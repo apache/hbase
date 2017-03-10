@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.security.token;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -27,11 +29,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.AsyncRpcClient;
+import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
-import org.apache.hadoop.hbase.ipc.RpcClientImpl;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest;
@@ -46,8 +48,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.ServiceException;
 
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestGenerateDelegationToken extends SecureTestCluster {
@@ -79,8 +79,8 @@ public class TestGenerateDelegationToken extends SecureTestCluster {
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       Token<? extends TokenIdentifier> token = TokenUtil.obtainToken(conn);
       UserGroupInformation.getCurrentUser().addToken(token);
-      testTokenAuth(RpcClientImpl.class);
-      testTokenAuth(AsyncRpcClient.class);
+      testTokenAuth(BlockingRpcClient.class);
+      testTokenAuth(NettyRpcClient.class);
     }
   }
 }

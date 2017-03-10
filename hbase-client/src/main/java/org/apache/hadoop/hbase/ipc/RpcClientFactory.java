@@ -18,12 +18,14 @@
 package org.apache.hadoop.hbase.ipc;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
+
+import java.net.SocketAddress;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-
-import java.net.SocketAddress;
 
 /**
  * Factory to create a {@link org.apache.hadoop.hbase.ipc.RpcClient}
@@ -32,6 +34,10 @@ import java.net.SocketAddress;
 public final class RpcClientFactory {
 
   public static final String CUSTOM_RPC_CLIENT_IMPL_CONF_KEY = "hbase.rpc.client.impl";
+
+  private static final ImmutableMap<String, String> DEPRECATED_NAME_MAPPING = ImmutableMap.of(
+    "org.apache.hadoop.hbase.ipc.RpcClientImpl", BlockingRpcClient.class.getName(),
+    "org.apache.hadoop.hbase.ipc.AsyncRpcClient", NettyRpcClient.class.getName());
 
   /**
    * Private Constructor
@@ -58,6 +64,15 @@ public final class RpcClientFactory {
     return createClient(conf, clusterId, null, metrics);
   }
 
+  private static String getRpcClientClass(Configuration conf) {
+    String rpcClientClass = conf.get(CUSTOM_RPC_CLIENT_IMPL_CONF_KEY);
+    if (rpcClientClass == null) {
+      return BlockingRpcClient.class.getName();
+    }
+    String mappedName = DEPRECATED_NAME_MAPPING.get(rpcClientClass);
+    return mappedName == null ? rpcClientClass : mappedName;
+  }
+
   /**
    * Creates a new RpcClient by the class defined in the configuration or falls back to
    * RpcClientImpl
@@ -69,14 +84,9 @@ public final class RpcClientFactory {
    */
   public static RpcClient createClient(Configuration conf, String clusterId,
       SocketAddress localAddr, MetricsConnection metrics) {
-    String rpcClientClass =
-        conf.get(CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
-          RpcClientImpl.class.getName());
-    return ReflectionUtils.instantiateWithCustomCtor(
-        rpcClientClass,
-        new Class[] { Configuration.class, String.class, SocketAddress.class,
-            MetricsConnection.class },
-        new Object[] { conf, clusterId, localAddr, metrics }
-    );
+    String rpcClientClass = getRpcClientClass(conf);
+    return ReflectionUtils.instantiateWithCustomCtor(rpcClientClass, new Class[] {
+        Configuration.class, String.class, SocketAddress.class, MetricsConnection.class },
+      new Object[] { conf, clusterId, localAddr, metrics });
   }
 }

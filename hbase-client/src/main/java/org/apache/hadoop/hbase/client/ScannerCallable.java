@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -104,7 +104,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   protected boolean isRegionServerRemote = true;
   private long nextCallSeq = 0;
   protected RpcControllerFactory controllerFactory;
-  protected PayloadCarryingRpcController controller;
+  protected HBaseRpcController controller;
 
   /**
    * @param connection which connection
@@ -141,7 +141,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     this.controller = rpcControllerFactory.newController();
   }
 
-  PayloadCarryingRpcController getController() {
+  HBaseRpcController getController() {
     return controller;
   }
 

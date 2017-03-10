@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
+
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
@@ -34,10 +35,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
 
 /**
  * Provides clients with an RPC connection to call coprocessor endpoint {@link com.google.protobuf.Service}s
@@ -90,11 +87,10 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
         new RegionServerCallable<CoprocessorServiceResponse>(connection, table, row) {
       @Override
       public CoprocessorServiceResponse call(int callTimeout) throws Exception {
-        if (rpcController instanceof PayloadCarryingRpcController) {
-          ((PayloadCarryingRpcController) rpcController).setPriority(tableName);
-        }
-        if (rpcController instanceof TimeLimitedRpcController) {
-          ((TimeLimitedRpcController) rpcController).setCallTimeout(callTimeout);
+        if (rpcController instanceof HBaseRpcController) {
+          HBaseRpcController hrc = (HBaseRpcController) rpcController;
+          hrc.setPriority(tableName);
+          hrc.setCallTimeout(callTimeout);
         }
         byte[] regionName = getLocation().getRegionInfo().getRegionName();
         return ProtobufUtil.execService(rpcController, getStub(), call, regionName);

@@ -33,3 +33,11 @@ message EchoRequestProto {
 message EchoResponseProto {
   required string message = 1;
 }
+
+message PauseRequestProto {
+  required uint32 ms = 1;
+}
+
+message AddrResponseProto {
+  required string addr = 1;
+}

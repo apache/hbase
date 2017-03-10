@@ -19,9 +19,16 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.RpcClient.SPECIFIC_WRITE_THREAD;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
+import com.google.common.collect.Lists;
+import com.google.protobuf.BlockingService;
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -40,27 +47,17 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import com.google.common.collect.Lists;
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.Descriptors.MethodDescriptor;
 
 @Category(IntegrationTests.class)
 public class IntegrationTestRpcClient {
@@ -95,38 +92,13 @@ public class IntegrationTestRpcClient {
     }
   }
 
-  static final BlockingService SERVICE =
-      TestRpcServiceProtos.TestProtobufRpcProto
-      .newReflectiveBlockingService(new TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface() {
-
-        @Override
-        public EmptyResponseProto ping(RpcController controller, EmptyRequestProto request)
-            throws ServiceException {
-          return null;
-        }
-
-        @Override
-        public EmptyResponseProto error(RpcController controller, EmptyRequestProto request)
-            throws ServiceException {
-          return null;
-        }
-
-        @Override
-        public EchoResponseProto echo(RpcController controller, EchoRequestProto request)
-            throws ServiceException {
-          return EchoResponseProto.newBuilder().setMessage(request.getMessage()).build();
-        }
-      });
-
-  protected AbstractRpcClient createRpcClient(Configuration conf, boolean isSyncClient) {
-    return isSyncClient ?
-        new RpcClientImpl(conf, HConstants.CLUSTER_ID_DEFAULT) :
-          new AsyncRpcClient(conf) {
-          @Override
-          Codec getCodec() {
-            return null;
-          }
-        };
+  protected AbstractRpcClient<?> createRpcClient(Configuration conf, boolean isSyncClient) {
+    return isSyncClient ? new BlockingRpcClient(conf) : new NettyRpcClient(conf) {
+      @Override
+      Codec getCodec() {
+        return null;
+      }
+    };
   }
 
   static String BIG_PAYLOAD;
@@ -283,7 +255,7 @@ public class IntegrationTestRpcClient {
   }
 
   static class SimpleClient extends Thread {
-    AbstractRpcClient rpcClient;
+    AbstractRpcClient<?> rpcClient;
     AtomicBoolean running = new  AtomicBoolean(true);
     AtomicBoolean sending = new AtomicBoolean(false);
     AtomicReference<Throwable> exception = new AtomicReference<>(null);
@@ -292,7 +264,7 @@ public class IntegrationTestRpcClient {
     long numCalls = 0;
     Random random = new Random();
 
-    public SimpleClient(Cluster cluster, AbstractRpcClient rpcClient, String id) {
+    public SimpleClient(Cluster cluster, AbstractRpcClient<?> rpcClient, String id) {
       this.cluster = cluster;
       this.rpcClient = rpcClient;
       this.id = id;
@@ -301,24 +273,16 @@ public class IntegrationTestRpcClient {
 
     @Override
     public void run() {
-      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-
       while (running.get()) {
         boolean isBigPayload = random.nextBoolean();
         String message = isBigPayload ? BIG_PAYLOAD : id + numCalls;
         EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message).build();
-        EchoResponseProto ret = EchoResponseProto.newBuilder().setMessage("foo").build();
-
+        EchoResponseProto ret;
         TestRpcServer server = cluster.getRandomServer();
         try {
-          User user = User.getCurrent();
-          InetSocketAddress address = server.getListenerAddress();
-          if (address == null) {
-            throw new IOException("Listener channel is closed");
-          }
           sending.set(true);
-          ret = (EchoResponseProto)
-              rpcClient.callBlockingMethod(md, null, param, ret, user, address);
+          BlockingInterface stub = newBlockingStub(rpcClient, server.getListenerAddress());
+          ret = stub.echo(null, param);
         } catch (Exception e) {
           LOG.warn(e);
           continue; // expected in case connection is closing or closed
@@ -360,7 +324,7 @@ public class IntegrationTestRpcClient {
     cluster.startServer();
     conf.setBoolean(SPECIFIC_WRITE_THREAD, true);
     for(int i = 0; i <1000; i++) {
-      AbstractRpcClient rpcClient = createRpcClient(conf, true);
+      AbstractRpcClient<?> rpcClient = createRpcClient(conf, true);
       SimpleClient client = new SimpleClient(cluster, rpcClient, "Client1");
       client.start();
       while(!client.isSending()) {
@@ -452,7 +416,7 @@ public class IntegrationTestRpcClient {
     ArrayList<SimpleClient> clients = new ArrayList<>();
 
     // all threads should share the same rpc client
-    AbstractRpcClient rpcClient = createRpcClient(conf, isSyncClient);
+    AbstractRpcClient<?> rpcClient = createRpcClient(conf, isSyncClient);
 
     for (int i = 0; i < 30; i++) {
       String clientId = "client_" + i + "_";

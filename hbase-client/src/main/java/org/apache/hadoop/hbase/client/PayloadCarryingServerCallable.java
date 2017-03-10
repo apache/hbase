@@ -18,7 +18,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 
 /**
@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 @InterfaceAudience.Private
 public abstract class PayloadCarryingServerCallable<T>
     extends RegionServerCallable<T> implements Cancellable {
-  protected PayloadCarryingRpcController controller;
+  protected HBaseRpcController controller;
 
   public PayloadCarryingServerCallable(Connection connection, TableName tableName, byte[] row,
     RpcControllerFactory rpcControllerFactory) {

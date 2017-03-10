@@ -19,9 +19,12 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -30,8 +33,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -52,9 +56,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 
 /**
  * Test {@link org.apache.hadoop.hbase.zookeeper.MetaTableLocator}
@@ -253,7 +254,7 @@ public class TestMetaTableLocator {
       thenReturn(implementation);
         RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
         Mockito.when(controllerFactory.newController()).thenReturn(
-          Mockito.mock(PayloadCarryingRpcController.class));
+          Mockito.mock(HBaseRpcController.class));
         Mockito.when(connection.getRpcControllerFactory()).thenReturn(controllerFactory);
 
     ServerName sn = ServerName.valueOf("example.com", 1234, System.currentTimeMillis());

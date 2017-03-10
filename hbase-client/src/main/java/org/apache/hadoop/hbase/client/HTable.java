@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -755,7 +755,7 @@ public class HTable implements HTableInterface, RegionLocator {
          tableName, row) {
        @Override
       public Result call(int callTimeout) throws IOException {
-         PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+         HBaseRpcController controller = rpcControllerFactory.newController();
          controller.setPriority(tableName);
          controller.setCallTimeout(callTimeout);
          ClientProtos.GetRequest request = RequestConverter.buildGetRowOrBeforeRequest(
@@ -851,7 +851,7 @@ public class HTable implements HTableInterface, RegionLocator {
         public Result call(int callTimeout) throws IOException {
           ClientProtos.GetRequest request =
             RequestConverter.buildGetRequest(getLocation().getRegionInfo().getRegionName(), getReq);
-          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+          HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
           controller.setCallTimeout(callTimeout);
           try {
@@ -976,7 +976,7 @@ public class HTable implements HTableInterface, RegionLocator {
         tableName, delete.getRow()) {
       @Override
       public Boolean call(int callTimeout) throws IOException {
-        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+        HBaseRpcController controller = rpcControllerFactory.newController();
         controller.setPriority(tableName);
         controller.setCallTimeout(callTimeout);
 
@@ -1053,6 +1053,7 @@ public class HTable implements HTableInterface, RegionLocator {
           rpcControllerFactory) {
         @Override
         public MultiResponse call(int callTimeout) throws IOException {
+          controller.reset();
           controller.setPriority(tableName);
           int remainingTime = tracker.getRemainingTime(callTimeout);
           if (remainingTime == 0) {
@@ -1105,7 +1106,7 @@ public class HTable implements HTableInterface, RegionLocator {
       new RegionServerCallable<Result>(this.connection, getName(), append.getRow()) {
         @Override
         public Result call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+          HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(getTableName());
           controller.setCallTimeout(callTimeout);
           try {
@@ -1138,7 +1139,7 @@ public class HTable implements HTableInterface, RegionLocator {
         getName(), increment.getRow()) {
       @Override
       public Result call(int callTimeout) throws IOException {
-        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+        HBaseRpcController controller = rpcControllerFactory.newController();
         controller.setPriority(getTableName());
         controller.setCallTimeout(callTimeout);
         try {
@@ -1206,7 +1207,7 @@ public class HTable implements HTableInterface, RegionLocator {
       new RegionServerCallable<Long>(connection, getName(), row) {
         @Override
         public Long call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+          HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(getTableName());
           controller.setCallTimeout(callTimeout);
           try {
@@ -1238,7 +1239,7 @@ public class HTable implements HTableInterface, RegionLocator {
       new RegionServerCallable<Boolean>(connection, getName(), row) {
         @Override
         public Boolean call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+          HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
           controller.setCallTimeout(callTimeout);
           try {
@@ -1268,7 +1269,7 @@ public class HTable implements HTableInterface, RegionLocator {
       new RegionServerCallable<Boolean>(connection, getName(), row) {
         @Override
         public Boolean call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
           controller.setCallTimeout(callTimeout);
           try {
@@ -1299,7 +1300,7 @@ public class HTable implements HTableInterface, RegionLocator {
       new RegionServerCallable<Boolean>(connection, getName(), row) {
         @Override
         public Boolean call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+          HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
           controller.setCallTimeout(callTimeout);
           try {
@@ -1329,7 +1330,7 @@ public class HTable implements HTableInterface, RegionLocator {
       new RegionServerCallable<Boolean>(connection, getName(), row) {
         @Override
         public Boolean call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+          HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
           controller.setCallTimeout(callTimeout);
           try {
@@ -1361,6 +1362,7 @@ public class HTable implements HTableInterface, RegionLocator {
         rpcControllerFactory) {
         @Override
         public MultiResponse call(int callTimeout) throws IOException {
+          controller.reset();
           controller.setPriority(tableName);
           int remainingTime = tracker.getRemainingTime(callTimeout);
           if (remainingTime == 0) {

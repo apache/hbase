@@ -127,6 +127,7 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
 
     // Controller optionally carries cell data over the proxy/service boundary and also
     // optionally ferries cell response data back out again.
+    controller.reset();
     if (cells != null) controller.setCellScanner(CellUtil.createCellScanner(cells));
     controller.setPriority(getTableName());
     controller.setCallTimeout(callTimeout);

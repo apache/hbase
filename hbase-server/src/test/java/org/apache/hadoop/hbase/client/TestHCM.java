@@ -18,6 +18,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import com.google.common.collect.Lists;
 
 import java.io.IOException;
@@ -61,7 +68,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.ipc.ServerTooBusyException;
@@ -85,13 +91,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * This class is for testing HBaseConnectionManager features
@@ -726,8 +725,11 @@ public class TestHCM {
     c2.setInt(HConstants.HBASE_CLIENT_PAUSE, 1); // don't wait between retries.
     c2.setInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, 0); // Server do not really expire
     c2.setBoolean(RpcClient.SPECIFIC_WRITE_THREAD, allowsInterrupt);
-
-    final HTable table = new HTable(c2, tableName);
+    c2.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 2000);
+    c2.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1000);
+    ConnectionManager.HConnectionImplementation conn =
+        (ConnectionManager.HConnectionImplementation) ConnectionManager.createConnection(c2);
+    final HTable table = (HTable) conn.getTable(tableName);
 
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
@@ -749,6 +751,7 @@ public class TestHCM {
             done++;
             if (done % 100 == 0)
               LOG.info("done=" + done);
+            Thread.sleep(100);
           }
         } catch (Throwable t) {
           failed.set(t);
@@ -766,8 +769,6 @@ public class TestHCM {
     });
 
     ServerName sn = table.getRegionLocation(ROW).getServerName();
-    ConnectionManager.HConnectionImplementation conn =
-        (ConnectionManager.HConnectionImplementation) table.getConnection();
     RpcClient rpcClient = conn.getRpcClient();
 
     LOG.info("Going to cancel connections. connection=" + conn.toString() + ", sn=" + sn);

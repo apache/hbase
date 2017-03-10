@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import com.google.common.collect.Lists;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,20 +32,18 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ProtobufCoprocessorService;
-import org.apache.hadoop.hbase.ipc.DelegatingPayloadCarryingRpcController;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.DelegatingHBaseRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.collect.Lists;
 
 @Category(MediumTests.class)
 public class TestRpcControllerFactory {
@@ -55,27 +55,27 @@ public class TestRpcControllerFactory {
     }
 
     @Override
-    public PayloadCarryingRpcController newController() {
+    public HBaseRpcController newController() {
       return new CountingRpcController(super.newController());
     }
 
     @Override
-    public PayloadCarryingRpcController newController(final CellScanner cellScanner) {
+    public HBaseRpcController newController(final CellScanner cellScanner) {
       return new CountingRpcController(super.newController(cellScanner));
     }
 
     @Override
-    public PayloadCarryingRpcController newController(final List<CellScannable> cellIterables) {
+    public HBaseRpcController newController(final List<CellScannable> cellIterables) {
       return new CountingRpcController(super.newController(cellIterables));
     }
   }
 
-  public static class CountingRpcController extends DelegatingPayloadCarryingRpcController {
+  public static class CountingRpcController extends DelegatingHBaseRpcController {
 
     private static AtomicInteger INT_PRIORITY = new AtomicInteger();
     private static AtomicInteger TABLE_PRIORITY = new AtomicInteger();
 
-    public CountingRpcController(PayloadCarryingRpcController delegate) {
+    public CountingRpcController(HBaseRpcController delegate) {
       super(delegate);
     }
 

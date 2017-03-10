@@ -15,19 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.ipc;
 
-package org.apache.hadoop.hbase.security;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import org.apache.hadoop.hbase.ipc.AsyncRpcClient;
-import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.testclassification.SecurityTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.experimental.categories.Category;
+/**
+ * Used to tell netty handler the call is cancelled, timeout...
+ */
+@InterfaceAudience.Private
+class CallEvent {
 
-@Category({ SecurityTests.class, SmallTests.class })
-public class TestAsyncSecureIPC extends AbstractTestSecureIPC {
+  public enum Type {
+    TIMEOUT, CANCELLED
+  }
 
-  Class<? extends RpcClient> getRpcClientClass() {
-    return AsyncRpcClient.class;
+  final Type type;
+
+  final Call call;
+
+  CallEvent(Type type, Call call) {
+    this.type = type;
+    this.call = call;
   }
 }

@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -33,14 +34,14 @@ import javax.security.sasl.RealmCallback;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
  * A utility class for dealing with SASL on RPC server
@@ -49,9 +50,15 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 public class HBaseSaslRpcServer {
   private static final Log LOG = LogFactory.getLog(HBaseSaslRpcServer.class);
 
+  private static Map<String, String> saslProps = null;
+
   public static void init(Configuration conf) {
-    SaslUtil.initSaslProperties(conf.get("hbase.rpc.protection", 
+    saslProps = SaslUtil.initSaslProperties(conf.get("hbase.rpc.protection",
           QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)));
+  }
+
+  public static Map<String, String> getSaslProps() {
+    return saslProps;
   }
 
   public static <T extends TokenIdentifier> T getIdentifier(String id,

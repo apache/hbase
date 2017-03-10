@@ -28,14 +28,15 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+@Category({ ClientTests.class, SmallTests.class })
+public class TestHBaseRpcControllerImpl {
 
-@Category(SmallTests.class)
-public class TestPayloadCarryingRpcController {
   @Test
   public void testListOfCellScannerables() throws IOException {
     List<CellScannable> cells = new ArrayList<CellScannable>();
@@ -43,12 +44,12 @@ public class TestPayloadCarryingRpcController {
     for (int i = 0; i < count; i++) {
       cells.add(createCell(i));
     }
-    PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
+    HBaseRpcController controller = new HBaseRpcControllerImpl(cells);
     CellScanner cellScanner = controller.cellScanner();
     int index = 0;
     for (; cellScanner.advance(); index++) {
       Cell cell = cellScanner.current();
-      byte [] indexBytes = Bytes.toBytes(index);
+      byte[] indexBytes = Bytes.toBytes(index);
       assertTrue("" + index, Bytes.equals(indexBytes, 0, indexBytes.length, cell.getValueArray(),
         cell.getValueOffset(), cell.getValueLength()));
     }
@@ -66,7 +67,7 @@ public class TestPayloadCarryingRpcController {
         return new CellScanner() {
           @Override
           public Cell current() {
-            // Fake out a Cell.  All this Cell has is a value that is an int in size and equal
+            // Fake out a Cell. All this Cell has is a value that is an int in size and equal
             // to the above 'index' param serialized as an int.
             return new Cell() {
               private final int i = index;
@@ -138,12 +139,6 @@ public class TestPayloadCarryingRpcController {
               }
 
               @Override
-              public long getMvccVersion() {
-                // unused
-                return 0;
-              }
-
-              @Override
               public long getSequenceId() {
                 // unused
                 return 0;
@@ -183,32 +178,34 @@ public class TestPayloadCarryingRpcController {
               }
 
               @Override
+              public long getMvccVersion() {
+                return 0;
+              }
+
+              @Override
               public byte[] getValue() {
-                // unused
-                return null;
+                return Bytes.toBytes(this.i);
               }
 
               @Override
               public byte[] getFamily() {
-                // unused
                 return null;
               }
 
               @Override
               public byte[] getQualifier() {
-                // unused
                 return null;
               }
 
               @Override
               public byte[] getRow() {
-                // unused
                 return null;
               }
             };
           }
 
           private boolean hasCell = true;
+
           @Override
           public boolean advance() {
             // We have one Cell only so return true first time then false ever after.

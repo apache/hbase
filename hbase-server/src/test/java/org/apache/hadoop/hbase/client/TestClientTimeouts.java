@@ -22,40 +22,38 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
-import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcClientFactory;
-import org.apache.hadoop.hbase.ipc.RpcClientImpl;
-import org.apache.hadoop.hbase.security.User;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-@Category(MediumTests.class)
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
+import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+@Category({MediumTests.class, ClientTests.class})
 public class TestClientTimeouts {
-  private static final Log LOG = LogFactory.getLog(TestClientTimeouts.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static int SLAVES = 1;
 
@@ -86,7 +84,6 @@ public class TestClientTimeouts {
    */
   @Test
   public void testAdminTimeout() throws Exception {
-    Connection lastConnection = null;
     boolean lastFailed = false;
     int initialInvocations = RandomTimeoutBlockingRpcChannel.invokations.get();
     RandomTimeoutRpcClient rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
@@ -98,12 +95,11 @@ public class TestClientTimeouts {
         // Ensure the HBaseAdmin uses a new connection by changing Configuration.
         Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
         conf.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
-        HBaseAdmin admin = null;
+        Admin admin = null;
+        Connection connection = null;
         try {
-          admin = new HBaseAdmin(conf);
-          Connection connection = admin.getConnection();
-          assertFalse(connection == lastConnection);
-          lastConnection = connection;
+          connection = ConnectionFactory.createConnection(conf);
+          admin = connection.getAdmin();
           // run some admin commands
           HBaseAdmin.checkHBaseAvailable(conf);
           admin.setBalancerRunning(false, false);
@@ -112,10 +108,15 @@ public class TestClientTimeouts {
           // a MasterNotRunningException.  It's a bug if we get other exceptions.
           lastFailed = true;
         } finally {
-          admin.close();
-          if (admin.getConnection().isClosed()) {
-            rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
-                .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
+          if(admin != null) {
+            admin.close();
+            if (admin.getConnection().isClosed()) {
+              rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
+                  .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
+            }
+          }
+          if(connection != null) {
+            connection.close();
           }
         }
       }
@@ -130,7 +131,7 @@ public class TestClientTimeouts {
   /**
    * Rpc Channel implementation with RandomTimeoutBlockingRpcChannel
    */
-  public static class RandomTimeoutRpcClient extends RpcClientImpl {
+  public static class RandomTimeoutRpcClient extends BlockingRpcClient {
     public RandomTimeoutRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
         MetricsConnection metrics) {
       super(conf, clusterId, localAddr, metrics);
@@ -153,9 +154,9 @@ public class TestClientTimeouts {
     public static final double CHANCE_OF_TIMEOUT = 0.3;
     private static AtomicInteger invokations = new AtomicInteger();
 
-    RandomTimeoutBlockingRpcChannel(final RpcClientImpl rpcClient, final ServerName sn,
-        final User ticket, final int rpcTimeout) throws UnknownHostException {
-      super(rpcClient, sn, ticket, rpcTimeout);
+    RandomTimeoutBlockingRpcChannel(final BlockingRpcClient rpcClient, final ServerName sn,
+        final User ticket, final int rpcTimeout) {
+      super(rpcClient, new InetSocketAddress(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
     }
 
     @Override

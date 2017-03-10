@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.protobuf.RpcController;
+
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -27,20 +29,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
-import com.google.protobuf.RpcController;
 
 /**
  * Test snapshot logic from the client
@@ -88,7 +88,7 @@ public class TestSnapshotFromAdmin {
     RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
     RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
     Mockito.when(controllerFactory.newController()).thenReturn(
-      Mockito.mock(PayloadCarryingRpcController.class));
+      Mockito.mock(HBaseRpcController.class));
     Mockito.when(mockConnection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
     Mockito.when(mockConnection.getRpcControllerFactory()).thenReturn(controllerFactory);
     // set the max wait time for the snapshot to complete
@@ -136,7 +136,7 @@ public class TestSnapshotFromAdmin {
     RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
     RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
     Mockito.when(controllerFactory.newController()).thenReturn(
-      Mockito.mock(PayloadCarryingRpcController.class));
+      Mockito.mock(HBaseRpcController.class));
     Mockito.when(mockConnection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
     Mockito.when(mockConnection.getRpcControllerFactory()).thenReturn(controllerFactory);
     Admin admin = new HBaseAdmin(mockConnection);

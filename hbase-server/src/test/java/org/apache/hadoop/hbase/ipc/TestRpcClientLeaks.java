@@ -17,15 +17,20 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.junit.Assert.assertTrue;
+
+import com.google.common.collect.Lists;
+
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -35,28 +40,26 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TestRule;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.junit.Assert.*;
-
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestRpcClientLeaks {
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
 
-  public static class MyRpcClientImpl extends RpcClientImpl {
+  public static class MyRpcClientImpl extends BlockingRpcClient {
     public static List<Socket> savedSockets = Lists.newArrayList();
     @Rule public ExpectedException thrown = ExpectedException.none();
 
-    public MyRpcClientImpl(Configuration conf, String clusterId) {
-      super(conf, clusterId);
+    public MyRpcClientImpl(Configuration conf) {
+      super(conf);
     }
 
     public MyRpcClientImpl(Configuration conf, String clusterId, SocketAddress address,
@@ -65,9 +68,8 @@ public class TestRpcClientLeaks {
     }
 
     @Override
-    protected Connection createConnection(ConnectionId remoteId, Codec codec,
-        CompressionCodec compressor) throws IOException {
-      return new Connection(remoteId, codec, compressor) {
+    protected BlockingRpcConnection createConnection(ConnectionId remoteId) throws IOException {
+      return new BlockingRpcConnection(this, remoteId) {
         @Override
         protected synchronized void setupConnection() throws IOException {
           super.setupConnection();
@@ -114,4 +116,3 @@ public class TestRpcClientLeaks {
     }
   }
 }
-

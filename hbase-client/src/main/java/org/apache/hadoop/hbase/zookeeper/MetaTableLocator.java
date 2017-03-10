@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.RpcController;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -43,7 +46,6 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -57,8 +59,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Utility class to perform operation (get/wait for/verify/set/delete) on znode in ZooKeeper
@@ -319,7 +319,7 @@ public class MetaTableLocator {
       return false;
     }
     Throwable t;
-    PayloadCarryingRpcController controller = null;
+    RpcController controller = null;
     if (connection instanceof ClusterConnection) {
       controller = ((ClusterConnection) connection).getRpcControllerFactory().newController();
     }

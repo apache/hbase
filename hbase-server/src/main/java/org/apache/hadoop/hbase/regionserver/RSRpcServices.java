@@ -90,7 +90,7 @@ import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
@@ -392,7 +392,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private void addResult(final MutateResponse.Builder builder,
-      final Result result, final PayloadCarryingRpcController rpcc) {
+      final Result result, final HBaseRpcController rpcc) {
     if (result == null) return;
     if (isClientCellBlockSupport()) {
       builder.setResult(ProtobufUtil.toResultNoData(result));
@@ -404,7 +404,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private void addResults(final ScanResponse.Builder builder, final List<Result> results,
-      final PayloadCarryingRpcController controller, boolean isDefaultRegion) {
+      final HBaseRpcController controller, boolean isDefaultRegion) {
     builder.setStale(!isDefaultRegion);
     if (results.isEmpty()) {
       return;
@@ -1795,7 +1795,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public ReplicateWALEntryResponse replay(final RpcController controller,
       final ReplicateWALEntryRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTime();
-    CellScanner cells = ((PayloadCarryingRpcController) controller).cellScanner();
+    CellScanner cells = ((HBaseRpcController) controller).cellScanner();
     try {
       checkOpen();
       List<WALEntry> entries = request.getEntryList();
@@ -1900,7 +1900,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (regionServer.replicationSinkHandler != null) {
         requestCount.increment();
         List<WALEntry> entries = request.getEntryList();
-        CellScanner cellScanner = ((PayloadCarryingRpcController)controller).cellScanner();
+        CellScanner cellScanner = ((HBaseRpcController)controller).cellScanner();
         regionServer.getRegionServerCoprocessorHost().preReplicateLogEntries(entries, cellScanner);
         regionServer.replicationSinkHandler.replicateLogEntries(entries, cellScanner,
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
@@ -2129,10 +2129,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       } else  if (r != null) {
         ClientProtos.Result pbr;
         RpcCallContext call = RpcServer.getCurrentCall();
-        if (isClientCellBlockSupport(call) && controller instanceof PayloadCarryingRpcController
+        if (isClientCellBlockSupport(call) && controller instanceof HBaseRpcController
             && VersionInfoUtil.hasMinimumVersion(call.getClientVersionInfo(), 1, 3)) {
           pbr = ProtobufUtil.toResultNoData(r);
-          ((PayloadCarryingRpcController) controller)
+          ((HBaseRpcController) controller)
               .setCellScanner(CellUtil.createCellScanner(r.rawCells()));
           addSize(call, r, null);
         } else {
@@ -2175,7 +2175,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     // rpc controller is how we bring in data via the back door;  it is unprotobuf'ed data.
     // It is also the conduit via which we pass back data.
-    PayloadCarryingRpcController controller = (PayloadCarryingRpcController)rpcc;
+    HBaseRpcController controller = (HBaseRpcController)rpcc;
     CellScanner cellScanner = controller != null ? controller.cellScanner(): null;
     if (controller != null) {
       controller.setCellScanner(null);
@@ -2305,7 +2305,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final MutateRequest request) throws ServiceException {
     // rpc controller is how we bring in data via the back door;  it is unprotobuf'ed data.
     // It is also the conduit via which we pass back data.
-    PayloadCarryingRpcController controller = (PayloadCarryingRpcController)rpcc;
+    HBaseRpcController controller = (HBaseRpcController)rpcc;
     CellScanner cellScanner = controller != null ? controller.cellScanner() : null;
     OperationQuota quota = null;
     RpcCallContext context = RpcServer.getCurrentCall();
@@ -2530,7 +2530,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  private long getTimeLimit(PayloadCarryingRpcController controller,
+  private long getTimeLimit(HBaseRpcController controller,
       boolean allowHeartbeatMessages) {
     // Set the time limit to be half of the more restrictive timeout value (one of the
     // timeout values must be positive). In the event that both values are positive, the
@@ -2559,7 +2559,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   // return whether we have more results in region.
-  private boolean scan(PayloadCarryingRpcController controller, ScanRequest request,
+  private boolean scan(HBaseRpcController controller, ScanRequest request,
       RegionScannerHolder rsh, long maxQuotaResultSize, int maxResults, List<Result> results,
       ScanResponse.Builder builder, MutableObject lastBlock, RpcCallContext context)
       throws IOException {
@@ -2714,9 +2714,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public ScanResponse scan(final RpcController controller, final ScanRequest request)
       throws ServiceException {
-    if (controller != null && !(controller instanceof PayloadCarryingRpcController)) {
+    if (controller != null && !(controller instanceof HBaseRpcController)) {
       throw new UnsupportedOperationException(
-          "We only do PayloadCarryingRpcControllers! FIX IF A PROBLEM: " + controller);
+          "We only do HBaseRpcController! FIX IF A PROBLEM: " + controller);
     }
     if (!request.hasScannerId() && !request.hasScan()) {
       throw new ServiceException(
@@ -2839,7 +2839,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
         }
         if (!done) {
-          moreResultsInRegion = scan((PayloadCarryingRpcController) controller, request, rsh,
+          moreResultsInRegion = scan((HBaseRpcController) controller, request, rsh,
             maxQuotaResultSize, rows, results, builder, lastBlock, context);
         }
       }
@@ -2858,7 +2858,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // if we have reached the limit of rows
         moreResults = false;
       }
-      addResults(builder, results, (PayloadCarryingRpcController) controller,
+      addResults(builder, results, (HBaseRpcController) controller,
         RegionReplicaUtil.isDefaultReplica(region.getRegionInfo()));
       if (!moreResults || !moreResultsInRegion || closeScanner) {
         scannerClosed = true;

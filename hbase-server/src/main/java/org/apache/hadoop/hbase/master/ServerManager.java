@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
@@ -52,7 +56,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -66,24 +70,20 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
 
 /**
  * The ServerManager class manages info about region servers.
@@ -871,7 +871,7 @@ public class ServerManager {
     }
   }
 
-  private PayloadCarryingRpcController newRpcController() {
+  private HBaseRpcController newRpcController() {
     return rpcControllerFactory == null ? null : rpcControllerFactory.newController();
   }
 
@@ -899,7 +899,7 @@ public class ServerManager {
         region.getRegionNameAsString() +
         " failed because no RPC connection found to this server");
     }
-    PayloadCarryingRpcController controller = newRpcController();
+    HBaseRpcController controller = newRpcController();
     return ProtobufUtil.closeRegion(controller, admin, server, region.getRegionName(),
       versionOfClosingNode, dest, transitionInZK);
   }
@@ -922,7 +922,7 @@ public class ServerManager {
     if (server == null) return;
     try {
       AdminService.BlockingInterface admin = getRsAdmin(server);
-      PayloadCarryingRpcController controller = newRpcController();
+      HBaseRpcController controller = newRpcController();
       ProtobufUtil.warmupRegion(controller, admin, region);
     } catch (IOException e) {
       LOG.error("Received exception in RPC for warmup server:" +
@@ -938,7 +938,7 @@ public class ServerManager {
   public static void closeRegionSilentlyAndWait(ClusterConnection connection,
     ServerName server, HRegionInfo region, long timeout) throws IOException, InterruptedException {
     AdminService.BlockingInterface rs = connection.getAdmin(server);
-    PayloadCarryingRpcController controller = connection.getRpcControllerFactory().newController();
+    HBaseRpcController controller = connection.getRpcControllerFactory().newController();
     try {
       ProtobufUtil.closeRegion(controller, rs, server, region.getRegionName(), false);
     } catch (IOException e) {
@@ -946,6 +946,7 @@ public class ServerManager {
     }
     long expiration = timeout + System.currentTimeMillis();
     while (System.currentTimeMillis() < expiration) {
+      controller.reset();
       try {
         HRegionInfo rsRegion =
           ProtobufUtil.getRegionInfo(controller, rs, region.getRegionName());
@@ -989,7 +990,7 @@ public class ServerManager {
           + region_b.getRegionNameAsString()
           + " failed because no RPC connection found to this server");
     }
-    PayloadCarryingRpcController controller = newRpcController();
+    HBaseRpcController controller = newRpcController();
     ProtobufUtil.mergeRegions(controller, admin, region_a, region_b, forcible, user);
   }
 
@@ -1008,7 +1009,7 @@ public class ServerManager {
         }
       }
       try {
-        PayloadCarryingRpcController controller = newRpcController();
+        HBaseRpcController controller = newRpcController();
         AdminService.BlockingInterface admin = getRsAdmin(server);
         if (admin != null) {
           ServerInfo info = ProtobufUtil.getServerInfo(controller, admin);

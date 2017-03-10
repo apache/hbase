@@ -17,7 +17,13 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newStub;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyObject;
@@ -25,11 +31,14 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,35 +48,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.MetricsConnection;
-import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.Interface;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Assert;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 
 /**
  * Some basic ipc tests.
@@ -76,59 +71,11 @@ public abstract class AbstractTestIPC {
 
   private static final Log LOG = LogFactory.getLog(AbstractTestIPC.class);
 
-  private static byte[] CELL_BYTES = Bytes.toBytes("xyz");
-  private static KeyValue CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);
+  private static final byte[] CELL_BYTES = Bytes.toBytes("xyz");
+  private static final KeyValue CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);
   static byte[] BIG_CELL_BYTES = new byte[10 * 1024];
   static KeyValue BIG_CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, BIG_CELL_BYTES);
   static final Configuration CONF = HBaseConfiguration.create();
-  // We are using the test TestRpcServiceProtos generated classes and Service because they are
-  // available and basic with methods like 'echo', and ping. Below we make a blocking service
-  // by passing in implementation of blocking interface. We use this service in all tests that
-  // follow.
-  static final BlockingService SERVICE =
-      TestRpcServiceProtos.TestProtobufRpcProto
-          .newReflectiveBlockingService(new TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface() {
-
-            @Override
-            public EmptyResponseProto ping(RpcController controller, EmptyRequestProto request)
-                throws ServiceException {
-              return null;
-            }
-
-            @Override
-            public EmptyResponseProto error(RpcController controller, EmptyRequestProto request)
-                throws ServiceException {
-              return null;
-            }
-
-            @Override
-            public EchoResponseProto echo(RpcController controller, EchoRequestProto request)
-                throws ServiceException {
-              if (controller instanceof PayloadCarryingRpcController) {
-                PayloadCarryingRpcController pcrc = (PayloadCarryingRpcController) controller;
-                // If cells, scan them to check we are able to iterate what we were given and since
-                // this is
-                // an echo, just put them back on the controller creating a new block. Tests our
-                // block
-                // building.
-                CellScanner cellScanner = pcrc.cellScanner();
-                List<Cell> list = null;
-                if (cellScanner != null) {
-                  list = new ArrayList<Cell>();
-                  try {
-                    while (cellScanner.advance()) {
-                      list.add(cellScanner.current());
-                    }
-                  } catch (IOException e) {
-                    throw new ServiceException(e);
-                  }
-                }
-                cellScanner = CellUtil.createCellScanner(list);
-                ((PayloadCarryingRpcController) controller).setCellScanner(cellScanner);
-              }
-              return EchoResponseProto.newBuilder().setMessage(request.getMessage()).build();
-            }
-          });
 
   /**
    * Instance of server. We actually don't do anything speical in here so could just use
@@ -145,149 +92,106 @@ public abstract class AbstractTestIPC {
     }
 
     TestRpcServer(RpcScheduler scheduler, Configuration conf) throws IOException {
-      super(null, "testRpcServer", Lists
-          .newArrayList(new BlockingServiceAndInterface(SERVICE, null)), new InetSocketAddress(
-          "localhost", 0), conf, scheduler);
-    }
-
-    @Override
-    public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-        Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
-        throws IOException {
-      return super.call(service, md, param, cellScanner, receiveTime, status);
+      super(null, "testRpcServer",
+          Lists.newArrayList(new BlockingServiceAndInterface(SERVICE, null)),
+          new InetSocketAddress("localhost", 0), conf, scheduler);
     }
   }
 
-  protected abstract AbstractRpcClient createRpcClientNoCodec(Configuration conf);
+  protected abstract AbstractRpcClient<?> createRpcClientNoCodec(Configuration conf);
 
   /**
    * Ensure we do not HAVE TO HAVE a codec.
-   * @throws InterruptedException
-   * @throws IOException
    */
   @Test
-  public void testNoCodec() throws InterruptedException, IOException {
+  public void testNoCodec() throws IOException, ServiceException {
     Configuration conf = HBaseConfiguration.create();
-    AbstractRpcClient client = createRpcClientNoCodec(conf);
     TestRpcServer rpcServer = new TestRpcServer();
-    try {
+    try (AbstractRpcClient<?> client = createRpcClientNoCodec(conf)) {
       rpcServer.start();
-      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-      final String message = "hello";
-      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message).build();
-      InetSocketAddress address = rpcServer.getListenerAddress();
-      if (address == null) {
-        throw new IOException("Listener channel is closed");
-      }
-      Pair<Message, CellScanner> r =
-          client.call(null, md, param, md.getOutputType().toProto(), User.getCurrent(), address,
-              new MetricsConnection.CallStats());
-      assertTrue(r.getSecond() == null);
-      // Silly assertion that the message is in the returned pb.
-      assertTrue(r.getFirst().toString().contains(message));
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      HBaseRpcController pcrc = new HBaseRpcControllerImpl();
+      String message = "hello";
+      assertEquals(message,
+        stub.echo(pcrc, EchoRequestProto.newBuilder().setMessage(message).build()).getMessage());
+      assertNull(pcrc.cellScanner());
     } finally {
-      client.close();
       rpcServer.stop();
     }
   }
 
-  protected abstract AbstractRpcClient createRpcClient(Configuration conf);
+  protected abstract AbstractRpcClient<?> createRpcClient(Configuration conf);
 
   /**
    * It is hard to verify the compression is actually happening under the wraps. Hope that if
    * unsupported, we'll get an exception out of some time (meantime, have to trace it manually to
    * confirm that compression is happening down in the client and server).
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws SecurityException
-   * @throws NoSuchMethodException
    */
   @Test
-  public void testCompressCellBlock() throws IOException, InterruptedException, SecurityException,
-      NoSuchMethodException, ServiceException {
+  public void testCompressCellBlock() throws IOException, ServiceException {
     Configuration conf = new Configuration(HBaseConfiguration.create());
-    conf.set("hbase.client.rpc.compressor", GzipCodec.class.getCanonicalName());
-    List<Cell> cells = new ArrayList<Cell>();
+   // conf.set("hbase.client.rpc.compressor", GzipCodec.class.getCanonicalName());
+    List<Cell> cells = new ArrayList<>();
     int count = 3;
     for (int i = 0; i < count; i++) {
       cells.add(CELL);
     }
-    AbstractRpcClient client = createRpcClient(conf);
     TestRpcServer rpcServer = new TestRpcServer();
-    try {
+    try (AbstractRpcClient<?> client = createRpcClient(conf)) {
       rpcServer.start();
-      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-      PayloadCarryingRpcController pcrc =
-          new PayloadCarryingRpcController(CellUtil.createCellScanner(cells));
-      InetSocketAddress address = rpcServer.getListenerAddress();
-      if (address == null) {
-        throw new IOException("Listener channel is closed");
-      }
-      Pair<Message, CellScanner> r =
-          client.call(pcrc, md, param, md.getOutputType().toProto(), User.getCurrent(), address,
-              new MetricsConnection.CallStats());
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      HBaseRpcController pcrc = new HBaseRpcControllerImpl(CellUtil.createCellScanner(cells));
+      String message = "hello";
+      assertEquals(message,
+        stub.echo(pcrc, EchoRequestProto.newBuilder().setMessage(message).build()).getMessage());
       int index = 0;
-      while (r.getSecond().advance()) {
-        assertTrue(CELL.equals(r.getSecond().current()));
+      CellScanner cellScanner = pcrc.cellScanner();
+      assertNotNull(cellScanner);
+      while (cellScanner.advance()) {
+        assertEquals(CELL, cellScanner.current());
         index++;
       }
       assertEquals(count, index);
     } finally {
-      client.close();
       rpcServer.stop();
     }
   }
 
-  protected abstract AbstractRpcClient createRpcClientRTEDuringConnectionSetup(Configuration conf)
-      throws IOException;
+  protected abstract AbstractRpcClient<?> createRpcClientRTEDuringConnectionSetup(
+      Configuration conf) throws IOException;
 
   @Test
   public void testRTEDuringConnectionSetup() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     TestRpcServer rpcServer = new TestRpcServer();
-    AbstractRpcClient client = createRpcClientRTEDuringConnectionSetup(conf);
-    try {
+    try (AbstractRpcClient<?> client = createRpcClientRTEDuringConnectionSetup(conf)) {
       rpcServer.start();
-      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-      InetSocketAddress address = rpcServer.getListenerAddress();
-      if (address == null) {
-        throw new IOException("Listener channel is closed");
-      }
-      client.call(null, md, param, null, User.getCurrent(), address,
-          new MetricsConnection.CallStats());
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      stub.ping(null, EmptyRequestProto.getDefaultInstance());
       fail("Expected an exception to have been thrown!");
     } catch (Exception e) {
       LOG.info("Caught expected exception: " + e.toString());
-      assertTrue(StringUtils.stringifyException(e).contains("Injected fault"));
+      assertTrue(e.toString(), StringUtils.stringifyException(e).contains("Injected fault"));
     } finally {
-      client.close();
       rpcServer.stop();
     }
   }
 
-  /** Tests that the rpc scheduler is called when requests arrive. */
+  /**
+   * Tests that the rpc scheduler is called when requests arrive.
+   */
   @Test
-  public void testRpcScheduler() throws IOException, InterruptedException {
+  public void testRpcScheduler() throws IOException, ServiceException, InterruptedException {
     RpcScheduler scheduler = spy(new FifoRpcScheduler(CONF, 1));
     RpcServer rpcServer = new TestRpcServer(scheduler, CONF);
     verify(scheduler).init((RpcScheduler.Context) anyObject());
-    AbstractRpcClient client = createRpcClient(CONF);
-    try {
+    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
       rpcServer.start();
       verify(scheduler).start();
-      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-      InetSocketAddress address = rpcServer.getListenerAddress();
-      if (address == null) {
-        throw new IOException("Listener channel is closed");
-      }
       for (int i = 0; i < 10; i++) {
-        client.call(new PayloadCarryingRpcController(
-            CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))), md, param,
-            md.getOutputType().toProto(), User.getCurrent(), address,
-            new MetricsConnection.CallStats());
+        stub.echo(null, param);
       }
       verify(scheduler, times(10)).dispatch((CallRunner) anyObject());
     } finally {
@@ -298,77 +202,29 @@ public abstract class AbstractTestIPC {
 
   /** Tests that the rpc scheduler is called when requests arrive. */
   @Test
-  public void testRpcMaxRequestSize() throws IOException, InterruptedException {
+  public void testRpcMaxRequestSize() throws IOException, ServiceException {
     Configuration conf = new Configuration(CONF);
     conf.setInt(RpcServer.MAX_REQUEST_SIZE, 1000);
     RpcServer rpcServer = new TestRpcServer(conf);
-    AbstractRpcClient client = createRpcClient(conf);
-    try {
+    try (AbstractRpcClient<?> client = createRpcClient(conf)) {
       rpcServer.start();
-      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       StringBuilder message = new StringBuilder(1200);
       for (int i = 0; i < 200; i++) {
         message.append("hello.");
       }
-      // set total RPC size bigger than 1000 bytes
+      // set total RPC size bigger than 100 bytes
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message.toString()).build();
-      InetSocketAddress address = rpcServer.getListenerAddress();
-      if (address == null) {
-        throw new IOException("Listener channel is closed");
-      }
-      try {
-        client.call(new PayloadCarryingRpcController(
-          CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))), md, param,
-          md.getOutputType().toProto(), User.getCurrent(), address,
-          new MetricsConnection.CallStats());
-        fail("RPC should have failed because it exceeds max request size");
-      } catch(IOException e) {
-        LOG.info("Caught expected exception: " + e);
-        assertTrue(e.toString(),
-            StringUtils.stringifyException(e).contains("RequestTooBigException"));
-      }
+      stub.echo(
+        new HBaseRpcControllerImpl(CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))),
+        param);
+      fail("RPC should have failed because it exceeds max request size");
+    } catch (ServiceException e) {
+      LOG.info("Caught expected exception: " + e);
+      assertTrue(e.toString(),
+        StringUtils.stringifyException(e).contains("RequestTooBigException"));
     } finally {
       rpcServer.stop();
-    }
-  }
-
-  /**
-   * Instance of RpcServer that echoes client hostAddress back to client
-   */
-  static class TestRpcServer1 extends RpcServer {
-
-    private static BlockingInterface SERVICE1 =
-        new TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface() {
-          @Override
-          public EmptyResponseProto ping(RpcController unused, EmptyRequestProto request)
-              throws ServiceException {
-            return EmptyResponseProto.newBuilder().build();
-          }
-
-          @Override
-          public EchoResponseProto echo(RpcController unused, EchoRequestProto request)
-              throws ServiceException {
-            final InetAddress remoteAddr = TestRpcServer1.getRemoteAddress();
-            final String message = remoteAddr == null ? "NULL" : remoteAddr.getHostAddress();
-            return EchoResponseProto.newBuilder().setMessage(message).build();
-          }
-
-          @Override
-          public EmptyResponseProto error(RpcController unused, EmptyRequestProto request)
-              throws ServiceException {
-            throw new ServiceException("error", new IOException("error"));
-          }
-        };
-
-    TestRpcServer1() throws IOException {
-      this(new FifoRpcScheduler(CONF, 1));
-    }
-
-    TestRpcServer1(RpcScheduler scheduler) throws IOException {
-      super(null, "testRemoteAddressInCallObject", Lists
-          .newArrayList(new BlockingServiceAndInterface(TestRpcServiceProtos.TestProtobufRpcProto
-              .newReflectiveBlockingService(SERVICE1), null)),
-          new InetSocketAddress("localhost", 0), CONF, scheduler);
     }
   }
 
@@ -378,29 +234,162 @@ public abstract class AbstractTestIPC {
    * @throws ServiceException
    */
   @Test
-  public void testRpcServerForNotNullRemoteAddressInCallObject() throws IOException,
-      ServiceException {
-    final RpcScheduler scheduler = new FifoRpcScheduler(CONF, 1);
-    final TestRpcServer1 rpcServer = new TestRpcServer1(scheduler);
-    final InetSocketAddress localAddr = new InetSocketAddress("localhost", 0);
-    final AbstractRpcClient client =
-        new RpcClientImpl(CONF, HConstants.CLUSTER_ID_DEFAULT, localAddr, null);
+  public void testRpcServerForNotNullRemoteAddressInCallObject()
+      throws IOException, ServiceException {
+    TestRpcServer rpcServer = new TestRpcServer();
+    InetSocketAddress localAddr = new InetSocketAddress("localhost", 0);
+    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      assertEquals(localAddr.getAddress().getHostAddress(),
+        stub.addr(null, EmptyRequestProto.getDefaultInstance()).getAddr());
+    } finally {
+      rpcServer.stop();
+    }
+  }
+
+  @Test
+  public void testRemoteError() throws IOException, ServiceException {
+    TestRpcServer rpcServer = new TestRpcServer();
+    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      stub.error(null, EmptyRequestProto.getDefaultInstance());
+    } catch (ServiceException e) {
+      LOG.info("Caught expected exception: " + e);
+      IOException ioe = ProtobufUtil.handleRemoteException(e);
+      assertTrue(ioe instanceof DoNotRetryIOException);
+      assertTrue(ioe.getMessage().contains("server error!"));
+    } finally {
+      rpcServer.stop();
+    }
+  }
+
+  @Test
+  public void testTimeout() throws IOException {
+    TestRpcServer rpcServer = new TestRpcServer();
+    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      HBaseRpcController pcrc = new HBaseRpcControllerImpl();
+      int ms = 1000;
+      int timeout = 100;
+      for (int i = 0; i < 10; i++) {
+        pcrc.reset();
+        pcrc.setCallTimeout(timeout);
+        long startTime = System.nanoTime();
+        try {
+          stub.pause(pcrc, PauseRequestProto.newBuilder().setMs(ms).build());
+        } catch (ServiceException e) {
+          long waitTime = (System.nanoTime() - startTime) / 1000000;
+          // expected
+          LOG.info("Caught expected exception: " + e);
+          IOException ioe = ProtobufUtil.handleRemoteException(e);
+          assertTrue(ioe.getCause() instanceof CallTimeoutException);
+          // confirm that we got exception before the actual pause.
+          assertTrue(waitTime < ms);
+        }
+      }
+    } finally {
+      rpcServer.stop();
+    }
+  }
+
+  static class TestFailingRpcServer extends TestRpcServer {
+
+    TestFailingRpcServer() throws IOException {
+      this(new FifoRpcScheduler(CONF, 1), CONF);
+    }
+
+    TestFailingRpcServer(Configuration conf) throws IOException {
+      this(new FifoRpcScheduler(conf, 1), conf);
+    }
+
+    TestFailingRpcServer(RpcScheduler scheduler, Configuration conf) throws IOException {
+      super(scheduler, conf);
+    }
+
+    class FailingConnection extends Connection {
+      public FailingConnection(SocketChannel channel, long lastContact) {
+        super(channel, lastContact);
+      }
+
+      @Override
+      protected void processRequest(ByteBuffer buf) throws IOException, InterruptedException {
+        // this will throw exception after the connection header is read, and an RPC is sent
+        // from client
+        throw new DoNotRetryIOException("Failing for test");
+      }
+    }
+
+    @Override
+    protected Connection getConnection(SocketChannel channel, long time) {
+      return new FailingConnection(channel, time);
+    }
+  }
+
+  /** Tests that the connection closing is handled by the client with outstanding RPC calls */
+  @Test
+  public void testConnectionCloseWithOutstandingRPCs() throws InterruptedException, IOException {
+    Configuration conf = new Configuration(CONF);
+    RpcServer rpcServer = new TestFailingRpcServer(conf);
+    try (AbstractRpcClient<?> client = createRpcClient(conf)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
+      stub.echo(null, param);
+      fail("RPC should have failed because connection closed");
+    } catch (ServiceException e) {
+      LOG.info("Caught expected exception: " + e.toString());
+    } finally {
+      rpcServer.stop();
+    }
+  }
+
+  @Test
+  public void testAsyncEcho() throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    TestRpcServer rpcServer = new TestRpcServer();
+    try (AbstractRpcClient<?> client = createRpcClient(conf)) {
+      rpcServer.start();
+      Interface stub = newStub(client, rpcServer.getListenerAddress());
+      int num = 10;
+      List<HBaseRpcController> pcrcList = new ArrayList<>();
+      List<BlockingRpcCallback<EchoResponseProto>> callbackList = new ArrayList<>();
+      for (int i = 0; i < num; i++) {
+        HBaseRpcController pcrc = new HBaseRpcControllerImpl();
+        BlockingRpcCallback<EchoResponseProto> done = new BlockingRpcCallback<>();
+        stub.echo(pcrc, EchoRequestProto.newBuilder().setMessage("hello-" + i).build(), done);
+        pcrcList.add(pcrc);
+        callbackList.add(done);
+      }
+      for (int i = 0; i < num; i++) {
+        HBaseRpcController pcrc = pcrcList.get(i);
+        assertFalse(pcrc.failed());
+        assertNull(pcrc.cellScanner());
+        assertEquals("hello-" + i, callbackList.get(i).get().getMessage());
+      }
+    } finally {
+      rpcServer.stop();
+    }
+  }
+
+  @Test
+  public void testAsyncRemoteError() throws IOException {
+    AbstractRpcClient<?> client = createRpcClient(CONF);
+    TestRpcServer rpcServer = new TestRpcServer();
     try {
       rpcServer.start();
-      final InetSocketAddress isa = rpcServer.getListenerAddress();
-      if (isa == null) {
-        throw new IOException("Listener channel is closed");
-      }
-      final BlockingRpcChannel channel =
-          client.createBlockingRpcChannel(
-            ServerName.valueOf(isa.getHostName(), isa.getPort(), System.currentTimeMillis()),
-            User.getCurrent(), 0);
-      TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub =
-          TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(channel);
-      final EchoRequestProto echoRequest =
-          EchoRequestProto.newBuilder().setMessage("GetRemoteAddress").build();
-      final EchoResponseProto echoResponse = stub.echo(null, echoRequest);
-      Assert.assertEquals(localAddr.getAddress().getHostAddress(), echoResponse.getMessage());
+      Interface stub = newStub(client, rpcServer.getListenerAddress());
+      BlockingRpcCallback<EmptyResponseProto> callback = new BlockingRpcCallback<>();
+      HBaseRpcController pcrc = new HBaseRpcControllerImpl();
+      stub.error(pcrc, EmptyRequestProto.getDefaultInstance(), callback);
+      assertNull(callback.get());
+      assertTrue(pcrc.failed());
+      LOG.info("Caught expected exception: " + pcrc.getFailed());
+      IOException ioe = ProtobufUtil.handleRemoteException(pcrc.getFailed());
+      assertTrue(ioe instanceof DoNotRetryIOException);
+      assertTrue(ioe.getMessage().contains("server error!"));
     } finally {
       client.close();
       rpcServer.stop();
@@ -408,17 +397,38 @@ public abstract class AbstractTestIPC {
   }
 
   @Test
-  public void testWrapException() throws Exception {
-    AbstractRpcClient client =
-        (AbstractRpcClient) RpcClientFactory.createClient(CONF, "AbstractTestIPC");
-    final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", 0);
-    assertTrue(client.wrapException(address, new ConnectException()) instanceof ConnectException);
-    assertTrue(client.wrapException(address,
-      new SocketTimeoutException()) instanceof SocketTimeoutException);
-    assertTrue(client.wrapException(address, new ConnectionClosingException(
-        "Test AbstractRpcClient#wrapException")) instanceof ConnectionClosingException);
-    assertTrue(client
-        .wrapException(address, new CallTimeoutException("Test AbstractRpcClient#wrapException"))
-        .getCause() instanceof CallTimeoutException);
+  public void testAsyncTimeout() throws IOException {
+    TestRpcServer rpcServer = new TestRpcServer();
+    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+      rpcServer.start();
+      Interface stub = newStub(client, rpcServer.getListenerAddress());
+      List<HBaseRpcController> pcrcList = new ArrayList<>();
+      List<BlockingRpcCallback<EmptyResponseProto>> callbackList = new ArrayList<>();
+      int ms = 1000;
+      int timeout = 100;
+      long startTime = System.nanoTime();
+      for (int i = 0; i < 10; i++) {
+        HBaseRpcController pcrc = new HBaseRpcControllerImpl();
+        pcrc.setCallTimeout(timeout);
+        BlockingRpcCallback<EmptyResponseProto> callback = new BlockingRpcCallback<>();
+        stub.pause(pcrc, PauseRequestProto.newBuilder().setMs(ms).build(), callback);
+        pcrcList.add(pcrc);
+        callbackList.add(callback);
+      }
+      for (BlockingRpcCallback<?> callback : callbackList) {
+        assertNull(callback.get());
+      }
+      long waitTime = (System.nanoTime() - startTime) / 1000000;
+      for (HBaseRpcController pcrc : pcrcList) {
+        assertTrue(pcrc.failed());
+        LOG.info("Caught expected exception: " + pcrc.getFailed());
+        IOException ioe = ProtobufUtil.handleRemoteException(pcrc.getFailed());
+        assertTrue(ioe.getCause() instanceof CallTimeoutException);
+      }
+      // confirm that we got exception before the actual pause.
+      assertTrue(waitTime < ms);
+    } finally {
+      rpcServer.stop();
+    }
   }
 }
