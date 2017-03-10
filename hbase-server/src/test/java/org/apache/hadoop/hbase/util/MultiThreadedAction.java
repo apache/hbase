@@ -218,11 +218,13 @@ public abstract class MultiThreadedAction {
               + ", time="
               + formatTime(time)
               + ((numKeys > 0 && time > 0) ? (" Overall: [" + "keys/s= "
-                  + numKeys * 1000 / time + ", latency=" + totalOpTime
-                  / numKeys + " ms]") : "")
+                  + numKeys * 1000 / time + ", latency="
+                  + String.format("%.2f", (double)totalOpTime / (double)numKeys)
+                  + " ms]") : "")
               + ((numKeysDelta > 0) ? (" Current: [" + "keys/s="
                   + numKeysDelta * 1000 / REPORTING_INTERVAL_MS + ", latency="
-                  + totalOpTimeDelta / numKeysDelta + " ms]") : "")
+                  + String.format("%.2f", (double)totalOpTimeDelta / (double)numKeysDelta)
+                  + " ms]") : "")
               + progressInfo());
 
           if (streamingCounters) {
