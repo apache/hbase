@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -159,6 +161,16 @@ public final class ConnectionUtils {
       @Override
       public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
         return serverName.equals(sn) ? client : super.getClient(sn);
+      }
+
+      @Override
+      public MasterKeepAliveConnection getKeepAliveMasterService()
+          throws MasterNotRunningException {
+        if (!(client instanceof MasterService.BlockingInterface)) {
+          return super.getKeepAliveMasterService();
+        } else {
+          return new ShortCircuitMasterConnection((MasterService.BlockingInterface) client);
+        }
       }
     };
   }
