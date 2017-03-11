@@ -162,7 +162,14 @@ public abstract class TestRSGroupsBase {
     ClusterStatus status = TEST_UTIL.getHBaseClusterInterface().getClusterStatus();
     for(ServerName serverName : status.getServers()) {
       for(RegionLoad rl : status.getLoad(serverName).getRegionsLoad().values()) {
-        TableName tableName = HRegionInfo.getTable(rl.getName());
+        TableName tableName = null;
+        try {
+          tableName = HRegionInfo.getTable(rl.getName());
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Failed parse a table name from regionname=" +
+              Bytes.toStringBinary(rl.getName()));
+          continue;
+        }
         if(!map.containsKey(tableName)) {
           map.put(tableName, new TreeMap<>());
         }
