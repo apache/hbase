@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.annotations.VisibleForTesting;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -62,6 +64,8 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   private AtomicBoolean prefetchRunning;
   // an attribute for synchronizing close between scanner and prefetch threads
   private AtomicLong closingThreadId;
+  // used for testing
+  private Consumer<Boolean> prefetchListener;
   private static final int NO_THREAD = -1;
 
   public ClientAsyncPrefetchScanner(Configuration configuration, Scan scan, TableName name,
@@ -70,6 +74,11 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
       int replicaCallTimeoutMicroSecondScan) throws IOException {
     super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
         replicaCallTimeoutMicroSecondScan);
+  }
+
+  @VisibleForTesting
+  void setPrefetchListener(Consumer<Boolean> prefetchListener) {
+    this.prefetchListener = prefetchListener;
   }
 
   @Override
@@ -88,34 +97,39 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   public Result next() throws IOException {
 
     try {
-      handleException();
+      boolean hasExecutedPrefetch = false;
+      do {
+        handleException();
 
-      // If the scanner is closed and there's nothing left in the cache, next is a no-op.
-      if (getCacheCount() == 0 && this.closed) {
-        return null;
-      }
-      if (prefetchCondition()) {
-        // run prefetch in the background only if no prefetch is already running
-        if (!isPrefetchRunning()) {
-          if (prefetchRunning.compareAndSet(false, true)) {
-            getPool().execute(prefetchRunnable);
+        // If the scanner is closed and there's nothing left in the cache, next is a no-op.
+        if (getCacheCount() == 0 && this.closed) {
+          return null;
+        }
+
+        if (prefetchCondition()) {
+          // run prefetch in the background only if no prefetch is already running
+          if (!isPrefetchRunning()) {
+            if (prefetchRunning.compareAndSet(false, true)) {
+              getPool().execute(prefetchRunnable);
+              hasExecutedPrefetch = true;
+            }
           }
         }
-      }
 
-      while (isPrefetchRunning()) {
-        // prefetch running or still pending
+        while (isPrefetchRunning()) {
+          // prefetch running or still pending
+          if (getCacheCount() > 0) {
+            return pollCache();
+          } else {
+            // (busy) wait for a record - sleep
+            Threads.sleep(1);
+          }
+        }
+
         if (getCacheCount() > 0) {
           return pollCache();
-        } else {
-          // (busy) wait for a record - sleep
-          Threads.sleep(1);
         }
-      }
-
-      if (getCacheCount() > 0) {
-        return pollCache();
-      }
+      } while (!hasExecutedPrefetch);
 
       // if we exhausted this scanner before calling close, write out the scan metrics
       writeScanMetrics();
@@ -219,11 +233,16 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
 
     @Override
     public void run() {
+      boolean succeed = false;
       try {
         loadCache();
+        succeed = true;
       } catch (Exception e) {
         exceptionsQueue.add(e);
       } finally {
+        if (prefetchListener != null) {
+          prefetchListener.accept(succeed);
+        }
         prefetchRunning.set(false);
         if(closed) {
           if (closingThreadId.compareAndSet(NO_THREAD, Thread.currentThread().getId())) {

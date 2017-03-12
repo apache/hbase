@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import org.apache.commons.logging.Log;
@@ -656,7 +657,9 @@ public class TestScannersFromClientSide {
     testAsyncScanner(TableName.valueOf(name.getMethodName()),
       2,
       3,
-      10);
+      10,
+      -1,
+      null);
   }
 
   @Test
@@ -664,11 +667,28 @@ public class TestScannersFromClientSide {
     testAsyncScanner(TableName.valueOf(name.getMethodName()),
       30000,
       1,
-      1);
+      1,
+      -1,
+      null);
+  }
+
+  @Test
+  public void testAsyncScannerWithoutCaching() throws Exception {
+    testAsyncScanner(TableName.valueOf(name.getMethodName()),
+      5,
+      1,
+      1,
+      1,
+      (b) -> {
+        try {
+          TimeUnit.MILLISECONDS.sleep(500);
+        } catch (InterruptedException ex) {
+        }
+      });
   }
 
   private void testAsyncScanner(TableName table, int rowNumber, int familyNumber,
-      int qualifierNumber) throws Exception {
+      int qualifierNumber, int caching, Consumer<Boolean> listener) throws Exception {
     assert rowNumber > 0;
     assert familyNumber > 0;
     assert qualifierNumber > 0;
@@ -707,23 +727,33 @@ public class TestScannersFromClientSide {
 
     Scan scan = new Scan();
     scan.setAsyncPrefetch(true);
-    ResultScanner scanner = ht.getScanner(scan);
-    List<Cell> kvListScan = new ArrayList<>();
-    Result result;
-    boolean first = true;
-    while ((result = scanner.next()) != null) {
-      // waiting for cache. see HBASE-17376
-      if (first) {
-        TimeUnit.SECONDS.sleep(1);
-        first = false;
-      }
-      for (Cell kv : result.listCells()) {
-        kvListScan.add(kv);
-      }
+    if (caching > 0) {
+      scan.setCaching(caching);
     }
-    result = Result.create(kvListScan);
-    assertTrue("Not instance of async scanner",scanner instanceof ClientAsyncPrefetchScanner);
-    verifyResult(result, kvListExp, toLog, "Testing async scan");
+    try (ResultScanner scanner = ht.getScanner(scan)) {
+      assertTrue("Not instance of async scanner",scanner instanceof ClientAsyncPrefetchScanner);
+      ((ClientAsyncPrefetchScanner) scanner).setPrefetchListener(listener);
+      List<Cell> kvListScan = new ArrayList<>();
+      Result result;
+      boolean first = true;
+      int actualRows = 0;
+      while ((result = scanner.next()) != null) {
+        ++actualRows;
+        // waiting for cache. see HBASE-17376
+        if (first) {
+          TimeUnit.SECONDS.sleep(1);
+          first = false;
+        }
+        for (Cell kv : result.listCells()) {
+          kvListScan.add(kv);
+        }
+      }
+      assertEquals(rowNumber, actualRows);
+      // These cells may have different rows but it is ok. The Result#getRow
+      // isn't used in the verifyResult()
+      result = Result.create(kvListScan);
+      verifyResult(result, kvListExp, toLog, "Testing async scan");
+    }
     TEST_UTIL.deleteTable(table);
   }
 
