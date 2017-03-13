@@ -28,7 +28,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -181,37 +180,20 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * Runnable (that can be submitted to thread pool) that submits MultiAction to a
    * single server. The server call is synchronous, therefore we do it on a thread pool.
    */
-  private final class SingleServerRequestRunnable implements Runnable {
+  @VisibleForTesting
+  final class SingleServerRequestRunnable implements Runnable {
     private final MultiAction multiAction;
     private final int numAttempt;
     private final ServerName server;
     private final Set<CancellableRegionServerCallable> callsInProgress;
-    private Long heapSize = null;
-    private SingleServerRequestRunnable(
+    @VisibleForTesting
+    SingleServerRequestRunnable(
         MultiAction multiAction, int numAttempt, ServerName server,
         Set<CancellableRegionServerCallable> callsInProgress) {
       this.multiAction = multiAction;
       this.numAttempt = numAttempt;
       this.server = server;
       this.callsInProgress = callsInProgress;
-    }
-
-    @VisibleForTesting
-    long heapSize() {
-      if (heapSize != null) {
-        return heapSize;
-      }
-      heapSize = 0L;
-      for (Map.Entry<byte[], List<Action>> e: this.multiAction.actions.entrySet()) {
-        List<Action> actions = e.getValue();
-        for (Action action: actions) {
-          Row row = action.getAction();
-          if (row instanceof Mutation) {
-            heapSize += ((Mutation) row).heapSize();
-          }
-        }
-      }
-      return heapSize;
     }
 
     @Override
@@ -303,7 +285,6 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private final CancellableRegionServerCallable currentCallable;
   private final int operationTimeout;
   private final int rpcTimeout;
-  private final Map<ServerName, List<Long>> heapSizesByServer = new HashMap<>();
   private final AsyncProcess asyncProcess;
 
   /**
@@ -423,20 +404,11 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   @VisibleForTesting
-  Map<ServerName, List<Long>> getRequestHeapSize() {
-    return heapSizesByServer;
+  SingleServerRequestRunnable createSingleServerRequest(MultiAction multiAction, int numAttempt, ServerName server,
+        Set<CancellableRegionServerCallable> callsInProgress) {
+    return new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress);
   }
 
-  private SingleServerRequestRunnable addSingleServerRequestHeapSize(ServerName server,
-    SingleServerRequestRunnable runnable) {
-    List<Long> heapCount = heapSizesByServer.get(server);
-    if (heapCount == null) {
-      heapCount = new LinkedList<>();
-      heapSizesByServer.put(server, heapCount);
-    }
-    heapCount.add(runnable.heapSize());
-    return runnable;
-  }
   /**
    * Group a list of actions per region servers, and send them.
    *
@@ -608,8 +580,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         asyncProcess.connection.getConnectionMetrics().incrNormalRunners();
       }
       asyncProcess.incTaskCounters(multiAction.getRegions(), server);
-      SingleServerRequestRunnable runnable = addSingleServerRequestHeapSize(server,
-          new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress));
+      SingleServerRequestRunnable runnable = createSingleServerRequest(
+              multiAction, numAttempt, server, callsInProgress);
       return Collections.singletonList(Trace.wrap("AsyncProcess.sendMultiAction", runnable));
     }
 
@@ -631,8 +603,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     for (DelayingRunner runner : actions.values()) {
       asyncProcess.incTaskCounters(runner.getActions().getRegions(), server);
       String traceText = "AsyncProcess.sendMultiAction";
-      Runnable runnable = addSingleServerRequestHeapSize(server,
-          new SingleServerRequestRunnable(runner.getActions(), numAttempt, server, callsInProgress));
+      Runnable runnable = createSingleServerRequest(runner.getActions(), numAttempt, server, callsInProgress);
       // use a delay runner only if we need to sleep for some time
       if (runner.getSleepTime() > 0) {
         runner.setRunner(runnable);

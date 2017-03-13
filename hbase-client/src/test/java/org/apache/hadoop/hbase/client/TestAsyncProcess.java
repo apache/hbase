@@ -261,7 +261,7 @@ public class TestAsyncProcess {
 
 
   static class MyAsyncRequestFutureImpl<Res> extends AsyncRequestFutureImpl<Res> {
-
+    private final Map<ServerName, List<Long>> heapSizesByServer = new HashMap<>();
     public MyAsyncRequestFutureImpl(AsyncProcessTask task, List<Action> actions,
       long nonceGroup, AsyncProcess asyncProcess) {
       super(task, actions, nonceGroup, asyncProcess);
@@ -272,6 +272,33 @@ public class TestAsyncProcess {
       // Do nothing for avoiding the NPE if we test the ClientBackofPolicy.
     }
 
+    Map<ServerName, List<Long>> getRequestHeapSize() {
+      return heapSizesByServer;
+    }
+
+    @Override
+    SingleServerRequestRunnable createSingleServerRequest(
+          MultiAction multiAction, int numAttempt, ServerName server,
+        Set<CancellableRegionServerCallable> callsInProgress) {
+      SingleServerRequestRunnable rq = new SingleServerRequestRunnable(
+              multiAction, numAttempt, server, callsInProgress);
+      List<Long> heapCount = heapSizesByServer.get(server);
+      if (heapCount == null) {
+        heapCount = new ArrayList<>();
+        heapSizesByServer.put(server, heapCount);
+      }
+      heapCount.add(heapSizeOf(multiAction));
+      return rq;
+    }
+
+    private long heapSizeOf(MultiAction multiAction) {
+      return multiAction.actions.values().stream()
+              .flatMap(v -> v.stream())
+              .map(action -> action.getAction())
+              .filter(row -> row instanceof Mutation)
+              .mapToLong(row -> ((Mutation) row).heapSize())
+              .sum();
+    }
   }
 
   static class CallerWithFailure extends RpcRetryingCallerImpl<AbstractResponse>{
@@ -635,7 +662,7 @@ public class TestAsyncProcess {
         if (!(req instanceof AsyncRequestFutureImpl)) {
           continue;
         }
-        AsyncRequestFutureImpl ars = (AsyncRequestFutureImpl) req;
+        MyAsyncRequestFutureImpl ars = (MyAsyncRequestFutureImpl) req;
         if (ars.getRequestHeapSize().containsKey(sn)) {
           ++actualSnReqCount;
         }
@@ -651,7 +678,7 @@ public class TestAsyncProcess {
         if (!(req instanceof AsyncRequestFutureImpl)) {
           continue;
         }
-        AsyncRequestFutureImpl ars = (AsyncRequestFutureImpl) req;
+        MyAsyncRequestFutureImpl ars = (MyAsyncRequestFutureImpl) req;
         Map<ServerName, List<Long>> requestHeapSize = ars.getRequestHeapSize();
         for (Map.Entry<ServerName, List<Long>> entry : requestHeapSize.entrySet()) {
           long sum = 0;
