@@ -41,6 +41,7 @@ cxx_library(
         "async-rpc-retrying-caller-factory.h",
         "async-rpc-retrying-caller.h",
         "hbase-rpc-controller.h",
+        "zk-util.h",
     ],
     srcs=[
         "cell.cc",
@@ -55,6 +56,7 @@ cxx_library(
         "request-converter.cc",
         "response-converter.cc",
         "table.cc",
+        "zk-util.cc",
     ],
     deps=[
         "//exceptions:exceptions",
@@ -83,14 +85,10 @@ cxx_library(
     ],
     deps=["//third-party:folly"],
     compiler_flags=['-Weffc++', '-ggdb'],
-    visibility=[
-        'PUBLIC',
-    ],)
+    visibility=['PUBLIC',],)
 cxx_test(
     name="location-cache-test",
-    srcs=[
-        "location-cache-test.cc",
-    ],
+    srcs=["location-cache-test.cc",],
     deps=[
         ":core",
         "//test-util:test-util",
@@ -98,18 +96,12 @@ cxx_test(
     run_test_separately=True,)
 cxx_test(
     name="cell-test",
-    srcs=[
-        "cell-test.cc",
-    ],
-    deps=[
-        ":core",
-    ],
+    srcs=["cell-test.cc",],
+    deps=[":core",],
     run_test_separately=True,)
 cxx_test(
     name="filter-test",
-    srcs=[
-        "filter-test.cc",
-    ],
+    srcs=["filter-test.cc",],
     deps=[
         ":core",
         "//if:if",
@@ -167,9 +159,7 @@ cxx_test(
     run_test_separately=True,)
 cxx_test(
     name="client-test",
-    srcs=[
-        "client-test.cc",
-    ],
+    srcs=["client-test.cc",],
     deps=[
         ":core",
         "//if:if",
@@ -177,9 +167,12 @@ cxx_test(
         "//test-util:test-util",
     ],
     run_test_separately=True,)
+cxx_test(
+    name="zk-util-test",
+    srcs=["zk-util-test.cc",],
+    deps=[":core",],
+    run_test_separately=True,)
 cxx_binary(
     name="simple-client",
-    srcs=[
-        "simple-client.cc",
-    ],
+    srcs=["simple-client.cc",],
     deps=[":core", "//connection:connection"],)

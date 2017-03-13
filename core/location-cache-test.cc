@@ -34,6 +34,7 @@ class LocationCacheTest : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
     test_util_ = std::make_unique<TestUtil>();
+    test_util_->StartMiniCluster(2);
   }
   static void TearDownTestCase() { test_util_.release(); }
 
@@ -45,7 +46,6 @@ class LocationCacheTest : public ::testing::Test {
 };
 
 std::unique_ptr<TestUtil> LocationCacheTest::test_util_ = nullptr;
-
 
 TEST_F(LocationCacheTest, TestGetMetaNodeContents) {
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
@@ -105,8 +105,9 @@ TEST_F(LocationCacheTest, TestCaching) {
   ASSERT_EQ(loc, cache.GetCachedLocation(tn_1, row_a));
 
   // test with two regions
-  std::string empty;
-  LocationCacheTest::test_util_->CreateTable("t2", "d", "b", empty);
+  std::vector<std::string> keys;
+  keys.push_back("b");
+  LocationCacheTest::test_util_->CreateTable("t2", "d", keys);
 
   ASSERT_FALSE(cache.IsLocationCached(tn_2, "a"));
   loc = cache.LocateRegion(tn_2, "a").get(milliseconds(1000));
@@ -121,7 +122,10 @@ TEST_F(LocationCacheTest, TestCaching) {
   ASSERT_EQ(loc, cache.GetCachedLocation(tn_2, "ba"));
 
   // test with three regions
-  LocationCacheTest::test_util_->CreateTable("t3", "d", "b", "c");
+  keys.clear();
+  keys.push_back("b");
+  keys.push_back("c");
+  LocationCacheTest::test_util_->CreateTable("t3", "d", keys);
 
   ASSERT_FALSE(cache.IsLocationCached(tn_3, "c"));
   ASSERT_FALSE(cache.IsLocationCached(tn_3, "ca"));

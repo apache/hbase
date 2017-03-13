@@ -143,11 +143,10 @@ class MockRawAsyncTableImpl {
 };
 
 TEST(AsyncRpcRetryTest, TestGetBasic) {
-  // Remove already configured env if present.
-  unsetenv("HBASE_CONF");
-
   // Using TestUtil to populate test data
-  hbase::TestUtil* test_util = new hbase::TestUtil();
+  auto test_util = std::make_unique<hbase::TestUtil>();
+  test_util->StartMiniCluster(2);
+
   test_util->CreateTable("t", "d");
   test_util->TablePut("t", "test2", "d", "2", "value2");
   test_util->TablePut("t", "test2", "d", "extra", "value for extra");
@@ -230,12 +229,6 @@ TEST(AsyncRpcRetryTest, TestGetBasic) {
             ->Build();
 
     hbase::Result result = async_caller->Call().get();
-
-    /*Stopping the connection as we are getting segfault due to some folly issue
-     The connection stays open and we don't want that.
-     So we are stopping the connection.
-     We can remove this once we have fixed the folly part */
-    delete test_util;
 
     // Test the values, should be same as in put executed on hbase shell
     ASSERT_TRUE(!result.IsEmpty()) << "Result shouldn't be empty.";

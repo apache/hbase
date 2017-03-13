@@ -41,7 +41,6 @@ Client::Client(const hbase::Configuration &conf) { init(conf); }
 
 void Client::init(const hbase::Configuration &conf) {
   conf_ = std::make_shared<hbase::Configuration>(conf);
-  auto zk_quorum = conf_->Get(kHBaseZookeeperQuorum_, kDefHBaseZookeeperQuorum_);
 
   conn_conf_ = std::make_shared<hbase::ConnectionConfiguration>(*conf_);
   // start thread pools

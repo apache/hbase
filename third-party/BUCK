@@ -112,6 +112,4 @@ cxx_library(
         ('googletest/googlemock', 'src/*.cc'),
     ]),
     exported_deps=dynamic_rules,
-    visibility=[
-        'PUBLIC',
-    ],)
+    visibility=['PUBLIC',],)

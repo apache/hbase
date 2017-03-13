@@ -19,27 +19,29 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "jni.h"
 
 namespace hbase {
 
 class MiniCluster {
  public:
-  jobject StartCluster(int numRegionServers, std::string conf_path);
+  jobject StartCluster(int32_t num_region_servers);
   void StopCluster();
-  jobject CreateTable(std::string tblNam, std::string familyName);
-  jobject CreateTable(std::string tblNam, std::string familyName, std::string key1, std::string k2);
-  jobject StopRegionServer(jobject cluster, int idx);
+  jobject CreateTable(const std::string &table, const std::string &family);
+  jobject CreateTable(const std::string &table, const std::string &family,
+                      const std::vector<std::string> &keys);
+  jobject StopRegionServer(int idx);
 
   // moves region to server
-  void MoveRegion(std::string region, std::string server);
+  void MoveRegion(const std::string &region, const std::string &server);
   // returns the Configuration instance for the cluster
   jobject GetConf();
   // returns the value for config key retrieved from cluster
-  const std::string GetConfValue(std::string key);
+  const std::string GetConfValue(const std::string &key);
   // Does Put into table for family fam, qualifier col with value
-  jobject TablePut(const std::string table, const std::string row, const std::string fam,
-    const std::string col, const std::string value);
+  jobject TablePut(const std::string &table, const std::string &row, const std::string &family,
+                   const std::string &column, const std::string &value);
 
  private:
   JNIEnv *env_;
@@ -66,13 +68,12 @@ class MiniCluster {
   jobject htu_;
   jobject cluster_;
   pthread_mutex_t count_mutex_;
-  JavaVM *jvm;
+  JavaVM *jvm_;
   JNIEnv *CreateVM(JavaVM **jvm);
-  void WriteConf(jobject conf, const std::string& filepath);
   void Setup();
   jobject htu();
   JNIEnv *env();
-  jbyteArray StrToByteChar(const std::string& str);
+  jbyteArray StrToByteChar(const std::string &str);
   jobject admin();
 };
 } /*namespace hbase*/
