@@ -153,13 +153,16 @@ public class TestAsyncProcess {
     public AtomicInteger callsCt = new AtomicInteger();
     private static int rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     private long previousTimeout = -1;
+
     @Override
-    protected <Res> AsyncRequestFutureImpl<Res> createAsyncRequestFuture(TableName tableName,
+    <Res> AsyncRequestFutureImpl<Res> createAsyncRequestFuture(TableName tableName,
         List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
-        Batch.Callback<Res> callback, Object[] results, boolean needResults) {
+        Batch.Callback<Res> callback, Object[] results, boolean needResults,
+        PayloadCarryingServerCallable callable, int operationTimeout, int rpcTimeout) {
       // Test HTable has tableName of null, so pass DUMMY_TABLE
-      AsyncRequestFutureImpl<Res> r = super.createAsyncRequestFuture(
-          DUMMY_TABLE, actions, nonceGroup, pool, callback, results, needResults);
+      MyAsyncRequestFutureImpl<Res> r = new MyAsyncRequestFutureImpl(
+          DUMMY_TABLE, actions, nonceGroup, getPool(pool), needResults, results, callback, callable,
+        operationTimeout, rpcTimeout);
       allReqs.add(r);
       callsCt.incrementAndGet();
       return r;
@@ -253,6 +256,50 @@ public class TestAsyncProcess {
           return mr;
         }
       };
+    }
+
+    class MyAsyncRequestFutureImpl<Res> extends AsyncRequestFutureImpl<Res> {
+
+      private final Map<ServerName, List<Long>> heapSizesByServer = new HashMap<>();
+
+      MyAsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
+              ExecutorService pool, boolean needResults, Object[] results,
+              Batch.Callback<Res> callback, PayloadCarryingServerCallable callable,
+              int operationTimeout, int rpcTimeout) {
+        super(tableName, actions, nonceGroup, pool, needResults, results, callback, callable, operationTimeout, rpcTimeout);
+      }
+
+      Map<ServerName, List<Long>> getRequestHeapSize() {
+        return heapSizesByServer;
+      }
+
+      @Override
+      SingleServerRequestRunnable createSingleServerRequest(
+              MultiAction<Row> multiAction, int numAttempt, ServerName server,
+              Set<PayloadCarryingServerCallable> callsInProgress) {
+        SingleServerRequestRunnable rq = new SingleServerRequestRunnable(
+                multiAction, numAttempt, server, callsInProgress);
+        List<Long> heapCount = heapSizesByServer.get(server);
+        if (heapCount == null) {
+          heapCount = new ArrayList<>();
+          heapSizesByServer.put(server, heapCount);
+        }
+        heapCount.add(heapSizeOf(multiAction));
+        return rq;
+      }
+
+      long heapSizeOf(MultiAction<Row> multiAction) {
+        long sum = 0;
+        for (List<Action<Row>> actions : multiAction.actions.values()) {
+          for (Action action : actions) {
+            Row row = action.getAction();
+            if (row instanceof Mutation) {
+              sum += ((Mutation) row).heapSize();
+            }
+          }
+        }
+        return sum;
+      }
     }
   }
 
@@ -644,7 +691,7 @@ public class TestAsyncProcess {
         if (!(req instanceof AsyncRequestFutureImpl)) {
           continue;
         }
-        AsyncRequestFutureImpl ars = (AsyncRequestFutureImpl) req;
+        MyAsyncProcess.MyAsyncRequestFutureImpl ars = (MyAsyncProcess.MyAsyncRequestFutureImpl) req;
         if (ars.getRequestHeapSize().containsKey(sn)) {
           ++actualSnReqCount;
         }
@@ -660,7 +707,7 @@ public class TestAsyncProcess {
         if (!(req instanceof AsyncRequestFutureImpl)) {
           continue;
         }
-        AsyncRequestFutureImpl ars = (AsyncRequestFutureImpl) req;
+        MyAsyncProcess.MyAsyncRequestFutureImpl ars = (MyAsyncProcess.MyAsyncRequestFutureImpl) req;
         Map<ServerName, List<Long>> requestHeapSize = ars.getRequestHeapSize();
         for (Map.Entry<ServerName, List<Long>> entry : requestHeapSize.entrySet()) {
           long sum = 0;

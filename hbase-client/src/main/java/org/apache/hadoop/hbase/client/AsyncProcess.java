@@ -404,7 +404,8 @@ class AsyncProcess {
    * @return pool if non null, otherwise returns this.pool if non null, otherwise throws
    *         RuntimeException
    */
-  private ExecutorService getPool(ExecutorService pool) {
+  @VisibleForTesting
+  ExecutorService getPool(ExecutorService pool) {
     if (pool != null) {
       return pool;
     }
@@ -551,7 +552,8 @@ class AsyncProcess {
       List<Integer> locationErrorRows, Map<ServerName, MultiAction<Row>> actionsByServer,
       ExecutorService pool) {
     AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(
-      tableName, retainedActions, nonceGroup, pool, callback, results, needResults);
+      tableName, retainedActions, nonceGroup, pool, callback, results, needResults, null,
+        operationTimeout, rpcTimeout);
     // Add location errors if any
     if (locationErrors != null) {
       for (int i = 0; i < locationErrors.size(); ++i) {
@@ -759,37 +761,20 @@ class AsyncProcess {
      * Runnable (that can be submitted to thread pool) that submits MultiAction to a
      * single server. The server call is synchronous, therefore we do it on a thread pool.
      */
-    private final class SingleServerRequestRunnable implements Runnable {
+    @VisibleForTesting
+    class SingleServerRequestRunnable implements Runnable {
       private final MultiAction<Row> multiAction;
       private final int numAttempt;
       private final ServerName server;
       private final Set<PayloadCarryingServerCallable> callsInProgress;
-      private Long heapSize = null;
-      private SingleServerRequestRunnable(
+      @VisibleForTesting
+      SingleServerRequestRunnable(
           MultiAction<Row> multiAction, int numAttempt, ServerName server,
           Set<PayloadCarryingServerCallable> callsInProgress) {
         this.multiAction = multiAction;
         this.numAttempt = numAttempt;
         this.server = server;
         this.callsInProgress = callsInProgress;
-      }
-
-      @VisibleForTesting
-      long heapSize() {
-        if (heapSize != null) {
-          return heapSize;
-        }
-        heapSize = 0L;
-        for (Map.Entry<byte[], List<Action<Row>>> e: this.multiAction.actions.entrySet()) {
-          List<Action<Row>> actions = e.getValue();
-          for (Action<Row> action: actions) {
-            Row row = action.getAction();
-            if (row instanceof Mutation) {
-              heapSize += ((Mutation) row).heapSize();
-            }
-          }
-        }
-        return heapSize;
       }
 
       @Override
@@ -874,7 +859,6 @@ class AsyncProcess {
     private PayloadCarryingServerCallable currentCallable;
     private int operationTimeout;
     private int rpcTimeout;
-    private final Map<ServerName, List<Long>> heapSizesByServer = new HashMap<>();
     private RetryingTimeTracker tracker;
 
     public AsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
@@ -961,21 +945,13 @@ class AsyncProcess {
     public Set<PayloadCarryingServerCallable> getCallsInProgress() {
       return callsInProgress;
     }
+
     @VisibleForTesting
-    Map<ServerName, List<Long>> getRequestHeapSize() {
-      return heapSizesByServer;
+    SingleServerRequestRunnable createSingleServerRequest(MultiAction<Row> multiAction, int numAttempt, ServerName server,
+      Set<PayloadCarryingServerCallable> callsInProgress) {
+      return new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress);
     }
 
-    private SingleServerRequestRunnable addSingleServerRequestHeapSize(ServerName server,
-        SingleServerRequestRunnable runnable) {
-      List<Long> heapCount = heapSizesByServer.get(server);
-      if (heapCount == null) {
-        heapCount = new LinkedList<>();
-        heapSizesByServer.put(server, heapCount);
-      }
-      heapCount.add(runnable.heapSize());
-      return runnable;
-    }
     /**
      * Group a list of actions per region servers, and send them.
      *
@@ -1148,8 +1124,7 @@ class AsyncProcess {
           connection.getConnectionMetrics().incrNormalRunners();
         }
         incTaskCounters(multiAction.getRegions(), server);
-        SingleServerRequestRunnable runnable = addSingleServerRequestHeapSize(server,
-          new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress));
+        SingleServerRequestRunnable runnable = createSingleServerRequest(multiAction, numAttempt, server, callsInProgress);
         return Collections.singletonList(Trace.wrap("AsyncProcess.sendMultiAction", runnable));
       }
 
@@ -1172,8 +1147,7 @@ class AsyncProcess {
       for (DelayingRunner runner : actions.values()) {
         incTaskCounters(runner.getActions().getRegions(), server);
         String traceText = "AsyncProcess.sendMultiAction";
-        Runnable runnable = addSingleServerRequestHeapSize(server,
-          new SingleServerRequestRunnable(runner.getActions(), numAttempt, server, callsInProgress));
+        Runnable runnable = createSingleServerRequest(runner.getActions(), numAttempt, server, callsInProgress);
         // use a delay runner only if we need to sleep for some time
         if (runner.getSleepTime() > 0) {
           runner.setRunner(runnable);
@@ -1829,23 +1803,14 @@ class AsyncProcess {
     }
   }
 
-  protected <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
+  @VisibleForTesting
+  <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
       TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
       Batch.Callback<CResult> callback, Object[] results, boolean needResults,
       PayloadCarryingServerCallable callable, int operationTimeout, int rpcTimeout) {
     return new AsyncRequestFutureImpl<CResult>(
         tableName, actions, nonceGroup, getPool(pool), needResults,
         results, callback, callable, operationTimeout, rpcTimeout);
-  }
-
-  @VisibleForTesting
-  /** Create AsyncRequestFuture. Isolated to be easily overridden in the tests. */
-  protected <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
-      TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
-      Batch.Callback<CResult> callback, Object[] results, boolean needResults) {
-    return createAsyncRequestFuture(
-        tableName, actions, nonceGroup, pool, callback, results, needResults, null,
-        operationTimeout, rpcTimeout);
   }
 
   /**
