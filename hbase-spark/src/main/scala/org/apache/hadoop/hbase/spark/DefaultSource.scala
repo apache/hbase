@@ -97,36 +97,36 @@ case class HBaseRelation (
   )(@transient val sqlContext: SQLContext)
   extends BaseRelation with PrunedFilteredScan  with InsertableRelation  with Logging {
   val timestamp = parameters.get(HBaseSparkConf.TIMESTAMP).map(_.toLong)
-  val minTimestamp = parameters.get(HBaseSparkConf.MIN_TIMESTAMP).map(_.toLong)
-  val maxTimestamp = parameters.get(HBaseSparkConf.MAX_TIMESTAMP).map(_.toLong)
+  val minTimestamp = parameters.get(HBaseSparkConf.TIMERANGE_START).map(_.toLong)
+  val maxTimestamp = parameters.get(HBaseSparkConf.TIMERANGE_END).map(_.toLong)
   val maxVersions = parameters.get(HBaseSparkConf.MAX_VERSIONS).map(_.toInt)
-  val encoderClsName = parameters.get(HBaseSparkConf.ENCODER).getOrElse(HBaseSparkConf.defaultEncoder)
+  val encoderClsName = parameters.get(HBaseSparkConf.QUERY_ENCODER).getOrElse(HBaseSparkConf.DEFAULT_QUERY_ENCODER)
 
   @transient val encoder = JavaBytesEncoder.create(encoderClsName)
 
   val catalog = HBaseTableCatalog(parameters)
   def tableName = catalog.name
-  val configResources = parameters.getOrElse(HBaseSparkConf.HBASE_CONFIG_RESOURCES_LOCATIONS, "")
-  val useHBaseContext =  parameters.get(HBaseSparkConf.USE_HBASE_CONTEXT).map(_.toBoolean).getOrElse(true)
-  val usePushDownColumnFilter = parameters.get(HBaseSparkConf.PUSH_DOWN_COLUMN_FILTER)
-    .map(_.toBoolean).getOrElse(true)
+  val configResources = parameters.getOrElse(HBaseSparkConf.HBASE_CONFIG_LOCATION, "")
+  val useHBaseContext =  parameters.get(HBaseSparkConf.USE_HBASECONTEXT).map(_.toBoolean).getOrElse(HBaseSparkConf.DEFAULT_USE_HBASECONTEXT)
+  val usePushDownColumnFilter = parameters.get(HBaseSparkConf.PUSHDOWN_COLUMN_FILTER)
+    .map(_.toBoolean).getOrElse(HBaseSparkConf.DEFAULT_PUSHDOWN_COLUMN_FILTER)
 
   // The user supplied per table parameter will overwrite global ones in SparkConf
-  val blockCacheEnable = parameters.get(HBaseSparkConf.BLOCK_CACHE_ENABLE).map(_.toBoolean)
+  val blockCacheEnable = parameters.get(HBaseSparkConf.QUERY_CACHEBLOCKS).map(_.toBoolean)
     .getOrElse(
       sqlContext.sparkContext.getConf.getBoolean(
-        HBaseSparkConf.BLOCK_CACHE_ENABLE, HBaseSparkConf.defaultBlockCacheEnable))
-  val cacheSize = parameters.get(HBaseSparkConf.CACHE_SIZE).map(_.toInt)
+        HBaseSparkConf.QUERY_CACHEBLOCKS, HBaseSparkConf.DEFAULT_QUERY_CACHEBLOCKS))
+  val cacheSize = parameters.get(HBaseSparkConf.QUERY_CACHEDROWS).map(_.toInt)
     .getOrElse(
       sqlContext.sparkContext.getConf.getInt(
-      HBaseSparkConf.CACHE_SIZE, HBaseSparkConf.defaultCachingSize))
-  val batchNum = parameters.get(HBaseSparkConf.BATCH_NUM).map(_.toInt)
+      HBaseSparkConf.QUERY_CACHEDROWS, -1))
+  val batchNum = parameters.get(HBaseSparkConf.QUERY_BATCHSIZE).map(_.toInt)
     .getOrElse(sqlContext.sparkContext.getConf.getInt(
-    HBaseSparkConf.BATCH_NUM,  HBaseSparkConf.defaultBatchNum))
+    HBaseSparkConf.QUERY_BATCHSIZE,  -1))
 
   val bulkGetSize =  parameters.get(HBaseSparkConf.BULKGET_SIZE).map(_.toInt)
     .getOrElse(sqlContext.sparkContext.getConf.getInt(
-    HBaseSparkConf.BULKGET_SIZE,  HBaseSparkConf.defaultBulkGetSize))
+    HBaseSparkConf.BULKGET_SIZE,  HBaseSparkConf.DEFAULT_BULKGET_SIZE))
 
   //create or get latest HBaseContext
   val hbaseContext:HBaseContext = if (useHBaseContext) {

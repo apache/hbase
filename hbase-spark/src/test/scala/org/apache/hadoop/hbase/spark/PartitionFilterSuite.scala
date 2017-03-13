@@ -69,9 +69,9 @@ class PartitionFilterSuite extends FunSuite with
 
     TEST_UTIL.startMiniCluster
     val sparkConf = new SparkConf
-    sparkConf.set(HBaseSparkConf.BLOCK_CACHE_ENABLE, "true")
-    sparkConf.set(HBaseSparkConf.BATCH_NUM, "100")
-    sparkConf.set(HBaseSparkConf.CACHE_SIZE, "100")
+    sparkConf.set(HBaseSparkConf.QUERY_CACHEBLOCKS, "true")
+    sparkConf.set(HBaseSparkConf.QUERY_BATCHSIZE, "100")
+    sparkConf.set(HBaseSparkConf.QUERY_CACHEDROWS, "100")
 
     sc = new SparkContext("local", "test", sparkConf)
     new HBaseContext(sc, TEST_UTIL.getConfiguration)
