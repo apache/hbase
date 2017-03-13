@@ -41,6 +41,7 @@ class FilterTest : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
     test_util_ = std::make_unique<TestUtil>();
+    test_util_->StartMiniCluster(2);
   }
 
   static void TearDownTestCase() { test_util_.release(); }
@@ -50,7 +51,6 @@ class FilterTest : public ::testing::Test {
 
   static std::unique_ptr<TestUtil> test_util_;
 };
-
 
 std::unique_ptr<TestUtil> FilterTest::test_util_ = nullptr;
 

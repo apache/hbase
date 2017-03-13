@@ -70,8 +70,6 @@ class Client {
 
  private:
   /** Constants */
-  static constexpr const char* kHBaseZookeeperQuorum_ = "hbase.zookeeper.quorum";
-  static constexpr const char* kDefHBaseZookeeperQuorum_ = "localhost:2181";
   /** Parameter name for HBase client IO thread pool size. Defaults to num cpus */
   static constexpr const char* kClientIoThreadPoolSize = "hbase.client.io.thread.pool.size";
   /** Parameter name for HBase client CPU thread pool size. Defaults to (2 * num cpus) */

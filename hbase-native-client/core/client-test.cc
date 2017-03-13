@@ -59,7 +59,8 @@ class ClientTest : public ::testing::Test {
   static std::unique_ptr<hbase::TestUtil> test_util;
 
   static void SetUpTestCase() {
-    test_util = std::make_unique<hbase::TestUtil>(2, ClientTest::kDefHBaseConfPath.c_str());
+    test_util = std::make_unique<hbase::TestUtil>();
+    test_util->StartMiniCluster(2);
   }
 };
 std::unique_ptr<hbase::TestUtil> ClientTest::test_util = nullptr;
@@ -86,9 +87,9 @@ const std::string ClientTest::kHBaseXmlData(
     "the License.\n "
     "*/\n-->\n<configuration>\n\n</configuration>");
 
-TEST(Client, EmptyConfigurationPassedToClient) { ASSERT_ANY_THROW(hbase::Client client); }
+TEST_F(ClientTest, EmptyConfigurationPassedToClient) { ASSERT_ANY_THROW(hbase::Client client); }
 
-TEST(Client, ConfigurationPassedToClient) {
+TEST_F(ClientTest, ConfigurationPassedToClient) {
   // Remove already configured env if present.
   unsetenv("HBASE_CONF");
   ClientTest::CreateHBaseConfWithEnv();
@@ -101,7 +102,7 @@ TEST(Client, ConfigurationPassedToClient) {
   client.Close();
 }
 
-TEST(Client, DefaultConfiguration) {
+TEST_F(ClientTest, DefaultConfiguration) {
   // Remove already configured env if present.
   unsetenv("HBASE_CONF");
   ClientTest::CreateHBaseConfWithEnv();
@@ -112,10 +113,6 @@ TEST(Client, DefaultConfiguration) {
 }
 
 TEST_F(ClientTest, Get) {
-  // Remove already configured env if present.
-  unsetenv("HBASE_CONF");
-  ClientTest::CreateHBaseConfWithEnv();
-
   // Using TestUtil to populate test data
   ClientTest::test_util->CreateTable("t", "d");
   ClientTest::test_util->TablePut("t", "test2", "d", "2", "value2");
@@ -128,12 +125,8 @@ TEST_F(ClientTest, Get) {
   // Get to be performed on above HBase Table
   hbase::Get get(row);
 
-  // Create Configuration
-  hbase::HBaseConfigurationLoader loader;
-  auto conf = loader.LoadDefaultResources();
-
   // Create a client
-  hbase::Client client(conf.value());
+  hbase::Client client(*ClientTest::test_util->conf());
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
@@ -152,11 +145,7 @@ TEST_F(ClientTest, Get) {
   client.Close();
 }
 
-TEST(Client, GetForNonExistentTable) {
-  // Remove already configured env if present.
-  unsetenv("HBASE_CONF");
-  ClientTest::CreateHBaseConfWithEnv();
-
+TEST_F(ClientTest, GetForNonExistentTable) {
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t_not_exists");
   auto row = "test2";
@@ -164,12 +153,8 @@ TEST(Client, GetForNonExistentTable) {
   // Get to be performed on above HBase Table
   hbase::Get get(row);
 
-  // Create Configuration
-  hbase::HBaseConfigurationLoader loader;
-  auto conf = loader.LoadDefaultResources();
-
   // Create a client
-  hbase::Client client(conf.value());
+  hbase::Client client(*ClientTest::test_util->conf());
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
@@ -183,10 +168,6 @@ TEST(Client, GetForNonExistentTable) {
 }
 
 TEST_F(ClientTest, GetForNonExistentRow) {
-  // Remove already configured env if present.
-  unsetenv("HBASE_CONF");
-  ClientTest::CreateHBaseConfWithEnv();
-
   // Using TestUtil to populate test data
   ClientTest::test_util->CreateTable("t_exists", "d");
 
@@ -197,12 +178,8 @@ TEST_F(ClientTest, GetForNonExistentRow) {
   // Get to be performed on above HBase Table
   hbase::Get get(row);
 
-  // Create Configuration
-  hbase::HBaseConfigurationLoader loader;
-  auto conf = loader.LoadDefaultResources();
-
   // Create a client
-  hbase::Client client(conf.value());
+  hbase::Client client(*ClientTest::test_util->conf());
 
   // Get connection to HBase Table
   auto table = client.Table(tn);

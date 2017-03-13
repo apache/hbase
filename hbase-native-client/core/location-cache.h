@@ -36,6 +36,7 @@
 #include "core/meta-utils.h"
 #include "core/region-location.h"
 #include "serde/table-name.h"
+#include "zk-util.h"
 
 namespace hbase {
 // Forward
@@ -172,6 +173,8 @@ class LocationCache {
    */
   void ClearCachedLocation(const hbase::pb::TableName &tn, const std::string &row);
 
+  const std::string &zk_quorum() { return zk_quorum_; }
+
  private:
   void RefreshMetaLocation();
   hbase::pb::ServerName ReadMetaLocation();
@@ -180,15 +183,9 @@ class LocationCache {
       const hbase::pb::TableName &tn);
   std::shared_ptr<hbase::PerTableLocationMap> GetNewTableLocations(const hbase::pb::TableName &tn);
 
-  const std::string kHBaseZookeeperQuorum_ = "hbase.zookeeper.quorum";
-  const std::string kDefHBaseZookeeperQuorum_ = "localhost:2181";
-  const std::string kHBaseMetaZnodeName_ = "zookeeper.znode.parent";
-  const std::string kDefHBaseMetaZnodeName_ = "/hbase";
-  const std::string kHBaseMetaRegionServer_ = "meta-region-server";
-
   /* data */
   std::shared_ptr<hbase::Configuration> conf_;
-  std::string quorum_spec_;
+  std::string zk_quorum_;
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;
   std::mutex meta_lock_;

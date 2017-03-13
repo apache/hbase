@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <memory>
 #include <string>
+#include <vector>
 #include "core/configuration.h"
 #include "test-util/mini-cluster.h"
 
@@ -33,14 +34,7 @@ namespace hbase {
  */
 class TestUtil {
  public:
-  /**
-   * Creating a TestUtil will spin up a cluster.
-   */
   TestUtil();
-  /**
-   * Creating a TestUtil will spin up a cluster with numRegionServers region servers.
-   */
-  TestUtil(int numRegionServers, const std::string& confPath);
 
   /**
    * Destroying a TestUtil will spin down a cluster and remove the test dir.
@@ -61,19 +55,18 @@ class TestUtil {
   /**
    * Starts mini hbase cluster with specified number of region servers
    */
-  void StartMiniCluster(int num_region_servers);
+  void StartMiniCluster(int32_t num_region_servers);
 
   void StopMiniCluster();
-  void CreateTable(std::string tblNam, std::string familyName);
-  void CreateTable(std::string tblNam, std::string familyName, std::string key1, std::string k2);
-  void TablePut(std::string table, std::string row, std::string fam, std::string col,
-          std::string value);
+  void CreateTable(const std::string &table, const std::string &family);
+  void CreateTable(const std::string &table, const std::string &family,
+                   const std::vector<std::string> &keys);
+  void TablePut(const std::string &table, const std::string &row, const std::string &family,
+                const std::string &column, const std::string &value);
 
  private:
-  std::unique_ptr<MiniCluster> mini;
+  std::unique_ptr<MiniCluster> mini_;
   folly::test::TemporaryDirectory temp_dir_;
-  int numRegionServers = 2;
-  std::string conf_path;
   std::shared_ptr<Configuration> conf_ = std::make_shared<Configuration>();
 };
 }  // namespace hbase

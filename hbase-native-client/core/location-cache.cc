@@ -18,12 +18,11 @@
  */
 #include "core/location-cache.h"
 
+#include <folly/Conv.h>
 #include <folly/Logging.h>
 #include <folly/io/IOBuf.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
-
-#include <utility>
 
 #include <folly/Logging.h>
 #include "connection/response.h"
@@ -33,6 +32,8 @@
 #include "serde/region-info.h"
 #include "serde/server-name.h"
 #include "serde/zk.h"
+
+#include <utility>
 
 using namespace std;
 using namespace folly;
@@ -63,8 +64,8 @@ LocationCache::LocationCache(std::shared_ptr<hbase::Configuration> conf,
       zk_(nullptr),
       cached_locations_(),
       locations_lock_() {
-  quorum_spec_ = conf_->Get(kHBaseZookeeperQuorum_, kDefHBaseZookeeperQuorum_);
-  zk_ = zookeeper_init(quorum_spec_.c_str(), nullptr, 1000, 0, 0, 0);
+  zk_quorum_ = ZKUtil::ParseZooKeeperQuorum(*conf_);
+  zk_ = zookeeper_init(zk_quorum_.c_str(), nullptr, 1000, 0, 0, 0);
 }
 
 LocationCache::~LocationCache() {
@@ -100,15 +101,13 @@ ServerName LocationCache::ReadMetaLocation() {
 
   // This needs to be int rather than size_t as that's what ZK expects.
   int len = buf->capacity();
-  std::string zk_node = conf_->Get(kHBaseMetaZnodeName_, kDefHBaseMetaZnodeName_);
-  zk_node += "/" + kHBaseMetaRegionServer_;
+  std::string zk_node = ZKUtil::MetaZNode(*conf_);
   // TODO(elliott): handle disconnects/reconntion as needed.
   int zk_result = zoo_get(this->zk_, zk_node.c_str(), 0,
                           reinterpret_cast<char *>(buf->writableData()), &len, nullptr);
   if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
-    throw runtime_error("Error getting meta location. Quorum " +
-                        conf_->Get(kHBaseZookeeperQuorum_, ""));
+    throw runtime_error("Error getting meta location. Quorum: " + zk_quorum_);
   }
   buf->append(len);
 

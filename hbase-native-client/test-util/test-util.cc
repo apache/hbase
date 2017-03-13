@@ -22,6 +22,8 @@
 
 #include <folly/Format.h>
 
+#include "core/zk-util.h"
+
 using hbase::TestUtil;
 using folly::Random;
 
@@ -42,33 +44,28 @@ std::string TestUtil::RandString(int len) {
   return s;
 }
 
-TestUtil::TestUtil() : TestUtil::TestUtil(2, "") {}
-
-TestUtil::TestUtil(int servers, const std::string& confPath)
-    : temp_dir_(TestUtil::RandString()), numRegionServers(servers), conf_path(confPath) {
-  auto p = temp_dir_.path().string();
-  StartMiniCluster(2);
-  std::string quorum("localhost:");
-  const std::string port = mini->GetConfValue("hbase.zookeeper.property.clientPort");
-  conf()->Set("hbase.zookeeper.quorum", quorum + port);
-}
+TestUtil::TestUtil() : temp_dir_(TestUtil::RandString()) {}
 
 TestUtil::~TestUtil() { StopMiniCluster(); }
 
-void TestUtil::StartMiniCluster(int num_region_servers) {
-  mini = std::make_unique<MiniCluster>();
-  mini->StartCluster(num_region_servers, conf_path);
-}
-void TestUtil::StopMiniCluster() { mini->StopCluster(); }
+void TestUtil::StartMiniCluster(int32_t num_region_servers) {
+  mini_ = std::make_unique<MiniCluster>();
+  mini_->StartCluster(num_region_servers);
 
-void TestUtil::CreateTable(std::string tblNam, std::string familyName) {
-  mini->CreateTable(tblNam, familyName);
+  conf()->Set(ZKUtil::kHBaseZookeeperQuorum_, mini_->GetConfValue(ZKUtil::kHBaseZookeeperQuorum_));
+  conf()->Set(ZKUtil::kHBaseZookeeperClientPort_,
+              mini_->GetConfValue(ZKUtil::kHBaseZookeeperClientPort_));
 }
-void TestUtil::CreateTable(std::string tblNam, std::string familyName, std::string key1,
-        std::string k2) {
-  mini->CreateTable(tblNam, familyName, key1, k2);
+void TestUtil::StopMiniCluster() { mini_->StopCluster(); }
+
+void TestUtil::CreateTable(const std::string &table, const std::string &family) {
+  mini_->CreateTable(table, family);
 }
-void TestUtil::TablePut(std::string table, std::string row, std::string fam, std::string col,
-        std::string value) {
-  mini->TablePut(table, row, fam, col, value);
+void TestUtil::CreateTable(const std::string &table, const std::string &family,
+                           const std::vector<std::string> &keys) {
+  mini_->CreateTable(table, family, keys);
+}
+void TestUtil::TablePut(const std::string &table, const std::string &row, const std::string &family,
+                        const std::string &column, const std::string &value) {
+  mini_->TablePut(table, row, family, column, value);
 }
