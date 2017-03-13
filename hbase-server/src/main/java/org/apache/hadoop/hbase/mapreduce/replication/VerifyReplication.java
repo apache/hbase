@@ -452,10 +452,6 @@ public class VerifyReplication extends Configured implements Tool {
           continue;
         }
 
-        if (cmd.startsWith("--")) {
-          printUsage("Invalid argument '" + cmd + "'");
-        }
-
         final String delimiterArgKey = "--delimiter=";
         if (cmd.startsWith(delimiterArgKey)) {
           delimiter = cmd.substring(delimiterArgKey.length());
@@ -467,11 +463,16 @@ public class VerifyReplication extends Configured implements Tool {
           sleepMsBeforeReCompare = Integer.parseInt(cmd.substring(sleepToReCompareKey.length()));
           continue;
         }
+
         final String verboseKey = "--verbose";
         if (cmd.startsWith(verboseKey)) {
           verbose = true;
           continue;
-        }        
+        }
+
+        if (cmd.startsWith("--")) {
+          printUsage("Invalid argument '" + cmd + "'");
+        }
 
         if (i == args.length-2) {
           peerId = cmd;
