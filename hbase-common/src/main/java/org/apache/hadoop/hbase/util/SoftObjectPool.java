@@ -18,14 +18,14 @@
 package org.apache.hadoop.hbase.util;
 
 import java.lang.ref.Reference;
-import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ObjectPool.ObjectFactory;
 
 /**
- * A {@code WeakReference} based shared object pool.
- * The objects are kept in weak references and
+ * A {@code SoftReference} based shared object pool.
+ * The objects are kept in soft references and
  * associated with keys which are identified by the {@code equals} method.
  * The objects are created by {@link ObjectFactory} on demand.
  * The object creation is expected to be lightweight,
@@ -33,17 +33,17 @@ import org.apache.hadoop.hbase.util.ObjectPool.ObjectFactory;
  * Thread safe.
  */
 @InterfaceAudience.Private
-public class WeakObjectPool<K,V> extends ObjectPool<K,V> {
+public class SoftObjectPool<K, V> extends ObjectPool<K, V> {
 
-  public WeakObjectPool(ObjectFactory<K, V> objectFactory) {
+  public SoftObjectPool(ObjectFactory<K, V> objectFactory) {
     super(objectFactory);
   }
 
-  public WeakObjectPool(ObjectFactory<K, V> objectFactory, int initialCapacity) {
+  public SoftObjectPool(ObjectFactory<K, V> objectFactory, int initialCapacity) {
     super(objectFactory, initialCapacity);
   }
 
-  public WeakObjectPool(ObjectFactory<K, V> objectFactory, int initialCapacity,
+  public SoftObjectPool(ObjectFactory<K, V> objectFactory, int initialCapacity,
       int concurrencyLevel) {
     super(objectFactory, initialCapacity, concurrencyLevel);
   }
@@ -56,7 +56,7 @@ public class WeakObjectPool<K,V> extends ObjectPool<K,V> {
     // variable in {@code ReferenceQueue}.
     while (true) {
       @SuppressWarnings("unchecked")
-      WeakObjectReference ref = (WeakObjectReference) staleRefQueue.poll();
+      SoftObjectReference ref = (SoftObjectReference) staleRefQueue.poll();
       if (ref == null) {
         break;
       }
@@ -66,13 +66,13 @@ public class WeakObjectPool<K,V> extends ObjectPool<K,V> {
 
   @Override
   public Reference<V> createReference(K key, V obj) {
-    return new WeakObjectReference(key, obj);
+    return new SoftObjectReference(key, obj);
   }
 
-  private class WeakObjectReference extends WeakReference<V> {
+  private class SoftObjectReference extends SoftReference<V> {
     final K key;
 
-    WeakObjectReference(K key, V obj) {
+    SoftObjectReference(K key, V obj) {
       super(obj, staleRefQueue);
       this.key = key;
     }

@@ -44,10 +44,11 @@ import com.google.common.annotations.VisibleForTesting;
 public class IdReadWriteLock {
   // The number of lock we want to easily support. It's not a maximum.
   private static final int NB_CONCURRENT_LOCKS = 1000;
-  // The pool to get entry from, entries are mapped by weak reference to make it able to be
-  // garbage-collected asap
-  private final WeakObjectPool<Long, ReentrantReadWriteLock> lockPool = new WeakObjectPool<>(
-          new WeakObjectPool.ObjectFactory<Long, ReentrantReadWriteLock>() {
+  // The pool to get entry from, entries are mapped by soft reference and will be
+  // automatically garbage-collected when JVM memory pressure is high
+  private final ObjectPool<Long, ReentrantReadWriteLock> lockPool =
+      new SoftObjectPool<>(
+          new ObjectPool.ObjectFactory<Long, ReentrantReadWriteLock>() {
             @Override
             public ReentrantReadWriteLock createObject(Long id) {
               return new ReentrantReadWriteLock();

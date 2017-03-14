@@ -111,10 +111,11 @@ public class TestIdReadWriteLock {
         Future<Boolean> result = ecs.take();
         assertTrue(result.get());
       }
-      // make sure the entry pool will be cleared after GC and purge call
+      // make sure the entry pool won't be cleared when JVM memory is enough
+      // even after GC and purge call
       int entryPoolSize = idLock.purgeAndGetEntryPoolSize();
       LOG.debug("Size of entry pool after gc and purge: " + entryPoolSize);
-      assertEquals(0, entryPoolSize);
+      assertEquals(NUM_IDS, entryPoolSize);
     } finally {
       exec.shutdown();
       exec.awaitTermination(5000, TimeUnit.MILLISECONDS);

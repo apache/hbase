@@ -50,7 +50,7 @@ public class KeyLocker<K> {
 
   private final WeakObjectPool<K, ReentrantLock> lockPool =
       new WeakObjectPool<>(
-          new WeakObjectPool.ObjectFactory<K, ReentrantLock>() {
+          new ObjectPool.ObjectFactory<K, ReentrantLock>() {
             @Override
             public ReentrantLock createObject(K key) {
               return new ReentrantLock();
