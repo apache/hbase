@@ -155,8 +155,8 @@ public class BoundedByteBufferPool {
       long prevState = stateRef.get();
       countOfBuffers = toCountOfBuffers(prevState);
       if (countOfBuffers >= maxToCache) {
-        if (LOG.isWarnEnabled()) {
-          LOG.warn("At capacity: " + countOfBuffers);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("At capacity: " + countOfBuffers);
         }
         return;
       }
