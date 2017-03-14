@@ -4228,14 +4228,16 @@ public class HBaseAdmin implements Admin {
   /**
    * Set the table's replication switch if the table's replication switch is already not set.
    * @param tableName name of the table
-   * @param isRepEnabled is replication switch enable or disable
+   * @param enableRep is replication switch enable or disable
    * @throws IOException if a remote or network exception occurs
    */
-  private void setTableRep(final TableName tableName, boolean isRepEnabled) throws IOException {
+  private void setTableRep(final TableName tableName, boolean enableRep) throws IOException {
     HTableDescriptor htd = getTableDescriptor(tableName);
-    if (isTableRepEnabled(htd) ^ isRepEnabled) {
+    ReplicationState currentReplicationState = getTableReplicationState(htd);
+    if (enableRep && currentReplicationState != ReplicationState.ENABLED
+        || !enableRep && currentReplicationState != ReplicationState.DISABLED) {
       for (HColumnDescriptor hcd : htd.getFamilies()) {
-        hcd.setScope(isRepEnabled ? HConstants.REPLICATION_SCOPE_GLOBAL
+        hcd.setScope(enableRep ? HConstants.REPLICATION_SCOPE_GLOBAL
             : HConstants.REPLICATION_SCOPE_LOCAL);
       }
       modifyTable(tableName, htd);
@@ -4243,17 +4245,34 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * @param htd table descriptor details for the table to check
-   * @return true if table's replication switch is enabled
+   * This enum indicates the current state of the replication for a given table.
    */
-  private boolean isTableRepEnabled(HTableDescriptor htd) {
+  private enum ReplicationState {
+    ENABLED, // all column families enabled
+    MIXED, // some column families enabled, some disabled
+    DISABLED // all column families disabled
+  }
+
+  /**
+   * @param htd table descriptor details for the table to check
+   * @return ReplicationState the current state of the table.
+   */
+  private ReplicationState getTableReplicationState(HTableDescriptor htd) {
+    boolean hasEnabled = false;
+    boolean hasDisabled = false;
+
     for (HColumnDescriptor hcd : htd.getFamilies()) {
       if (hcd.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL
           && hcd.getScope() != HConstants.REPLICATION_SCOPE_SERIAL) {
-        return false;
+        hasDisabled = true;
+      } else {
+        hasEnabled = true;
       }
     }
-    return true;
+
+    if (hasEnabled && hasDisabled) return ReplicationState.MIXED;
+    if (hasEnabled) return ReplicationState.ENABLED;
+    return ReplicationState.DISABLED;
   }
 
   /**
