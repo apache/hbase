@@ -126,7 +126,9 @@ public class BoundedByteBufferPool {
       lock.unlock();
     }
     if (!success) {
-      LOG.warn("At capacity: " + this.buffers.size());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("At capacity: " + this.buffers.size());
+      }
     } else {
       if (average > this.runningAverage && average < this.maxByteBufferSizeToCache) {
         this.runningAverage = average;
