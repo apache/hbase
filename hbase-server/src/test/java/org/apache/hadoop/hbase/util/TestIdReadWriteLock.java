@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
@@ -38,9 +39,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 @Category({MiscTests.class, MediumTests.class})
 // Medium as it creates 100 threads; seems better to run it isolated
 public class TestIdReadWriteLock {
@@ -51,7 +56,14 @@ public class TestIdReadWriteLock {
   private static final int NUM_THREADS = 128;
   private static final int NUM_SECONDS = 15;
 
-  private IdReadWriteLock idLock = new IdReadWriteLock();
+  @Parameterized.Parameter
+  public IdReadWriteLock idLock;
+
+  @Parameterized.Parameters
+  public static Iterable<Object[]> data() {
+    return Arrays.asList(new Object[][] { { new IdReadWriteLock(ReferenceType.WEAK) },
+        { new IdReadWriteLock(ReferenceType.SOFT) } });
+  }
 
   private Map<Long, String> idOwner = new ConcurrentHashMap<>();
 
@@ -111,11 +123,22 @@ public class TestIdReadWriteLock {
         Future<Boolean> result = ecs.take();
         assertTrue(result.get());
       }
-      // make sure the entry pool won't be cleared when JVM memory is enough
-      // even after GC and purge call
       int entryPoolSize = idLock.purgeAndGetEntryPoolSize();
       LOG.debug("Size of entry pool after gc and purge: " + entryPoolSize);
-      assertEquals(NUM_IDS, entryPoolSize);
+      ReferenceType refType = idLock.getReferenceType();
+      switch (refType) {
+      case WEAK:
+        // make sure the entry pool will be cleared after GC and purge call
+        assertEquals(0, entryPoolSize);
+        break;
+      case SOFT:
+        // make sure the entry pool won't be cleared when JVM memory is enough
+        // even after GC and purge call
+        assertEquals(NUM_IDS, entryPoolSize);
+        break;
+      default:
+        break;
+      }
     } finally {
       exec.shutdown();
       exec.awaitTermination(5000, TimeUnit.MILLISECONDS);

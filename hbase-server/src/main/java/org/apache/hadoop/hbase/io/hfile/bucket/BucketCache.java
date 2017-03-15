@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
+import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -185,9 +186,11 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * A ReentrantReadWriteLock to lock on a particular block identified by offset.
    * The purpose of this is to avoid freeing the block which is being read.
+   * <p>
+   * Key set of offsets in BucketCache is limited so soft reference is the best choice here.
    */
   @VisibleForTesting
-  final IdReadWriteLock offsetLock = new IdReadWriteLock();
+  final IdReadWriteLock offsetLock = new IdReadWriteLock(ReferenceType.SOFT);
 
   private final NavigableSet<BlockCacheKey> blocksByHFile =
       new ConcurrentSkipListSet<>(new Comparator<BlockCacheKey>() {
