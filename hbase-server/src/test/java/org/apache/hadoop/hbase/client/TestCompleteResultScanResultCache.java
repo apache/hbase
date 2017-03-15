@@ -22,7 +22,6 @@ import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.stream.IntStream;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -70,9 +69,9 @@ public class TestCompleteResultScanResultCache {
       resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, true));
     int count = 10;
     Result[] results = new Result[count];
-    IntStream.range(0, count).forEach(i -> {
+    for (int i = 0; i < count; i++) {
       results[i] = Result.create(Arrays.asList(createCell(i, CQ1)));
-    });
+    }
     assertSame(results, resultCache.addAndGet(results, false));
   }
 

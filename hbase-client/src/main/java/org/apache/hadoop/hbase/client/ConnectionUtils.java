@@ -316,6 +316,10 @@ public final class ConnectionUtils {
   }
 
   static Result filterCells(Result result, Cell keepCellsAfter) {
+    if (keepCellsAfter == null) {
+      // do not need to filter
+      return result;
+    }
     // not the same row
     if (!CellUtil.matchingRow(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
       return result;
@@ -409,5 +413,15 @@ public final class ConnectionUtils {
    */
   public static int numberOfIndividualRows(List<Result> results) {
     return (int) results.stream().filter(r -> !r.mayHaveMoreCellsInRow()).count();
+  }
+
+  public static ScanResultCache createScanResultCache(Scan scan) {
+    if (scan.getAllowPartialResults()) {
+      return new AllowPartialScanResultCache();
+    } else if (scan.getBatch() > 0) {
+      return new BatchScanResultCache(scan.getBatch());
+    } else {
+      return new CompleteScanResultCache();
+    }
   }
 }

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.createScanResultCache;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getLocateType;
 
 import java.io.IOException;
@@ -86,8 +87,7 @@ class AsyncClientScanner {
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
     this.startLogErrorsCnt = startLogErrorsCnt;
-    this.resultCache = scan.getAllowPartialResults() || scan.getBatch() > 0
-        ? new AllowPartialScanResultCache() : new CompleteScanResultCache();
+    this.resultCache = createScanResultCache(scan);
   }
 
   private static final class OpenScannerResponse {

@@ -18,16 +18,15 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.createScanResultCache;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.numberOfIndividualRows;
 
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 
@@ -35,8 +34,6 @@ import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -69,24 +66,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   protected HRegionInfo currentRegion = null;
   protected ScannerCallableWithReplicas callable = null;
   protected Queue<Result> cache;
-  /**
-   * A list of partial results that have been returned from the server. This list should only
-   * contain results if this scanner does not have enough partial results to form the complete
-   * result.
-   */
-  protected int partialResultsCellSizes = 0;
-  protected final LinkedList<Result> partialResults = new LinkedList<>();
-
-  /**
-   * The row for which we are accumulating partial Results (i.e. the row of the Results stored
-   * inside partialResults). Changes to partialResultsRow and partialResults are kept in sync via
-   * the methods {@link #regroupResults(Result)} and {@link #clearPartialResults()}
-   */
-  protected byte[] partialResultsRow = null;
-  /**
-   * The last cell from a not full Row which is added to cache
-   */
-  protected Cell lastCellLoadedToCache = null;
+  private final ScanResultCache scanResultCache;
   protected final int caching;
   protected long lastNext;
   // Keep lastResult returned successfully in case we have to reset scanner.
@@ -159,6 +139,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
     this.rpcControllerFactory = controllerFactory;
 
     this.conf = conf;
+
+    this.scanResultCache = createScanResultCache(scan);
     initCache();
   }
 
@@ -356,14 +338,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
 
   private void closeScannerIfExhausted(boolean exhausted) throws IOException {
     if (exhausted) {
-      if (!partialResults.isEmpty()) {
-        // XXX: continue if there are partial results. But in fact server should not set
-        // hasMoreResults to false if there are partial results.
-        LOG.warn("Server tells us there is no more results for this region but we still have" +
-            " partialResults, this should not happen, retry on the current scanner anyway");
-      } else {
-        closeScanner();
-      }
+      closeScanner();
     }
   }
 
@@ -371,7 +346,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
       MutableBoolean retryAfterOutOfOrderException, int retriesLeft) throws DoNotRetryIOException {
     // An exception was thrown which makes any partial results that we were collecting
     // invalid. The scanner will need to be reset to the beginning of a row.
-    clearPartialResults();
+    scanResultCache.clear();
 
     // Unfortunately, DNRIOE is used in two different semantics.
     // (1) The first is to close the client scanner and bubble up the exception all the way
@@ -465,7 +440,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
         if (callable.switchedToADifferentReplica()) {
           // Any accumulated partial results are no longer valid since the callable will
           // openScanner with the correct startkey and we must pick up from there
-          clearPartialResults();
+          scanResultCache.clear();
           this.currentRegion = callable.getHRegionInfo();
         }
         retryAfterOutOfOrderException.setValue(true);
@@ -485,29 +460,19 @@ public abstract class ClientScanner extends AbstractClientScanner {
       // Groom the array of Results that we received back from the server before adding that
       // Results to the scanner's cache. If partial results are not allowed to be seen by the
       // caller, all book keeping will be performed within this method.
-      List<Result> resultsToAddToCache =
-          getResultsToAddToCache(values, callable.isHeartbeatMessage());
-      if (!resultsToAddToCache.isEmpty()) {
+      Result[] resultsToAddToCache = scanResultCache.addAndGet(values, callable.isHeartbeatMessage());
+      if (resultsToAddToCache.length > 0) {
         for (Result rs : resultsToAddToCache) {
-          rs = filterLoadedCell(rs);
-          if (rs == null) {
-            continue;
-          }
-
           cache.add(rs);
           long estimatedHeapSizeOfResult = calcEstimatedSize(rs);
           countdown--;
           remainingResultSize -= estimatedHeapSizeOfResult;
           addEstimatedSize(estimatedHeapSizeOfResult);
           this.lastResult = rs;
-          if (this.lastResult.mayHaveMoreCellsInRow()) {
-            updateLastCellLoadedToCache(this.lastResult);
-          } else {
-            this.lastCellLoadedToCache = null;
-          }
         }
-        if (scan.getLimit() > 0 && !resultsToAddToCache.isEmpty()) {
-          int newLimit = scan.getLimit() - numberOfIndividualRows(resultsToAddToCache);
+        if (scan.getLimit() > 0) {
+          int newLimit =
+              scan.getLimit() - numberOfIndividualRows(Arrays.asList(resultsToAddToCache));
           assert newLimit >= 0;
           scan.setLimit(newLimit);
         }
@@ -550,13 +515,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
       }
       // we are done with the current region
       if (regionExhausted) {
-        if (!partialResults.isEmpty()) {
-          // XXX: continue if there are partial results. But in fact server should not set
-          // hasMoreResults to false if there are partial results.
-          LOG.warn("Server tells us there is no more results for this region but we still have" +
-              " partialResults, this should not happen, retry on the current scanner anyway");
-          continue;
-        }
         if (!moveToNextRegion()) {
           break;
         }
@@ -571,142 +529,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
   @VisibleForTesting
   public int getCacheCount() {
     return cache != null ? cache.size() : 0;
-  }
-
-  /**
-   * This method ensures all of our book keeping regarding partial results is kept up to date. This
-   * method should be called once we know that the results we received back from the RPC request do
-   * not contain errors. We return a list of results that should be added to the cache. In general,
-   * this list will contain all NON-partial results from the input array (unless the client has
-   * specified that they are okay with receiving partial results)
-   * @param resultsFromServer The array of {@link Result}s returned from the server
-   * @param heartbeatMessage Flag indicating whether or not the response received from the server
-   *          represented a complete response, or a heartbeat message that was sent to keep the
-   *          client-server connection alive
-   * @return the list of results that should be added to the cache.
-   * @throws IOException
-   */
-  protected List<Result> getResultsToAddToCache(Result[] resultsFromServer,
-      boolean heartbeatMessage) throws IOException {
-    int resultSize = resultsFromServer != null ? resultsFromServer.length : 0;
-    List<Result> resultsToAddToCache = new ArrayList<>(resultSize);
-
-    // If the caller has indicated in their scan that they are okay with seeing partial results,
-    // then simply add all results to the list. Note allowPartial and setBatch are not same, we can
-    // return here if allow partials and we will handle batching later.
-    if (scan.getAllowPartialResults()) {
-      addResultsToList(resultsToAddToCache, resultsFromServer, 0,
-        (null == resultsFromServer ? 0 : resultsFromServer.length));
-      return resultsToAddToCache;
-    }
-
-    // If no results were returned it indicates that either we have the all the partial results
-    // necessary to construct the complete result or the server had to send a heartbeat message
-    // to the client to keep the client-server connection alive
-    if (resultsFromServer == null || resultsFromServer.length == 0) {
-      // If this response was an empty heartbeat message, then we have not exhausted the region
-      // and thus there may be more partials server side that still need to be added to the partial
-      // list before we form the complete Result
-      if (!partialResults.isEmpty() && !heartbeatMessage) {
-        resultsToAddToCache.add(Result.createCompleteResult(partialResults));
-        clearPartialResults();
-      }
-
-      return resultsToAddToCache;
-    }
-
-    for(Result result : resultsFromServer) {
-      if (partialResultsRow != null && Bytes.compareTo(result.getRow(), partialResultsRow) != 0) {
-        // We have a new row, complete the previous row.
-        resultsToAddToCache.add(Result.createCompleteResult(partialResults));
-        clearPartialResults();
-      }
-      Result res = regroupResults(result);
-      if (res != null) {
-        resultsToAddToCache.add(res);
-      }
-      if (!result.mayHaveMoreCellsInRow()) {
-        // We are done for this row
-        if (partialResultsCellSizes > 0) {
-          resultsToAddToCache.add(Result.createCompleteResult(partialResults));
-        }
-        clearPartialResults();
-      }
-    }
-
-
-    return resultsToAddToCache;
-  }
-
-  /**
-   * Add new result to the partial list and return a batched Result if caching size exceed
-   * batching limit.
-   * If user setBatch(5) and rpc returns 3+5+5+5+3 cells, we should return 5+5+5+5+1 to user.
-   * setBatch doesn't mean setAllowPartialResult(true)
-   * @param result The result that we want to add to our list of partial Results
-   * @return the result if we have batch limit and there is one Result can be returned to user, or
-   *         null if we have not.
-   * @throws IOException
-   */
-  private Result regroupResults(final Result result) throws IOException {
-    partialResultsRow = result.getRow();
-    partialResults.add(result);
-    partialResultsCellSizes += result.size();
-    if (scan.getBatch() > 0 && partialResultsCellSizes >= scan.getBatch()) {
-      Cell[] cells = new Cell[scan.getBatch()];
-      int count = 0;
-      boolean stale = false;
-      while (count < scan.getBatch()) {
-        Result res = partialResults.poll();
-        stale = stale || res.isStale();
-        if (res.size() + count <= scan.getBatch()) {
-          System.arraycopy(res.rawCells(), 0, cells, count, res.size());
-          count += res.size();
-        } else {
-          int len = scan.getBatch() - count;
-          System.arraycopy(res.rawCells(), 0, cells, count, len);
-          Cell[] remainingCells = new Cell[res.size() - len];
-          System.arraycopy(res.rawCells(), len, remainingCells, 0, res.size() - len);
-          Result remainingRes = Result.create(remainingCells, res.getExists(), res.isStale(),
-              res.mayHaveMoreCellsInRow());
-          partialResults.addFirst(remainingRes);
-          count = scan.getBatch();
-        }
-      }
-      partialResultsCellSizes -= scan.getBatch();
-      if (partialResultsCellSizes == 0) {
-        // We have nothing in partialResults, clear the flags to prevent returning empty Result
-        // when next result belongs to the next row.
-        clearPartialResults();
-      }
-      return Result.create(cells, null, stale,
-          partialResultsCellSizes > 0 || result.mayHaveMoreCellsInRow());
-    }
-    return null;
-  }
-
-  /**
-   * Convenience method for clearing the list of partials and resetting the partialResultsRow.
-   */
-  private void clearPartialResults() {
-    partialResults.clear();
-    partialResultsCellSizes = 0;
-    partialResultsRow = null;
-  }
-
-  /**
-   * Helper method for adding results between the indices [start, end) to the outputList
-   * @param outputList the list that results will be added to
-   * @param inputArray the array that results are taken from
-   * @param start beginning index (inclusive)
-   * @param end ending index (exclusive)
-   */
-  private void addResultsToList(List<Result> outputList, Result[] inputArray, int start, int end) {
-    if (inputArray == null || start < 0 || end > inputArray.length) return;
-
-    for (int i = start; i < end; i++) {
-      outputList.add(inputArray[i]);
-    }
   }
 
   @Override
@@ -747,57 +569,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
       return true;
     }
     return false;
-  }
-
-  protected void updateLastCellLoadedToCache(Result result) {
-    if (result.rawCells().length == 0) {
-      return;
-    }
-    this.lastCellLoadedToCache = result.rawCells()[result.rawCells().length - 1];
-  }
-
-  /**
-   * Compare two Cells considering reversed scanner. ReversedScanner only reverses rows, not
-   * columns.
-   */
-  private int compare(Cell a, Cell b) {
-    CellComparator comparator = currentRegion != null && currentRegion.isMetaRegion()
-        ? CellComparator.META_COMPARATOR : CellComparator.COMPARATOR;
-    int r = comparator.compareRows(a, b);
-    if (r != 0) {
-      return this.scan.isReversed() ? -r : r;
-    }
-    return CellComparator.compareWithoutRow(a, b);
-  }
-
-  private Result filterLoadedCell(Result result) {
-    // we only filter result when last result is partial
-    // so lastCellLoadedToCache and result should have same row key.
-    // However, if 1) read some cells; 1.1) delete this row at the same time 2) move region;
-    // 3) read more cell. lastCellLoadedToCache and result will be not at same row.
-    if (lastCellLoadedToCache == null || result.rawCells().length == 0) {
-      return result;
-    }
-    if (compare(this.lastCellLoadedToCache, result.rawCells()[0]) < 0) {
-      // The first cell of this result is larger than the last cell of loadcache.
-      // If user do not allow partial result, it must be true.
-      return result;
-    }
-    if (compare(this.lastCellLoadedToCache, result.rawCells()[result.rawCells().length - 1]) >= 0) {
-      // The last cell of this result is smaller than the last cell of loadcache, skip all.
-      return null;
-    }
-
-    // The first one must not in filtered result, we start at the second.
-    int index = 1;
-    while (index < result.rawCells().length) {
-      if (compare(this.lastCellLoadedToCache, result.rawCells()[index]) < 0) {
-        break;
-      }
-      index++;
-    }
-    Cell[] list = Arrays.copyOfRange(result.rawCells(), index, result.rawCells().length);
-    return Result.create(list, result.getExists(), result.isStale(), result.mayHaveMoreCellsInRow());
   }
 
   protected void initCache() {
