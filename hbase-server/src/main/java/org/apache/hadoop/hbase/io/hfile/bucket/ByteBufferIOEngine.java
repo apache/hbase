@@ -110,6 +110,27 @@ public class ByteBufferIOEngine implements IOEngine {
     return false;
   }
 
+  /**
+   * The Memory IO engine is not a segmented buffer
+   * @return false
+   */
+  @Override
+  public boolean isSegmented() {
+    return false;
+  }
+
+  /**
+   * The Memory IO engine is not segmented, so an allocation can never cross a segment
+   *
+   * @param offset the offset of the allocation
+   * @param len the length of the allocation
+   * @return false
+   */
+  @Override
+  public boolean allocationCrossedSegments(long offset, long len) {
+    return false;
+  }
+
   @Override
   public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
       throws IOException {

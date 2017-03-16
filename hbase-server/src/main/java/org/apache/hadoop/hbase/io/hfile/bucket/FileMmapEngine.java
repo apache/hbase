@@ -107,6 +107,16 @@ public class FileMmapEngine implements IOEngine {
   }
 
   @Override
+  public boolean isSegmented() {
+    return false;
+  }
+
+  @Override
+  public boolean allocationCrossedSegments(long offset, long len) {
+    return false;
+  }
+
+  @Override
   public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
       throws IOException {
     byte[] dst = new byte[length];

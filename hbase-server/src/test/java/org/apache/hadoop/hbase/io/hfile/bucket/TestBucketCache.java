@@ -40,16 +40,18 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
  * Basic test of BucketCache.Puts and gets.
- * <p>
- * Tests will ensure that blocks' data correctness under several threads concurrency
+ * <p>Tests will ensure that blocks' data correctness under several threads concurrency across
+ * different IOEngine implementations</p>
  */
 @RunWith(Parameterized.class)
 @Category({ IOTests.class, SmallTests.class })
@@ -57,22 +59,35 @@ public class TestBucketCache {
 
   private static final Random RAND = new Random();
 
-  @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
+  public static TemporaryFolder FOLDER = initStaticTemp();
+
+  @Parameterized.Parameters(name = "{index}: ioengine={0}, blockSize={1}, bucketSizes={2}")
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
-        { 8192, null }, // TODO: why is 8k the default blocksize for these tests?
+        { "heap", 8192, null },
+        { "offheap", 8192, null },
+        { "file", 8192, null },
+        { "files", 8192, null }, // TODO: why is 8k the default blocksize for these tests?
         {
+            "offheap",
             16 * 1024,
             new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
                 28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
-                128 * 1024 + 1024 } } });
+                128 * 1024 + 1024 },
+        },
+        {
+            "files",
+            16 * 1024,
+            new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
+                28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
+                128 * 1024 + 1024 },
+        },
+    });
   }
 
-  @Parameterized.Parameter(0)
-  public int constructedBlockSize;
-
-  @Parameterized.Parameter(1)
-  public int[] constructedBlockSizes;
+  private final String ioEngineName;
+  private final int constructedBlockSize;
+  private final int[] constructedBlockSizes;
 
   BucketCache cache;
   final int CACHE_SIZE = 1000000;
@@ -80,12 +95,33 @@ public class TestBucketCache {
   final int BLOCK_SIZE = CACHE_SIZE / NUM_BLOCKS;
   final int NUM_THREADS = 100;
   final int NUM_QUERIES = 10000;
+  final int FILE_IO_ENGINE_NUM_FILES = 16;
+  final long CAPACITY_SIZE = 32 * 1024 * 1024;
 
-  final long capacitySize = 32 * 1024 * 1024;
   final int writeThreads = BucketCache.DEFAULT_WRITER_THREADS;
   final int writerQLen = BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
-  String ioEngineName = "heap";
   String persistencePath = null;
+
+  public TestBucketCache(String ioEngineName,
+                         int constructedBlockSize,
+                         int[] constructedBlockSizes) throws Exception {
+    this.constructedBlockSize = constructedBlockSize;
+    this.constructedBlockSizes = constructedBlockSizes;
+    if ("files".equals(ioEngineName)) {
+      StringBuilder sb = new StringBuilder("files:");
+      String delim = "";
+      for (int i = 0; i < FILE_IO_ENGINE_NUM_FILES; ++i) {
+        sb.append(delim);
+        sb.append(FOLDER.newFile());
+        delim = ",";
+      }
+      this.ioEngineName = sb.toString();
+    } else if ("file".equals(ioEngineName)) {
+      this.ioEngineName = "file:/" + FOLDER.newFile();
+    } else {
+      this.ioEngineName = ioEngineName;
+    }
+  }
 
   private class MockedBucketCache extends BucketCache {
 
@@ -115,16 +151,34 @@ public class TestBucketCache {
     }
   }
 
+  protected static TemporaryFolder initStaticTemp() {
+    try {
+      return new TemporaryFolder() {
+        {
+          before();
+        }
+      };
+    } catch (Throwable t) {
+      throw new RuntimeException(t);
+    }
+  }
+
+
   @Before
   public void setup() throws FileNotFoundException, IOException {
     cache =
-        new MockedBucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        new MockedBucketCache(ioEngineName, CAPACITY_SIZE, constructedBlockSize,
             constructedBlockSizes, writeThreads, writerQLen, persistencePath);
   }
 
   @After
   public void tearDown() {
     cache.shutdown();
+  }
+
+  @AfterClass
+  public static void cleanup() throws Exception {
+    FOLDER.delete();
   }
 
   /**
@@ -230,7 +284,7 @@ public class TestBucketCache {
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
 
-    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", CAPACITY_SIZE,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, testDir
             + "/bucket.persistence");
     long usedSize = bucketCache.getAllocator().getUsedSize();
@@ -250,7 +304,7 @@ public class TestBucketCache {
     bucketCache.shutdown();
 
     // restore cache from file
-    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", CAPACITY_SIZE,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, testDir
             + "/bucket.persistence");
     assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
@@ -260,7 +314,7 @@ public class TestBucketCache {
     // reconfig buckets sizes, the biggest bucket is small than constructedBlockSize (8k or 16k)
     // so it can't restore cache from file
     int[] smallBucketSizes = new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024 };
-    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", CAPACITY_SIZE,
         constructedBlockSize, smallBucketSizes, writeThreads,
         writerQLen, testDir + "/bucket.persistence");
     assertEquals(0, bucketCache.getAllocator().getUsedSize());
