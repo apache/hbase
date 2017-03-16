@@ -24,7 +24,9 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -34,7 +36,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -857,44 +858,42 @@ public class Result implements CellScannable, CellScanner {
    * @throws IOException A complete result cannot be formed because the results in the partial list
    *           come from different rows
    */
-  public static Result createCompleteResult(List<Result> partialResults)
+  public static Result createCompleteResult(Iterable<Result> partialResults)
       throws IOException {
-    List<Cell> cells = new ArrayList<Cell>();
+    if (partialResults == null) {
+      return Result.create(Collections.<Cell> emptyList(), null, false);
+    }
+    List<Cell> cells = new ArrayList<>();
     boolean stale = false;
     byte[] prevRow = null;
     byte[] currentRow = null;
-
-    if (partialResults != null && !partialResults.isEmpty()) {
-      for (int i = 0; i < partialResults.size(); i++) {
-        Result r = partialResults.get(i);
-        currentRow = r.getRow();
-        if (prevRow != null && !Bytes.equals(prevRow, currentRow)) {
-          throw new IOException(
-              "Cannot form complete result. Rows of partial results do not match." +
-                  " Partial Results: " + partialResults);
-        }
-
-        // Ensure that all Results except the last one are marked as partials. The last result
-        // may not be marked as a partial because Results are only marked as partials when
-        // the scan on the server side must be stopped due to reaching the maxResultSize.
-        // Visualizing it makes it easier to understand:
-        // maxResultSize: 2 cells
-        // (-x-) represents cell number x in a row
-        // Example: row1: -1- -2- -3- -4- -5- (5 cells total)
-        // How row1 will be returned by the server as partial Results:
-        // Result1: -1- -2- (2 cells, size limit reached, mark as partial)
-        // Result2: -3- -4- (2 cells, size limit reached, mark as partial)
-        // Result3: -5- (1 cell, size limit NOT reached, NOT marked as partial)
-        if (i != (partialResults.size() - 1) && !r.mayHaveMoreCellsInRow()) {
-          throw new IOException(
-              "Cannot form complete result. Result is missing partial flag. " +
-                  "Partial Results: " + partialResults);
-        }
-        prevRow = currentRow;
-        stale = stale || r.isStale();
-        for (Cell c : r.rawCells()) {
-          cells.add(c);
-        }
+    for (Iterator<Result> iter = partialResults.iterator(); iter.hasNext();) {
+      Result r = iter.next();
+      currentRow = r.getRow();
+      if (prevRow != null && !Bytes.equals(prevRow, currentRow)) {
+        throw new IOException(
+            "Cannot form complete result. Rows of partial results do not match." +
+                " Partial Results: " + partialResults);
+      }
+      // Ensure that all Results except the last one are marked as partials. The last result
+      // may not be marked as a partial because Results are only marked as partials when
+      // the scan on the server side must be stopped due to reaching the maxResultSize.
+      // Visualizing it makes it easier to understand:
+      // maxResultSize: 2 cells
+      // (-x-) represents cell number x in a row
+      // Example: row1: -1- -2- -3- -4- -5- (5 cells total)
+      // How row1 will be returned by the server as partial Results:
+      // Result1: -1- -2- (2 cells, size limit reached, mark as partial)
+      // Result2: -3- -4- (2 cells, size limit reached, mark as partial)
+      // Result3: -5- (1 cell, size limit NOT reached, NOT marked as partial)
+      if (iter.hasNext() && !r.mayHaveMoreCellsInRow()) {
+        throw new IOException("Cannot form complete result. Result is missing partial flag. " +
+            "Partial Results: " + partialResults);
+      }
+      prevRow = currentRow;
+      stale = stale || r.isStale();
+      for (Cell c : r.rawCells()) {
+        cells.add(c);
       }
     }
 

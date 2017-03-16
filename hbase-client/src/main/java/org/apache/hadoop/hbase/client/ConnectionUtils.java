@@ -24,12 +24,16 @@ import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -239,6 +243,40 @@ public class ConnectionUtils {
     return Bytes.equals(row, EMPTY_END_ROW);
   }
 
+  private static final Comparator<Cell> COMPARE_WITHOUT_ROW = new Comparator<Cell>() {
+
+    @Override
+    public int compare(Cell o1, Cell o2) {
+      return CellComparator.compareWithoutRow(o1, o2);
+    }
+  };
+
+  static Result filterCells(Result result, Cell keepCellsAfter) {
+    if (keepCellsAfter == null) {
+      // do not need to filter
+      return result;
+    }
+    // not the same row
+    if (!CellUtil.matchingRow(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
+      return result;
+    }
+    Cell[] rawCells = result.rawCells();
+    int index = Arrays.binarySearch(rawCells, keepCellsAfter, COMPARE_WITHOUT_ROW);
+    if (index < 0) {
+      index = -index - 1;
+    } else {
+      index++;
+    }
+    if (index == 0) {
+      return result;
+    }
+    if (index == rawCells.length) {
+      return null;
+    }
+    return Result.create(Arrays.copyOfRange(rawCells, index, rawCells.length), null,
+      result.isStale(), result.mayHaveMoreCellsInRow());
+  }
+
   static boolean noMoreResultsForScan(Scan scan, HRegionInfo info) {
     if (isEmptyStopRow(info.getEndKey())) {
       return true;
@@ -286,5 +324,15 @@ public class ConnectionUtils {
       }
     }
     return count;
+  }
+
+  public static ScanResultCache createScanResultCache(Scan scan) {
+    if (scan.getAllowPartialResults()) {
+      return new AllowPartialScanResultCache();
+    } else if (scan.getBatch() > 0) {
+      return new BatchScanResultCache(scan.getBatch());
+    } else {
+      return new CompleteScanResultCache();
+    }
   }
 }
