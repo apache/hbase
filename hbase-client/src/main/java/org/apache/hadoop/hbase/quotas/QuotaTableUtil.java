@@ -228,7 +228,7 @@ public class QuotaTableUtil {
   }
 
   /**
-   * Creates a {@link Scan} which returns only quota violations from the quota table.
+   * Creates a {@link Scan} which returns only quota snapshots from the quota table.
    */
   public static Scan makeQuotaSnapshotScan() {
     Scan s = new Scan();
@@ -246,7 +246,7 @@ public class QuotaTableUtil {
    * will throw an {@link IllegalArgumentException}.
    *
    * @param result A row from the quota table.
-   * @param snapshots A map of violations to add the result of this method into.
+   * @param snapshots A map of snapshots to add the result of this method into.
    */
   public static void extractQuotaSnapshot(
       Result result, Map<TableName,SpaceQuotaSnapshot> snapshots) {

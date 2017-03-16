@@ -532,9 +532,9 @@ public class QuotaObserverChore extends ScheduledChore {
   }
 
   /**
-   * Stores the quota violation state for the given table.
+   * Stores the quota state for the given table.
    */
-  void setTableQuotaViolation(TableName table, SpaceQuotaSnapshot snapshot) {
+  void setTableQuotaSnapshot(TableName table, SpaceQuotaSnapshot snapshot) {
     this.tableQuotaSnapshots.put(table, snapshot);
   }
 
@@ -552,7 +552,7 @@ public class QuotaObserverChore extends ScheduledChore {
   }
 
   /**
-   * Stores the quota violation state for the given namespace.
+   * Stores the quota state for the given namespace.
    */
   void setNamespaceQuotaSnapshot(String namespace, SpaceQuotaSnapshot snapshot) {
     this.namespaceQuotaSnapshots.put(namespace, snapshot);

@@ -112,7 +112,7 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
   @Override
   public void setCurrentState(TableName table, SpaceQuotaSnapshot snapshot) {
     // Defer the "current state" to the chore
-    this.chore.setTableQuotaViolation(table, snapshot);
+    this.chore.setTableQuotaSnapshot(table, snapshot);
   }
 
   @Override

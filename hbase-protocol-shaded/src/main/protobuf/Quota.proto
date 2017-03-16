@@ -98,7 +98,7 @@ message SpaceLimitRequest {
 }
 
 // Represents the state of a quota on a table. Either the quota is not in violation
-// or it is in violatino there is a violation policy which should be in effect.
+// or it is in violation there is a violation policy which should be in effect.
 message SpaceQuotaStatus {
   optional SpaceViolationPolicy policy = 1;
   optional bool in_violation = 2;
