@@ -1705,7 +1705,7 @@ handling multiple workloads:
 
 [[quota]]
 === Quotas
-HBASE-11598 introduces quotas, which allow you to throttle requests based on
+HBASE-11598 introduces RPC quotas, which allow you to throttle requests based on
 the following limits:
 
 . <<request-quotas,The number or size of requests(read, write, or read+write) in a given timeframe>>
@@ -1885,6 +1885,68 @@ at the same time and that fewer scans can be executed at the same time. A value 
 `0.9` will give more queue/handlers to scans, so the number of scans executed will
 increase and the number of gets will decrease.
 
+[[space-quotas]]
+=== Space Quotas
+
+link:https://issues.apache.org/jira/browse/HBASE-16961[HBASE-16961] introduces a new type of
+quotas for HBase to leverage: filesystem quotas. These "space" quotas limit the amount of space
+on the filesystem that HBase namespaces and tables can consume. If a user, malicious or ignorant,
+has the ability to write data into HBase, with enough time, that user can effectively crash HBase
+(or worse HDFS) by consuming all available space. When there is no filesystem space available,
+HBase crashes because it can no longer create/sync data to the write-ahead log.
+
+This feature allows a for a limit to be set on the size of a table or namespace. When a space quota is set
+on a namespace, the quota's limit applies to the sum of usage of all tables in that namespace.
+When a table with a quota exists in a namespace with a quota, the table quota takes priority
+over the namespace quota. This allows for a scenario where a large limit can be placed on
+a collection of tables, but a single table in that collection can have a fine-grained limit set.
+
+The existing `set_quota` and `list_quota` HBase shell commands can be used to interact with
+space quotas. Space quotas are quotas with a `TYPE` of `SPACE` and have `LIMIT` and `POLICY`
+attributes. The `LIMIT` is a string that refers to the amount of space on the filesystem
+that the quota subject (e.g. the table or namespace) may consume. For example, valid values
+of `LIMIT` are `'10G'`, `'2T'`, or `'256M'`. The `POLICY` refers to the action that HBase will
+take when the quota subject's usage exceeds the `LIMIT`. The following are valid `POLICY` values.
+
+* `NO_INSERTS` - No new data may be written (e.g. `Put`, `Increment`, `Append`).
+* `NO_WRITES` - Same as `NO_INSERTS` but `Deletes` are also disallowed.
+* `NO_WRITES_COMPACTIONS` - Same as `NO_WRITES` but compactions are also disallowed.
+* `DISABLE` - The table(s) are disabled, preventing all read/write access.
+
+.Setting simple space quotas
+----
+# Sets a quota on the table 't1' with a limit of 1GB, disallowing Puts/Increments/Appends when the table exceeds 1GB
+hbase> set_quota TYPE => SPACE, TABLE => 't1', LIMIT => '1G', POLICY => NO_INSERTS
+
+# Sets a quota on the namespace 'ns1' with a limit of 50TB, disallowing Puts/Increments/Appends/Deletes
+hbase> set_quota TYPE => SPACE, NAMESPACE => 'ns1', LIMIT => '50T', POLICY => NO_WRITES
+
+# Sets a quota on the table 't3' with a limit of 2TB, disallowing any writes and compactions when the table exceeds 2TB.
+hbase> set_quota TYPE => SPACE, TABLE => 't3', LIMIT => '2T', POLICY => NO_WRITES_COMPACTIONS
+
+# Sets a quota on the table 't2' with a limit of 50GB, disabling the table when it exceeds 50GB
+hbase> set_quota TYPE => SPACE, TABLE => 't2', LIMIT => '50G', POLICY => DISABLE
+----
+
+Consider the following scenario to set up quotas on a namespace, overriding the quota on tables in that namespace
+
+.Table and Namespace space quotas
+----
+hbase> create_namespace 'ns1'
+hbase> create 'ns1:t1'
+hbase> create 'ns1:t2'
+hbase> create 'ns1:t3'
+hbase> set_quota TYPE => SPACE, NAMESPACE => 'ns1', LIMIT => '100T', POLICY => NO_INSERTS
+hbase> set_quota TYPE => SPACE, TABLE => 'ns1:t2', LIMIT => '200G', POLICY => NO_WRITES
+hbase> set_quota TYPE => SPACE, TABLE => 'ns1:t3', LIMIT => '20T', POLICY => NO_WRITES
+----
+
+In the above scenario, the tables in the namespace `ns1` will not be allowed to consume more than
+100TB of space on the filesystem among each other. The table 'ns1:t2' is only allowed to be 200GB in size, and will
+disallow all writes when the usage exceeds this limit. The table 'ns1:t3' is allowed to grow to 20TB in size
+and also will disallow all writes then the usage exceeds this limit. Because there is no table quota
+on 'ns1:t1', this table can grow up to 100TB, but only if 'ns1:t2' and 'ns1:t3' have a usage of zero bytes.
+Practically, it's limit is 100TB less the current usage of 'ns1:t2' and 'ns1:t3'.
 
 [[ops.backup]]
 == HBase Backup
