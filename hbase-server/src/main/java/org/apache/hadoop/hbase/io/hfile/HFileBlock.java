@@ -1450,7 +1450,7 @@ public class HFileBlock implements Cacheable {
       if (!pread && streamLock.tryLock()) {
         // Seek + read. Better for scanning.
         try {
-          istream.seek(fileOffset);
+          HFileUtil.seekOnMultipleSources(istream, fileOffset);
 
           long realOffset = istream.getPos();
           if (realOffset != fileOffset) {
