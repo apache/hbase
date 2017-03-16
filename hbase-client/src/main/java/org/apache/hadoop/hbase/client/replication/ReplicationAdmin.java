@@ -521,11 +521,16 @@ public class ReplicationAdmin implements Closeable {
   }
 
   @VisibleForTesting
+  @Deprecated
   public void peerAdded(String id) throws ReplicationException {
     this.replicationPeers.peerConnected(id);
   }
 
+  /**
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#listReplicationPeers()} instead
+   */
   @VisibleForTesting
+  @Deprecated
   List<ReplicationPeer> listReplicationPeers() throws IOException {
     Map<String, ReplicationPeerConfig> peers = listPeerConfigs();
     if (peers == null || peers.size() <= 0) {

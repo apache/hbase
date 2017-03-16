@@ -33,11 +33,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -74,6 +76,7 @@ public class TestReplicationAdmin {
   private final String KEY_SECOND = "127.0.0.1:2181:/hbase2";
 
   private static ReplicationAdmin admin;
+  private static Admin hbaseAdmin;
 
   @Rule
   public TestName name = new TestName();
@@ -87,6 +90,7 @@ public class TestReplicationAdmin {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     admin = new ReplicationAdmin(conf);
+    hbaseAdmin = TEST_UTIL.getAdmin();
   }
 
   @AfterClass
@@ -149,16 +153,16 @@ public class TestReplicationAdmin {
     config.setClusterKey(KEY_ONE);
     config.getConfiguration().put("key1", "value1");
     config.getConfiguration().put("key2", "value2");
-    admin.addPeer(ID_ONE, config, null);
+    hbaseAdmin.addReplicationPeer(ID_ONE, config);
 
-    List<ReplicationPeer> peers = admin.listReplicationPeers();
+    List<ReplicationPeerDescription> peers = hbaseAdmin.listReplicationPeers();
     assertEquals(1, peers.size());
-    ReplicationPeer peerOne = peers.get(0);
+    ReplicationPeerDescription peerOne = peers.get(0);
     assertNotNull(peerOne);
-    assertEquals("value1", peerOne.getConfiguration().get("key1"));
-    assertEquals("value2", peerOne.getConfiguration().get("key2"));
+    assertEquals("value1", peerOne.getPeerConfig().getConfiguration().get("key1"));
+    assertEquals("value2", peerOne.getPeerConfig().getConfiguration().get("key2"));
 
-    admin.removePeer(ID_ONE);
+    hbaseAdmin.removeReplicationPeer(ID_ONE);
   }
 
   @Test
@@ -403,8 +407,7 @@ public class TestReplicationAdmin {
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
-    admin.addPeer(ID_ONE, rpc);
-    admin.peerAdded(ID_ONE);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
 
     rpc = admin.getPeerConfig(ID_ONE);
     Set<String> namespaces = new HashSet<>();
@@ -438,8 +441,7 @@ public class TestReplicationAdmin {
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
-    admin.addPeer(ID_ONE, rpc);
-    admin.peerAdded(ID_ONE);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
 
     rpc = admin.getPeerConfig(ID_ONE);
     Set<String> namespaces = new HashSet<String>();
@@ -482,8 +484,7 @@ public class TestReplicationAdmin {
   public void testPeerBandwidth() throws Exception {
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
-    admin.addPeer(ID_ONE, rpc);
-    admin.peerAdded(ID_ONE);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
 
     rpc = admin.getPeerConfig(ID_ONE);
     assertEquals(0, rpc.getBandwidth());
