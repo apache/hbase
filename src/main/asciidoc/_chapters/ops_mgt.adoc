@@ -1948,6 +1948,23 @@ and also will disallow all writes then the usage exceeds this limit. Because the
 on 'ns1:t1', this table can grow up to 100TB, but only if 'ns1:t2' and 'ns1:t3' have a usage of zero bytes.
 Practically, it's limit is 100TB less the current usage of 'ns1:t2' and 'ns1:t3'.
 
+[[ops.space.quota.deletion]]
+=== Automatic Space Quota Deletion
+
+By default, if a table or namespace is deleted that has a space quota, the quota itself is
+not also deleted. In some cases, it may be desirable for the space quota to be automatically deleted.
+In these cases, the user may configure the MasterSpaceQuotaObserver to delete any space quota
+automatically in hbase-site.xml.
+
+[source,java]
+----
+
+  <property>
+    <name>hbase.coprocessor.master.classes</name>
+    <value>...,org.apache.hadoop.hbase.quotas.MasterSpaceQuotaObserver</value>
+  </property>
+----
+
 [[ops.backup]]
 == HBase Backup
 
