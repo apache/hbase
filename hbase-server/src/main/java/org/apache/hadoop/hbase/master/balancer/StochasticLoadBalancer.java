@@ -272,6 +272,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   @Override
   protected boolean needsBalance(Cluster cluster) {
+    ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
+    if (cs.getNumServers() < MIN_SERVER_BALANCE) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Not running balancer because only " + cs.getNumServers()
+            + " active regionserver(s)");
+      }
+      return false;
+    }
     if (areSomeRegionReplicasColocated(cluster)) {
       return true;
     }
@@ -298,17 +306,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           + minCostNeedBalance);
       return false;
     }
-
-    ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
-    if (cs.getNumServers() < MIN_SERVER_BALANCE) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Not running balancer because only " + cs.getNumServers()
-            + " active regionserver(s)");
-      }
-      return false;
-    }
-
-
     return true;
   }
 

@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.CandidateGenerator;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.TableSkewCandidateGenerator;
-import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.LoadCandidateGenerator;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -236,33 +235,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
     }
-  }
-
-  @Test
-  public void testTableSkewCostProperlyDecreases() {
-    int replication = 1;
-    Configuration conf = HBaseConfiguration.create();
-    StochasticLoadBalancer.CostFunction
-        costFunction = new StochasticLoadBalancer.TableSkewCostFunction(conf);
-    CandidateGenerator generator = new LoadCandidateGenerator();
-    // Start out with 100 regions on one server and 0 regions on the other
-    int numNodes = 2;
-    int numTables = 1;
-    int numRegions = 100;
-    int numRegionsPerServer = 0;
-
-    Map<ServerName, List<HRegionInfo>> serverMap = createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
-    BaseLoadBalancer.Cluster cluster = new Cluster(serverMap, null, null, null);
-    costFunction.init(cluster);
-    double cost = costFunction.cost();
-    assertEquals(1.0, cost, .0001);
-    for (int i = 0; i < 100; i++) {
-      Cluster.Action action = generator.generate(cluster);
-      cluster.doAction(action);
-      costFunction.postAction(action);
-      cost = costFunction.cost();
-    }
-    assertTrue(cost < 0.5);
   }
 
   @Test
