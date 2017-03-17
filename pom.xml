@@ -206,6 +206,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>chia7712</id>
+      <name>Chia-Ping Tsai</name>
+      <email>chia7712@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>ddas</id>
       <name>Devaraj Das</name>
       <email>ddas@apache.org</email>
