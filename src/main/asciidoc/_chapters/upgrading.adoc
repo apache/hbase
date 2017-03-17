@@ -74,12 +74,15 @@ In addition to the usual API versioning considerations HBase has other compatibi
 * An API needs to be deprecated for a major version before we will change/remove it.
 * APIs available in a patch version will be available in all later patch versions. However, new APIs may be added which will not be available in earlier patch versions.
 * New APIs introduced in a patch version will only be added in a source compatible way footnote:[See 'Source Compatibility' https://blogs.oracle.com/darcy/entry/kinds_of_compatibility]: i.e. code that implements public APIs will continue to compile.
-* Example: A user using a newly deprecated API does not need to modify application code with HBase API calls until the next major version.
+** Example: A user using a newly deprecated API does not need to modify application code with HBase API calls until the next major version.
+* 
 
 .Client Binary compatibility
 * Client code written to APIs available in a given patch release can run unchanged (no recompilation needed) against the new jars of later patch versions.
 * Client code written to APIs available in a given patch release might not run against the old jars from an earlier patch version.
-* Example: Old compiled client code will work unchanged with the new jars.
+** Example: Old compiled client code will work unchanged with the new jars.
+* If a Client implements an HBase Interface, a recompile MAY be required upgrading to a newer minor version (See release notes
+for warning about incompatible changes). All effort will be made to provide a default implementation so this case should not arise.
 
 .Server-Side Limited API compatibility (taken from Hadoop)
 * Internal APIs are marked as Stable, Evolving, or Unstable
