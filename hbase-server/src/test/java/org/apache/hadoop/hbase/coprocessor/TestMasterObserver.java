@@ -1461,6 +1461,16 @@ public class TestMasterObserver {
     }
 
     @Override
+    public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    }
+
+    @Override
+    public void postMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, Set<TableName> tables,String targetGroup) throws IOException {
+    }
+
+    @Override
     public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                Set<Address> servers, String targetGroup) throws IOException {
     }

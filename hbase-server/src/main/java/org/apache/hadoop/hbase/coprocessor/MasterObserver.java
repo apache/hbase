@@ -1652,6 +1652,24 @@ public interface MasterObserver extends Coprocessor {
    * @param servers set of servers to move
    * @param targetGroup destination group
    */
+  default void preMoveServersAndTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {}
+
+  /**
+   * Called after servers are moved to target region server group
+   * @param ctx the environment to interact with the framework and master
+   * @param servers set of servers to move
+   * @param targetGroup name of group
+   */
+  default void postMoveServersAndTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {}
+
+  /**
+   * Called before servers are moved to target region server group
+   * @param ctx the environment to interact with the framework and master
+   * @param servers set of servers to move
+   * @param targetGroup destination group
+   */
   default void preMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
                       Set<Address> servers, String targetGroup) throws IOException {}
 

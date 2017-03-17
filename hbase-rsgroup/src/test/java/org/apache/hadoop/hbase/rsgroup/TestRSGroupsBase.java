@@ -691,4 +691,115 @@ public abstract class TestRSGroupsBase {
     assertTrue(newGroupTables.contains(tableNameA));
     assertTrue(newGroupTables.contains(tableNameB));
   }
+
+  @Test
+  public void testMoveServersAndTables() throws Exception {
+    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
+    //create table
+    final byte[] familyNameBytes = Bytes.toBytes("f");
+    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, 5);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        List<String> regions = getTableRegionMap().get(tableName);
+        if (regions == null)
+          return false;
+        return getTableRegionMap().get(tableName).size() >= 5;
+      }
+    });
+
+    //get server which is not a member of new group
+    ServerName targetServer = null;
+    for(ServerName server : admin.getClusterStatus().getServers()) {
+      if(!newGroup.containsServer(server.getAddress()) && 
+           !rsGroupAdmin.getRSGroupInfo("master").containsServer(server.getAddress())) {
+        targetServer = server;
+        break;
+      }
+    }
+
+    //test fail bogus server move
+    try {
+      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(Address.fromString("foo:9999")),
+              Sets.newHashSet(tableName), newGroup.getName());
+      fail("Bogus servers shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      String exp = "Source RSGroup for server foo:9999 does not exist.";
+      String msg = "Expected '" + exp + "' in exception message: ";
+      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+    }
+
+    //test fail server move
+    try {
+      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
+              Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
+      fail("servers shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      String exp = "Target RSGroup " + RSGroupInfo.DEFAULT_GROUP +
+              " is same as source " + RSGroupInfo.DEFAULT_GROUP + " RSGroup.";
+      String msg = "Expected '" + exp + "' in exception message: ";
+      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+    }
+
+    //verify default group info
+    Assert.assertEquals(3,
+            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size());
+    Assert.assertEquals(4,
+            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size());
+
+    //verify new group info
+    Assert.assertEquals(1,
+            rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers().size());
+    Assert.assertEquals(0,
+            rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
+
+    //get all region to move targetServer
+    List<String> regionList = getTableRegionMap().get(tableName);
+    for(String region : regionList) {
+      // Lets move this region to the targetServer
+      TEST_UTIL.getAdmin().move(Bytes.toBytes(HRegionInfo.encodeRegionName(Bytes.toBytes(region))),
+              Bytes.toBytes(targetServer.getServerName()));
+    }
+
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return getTableRegionMap().get(tableName) != null &&
+                getTableRegionMap().get(tableName).size() == 5 &&
+                getTableServerRegionMap().get(tableName).size() == 1 &&
+                admin.getClusterStatus().getRegionsInTransition().size() < 1;
+      }
+    });
+
+    //verify that all region move to targetServer
+    Assert.assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
+
+    //move targetServer and table to newGroup
+    LOG.info("moving server and table to newGroup");
+    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
+            Sets.newHashSet(tableName), newGroup.getName());
+
+    //verify group change
+    Assert.assertEquals(newGroup.getName(),
+            rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
+
+    //verify servers' not exist in old group
+    Set<Address> defaultServers = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers();
+    assertFalse(defaultServers.contains(targetServer.getAddress()));
+
+    //verify servers' exist in new group
+    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
+    assertTrue(newGroupServers.contains(targetServer.getAddress()));
+
+    //verify tables' not exist in old group
+    Set<TableName> defaultTables = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+    assertFalse(defaultTables.contains(tableName));
+
+    //verify tables' exist in new group
+    Set<TableName> newGroupTables = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables();
+    assertTrue(newGroupTables.contains(tableName));
+
+    //verify that all region still assgin on targetServer
+    Assert.assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
+  }
 }

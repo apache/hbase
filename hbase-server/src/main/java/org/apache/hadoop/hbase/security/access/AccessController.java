@@ -2668,6 +2668,12 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   }
 
   @Override
+  public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    requirePermission(getActiveUser(ctx), "moveServersAndTables", Action.ADMIN);
+  }
+
+  @Override
   public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
                              Set<Address> servers, String targetGroup) throws IOException {
     requirePermission(getActiveUser(ctx), "moveServers", Action.ADMIN);

@@ -78,4 +78,14 @@ public interface RSGroupAdmin {
    * @param hostPort HostPort to get RSGroupInfo for
    */
   RSGroupInfo getRSGroupOfServer(Address hostPort) throws IOException;
+
+  /**
+   * Move given set of servers and tables to the specified target RegionServer group.
+   * @param servers set of servers to move
+   * @param tables set of tables to move
+   * @param targetGroup the target group name
+   * @throws IOException
+   */
+  void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
+                            String targetGroup) throws IOException;
 }

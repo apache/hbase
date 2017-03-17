@@ -103,6 +103,12 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     return wrapped.getRSGroupOfServer(hostPort);
   }
 
+  @Override
+  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    wrapped.moveServersAndTables(servers, tables, targetGroup);
+    verify();
+  }
+
   public void verify() throws IOException {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();

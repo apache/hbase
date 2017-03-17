@@ -104,4 +104,14 @@ public interface RSGroupInfoManager {
    * @return whether the manager is in online mode
    */
   boolean isOnline();
+
+  /**
+   * Move servers and tables to a new group.
+   * @param servers list of servers, must be part of the same group
+   * @param tables set of tables to move
+   * @param srcGroup groupName being moved from
+   * @param dstGroup groupName being moved to
+   */
+  void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
+      String srcGroup, String dstGroup) throws IOException;
 }

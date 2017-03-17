@@ -138,6 +138,139 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     else regions.addFirst(hri);
   }
 
+  /**
+   * Check servers and tables.
+   * Fail if nulls or if servers and tables not belong to the same group
+   * @param servers servers to move
+   * @param tables tables to move
+   * @param targetGroupName target group name
+   * @throws IOException
+   */
+  private void checkServersAndTables(Set<Address> servers, Set<TableName> tables,
+                                     String targetGroupName) throws IOException {
+    // Presume first server's source group. Later ensure all servers are from this group.
+    Address firstServer = servers.iterator().next();
+    RSGroupInfo tmpSrcGrp = rsGroupInfoManager.getRSGroupOfServer(firstServer);
+    if (tmpSrcGrp == null) {
+      // Be careful. This exception message is tested for in TestRSGroupsBase...
+      throw new ConstraintException("Source RSGroup for server " + firstServer
+              + " does not exist.");
+    }
+    RSGroupInfo srcGrp = new RSGroupInfo(tmpSrcGrp);
+    if (srcGrp.getName().equals(targetGroupName)) {
+      throw new ConstraintException( "Target RSGroup " + targetGroupName +
+              " is same as source " + srcGrp.getName() + " RSGroup.");
+    }
+    // Only move online servers
+    checkOnlineServersOnly(servers);
+
+    // Ensure all servers are of same rsgroup.
+    for (Address server: servers) {
+      String tmpGroup = rsGroupInfoManager.getRSGroupOfServer(server).getName();
+      if (!tmpGroup.equals(srcGrp.getName())) {
+        throw new ConstraintException("Move server request should only come from one source " +
+                "RSGroup. Expecting only " + srcGrp.getName() + " but contains " + tmpGroup);
+      }
+    }
+
+    // Ensure all tables and servers are of same rsgroup.
+    for (TableName table : tables) {
+      String tmpGroup = rsGroupInfoManager.getRSGroupOfTable(table);
+      if (!tmpGroup.equals(srcGrp.getName())) {
+        throw new ConstraintException("Move table request should only come from one source " +
+                "RSGroup. Expecting only " + srcGrp.getName() + " but contains " + tmpGroup);
+      }
+    }
+
+    if (srcGrp.getServers().size() <= servers.size()
+            && srcGrp.getTables().size() > tables.size() ) {
+      throw new ConstraintException("Cannot leave a RSGroup " + srcGrp.getName() +
+              " that contains tables without servers to host them.");
+    }
+  }
+
+  /**
+   * @param servers the servers that will move to new group
+   * @param targetGroupName the target group name
+   * @param tables The regions of tables assigned to these servers will not unassign
+   * @throws IOException
+   */
+  private void unassignRegionFromServers(Set<Address> servers, String targetGroupName,
+                                     Set<TableName> tables) throws IOException {
+    boolean foundRegionsToUnassign;
+    RSGroupInfo targetGrp = getRSGroupInfo(targetGroupName);
+    Set<Address> allSevers = new HashSet<>(servers);
+    do {
+      foundRegionsToUnassign = false;
+      for (Iterator<Address> iter = allSevers.iterator(); iter.hasNext();) {
+        Address rs = iter.next();
+        // Get regions that are associated with this server and filter regions by tables.
+        List<HRegionInfo> regions = new ArrayList<>();
+        for (HRegionInfo region : getRegions(rs)) {
+          if (!tables.contains(region.getTable())) {
+            regions.add(region);
+          }
+        }
+
+        LOG.info("Unassigning " + regions.size() +
+                " region(s) from " + rs + " for server move to " + targetGroupName);
+        if (!regions.isEmpty()) {
+          for (HRegionInfo region: regions) {
+            // Regions might get assigned from tables of target group so we need to filter
+            if (!targetGrp.containsTable(region.getTable())) {
+              this.master.getAssignmentManager().unassign(region);
+              if (master.getAssignmentManager().getRegionStates().
+                      getRegionState(region).isFailedOpen()) {
+                continue;
+              }
+              foundRegionsToUnassign = true;
+            }
+          }
+        }
+        if (!foundRegionsToUnassign) {
+          iter.remove();
+        }
+      }
+      try {
+        rsGroupInfoManager.wait(1000);
+      } catch (InterruptedException e) {
+        LOG.warn("Sleep interrupted", e);
+        Thread.currentThread().interrupt();
+      }
+    } while (foundRegionsToUnassign);
+  }
+
+  /**
+   * @param tables the tables that will move to new group
+   * @param targetGroupName the target group name
+   * @param servers the regions of tables assigned to these servers will not unassign
+   * @throws IOException
+   */
+  private void unassignRegionFromTables(Set<TableName> tables, String targetGroupName,
+                                        Set<Address> servers) throws IOException {
+    for (TableName table: tables) {
+      LOG.info("Unassigning region(s) from " + table + " for table move to " + targetGroupName);
+      LockManager.MasterLock lock = master.getLockManager().createMasterLock(table,
+              LockProcedure.LockType.EXCLUSIVE, this.getClass().getName() + ": RSGroup: table move");
+      try {
+        try {
+          lock.acquire();
+        } catch (InterruptedException e) {
+          throw new IOException("Interrupted when waiting for table lock", e);
+        }
+        for (HRegionInfo region :
+                master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
+          ServerName sn = master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
+          if (!servers.contains(sn.getAddress())) {
+            master.getAssignmentManager().unassign(region);
+          }
+        }
+      } finally {
+        lock.release();
+      }
+    }
+  }
+
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
       justification="Ignoring complaint because don't know what it is complaining about")
@@ -418,6 +551,45 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   @Override
   public RSGroupInfo getRSGroupOfServer(Address hostPort) throws IOException {
     return rsGroupInfoManager.getRSGroupOfServer(hostPort);
+  }
+
+  @Override
+  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
+      throws IOException {
+    if (servers == null || servers.isEmpty() ) {
+      throw new ConstraintException("The list of servers to move cannot be null or empty.");
+    }
+    if (tables == null || tables.isEmpty()) {
+      throw new ConstraintException("The list of tables to move cannot be null or empty.");
+    }
+
+    //check target group
+    getAndCheckRSGroupInfo(targetGroup);
+
+    // Hold a lock on the manager instance while moving servers and tables to prevent
+    // another writer changing our state while we are working.
+    synchronized (rsGroupInfoManager) {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preMoveServersAndTables(servers, tables, targetGroup);
+      }
+      //check servers and tables status
+      checkServersAndTables(servers, tables, targetGroup);
+
+      //Move servers and tables to a new group.
+      String srcGroup = getRSGroupOfServer(servers.iterator().next()).getName();
+      rsGroupInfoManager.moveServersAndTables(servers, tables, srcGroup, targetGroup);
+
+      //unassign regions which not belong to these tables
+      unassignRegionFromServers(servers, targetGroup, tables);
+      //unassign regions which not assigned to these servers
+      unassignRegionFromTables(tables, targetGroup, servers);
+
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postMoveServersAndTables(servers, tables, targetGroup);
+      }
+    }
+    LOG.info("Move servers and tables done. Severs :"
+            + servers + " , Tables : " + tables + " => " +  targetGroup);
   }
 
   private Map<String, RegionState> rsGroupGetRegionsInTransition(String groupName)

@@ -276,6 +276,30 @@ class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     return rsGroupStartupWorker.isOnline();
   }
 
+  @Override
+  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
+                                   String srcGroup, String dstGroup) throws IOException {
+    //get server's group
+    RSGroupInfo srcGroupInfo = getRSGroupInfo(srcGroup);
+    RSGroupInfo dstGroupInfo = getRSGroupInfo(dstGroup);
+
+    //move servers
+    for (Address el: servers) {
+      srcGroupInfo.removeServer(el);
+      dstGroupInfo.addServer(el);
+    }
+    //move tables
+    for(TableName tableName: tables) {
+      srcGroupInfo.removeTable(tableName);
+      dstGroupInfo.addTable(tableName);
+    }
+
+    //flush changed groupinfo
+    Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
+    newGroupMap.put(srcGroupInfo.getName(), srcGroupInfo);
+    newGroupMap.put(dstGroupInfo.getName(), dstGroupInfo);
+    flushConfig(newGroupMap);
+  }
 
   List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {
     List<RSGroupInfo> rsGroupInfoList = Lists.newArrayList();
