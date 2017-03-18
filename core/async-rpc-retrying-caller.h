@@ -32,6 +32,7 @@
 #include <utility>
 #include <vector>
 #include "connection/rpc-client.h"
+#include "core/async-connection.h"
 #include "core/hbase-rpc-controller.h"
 #include "core/region-location.h"
 #include "exceptions/exception.h"
@@ -60,23 +61,23 @@ using RespConverter = std::function<R(const S&)>;
 template <typename RESP>
 using RpcCallback = std::function<void(const RESP&)>;
 
-template <typename REQ, typename RESP, typename RPC_CLIENT = hbase::RpcClient>
+template <typename REQ, typename RESP>
 using RpcCall = std::function<folly::Future<std::unique_ptr<RESP>>(
-    std::shared_ptr<RPC_CLIENT>, std::shared_ptr<RegionLocation>,
+    std::shared_ptr<RpcClient>, std::shared_ptr<RegionLocation>,
     std::shared_ptr<HBaseRpcController>, std::unique_ptr<REQ>)>;
 
-template <typename RESP, typename RPC_CLIENT = hbase::RpcClient>
-using Callable = std::function<folly::Future<RESP>(std::shared_ptr<HBaseRpcController>,
-                                                   std::shared_ptr<RegionLocation>,
-                                                   std::shared_ptr<RPC_CLIENT>)>;
+template <typename RESP>
+using Callable =
+    std::function<folly::Future<RESP>(std::shared_ptr<HBaseRpcController>,
+                                      std::shared_ptr<RegionLocation>, std::shared_ptr<RpcClient>)>;
 
-template <typename CONN, typename RESP, typename RPC_CLIENT = hbase::RpcClient>
+template <typename RESP>
 class AsyncSingleRequestRpcRetryingCaller {
  public:
-  AsyncSingleRequestRpcRetryingCaller(std::shared_ptr<CONN> conn,
+  AsyncSingleRequestRpcRetryingCaller(std::shared_ptr<AsyncConnection> conn,
                                       std::shared_ptr<hbase::pb::TableName> table_name,
                                       const std::string& row, RegionLocateType locate_type,
-                                      Callable<RESP, RPC_CLIENT> callable, nanoseconds pause_ns,
+                                      Callable<RESP> callable, nanoseconds pause,
                                       uint32_t max_retries, nanoseconds operation_timeout_nanos,
                                       nanoseconds rpc_timeout_nanos,
                                       uint32_t start_log_errors_count)
@@ -85,14 +86,14 @@ class AsyncSingleRequestRpcRetryingCaller {
         row_(row),
         locate_type_(locate_type),
         callable_(callable),
-        pause_ns_(pause_ns),
+        pause_(pause),
         max_retries_(max_retries),
         operation_timeout_nanos_(operation_timeout_nanos),
         rpc_timeout_nanos_(rpc_timeout_nanos),
         start_log_errors_count_(start_log_errors_count),
         promise_(std::make_shared<folly::Promise<RESP>>()),
         tries_(1) {
-    controller_ = conn_->get_rpc_controller_factory()->NewController();
+    controller_ = conn_->CreateRpcController();
     start_ns_ = TimeUtil::GetNowNanos();
     max_attempts_ = ConnectionUtils::Retries2Attempts(max_retries);
     exceptions_ = std::make_shared<std::vector<ThrowableWithExtraContext>>();
@@ -120,9 +121,9 @@ class AsyncSingleRequestRpcRetryingCaller {
       locate_timeout_ns = -1L;
     }
 
-    conn_->get_locator()
-        ->GetRegionLocation(table_name_, row_, locate_type_, locate_timeout_ns)
-        .then([this](RegionLocation& loc) { Call(loc); })
+    conn_->region_locator()
+        ->LocateRegion(*table_name_, row_, locate_type_, locate_timeout_ns)
+        .then([this](std::shared_ptr<RegionLocation> loc) { Call(*loc); })
         .onError([this](const std::exception& e) {
           OnError(e,
                   [this]() -> std::string {
@@ -155,10 +156,9 @@ class AsyncSingleRequestRpcRetryingCaller {
         CompleteExceptionally();
         return;
       }
-      delay_ns =
-          std::min(max_delay_ns, ConnectionUtils::GetPauseTime(pause_ns_.count(), tries_ - 1));
+      delay_ns = std::min(max_delay_ns, ConnectionUtils::GetPauseTime(pause_.count(), tries_ - 1));
     } else {
-      delay_ns = ConnectionUtils::GetPauseTime(pause_ns_.count(), tries_ - 1);
+      delay_ns = ConnectionUtils::GetPauseTime(pause_.count(), tries_ - 1);
     }
     update_cached_location(error);
     tries_++;
@@ -179,9 +179,10 @@ class AsyncSingleRequestRpcRetryingCaller {
       call_timeout_ns = rpc_timeout_nanos_.count();
     }
 
-    std::shared_ptr<RPC_CLIENT> rpc_client;
+    std::shared_ptr<RpcClient> rpc_client;
     try {
-      rpc_client = conn_->GetRpcClient();
+      // TODO: There is no connection attempt happening here, no need to try-catch.
+      rpc_client = conn_->rpc_client();
     } catch (const IOException& e) {
       OnError(e,
               [&, this]() -> std::string {
@@ -196,7 +197,7 @@ class AsyncSingleRequestRpcRetryingCaller {
                        " ms, time elapsed = " + TimeUtil::ElapsedMillisStr(this->start_ns_) + " ms";
               },
               [&, this](const std::exception& error) {
-                conn_->get_locator()->UpdateCachedLocation(loc, error);
+                conn_->region_locator()->UpdateCachedLocation(loc, error);
               });
       return;
     }
@@ -219,7 +220,7 @@ class AsyncSingleRequestRpcRetryingCaller {
                            " ms";
                   },
                   [&, this](const std::exception& error) {
-                    conn_->get_locator()->UpdateCachedLocation(loc, error);
+                    conn_->region_locator()->UpdateCachedLocation(loc, error);
                   });
           return;
         });
@@ -244,12 +245,12 @@ class AsyncSingleRequestRpcRetryingCaller {
 
  private:
   folly::HHWheelTimer::UniquePtr retry_timer_;
-  std::shared_ptr<CONN> conn_;
+  std::shared_ptr<AsyncConnection> conn_;
   std::shared_ptr<hbase::pb::TableName> table_name_;
   std::string row_;
   RegionLocateType locate_type_;
-  Callable<RESP, RPC_CLIENT> callable_;
-  nanoseconds pause_ns_;
+  Callable<RESP> callable_;
+  nanoseconds pause_;
   uint32_t max_retries_;
   nanoseconds operation_timeout_nanos_;
   nanoseconds rpc_timeout_nanos_;

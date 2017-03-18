@@ -33,14 +33,17 @@ ResponseConverter::ResponseConverter() {}
 
 ResponseConverter::~ResponseConverter() {}
 
-std::unique_ptr<Result> ResponseConverter::FromGetResponse(const Response& resp) {
+// impl note: we are returning shared_ptr's instead of unique_ptr's because these
+// go inside folly::Future's, making the move semantics extremely tricky.
+std::shared_ptr<Result> ResponseConverter::FromGetResponse(const Response& resp) {
+  LOG(INFO) << "FromGetResponse";
   auto get_resp = std::static_pointer_cast<GetResponse>(resp.resp_msg());
-
   return ToResult(get_resp->result(), resp.cell_scanner());
 }
 
-std::unique_ptr<Result> ResponseConverter::ToResult(
+std::shared_ptr<Result> ResponseConverter::ToResult(
     const hbase::pb::Result& result, const std::unique_ptr<CellScanner>& cell_scanner) {
+  LOG(INFO) << "ToResult";
   std::vector<std::shared_ptr<Cell>> vcells;
   for (auto cell : result.cell()) {
     std::shared_ptr<Cell> pcell =
@@ -56,16 +59,17 @@ std::unique_ptr<Result> ResponseConverter::ToResult(
     }
     // TODO: check associated cell count?
   }
-  return std::make_unique<Result>(vcells, result.exists(), result.stale(), result.partial());
+  LOG(INFO) << "Returning Result";
+  return std::make_shared<Result>(vcells, result.exists(), result.stale(), result.partial());
 }
 
-std::vector<std::unique_ptr<Result>> ResponseConverter::FromScanResponse(const Response& resp) {
+std::vector<std::shared_ptr<Result>> ResponseConverter::FromScanResponse(const Response& resp) {
   auto scan_resp = std::static_pointer_cast<ScanResponse>(resp.resp_msg());
-  VLOG(3) << "FromScanResponse:" << scan_resp->ShortDebugString();
+  LOG(INFO) << "FromScanResponse:" << scan_resp->ShortDebugString();
   int num_results = resp.cell_scanner() != nullptr ? scan_resp->cells_per_result_size()
                                                    : scan_resp->results_size();
 
-  std::vector<std::unique_ptr<Result>> results{static_cast<size_t>(num_results)};
+  std::vector<std::shared_ptr<Result>> results{static_cast<size_t>(num_results)};
   for (int i = 0; i < num_results; i++) {
     if (resp.cell_scanner() != nullptr) {
       // Cells are out in cellblocks.  Group them up again as Results.  How many to read at a
@@ -86,7 +90,7 @@ std::vector<std::unique_ptr<Result>> ResponseConverter::FromScanResponse(const R
         throw std::runtime_error(msg);
       }
       // TODO: handle partial results per Result by checking partial_flag_per_result
-      results[i] = std::make_unique<Result>(vcells, false, scan_resp->stale(), false);
+      results[i] = std::make_shared<Result>(vcells, false, scan_resp->stale(), false);
     } else {
       results[i] = ToResult(scan_resp->results(i), resp.cell_scanner());
     }

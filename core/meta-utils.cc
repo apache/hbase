@@ -89,7 +89,7 @@ std::unique_ptr<Request> MetaUtil::MetaRequest(const TableName tn, const std::st
 }
 
 std::shared_ptr<RegionLocation> MetaUtil::CreateLocation(const Response &resp) {
-  std::vector<std::unique_ptr<Result>> results = ResponseConverter::FromScanResponse(resp);
+  std::vector<std::shared_ptr<Result>> results = ResponseConverter::FromScanResponse(resp);
   if (results.size() != 1) {
     throw std::runtime_error("Was expecting exactly 1 result in meta scan response, got:" +
                              std::to_string(results.size()));

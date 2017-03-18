@@ -19,22 +19,14 @@
 
 #pragma once
 
-#include <folly/futures/Future.h>
-#include <folly/io/IOBuf.h>
-#include <wangle/concurrent/CPUThreadPoolExecutor.h>
-#include <wangle/concurrent/IOThreadPoolExecutor.h>
-
 #include <memory>
 #include <string>
 
 #include "connection/rpc-client.h"
+#include "core/async-connection.h"
 #include "core/configuration.h"
-#include "core/connection-configuration.h"
-#include "core/hbase-configuration-loader.h"
-#include "core/keyvalue-codec.h"
-#include "core/location-cache.h"
+
 #include "core/table.h"
-#include "if/Cell.pb.h"
 #include "serde/table-name.h"
 
 using hbase::pb::TableName;
@@ -55,13 +47,14 @@ class Client {
    * @param quorum_spec Where to connect to get Zookeeper bootstrap information.
    */
   Client();
-  explicit Client(const hbase::Configuration& conf);
-  ~Client();
+  explicit Client(const Configuration& conf);
+  ~Client() = default;
+
   /**
    * @brief Retrieve a Table implementation for accessing a table.
    * @param - table_name
    */
-  std::unique_ptr<hbase::Table> Table(const TableName& table_name);
+  std::unique_ptr<::hbase::Table> Table(const TableName& table_name);
 
   /**
    * @brief Close the Client connection.
@@ -69,25 +62,12 @@ class Client {
   void Close();
 
  private:
-  /** Constants */
-  /** Parameter name for HBase client IO thread pool size. Defaults to num cpus */
-  static constexpr const char* kClientIoThreadPoolSize = "hbase.client.io.thread.pool.size";
-  /** Parameter name for HBase client CPU thread pool size. Defaults to (2 * num cpus) */
-  static constexpr const char* kClientCpuThreadPoolSize = "hbase.client.cpu.thread.pool.size";
-  /** The RPC codec to encode cells. For now it is KeyValueCodec */
-  static constexpr const char* kRpcCodec = "hbase.client.rpc.codec";
-
   /** Data */
-  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
-  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
-  std::shared_ptr<hbase::LocationCache> location_cache_;
-  std::shared_ptr<hbase::RpcClient> rpc_client_;
-  std::shared_ptr<hbase::Configuration> conf_;
-  std::shared_ptr<hbase::ConnectionConfiguration> conn_conf_;
-  bool is_closed_ = false;
+  std::shared_ptr<AsyncConnectionImpl> async_connection_;
 
+ private:
   /** Methods */
-  void init(const hbase::Configuration& conf);
+  void Init(const Configuration& conf);
 };
 
 }  // namespace hbase

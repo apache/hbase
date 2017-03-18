@@ -19,15 +19,18 @@
 
 #pragma once
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "connection/rpc-client.h"
+#include "core/async-connection.h"
 #include "core/client.h"
 #include "core/configuration.h"
 #include "core/get.h"
 #include "core/location-cache.h"
+#include "core/raw-async-table.h"
 #include "core/result.h"
 #include "serde/table-name.h"
 
@@ -41,16 +44,17 @@ class Table {
   /**
    * Constructors
    */
-  Table(const TableName &table_name, const std::shared_ptr<hbase::LocationCache> &location_cache,
-        const std::shared_ptr<hbase::RpcClient> &rpc_client,
-        const std::shared_ptr<hbase::Configuration> &conf);
+  Table(const TableName &table_name, std::shared_ptr<AsyncConnection> async_connection);
   ~Table();
 
   /**
    * @brief - Returns a Result object for the constructed Get.
    * @param - get Get object to perform HBase Get operation.
    */
-  std::unique_ptr<hbase::Result> Get(const hbase::Get &get);
+  std::shared_ptr<hbase::Result> Get(const hbase::Get &get);
+
+  // TODO: next jira
+  // std::vector<std::unique_ptr<hbase::Result>> Get(const std::vector<hbase::Get> &gets);
 
   /**
    * @brief - Close the client connection.
@@ -64,11 +68,11 @@ class Table {
 
  private:
   std::shared_ptr<TableName> table_name_;
-  std::shared_ptr<hbase::LocationCache> location_cache_;
-  std::shared_ptr<hbase::RpcClient> rpc_client_;
+  std::shared_ptr<AsyncConnection> async_connection_;
   std::shared_ptr<hbase::Configuration> conf_;
-  bool is_closed_ = false;
-  // default 5 retries. over-ridden in constructor.
-  int client_retries_ = 5;
+  std::unique_ptr<RawAsyncTable> async_table_;
+
+ private:
+  milliseconds operation_timeout() const;
 };
 } /* namespace hbase */

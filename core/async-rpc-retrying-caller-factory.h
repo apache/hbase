@@ -35,20 +35,25 @@ using std::chrono::nanoseconds;
 
 namespace hbase {
 
-template <typename CONN, typename RESP, typename RPC_CLIENT>
+class AsyncConnection;
+
+template <typename RESP>
 class SingleRequestCallerBuilder
-    : public std::enable_shared_from_this<SingleRequestCallerBuilder<CONN, RESP, RPC_CLIENT>> {
+    : public std::enable_shared_from_this<SingleRequestCallerBuilder<RESP>> {
  public:
-  explicit SingleRequestCallerBuilder(std::shared_ptr<CONN> conn)
+  explicit SingleRequestCallerBuilder(std::shared_ptr<AsyncConnection> conn)
       : conn_(conn),
         table_name_(nullptr),
-        rpc_timeout_nanos_(0),
-        operation_timeout_nanos_(0),
+        rpc_timeout_nanos_(conn->connection_conf()->rpc_timeout()),
+        pause_(conn->connection_conf()->pause()),
+        operation_timeout_nanos_(conn->connection_conf()->operation_timeout()),
+        max_retries_(conn->connection_conf()->max_retries()),
+        start_log_errors_count_(conn->connection_conf()->start_log_errors_count()),
         locate_type_(RegionLocateType::kCurrent) {}
 
   virtual ~SingleRequestCallerBuilder() = default;
 
-  typedef SingleRequestCallerBuilder<CONN, RESP, RPC_CLIENT> GenenericThisType;
+  typedef SingleRequestCallerBuilder<RESP> GenenericThisType;
   typedef std::shared_ptr<GenenericThisType> SharedThisPtr;
 
   SharedThisPtr table(std::shared_ptr<TableName> table_name) {
@@ -66,6 +71,21 @@ class SingleRequestCallerBuilder
     return shared_this();
   }
 
+  SharedThisPtr pause(nanoseconds pause) {
+    pause_ = pause;
+    return shared_this();
+  }
+
+  SharedThisPtr max_retries(uint32_t max_retries) {
+    max_retries_ = max_retries;
+    return shared_this();
+  }
+
+  SharedThisPtr start_log_errors_count(uint32_t start_log_errors_count) {
+    start_log_errors_count_ = start_log_errors_count;
+    return shared_this();
+  }
+
   SharedThisPtr row(const std::string& row) {
     row_ = row;
     return shared_this();
@@ -76,18 +96,17 @@ class SingleRequestCallerBuilder
     return shared_this();
   }
 
-  SharedThisPtr action(Callable<RESP, RPC_CLIENT> callable) {
+  SharedThisPtr action(Callable<RESP> callable) {
     callable_ = callable;
     return shared_this();
   }
 
   folly::Future<RESP> Call() { return Build()->Call(); }
 
-  std::shared_ptr<AsyncSingleRequestRpcRetryingCaller<CONN, RESP, RPC_CLIENT>> Build() {
-    return std::make_shared<AsyncSingleRequestRpcRetryingCaller<CONN, RESP, RPC_CLIENT>>(
-        conn_, table_name_, row_, locate_type_, callable_, conn_->get_conn_conf()->GetPauseNs(),
-        conn_->get_conn_conf()->GetMaxRetries(), operation_timeout_nanos_, rpc_timeout_nanos_,
-        conn_->get_conn_conf()->GetStartLogErrorsCount());
+  std::shared_ptr<AsyncSingleRequestRpcRetryingCaller<RESP>> Build() {
+    return std::make_shared<AsyncSingleRequestRpcRetryingCaller<RESP>>(
+        conn_, table_name_, row_, locate_type_, callable_, pause_, max_retries_,
+        operation_timeout_nanos_, rpc_timeout_nanos_, start_log_errors_count_);
   }
 
  private:
@@ -96,28 +115,30 @@ class SingleRequestCallerBuilder
   }
 
  private:
-  std::shared_ptr<CONN> conn_;
+  std::shared_ptr<AsyncConnection> conn_;
   std::shared_ptr<TableName> table_name_;
   nanoseconds rpc_timeout_nanos_;
   nanoseconds operation_timeout_nanos_;
+  nanoseconds pause_;
+  uint32_t max_retries_;
+  uint32_t start_log_errors_count_;
   std::string row_;
   RegionLocateType locate_type_;
-  Callable<RESP, RPC_CLIENT> callable_;
+  Callable<RESP> callable_;
 };  // end of SingleRequestCallerBuilder
 
-template <typename CONN>
 class AsyncRpcRetryingCallerFactory {
  private:
-  std::shared_ptr<CONN> conn_;
+  std::shared_ptr<AsyncConnection> conn_;
 
  public:
-  explicit AsyncRpcRetryingCallerFactory(std::shared_ptr<CONN> conn) : conn_(conn) {}
+  explicit AsyncRpcRetryingCallerFactory(std::shared_ptr<AsyncConnection> conn) : conn_(conn) {}
 
   virtual ~AsyncRpcRetryingCallerFactory() = default;
 
-  template <typename RESP, typename RPC_CLIENT = hbase::RpcClient>
-  std::shared_ptr<SingleRequestCallerBuilder<CONN, RESP, RPC_CLIENT>> Single() {
-    return std::make_shared<SingleRequestCallerBuilder<CONN, RESP, RPC_CLIENT>>(conn_);
+  template <typename RESP>
+  std::shared_ptr<SingleRequestCallerBuilder<RESP>> Single() {
+    return std::make_shared<SingleRequestCallerBuilder<RESP>>(conn_);
   }
 };
 
