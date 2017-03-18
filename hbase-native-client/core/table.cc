@@ -25,11 +25,13 @@
 #include <utility>
 #include <vector>
 
+#include "core/async-connection.h"
 #include "core/request-converter.h"
 #include "core/response-converter.h"
 #include "if/Client.pb.h"
 #include "security/user.h"
 #include "serde/server-name.h"
+#include "utils/time-util.h"
 
 using folly::Future;
 using hbase::pb::TableName;
@@ -38,41 +40,28 @@ using std::chrono::milliseconds;
 
 namespace hbase {
 
-Table::Table(const TableName &table_name,
-             const std::shared_ptr<hbase::LocationCache> &location_cache,
-             const std::shared_ptr<hbase::RpcClient> &rpc_client,
-             const std::shared_ptr<hbase::Configuration> &conf)
+Table::Table(const TableName &table_name, std::shared_ptr<AsyncConnection> async_connection)
     : table_name_(std::make_shared<TableName>(table_name)),
-      location_cache_(location_cache),
-      rpc_client_(rpc_client),
-      conf_(conf) {
-  client_retries_ = (conf_) ? conf_->GetInt("hbase.client.retries", client_retries_) : 5;
+      async_connection_(async_connection),
+      conf_(async_connection->conf()) {
+  async_table_ = std::make_unique<RawAsyncTable>(table_name_, async_connection);
 }
 
 Table::~Table() {}
 
-std::unique_ptr<hbase::Result> Table::Get(const hbase::Get &get) {
-  auto loc = location_cache_->LocateFromMeta(*table_name_, get.Row()).get(milliseconds(1000));
-  auto req = hbase::RequestConverter::ToGetRequest(get, loc->region_name());
-  auto user = User::defaultUser();  // TODO: make User::current() similar to UserUtil
-
-  Future<std::unique_ptr<Response>> f =
-      rpc_client_->AsyncCall(loc->server_name().host_name(), loc->server_name().port(),
-                             std::move(req), user, "ClientService");
-  auto resp = f.get();
-
-  return hbase::ResponseConverter::FromGetResponse(*resp);
+std::shared_ptr<hbase::Result> Table::Get(const hbase::Get &get) {
+  auto context = async_table_->Get(get);
+  return context.get(operation_timeout());
 }
 
-void Table::Close() {
-  if (is_closed_) return;
-
-  if (rpc_client_.get()) rpc_client_->Close();
-  is_closed_ = true;
+milliseconds Table::operation_timeout() const {
+  return TimeUtil::ToMillis(async_connection_->connection_conf()->operation_timeout());
 }
+
+void Table::Close() { async_table_->Close(); }
 
 std::shared_ptr<RegionLocation> Table::GetRegionLocation(const std::string &row) {
-  return location_cache_->LocateRegion(*table_name_, row).get();
+  return async_connection_->region_locator()->LocateRegion(*table_name_, row).get();
 }
 
 } /* namespace hbase */

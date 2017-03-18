@@ -30,9 +30,11 @@
 #include "connection/request.h"
 #include "connection/response.h"
 #include "connection/rpc-client.h"
+#include "core/async-connection.h"
 #include "core/async-rpc-retrying-caller-factory.h"
 #include "core/async-rpc-retrying-caller.h"
 #include "core/client.h"
+#include "core/connection-configuration.h"
 #include "core/hbase-rpc-controller.h"
 #include "core/keyvalue-codec.h"
 #include "core/region-location.h"
@@ -43,6 +45,7 @@
 #include "if/Client.pb.h"
 #include "if/HBase.pb.h"
 #include "test-util/test-util.h"
+#include "utils/time-util.h"
 
 using namespace google::protobuf;
 using namespace hbase;
@@ -53,61 +56,73 @@ using ::testing::Return;
 using ::testing::_;
 using std::chrono::nanoseconds;
 
-class MockRpcControllerFactory {
+class MockAsyncRegionLocator : public AsyncRegionLocator {
  public:
-  MOCK_METHOD0(NewController, std::shared_ptr<HBaseRpcController>());
-};
-
-class MockAsyncConnectionConfiguration {
- public:
-  MOCK_METHOD0(GetPauseNs, nanoseconds());
-  MOCK_METHOD0(GetMaxRetries, int32_t());
-  MOCK_METHOD0(GetStartLogErrorsCount, int32_t());
-  MOCK_METHOD0(GetReadRpcTimeoutNs, nanoseconds());
-  MOCK_METHOD0(GetOperationTimeoutNs, nanoseconds());
-};
-
-class AsyncRegionLocator {
- public:
-  explicit AsyncRegionLocator(std::shared_ptr<RegionLocation> region_location)
+  explicit MockAsyncRegionLocator(std::shared_ptr<RegionLocation> region_location)
       : region_location_(region_location) {}
-  ~AsyncRegionLocator() = default;
+  ~MockAsyncRegionLocator() = default;
 
-  folly::Future<RegionLocation> GetRegionLocation(std::shared_ptr<hbase::pb::TableName>,
-                                                  const std::string&, RegionLocateType, int64_t) {
-    folly::Promise<RegionLocation> promise;
-    promise.setValue(*region_location_);
+  folly::Future<std::shared_ptr<RegionLocation>> LocateRegion(const hbase::pb::TableName&,
+                                                              const std::string&,
+                                                              const RegionLocateType,
+                                                              const int64_t) override {
+    folly::Promise<std::shared_ptr<RegionLocation>> promise;
+    promise.setValue(region_location_);
     return promise.getFuture();
   }
 
-  void UpdateCachedLocation(const RegionLocation&, const std::exception&) {}
+  void UpdateCachedLocation(const RegionLocation&, const std::exception&) override {}
 
  private:
   std::shared_ptr<RegionLocation> region_location_;
 };
 
-class MockAsyncConnection {
+class MockAsyncConnection : public AsyncConnection,
+                            public std::enable_shared_from_this<MockAsyncConnection> {
  public:
-  MOCK_METHOD0(get_conn_conf, std::shared_ptr<MockAsyncConnectionConfiguration>());
-  MOCK_METHOD0(get_rpc_controller_factory, std::shared_ptr<MockRpcControllerFactory>());
-  MOCK_METHOD0(get_locator, std::shared_ptr<AsyncRegionLocator>());
-  MOCK_METHOD0(GetRpcClient, std::shared_ptr<hbase::RpcClient>());
+  MockAsyncConnection(std::shared_ptr<ConnectionConfiguration> conn_conf,
+                      std::shared_ptr<RpcClient> rpc_client,
+                      std::shared_ptr<AsyncRegionLocator> region_locator)
+      : conn_conf_(conn_conf), rpc_client_(rpc_client), region_locator_(region_locator) {}
+  ~MockAsyncConnection() {}
+  void Init() {
+    caller_factory_ = std::make_shared<AsyncRpcRetryingCallerFactory>(shared_from_this());
+  }
+
+  std::shared_ptr<Configuration> conf() override { return nullptr; }
+  std::shared_ptr<ConnectionConfiguration> connection_conf() override { return conn_conf_; }
+  std::shared_ptr<AsyncRpcRetryingCallerFactory> caller_factory() override {
+    return caller_factory_;
+  }
+  std::shared_ptr<RpcClient> rpc_client() override { return rpc_client_; }
+  std::shared_ptr<AsyncRegionLocator> region_locator() override { return region_locator_; }
+
+  void Close() override {}
+  std::shared_ptr<HBaseRpcController> CreateRpcController() override {
+    return std::make_shared<HBaseRpcController>();
+  }
+
+ private:
+  std::shared_ptr<ConnectionConfiguration> conn_conf_;
+  std::shared_ptr<AsyncRpcRetryingCallerFactory> caller_factory_;
+  std::shared_ptr<RpcClient> rpc_client_;
+  std::shared_ptr<AsyncRegionLocator> region_locator_;
 };
 
 template <typename CONN>
 class MockRawAsyncTableImpl {
  public:
   explicit MockRawAsyncTableImpl(std::shared_ptr<CONN> conn)
-      : conn_(conn), promise_(std::make_shared<folly::Promise<hbase::Result>>()) {}
+      : conn_(conn), promise_(std::make_shared<folly::Promise<std::shared_ptr<hbase::Result>>>()) {}
   virtual ~MockRawAsyncTableImpl() = default;
 
   /* implement this in real RawAsyncTableImpl. */
 
   /* in real RawAsyncTableImpl, this should be private. */
-  folly::Future<hbase::Result> GetCall(std::shared_ptr<hbase::RpcClient> rpc_client,
-                                       std::shared_ptr<HBaseRpcController> controller,
-                                       std::shared_ptr<RegionLocation> loc, const hbase::Get& get) {
-    hbase::RpcCall<hbase::Request, hbase::Response, hbase::RpcClient> rpc_call = [](
+  folly::Future<std::shared_ptr<hbase::Result>> GetCall(
+      std::shared_ptr<hbase::RpcClient> rpc_client, std::shared_ptr<HBaseRpcController> controller,
+      std::shared_ptr<RegionLocation> loc, const hbase::Get& get) {
+    hbase::RpcCall<hbase::Request, hbase::Response> rpc_call = [](
         std::shared_ptr<hbase::RpcClient> rpc_client, std::shared_ptr<RegionLocation> loc,
         std::shared_ptr<HBaseRpcController> controller,
         std::unique_ptr<hbase::Request> preq) -> folly::Future<std::unique_ptr<hbase::Response>> {
@@ -115,7 +130,7 @@ class MockRawAsyncTableImpl {
                                    std::move(preq), User::defaultUser(), "ClientService");
     };
 
-    return Call<hbase::Get, hbase::Request, hbase::Response, hbase::Result>(
+    return Call<hbase::Get, hbase::Request, hbase::Response, std::shared_ptr<hbase::Result>>(
         rpc_client, controller, loc, get, &hbase::RequestConverter::ToGetRequest, rpc_call,
         &hbase::ResponseConverter::FromGetResponse);
   }
@@ -126,12 +141,12 @@ class MockRawAsyncTableImpl {
       std::shared_ptr<hbase::RpcClient> rpc_client, std::shared_ptr<HBaseRpcController> controller,
       std::shared_ptr<RegionLocation> loc, const REQ& req,
       const ReqConverter<std::unique_ptr<PREQ>, REQ, std::string>& req_converter,
-      const hbase::RpcCall<PREQ, PRESP, hbase::RpcClient>& rpc_call,
-      const RespConverter<std::unique_ptr<RESP>, PRESP>& resp_converter) {
+      const hbase::RpcCall<PREQ, PRESP>& rpc_call,
+      const RespConverter<RESP, PRESP>& resp_converter) {
     rpc_call(rpc_client, loc, controller, std::move(req_converter(req, loc->region_name())))
         .then([&, this](std::unique_ptr<PRESP> presp) {
-          std::unique_ptr<hbase::Result> result = hbase::ResponseConverter::FromGetResponse(*presp);
-          promise_->setValue(std::move(*result));
+          std::shared_ptr<hbase::Result> result = hbase::ResponseConverter::FromGetResponse(*presp);
+          promise_->setValue(result);
         })
         .onError([this](const std::exception& e) { promise_->setException(e); });
     return promise_->getFuture();
@@ -139,7 +154,7 @@ class MockRawAsyncTableImpl {
 
  private:
   std::shared_ptr<CONN> conn_;
-  std::shared_ptr<folly::Promise<hbase::Result>> promise_;
+  std::shared_ptr<folly::Promise<std::shared_ptr<hbase::Result>>> promise_;
 };
 
 TEST(AsyncRpcRetryTest, TestGetBasic) {
@@ -172,69 +187,50 @@ TEST(AsyncRpcRetryTest, TestGetBasic) {
   auto codec = std::make_shared<hbase::KeyValueCodec>();
   auto rpc_client = std::make_shared<RpcClient>(io_executor_, codec);
 
-  /* init rpc controller */
-  auto controller = std::make_shared<HBaseRpcController>();
-
-  /* init rpc controller factory */
-  auto controller_factory = std::make_shared<MockRpcControllerFactory>();
-  EXPECT_CALL((*controller_factory), NewController()).Times(1).WillRepeatedly(Return(controller));
-
   /* init connection configuration */
-  auto connection_conf = std::make_shared<MockAsyncConnectionConfiguration>();
-  EXPECT_CALL((*connection_conf), GetPauseNs())
-      .Times(1)
-      .WillRepeatedly(Return(nanoseconds(100000000)));
-  EXPECT_CALL((*connection_conf), GetMaxRetries()).Times(1).WillRepeatedly(Return(31));
-  EXPECT_CALL((*connection_conf), GetStartLogErrorsCount()).Times(1).WillRepeatedly(Return(9));
-  EXPECT_CALL((*connection_conf), GetReadRpcTimeoutNs())
-      .Times(1)
-      .WillRepeatedly(Return(nanoseconds(60000000000)));
-  EXPECT_CALL((*connection_conf), GetOperationTimeoutNs())
-      .Times(1)
-      .WillRepeatedly(Return(nanoseconds(1200000000000)));
+  auto connection_conf = std::make_shared<ConnectionConfiguration>(
+      TimeUtil::SecondsToNanos(20),    // connect_timeout
+      TimeUtil::SecondsToNanos(1200),  // operation_timeout
+      TimeUtil::SecondsToNanos(60),    // rpc_timeout
+      TimeUtil::MillisToNanos(100),    // pause
+      31,                              // max retries
+      9);                              // start log errors count
 
   /* init region locator */
-  auto region_locator = std::make_shared<AsyncRegionLocator>(region_location);
+  auto region_locator = std::make_shared<MockAsyncRegionLocator>(region_location);
 
   /* init hbase client connection */
-  auto conn = std::make_shared<MockAsyncConnection>();
-  EXPECT_CALL((*conn), get_conn_conf()).Times(AtLeast(1)).WillRepeatedly(Return(connection_conf));
-  EXPECT_CALL((*conn), get_rpc_controller_factory())
-      .Times(AtLeast(1))
-      .WillRepeatedly(Return(controller_factory));
-  EXPECT_CALL((*conn), get_locator()).Times(AtLeast(1)).WillRepeatedly(Return(region_locator));
-  EXPECT_CALL((*conn), GetRpcClient()).Times(AtLeast(1)).WillRepeatedly(Return(rpc_client));
+  auto conn = std::make_shared<MockAsyncConnection>(connection_conf, rpc_client, region_locator);
+  conn->Init();
 
   /* init retry caller factory */
   auto tableImpl = std::make_shared<MockRawAsyncTableImpl<MockAsyncConnection>>(conn);
-  AsyncRpcRetryingCallerFactory<MockAsyncConnection> caller_factory(conn);
 
   /* init request caller builder */
-  auto builder = caller_factory.Single<hbase::Result>();
+  auto builder = conn->caller_factory()->Single<std::shared_ptr<hbase::Result>>();
 
   /* call with retry to get result */
   try {
     auto async_caller =
         builder->table(std::make_shared<TableName>(tn))
             ->row(row)
-            ->rpc_timeout(conn->get_conn_conf()->GetReadRpcTimeoutNs())
-            ->operation_timeout(conn->get_conn_conf()->GetOperationTimeoutNs())
-            ->action(
-                [=, &get](
-                    std::shared_ptr<hbase::HBaseRpcController> controller,
-                    std::shared_ptr<hbase::RegionLocation> loc,
-                    std::shared_ptr<hbase::RpcClient> rpc_client) -> folly::Future<hbase::Result> {
-                  return tableImpl->GetCall(rpc_client, controller, loc, get);
-                })
+            ->rpc_timeout(conn->connection_conf()->read_rpc_timeout())
+            ->operation_timeout(conn->connection_conf()->operation_timeout())
+            ->action([=, &get](std::shared_ptr<hbase::HBaseRpcController> controller,
+                               std::shared_ptr<hbase::RegionLocation> loc,
+                               std::shared_ptr<hbase::RpcClient> rpc_client)
+                         -> folly::Future<std::shared_ptr<hbase::Result>> {
+                           return tableImpl->GetCall(rpc_client, controller, loc, get);
+                         })
             ->Build();
 
-    hbase::Result result = async_caller->Call().get();
+    auto result = async_caller->Call().get();
 
     // Test the values, should be same as in put executed on hbase shell
-    ASSERT_TRUE(!result.IsEmpty()) << "Result shouldn't be empty.";
-    EXPECT_EQ("test2", result.Row());
-    EXPECT_EQ("value2", *(result.Value("d", "2")));
-    EXPECT_EQ("value for extra", *(result.Value("d", "extra")));
+    ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
+    EXPECT_EQ("test2", result->Row());
+    EXPECT_EQ("value2", *(result->Value("d", "2")));
+    EXPECT_EQ("value for extra", *(result->Value("d", "extra")));
   } catch (std::exception& e) {
     LOG(ERROR) << e.what();
     throw e;

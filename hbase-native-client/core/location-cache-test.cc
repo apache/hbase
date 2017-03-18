@@ -33,6 +33,7 @@ using namespace std::chrono;
 class LocationCacheTest : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
+    google::InstallFailureSignalHandler();
     test_util_ = std::make_unique<TestUtil>();
     test_util_->StartMiniCluster(2);
   }

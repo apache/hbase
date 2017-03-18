@@ -47,6 +47,7 @@ class ClientTest : public ::testing::Test {
                               const std::string xml_data) {
     // Remove temp file always
     boost::filesystem::remove((dir + file).c_str());
+    boost::filesystem::create_directories(dir.c_str());
     WriteDataToFile((dir + file), xml_data);
   }
 
@@ -59,6 +60,7 @@ class ClientTest : public ::testing::Test {
   static std::unique_ptr<hbase::TestUtil> test_util;
 
   static void SetUpTestCase() {
+    google::InstallFailureSignalHandler();
     test_util = std::make_unique<hbase::TestUtil>();
     test_util->StartMiniCluster(2);
   }

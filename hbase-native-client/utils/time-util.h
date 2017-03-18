@@ -23,28 +23,45 @@
 #include <string>
 using std::chrono::nanoseconds;
 using std::chrono::milliseconds;
+using std::chrono::seconds;
 
 namespace hbase {
 class TimeUtil {
  public:
-  static int64_t ToMillis(const int64_t& nanos) {
+  static inline int64_t ToMillis(const int64_t& nanos) {
     return std::chrono::duration_cast<milliseconds>(nanoseconds(nanos)).count();
   }
 
-  static std::string ToMillisStr(const nanoseconds& nanos) {
+  static inline milliseconds ToMillis(const nanoseconds& nanos) {
+    return std::chrono::duration_cast<milliseconds>(nanoseconds(nanos));
+  }
+
+  static inline nanoseconds ToNanos(const milliseconds& millis) {
+    return std::chrono::duration_cast<nanoseconds>(millis);
+  }
+
+  static inline nanoseconds MillisToNanos(const int64_t& millis) {
+    return std::chrono::duration_cast<nanoseconds>(milliseconds(millis));
+  }
+
+  static inline nanoseconds SecondsToNanos(const int64_t& secs) {
+    return std::chrono::duration_cast<nanoseconds>(seconds(secs));
+  }
+
+  static inline std::string ToMillisStr(const nanoseconds& nanos) {
     return std::to_string(std::chrono::duration_cast<milliseconds>(nanos).count());
   }
 
-  static int64_t GetNowNanos() {
+  static inline int64_t GetNowNanos() {
     auto duration = std::chrono::high_resolution_clock::now().time_since_epoch();
     return std::chrono::duration_cast<nanoseconds>(duration).count();
   }
 
-  static int64_t ElapsedMillis(const int64_t& start_ns) {
+  static inline int64_t ElapsedMillis(const int64_t& start_ns) {
     return std::chrono::duration_cast<milliseconds>(nanoseconds(GetNowNanos() - start_ns)).count();
   }
 
-  static std::string ElapsedMillisStr(const int64_t& start_ns) {
+  static inline std::string ElapsedMillisStr(const int64_t& start_ns) {
     return std::to_string(
         std::chrono::duration_cast<milliseconds>(nanoseconds(GetNowNanos() - start_ns)).count());
   }

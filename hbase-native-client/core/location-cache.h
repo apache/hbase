@@ -32,6 +32,7 @@
 #include <string>
 
 #include "connection/connection-pool.h"
+#include "core/async-region-locator.h"
 #include "core/configuration.h"
 #include "core/meta-utils.h"
 #include "core/region-location.h"
@@ -75,7 +76,7 @@ typedef std::unordered_map<hbase::pb::TableName, std::shared_ptr<PerTableLocatio
 /**
  * Class that can look up and cache locations.
  */
-class LocationCache {
+class LocationCache : public AsyncRegionLocator {
  public:
   /**
    * Constructor.
@@ -127,8 +128,10 @@ class LocationCache {
    * @param row of the table to look up. This object must live until after the
    * future is returned
    */
-  folly::Future<std::shared_ptr<RegionLocation>> LocateRegion(const hbase::pb::TableName &tn,
-                                                              const std::string &row);
+  virtual folly::Future<std::shared_ptr<RegionLocation>> LocateRegion(
+      const hbase::pb::TableName &tn, const std::string &row,
+      const RegionLocateType locate_type = RegionLocateType::kCurrent,
+      const int64_t locate_ns = 0) override;
 
   /**
    * Remove the cached location of meta.
@@ -172,6 +175,12 @@ class LocationCache {
    * Clear cached region location.
    */
   void ClearCachedLocation(const hbase::pb::TableName &tn, const std::string &row);
+
+  /**
+   * Update cached region location, possibly using the information from exception.
+   */
+  virtual void UpdateCachedLocation(const RegionLocation &loc,
+                                    const std::exception &error) override;
 
   const std::string &zk_quorum() { return zk_quorum_; }
 

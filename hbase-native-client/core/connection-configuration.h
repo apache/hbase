@@ -56,6 +56,20 @@ class ConnectionConfiguration {
         conf.GetLong(kClientScannerMaxResultsSize, kDefaultClientScannerMaxResultsSize);
   }
 
+  // Used by tests
+  ConnectionConfiguration(nanoseconds connect_timeout, nanoseconds operation_timeout,
+                          nanoseconds rpc_timeout, nanoseconds pause, uint32_t max_retries,
+                          uint32_t start_log_errors_count)
+      : connect_timeout_(connect_timeout),
+        operation_timeout_(operation_timeout),
+        meta_operation_timeout_(operation_timeout),
+        rpc_timeout_(rpc_timeout),
+        read_rpc_timeout_(rpc_timeout),
+        write_rpc_timeout_(rpc_timeout),
+        pause_(pause),
+        max_retries_(max_retries),
+        start_log_errors_count_(start_log_errors_count) {}
+
   nanoseconds connect_timeout() const { return connect_timeout_; }
 
   nanoseconds meta_operation_timeout() const { return meta_operation_timeout_; }
@@ -74,7 +88,7 @@ class ConnectionConfiguration {
   // timeout for each write rpc request
   nanoseconds write_rpc_timeout() const { return write_rpc_timeout_; }
 
-  nanoseconds pause_nanos() const { return pause_; }
+  nanoseconds pause() const { return pause_; }
 
   uint32_t max_retries() const { return max_retries_; }
 

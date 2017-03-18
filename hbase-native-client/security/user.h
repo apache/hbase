@@ -37,6 +37,7 @@ class User {
   static bool IsSecurityEnabled(const Configuration& conf) {
     return conf.Get("hbase.security.authentication", "").compare(kKerberos) == 0;
   }
+
  private:
   std::string user_name_;
 };

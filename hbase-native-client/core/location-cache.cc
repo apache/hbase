@@ -158,7 +158,10 @@ Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(const Tabl
 }
 
 Future<shared_ptr<RegionLocation>> LocationCache::LocateRegion(const hbase::pb::TableName &tn,
-                                                               const std::string &row) {
+                                                               const std::string &row,
+                                                               const RegionLocateType locate_type,
+                                                               const int64_t locate_ns) {
+  // TODO: implement region locate type and timeout
   auto cached_loc = this->GetCachedLocation(tn, row);
   if (cached_loc != nullptr) {
     return cached_loc;
@@ -279,4 +282,9 @@ void LocationCache::ClearCachedLocation(const hbase::pb::TableName &tn, const st
   auto table_locs = this->GetTableLocations(tn);
   unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
   table_locs->erase(row);
+}
+
+void LocationCache::UpdateCachedLocation(const RegionLocation &loc, const std::exception &error) {
+  // TODO: just clears the location for now. We can inspect RegionMovedExceptions, etc later.
+  ClearCachedLocation(loc.region_info().table_name(), loc.region_info().start_key());
 }
