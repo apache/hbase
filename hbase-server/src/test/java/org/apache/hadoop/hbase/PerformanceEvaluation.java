@@ -325,7 +325,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // recreate the table when user has requested presplit or when existing
     // {RegionSplitPolicy,replica count} does not match requested.
     if ((exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions)
-      || (!isReadCmd && desc != null && desc.getRegionSplitPolicyClassName() != opts.splitPolicy)
+      || (!isReadCmd && desc != null && !desc.getRegionSplitPolicyClassName().equals(opts.splitPolicy))
       || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)) {
       needsDelete = true;
       // wait, why did it delete my table?!?
