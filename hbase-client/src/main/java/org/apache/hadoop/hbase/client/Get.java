@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -128,6 +129,27 @@ public class Get extends Query
       TimeRange tr = entry.getValue();
       setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
+  }
+
+  /**
+   * Create a Get operation for the specified row.
+   * @param row
+   * @param rowOffset
+   * @param rowLength
+   */
+  public Get(byte[] row, int rowOffset, int rowLength) {
+    Mutation.checkRow(row, rowOffset, rowLength);
+    this.row = Bytes.copy(row, rowOffset, rowLength);
+  }
+
+  /**
+   * Create a Get operation for the specified row.
+   * @param row
+   */
+  public Get(ByteBuffer row) {
+    Mutation.checkRow(row);
+    this.row = new byte[row.remaining()];
+    row.get(this.row);
   }
 
   public boolean isCheckExistenceOnly() {
