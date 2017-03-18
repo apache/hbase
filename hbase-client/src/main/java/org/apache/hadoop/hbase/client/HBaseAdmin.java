@@ -4098,11 +4098,11 @@ public class HBaseAdmin implements Admin {
     if (result == 0) {
       Iterator<HColumnDescriptor> remoteHCDIter = peerHtd.getFamilies().iterator();
       Iterator<HColumnDescriptor> localHCDIter = localHtd.getFamilies().iterator();
-          
+
       while (remoteHCDIter.hasNext() && localHCDIter.hasNext()) {
         HColumnDescriptor remoteHCD = remoteHCDIter.next();
         HColumnDescriptor localHCD = localHCDIter.next();
-        
+
         String remoteHCDName = remoteHCD.getNameAsString();
         String localHCDName = localHCD.getNameAsString();
 

@@ -64,7 +64,7 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
     // setup the default procedure coordinator
     String name = master.getServerName().toString();
     ThreadPoolExecutor tpool = ProcedureCoordinator.defaultPool(name, 1);
-    ProcedureCoordinatorRpcs comms = new ZKProcedureCoordinatorRpcs(
+    ProcedureCoordinatorRpcs comms = new ZKProcedureCoordinator(
         master.getZooKeeper(), getProcedureSignature(), name);
 
     this.coordinator = new ProcedureCoordinator(comms, tpool);

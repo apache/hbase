@@ -368,6 +368,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return false;
   }
 
+  public static boolean isArchivedLogFile(Path p) {
+    String oldLog = Path.SEPARATOR + HConstants.HREGION_OLDLOGDIR_NAME + Path.SEPARATOR;
+    return p.toString().contains(oldLog);
+  }
+
   /**
    * Get prefix of the log from its name, assuming WAL name in format of
    * log_prefix.filenumber.log_suffix

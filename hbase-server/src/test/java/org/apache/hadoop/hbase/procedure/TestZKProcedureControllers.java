@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.procedure;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -31,11 +31,11 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -188,9 +188,9 @@ public class TestZKProcedureControllers {
 
     ProcedureMember member = Mockito.mock(ProcedureMember.class);
 
-    Pair<ZKProcedureCoordinatorRpcs, List<ZKProcedureMemberRpcs>> pair = controllers
+    Pair<ZKProcedureCoordinator, List<ZKProcedureMemberRpcs>> pair = controllers
         .start(watcher, operationName, coordinator, CONTROLLER_NODE_NAME, member, expected);
-    ZKProcedureCoordinatorRpcs controller = pair.getFirst();
+    ZKProcedureCoordinator controller = pair.getFirst();
     List<ZKProcedureMemberRpcs> cohortControllers = pair.getSecond();
     // start the operation
     Procedure p = Mockito.mock(Procedure.class);
@@ -266,9 +266,9 @@ public class TestZKProcedureControllers {
     Procedure p = Mockito.mock(Procedure.class);
     Mockito.when(p.getName()).thenReturn(operationName);
 
-    Pair<ZKProcedureCoordinatorRpcs, List<ZKProcedureMemberRpcs>> pair = controllers
+    Pair<ZKProcedureCoordinator, List<ZKProcedureMemberRpcs>> pair = controllers
         .start(watcher, operationName, coordinator, CONTROLLER_NODE_NAME, member, expected);
-    ZKProcedureCoordinatorRpcs controller = pair.getFirst();
+    ZKProcedureCoordinator controller = pair.getFirst();
     List<ZKProcedureMemberRpcs> cohortControllers = pair.getSecond();
 
     // post 1/2 the prepare nodes early
@@ -383,7 +383,7 @@ public class TestZKProcedureControllers {
    * Specify how the controllers that should be started (not spy/mockable) for the test.
    */
   private abstract class StartControllers {
-    public abstract Pair<ZKProcedureCoordinatorRpcs, List<ZKProcedureMemberRpcs>> start(
+    public abstract Pair<ZKProcedureCoordinator, List<ZKProcedureMemberRpcs>> start(
         ZooKeeperWatcher watcher, String operationName,
         ProcedureCoordinator coordinator, String controllerName,
         ProcedureMember member, List<String> cohortNames) throws Exception;
@@ -392,12 +392,12 @@ public class TestZKProcedureControllers {
   private final StartControllers startCoordinatorFirst = new StartControllers() {
 
     @Override
-    public Pair<ZKProcedureCoordinatorRpcs, List<ZKProcedureMemberRpcs>> start(
+    public Pair<ZKProcedureCoordinator, List<ZKProcedureMemberRpcs>> start(
         ZooKeeperWatcher watcher, String operationName,
         ProcedureCoordinator coordinator, String controllerName,
         ProcedureMember member, List<String> expected) throws Exception {
       // start the controller
-      ZKProcedureCoordinatorRpcs controller = new ZKProcedureCoordinatorRpcs(
+      ZKProcedureCoordinator controller = new ZKProcedureCoordinator(
           watcher, operationName, CONTROLLER_NODE_NAME);
       controller.start(coordinator);
 
@@ -420,7 +420,7 @@ public class TestZKProcedureControllers {
   private final StartControllers startCohortFirst = new StartControllers() {
 
     @Override
-    public Pair<ZKProcedureCoordinatorRpcs, List<ZKProcedureMemberRpcs>> start(
+    public Pair<ZKProcedureCoordinator, List<ZKProcedureMemberRpcs>> start(
         ZooKeeperWatcher watcher, String operationName,
         ProcedureCoordinator coordinator, String controllerName,
         ProcedureMember member, List<String> expected) throws Exception {
@@ -434,7 +434,7 @@ public class TestZKProcedureControllers {
       }
 
       // start the controller
-      ZKProcedureCoordinatorRpcs controller = new ZKProcedureCoordinatorRpcs(
+      ZKProcedureCoordinator controller = new ZKProcedureCoordinator(
           watcher, operationName, CONTROLLER_NODE_NAME);
       controller.start(coordinator);
 

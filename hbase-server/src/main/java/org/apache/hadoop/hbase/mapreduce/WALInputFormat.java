@@ -27,22 +27,26 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Simple {@link InputFormat} for {@link org.apache.hadoop.hbase.wal.WAL} files.
@@ -169,7 +173,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
           temp = reader.next(currentEntry);
           i++;
         } catch (EOFException x) {
-          LOG.info("Corrupted entry detected. Ignoring the rest of the file."
+          LOG.warn("Corrupted entry detected. Ignoring the rest of the file."
               + " (This is normal when a RegionServer crashed.)");
           return false;
         }
@@ -231,19 +235,26 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
   List<InputSplit> getSplits(final JobContext context, final String startKey, final String endKey)
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
-    Path inputDir = new Path(conf.get("mapreduce.input.fileinputformat.inputdir"));
-
+    Path[] inputPaths = getInputPaths(conf);
     long startTime = conf.getLong(startKey, Long.MIN_VALUE);
     long endTime = conf.getLong(endKey, Long.MAX_VALUE);
 
-    FileSystem fs = inputDir.getFileSystem(conf);
-    List<FileStatus> files = getFiles(fs, inputDir, startTime, endTime);
-
-    List<InputSplit> splits = new ArrayList<>(files.size());
-    for (FileStatus file : files) {
+    List<FileStatus> allFiles = new ArrayList<FileStatus>();
+    for(Path inputPath: inputPaths){
+      FileSystem fs = inputPath.getFileSystem(conf);
+      List<FileStatus> files = getFiles(fs, inputPath, startTime, endTime);
+      allFiles.addAll(files);
+    }
+    List<InputSplit> splits = new ArrayList<InputSplit>(allFiles.size());
+    for (FileStatus file : allFiles) {
       splits.add(new WALSplit(file.getPath().toString(), file.getLen(), startTime, endTime));
     }
     return splits;
+  }
+
+  private Path[] getInputPaths(Configuration conf) {
+    String inpDirs = conf.get("mapreduce.input.fileinputformat.inputdir");
+    return StringUtils.stringToPath(inpDirs.split(","));
   }
 
   private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime)
@@ -251,9 +262,10 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
     List<FileStatus> result = new ArrayList<>();
     LOG.debug("Scanning " + dir.toString() + " for WAL files");
 
-    FileStatus[] files = fs.listStatus(dir);
-    if (files == null) return Collections.emptyList();
-    for (FileStatus file : files) {
+    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir);
+    if (!iter.hasNext()) return Collections.emptyList();
+    while (iter.hasNext()) {
+      LocatedFileStatus file = iter.next();
       if (file.isDirectory()) {
         // recurse into sub directories
         result.addAll(getFiles(fs, file.getPath(), startTime, endTime));
@@ -264,7 +276,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
           try {
             long fileStartTime = Long.parseLong(name.substring(idx+1));
             if (fileStartTime <= endTime) {
-              LOG.info("Found: " + name);
+              LOG.info("Found: " + file);
               result.add(file);
             }
           } catch (NumberFormatException x) {

@@ -35,8 +35,8 @@ import org.apache.zookeeper.KeeperException;
  * ZooKeeper based {@link ProcedureCoordinatorRpcs} for a {@link ProcedureCoordinator}
  */
 @InterfaceAudience.Private
-public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
-  private static final Log LOG = LogFactory.getLog(ZKProcedureCoordinatorRpcs.class);
+public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
+  private static final Log LOG = LogFactory.getLog(ZKProcedureCoordinator.class);
   private ZKProcedureUtil zkProc = null;
   protected ProcedureCoordinator coordinator = null;  // if started this should be non-null
 
@@ -51,8 +51,8 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
    * @param coordName name of the node running the coordinator
    * @throws KeeperException if an unexpected zk error occurs
    */
-  public ZKProcedureCoordinatorRpcs(ZooKeeperWatcher watcher,
-      String procedureClass, String coordName) throws KeeperException {
+  public ZKProcedureCoordinator(ZooKeeperWatcher watcher,
+      String procedureClass, String coordName) {
     this.watcher = watcher;
     this.procedureType = procedureClass;
     this.coordName = coordName;
@@ -179,6 +179,7 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
    * Start monitoring znodes in ZK - subclass hook to start monitoring znodes they are about.
    * @return true if succeed, false if encountered initialization errors.
    */
+  @Override
   final public boolean start(final ProcedureCoordinator coordinator) {
     if (this.coordinator != null) {
       throw new IllegalStateException(

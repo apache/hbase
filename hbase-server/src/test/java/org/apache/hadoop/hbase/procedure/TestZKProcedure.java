@@ -127,7 +127,7 @@ public class TestZKProcedure {
     String opDescription = "coordination test - " + members.length + " cohort members";
 
     // start running the controller
-    ZKProcedureCoordinatorRpcs coordinatorComms = new ZKProcedureCoordinatorRpcs(
+    ZKProcedureCoordinator coordinatorComms = new ZKProcedureCoordinator(
         coordZkw, opDescription, COORDINATOR_NODE_NAME);
     ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(COORDINATOR_NODE_NAME, POOL_SIZE, KEEP_ALIVE);
     ProcedureCoordinator coordinator = new ProcedureCoordinator(coordinatorComms, pool) {
@@ -208,7 +208,7 @@ public class TestZKProcedure {
 
     // start running the coordinator and its controller
     ZooKeeperWatcher coordinatorWatcher = newZooKeeperWatcher();
-    ZKProcedureCoordinatorRpcs coordinatorController = new ZKProcedureCoordinatorRpcs(
+    ZKProcedureCoordinator coordinatorController = new ZKProcedureCoordinator(
         coordinatorWatcher, opDescription, COORDINATOR_NODE_NAME);
     ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(COORDINATOR_NODE_NAME, POOL_SIZE, KEEP_ALIVE);
     ProcedureCoordinator coordinator = spy(new ProcedureCoordinator(coordinatorController, pool));
@@ -393,7 +393,7 @@ public class TestZKProcedure {
 
   private void closeAll(
       ProcedureCoordinator coordinator,
-      ZKProcedureCoordinatorRpcs coordinatorController,
+      ZKProcedureCoordinator coordinatorController,
       List<Pair<ProcedureMember, ZKProcedureMemberRpcs>> cohort)
       throws IOException {
     // make sure we close all the resources

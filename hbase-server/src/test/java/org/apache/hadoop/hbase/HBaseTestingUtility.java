@@ -49,7 +49,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
@@ -117,6 +116,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RegionSplitter;
+import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -136,6 +136,8 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+
+import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -2171,6 +2173,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
+  public void loadRandomRows(final Table t, final byte[] f, int rowSize, int totalRows)
+      throws IOException {
+    Random r = new Random();
+    byte[] row = new byte[rowSize];
+    for (int i = 0; i < totalRows; i++) {
+      r.nextBytes(row);
+      Put put = new Put(row);
+      put.addColumn(f, new byte[]{0}, new byte[]{0});
+      t.put(put);
+    }
+  }
+
   public void verifyNumericRows(Table table, final byte[] f, int startRow, int endRow,
       int replicaId)
       throws IOException {
@@ -3337,6 +3351,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Waith until all system table's regions get assigned
+   * @throws IOException
+   */
+  public void waitUntilAllSystemRegionsAssigned() throws IOException {
+    waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
+    waitUntilAllRegionsAssigned(TableName.NAMESPACE_TABLE_NAME);
+  }
+
+  /**
    * Wait until all regions for a table in hbase:meta have a non-empty
    * info:server, or until timeout.  This means all regions have been deployed,
    * master has been informed and updated hbase:meta with the regions deployed
@@ -3801,12 +3824,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
       HTableDescriptor desc, HColumnDescriptor[] hcds, int numRegionsPerServer) throws IOException {
+
+    return createPreSplitLoadTestTable(conf, desc, hcds,
+      new RegionSplitter.HexStringSplit(), numRegionsPerServer);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      HTableDescriptor desc, HColumnDescriptor[] hcds,
+      SplitAlgorithm splitter, int numRegionsPerServer) throws IOException {
     for (HColumnDescriptor hcd : hcds) {
       if (!desc.hasFamily(hcd.getName())) {
         desc.addFamily(hcd);
       }
     }
-
     int totalNumberOfRegions = 0;
     Connection unmanagedConnection = ConnectionFactory.createConnection(conf);
     Admin admin = unmanagedConnection.getAdmin();
@@ -3825,7 +3860,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           "pre-splitting table into " + totalNumberOfRegions + " regions " +
           "(regions per server: " + numRegionsPerServer + ")");
 
-      byte[][] splits = new RegionSplitter.HexStringSplit().split(
+      byte[][] splits = splitter.split(
           totalNumberOfRegions);
 
       admin.createTable(desc, splits);

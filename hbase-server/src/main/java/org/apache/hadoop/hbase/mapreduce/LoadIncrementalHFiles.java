@@ -100,7 +100,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
  */
@@ -116,7 +115,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     = "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
   private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
   public final static String CREATE_TABLE_CONF_KEY = "create.table";
-  public final static String SILENCE_CONF_KEY = "ignore.unmatched.families";
+  public final static String IGNORE_UNMATCHED_CF_CONF_KEY = "ignore.unmatched.families";
   public final static String ALWAYS_COPY_FILES = "always.copy.files";
 
   // We use a '.' prefix which is ignored when walking directory trees
@@ -168,7 +167,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     System.err.println("usage: " + NAME + " /path/to/hfileoutputformat-output tablename" + "\n -D"
         + CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by this tool\n"
         + "  Note: if you set this to 'no', then the target table must already exist in HBase\n -D"
-        + SILENCE_CONF_KEY + "=yes - can be used to ignore unmatched column families\n"
+        + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes - can be used to ignore unmatched column families\n"
         + "\n");
   }
 
@@ -530,7 +529,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         boolean success = false;
         try {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
-              + Bytes.toStringBinary(getRow()) + " with hfile group " + famPaths);
+              + Bytes.toStringBinary(getRow()) + " with hfile group " +
+              LoadIncrementalHFiles.this.toString( famPaths));
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
           try (Table table = conn.getTable(getTableName())) {
             secureClient = new SecureBulkLoadClient(getConf(), table);
@@ -1047,6 +1047,21 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
   }
 
+  private final String toString(List<Pair<byte[], String>> list) {
+    StringBuffer sb = new StringBuffer();
+    sb.append("[");
+    if(list != null){
+      for(Pair<byte[], String> pair: list) {
+        sb.append("{");
+        sb.append(Bytes.toStringBinary(pair.getFirst()));
+        sb.append(",");
+        sb.append(pair.getSecond());
+        sb.append("}");
+      }
+    }
+    sb.append("]");
+    return sb.toString();
+  }
   private boolean isSecureBulkLoadEndpointAvailable() {
     String classes = getConf().get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
     return classes.contains("org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint");
@@ -1245,7 +1260,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       try (Table table = connection.getTable(tableName);
         RegionLocator locator = connection.getRegionLocator(tableName)) {
-        boolean silence = "yes".equalsIgnoreCase(getConf().get(SILENCE_CONF_KEY, ""));
+        boolean silence = "yes".equalsIgnoreCase(getConf().get(IGNORE_UNMATCHED_CF_CONF_KEY, ""));
         boolean copyFiles = "yes".equalsIgnoreCase(getConf().get(ALWAYS_COPY_FILES, ""));
         if (dirPath != null) {
           doBulkLoad(hfofDir, admin, table, locator, silence, copyFiles);
