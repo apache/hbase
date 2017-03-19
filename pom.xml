@@ -248,6 +248,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>eshcar</id>
+      <name>Eshcar Hillel</name>
+      <email>eshcar@apache.org</email>
+      <timezone>+2</timezone>
+    </developer>
+    <developer>
       <id>fenghh</id>
       <name>Honghua Feng</name>
       <email>fenghh@apache.org</email>
