@@ -76,8 +76,7 @@ public class RowCounter extends Configured implements Tool {
      * @param values  The columns.
      * @param context  The current context.
      * @throws IOException When something is broken with the data.
-     * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN,
-     *   org.apache.hadoop.mapreduce.Mapper.Context)
+     * @see org.apache.hadoop.mapreduce.Mapper#map(Object, Object, Context)
      */
     @Override
     public void map(ImmutableBytesWritable row, Result values,

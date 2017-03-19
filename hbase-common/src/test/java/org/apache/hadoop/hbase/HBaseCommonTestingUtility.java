@@ -32,8 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
- * @see {@link HBaseTestingUtility}
- *
+ * {@see org.apache.hadoop.hbase.HBaseTestingUtility}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable

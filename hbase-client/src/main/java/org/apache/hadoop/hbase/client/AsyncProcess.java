@@ -452,7 +452,7 @@ class AsyncProcess {
   /**
    * Only used w/useGlobalErrors ctor argument, for HTable backward compat.
    * @return Whether there were any errors in any request since the last time
-   *          {@link #waitForAllPreviousOpsAndReset(List, String)} was called, or AP was created.
+   *          {@link #waitForAllPreviousOpsAndReset(List, TableName)} was called, or AP was created.
    */
   public boolean hasError() {
     return globalErrors != null && globalErrors.hasErrors();
@@ -463,9 +463,9 @@ class AsyncProcess {
    * Waits for all previous operations to finish, and returns errors and (optionally)
    * failed operations themselves.
    * @param failedRows an optional list into which the rows that failed since the last time
-   *        {@link #waitForAllPreviousOpsAndReset(List, String)} was called, or AP was created, are saved.
+   *        {@link #waitForAllPreviousOpsAndReset(List, TableName)} was called, or AP was created, are saved.
    * @param tableName name of the table
-   * @return all the errors since the last time {@link #waitForAllPreviousOpsAndReset(List, String)}
+   * @return all the errors since the last time {@link #waitForAllPreviousOpsAndReset(List, TableName)}
    *          was called, or AP was created.
    */
   public RetriesExhaustedWithDetailsException waitForAllPreviousOpsAndReset(

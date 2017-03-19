@@ -61,7 +61,7 @@ import org.apache.hadoop.util.StringUtils;
  * {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter} and
  *  {@link HFileWriterImpl}. Examples of how to use the reader can be
  *  found in {@link HFileReaderImpl} and
- *  {@link org.apache.hadoop.hbase.io.hfile.TestHFileBlockIndex}.
+ *  org.apache.hadoop.hbase.io.hfile.TestHFileBlockIndex.
  */
 @InterfaceAudience.Private
 public class HFileBlockIndex {

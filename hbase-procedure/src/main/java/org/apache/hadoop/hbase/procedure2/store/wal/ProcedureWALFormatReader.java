@@ -119,8 +119,7 @@ public class ProcedureWALFormatReader {
    * purpose. If all procedures updated in a WAL are found to be obsolete, it can be safely deleted.
    * (see {@link WALProcedureStore#removeInactiveLogs()}).
    * However, we don't need deleted part of a WAL's tracker for this purpose, so we don't bother
-   * re-building it. (To understand why, take a look at
-   * {@link ProcedureStoreTracker.BitSetNode#subtract(ProcedureStoreTracker.BitSetNode)}).
+   * re-building it.
    */
   private ProcedureStoreTracker localTracker;
 

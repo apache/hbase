@@ -27,15 +27,15 @@ import org.apache.hadoop.hbase.client.Put;
  * any order.
  * <p>
  * A {@link Constraint} must be added to a table before the table is loaded via
- * {@link Constraints#add(HTableDescriptor, Class...)} or
- * {@link Constraints#add(HTableDescriptor,
+ * {@link Constraints#add(org.apache.hadoop.hbase.HTableDescriptor, Class[])} or
+ * {@link Constraints#add(org.apache.hadoop.hbase.HTableDescriptor,
  * org.apache.hadoop.hbase.util.Pair...)}
  * (if you want to add a configuration with the {@link Constraint}). Constraints
  * will be run in the order that they are added. Further, a Constraint will be
  * configured before it is run (on load).
  * <p>
- * See {@link Constraints#enableConstraint(HTableDescriptor, Class)} and
- * {@link Constraints#disableConstraint(HTableDescriptor, Class)} for
+ * See {@link Constraints#enableConstraint(org.apache.hadoop.hbase.HTableDescriptor, Class)} and
+ * {@link Constraints#disableConstraint(org.apache.hadoop.hbase.HTableDescriptor, Class)} for
  * enabling/disabling of a given {@link Constraint} after it has been added.
  * <p>
  * If a {@link Put} is invalid, the Constraint should throw some sort of

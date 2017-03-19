@@ -447,7 +447,7 @@ public class TestPartialResultsFromClientSide {
   }
 
   /**
-   * Test the method {@link Result#createCompleteResult(List)}
+   * Test the method {@link Result#createCompleteResult(Iterable)}
    * @throws Exception
    */
   @Test

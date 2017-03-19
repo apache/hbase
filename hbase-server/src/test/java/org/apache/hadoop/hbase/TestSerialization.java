@@ -571,7 +571,7 @@ public class TestSerialization {
   protected static final byte [][] COLUMNS = {fam1, fam2, fam3};
 
   /**
-   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * Create a table of name <code>name</code> with {@link #COLUMNS} for
    * families.
    * @param name Name to give table.
    * @return Column descriptor.
@@ -581,7 +581,7 @@ public class TestSerialization {
   }
 
   /**
-   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * Create a table of name <code>name</code> with {@link #COLUMNS} for
    * families.
    * @param name Name to give table.
    * @param versions How many versions to allow per column.

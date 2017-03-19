@@ -208,7 +208,7 @@ public class StoreFileReader {
    * Checks whether the given scan passes the Bloom filter (if present). Only
    * checks Bloom filters for single-row or single-row-column scans. Bloom
    * filter checking for multi-gets is implemented as part of the store
-   * scanner system (see {@link StoreFileScanner#seekExactly}) and uses
+   * scanner system (see {@link StoreFileScanner#seek(Cell)} and uses
    * the lower-level API {@link #passesGeneralRowBloomFilter(byte[], int, int)}
    * and {@link #passesGeneralRowColBloomFilter(Cell)}.
    *

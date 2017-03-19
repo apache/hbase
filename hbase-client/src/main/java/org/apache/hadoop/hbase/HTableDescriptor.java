@@ -723,7 +723,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   /**
    * This sets the class associated with the region split policy which
    * determines when a region split should occur.  The class used by
-   * default is defined in {@link org.apache.hadoop.hbase.regionserver.RegionSplitPolicy}
+   * default is defined in org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
    * @param clazz the class name
    */
   public HTableDescriptor setRegionSplitPolicyClassName(String clazz) {
@@ -734,7 +734,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   /**
    * This gets the class associated with the region split policy which
    * determines when a region split should occur.  The class used by
-   * default is defined in {@link org.apache.hadoop.hbase.regionserver.RegionSplitPolicy}
+   * default is defined in org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
    *
    * @return the class name of the region split policy for this table.
    * If this returns null, the default split policy is used.
@@ -827,7 +827,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   /**
    * This sets the class associated with the flush policy which determines determines the stores
    * need to be flushed when flushing a region. The class used by default is defined in
-   * {@link org.apache.hadoop.hbase.regionserver.FlushPolicy}
+   * org.apache.hadoop.hbase.regionserver.FlushPolicy.
    * @param clazz the class name
    */
   public HTableDescriptor setFlushPolicyClassName(String clazz) {
@@ -838,7 +838,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   /**
    * This gets the class associated with the flush policy which determines the stores need to be
    * flushed when flushing a region. The class used by default is defined in
-   * {@link org.apache.hadoop.hbase.regionserver.FlushPolicy}
+   * org.apache.hadoop.hbase.regionserver.FlushPolicy.
    * @return the class name of the flush policy for this table. If this returns null, the default
    *         flush policy is used.
    */
@@ -1244,7 +1244,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
    * or Endpoint.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
@@ -1259,7 +1259,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
    * or Endpoint.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
@@ -1304,7 +1304,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
    * or Endpoint.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when

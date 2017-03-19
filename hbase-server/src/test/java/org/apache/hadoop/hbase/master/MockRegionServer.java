@@ -139,7 +139,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   /**
    * Map of regions to map of rows and {@link Result}.  Used as data source when
-   * {@link MockRegionServer#get(byte[], Get)} is called. Because we have a byte
+   * {@link #get(RpcController, GetRequest)} is called. Because we have a byte
    * key, need to use TreeMap and provide a Comparator.  Use
    * {@link #setGetResult(byte[], byte[], Result)} filling this map.
    */
@@ -190,7 +190,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   /**
-   * Use this method filling the backing data source used by {@link #get(byte[], Get)}
+   * Use this method filling the backing data source used by {@link #get(RpcController, GetRequest)}
    * @param regionName
    * @param row
    * @param r

@@ -248,7 +248,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     }
 
     /**
-     * This is modeled after {@link BloomFilterChunk.MetaWriter} for simplicity,
+     * This is modeled after {@link CompoundBloomFilterWriter.MetaWriter} for simplicity,
      * although the two metadata formats do not have to be consistent. This
      * does have to be consistent with how {@link
      * CompoundBloomFilter#CompoundBloomFilter(DataInput,

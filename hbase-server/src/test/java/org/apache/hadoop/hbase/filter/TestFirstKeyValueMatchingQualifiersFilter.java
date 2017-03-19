@@ -40,7 +40,7 @@ public class TestFirstKeyValueMatchingQualifiersFilter extends TestCase {
 
   /**
    * Test the functionality of
-   * {@link FirstKeyValueMatchingQualifiersFilter#filterKeyValue(KeyValue)}
+   * {@link FirstKeyValueMatchingQualifiersFilter#filterKeyValue(org.apache.hadoop.hbase.Cell)}
    * 
    * @throws Exception
    */

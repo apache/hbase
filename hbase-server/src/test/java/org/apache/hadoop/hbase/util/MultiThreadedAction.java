@@ -78,8 +78,8 @@ public abstract class MultiThreadedAction {
    * Default implementation of LoadTestDataGenerator that uses LoadTestKVGenerator, fixed
    * set of column families, and random number of columns in range. The table for it can
    * be created manually or, for example, via
-   * {@link HBaseTestingUtility#createPreSplitLoadTestTable(
-   * org.apache.hadoop.hbase.Configuration, byte[], byte[], Algorithm, DataBlockEncoding)}
+   * {@link org.apache.hadoop.hbase.HBaseTestingUtility#createPreSplitLoadTestTable(Configuration, TableName, byte[],
+   * org.apache.hadoop.hbase.io.compress.Compression.Algorithm, org.apache.hadoop.hbase.io.encoding.DataBlockEncoding)}
    */
   public static class DefaultDataGenerator extends LoadTestDataGenerator {
     private byte[][] columnFamilies = null;

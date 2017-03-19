@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
  * Note : It may emit KVs which do not have the given columns in them, if
  * these KVs happen to occur before a KV which does have a match. Given this
  * caveat, this filter is only useful for special cases
- * like {@link org.apache.hadoop.hbase.mapreduce.RowCounter}.
+ * like org.apache.hadoop.hbase.mapreduce.RowCounter.
  * <p>
  * @deprecated Deprecated in 2.0. See HBASE-13347
  */

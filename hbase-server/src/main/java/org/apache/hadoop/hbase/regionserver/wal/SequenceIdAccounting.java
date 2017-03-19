@@ -61,7 +61,7 @@ class SequenceIdAccounting {
    * {@link #flushingSequenceIds}.
    * 
    * <p>The two Maps are tied by this locking object EXCEPT when we go to update the lowest
-   * entry; see {@link #lowest(byte[], Set, Long)}. In here is a putIfAbsent call on
+   * entry; see {@link #lowestUnflushedSequenceIds}. In here is a putIfAbsent call on
    * {@link #lowestUnflushedSequenceIds}. In this latter case, we will add this lowest
    * sequence id if we find that there is no entry for the current column family. There will be no
    * entry only if we just came up OR we have moved aside current set of lowest sequence ids
@@ -403,8 +403,8 @@ class SequenceIdAccounting {
 
   /**
    * Iterates over the given Map and compares sequence ids with corresponding entries in
-   * {@link #oldestUnflushedRegionSequenceIds}. If a region in
-   * {@link #oldestUnflushedRegionSequenceIds} has a sequence id less than that passed in
+   * {@link #lowestUnflushedSequenceIds}. If a region in
+   * {@link #lowestUnflushedSequenceIds} has a sequence id less than that passed in
    * <code>sequenceids</code> then return it.
    * @param sequenceids Sequenceids keyed by encoded region name.
    * @return regions found in this instance with sequence ids less than those passed in.

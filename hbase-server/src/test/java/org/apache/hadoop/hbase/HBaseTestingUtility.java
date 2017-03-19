@@ -2059,7 +2059,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /** A tracker for tracking and validating table rows
-   * generated with {@link HBaseTestingUtility#loadTable(HTable, byte[])}
+   * generated with {@link HBaseTestingUtility#loadTable(Table, byte[])}
    */
   public static class SeenRowTracker {
     int dim = 'z' - 'a' + 1;
@@ -2326,7 +2326,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return digest.toString();
   }
 
-  /** All the row values for the data loaded by {@link #loadTable(HTable, byte[])} */
+  /** All the row values for the data loaded by {@link #loadTable(Table, byte[])} */
   public static final byte[][] ROWS = new byte[(int) Math.pow('z' - 'a' + 1, 3)][3]; // ~52KB
   static {
     int i = 0;
@@ -3110,7 +3110,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Waits for a table to be 'enabled'.  Enabled means that table is set as 'enabled' and the
    * regions have been all assigned.
-   * @see #waitTableEnabled(Admin, byte[], long)
+   * @see #waitTableEnabled(TableName, long)
    * @param table Table to wait on.
    * @param timeoutMillis Time to wait on it being marked enabled.
    * @throws InterruptedException

@@ -113,7 +113,7 @@ import org.junit.rules.TestRule;
 import org.mockito.Mockito;
 
 /**
- * Simple test for {@link CellSortReducer} and {@link HFileOutputFormat2}.
+ * Simple test for {@link HFileOutputFormat2}.
  * Sets up and runs a mapreduce job that writes hfile output.
  * Creates a few inner classes to implement splits and an inputformat that
  * emits keys and values like those of {@link PerformanceEvaluation}.
@@ -684,9 +684,8 @@ public class TestHFileOutputFormat2  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat2#configureCompression(org.apache.hadoop.hbase.client.Table,
-   * Configuration)} and {@link HFileOutputFormat2#createFamilyCompressionMap
-   * (Configuration)}.
+   * Test for {@link HFileOutputFormat2#configureCompression(Configuration, HTableDescriptor)} and
+   * {@link HFileOutputFormat2#createFamilyCompressionMap(Configuration)}.
    * Tests that the compression map is correctly serialized into
    * and deserialized from configuration
    *
@@ -754,9 +753,8 @@ public class TestHFileOutputFormat2  {
 
 
   /**
-   * Test for {@link HFileOutputFormat2#configureBloomType(org.apache.hadoop.hbase.client.Table,
-   * Configuration)} and {@link HFileOutputFormat2#createFamilyBloomTypeMap
-   * (Configuration)}.
+   * Test for {@link HFileOutputFormat2#configureBloomType(HTableDescriptor, Configuration)} and
+   * {@link HFileOutputFormat2#createFamilyBloomTypeMap(Configuration)}.
    * Tests that the compression map is correctly serialized into
    * and deserialized from configuration
    *
@@ -824,9 +822,8 @@ public class TestHFileOutputFormat2  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat2#configureBlockSize(org.apache.hadoop.hbase.client.Table,
-   * Configuration)} and {@link HFileOutputFormat2#createFamilyBlockSizeMap
-   * (Configuration)}.
+   * Test for {@link HFileOutputFormat2#configureBlockSize(HTableDescriptor, Configuration)} and
+   * {@link HFileOutputFormat2#createFamilyBlockSizeMap(Configuration)}.
    * Tests that the compression map is correctly serialized into
    * and deserialized from configuration
    *

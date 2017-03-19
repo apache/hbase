@@ -697,7 +697,7 @@ public class HFileBlock implements Cacheable {
   }
 
   /**
-   * Cannot be {@link #UNSET}. Must be a legitimate value. Used re-making the {@link CacheKey} when
+   * Cannot be {@link #UNSET}. Must be a legitimate value. Used re-making the {@link BlockCacheKey} when
    * block is returned to the cache.
    * @return the offset of this block in the file it was read from
    */

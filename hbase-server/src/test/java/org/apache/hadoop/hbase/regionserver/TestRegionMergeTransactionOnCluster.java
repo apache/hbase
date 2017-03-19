@@ -88,12 +88,6 @@ import com.google.common.base.Joiner;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
-/**
- * Like {@link TestRegionMergeTransaction} in that we're testing
- * {@link RegionMergeTransactionImpl} only the below tests are against a running
- * cluster where {@link TestRegionMergeTransaction} is tests against bare
- * {@link HRegion}.
- */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionMergeTransactionOnCluster {
   private static final Log LOG = LogFactory

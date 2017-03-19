@@ -71,7 +71,7 @@ public interface CellSearcher extends ReversibleCellScanner {
   /**
    * <p>
    * Note: Added for backwards compatibility with
-   * {@link org.apache.hadoop.hbase.regionserver.KeyValueScanner#reseek}
+   * org.apache.hadoop.hbase.regionserver.KeyValueScanner#reseek(Cell)
    * </p><p>
    * Look for the key, but only look after the current position. Probably not needed for an
    * efficient tree implementation, but is important for implementations without random access such

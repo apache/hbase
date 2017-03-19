@@ -630,7 +630,7 @@ public class RecoverableZooKeeper {
     }
   }
   /**
-   * Convert Iterable of {@link ZKOp} we got into the ZooKeeper.Op
+   * Convert Iterable of {@link org.apache.zookeeper.Op} we got into the ZooKeeper.Op
    * instances to actually pass to multi (need to do this in order to appendMetaData).
    */
   private Iterable<Op> prepareZKMulti(Iterable<Op> ops)

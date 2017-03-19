@@ -85,7 +85,7 @@ public class TableAuthManager implements Closeable {
 
     /**
      * Returns a combined map of user and group permissions, with group names
-     * distinguished according to {@link AuthUtil.isGroupPrincipal}
+     * distinguished according to {@link AuthUtil#isGroupPrincipal(String)}.
      */
     public ListMultimap<String,T> getAllPermissions() {
       ListMultimap<String,T> tmp = ArrayListMultimap.create();

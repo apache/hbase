@@ -283,7 +283,7 @@ public class RestoreTool {
 
   /**
    * Duplicate the backup image if it's on local cluster
-   * @see HStore#bulkLoadHFile(String, long)
+   * @see HStore#bulkLoadHFile(org.apache.hadoop.hbase.regionserver.StoreFile)
    * @see HRegionFileSystem#bulkLoadStoreFile(String familyName, Path srcPath, long seqNum)
    * @param tableArchivePath archive path
    * @return the new tableArchivePath
@@ -554,7 +554,7 @@ public class RestoreTool {
 
   /**
    * Prepare the table for bulkload, most codes copied from
-   * {@link LoadIncrementalHFiles#createTable(String, String)}
+   * {@link LoadIncrementalHFiles#createTable(TableName, String, Admin)}
    * @param conn connection
    * @param tableBackupPath path
    * @param tableName table name

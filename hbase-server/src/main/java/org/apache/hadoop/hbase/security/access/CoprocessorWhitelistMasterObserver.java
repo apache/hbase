@@ -75,7 +75,7 @@ public class CoprocessorWhitelistMasterObserver implements MasterObserver {
    *                      1) a "*" to wildcard all coprocessor paths
    *                      2) a specific filesystem (e.g. hdfs://my-cluster/)
    *                      3) a wildcard path to be evaluated by
-   *                         {@link FilenameUtils.wildcardMatch}
+   *                         {@link FilenameUtils#wildcardMatch(String, String)}
    *                         path can specify scheme or not (e.g.
    *                         "file:///usr/hbase/coprocessors" or for all
    *                         filesystems "/usr/hbase/coprocessors")

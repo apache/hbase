@@ -77,7 +77,7 @@ class SyncFuture {
    * Call this method to clear old usage and get it ready for new deploy.
    * @param txid the new transaction id
    * @param span current span, detached from caller. Don't forget to attach it when resuming after a
-   *          call to {@link #get()}.
+   *          call to {@link #get(long)}.
    * @return this
    */
   synchronized SyncFuture reset(final long txid, Span span) {
@@ -107,7 +107,7 @@ class SyncFuture {
   /**
    * Retrieve the {@code span} instance from this Future. EventHandler calls this method to continue
    * the span. Thread waiting on this Future musn't call this method until AFTER calling
-   * {@link #get()} and the future has been released back to the originating thread.
+   * {@link #get(long)} and the future has been released back to the originating thread.
    */
   synchronized Span getSpan() {
     return this.span;

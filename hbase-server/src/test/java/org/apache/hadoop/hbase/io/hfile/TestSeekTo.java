@@ -55,7 +55,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 /**
- * Test {@link HFileScanner#seekTo(byte[])} and its variants.
+ * Test {@link HFileScanner#seekTo(Cell)} and its variants.
  */
 @Category({IOTests.class, SmallTests.class})
 @RunWith(Parameterized.class)

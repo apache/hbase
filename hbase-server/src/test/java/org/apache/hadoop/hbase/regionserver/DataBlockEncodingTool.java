@@ -69,7 +69,7 @@ public class DataBlockEncodingTool {
   /**
    * How many times to run the benchmark. More times means better data in terms
    * of statistics but slower execution. Has to be strictly larger than
-   * {@link DEFAULT_BENCHMARK_N_OMIT}.
+   * {@link #DEFAULT_BENCHMARK_N_OMIT}.
    */
   private static final int DEFAULT_BENCHMARK_N_TIMES = 12;
 

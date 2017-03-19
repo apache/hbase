@@ -25,9 +25,9 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  * Wraps together the mutations which are applied as a batch to the region and their operation
  * status and WALEdits.
  * @see org.apache.hadoop.hbase.coprocessor.RegionObserver#preBatchMutate(
- * ObserverContext, MiniBatchOperationInProgress)
+ * org.apache.hadoop.hbase.coprocessor.ObserverContext, MiniBatchOperationInProgress)
  * @see org.apache.hadoop.hbase.coprocessor.RegionObserver#postBatchMutate(
- * ObserverContext, MiniBatchOperationInProgress)
+ * org.apache.hadoop.hbase.coprocessor.ObserverContext, MiniBatchOperationInProgress)
  * @param T Pair&lt;Mutation, Integer&gt; pair of Mutations and associated rowlock ids .
  */
 @InterfaceAudience.LimitedPrivate("Coprocessors")

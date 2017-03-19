@@ -64,7 +64,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A command-line utility that reads, writes, and verifies data. Unlike
- * {@link PerformanceEvaluation}, this tool validates the data written,
+ * {@link org.apache.hadoop.hbase.PerformanceEvaluation}, this tool validates the data written,
  * and supports simultaneously writing and reading the same set of keys.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
