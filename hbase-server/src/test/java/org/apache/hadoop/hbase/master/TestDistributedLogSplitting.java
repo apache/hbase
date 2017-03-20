@@ -82,7 +82,6 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
-import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
@@ -396,7 +395,7 @@ public class TestDistributedLogSplitting {
         try {
           ht.increment(incr);
           fail("should have thrown");
-        } catch (OperationConflictException ope) {
+        } catch (IOException ope) {
           LOG.debug("Caught as expected: " + ope.getMessage());
         }
       }

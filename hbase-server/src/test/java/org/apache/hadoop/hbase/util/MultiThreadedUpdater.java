@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
@@ -297,7 +296,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         }
         totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
       } catch (IOException e) {
-        if (ignoreNonceConflicts && (e instanceof OperationConflictException)) {
+        if (ignoreNonceConflicts) {
           LOG.info("Detected nonce conflict, ignoring: " + e.getMessage());
           totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
           return;

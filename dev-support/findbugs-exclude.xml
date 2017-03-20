@@ -66,14 +66,6 @@
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.hbase.regionserver.LruHashMap"/>
-    <Or>
-      <Method name="equals"/>
-    </Or>
-    <Bug pattern="EQ_UNUSUAL"/>
-  </Match>
-
-  <Match>
     <Class name="org.apache.hadoop.hbase.util.ByteBufferUtils"/>
     <Or>
       <Method name="putInt"/>

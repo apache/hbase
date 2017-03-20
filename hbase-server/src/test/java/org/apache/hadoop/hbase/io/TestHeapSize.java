@@ -65,7 +65,7 @@ public class TestHeapSize  {
   private static final Log LOG = LogFactory.getLog(TestHeapSize.class);
   // List of classes implementing HeapSize
   // BatchOperation, BatchUpdate, BlockIndex, Entry, Entry<K,V>, HStoreKey
-  // KeyValue, LruBlockCache, LruHashMap<K,V>, Put, WALKey
+  // KeyValue, LruBlockCache, Put, WALKey
 
   @BeforeClass
   public static void beforeClass() throws Exception {
