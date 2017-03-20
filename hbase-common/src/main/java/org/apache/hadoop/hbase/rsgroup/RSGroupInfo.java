@@ -132,6 +132,9 @@ public class RSGroupInfo {
     sb.append(", ");
     sb.append(" Servers:");
     sb.append(this.servers);
+    sb.append(", ");
+    sb.append(" Tables:");
+    sb.append(this.tables);
     return sb.toString();
 
   }

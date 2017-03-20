@@ -694,6 +694,7 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testMoveServersAndTables() throws Exception {
+    LOG.info("testMoveServersAndTables");
     final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
     //create table
     final byte[] familyNameBytes = Bytes.toBytes("f");
@@ -717,6 +718,12 @@ public abstract class TestRSGroupsBase {
         break;
       }
     }
+
+    LOG.debug("Print group info : " + rsGroupAdmin.listRSGroups());
+    int oldDefaultGroupServerSize =
+            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size();
+    int oldDefaultGroupTableSize =
+            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size();
 
     //test fail bogus server move
     try {
@@ -742,9 +749,9 @@ public abstract class TestRSGroupsBase {
     }
 
     //verify default group info
-    Assert.assertEquals(3,
+    Assert.assertEquals(oldDefaultGroupServerSize,
             rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size());
-    Assert.assertEquals(4,
+    Assert.assertEquals(oldDefaultGroupTableSize,
             rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size());
 
     //verify new group info
