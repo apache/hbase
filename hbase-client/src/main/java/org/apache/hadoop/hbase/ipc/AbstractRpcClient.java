@@ -444,6 +444,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
             && remoteId.address.getHostName().equals(sn.getHostname())) {
           LOG.info("The server on " + sn.toString() + " is dead - stopping the connection "
               + connection.remoteId);
+          connections.removeValue(remoteId, connection);
           connection.shutdown();
         }
       }
