@@ -47,16 +47,20 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.DNS;
 
 /**
  * Utility used by client connections.
@@ -423,5 +427,76 @@ public final class ConnectionUtils {
     } else {
       return new CompleteScanResultCache();
     }
+  }
+
+  private static final String MY_ADDRESS = getMyAddress();
+
+  private static String getMyAddress() {
+    try {
+      return DNS.getDefaultHost("default", "default");
+    } catch (UnknownHostException uhe) {
+      LOG.error("cannot determine my address", uhe);
+      return null;
+    }
+  }
+
+  static boolean isRemote(String host) {
+    return !host.equalsIgnoreCase(MY_ADDRESS);
+  }
+
+  static void incRPCCallsMetrics(ScanMetrics scanMetrics, boolean isRegionServerRemote) {
+    if (scanMetrics == null) {
+      return;
+    }
+    scanMetrics.countOfRPCcalls.incrementAndGet();
+    if (isRegionServerRemote) {
+      scanMetrics.countOfRemoteRPCcalls.incrementAndGet();
+    }
+  }
+
+  static void incRPCRetriesMetrics(ScanMetrics scanMetrics, boolean isRegionServerRemote) {
+    if (scanMetrics == null) {
+      return;
+    }
+    scanMetrics.countOfRPCRetries.incrementAndGet();
+    if (isRegionServerRemote) {
+      scanMetrics.countOfRemoteRPCRetries.incrementAndGet();
+    }
+  }
+
+  static void updateResultsMetrics(ScanMetrics scanMetrics, Result[] rrs,
+      boolean isRegionServerRemote) {
+    if (scanMetrics == null || rrs == null || rrs.length == 0) {
+      return;
+    }
+    long resultSize = 0;
+    for (Result rr : rrs) {
+      for (Cell cell : rr.rawCells()) {
+        resultSize += CellUtil.estimatedSerializedSizeOf(cell);
+      }
+    }
+    scanMetrics.countOfBytesInResults.addAndGet(resultSize);
+    if (isRegionServerRemote) {
+      scanMetrics.countOfBytesInRemoteResults.addAndGet(resultSize);
+    }
+  }
+
+  /**
+   * Use the scan metrics returned by the server to add to the identically named counters in the
+   * client side metrics. If a counter does not exist with the same name as the server side metric,
+   * the attempt to increase the counter will fail.
+   */
+  static void updateServerSideMetrics(ScanMetrics scanMetrics, ScanResponse response) {
+    if (scanMetrics == null || response == null || !response.hasScanMetrics()) {
+      return;
+    }
+    ResponseConverter.getScanMetrics(response).forEach(scanMetrics::addToCounter);
+  }
+
+  static void incRegionCountMetrics(ScanMetrics scanMetrics) {
+    if (scanMetrics == null) {
+      return;
+    }
+    scanMetrics.countOfRegions.incrementAndGet();
   }
 }

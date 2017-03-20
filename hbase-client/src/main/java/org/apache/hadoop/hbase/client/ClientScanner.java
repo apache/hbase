@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createScanResultCache;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.incRegionCountMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.numberOfIndividualRows;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -250,9 +251,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
         new ScannerCallableWithReplicas(getTable(), getConnection(), createScannerCallable(), pool,
             primaryOperationTimeout, scan, getRetries(), scannerTimeout, caching, conf, caller);
     this.callable.setCaching(this.caching);
-    if (this.scanMetrics != null) {
-      this.scanMetrics.countOfRegions.incrementAndGet();
-    }
+    incRegionCountMetrics(scanMetrics);
     return true;
   }
 
@@ -460,7 +459,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
       // Groom the array of Results that we received back from the server before adding that
       // Results to the scanner's cache. If partial results are not allowed to be seen by the
       // caller, all book keeping will be performed within this method.
-      Result[] resultsToAddToCache = scanResultCache.addAndGet(values, callable.isHeartbeatMessage());
+      Result[] resultsToAddToCache =
+          scanResultCache.addAndGet(values, callable.isHeartbeatMessage());
       if (resultsToAddToCache.length > 0) {
         for (Result rs : resultsToAddToCache) {
           cache.add(rs);

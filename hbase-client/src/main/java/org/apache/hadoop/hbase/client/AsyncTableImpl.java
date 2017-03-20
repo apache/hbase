@@ -162,6 +162,7 @@ class AsyncTableImpl implements AsyncTable {
 
   private void scan0(Scan scan, ScanResultConsumer consumer) {
     try (ResultScanner scanner = getScanner(scan)) {
+      consumer.onScanMetricsCreated(scanner.getScanMetrics());
       for (Result result; (result = scanner.next()) != null;) {
         if (!consumer.onNext(result)) {
           break;

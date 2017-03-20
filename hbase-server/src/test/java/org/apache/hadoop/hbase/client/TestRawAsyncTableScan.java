@@ -17,13 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.base.Throwables;
-
-import java.io.IOException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -38,53 +33,6 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
 public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
-
-  private static final class SimpleRawScanResultConsumer implements RawScanResultConsumer {
-
-    private final Queue<Result> queue = new ArrayDeque<>();
-
-    private boolean finished;
-
-    private Throwable error;
-
-    @Override
-    public synchronized void onNext(Result[] results, ScanController controller) {
-      for (Result result : results) {
-        queue.offer(result);
-      }
-      notifyAll();
-    }
-
-    @Override
-    public synchronized void onError(Throwable error) {
-      finished = true;
-      this.error = error;
-      notifyAll();
-    }
-
-    @Override
-    public synchronized void onComplete() {
-      finished = true;
-      notifyAll();
-    }
-
-    public synchronized Result take() throws IOException, InterruptedException {
-      for (;;) {
-        if (!queue.isEmpty()) {
-          return queue.poll();
-        }
-        if (finished) {
-          if (error != null) {
-            Throwables.propagateIfPossible(error, IOException.class);
-            throw new IOException(error);
-          } else {
-            return null;
-          }
-        }
-        wait();
-      }
-    }
-  }
 
   @Parameter(0)
   public String scanType;

@@ -48,6 +48,8 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
 
   private final Queue<Result> queue = new ArrayDeque<>();
 
+  private ScanMetrics scanMetrics;
+
   private long cacheSize;
 
   private boolean closed = false;
@@ -110,6 +112,11 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
     notifyAll();
   }
 
+  @Override
+  public void onScanMetricsCreated(ScanMetrics scanMetrics) {
+    this.scanMetrics = scanMetrics;
+  }
+
   private void resumePrefetch() {
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("0x%x", System.identityHashCode(this)) + " resume prefetching");
@@ -168,6 +175,6 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
 
   @Override
   public ScanMetrics getScanMetrics() {
-    throw new UnsupportedOperationException();
+    return scanMetrics;
   }
 }

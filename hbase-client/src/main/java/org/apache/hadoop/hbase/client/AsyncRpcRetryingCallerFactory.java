@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.*;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
 import io.netty.util.HashedWheelTimer;
 
@@ -31,10 +31,10 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
 
 /**
  * Factory to create an AsyncRpcRetryCaller.
@@ -148,6 +148,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private Scan scan;
 
+    private ScanMetrics scanMetrics;
+
     private ScanResultCache resultCache;
 
     private RawScanResultConsumer consumer;
@@ -155,6 +157,8 @@ class AsyncRpcRetryingCallerFactory {
     private ClientService.Interface stub;
 
     private HRegionLocation loc;
+
+    private boolean isRegionServerRemote;
 
     private long scannerLeaseTimeoutPeriodNs;
 
@@ -169,6 +173,16 @@ class AsyncRpcRetryingCallerFactory {
 
     public ScanSingleRegionCallerBuilder setScan(Scan scan) {
       this.scan = scan;
+      return this;
+    }
+
+    public ScanSingleRegionCallerBuilder metrics(ScanMetrics scanMetrics) {
+      this.scanMetrics = scanMetrics;
+      return this;
+    }
+
+    public ScanSingleRegionCallerBuilder remote(boolean isRegionServerRemote) {
+      this.isRegionServerRemote = isRegionServerRemote;
       return this;
     }
 
@@ -226,11 +240,11 @@ class AsyncRpcRetryingCallerFactory {
     public AsyncScanSingleRegionRpcRetryingCaller build() {
       checkArgument(scannerId >= 0, "invalid scannerId %d", scannerId);
       return new AsyncScanSingleRegionRpcRetryingCaller(retryTimer, conn,
-          checkNotNull(scan, "scan is null"), scannerId,
+          checkNotNull(scan, "scan is null"), scanMetrics, scannerId,
           checkNotNull(resultCache, "resultCache is null"),
           checkNotNull(consumer, "consumer is null"), checkNotNull(stub, "stub is null"),
-          checkNotNull(loc, "location is null"), scannerLeaseTimeoutPeriodNs, pauseNs, maxAttempts,
-          scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+          checkNotNull(loc, "location is null"), isRegionServerRemote, scannerLeaseTimeoutPeriodNs,
+          pauseNs, maxAttempts, scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**
