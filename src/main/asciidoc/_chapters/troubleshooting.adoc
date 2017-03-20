@@ -1050,7 +1050,7 @@ If you wish to increase the session timeout, add the following to your _hbase-si
 ----
 <property>
   <name>zookeeper.session.timeout</name>
-  <value>1200000</value>
+  <value>120000</value>
 </property>
 <property>
   <name>hbase.zookeeper.property.tickTime</name>
