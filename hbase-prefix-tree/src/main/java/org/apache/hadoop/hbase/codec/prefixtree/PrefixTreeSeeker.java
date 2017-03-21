@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
 @InterfaceAudience.Private
 public class PrefixTreeSeeker implements EncodedSeeker {
 
-  protected ByteBuffer block;
   protected boolean includeMvccVersion;
   protected PrefixTreeArraySearcher ptSearcher;
 
