@@ -1231,7 +1231,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return assignments;
     }
 
-    Cluster cluster = createCluster(servers, regions);
+    Cluster cluster = createCluster(servers, regions, false);
     List<HRegionInfo> unassignedRegions = new ArrayList<HRegionInfo>();
 
     roundRobinAssignment(cluster, regions, unassignedRegions,
@@ -1278,7 +1278,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   protected Cluster createCluster(List<ServerName> servers,
-      Collection<HRegionInfo> regions) {
+      Collection<HRegionInfo> regions, boolean forceRefresh) {
+    if (forceRefresh) {
+      regionFinder.refreshAndWait(regions);
+    }
     // Get the snapshot of the current assignments for the regions in question, and then create
     // a cluster out of it. Note that we might have replicas already assigned to some servers
     // earlier. So we want to get the snapshot to see those assignments, but this will only contain
@@ -1352,7 +1355,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
 
     List<HRegionInfo> regions = Lists.newArrayList(regionInfo);
-    Cluster cluster = createCluster(servers, regions);
+    Cluster cluster = createCluster(servers, regions, false);
     return randomAssignment(cluster, regionInfo, servers);
   }
 
@@ -1427,7 +1430,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int numRandomAssignments = 0;
     int numRetainedAssigments = 0;
 
-    Cluster cluster = createCluster(servers, regions.keySet());
+    Cluster cluster = createCluster(servers, regions.keySet(), true);
 
     for (Map.Entry<HRegionInfo, ServerName> entry : regions.entrySet()) {
       HRegionInfo region = entry.getKey();

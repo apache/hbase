@@ -21,6 +21,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -63,11 +64,13 @@ import java.util.concurrent.TimeUnit;
 class RegionLocationFinder {
   private static final Log LOG = LogFactory.getLog(RegionLocationFinder.class);
   private static final long CACHE_TIME = 240 * 60 * 1000;
+  private static final HDFSBlocksDistribution EMPTY_BLOCK_DISTRIBUTION = new HDFSBlocksDistribution();
   private Configuration conf;
   private volatile ClusterStatus status;
   private MasterServices services;
   private final ListeningExecutorService executor;
-  private long lastFullRefresh = 0;
+  // Do not scheduleFullRefresh at master startup
+  private long lastFullRefresh = EnvironmentEdgeManager.currentTime();
 
   private CacheLoader<HRegionInfo, HDFSBlocksDistribution> loader =
       new CacheLoader<HRegionInfo, HDFSBlocksDistribution>() {
@@ -165,8 +168,7 @@ class RegionLocationFinder {
   }
 
   protected List<ServerName> getTopBlockLocations(HRegionInfo region) {
-    HDFSBlocksDistribution blocksDistribution = getBlockDistribution(region);
-    List<String> topHosts = blocksDistribution.getTopHosts();
+    List<String> topHosts = getBlockDistribution(region).getTopHosts();
     return mapHostNameToServerName(topHosts);
   }
 
@@ -208,7 +210,7 @@ class RegionLocationFinder {
           + region.getEncodedName(), ioe);
     }
 
-    return new HDFSBlocksDistribution();
+    return EMPTY_BLOCK_DISTRIBUTION;
   }
 
   /**
@@ -294,5 +296,42 @@ class RegionLocationFinder {
       cache.put(hri, blockDistbn);
       return blockDistbn;
     }
+  }
+
+  private ListenableFuture<HDFSBlocksDistribution> asyncGetBlockDistribution(
+      HRegionInfo hri) {
+    try {
+      return loader.reload(hri, EMPTY_BLOCK_DISTRIBUTION);
+    } catch (Exception e) {
+      return Futures.immediateFuture(EMPTY_BLOCK_DISTRIBUTION);
+    }
+  }
+
+  public void refreshAndWait(Collection<HRegionInfo> hris) {
+    ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures =
+        new ArrayList<ListenableFuture<HDFSBlocksDistribution>>(hris.size());
+    for (HRegionInfo hregionInfo : hris) {
+      regionLocationFutures.add(asyncGetBlockDistribution(hregionInfo));
+    }
+    int index = 0;
+    for (HRegionInfo hregionInfo : hris) {
+      ListenableFuture<HDFSBlocksDistribution> future = regionLocationFutures
+          .get(index);
+      try {
+        cache.put(hregionInfo, future.get());
+      } catch (InterruptedException ite) {
+        Thread.currentThread().interrupt();
+      } catch (ExecutionException ee) {
+        LOG.debug(
+            "ExecutionException during HDFSBlocksDistribution computation. for region = "
+                + hregionInfo.getEncodedName(), ee);
+      }
+      index++;
+    }
+  }
+
+  // For test
+  LoadingCache<HRegionInfo, HDFSBlocksDistribution> getCache() {
+    return cache;
   }
 }
