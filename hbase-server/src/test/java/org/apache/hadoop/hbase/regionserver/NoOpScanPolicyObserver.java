@@ -43,13 +43,13 @@ public class NoOpScanPolicyObserver implements RegionObserver {
    */
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+      Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
     ScanInfo oldSI = store.getScanInfo();
     ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getFamily(), oldSI.getTtl(),
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
     Scan scan = new Scan();
     scan.setMaxVersions(oldSI.getMaxVersions());
-    return new StoreScanner(store, scanInfo, scan, Collections.singletonList(memstoreScanner),
+    return new StoreScanner(store, scanInfo, scan, scanners,
         ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 

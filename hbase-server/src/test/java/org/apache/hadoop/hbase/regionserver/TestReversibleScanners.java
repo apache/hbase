@@ -120,7 +120,7 @@ public class TestReversibleScanners {
         LOG.info("Setting read point to " + readPoint);
         scanners = StoreFileScanner.getScannersForStoreFiles(
             Collections.singletonList(sf), false, true, false, false, readPoint);
-        seekTestOfReversibleKeyValueScannerWithMVCC(scanners.get(0), readPoint);
+        seekTestOfReversibleKeyValueScannerWithMVCC(scanners, readPoint);
       }
     }
 
@@ -135,7 +135,7 @@ public class TestReversibleScanners {
     for (int readPoint = 0; readPoint < MAXMVCC; readPoint++) {
       LOG.info("Setting read point to " + readPoint);
       scanners = memstore.getScanners(readPoint);
-      seekTestOfReversibleKeyValueScannerWithMVCC(scanners.get(0), readPoint);
+      seekTestOfReversibleKeyValueScannerWithMVCC(scanners, readPoint);
     }
 
   }
@@ -560,38 +560,68 @@ public class TestReversibleScanners {
   }
 
   private void seekTestOfReversibleKeyValueScannerWithMVCC(
-      KeyValueScanner scanner, int readPoint) throws IOException {
-    /**
-     * Test with MVCC
-     */
-      // Test seek to last row
-      KeyValue expectedKey = getNextReadableKeyValueWithBackwardScan(
-          ROWSIZE - 1, 0, readPoint);
-      assertEquals(expectedKey != null, scanner.seekToLastRow());
-      assertEquals(expectedKey, scanner.peek());
+      List<? extends KeyValueScanner> scanners, int readPoint) throws IOException {
+  /**
+   * Test with MVCC
+   */
+    // Test seek to last row
+    KeyValue expectedKey = getNextReadableKeyValueWithBackwardScan(
+        ROWSIZE - 1, 0, readPoint);
+    boolean res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= scanner.seekToLastRow();
+    }
+    assertEquals(expectedKey != null, res);
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= (expectedKey.equals(scanner.peek()));
+    }
+    assertTrue(res);
 
       // Test backward seek in two cases
       // Case1: seek in the same row in backwardSeek
       expectedKey = getNextReadableKeyValueWithBackwardScan(ROWSIZE - 2,
           QUALSIZE - 2, readPoint);
-      assertEquals(expectedKey != null, scanner.backwardSeek(expectedKey));
-      assertEquals(expectedKey, scanner.peek());
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= scanner.backwardSeek(expectedKey);
+    }
+    assertEquals(expectedKey != null, res);
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= (expectedKey.equals(scanner.peek()));
+    }
+    assertTrue(res);
 
       // Case2: seek to the previous row in backwardSeek
     int seekRowNum = ROWSIZE - 3;
     KeyValue seekKey = KeyValueUtil.createLastOnRow(ROWS[seekRowNum]);
       expectedKey = getNextReadableKeyValueWithBackwardScan(seekRowNum - 1, 0,
           readPoint);
-      assertEquals(expectedKey != null, scanner.backwardSeek(seekKey));
-      assertEquals(expectedKey, scanner.peek());
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= scanner.backwardSeek(expectedKey);
+    }
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= (expectedKey.equals(scanner.peek()));
+    }
+    assertTrue(res);
 
       // Test seek to previous row
       seekRowNum = ROWSIZE - 4;
       expectedKey = getNextReadableKeyValueWithBackwardScan(seekRowNum - 1, 0,
           readPoint);
-      assertEquals(expectedKey != null, scanner.seekToPreviousRow(KeyValueUtil
-          .createFirstOnRow(ROWS[seekRowNum])));
-      assertEquals(expectedKey, scanner.peek());
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= scanner.seekToPreviousRow(KeyValueUtil.createFirstOnRow(ROWS[seekRowNum]));
+    }
+    assertEquals(expectedKey != null, res);
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= (expectedKey.equals(scanner.peek()));
+    }
+    assertTrue(res);
   }
 
   private KeyValue getNextReadableKeyValueWithBackwardScan(int startRowNum,

@@ -60,6 +60,20 @@ public abstract class AbstractMemStore implements MemStore {
 
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD;
 
+  public static long addToScanners(List<? extends Segment> segments, long readPt, long order,
+      List<KeyValueScanner> scanners) {
+    for (Segment item : segments) {
+      order = addToScanners(item, readPt, order, scanners);
+    }
+    return order;
+  }
+
+  protected static long addToScanners(Segment segment, long readPt, long order,
+      List<KeyValueScanner> scanners) {
+    scanners.add(segment.getScanner(readPt, order));
+    return order - 1;
+  }
+
   protected AbstractMemStore(final Configuration conf, final CellComparator c) {
     this.conf = conf;
     this.comparator = c;

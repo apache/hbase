@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import com.google.common.collect.ImmutableList;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -128,16 +129,16 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param c the environment provided by the region server
    * @param store the store being flushed
-   * @param memstoreScanner the scanner for the memstore that is flushed
+   * @param scanners the scanners for the memstore that is flushed
    * @param s the base scanner, if not {@code null}, from previous RegionObserver in the chain
    * @return the scanner to use during the flush.  {@code null} if the default implementation
    * is to be used.
-   * @deprecated Use {@link #preFlushScannerOpen(ObserverContext, Store, KeyValueScanner,
+   * @deprecated Use {@link #preFlushScannerOpen(ObserverContext, Store, List,
    *             InternalScanner, long)}
    */
   @Deprecated
   default InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final KeyValueScanner memstoreScanner, final InternalScanner s)
+      final Store store, final List<KeyValueScanner> scanners, final InternalScanner s)
       throws IOException {
     return s;
   }
@@ -151,16 +152,32 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param c the environment provided by the region server
    * @param store the store being flushed
-   * @param memstoreScanner the scanner for the memstore that is flushed
+   * @param scanners the scanners for the memstore that is flushed
    * @param s the base scanner, if not {@code null}, from previous RegionObserver in the chain
    * @param readPoint the readpoint to create scanner
    * @return the scanner to use during the flush.  {@code null} if the default implementation
    * is to be used.
    */
   default InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final KeyValueScanner memstoreScanner, final InternalScanner s,
+      final Store store, final List<KeyValueScanner> scanners, final InternalScanner s,
       final long readPoint) throws IOException {
-    return preFlushScannerOpen(c, store, memstoreScanner, s);
+    return preFlushScannerOpen(c, store, scanners, s);
+  }
+
+  /**
+   * Maintain backward compatibility.
+   * @param c the environment provided by the region server
+   * @param store the store being flushed
+   * @param scanner the scanner for the memstore that is flushed
+   * @param s the base scanner, if not {@code null}, from previous RegionObserver in the chain
+   * @param readPoint the readpoint to create scanner
+   * @return the scanner to use during the flush.  {@code null} if the default implementation
+   * is to be used.
+   */
+  default InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, final KeyValueScanner scanner, final InternalScanner s,
+      final long readPoint) throws IOException {
+    return preFlushScannerOpen(c, store, Collections.singletonList(scanner), s, readPoint);
   }
 
   /**
@@ -1113,8 +1130,7 @@ public interface RegionObserver extends Coprocessor {
    * Called before a store opens a new scanner.
    * This hook is called when a "user" scanner is opened.
    * <p>
-   * See {@link #preFlushScannerOpen(ObserverContext, Store, KeyValueScanner, InternalScanner,
-   * long)} and {@link #preCompactScannerOpen(ObserverContext,
+   * See {@link #preFlushScannerOpen(ObserverContext, Store, List, InternalScanner, long)} and {@link #preCompactScannerOpen(ObserverContext,
    *  Store, List, ScanType, long, InternalScanner, CompactionRequest, long)}
    * to override scanners created for flushes or compactions, resp.
    * <p>
@@ -1145,8 +1161,7 @@ public interface RegionObserver extends Coprocessor {
    * Called before a store opens a new scanner.
    * This hook is called when a "user" scanner is opened.
    * <p>
-   * See {@link #preFlushScannerOpen(ObserverContext, Store, KeyValueScanner, InternalScanner,
-   * long)} and {@link #preCompactScannerOpen(ObserverContext,
+   * See {@link #preFlushScannerOpen(ObserverContext, Store, List, InternalScanner, long)} and {@link #preCompactScannerOpen(ObserverContext,
    *  Store, List, ScanType, long, InternalScanner, CompactionRequest, long)}
    * to override scanners created for flushes or compactions, resp.
    * <p>

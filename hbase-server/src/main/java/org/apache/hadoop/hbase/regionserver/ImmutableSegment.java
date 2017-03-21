@@ -34,9 +34,7 @@ import java.util.List;
 
 /**
  * ImmutableSegment is an abstract class that extends the API supported by a {@link Segment},
- * and is not needed for a {@link MutableSegment}. Specifically, the method
- * {@link ImmutableSegment#getSnapshotScanner()} builds a special scanner for the
- * {@link MemStoreSnapshot} object.
+ * and is not needed for a {@link MutableSegment}.
  */
 @InterfaceAudience.Private
 public class ImmutableSegment extends Segment {
@@ -130,14 +128,6 @@ public class ImmutableSegment extends Segment {
   }
 
   /////////////////////  PUBLIC METHODS  /////////////////////
-  /**
-   * Builds a special scanner for the MemStoreSnapshot object that is different than the
-   * general segment scanner.
-   * @return a special scanner for the MemStoreSnapshot object
-   */
-  public KeyValueScanner getSnapshotScanner() {
-    return new SnapshotScanner(this);
-  }
 
   @Override
   public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {

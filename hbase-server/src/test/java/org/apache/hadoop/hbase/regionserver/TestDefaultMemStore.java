@@ -264,12 +264,20 @@ public class TestDefaultMemStore {
   protected void verifyScanAcrossSnapshot2(KeyValue kv1, KeyValue kv2)
       throws IOException {
     List<KeyValueScanner> memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
-    assertEquals(1, memstorescanners.size());
-    final KeyValueScanner scanner = memstorescanners.get(0);
-    scanner.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
-    assertEquals(kv1, scanner.next());
-    assertEquals(kv2, scanner.next());
-    assertNull(scanner.next());
+    assertEquals(2, memstorescanners.size());
+    final KeyValueScanner scanner0 = memstorescanners.get(0);
+    final KeyValueScanner scanner1 = memstorescanners.get(1);
+    scanner0.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
+    scanner1.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
+    Cell n0 = scanner0.next();
+    Cell n1 = scanner1.next();
+    assertTrue(kv1.equals(n0) || kv1.equals(n1));
+    assertTrue(kv2.equals(n0)
+        || kv2.equals(n1)
+        || kv2.equals(scanner0.next())
+        || kv2.equals(scanner1.next()));
+    assertNull(scanner0.next());
+    assertNull(scanner1.next());
   }
 
   protected void assertScannerResults(KeyValueScanner scanner, KeyValue[] expected)

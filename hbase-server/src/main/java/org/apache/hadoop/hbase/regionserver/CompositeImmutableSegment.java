@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -69,16 +68,6 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   @Override
   public int getNumOfSegments() {
     return segments.size();
-  }
-
-  /**
-   * Builds a special scanner for the MemStoreSnapshot object that is different than the
-   * general segment scanner.
-   * @return a special scanner for the MemStoreSnapshot object
-   */
-  @Override
-  public KeyValueScanner getSnapshotScanner() {
-    return getScanner(Long.MAX_VALUE, Long.MAX_VALUE);
   }
 
   /**
@@ -148,8 +137,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    */
   @Override
   public KeyValueScanner getScanner(long readPoint) {
-    // Long.MAX_VALUE is DEFAULT_SCANNER_ORDER
-    return getScanner(readPoint,Long.MAX_VALUE);
+    throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
   /**
@@ -158,19 +146,14 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    */
   @Override
   public KeyValueScanner getScanner(long readPoint, long order) {
-    KeyValueScanner resultScanner;
+    throw new IllegalStateException("Not supported by CompositeImmutableScanner");
+  }
+
+  @Override
+  public List<KeyValueScanner> getScanners(long readPoint, long order) {
     List<KeyValueScanner> list = new ArrayList<>(segments.size());
-    for (ImmutableSegment s : segments) {
-      list.add(s.getScanner(readPoint, order));
-    }
-
-    try {
-      resultScanner = new MemStoreScanner(getComparator(), list);
-    } catch (IOException ie) {
-      throw new IllegalStateException(ie);
-    }
-
-    return resultScanner;
+    AbstractMemStore.addToScanners(segments, readPoint, order, list);
+    return list;
   }
 
   @Override

@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.client.Scan;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -50,11 +49,16 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
       List<ImmutableSegment> segments,
       CellComparator comparator, int compactionKVMax, Store store
   ) throws IOException {
-    super(segments,comparator,compactionKVMax,store);
+    super(compactionKVMax);
 
+    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
+    // create the list of scanners to traverse over all the data
+    // no dirty reads here as these are immutable segments
+    int order = segments.size();
+    AbstractMemStore.addToScanners(segments, Integer.MAX_VALUE, order, scanners);
     // build the scanner based on Query Matcher
     // reinitialize the compacting scanner for each instance of iterator
-    compactingScanner = createScanner(store, scanner);
+    compactingScanner = createScanner(store, scanners);
 
     hasMore = compactingScanner.next(kvs, scannerContext);
 
@@ -93,7 +97,6 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
   public void close() {
     compactingScanner.close();
     compactingScanner = null;
-    scanner = null;
   }
 
   @Override
@@ -106,13 +109,13 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
    *
    * @return the scanner
    */
-  private StoreScanner createScanner(Store store, KeyValueScanner scanner)
+  private StoreScanner createScanner(Store store, List<KeyValueScanner> scanners)
       throws IOException {
 
     Scan scan = new Scan();
     scan.setMaxVersions();  //Get all available versions
     StoreScanner internalScanner =
-        new StoreScanner(store, store.getScanInfo(), scan, Collections.singletonList(scanner),
+        new StoreScanner(store, store.getScanInfo(), scan, scanners,
             ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
             HConstants.OLDEST_TIMESTAMP);
 

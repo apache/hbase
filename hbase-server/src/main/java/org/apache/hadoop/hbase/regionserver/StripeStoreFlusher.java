@@ -62,7 +62,7 @@ public class StripeStoreFlusher extends StoreFlusher {
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
     long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanner(), smallestReadPoint);
+    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint);
     if (scanner == null) {
       return result; // NULL scanner returned from coprocessor hooks means skip normal processing
     }

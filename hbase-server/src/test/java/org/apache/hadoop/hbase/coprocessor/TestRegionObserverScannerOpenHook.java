@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -50,7 +49,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -122,11 +120,11 @@ public class TestRegionObserverScannerOpenHook {
   public static class NoDataFromFlush implements RegionObserver {
     @Override
     public InternalScanner preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+        Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
       Scan scan = new Scan();
       scan.setFilter(new NoDataFilter());
       return new StoreScanner(store, store.getScanInfo(), scan,
-          Collections.singletonList(memstoreScanner), ScanType.COMPACT_RETAIN_DELETES,
+          scanners, ScanType.COMPACT_RETAIN_DELETES,
           store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
     }
   }

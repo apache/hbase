@@ -187,7 +187,7 @@ public class SimpleRegionObserver implements RegionObserver {
 
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+      Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
     ctPreFlushScannerOpen.incrementAndGet();
     return null;
   }

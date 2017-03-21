@@ -252,7 +252,7 @@ public class MemStoreCompactor {
       iterator =
           new MemStoreMergerSegmentsIterator(versionedList.getStoreSegments(),
               compactingMemStore.getComparator(),
-              compactionKVMax, compactingMemStore.getStore());
+              compactionKVMax);
 
       result = SegmentFactory.instance().createImmutableSegmentByMerge(
           compactingMemStore.getConfiguration(), compactingMemStore.getComparator(), iterator,

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -318,21 +317,15 @@ public class CompactingMemStore extends AbstractMemStore {
    */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
     List<? extends Segment> pipelineList = pipeline.getSegments();
-    int order = pipelineList.size() + snapshot.getNumOfSegments();
+    List<? extends Segment> snapshotList = snapshot.getAllSegments();
+    long order = 1 + pipelineList.size() + snapshotList.size();
     // The list of elements in pipeline + the active element + the snapshot segment
-    // TODO : This will change when the snapshot is made of more than one element
     // The order is the Segment ordinal
-    List<KeyValueScanner> list = new ArrayList<>(order+1);
-    list.add(this.active.getScanner(readPt, order + 1));
-    for (Segment item : pipelineList) {
-      list.add(item.getScanner(readPt, order));
-      order--;
-    }
-    for (Segment item : snapshot.getAllSegments()) {
-      list.add(item.getScanner(readPt, order));
-      order--;
-    }
-    return Collections.<KeyValueScanner> singletonList(new MemStoreScanner(getComparator(), list));
+    List<KeyValueScanner> list = new ArrayList<KeyValueScanner>((int) order);
+    order = addToScanners(active, readPt, order, list);
+    order = addToScanners(pipelineList, readPt, order, list);
+    addToScanners(snapshotList, readPt, order, list);
+    return list;
   }
 
   /**

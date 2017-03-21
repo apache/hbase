@@ -316,13 +316,17 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     }
     List<KeyValueScanner> scanners = memstore.getScanners(Long.MAX_VALUE);
     // seek
-    scanners.get(0).seek(KeyValue.LOWESTKEY);
     int count = 0;
-    while (scanners.get(0).next() != null) {
-      count++;
+    for(int i = 0; i < scanners.size(); i++) {
+      scanners.get(i).seek(KeyValue.LOWESTKEY);
+      while (scanners.get(i).next() != null) {
+        count++;
+      }
     }
     assertEquals("the count should be ", count, 150);
-    scanners.get(0).close();
+    for(int i = 0; i < scanners.size(); i++) {
+      scanners.get(i).close();
+    }
   }
 
   @Test
@@ -337,7 +341,7 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     // Just doing the cnt operation here
     MemStoreSegmentsIterator itr = new MemStoreMergerSegmentsIterator(
         ((CompactingMemStore) memstore).getImmutableSegments().getStoreSegments(),
-        CellComparator.COMPARATOR, 10, ((CompactingMemStore) memstore).getStore());
+        CellComparator.COMPARATOR, 10);
     int cnt = 0;
     try {
       while (itr.next() != null) {
@@ -398,8 +402,10 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     List<KeyValueScanner> scanners = memstore.getScanners(0);
     // Shouldn't putting back the chunks to pool,since some scanners are opening
     // based on their data
-    // close the scanner
-    snapshot.getScanner().close();
+    // close the scanners
+    for(KeyValueScanner scanner : snapshot.getScanners()) {
+      scanner.close();
+    }
     memstore.clearSnapshot(snapshot.getId());
 
     assertTrue(chunkPool.getPoolSize() == 0);
@@ -427,8 +433,10 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     }
     // Since no opening scanner, the chunks of snapshot should be put back to
     // pool
-    // close the scanner
-    snapshot.getScanner().close();
+    // close the scanners
+    for(KeyValueScanner scanner : snapshot.getScanners()) {
+      scanner.close();
+    }
     memstore.clearSnapshot(snapshot.getId());
     assertTrue(chunkPool.getPoolSize() > 0);
   }
@@ -458,8 +466,10 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     memstore.add(new KeyValue(row, fam, qf4, val), null);
     memstore.add(new KeyValue(row, fam, qf5, val), null);
     assertEquals(2, memstore.getActive().getCellsCount());
-    // close the scanner
-    snapshot.getScanner().close();
+    // close the scanners
+    for(KeyValueScanner scanner : snapshot.getScanners()) {
+      scanner.close();
+    }
     memstore.clearSnapshot(snapshot.getId());
 
     int chunkCount = chunkPool.getPoolSize();

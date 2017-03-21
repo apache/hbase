@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -238,7 +237,7 @@ public class TestCoprocessorScanPolicy {
     @Override
     public InternalScanner preFlushScannerOpen(
         final ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+        Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
       Long newTtl = ttls.get(store.getTableName());
       if (newTtl != null) {
         System.out.println("PreFlush:" + newTtl);
@@ -253,7 +252,7 @@ public class TestCoprocessorScanPolicy {
           oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
       Scan scan = new Scan();
       scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
-      return new StoreScanner(store, scanInfo, scan, Collections.singletonList(memstoreScanner),
+      return new StoreScanner(store, scanInfo, scan, scanners,
           ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
           HConstants.OLDEST_TIMESTAMP);
     }

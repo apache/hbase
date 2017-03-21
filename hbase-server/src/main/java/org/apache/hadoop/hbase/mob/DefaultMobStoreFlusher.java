@@ -104,7 +104,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
 
     // Use a store scanner to find which rows to flush.
     long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanner(), smallestReadPoint);
+    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint);
     if (scanner == null) {
       return result; // NULL scanner returned from coprocessor hooks means skip normal processing
     }

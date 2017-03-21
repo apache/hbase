@@ -629,17 +629,16 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preFlushScannerOpen(ObserverContext,
-   *    Store, KeyValueScanner, InternalScanner, long)}
+   * {@link RegionObserver#preFlushScannerOpen(ObserverContext, Store, List, InternalScanner, long)}
    */
   public InternalScanner preFlushScannerOpen(final Store store,
-      final KeyValueScanner memstoreScanner, final long readPoint) throws IOException {
+      final List<KeyValueScanner> scanners, final long readPoint) throws IOException {
     return execOperationWithResult(null,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        setResult(oserver.preFlushScannerOpen(ctx, store, memstoreScanner, getResult(), readPoint));
+        setResult(oserver.preFlushScannerOpen(ctx, store, scanners, getResult(), readPoint));
       }
     });
   }
