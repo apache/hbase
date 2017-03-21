@@ -731,7 +731,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
             }
           } catch (InterruptedException e) {
             LOG.debug("Interrupted while sleeping");
-            return;
+          } catch (CancelledKeyException e) {
+            LOG.error(getName() + ": CancelledKeyException in Reader", e);
           } catch (IOException ex) {
             LOG.info(getName() + ": IOException in Reader", ex);
           } catch (OutOfMemoryError e) {
