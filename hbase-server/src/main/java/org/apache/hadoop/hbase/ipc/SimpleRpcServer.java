@@ -302,7 +302,8 @@ public class SimpleRpcServer extends RpcServer {
             if (running) {                      // unexpected -- log it
               LOG.info(Thread.currentThread().getName() + " unexpectedly interrupted", e);
             }
-            return;
+          } catch (CancelledKeyException e) {
+            LOG.error(getName() + ": CancelledKeyException in Reader", e);
           } catch (IOException ex) {
             LOG.info(getName() + ": IOException in Reader", ex);
           }
