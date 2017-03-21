@@ -273,14 +273,10 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         serversByLoad.entrySet()) {
       if (maxToTake == 0) break; // no more to take
       int load = server.getKey().getLoad();
-      if (load >= min && load > 0) {
+      if (load >= min) {
         continue; // look for other servers which haven't reached min
       }
       int regionsToPut = min - load;
-      if (regionsToPut == 0)
-      {
-        regionsToPut = 1;
-      }
       maxToTake -= regionsToPut;
       underloadedServers.put(server.getKey().getServerName(), regionsToPut);
     }
