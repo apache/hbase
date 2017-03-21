@@ -294,9 +294,38 @@ public class TestHFileWriterV2 {
     return keyBytes;
   }
 
+  public static byte[] randomOrderedFixedLengthKey(Random rand, int i, int suffixLength) {
+    StringBuilder k = new StringBuilder();
+
+    // The fixed-length lexicographically increasing part of the key.
+    for (int bitIndex = 31; bitIndex >= 0; --bitIndex) {
+      if ((i & (1 << bitIndex)) == 0)
+        k.append("a");
+      else
+        k.append("b");
+    }
+
+    // A random suffix of the key.
+    for (int j = 0; j < suffixLength; ++j)
+      k.append(randomReadableChar(rand));
+
+    byte[] keyBytes = k.toString().getBytes();
+    return keyBytes;
+  }
+
   public static byte[] randomValue(Random rand) {
     StringBuilder v = new StringBuilder();
     for (int j = 0; j < 1 + rand.nextInt(2000); ++j) {
+      v.append((char) (32 + rand.nextInt(95)));
+    }
+
+    byte[] valueBytes = v.toString().getBytes();
+    return valueBytes;
+  }
+
+  public static byte[] randomFixedLengthValue(Random rand, int valueLength) {
+    StringBuilder v = new StringBuilder();
+    for (int j = 0; j < valueLength; ++j) {
       v.append((char) (32 + rand.nextInt(95)));
     }
 
