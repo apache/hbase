@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.io.encoding;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.SecureRandom;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
@@ -37,6 +37,7 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A default implementation of {@link HFileBlockEncodingContext}. It will
@@ -48,7 +49,6 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class HFileBlockDefaultEncodingContext implements
     HFileBlockEncodingContext {
-  private byte[] onDiskBytesWithHeader;
   private BlockType blockType;
   private final DataBlockEncoding encodingAlgo;
 
@@ -128,17 +128,12 @@ public class HFileBlockDefaultEncodingContext implements
   }
 
   @Override
-  public byte[] compressAndEncrypt(byte[] uncompressedBytesWithHeader) throws IOException {
-    compressAfterEncoding(uncompressedBytesWithHeader, dummyHeader);
-    return onDiskBytesWithHeader;
+  public Bytes compressAndEncrypt(byte[] data, int offset, int length) throws IOException {
+    return compressAfterEncoding(data, offset, length, dummyHeader);
   }
 
-  /**
-   * @param uncompressedBytesWithHeader
-   * @param headerBytes
-   * @throws IOException
-   */
-  protected void compressAfterEncoding(byte[] uncompressedBytesWithHeader, byte[] headerBytes)
+  private Bytes compressAfterEncoding(byte[] uncompressedBytesWithHeaderBuffer,
+        int uncompressedBytesWithHeaderOffset, int uncompressedBytesWithHeaderLength, byte[] headerBytes)
       throws IOException {
     Encryption.Context cryptoContext = fileContext.getEncryptionContext();
     if (cryptoContext != Encryption.Context.NONE) {
@@ -162,17 +157,17 @@ public class HFileBlockDefaultEncodingContext implements
       if (fileContext.getCompression() != Compression.Algorithm.NONE) {
         compressedByteStream.reset();
         compressionStream.resetState();
-        compressionStream.write(uncompressedBytesWithHeader,
-            headerBytes.length, uncompressedBytesWithHeader.length - headerBytes.length);
+        compressionStream.write(uncompressedBytesWithHeaderBuffer,
+            headerBytes.length + uncompressedBytesWithHeaderOffset, uncompressedBytesWithHeaderLength - headerBytes.length);
         compressionStream.flush();
         compressionStream.finish();
         byte[] plaintext = compressedByteStream.toByteArray();
         plaintextLength = plaintext.length;
         in = new ByteArrayInputStream(plaintext);
       } else {
-        plaintextLength = uncompressedBytesWithHeader.length - headerBytes.length;
-        in = new ByteArrayInputStream(uncompressedBytesWithHeader,
-          headerBytes.length, plaintextLength);
+        plaintextLength = uncompressedBytesWithHeaderLength - headerBytes.length;
+        in = new ByteArrayInputStream(uncompressedBytesWithHeaderBuffer,
+          headerBytes.length + uncompressedBytesWithHeaderOffset, plaintextLength);
       }
 
       if (plaintextLength > 0) {
@@ -194,16 +189,13 @@ public class HFileBlockDefaultEncodingContext implements
         // Encrypt the data
         Encryption.encrypt(cryptoByteStream, in, encryptor);
 
-        onDiskBytesWithHeader = cryptoByteStream.toByteArray();
-
         // Increment the IV given the final block size
-        Encryption.incrementIv(iv, 1 + (onDiskBytesWithHeader.length / encryptor.getBlockSize()));
-
+        Encryption.incrementIv(iv, 1 + (cryptoByteStream.size() / encryptor.getBlockSize()));
+        return new Bytes(cryptoByteStream.getBuffer(), 0, cryptoByteStream.size());
       } else {
 
         cryptoByteStream.write(0);
-        onDiskBytesWithHeader = cryptoByteStream.toByteArray();
-
+        return new Bytes(cryptoByteStream.getBuffer(), 0, cryptoByteStream.size());
       }
 
     } else {
@@ -212,14 +204,14 @@ public class HFileBlockDefaultEncodingContext implements
         compressedByteStream.reset();
         compressedByteStream.write(headerBytes);
         compressionStream.resetState();
-        compressionStream.write(uncompressedBytesWithHeader,
-          headerBytes.length, uncompressedBytesWithHeader.length
+        compressionStream.write(uncompressedBytesWithHeaderBuffer,
+          headerBytes.length + uncompressedBytesWithHeaderOffset, uncompressedBytesWithHeaderLength
               - headerBytes.length);
         compressionStream.flush();
         compressionStream.finish();
-        onDiskBytesWithHeader = compressedByteStream.toByteArray();
+        return new Bytes(compressedByteStream.getBuffer(), 0, compressedByteStream.size());
       } else {
-        onDiskBytesWithHeader = uncompressedBytesWithHeader;
+        return null;
       }
     }
   }

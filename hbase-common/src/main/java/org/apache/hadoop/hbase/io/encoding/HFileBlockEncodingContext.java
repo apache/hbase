@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * An encoding context that is created by a writer's encoder, and is shared
@@ -73,9 +74,14 @@ public interface HFileBlockEncodingContext {
   EncodingState getEncodingState();
 
   /**
-   * @param uncompressedBytesWithHeader encoded bytes with header
-   * @return Bytes with header which are ready to write out to disk. This is compressed and
-   *         encrypted bytes applying the set compression algorithm and encryption.
+   * @param data encoded bytes with header
+   * @param offset the offset in encoded data to start at
+   * @param length the number of encoded bytes
+   * @return Bytes with header which are ready to write out to disk.
+   *         This is compressed and encrypted bytes applying the set compression
+   *         algorithm and encryption. The bytes may be changed.
+   *         If need a Bytes reference for later use, clone the bytes and use that.
+   *         Null if the data doesn't need to be compressed and encrypted.
    */
-  byte[] compressAndEncrypt(byte[] uncompressedBytesWithHeader) throws IOException;
+  Bytes compressAndEncrypt(byte[] data, int offset, int length) throws IOException;
 }

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -301,7 +301,7 @@ public class HFileBlock implements Cacheable {
 
   /**
    * Creates a new {@link HFile} block from the given fields. This constructor
-   * is used when the block data has already been read and uncompressed,
+   * is used only while writing blocks and caching,
    * and is sitting in a byte buffer and we want to stuff the block into cache.
    * See {@link Writer#getBlockForCaching(CacheConfig)}.
    *
@@ -313,8 +313,7 @@ public class HFileBlock implements Cacheable {
    * @param onDiskSizeWithoutHeader see {@link #onDiskSizeWithoutHeader}
    * @param uncompressedSizeWithoutHeader see {@link #uncompressedSizeWithoutHeader}
    * @param prevBlockOffset see {@link #prevBlockOffset}
-   * @param b block header ({@link HConstants#HFILEBLOCK_HEADER_SIZE} bytes) followed by
-   *          uncompressed data.
+   * @param b block header ({@link HConstants#HFILEBLOCK_HEADER_SIZE} bytes)
    * @param fillHeader when true, write the first 4 header fields into passed buffer.
    * @param offset the file offset the block was read from
    * @param onDiskDataSizeWithHeader see {@link #onDiskDataSizeWithHeader}
@@ -850,7 +849,7 @@ public class HFileBlock implements Cacheable {
      * if compression is turned on. It also includes the checksum data that
      * immediately follows the block data. (header + data + checksums)
      */
-    private byte[] onDiskBlockBytesWithHeader;
+    private ByteArrayOutputStream onDiskBlockBytesWithHeader;
 
     /**
      * The size of the checksum data on disk. It is used only if data is
@@ -859,15 +858,6 @@ public class HFileBlock implements Cacheable {
      * variable stores the checksum data for this block.
      */
     private byte[] onDiskChecksum = HConstants.EMPTY_BYTE_ARRAY;
-
-    /**
-     * Valid in the READY state. Contains the header and the uncompressed (but
-     * potentially encoded, if this is a data block) bytes, so the length is
-     * {@link #uncompressedSizeWithoutHeader} +
-     * {@link org.apache.hadoop.hbase.HConstants#HFILEBLOCK_HEADER_SIZE}.
-     * Does not store checksums.
-     */
-    private byte[] uncompressedBlockBytesWithHeader;
 
     /**
      * Current block's start offset in the {@link HFile}. Set in
@@ -991,66 +981,57 @@ public class HFileBlock implements Cacheable {
      */
     private void finishBlock() throws IOException {
       if (blockType == BlockType.DATA) {
-        BufferGrabbingByteArrayOutputStream baosInMemoryCopy =
-            new BufferGrabbingByteArrayOutputStream();
-        baosInMemory.writeTo(baosInMemoryCopy);
         this.dataBlockEncoder.endBlockEncoding(dataBlockEncodingCtx, userDataStream,
-            baosInMemoryCopy.buf, blockType);
+            baosInMemory.getBuffer(), blockType);
         blockType = dataBlockEncodingCtx.getBlockType();
       }
       userDataStream.flush();
-      // This does an array copy, so it is safe to cache this byte array when cache-on-write.
-      // Header is still the empty, 'dummy' header that is yet to be filled out.
-      uncompressedBlockBytesWithHeader = baosInMemory.toByteArray();
       prevOffset = prevOffsetByType[blockType.getId()];
 
       // We need to set state before we can package the block up for cache-on-write. In a way, the
       // block is ready, but not yet encoded or compressed.
       state = State.BLOCK_READY;
+      Bytes compressAndEncryptDat;
       if (blockType == BlockType.DATA || blockType == BlockType.ENCODED_DATA) {
-        onDiskBlockBytesWithHeader = dataBlockEncodingCtx.
-            compressAndEncrypt(uncompressedBlockBytesWithHeader);
+        compressAndEncryptDat = dataBlockEncodingCtx.
+            compressAndEncrypt(baosInMemory.getBuffer(),
+                    0, baosInMemory.size());
       } else {
-        onDiskBlockBytesWithHeader = defaultBlockEncodingCtx.
-            compressAndEncrypt(uncompressedBlockBytesWithHeader);
+        compressAndEncryptDat = defaultBlockEncodingCtx.
+            compressAndEncrypt(baosInMemory.getBuffer(),
+                    0, baosInMemory.size());
       }
+      if (compressAndEncryptDat == null) {
+        compressAndEncryptDat = new Bytes(baosInMemory.getBuffer(),
+          0, baosInMemory.size());
+      }
+      if (onDiskBlockBytesWithHeader == null) {
+        onDiskBlockBytesWithHeader = new ByteArrayOutputStream(compressAndEncryptDat.getLength());
+      }
+      onDiskBlockBytesWithHeader.reset();
+      onDiskBlockBytesWithHeader.write(compressAndEncryptDat.get(),
+            compressAndEncryptDat.getOffset(), compressAndEncryptDat.getLength());
       // Calculate how many bytes we need for checksum on the tail of the block.
       int numBytes = (int) ChecksumUtil.numBytes(
-          onDiskBlockBytesWithHeader.length,
+          onDiskBlockBytesWithHeader.size(),
           fileContext.getBytesPerChecksum());
 
       // Put the header for the on disk bytes; header currently is unfilled-out
-      putHeader(onDiskBlockBytesWithHeader, 0,
-          onDiskBlockBytesWithHeader.length + numBytes,
-          uncompressedBlockBytesWithHeader.length, onDiskBlockBytesWithHeader.length);
-      // Set the header for the uncompressed bytes (for cache-on-write) -- IFF different from
-      // onDiskBlockBytesWithHeader array.
-      if (onDiskBlockBytesWithHeader != uncompressedBlockBytesWithHeader) {
-        putHeader(uncompressedBlockBytesWithHeader, 0,
-          onDiskBlockBytesWithHeader.length + numBytes,
-          uncompressedBlockBytesWithHeader.length, onDiskBlockBytesWithHeader.length);
-      }
+      putHeader(onDiskBlockBytesWithHeader,
+          onDiskBlockBytesWithHeader.size() + numBytes,
+          baosInMemory.size(), onDiskBlockBytesWithHeader.size());
+      // Set the header for the uncompressed bytes (for cache-on-write)
       if (onDiskChecksum.length != numBytes) {
         onDiskChecksum = new byte[numBytes];
       }
       ChecksumUtil.generateChecksums(
-          onDiskBlockBytesWithHeader, 0, onDiskBlockBytesWithHeader.length,
+          onDiskBlockBytesWithHeader.getBuffer(), 0,onDiskBlockBytesWithHeader.size(),
           onDiskChecksum, 0, fileContext.getChecksumType(), fileContext.getBytesPerChecksum());
     }
-
-    public static class BufferGrabbingByteArrayOutputStream extends ByteArrayOutputStream {
-      private byte[] buf;
-
-      @Override
-      public void write(byte[] b, int off, int len) {
-        this.buf = b;
-      }
-
-      public byte[] getBuffer() {
-        return this.buf;
-      }
+    private void putHeader(ByteArrayOutputStream dest, int onDiskSize,
+      int uncompressedSize, int onDiskDataSize) {
+      putHeader(dest.getBuffer(),0, onDiskSize, uncompressedSize, onDiskDataSize);
     }
-
     /**
      * Put the header into the given byte array at the given offset.
      * @param onDiskSize size of the block on disk header + data + checksum
@@ -1102,7 +1083,7 @@ public class HFileBlock implements Cacheable {
     protected void finishBlockAndWriteHeaderAndData(DataOutputStream out)
       throws IOException {
       ensureBlockReady();
-      out.write(onDiskBlockBytesWithHeader);
+      out.write(onDiskBlockBytesWithHeader.getBuffer(), 0, onDiskBlockBytesWithHeader.size());
       out.write(onDiskChecksum);
     }
 
@@ -1121,12 +1102,12 @@ public class HFileBlock implements Cacheable {
       // This is not very optimal, because we are doing an extra copy.
       // But this method is used only by unit tests.
       byte[] output =
-          new byte[onDiskBlockBytesWithHeader.length
+          new byte[onDiskBlockBytesWithHeader.size()
               + onDiskChecksum.length];
-      System.arraycopy(onDiskBlockBytesWithHeader, 0, output, 0,
-          onDiskBlockBytesWithHeader.length);
+      System.arraycopy(onDiskBlockBytesWithHeader.getBuffer(), 0, output, 0,
+          onDiskBlockBytesWithHeader.size());
       System.arraycopy(onDiskChecksum, 0, output,
-          onDiskBlockBytesWithHeader.length, onDiskChecksum.length);
+          onDiskBlockBytesWithHeader.size(), onDiskChecksum.length);
       return output;
     }
 
@@ -1154,7 +1135,7 @@ public class HFileBlock implements Cacheable {
      */
     int getOnDiskSizeWithoutHeader() {
       expectState(State.BLOCK_READY);
-      return onDiskBlockBytesWithHeader.length +
+      return onDiskBlockBytesWithHeader.size() +
           onDiskChecksum.length - HConstants.HFILEBLOCK_HEADER_SIZE;
     }
 
@@ -1167,7 +1148,7 @@ public class HFileBlock implements Cacheable {
      */
     int getOnDiskSizeWithHeader() {
       expectState(State.BLOCK_READY);
-      return onDiskBlockBytesWithHeader.length + onDiskChecksum.length;
+      return onDiskBlockBytesWithHeader.size() + onDiskChecksum.length;
     }
 
     /**
@@ -1175,7 +1156,7 @@ public class HFileBlock implements Cacheable {
      */
     int getUncompressedSizeWithoutHeader() {
       expectState(State.BLOCK_READY);
-      return uncompressedBlockBytesWithHeader.length - HConstants.HFILEBLOCK_HEADER_SIZE;
+      return baosInMemory.size() - HConstants.HFILEBLOCK_HEADER_SIZE;
     }
 
     /**
@@ -1183,7 +1164,7 @@ public class HFileBlock implements Cacheable {
      */
     int getUncompressedSizeWithHeader() {
       expectState(State.BLOCK_READY);
-      return uncompressedBlockBytesWithHeader.length;
+      return baosInMemory.size();
     }
 
     /** @return true if a block is being written  */
@@ -1204,29 +1185,37 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
-     * Returns the header followed by the uncompressed data, even if using
+     * Clones the header followed by the uncompressed data, even if using
      * compression. This is needed for storing uncompressed blocks in the block
      * cache. Can be called in the "writing" state or the "block ready" state.
      * Returns only the header and data, does not include checksum data.
      *
-     * @return uncompressed block bytes for caching on write
+     * @return Returns a copy of uncompressed block bytes for caching on write
      */
-    ByteBuffer getUncompressedBufferWithHeader() {
+    @VisibleForTesting
+    ByteBuffer cloneUncompressedBufferWithHeader() {
       expectState(State.BLOCK_READY);
+      byte[] uncompressedBlockBytesWithHeader = baosInMemory.toByteArray();
+      int numBytes = (int) ChecksumUtil.numBytes(
+          onDiskBlockBytesWithHeader.size(),
+          fileContext.getBytesPerChecksum());
+      putHeader(uncompressedBlockBytesWithHeader, 0,
+        onDiskBlockBytesWithHeader.size() + numBytes,
+        uncompressedBlockBytesWithHeader.length, onDiskBlockBytesWithHeader.size());
       return ByteBuffer.wrap(uncompressedBlockBytesWithHeader);
     }
 
     /**
-     * Returns the header followed by the on-disk (compressed/encoded/encrypted) data. This is
+     * Clones the header followed by the on-disk (compressed/encoded/encrypted) data. This is
      * needed for storing packed blocks in the block cache. Expects calling semantics identical to
      * {@link #getUncompressedBufferWithHeader()}. Returns only the header and data,
      * Does not include checksum data.
      *
-     * @return packed block bytes for caching on write
+     * @return Returns a copy of block bytes for caching on write
      */
-    ByteBuffer getOnDiskBufferWithHeader() {
+    private ByteBuffer cloneOnDiskBufferWithHeader() {
       expectState(State.BLOCK_READY);
-      return ByteBuffer.wrap(onDiskBlockBytesWithHeader);
+      return ByteBuffer.wrap(onDiskBlockBytesWithHeader.toByteArray());
     }
 
     private void expectState(State expectedState) {
@@ -1257,7 +1246,9 @@ public class HFileBlock implements Cacheable {
      * the byte buffer passed into the constructor of this newly created
      * block does not have checksum data even though the header minor
      * version is MINOR_VERSION_WITH_CHECKSUM. This is indicated by setting a
-     * 0 value in bytesPerChecksum.
+     * 0 value in bytesPerChecksum. This method copies the on-disk or
+     * uncompressed data to build the HFileBlock which is used only
+     * while writing blocks and caching.
      *
      * <p>TODO: Should there be an option where a cache can ask that hbase preserve block
      * checksums for checking after a block comes out of the cache? Otehrwise, cache is responsible
@@ -1278,10 +1269,10 @@ public class HFileBlock implements Cacheable {
        return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),
           getUncompressedSizeWithoutHeader(), prevOffset,
           cacheConf.shouldCacheCompressed(blockType.getCategory())?
-            getOnDiskBufferWithHeader() :
-            getUncompressedBufferWithHeader(),
+            cloneOnDiskBufferWithHeader() :
+            cloneUncompressedBufferWithHeader(),
           FILL_HEADER, startOffset, UNSET,
-          onDiskBlockBytesWithHeader.length + onDiskChecksum.length, newContext);
+          onDiskBlockBytesWithHeader.size() + onDiskChecksum.length, newContext);
     }
   }
 

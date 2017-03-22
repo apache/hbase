@@ -384,7 +384,7 @@ public class TestHFileBlock {
             writeTestKeyValues(hbw, blockId, includesMemstoreTS, includesTag);
             hbw.writeHeaderAndData(os);
             int headerLen = HConstants.HFILEBLOCK_HEADER_SIZE;
-            byte[] encodedResultWithHeader = hbw.getUncompressedBufferWithHeader().array();
+            byte[] encodedResultWithHeader = hbw.cloneUncompressedBufferWithHeader().array();
             final int encodedSize = encodedResultWithHeader.length - headerLen;
             if (encoding != DataBlockEncoding.NONE) {
               // We need to account for the two-byte encoding algorithm ID that
@@ -792,7 +792,7 @@ public class TestHFileBlock {
       totalSize += hbw.getOnDiskSizeWithHeader();
 
       if (cacheOnWrite)
-        expectedContents.add(hbw.getUncompressedBufferWithHeader());
+        expectedContents.add(hbw.cloneUncompressedBufferWithHeader());
 
       if (detailedLogging) {
         LOG.info("Written block #" + i + " of type " + bt
