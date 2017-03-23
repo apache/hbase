@@ -1149,8 +1149,6 @@ public class Scan extends Query {
    * reaches this value.
    * <p>
    * This condition will be tested at last, after all other conditions such as stopRow, filter, etc.
-   * <p>
-   * Can not be used together with batch and allowPartial.
    * @param limit the limit of rows for this scan
    * @return this
    */

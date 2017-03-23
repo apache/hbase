@@ -18,13 +18,11 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createScanResultCache;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.numberOfIndividualRows;
 
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 
@@ -465,8 +463,11 @@ public abstract class ClientScanner extends AbstractClientScanner {
       // Groom the array of Results that we received back from the server before adding that
       // Results to the scanner's cache. If partial results are not allowed to be seen by the
       // caller, all book keeping will be performed within this method.
+      int numberOfCompleteRowsBefore = scanResultCache.numberOfCompleteRows();
       Result[] resultsToAddToCache =
           scanResultCache.addAndGet(values, callable.isHeartbeatMessage());
+      int numberOfCompleteRows =
+          scanResultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
       if (resultsToAddToCache.length > 0) {
         for (Result rs : resultsToAddToCache) {
           cache.add(rs);
@@ -476,12 +477,12 @@ public abstract class ClientScanner extends AbstractClientScanner {
           countdown--;
           this.lastResult = rs;
         }
-        if (scan.getLimit() > 0) {
-          int newLimit =
-              scan.getLimit() - numberOfIndividualRows(Arrays.asList(resultsToAddToCache));
-          assert newLimit >= 0;
-          scan.setLimit(newLimit);
-        }
+      }
+
+      if (scan.getLimit() > 0) {
+        int newLimit = scan.getLimit() - numberOfCompleteRows;
+        assert newLimit >= 0;
+        scan.setLimit(newLimit);
       }
       if (scanExhausted(values)) {
         closeScanner();
