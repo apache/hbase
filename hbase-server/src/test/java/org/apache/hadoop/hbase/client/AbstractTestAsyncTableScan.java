@@ -237,12 +237,11 @@ public abstract class AbstractTestAsyncTableScan {
 
   @Test
   public void testScanWithLimit() throws Exception {
-    testScan(1, true, 998, false, 900); // from first region to last region
-    testScan(123, true, 345, true, 100);
-    testScan(234, true, 456, false, 100);
-    testScan(345, false, 567, true, 100);
-    testScan(456, false, 678, false, 100);
-
+ //   testScan(1, true, 998, false, 900); // from first region to last region
+    testScan(123, true, 234, true, 100);
+  //  testScan(234, true, 456, false, 100);
+ //   testScan(345, false, 567, true, 100);
+ //   testScan(456, false, 678, false, 100);
   }
 
   @Test

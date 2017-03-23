@@ -17,13 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.*;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCRetriesMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForScan;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.numberOfIndividualRows;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.updateResultsMetrics;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.updateServerSideMetrics;
 
 import com.google.common.base.Preconditions;
 
@@ -32,7 +35,6 @@ import io.netty.util.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -209,7 +211,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
     private ScanResponse resp;
 
-    private int numberOfIndividualRows;
+    private int numberOfCompleteRows;
 
     // If the scan is suspended successfully, we need to do lease renewal to prevent it being closed
     // by RS due to lease expire. It is a one-time timer task so we need to schedule a new task
@@ -226,7 +228,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       // resume is called after suspend, then it is also safe to just reference resp and
       // numValidResults after the synchronized block as no one will change it anymore.
       ScanResponse localResp;
-      int localNumberOfIndividualRows;
+      int localNumberOfCompleteRows;
       synchronized (this) {
         if (state == ScanResumerState.INITIALIZED) {
           // user calls this method before we call prepare, so just set the state to
@@ -243,9 +245,9 @@ class AsyncScanSingleRegionRpcRetryingCaller {
           leaseRenewer.cancel();
         }
         localResp = this.resp;
-        localNumberOfIndividualRows = this.numberOfIndividualRows;
+        localNumberOfCompleteRows = this.numberOfCompleteRows;
       }
-      completeOrNext(localResp, localNumberOfIndividualRows);
+      completeOrNext(localResp, localNumberOfCompleteRows);
     }
 
     private void scheduleRenewLeaseTask() {
@@ -265,14 +267,14 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
     // return false if the scan has already been resumed. See the comment above for ScanResumerImpl
     // for more details.
-    synchronized boolean prepare(ScanResponse resp, int numberOfIndividualRows) {
+    synchronized boolean prepare(ScanResponse resp, int numberOfCompleteRows) {
       if (state == ScanResumerState.RESUMED) {
         // user calls resume before we actually suspend the scan, just continue;
         return false;
       }
       state = ScanResumerState.SUSPENDED;
       this.resp = resp;
-      this.numberOfIndividualRows = numberOfIndividualRows;
+      this.numberOfCompleteRows = numberOfCompleteRows;
       // if there are no more results in region then the scanner at RS side will be closed
       // automatically so we do not need to renew lease.
       if (resp.getMoreResultsInRegion()) {
@@ -432,7 +434,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
   }
 
-  private void completeOrNext(ScanResponse resp, int numIndividualRows) {
+  private void completeOrNext(ScanResponse resp, int numberOfCompleteRows) {
     if (resp.hasMoreResults() && !resp.getMoreResults()) {
       // RS tells us there is no more data for the whole scan
       completeNoMoreResults();
@@ -441,7 +443,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     if (scan.getLimit() > 0) {
       // The RS should have set the moreResults field in ScanResponse to false when we have reached
       // the limit, so we add an assert here.
-      int newLimit = scan.getLimit() - numIndividualRows;
+      int newLimit = scan.getLimit() - numberOfCompleteRows;
       assert newLimit > 0;
       scan.setLimit(newLimit);
     }
@@ -461,6 +463,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     updateServerSideMetrics(scanMetrics, resp);
     boolean isHeartbeatMessage = resp.hasHeartbeatMessage() && resp.getHeartbeatMessage();
     Result[] results;
+    int numberOfCompleteRowsBefore = resultCache.numberOfCompleteRows();
     try {
       Result[] rawResults = ResponseConverter.getResults(controller.cellScanner(), resp);
       updateResultsMetrics(scanMetrics, rawResults, isHeartbeatMessage);
@@ -476,16 +479,12 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
 
-    // calculate this before calling onNext as it is free for user to modify the result array in
-    // onNext.
-    int numberOfIndividualRows = numberOfIndividualRows(Arrays.asList(results));
     ScanControllerImpl scanController = new ScanControllerImpl();
-    if (results.length == 0) {
-      // if we have nothing to return then just call onHeartbeat.
-      consumer.onHeartbeat(scanController);
-    } else {
+    if (results.length > 0) {
       updateNextStartRowWhenError(results[results.length - 1]);
       consumer.onNext(results, scanController);
+    } else if (resp.hasHeartbeatMessage() && resp.getHeartbeatMessage()) {
+      consumer.onHeartbeat(scanController);
     }
     ScanControllerState state = scanController.destroy();
     if (state == ScanControllerState.TERMINATED) {
@@ -497,12 +496,13 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       completeNoMoreResults();
       return;
     }
+    int numberOfCompleteRows = resultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
     if (state == ScanControllerState.SUSPENDED) {
-      if (scanController.resumer.prepare(resp, numberOfIndividualRows)) {
+      if (scanController.resumer.prepare(resp, numberOfCompleteRows)) {
         return;
       }
     }
-    completeOrNext(resp, numberOfIndividualRows);
+    completeOrNext(resp, numberOfCompleteRows);
   }
 
   private void call() {

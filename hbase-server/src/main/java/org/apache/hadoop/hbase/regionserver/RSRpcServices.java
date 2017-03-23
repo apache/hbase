@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -204,7 +206,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implements the regionserver RPC services.
@@ -352,6 +353,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private final Region r;
     private final RpcCallback closeCallBack;
     private final RpcCallback shippedCallback;
+    private byte[] rowOfLastPartialResult;
 
     public RegionScannerHolder(String scannerName, RegionScanner s, Region r,
         RpcCallback closeCallBack, RpcCallback shippedCallback) {
@@ -2770,10 +2772,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return -1L;
   }
 
+  private void checkLimitOfRows(int numOfCompleteRows, int limitOfRows, boolean moreRows,
+      ScannerContext scannerContext, ScanResponse.Builder builder) {
+    if (numOfCompleteRows >= limitOfRows) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Done scanning, limit of rows reached, moreRows: " + moreRows +
+            " scannerContext: " + scannerContext);
+      }
+      builder.setMoreResults(false);
+    }
+  }
+
   // return whether we have more results in region.
-  private boolean scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
-      long maxQuotaResultSize, int maxResults, List<Result> results, ScanResponse.Builder builder,
-      MutableObject lastBlock, RpcCallContext context) throws IOException {
+  private void scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
+      long maxQuotaResultSize, int maxResults, int limitOfRows, List<Result> results,
+      ScanResponse.Builder builder, MutableObject lastBlock, RpcCallContext context)
+      throws IOException {
     Region region = rsh.r;
     RegionScanner scanner = rsh.s;
     long maxResultSize;
@@ -2788,7 +2802,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     List<Cell> values = new ArrayList<>(32);
     region.startRegionOperation(Operation.SCAN);
     try {
-      int i = 0;
+      int numOfResults = 0;
+      int numOfCompleteRows = 0;
       long before = EnvironmentEdgeManager.currentTime();
       synchronized (scanner) {
         boolean stale = (region.getRegionInfo().getReplicaId() != 0);
@@ -2835,7 +2850,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         contextBuilder.setTrackMetrics(trackMetrics);
         ScannerContext scannerContext = contextBuilder.build();
         boolean limitReached = false;
-        while (i < maxResults) {
+        while (numOfResults < maxResults) {
           // Reset the batch progress to 0 before every call to RegionScanner#nextRaw. The
           // batch limit is a limit on the number of cells per Result. Thus, if progress is
           // being tracked (i.e. scannerContext.keepProgress() is true) then we need to
@@ -2847,16 +2862,46 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           moreRows = scanner.nextRaw(values, scannerContext);
 
           if (!values.isEmpty()) {
-            Result r = Result.create(values, null, stale, scannerContext.hasMoreCellsInRow());
+            if (limitOfRows > 0) {
+              // First we need to check if the last result is partial and we have a row change. If
+              // so then we need to increase the numOfCompleteRows.
+              if (results.isEmpty()) {
+                if (rsh.rowOfLastPartialResult != null &&
+                    !CellUtil.matchingRow(values.get(0), rsh.rowOfLastPartialResult)) {
+                  numOfCompleteRows++;
+                  checkLimitOfRows(numOfCompleteRows, limitOfRows, moreRows, scannerContext,
+                    builder);
+                }
+              } else {
+                Result lastResult = results.get(results.size() - 1);
+                if (lastResult.mayHaveMoreCellsInRow() &&
+                    !CellUtil.matchingRow(values.get(0), lastResult.getRow())) {
+                  numOfCompleteRows++;
+                  checkLimitOfRows(numOfCompleteRows, limitOfRows, moreRows, scannerContext,
+                    builder);
+                }
+              }
+              if (builder.hasMoreResults() && !builder.getMoreResults()) {
+                break;
+              }
+            }
+            boolean mayHaveMoreCellsInRow = scannerContext.mayHaveMoreCellsInRow();
+            Result r = Result.create(values, null, stale, mayHaveMoreCellsInRow);
             lastBlock.setValue(addSize(context, r, lastBlock.getValue()));
             results.add(r);
-            i++;
+            numOfResults++;
+            if (!mayHaveMoreCellsInRow && limitOfRows > 0) {
+              numOfCompleteRows++;
+              checkLimitOfRows(numOfCompleteRows, limitOfRows, moreRows, scannerContext, builder);
+              if (builder.hasMoreResults() && !builder.getMoreResults()) {
+                break;
+              }
+            }
           }
-
           boolean sizeLimitReached = scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS);
           boolean timeLimitReached = scannerContext.checkTimeLimit(LimitScope.BETWEEN_ROWS);
-          boolean rowLimitReached = i >= maxResults;
-          limitReached = sizeLimitReached || timeLimitReached || rowLimitReached;
+          boolean resultsLimitReached = numOfResults >= maxResults;
+          limitReached = sizeLimitReached || timeLimitReached || resultsLimitReached;
 
           if (limitReached || !moreRows) {
             if (LOG.isTraceEnabled()) {
@@ -2882,7 +2927,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // We didn't get a single batch
           builder.setMoreResultsInRegion(false);
         }
-
         // Check to see if the client requested that we track metrics server side. If the
         // client requested metrics, retrieve the metrics from the scanner context.
         if (trackMetrics) {
@@ -2899,7 +2943,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           builder.setScanMetrics(metricBuilder.build());
         }
       }
-      region.updateReadRequestsCount(i);
+      region.updateReadRequestsCount(numOfResults);
       long end = EnvironmentEdgeManager.currentTime();
       long responseCellSize = context != null ? context.getResponseCellSize() : 0;
       region.getMetrics().updateScanTime(end - before);
@@ -2914,7 +2958,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (region.getCoprocessorHost() != null) {
       region.getCoprocessorHost().postScannerNext(scanner, results, maxResults, true);
     }
-    return builder.getMoreResultsInRegion();
   }
 
   /**
@@ -3022,14 +3065,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // now let's do the real scan.
     long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
     RegionScanner scanner = rsh.s;
-    boolean moreResults = true;
-    boolean moreResultsInRegion = true;
     // this is the limit of rows for this scan, if we the number of rows reach this value, we will
     // close the scanner.
     int limitOfRows;
     if (request.hasLimitOfRows()) {
       limitOfRows = request.getLimitOfRows();
-      rows = Math.min(rows, limitOfRows);
     } else {
       limitOfRows = -1;
     }
@@ -3052,33 +3092,45 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
         }
         if (!done) {
-          moreResultsInRegion = scan((HBaseRpcController) controller, request, rsh,
-            maxQuotaResultSize, rows, results, builder, lastBlock, context);
+          scan((HBaseRpcController) controller, request, rsh, maxQuotaResultSize, rows, limitOfRows,
+            results, builder, lastBlock, context);
         }
       }
 
       quota.addScanResult(results);
-
+      addResults(builder, results, (HBaseRpcController) controller,
+        RegionReplicaUtil.isDefaultReplica(region.getRegionInfo()),
+        isClientCellBlockSupport(context));
       if (scanner.isFilterDone() && results.isEmpty()) {
         // If the scanner's filter - if any - is done with the scan
         // only set moreResults to false if the results is empty. This is used to keep compatible
         // with the old scan implementation where we just ignore the returned results if moreResults
         // is false. Can remove the isEmpty check after we get rid of the old implementation.
-        moreResults = false;
-      } else if (limitOfRows > 0 && !results.isEmpty() &&
-          !results.get(results.size() - 1).mayHaveMoreCellsInRow() &&
-          ConnectionUtils.numberOfIndividualRows(results) >= limitOfRows) {
-        // if we have reached the limit of rows
-        moreResults = false;
+        builder.setMoreResults(false);
       }
-      addResults(builder, results, (HBaseRpcController) controller,
-        RegionReplicaUtil.isDefaultReplica(region.getRegionInfo()),
-        isClientCellBlockSupport(context));
-      if (!moreResults || !moreResultsInRegion || closeScanner) {
+      // we only set moreResults to false in the above code, so set it to true if we haven't set it
+      // yet.
+      if (!builder.hasMoreResults()) {
+        builder.setMoreResults(true);
+      }
+      if (builder.getMoreResults() && builder.getMoreResultsInRegion() && !results.isEmpty()) {
+        // Record the last cell of the last result if it is a partial result
+        // We need this to calculate the complete rows we have returned to client as the
+        // mayHaveMoreCellsInRow is true does not mean that there will be extra cells for the
+        // current row. We may filter out all the remaining cells for the current row and just
+        // return the cells of the nextRow when calling RegionScanner.nextRaw. So here we need to
+        // check for row change.
+        Result lastResult = results.get(results.size() - 1);
+        if (lastResult.mayHaveMoreCellsInRow()) {
+          rsh.rowOfLastPartialResult = lastResult.getRow();
+        } else {
+          rsh.rowOfLastPartialResult = null;
+        }
+      }
+      if (!builder.getMoreResults() || !builder.getMoreResultsInRegion() || closeScanner) {
         scannerClosed = true;
         closeScanner(region, scanner, scannerName, context);
       }
-      builder.setMoreResults(moreResults);
       return builder.build();
     } catch (Exception e) {
       try {
