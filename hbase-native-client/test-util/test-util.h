@@ -64,6 +64,10 @@ class TestUtil {
   void TablePut(const std::string &table, const std::string &row, const std::string &family,
                 const std::string &column, const std::string &value);
 
+  void StartStandAloneInstance();
+  void StopStandAloneInstance();
+  void RunShellCmd(const std::string &);
+
  private:
   std::unique_ptr<MiniCluster> mini_;
   folly::test::TemporaryDirectory temp_dir_;

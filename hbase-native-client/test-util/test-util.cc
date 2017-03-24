@@ -46,7 +46,9 @@ std::string TestUtil::RandString(int len) {
 
 TestUtil::TestUtil() : temp_dir_(TestUtil::RandString()) {}
 
-TestUtil::~TestUtil() { StopMiniCluster(); }
+TestUtil::~TestUtil() {
+  if (mini_) StopMiniCluster();
+}
 
 void TestUtil::StartMiniCluster(int32_t num_region_servers) {
   mini_ = std::make_unique<MiniCluster>();
@@ -68,4 +70,22 @@ void TestUtil::CreateTable(const std::string &table, const std::string &family,
 void TestUtil::TablePut(const std::string &table, const std::string &row, const std::string &family,
                         const std::string &column, const std::string &value) {
   mini_->TablePut(table, row, family, column, value);
+}
+
+void TestUtil::StartStandAloneInstance() {
+  auto p = temp_dir_.path().string();
+  auto cmd = std::string{"bin/start-local-hbase.sh " + p};
+  auto res_code = std::system(cmd.c_str());
+  CHECK_EQ(res_code, 0);
+}
+
+void TestUtil::StopStandAloneInstance() {
+  auto res_code = std::system("bin/stop-local-hbase.sh");
+  CHECK_EQ(res_code, 0);
+}
+
+void TestUtil::RunShellCmd(const std::string &command) {
+  auto cmd_string = folly::sformat("echo \"{}\" | ../bin/hbase shell", command);
+  auto res_code = std::system(cmd_string.c_str());
+  CHECK_EQ(res_code, 0);
 }
