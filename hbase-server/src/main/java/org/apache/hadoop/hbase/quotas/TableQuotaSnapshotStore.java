@@ -114,7 +114,7 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
    */
   long getSnapshotSizesForTable(TableName tn) throws IOException {
     try (Table quotaTable = conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
-      Scan s = QuotaTableUtil.createScanForSnapshotSizes(tn);
+      Scan s = QuotaTableUtil.createScanForSpaceSnapshotSizes(tn);
       ResultScanner rs = quotaTable.getScanner(s);
       try {
         long size = 0L;

@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -513,16 +514,50 @@ public class QuotaTableUtil {
     return QuotaProtos.SpaceQuotaSnapshot.parseFrom(bs).getQuotaUsage();
   }
 
-  static Scan createScanForSnapshotSizes(TableName table) {
-    byte[] rowkey = getTableRowKey(table);
-    return new Scan()
-        // Fetch just this one row
-        .withStartRow(rowkey)
-        .withStopRow(rowkey, true)
-        // Just the usage family
-        .addFamily(QUOTA_FAMILY_USAGE)
-        // Only the snapshot size qualifiers
-        .setFilter(new ColumnPrefixFilter(QUOTA_SNAPSHOT_SIZE_QUALIFIER));
+  static Scan createScanForSpaceSnapshotSizes() {
+    return createScanForSpaceSnapshotSizes(null);
+  }
+
+  static Scan createScanForSpaceSnapshotSizes(TableName table) {
+    Scan s = new Scan();
+    if (null == table) {
+      // Read all tables, just look at the row prefix
+      s.setRowPrefixFilter(QUOTA_TABLE_ROW_KEY_PREFIX);
+    } else {
+      // Fetch the exact row for the table
+      byte[] rowkey = getTableRowKey(table);
+      // Fetch just this one row
+      s.withStartRow(rowkey).withStopRow(rowkey, true);
+    }
+
+    // Just the usage family and only the snapshot size qualifiers
+    return s.addFamily(QUOTA_FAMILY_USAGE).setFilter(
+        new ColumnPrefixFilter(QUOTA_SNAPSHOT_SIZE_QUALIFIER));
+  }
+
+  /**
+   * Fetches any persisted HBase snapshot sizes stored in the quota table. The sizes here are
+   * computed relative to the table which the snapshot was created from. A snapshot's size will
+   * not include the size of files which the table still refers. These sizes, in bytes, are what
+   * is used internally to compute quota violation for tables and namespaces.
+   *
+   * @return A map of snapshot name to size in bytes per space quota computations
+   */
+  public static Map<String,Long> getObservedSnapshotSizes(Connection conn) throws IOException {
+    try (Table quotaTable = conn.getTable(QUOTA_TABLE_NAME);
+        ResultScanner rs = quotaTable.getScanner(createScanForSpaceSnapshotSizes())) {
+      final Map<String,Long> snapshotSizes = new HashMap<>();
+      for (Result r : rs) {
+        CellScanner cs = r.cellScanner();
+        while (cs.advance()) {
+          Cell c = cs.current();
+          final String snapshot = extractSnapshotNameFromSizeCell(c);
+          final long size = parseSnapshotSize(c);
+          snapshotSizes.put(snapshot, size);
+        }
+      }
+      return snapshotSizes;
+    }
   }
 
   /* =========================================================================
@@ -747,6 +782,12 @@ public class QuotaTableUtil {
 
   protected static byte[] getSnapshotSizeQualifier(String snapshotName) {
     return Bytes.add(QUOTA_SNAPSHOT_SIZE_QUALIFIER, Bytes.toBytes(snapshotName));
+  }
+
+  protected static String extractSnapshotNameFromSizeCell(Cell c) {
+    return Bytes.toString(
+        c.getQualifierArray(), c.getQualifierOffset() + QUOTA_SNAPSHOT_SIZE_QUALIFIER.length,
+        c.getQualifierLength() - QUOTA_SNAPSHOT_SIZE_QUALIFIER.length);
   }
 
   protected static long extractSnapshotSize(
