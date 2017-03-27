@@ -97,7 +97,7 @@ The colon character (`:`) delimits the column family from the column family _qua
 |"com.cnn.www" |t6  | contents:html = "<html>..."    | |
 |"com.cnn.www" |t5  | contents:html = "<html>..."    | |
 |"com.cnn.www" |t3  | contents:html = "<html>..."    | |
-|"com.example.www"| t5  | contents:html = "<html>..."   | people:author = "John Doe"
+|"com.example.www"| t5  | contents:html = "<html>..."    | | people:author = "John Doe"
 |===
 
 Cells in this table that appear to be empty do not take space, or in fact exist, in HBase.
