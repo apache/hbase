@@ -99,7 +99,7 @@ public class ImmutableSegment extends Segment {
     super(null, // initiailize the CellSet with NULL
         comparator, memStoreLAB);
     this.type = type;
-    // build the true CellSet based on CellArrayMap
+    // build the new CellSet based on CellArrayMap
     CellSet cs = createCellArrayMapSet(numOfCells, iterator, merge);
 
     this.setCellSet(null, cs);            // update the CellSet of the new Segment
@@ -203,7 +203,7 @@ public class ImmutableSegment extends Segment {
         cells[i] = maybeCloneWithAllocator(c);
       }
       boolean useMSLAB = (getMemStoreLAB()!=null);
-      // second parameter true, because in compaction addition of the cell to new segment
+      // second parameter true, because in compaction/merge the addition of the cell to new segment
       // is always successful
       updateMetaInfo(c, true, useMSLAB, null); // updates the size per cell
       i++;
