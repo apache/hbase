@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
+import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
@@ -845,6 +846,50 @@ public class TestThriftHBaseServiceHandler {
     handler.closeScanner(scanId);
     try {
       handler.getScannerRows(scanId, 1);
+      fail("Scanner id should be invalid");
+    } catch (TIllegalArgument e) {
+    }
+  }
+
+  @Test
+  public void testSmallScan() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    ByteBuffer table = wrap(tableAname);
+
+    // insert data
+    TColumnValue columnValue = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
+            wrap(valueAname));
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(columnValue);
+    for (int i = 0; i < 10; i++) {
+      TPut put = new TPut(wrap(("testSmallScan" + i).getBytes()), columnValues);
+      handler.put(table, put);
+    }
+
+    // small scan instance
+    TScan scan = new TScan();
+    scan.setStartRow("testSmallScan".getBytes());
+    scan.setStopRow("testSmallScan\uffff".getBytes());
+    scan.setReadType(TReadType.PREAD);
+    scan.setCaching(2);
+
+    // get scanner and rows
+    int scanId = handler.openScanner(table, scan);
+    List<TResult> results = handler.getScannerRows(scanId, 10);
+    assertEquals(10, results.size());
+    for (int i = 0; i < 10; i++) {
+      // check if the rows are returned and in order
+      assertArrayEquals(("testSmallScan" + i).getBytes(), results.get(i).getRow());
+    }
+
+    // check that we are at the end of the scan
+    results = handler.getScannerRows(scanId, 10);
+    assertEquals(0, results.size());
+
+    // close scanner and check that it was indeed closed
+    handler.closeScanner(scanId);
+    try {
+      handler.getScannerRows(scanId, 10);
       fail("Scanner id should be invalid");
     } catch (TIllegalArgument e) {
     }

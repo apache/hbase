@@ -208,6 +208,12 @@ struct TAppend {
   5: optional TCellVisibility cellVisibility
 }
 
+enum TReadType {
+  DEFAULT = 1,
+  STREAM = 2,
+  PREAD = 3
+}
+
 /**
  * Any timestamps in the columns are ignored but the colFamTimeRangeMap included, use timeRange to select by timestamp.
  * Max versions defaults to 1.
@@ -226,6 +232,8 @@ struct TScan {
   11: optional bool reversed
   12: optional bool cacheBlocks
   13: optional map<binary,TTimeRange> colFamTimeRangeMap
+  14: optional TReadType readType
+  15: optional i32 limit
 }
 
 /**

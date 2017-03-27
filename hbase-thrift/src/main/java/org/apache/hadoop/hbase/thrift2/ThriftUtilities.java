@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
+import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
@@ -445,6 +447,14 @@ public class ThriftUtilities {
       }
     }
 
+    if (in.isSetReadType()) {
+      out.setReadType(readTypeFromThrift(in.getReadType()));
+    }
+
+    if (in.isSetLimit()) {
+      out.setLimit(in.getLimit());
+    }
+
     return out;
   }
 
@@ -557,6 +567,15 @@ public class ThriftUtilities {
       case 4: return CompareOp.GREATER_OR_EQUAL;
       case 5: return CompareOp.GREATER;
       case 6: return CompareOp.NO_OP;
+      default: return null;
+    }
+  }
+
+  private static ReadType readTypeFromThrift(TReadType tReadType) {
+    switch (tReadType.getValue()) {
+      case 1: return ReadType.DEFAULT;
+      case 2: return ReadType.STREAM;
+      case 3: return ReadType.PREAD;
       default: return null;
     }
   }
