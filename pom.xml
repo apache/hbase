@@ -164,6 +164,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>anastasia</id>
+      <name>Anastasia Braginsky</name>
+      <email>anastasia@apache.org</email>
+      <timezone>+2</timezone>
+    </developer>
+    <developer>
       <id>apurtell</id>
       <name>Andrew Purtell</name>
       <email>apurtell@apache.org</email>
