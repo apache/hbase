@@ -28,7 +28,7 @@
   </parent>
   <artifactId>hbase-server</artifactId>
   <name>Apache HBase - Server</name>
-  <description>Main functionality for HBase</description>
+  <description>Server functionality for HBase</description>
   <properties>
     <test.build.webapps>target/test-classes/webapps</test.build.webapps>
     <license.bundles.logo>true</license.bundles.logo>
