@@ -188,7 +188,33 @@ public class BackupAdminImpl implements BackupAdmin {
           removeTableFromBackupImage(info, tn, sysTable);
         }
       }
-      LOG.debug("Delete backup info " + backupInfo.getBackupId());
+      Map<byte[], String> map = sysTable.readBulkLoadedFiles(backupId);
+      FileSystem fs = FileSystem.get(conn.getConfiguration());
+      boolean succ = true;
+      int numDeleted = 0;
+      for (String f : map.values()) {
+        Path p = new Path(f);
+        try {
+          LOG.debug("Delete backup info " + p + " for " + backupInfo.getBackupId());
+          if (!fs.delete(p)) {
+            if (fs.exists(p)) {
+              LOG.warn(f + " was not deleted");
+              succ = false;
+            }
+          } else {
+            numDeleted++;
+          }
+        } catch (IOException ioe) {
+          LOG.warn(f + " was not deleted", ioe);
+          succ = false;
+        }
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(numDeleted + " bulk loaded files out of " + map.size() + " were deleted");
+      }
+      if (succ) {
+        sysTable.deleteBulkLoadedFiles(map);
+      }
 
       sysTable.deleteBackupInfo(backupInfo.getBackupId());
       LOG.info("Delete backup " + backupInfo.getBackupId() + " completed.");

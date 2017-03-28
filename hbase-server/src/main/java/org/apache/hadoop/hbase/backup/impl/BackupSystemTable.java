@@ -22,11 +22,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.commons.lang.StringUtils;
@@ -35,6 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -44,6 +47,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
+import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
@@ -59,6 +63,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * This class provides API to access backup system table<br>
@@ -77,6 +82,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public final class BackupSystemTable implements Closeable {
+  private static final Log LOG = LogFactory.getLog(BackupSystemTable.class);
 
   static class WALItem {
     String backupId;
@@ -108,8 +114,6 @@ public final class BackupSystemTable implements Closeable {
 
   }
 
-  private static final Log LOG = LogFactory.getLog(BackupSystemTable.class);
-
   private TableName tableName;
   /**
    *  Stores backup sessions (contexts)
@@ -119,6 +123,7 @@ public final class BackupSystemTable implements Closeable {
    * Stores other meta
    */
   final static byte[] META_FAMILY = "meta".getBytes();
+  final static byte[] BULK_LOAD_FAMILY = "bulk".getBytes();
   /**
    *  Connection to HBase cluster, shared among all instances
    */
@@ -130,9 +135,22 @@ public final class BackupSystemTable implements Closeable {
   private final static String INCR_BACKUP_SET = "incrbackupset:";
   private final static String TABLE_RS_LOG_MAP_PREFIX = "trslm:";
   private final static String RS_LOG_TS_PREFIX = "rslogts:";
+
+  private final static String BULK_LOAD_PREFIX = "bulk:";
+  private final static byte[] BULK_LOAD_PREFIX_BYTES = BULK_LOAD_PREFIX.getBytes();
+  final static byte[] TBL_COL = Bytes.toBytes("tbl");
+  final static byte[] FAM_COL = Bytes.toBytes("fam");
+  final static byte[] PATH_COL = Bytes.toBytes("path");
+  final static byte[] STATE_COL = Bytes.toBytes("state");
+  // the two states a bulk loaded file can be
+  final static byte[] BL_PREPARE = Bytes.toBytes("R");
+  final static byte[] BL_COMMIT = Bytes.toBytes("D");
+
   private final static String WALS_PREFIX = "wals:";
   private final static String SET_KEY_PREFIX = "backupset:";
 
+  // separator between BULK_LOAD_PREFIX and ordinals
+ protected final static String BLK_LD_DELIM = ":";
   private final static byte[] EMPTY_VALUE = new byte[] {};
 
   // Safe delimiter in a string
@@ -196,6 +214,97 @@ public final class BackupSystemTable implements Closeable {
     }
   }
 
+  /*
+   * @param backupId the backup Id
+   * @return Map of rows to path of bulk loaded hfile
+   */
+  Map<byte[], String> readBulkLoadedFiles(String backupId) throws IOException {
+    Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
+    try (Table table = connection.getTable(tableName);
+        ResultScanner scanner = table.getScanner(scan)) {
+      Result res = null;
+      Map<byte[], String> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      while ((res = scanner.next()) != null) {
+        res.advance();
+        byte[] row = CellUtil.cloneRow(res.listCells().get(0));
+        for (Cell cell : res.listCells()) {
+          if (CellComparator.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+              BackupSystemTable.PATH_COL.length) == 0) {
+            map.put(row, Bytes.toString(CellUtil.cloneValue(cell)));
+          }
+        }
+      }
+      return map;
+    }
+  }
+
+  /*
+   * Used during restore
+   * @param backupId the backup Id
+   * @param sTableList List of tables
+   * @return array of Map of family to List of Paths
+   */
+  public Map<byte[], List<Path>>[] readBulkLoadedFiles(String backupId, List<TableName> sTableList)
+      throws IOException {
+    Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
+    Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList == null ? 1 : sTableList.size()];
+    try (Table table = connection.getTable(tableName);
+        ResultScanner scanner = table.getScanner(scan)) {
+      Result res = null;
+      while ((res = scanner.next()) != null) {
+        res.advance();
+        TableName tbl = null;
+        byte[] fam = null;
+        String path = null;
+        for (Cell cell : res.listCells()) {
+          if (CellComparator.compareQualifiers(cell, BackupSystemTable.TBL_COL, 0,
+              BackupSystemTable.TBL_COL.length) == 0) {
+            tbl = TableName.valueOf(CellUtil.cloneValue(cell));
+          } else if (CellComparator.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
+              BackupSystemTable.FAM_COL.length) == 0) {
+            fam = CellUtil.cloneValue(cell);
+          } else if (CellComparator.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+              BackupSystemTable.PATH_COL.length) == 0) {
+            path = Bytes.toString(CellUtil.cloneValue(cell));
+          }
+        }
+        int srcIdx = IncrementalTableBackupClient.getIndex(tbl, sTableList);
+        if (srcIdx == -1) {
+          // the table is not among the query
+          continue;
+        }
+        if (mapForSrc[srcIdx] == null) {
+          mapForSrc[srcIdx] = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+        }
+        List<Path> files;
+        if (!mapForSrc[srcIdx].containsKey(fam)) {
+          files = new ArrayList<Path>();
+          mapForSrc[srcIdx].put(fam, files);
+        } else {
+          files = mapForSrc[srcIdx].get(fam);
+        }
+        files.add(new Path(path));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("found bulk loaded file : " + tbl + " " +  Bytes.toString(fam) + " " + path);
+        }
+      };
+      return mapForSrc;
+    }
+  }
+
+  /*
+   * @param map Map of row keys to path of bulk loaded hfile
+   */
+  void deleteBulkLoadedFiles(Map<byte[], String> map) throws IOException {
+    try (Table table = connection.getTable(tableName)) {
+      List<Delete> dels = new ArrayList<>();
+      for (byte[] row : map.keySet()) {
+        dels.add(new Delete(row).addFamily(BackupSystemTable.META_FAMILY));
+      }
+      table.delete(dels);
+    }
+  }
+
   /**
    * Deletes backup status from backup system table table
    * @param backupId backup id
@@ -210,6 +319,156 @@ public final class BackupSystemTable implements Closeable {
     try (Table table = connection.getTable(tableName)) {
       Delete del = createDeleteForBackupInfo(backupId);
       table.delete(del);
+    }
+  }
+
+  /*
+   * For postBulkLoadHFile() hook.
+   * @param tabName table name
+   * @param region the region receiving hfile
+   * @param finalPaths family and associated hfiles
+   */
+  public void writePathsPostBulkLoad(TableName tabName, byte[] region,
+      Map<byte[], List<Path>> finalPaths) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("write bulk load descriptor to backup " + tabName + " with " +
+          finalPaths.size() + " entries");
+    }
+    try (Table table = connection.getTable(tableName)) {
+      List<Put> puts = BackupSystemTable.createPutForCommittedBulkload(tabName, region,
+          finalPaths);
+      table.put(puts);
+      LOG.debug("written " + puts.size() + " rows for bulk load of " + tabName);
+    }
+  }
+  /*
+   * For preCommitStoreFile() hook
+   * @param tabName table name
+   * @param region the region receiving hfile
+   * @param family column family
+   * @param pairs list of paths for hfiles
+   */
+  public void writeFilesForBulkLoadPreCommit(TableName tabName, byte[] region,
+      final byte[] family, final List<Pair<Path, Path>> pairs) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("write bulk load descriptor to backup " + tabName + " with " +
+          pairs.size() + " entries");
+    }
+    try (Table table = connection.getTable(tableName)) {
+      List<Put> puts = BackupSystemTable.createPutForPreparedBulkload(tabName, region,
+          family, pairs);
+      table.put(puts);
+      LOG.debug("written " + puts.size() + " rows for bulk load of " + tabName);
+    }
+  }
+
+  /*
+   * Removes rows recording bulk loaded hfiles from backup table
+   * @param lst list of table names
+   * @param rows the rows to be deleted
+   */
+  public void removeBulkLoadedRows(List<TableName> lst, List<byte[]> rows) throws IOException {
+    try (Table table = connection.getTable(tableName)) {
+      List<Delete> lstDels = new ArrayList<>();
+      for (byte[] row : rows) {
+        Delete del = new Delete(row);
+        lstDels.add(del);
+        LOG.debug("orig deleting the row: " + Bytes.toString(row));
+      }
+      table.delete(lstDels);
+      LOG.debug("deleted " + rows.size() + " original bulkload rows for " + lst.size() + " tables");
+    }
+  }
+
+  /*
+   * Reads the rows from backup table recording bulk loaded hfiles
+   * @param tableList list of table names
+   * @return The keys of the Map are table, region and column family.
+   *  Value of the map reflects whether the hfile was recorded by preCommitStoreFile hook (true)
+   */
+  public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
+  readBulkloadRows(List<TableName> tableList) throws IOException {
+    Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> map = new HashMap<>();
+    List<byte[]> rows = new ArrayList<>();
+    for (TableName tTable : tableList) {
+      Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(tTable);
+      Map<String, Map<String, List<Pair<String, Boolean>>>> tblMap = map.get(tTable);
+      try (Table table = connection.getTable(tableName);
+          ResultScanner scanner = table.getScanner(scan)) {
+        Result res = null;
+        while ((res = scanner.next()) != null) {
+          res.advance();
+          String fam = null;
+          String path = null;
+          boolean raw = false;
+          byte[] row = null;
+          String region = null;
+          for (Cell cell : res.listCells()) {
+            row = CellUtil.cloneRow(cell);
+            rows.add(row);
+            String rowStr = Bytes.toString(row);
+            region = BackupSystemTable.getRegionNameFromOrigBulkLoadRow(rowStr);
+            if (CellComparator.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
+                BackupSystemTable.FAM_COL.length) == 0) {
+              fam = Bytes.toString(CellUtil.cloneValue(cell));
+            } else if (CellComparator.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+                BackupSystemTable.PATH_COL.length) == 0) {
+              path = Bytes.toString(CellUtil.cloneValue(cell));
+            } else if (CellComparator.compareQualifiers(cell, BackupSystemTable.STATE_COL, 0,
+                BackupSystemTable.STATE_COL.length) == 0) {
+              byte[] state = CellUtil.cloneValue(cell);
+              if (Bytes.equals(BackupSystemTable.BL_PREPARE, state)) {
+                raw = true;
+              } else raw = false;
+            }
+          }
+          if (map.get(tTable) == null) {
+            map.put(tTable, new HashMap<String, Map<String, List<Pair<String, Boolean>>>>());
+            tblMap = map.get(tTable);
+          }
+          if (tblMap.get(region) == null) {
+            tblMap.put(region, new HashMap<String, List<Pair<String, Boolean>>>());
+          }
+          Map<String, List<Pair<String, Boolean>>> famMap = tblMap.get(region);
+          if (famMap.get(fam) == null) {
+            famMap.put(fam, new ArrayList<Pair<String, Boolean>>());
+          }
+          famMap.get(fam).add(new Pair<>(path, raw));
+          LOG.debug("found orig " + path + " for " + fam + " of table " + region);
+        }
+      }
+    }
+    return new Pair<>(map, rows);
+  }
+
+  /*
+   * @param sTableList List of tables
+   * @param maps array of Map of family to List of Paths
+   * @param backupId the backup Id
+   */
+  public void writeBulkLoadedFiles(List<TableName> sTableList, Map<byte[], List<Path>>[] maps,
+      String backupId) throws IOException {
+    try (Table table = connection.getTable(tableName)) {
+      long ts = EnvironmentEdgeManager.currentTime();
+      int cnt = 0;
+      List<Put> puts = new ArrayList<>();
+      for (int idx = 0; idx < maps.length; idx++) {
+        Map<byte[], List<Path>> map = maps[idx];
+        TableName tn = sTableList.get(idx);
+        if (map == null) continue;
+        for (Map.Entry<byte[], List<Path>> entry: map.entrySet()) {
+          byte[] fam = entry.getKey();
+          List<Path> paths = entry.getValue();
+          for (Path p : paths) {
+            Put put = BackupSystemTable.createPutForBulkLoadedFile(tn, fam, p.toString(),
+                backupId, ts, cnt++);
+            puts.add(put);
+          }
+        }
+      }
+      if (!puts.isEmpty()) {
+        table.put(puts);
+      }
     }
   }
 
@@ -397,6 +656,21 @@ public final class BackupSystemTable implements Closeable {
     }
     return result;
 
+  }
+
+  /*
+   * Retrieve TableName's for completed backup of given type
+   * @param type backup type
+   * @return List of table names
+   */
+  public List<TableName> getTablesForBackupType(BackupType type) throws IOException {
+    Set<TableName> names = new HashSet<>();
+    List<BackupInfo> infos = getBackupHistory(true);
+    for (BackupInfo info : infos) {
+      if (info.getType() != type) continue;
+      names.addAll(info.getTableNames());
+    }
+    return new ArrayList(names);
   }
 
   /**
@@ -1233,6 +1507,119 @@ public final class BackupSystemTable implements Closeable {
     return s.substring(index + 1);
   }
 
+  /*
+   * Creates Put's for bulk load resulting from running LoadIncrementalHFiles
+   */
+  static List<Put> createPutForCommittedBulkload(TableName table, byte[] region,
+      Map<byte[], List<Path>> finalPaths) {
+    List<Put> puts = new ArrayList<>();
+    for (Map.Entry<byte[], List<Path>> entry : finalPaths.entrySet()) {
+      for (Path path : entry.getValue()) {
+        String file = path.toString();
+        int lastSlash = file.lastIndexOf("/");
+        String filename = file.substring(lastSlash+1);
+        Put put = new Put(rowkey(BULK_LOAD_PREFIX, table.toString(), BLK_LD_DELIM,
+            Bytes.toString(region), BLK_LD_DELIM, filename));
+        put.addColumn(BackupSystemTable.META_FAMILY, TBL_COL, table.getName());
+        put.addColumn(BackupSystemTable.META_FAMILY, FAM_COL, entry.getKey());
+        put.addColumn(BackupSystemTable.META_FAMILY, PATH_COL,
+            file.getBytes());
+        put.addColumn(BackupSystemTable.META_FAMILY, STATE_COL, BL_COMMIT);
+        puts.add(put);
+        LOG.debug("writing done bulk path " + file + " for " + table + " " +
+            Bytes.toString(region));
+      }
+    }
+    return puts;
+  }
+
+  /*
+   * Creates Put's for bulk load resulting from running LoadIncrementalHFiles
+   */
+  static List<Put> createPutForPreparedBulkload(TableName table, byte[] region,
+      final byte[] family, final List<Pair<Path, Path>> pairs) {
+    List<Put> puts = new ArrayList<>();
+    for (Pair<Path, Path> pair : pairs) {
+      Path path = pair.getSecond();
+      String file = path.toString();
+      int lastSlash = file.lastIndexOf("/");
+      String filename = file.substring(lastSlash+1);
+      Put put = new Put(rowkey(BULK_LOAD_PREFIX, table.toString(), BLK_LD_DELIM,
+          Bytes.toString(region), BLK_LD_DELIM, filename));
+      put.addColumn(BackupSystemTable.META_FAMILY, TBL_COL, table.getName());
+      put.addColumn(BackupSystemTable.META_FAMILY, FAM_COL, family);
+      put.addColumn(BackupSystemTable.META_FAMILY, PATH_COL,
+          file.getBytes());
+      put.addColumn(BackupSystemTable.META_FAMILY, STATE_COL, BL_PREPARE);
+      puts.add(put);
+      LOG.debug("writing raw bulk path " + file + " for " + table + " " +
+          Bytes.toString(region));
+    }
+    return puts;
+  }
+  public static List<Delete> createDeleteForOrigBulkLoad(List<TableName> lst) {
+    List<Delete> lstDels = new ArrayList<>();
+    for (TableName table : lst) {
+      Delete del = new Delete(rowkey(BULK_LOAD_PREFIX, table.toString(), BLK_LD_DELIM));
+      del.addFamily(BackupSystemTable.META_FAMILY);
+      lstDels.add(del);
+    }
+    return lstDels;
+  }
+
+  static Scan createScanForOrigBulkLoadedFiles(TableName table) throws IOException {
+    Scan scan = new Scan();
+    byte[] startRow = rowkey(BULK_LOAD_PREFIX, table.toString(), BLK_LD_DELIM);
+    byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
+    stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
+    scan.withStartRow(startRow);
+    scan.withStopRow(stopRow);
+    scan.addFamily(BackupSystemTable.META_FAMILY);
+    scan.setMaxVersions(1);
+    return scan;
+  }
+  static String getTableNameFromOrigBulkLoadRow(String rowStr) {
+    String[] parts = rowStr.split(BLK_LD_DELIM);
+    return parts[1];
+  }
+  static String getRegionNameFromOrigBulkLoadRow(String rowStr) {
+    // format is bulk : namespace : table : region : file
+    String[] parts = rowStr.split(BLK_LD_DELIM);
+    int idx = 3;
+    if (parts.length == 4) {
+      // the table is in default namespace
+      idx = 2;
+    }
+    LOG.debug("bulk row string " + rowStr + " region " + parts[idx]);
+    return parts[idx];
+  }
+  /*
+   * Used to query bulk loaded hfiles which have been copied by incremental backup
+   * @param backupId the backup Id. It can be null when querying for all tables
+   * @return the Scan object
+   */
+  static Scan createScanForBulkLoadedFiles(String backupId) throws IOException {
+    Scan scan = new Scan();
+    byte[] startRow = backupId == null ? BULK_LOAD_PREFIX_BYTES :
+      rowkey(BULK_LOAD_PREFIX, backupId+BLK_LD_DELIM);
+    byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
+    stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
+    scan.setStartRow(startRow);
+    scan.setStopRow(stopRow);
+    //scan.setTimeRange(lower, Long.MAX_VALUE);
+    scan.addFamily(BackupSystemTable.META_FAMILY);
+    scan.setMaxVersions(1);
+    return scan;
+  }
+
+  static Put createPutForBulkLoadedFile(TableName tn, byte[] fam, String p, String backupId,
+      long ts, int idx) {
+    Put put = new Put(rowkey(BULK_LOAD_PREFIX, backupId+BLK_LD_DELIM+ts+BLK_LD_DELIM+idx));
+    put.addColumn(BackupSystemTable.META_FAMILY, TBL_COL, tn.getName());
+    put.addColumn(BackupSystemTable.META_FAMILY, FAM_COL, fam);
+    put.addColumn(BackupSystemTable.META_FAMILY, PATH_COL, p.getBytes());
+    return put;
+  }
   /**
    * Creates put list for list of WAL files
    * @param files list of WAL file paths
@@ -1364,7 +1751,7 @@ public final class BackupSystemTable implements Closeable {
     return Bytes.toString(data).substring(SET_KEY_PREFIX.length());
   }
 
-  private byte[] rowkey(String s, String... other) {
+  private static byte[] rowkey(String s, String... other) {
     StringBuilder sb = new StringBuilder(s);
     for (String ss : other) {
       sb.append(ss);

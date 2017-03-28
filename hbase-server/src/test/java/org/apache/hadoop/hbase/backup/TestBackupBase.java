@@ -49,6 +49,10 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.mapreduce.HadoopSecurityEnabledUserProviderForTesting;
+import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -88,6 +92,7 @@ public class TestBackupBase {
   protected static String BACKUP_ROOT_DIR = "/backupUT";
   protected static String BACKUP_REMOTE_ROOT_DIR = "/backupUT";
   protected static String provider = "defaultProvider";
+  protected static boolean secure = false;
 
   /**
    * @throws java.lang.Exception
@@ -96,6 +101,16 @@ public class TestBackupBase {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     conf1 = TEST_UTIL.getConfiguration();
+    if (secure) {
+      // set the always on security provider
+      UserProvider.setUserProviderForTesting(TEST_UTIL.getConfiguration(),
+          HadoopSecurityEnabledUserProviderForTesting.class);
+      // setup configuration
+      SecureTestUtil.enableSecurity(TEST_UTIL.getConfiguration());
+    }
+    String coproc = conf1.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+    conf1.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, (coproc == null ? "" : coproc + ",") +
+        BackupObserver.class.getName());
     conf1.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
     BackupManager.decorateMasterConfiguration(conf1);
     BackupManager.decorateRegionServerConfiguration(conf1);

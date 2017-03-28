@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
+import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -391,6 +393,20 @@ public class BackupManager implements Closeable {
    */
   public HashMap<String, Long> readRegionServerLastLogRollResult() throws IOException {
     return systemTable.readRegionServerLastLogRollResult(backupInfo.getBackupRootDir());
+  }
+
+  public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
+  readBulkloadRows(List<TableName> tableList) throws IOException {
+    return systemTable.readBulkloadRows(tableList);
+  }
+
+  public void removeBulkLoadedRows(List<TableName> lst, List<byte[]> rows) throws IOException {
+    systemTable.removeBulkLoadedRows(lst, rows);
+  }
+
+  public void writeBulkLoadedFiles(List<TableName> sTableList, Map<byte[], List<Path>>[] maps)
+      throws IOException {
+    systemTable.writeBulkLoadedFiles(sTableList, maps, backupInfo.getBackupId());
   }
 
   /**

@@ -19,9 +19,14 @@
 package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang.StringUtils;
@@ -34,10 +39,13 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
+import org.apache.hadoop.hbase.backup.mapreduce.MapReduceRestoreJob;
 import org.apache.hadoop.hbase.backup.util.RestoreTool;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles.LoadQueueItem;
 
 /**
  * Restore table implementation
@@ -50,6 +58,7 @@ public class RestoreTablesClient {
   private Configuration conf;
   private Connection conn;
   private String backupId;
+  private String fullBackupId;
   private TableName[] sTableArray;
   private TableName[] tTableArray;
   private String targetRootDir;
@@ -141,6 +150,7 @@ public class RestoreTablesClient {
     // We need hFS only for full restore (see the code)
     BackupManifest manifest = HBackupFileSystem.getManifest(sTable, conf, backupRoot, backupId);
     if (manifest.getType() == BackupType.FULL) {
+      fullBackupId = manifest.getBackupImage().getBackupId();
       LOG.info("Restoring '" + sTable + "' to '" + tTable + "' from full" + " backup image "
           + tableBackupPath.toString());
       restoreTool.fullRestoreTable(conn, tableBackupPath, sTable, tTable, truncateIfExists,
@@ -170,7 +180,6 @@ public class RestoreTablesClient {
     restoreTool.incrementalRestoreTable(conn, tableBackupPath, paths, new TableName[] { sTable },
       new TableName[] { tTable }, lastIncrBackupId);
     LOG.info(sTable + " has been successfully restored to " + tTable);
-
   }
 
   /**
@@ -185,37 +194,72 @@ public class RestoreTablesClient {
       TableName[] sTableArray, TableName[] tTableArray, boolean isOverwrite) throws IOException {
     TreeSet<BackupImage> restoreImageSet = new TreeSet<BackupImage>();
     boolean truncateIfExists = isOverwrite;
-    try {
-      for (int i = 0; i < sTableArray.length; i++) {
-        TableName table = sTableArray[i];
-        BackupManifest manifest = backupManifestMap.get(table);
-        // Get the image list of this backup for restore in time order from old
-        // to new.
-        List<BackupImage> list = new ArrayList<BackupImage>();
-        list.add(manifest.getBackupImage());
-        TreeSet<BackupImage> set = new TreeSet<BackupImage>(list);
-        List<BackupImage> depList = manifest.getDependentListByTable(table);
-        set.addAll(depList);
-        BackupImage[] arr = new BackupImage[set.size()];
-        set.toArray(arr);
-        restoreImages(arr, table, tTableArray[i], truncateIfExists);
-        restoreImageSet.addAll(list);
-        if (restoreImageSet != null && !restoreImageSet.isEmpty()) {
-          LOG.info("Restore includes the following image(s):");
-          for (BackupImage image : restoreImageSet) {
-            LOG.info("Backup: "
-                + image.getBackupId()
-                + " "
-                + HBackupFileSystem.getTableBackupDir(image.getRootDir(), image.getBackupId(),
+    Set<String> backupIdSet = new HashSet<>();
+    for (int i = 0; i < sTableArray.length; i++) {
+      TableName table = sTableArray[i];
+      BackupManifest manifest = backupManifestMap.get(table);
+      // Get the image list of this backup for restore in time order from old
+      // to new.
+      List<BackupImage> list = new ArrayList<BackupImage>();
+      list.add(manifest.getBackupImage());
+      TreeSet<BackupImage> set = new TreeSet<BackupImage>(list);
+      List<BackupImage> depList = manifest.getDependentListByTable(table);
+      set.addAll(depList);
+      BackupImage[] arr = new BackupImage[set.size()];
+      set.toArray(arr);
+      restoreImages(arr, table, tTableArray[i], truncateIfExists);
+      restoreImageSet.addAll(list);
+      if (restoreImageSet != null && !restoreImageSet.isEmpty()) {
+        LOG.info("Restore includes the following image(s):");
+        for (BackupImage image : restoreImageSet) {
+          LOG.info("Backup: "
+              + image.getBackupId()
+              + " "
+              + HBackupFileSystem.getTableBackupDir(image.getRootDir(), image.getBackupId(),
                   table));
+          if (image.getType() == BackupType.INCREMENTAL) {
+            backupIdSet.add(image.getBackupId());
+            LOG.debug("adding " + image.getBackupId() + " for bulk load");
           }
         }
       }
-    } catch (Exception e) {
-      LOG.error("Failed", e);
-      throw new IOException(e);
+    }
+    try (BackupSystemTable table = new BackupSystemTable(conn)) {
+      List<TableName> sTableList = Arrays.asList(sTableArray);
+      for (String id : backupIdSet) {
+        LOG.debug("restoring bulk load for " + id);
+        Map<byte[], List<Path>>[] mapForSrc = table.readBulkLoadedFiles(id, sTableList);
+        Map<LoadQueueItem, ByteBuffer> loaderResult;
+        conf.setBoolean(LoadIncrementalHFiles.ALWAYS_COPY_FILES, true);
+        LoadIncrementalHFiles loader = MapReduceRestoreJob.createLoader(conf);
+        for (int i = 0; i < sTableList.size(); i++) {
+          if (mapForSrc[i] != null && !mapForSrc[i].isEmpty()) {
+            loaderResult = loader.run(null, mapForSrc[i], tTableArray[i]);
+            LOG.debug("bulk loading " + sTableList.get(i) + " to " + tTableArray[i]);
+            if (loaderResult.isEmpty()) {
+              String msg = "Couldn't bulk load for " + sTableList.get(i) + " to " +tTableArray[i];
+              LOG.error(msg);
+              throw new IOException(msg);
+            }
+          }
+        }
+      }
     }
     LOG.debug("restoreStage finished");
+  }
+
+  static long getTsFromBackupId(String backupId) {
+    if (backupId == null) {
+      return 0;
+    }
+    return Long.parseLong(backupId.substring(backupId.lastIndexOf("_")+1));
+  }
+
+  static boolean withinRange(long a, long lower, long upper) {
+    if (a < lower || a > upper) {
+      return false;
+    }
+    return true;
   }
 
   public void execute() throws IOException {

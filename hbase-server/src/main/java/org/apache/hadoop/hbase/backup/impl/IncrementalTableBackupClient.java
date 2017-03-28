@@ -18,15 +18,21 @@
 
 package org.apache.hadoop.hbase.backup.impl;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -40,6 +46,10 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Incremental backup implementation.
@@ -154,6 +164,118 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     return list;
   }
 
+  static int getIndex(TableName tbl, List<TableName> sTableList) {
+    if (sTableList == null) return 0;
+    for (int i = 0; i < sTableList.size(); i++) {
+      if (tbl.equals(sTableList.get(i))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /*
+   * Reads bulk load records from backup table, iterates through the records and forms the paths
+   * for bulk loaded hfiles. Copies the bulk loaded hfiles to backup destination
+   * @param sTableList list of tables to be backed up
+   * @return map of table to List of files
+   */
+  Map<byte[], List<Path>>[] handleBulkLoad(List<TableName> sTableList) throws IOException {
+    Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList.size()];
+    Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>> pair =
+    backupManager.readBulkloadRows(sTableList);
+    Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> map = pair.getFirst();
+    FileSystem fs = FileSystem.get(conf);
+    FileSystem tgtFs;
+    try {
+      tgtFs = FileSystem.get(new URI(backupInfo.getBackupRootDir()), conf);
+    } catch (URISyntaxException use) {
+      throw new IOException("Unable to get FileSystem", use);
+    }
+    Path rootdir = FSUtils.getRootDir(conf);
+    Path tgtRoot = new Path(new Path(backupInfo.getBackupRootDir()), backupId);
+    for (Map.Entry<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> tblEntry :
+      map.entrySet()) {
+      TableName srcTable = tblEntry.getKey();
+      int srcIdx = getIndex(srcTable, sTableList);
+      if (srcIdx < 0) {
+        LOG.warn("Couldn't find " + srcTable + " in source table List");
+        continue;
+      }
+      if (mapForSrc[srcIdx] == null) {
+        mapForSrc[srcIdx] = new TreeMap<byte[], List<Path>>(Bytes.BYTES_COMPARATOR);
+      }
+      Path tblDir = FSUtils.getTableDir(rootdir, srcTable);
+      Path tgtTable = new Path(new Path(tgtRoot, srcTable.getNamespaceAsString()),
+          srcTable.getQualifierAsString());
+      for (Map.Entry<String,Map<String,List<Pair<String, Boolean>>>> regionEntry :
+        tblEntry.getValue().entrySet()){
+        String regionName = regionEntry.getKey();
+        Path regionDir = new Path(tblDir, regionName);
+        // map from family to List of hfiles
+        for (Map.Entry<String,List<Pair<String, Boolean>>> famEntry :
+          regionEntry.getValue().entrySet()) {
+          String fam = famEntry.getKey();
+          Path famDir = new Path(regionDir, fam);
+          List<Path> files;
+          if (!mapForSrc[srcIdx].containsKey(fam.getBytes())) {
+            files = new ArrayList<Path>();
+            mapForSrc[srcIdx].put(fam.getBytes(), files);
+          } else {
+            files = mapForSrc[srcIdx].get(fam.getBytes());
+          }
+          Path archiveDir = HFileArchiveUtil.getStoreArchivePath(conf, srcTable, regionName, fam);
+          String tblName = srcTable.getQualifierAsString();
+          Path tgtFam = new Path(new Path(tgtTable, regionName), fam);
+          if (!tgtFs.mkdirs(tgtFam)) {
+            throw new IOException("couldn't create " + tgtFam);
+          }
+          for (Pair<String, Boolean> fileWithState : famEntry.getValue()) {
+            String file = fileWithState.getFirst();
+            boolean raw = fileWithState.getSecond();
+            int idx = file.lastIndexOf("/");
+            String filename = file;
+            if (idx > 0) {
+              filename = file.substring(idx+1);
+            }
+            Path p = new Path(famDir, filename);
+            Path tgt = new Path(tgtFam, filename);
+            Path archive = new Path(archiveDir, filename);
+            if (fs.exists(p)) {
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("found bulk hfile " + file + " in " + famDir + " for " + tblName);
+              }
+              try {
+                if (LOG.isTraceEnabled()) {
+                  LOG.trace("copying " + p + " to " + tgt);
+                }
+                FileUtil.copy(fs, p, tgtFs, tgt, false,conf);
+              } catch (FileNotFoundException e) {
+                LOG.debug("copying archive " + archive + " to " + tgt);
+                try {
+                  FileUtil.copy(fs, archive, tgtFs, tgt, false, conf);
+                } catch (FileNotFoundException fnfe) {
+                  if (!raw) throw fnfe;
+                }
+              }
+            } else {
+              LOG.debug("copying archive " + archive + " to " + tgt);
+              try {
+                FileUtil.copy(fs, archive, tgtFs, tgt, false, conf);
+              } catch (FileNotFoundException fnfe) {
+                if (!raw) throw fnfe;
+              }
+            }
+            files.add(tgt);
+          }
+        }
+      }
+    }
+    backupManager.writeBulkLoadedFiles(sTableList, mapForSrc);
+    backupManager.removeBulkLoadedRows(sTableList, pair.getSecond());
+    return mapForSrc;
+  }
+
   @Override
   public void execute() throws IOException {
 
@@ -204,6 +326,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
           BackupUtils.getMinValue(BackupUtils
               .getRSLogTimestampMins(newTableSetTimestampMap));
       backupManager.writeBackupStartCode(newStartCode);
+
+      handleBulkLoad(backupInfo.getTableNames());
       // backup complete
       completeBackup(conn, backupInfo, backupManager, BackupType.INCREMENTAL, conf);
 
