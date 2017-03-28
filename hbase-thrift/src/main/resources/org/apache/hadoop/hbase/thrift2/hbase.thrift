@@ -226,6 +226,7 @@ struct TScan {
   11: optional bool reversed
   12: optional bool cacheBlocks
   13: optional map<binary,TTimeRange> colFamTimeRangeMap
+  14: optional bool small
 }
 
 /**

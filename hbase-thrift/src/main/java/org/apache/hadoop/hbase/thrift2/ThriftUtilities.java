@@ -446,6 +446,10 @@ public class ThriftUtilities {
       }
     }
 
+    if (in.isSetSmall()) {
+      out.setSmall(in.isSmall());
+    }
+
     return out;
   }
 

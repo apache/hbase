@@ -845,6 +845,50 @@ public class TestThriftHBaseServiceHandler {
   }
 
   @Test
+  public void testSmallScan() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    ByteBuffer table = wrap(tableAname);
+
+    // insert data
+    TColumnValue columnValue = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
+            wrap(valueAname));
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(columnValue);
+    for (int i = 0; i < 10; i++) {
+      TPut put = new TPut(wrap(("testSmallScan" + i).getBytes()), columnValues);
+      handler.put(table, put);
+    }
+
+    // small scan instance
+    TScan scan = new TScan();
+    scan.setStartRow("testSmallScan".getBytes());
+    scan.setStopRow("testSmallScan\uffff".getBytes());
+    scan.setSmall(true);
+    scan.setCaching(2);
+
+    // get scanner and rows
+    int scanId = handler.openScanner(table, scan);
+    List<TResult> results = handler.getScannerRows(scanId, 10);
+    assertEquals(10, results.size());
+    for (int i = 0; i < 10; i++) {
+      // check if the rows are returned and in order
+      assertArrayEquals(("testSmallScan" + i).getBytes(), results.get(i).getRow());
+    }
+
+    // check that we are at the end of the scan
+    results = handler.getScannerRows(scanId, 10);
+    assertEquals(0, results.size());
+
+    // close scanner and check that it was indeed closed
+    handler.closeScanner(scanId);
+    try {
+      handler.getScannerRows(scanId, 10);
+      fail("Scanner id should be invalid");
+    } catch (TIllegalArgument e) {
+    }
+  }
+
+  @Test
   public void testPutTTL() throws Exception {
     ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testPutTTL".getBytes();
