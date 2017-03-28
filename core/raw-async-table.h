@@ -18,11 +18,11 @@
  */
 #pragma once
 
+#include <folly/futures/Future.h>
+
 #include <chrono>
 #include <memory>
 #include <string>
-
-#include <folly/futures/Future.h>
 
 #include "core/async-connection.h"
 #include "core/async-rpc-retrying-caller-factory.h"
@@ -66,8 +66,8 @@ class RawAsyncTable {
   folly::Future<RESP> Call(
       std::shared_ptr<RpcClient> rpc_client, std::shared_ptr<HBaseRpcController> controller,
       std::shared_ptr<RegionLocation> loc, const REQ& req,
-      const ReqConverter<std::unique_ptr<PREQ>, REQ, std::string>& req_converter,
-      const RespConverter<RESP, PRESP>& resp_converter);
+      const ReqConverter<std::unique_ptr<PREQ>, REQ, std::string> req_converter,
+      const RespConverter<RESP, PRESP> resp_converter);
 
   template <typename RESP>
   std::shared_ptr<SingleRequestCallerBuilder<RESP>> CreateCallerBuilder(std::string row,

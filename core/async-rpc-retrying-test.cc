@@ -137,15 +137,15 @@ class MockRawAsyncTableImpl {
 
   /* in real RawAsyncTableImpl, this should be private. */
   template <typename REQ, typename PREQ, typename PRESP, typename RESP>
-  folly::Future<RESP> Call(
-      std::shared_ptr<hbase::RpcClient> rpc_client, std::shared_ptr<HBaseRpcController> controller,
-      std::shared_ptr<RegionLocation> loc, const REQ& req,
-      const ReqConverter<std::unique_ptr<PREQ>, REQ, std::string>& req_converter,
-      const hbase::RpcCall<PREQ, PRESP>& rpc_call,
-      const RespConverter<RESP, PRESP>& resp_converter) {
+  folly::Future<RESP> Call(std::shared_ptr<hbase::RpcClient> rpc_client,
+                           std::shared_ptr<HBaseRpcController> controller,
+                           std::shared_ptr<RegionLocation> loc, const REQ& req,
+                           ReqConverter<std::unique_ptr<PREQ>, REQ, std::string> req_converter,
+                           const hbase::RpcCall<PREQ, PRESP>& rpc_call,
+                           RespConverter<RESP, PRESP> resp_converter) {
     rpc_call(rpc_client, loc, controller, std::move(req_converter(req, loc->region_name())))
-        .then([&, this](std::unique_ptr<PRESP> presp) {
-          std::shared_ptr<hbase::Result> result = hbase::ResponseConverter::FromGetResponse(*presp);
+        .then([&, this, resp_converter](std::unique_ptr<PRESP> presp) {
+          RESP result = resp_converter(*presp);
           promise_->setValue(result);
         })
         .onError([this](const std::exception& e) { promise_->setException(e); });
@@ -210,31 +210,27 @@ TEST(AsyncRpcRetryTest, TestGetBasic) {
   auto builder = conn->caller_factory()->Single<std::shared_ptr<hbase::Result>>();
 
   /* call with retry to get result */
-  try {
-    auto async_caller =
-        builder->table(std::make_shared<TableName>(tn))
-            ->row(row)
-            ->rpc_timeout(conn->connection_conf()->read_rpc_timeout())
-            ->operation_timeout(conn->connection_conf()->operation_timeout())
-            ->action([=, &get](std::shared_ptr<hbase::HBaseRpcController> controller,
-                               std::shared_ptr<hbase::RegionLocation> loc,
-                               std::shared_ptr<hbase::RpcClient> rpc_client)
-                         -> folly::Future<std::shared_ptr<hbase::Result>> {
-                           return tableImpl->GetCall(rpc_client, controller, loc, get);
-                         })
-            ->Build();
 
-    auto result = async_caller->Call().get();
+  auto async_caller =
+      builder->table(std::make_shared<TableName>(tn))
+          ->row(row)
+          ->rpc_timeout(conn->connection_conf()->read_rpc_timeout())
+          ->operation_timeout(conn->connection_conf()->operation_timeout())
+          ->action([=, &get](std::shared_ptr<hbase::HBaseRpcController> controller,
+                             std::shared_ptr<hbase::RegionLocation> loc,
+                             std::shared_ptr<hbase::RpcClient> rpc_client)
+                       -> folly::Future<std::shared_ptr<hbase::Result>> {
+                         return tableImpl->GetCall(rpc_client, controller, loc, get);
+                       })
+          ->Build();
 
-    // Test the values, should be same as in put executed on hbase shell
-    ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
-    EXPECT_EQ("test2", result->Row());
-    EXPECT_EQ("value2", *(result->Value("d", "2")));
-    EXPECT_EQ("value for extra", *(result->Value("d", "extra")));
-  } catch (std::exception& e) {
-    LOG(ERROR) << e.what();
-    throw e;
-  }
+  auto result = async_caller->Call().get();
+
+  // Test the values, should be same as in put executed on hbase shell
+  ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
+  EXPECT_EQ("test2", result->Row());
+  EXPECT_EQ("value2", *(result->Value("d", "2")));
+  EXPECT_EQ("value for extra", *(result->Value("d", "extra")));
 
   table->Close();
   client.Close();
