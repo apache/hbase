@@ -36,14 +36,12 @@ ResponseConverter::~ResponseConverter() {}
 // impl note: we are returning shared_ptr's instead of unique_ptr's because these
 // go inside folly::Future's, making the move semantics extremely tricky.
 std::shared_ptr<Result> ResponseConverter::FromGetResponse(const Response& resp) {
-  LOG(INFO) << "FromGetResponse";
   auto get_resp = std::static_pointer_cast<GetResponse>(resp.resp_msg());
   return ToResult(get_resp->result(), resp.cell_scanner());
 }
 
 std::shared_ptr<Result> ResponseConverter::ToResult(
     const hbase::pb::Result& result, const std::unique_ptr<CellScanner>& cell_scanner) {
-  LOG(INFO) << "ToResult";
   std::vector<std::shared_ptr<Cell>> vcells;
   for (auto cell : result.cell()) {
     std::shared_ptr<Cell> pcell =
@@ -59,13 +57,11 @@ std::shared_ptr<Result> ResponseConverter::ToResult(
     }
     // TODO: check associated cell count?
   }
-  LOG(INFO) << "Returning Result";
   return std::make_shared<Result>(vcells, result.exists(), result.stale(), result.partial());
 }
 
 std::vector<std::shared_ptr<Result>> ResponseConverter::FromScanResponse(const Response& resp) {
   auto scan_resp = std::static_pointer_cast<ScanResponse>(resp.resp_msg());
-  LOG(INFO) << "FromScanResponse:" << scan_resp->ShortDebugString();
   int num_results = resp.cell_scanner() != nullptr ? scan_resp->cells_per_result_size()
                                                    : scan_resp->results_size();
 

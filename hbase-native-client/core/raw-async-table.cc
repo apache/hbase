@@ -16,6 +16,7 @@
  * limitations under the License.
  *
  */
+#include <utility>
 
 #include "core/raw-async-table.h"
 #include "core/request-converter.h"
@@ -41,18 +42,16 @@ template <typename REQ, typename PREQ, typename PRESP, typename RESP>
 folly::Future<RESP> RawAsyncTable::Call(
     std::shared_ptr<RpcClient> rpc_client, std::shared_ptr<HBaseRpcController> controller,
     std::shared_ptr<RegionLocation> loc, const REQ& req,
-    const ReqConverter<std::unique_ptr<PREQ>, REQ, std::string>& req_converter,
-    const RespConverter<RESP, PRESP>& resp_converter) {
+    const ReqConverter<std::unique_ptr<PREQ>, REQ, std::string> req_converter,
+    const RespConverter<RESP, PRESP> resp_converter) {
   std::unique_ptr<PREQ> preq = req_converter(req, loc->region_name());
 
   // No need to make take a callable argument, it is always the same
   return rpc_client
       ->AsyncCall(loc->server_name().host_name(), loc->server_name().port(), std::move(preq),
                   User::defaultUser(), "ClientService")
-      .then([&](const std::unique_ptr<Response>& presp) {
-        return ResponseConverter::FromGetResponse(*presp);
-        // return resp_converter(*presp); // TODO this is causing SEGFAULT, figure out why
-      });
+      .then(
+          [resp_converter](const std::unique_ptr<PRESP>& presp) { return resp_converter(*presp); });
 }
 
 Future<std::shared_ptr<Result>> RawAsyncTable::Get(const hbase::Get& get) {
