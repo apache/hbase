@@ -695,7 +695,8 @@ public class WALSplitter {
    */
   public static long writeRegionSequenceIdFile(final FileSystem fs, final Path regiondir,
       long newSeqId, long saftyBumper) throws IOException {
-
+    // TODO: Why are we using a method in here as part of our normal region open where
+    // there is no splitting involved? Fix. St.Ack 01/20/2017.
     Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
     long maxSeqId = 0;
     FileStatus[] files = null;
@@ -732,7 +733,7 @@ public class WALSplitter {
           throw new IOException("Failed to create SeqId file:" + newSeqIdFile);
         }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Wrote region seqId=" + newSeqIdFile + " to file, newSeqId=" + newSeqId
+          LOG.debug("Wrote file=" + newSeqIdFile + ", newSeqId=" + newSeqId
               + ", maxSeqId=" + maxSeqId);
         }
       } catch (FileAlreadyExistsException ignored) {

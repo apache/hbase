@@ -287,7 +287,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   protected final Configuration conf;
   private final Configuration baseConf;
   private final int rowLockWaitDuration;
-  private CompactedHFilesDischarger compactedFileDischarger;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
   // The internal wait duration to acquire a lock before read/update
@@ -1703,8 +1702,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (this.metricsRegionWrapper != null) {
         Closeables.closeQuietly(this.metricsRegionWrapper);
       }
-      // stop the Compacted hfile discharger
-      if (this.compactedFileDischarger != null) this.compactedFileDischarger.cancel(true);
       status.markComplete("Closed");
       LOG.info("Closed " + this);
       return result;
@@ -7612,7 +7609,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      50 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      49 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       6 * Bytes.SIZEOF_BOOLEAN);
 

@@ -1298,10 +1298,9 @@ public class HStore implements Store {
       }
 
       // Ready to go. Have list of files to compact.
-      LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
-          + this + " of " + this.getRegionInfo().getRegionNameAsString()
-          + " into tmpdir=" + fs.getTempDir() + ", totalSize="
-          + TraditionalBinaryPrefix.long2String(cr.getSize(), "", 1));
+      LOG.info("Starting compaction of " + filesToCompact +
+        " into tmpdir=" + fs.getTempDir() + ", totalSize=" +
+          TraditionalBinaryPrefix.long2String(cr.getSize(), "", 1));
 
       // Commence the compaction.
       List<Path> newFiles = compaction.compact(throughputController, user);

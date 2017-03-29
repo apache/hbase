@@ -360,8 +360,7 @@ public class ProcedureExecutor<TEnvironment> {
       assert !(proc.isFinished() && !proc.hasParent()) : "unexpected completed proc=" + proc;
 
       if (debugEnabled) {
-        LOG.debug(String.format("Loading state=%s isFailed=%s: %s",
-                    proc.getState(), proc.hasException(), proc));
+        LOG.debug(String.format("Loading %s", proc));
       }
 
       Long rootProcId = getRootProcedureId(proc);
@@ -483,7 +482,7 @@ public class ProcedureExecutor<TEnvironment> {
     // We have numThreads executor + one timer thread used for timing out
     // procedures and triggering periodic procedures.
     this.corePoolSize = numThreads;
-    LOG.info("Starting executor threads=" + corePoolSize);
+    LOG.info("Starting executor worker threads=" + corePoolSize);
 
     // Create the Thread Group for the executors
     threadGroup = new ThreadGroup("ProcedureExecutor");
@@ -522,7 +521,9 @@ public class ProcedureExecutor<TEnvironment> {
       store.getClass().getSimpleName(), StringUtils.humanTimeDiff(et - st)));
 
     // Start the executors. Here we must have the lastProcId set.
-    LOG.debug("Start workers " + workerThreads.size());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Start workers " + workerThreads.size());
+    }
     timeoutExecutor.start();
     for (WorkerThread worker: workerThreads) {
       worker.start();
@@ -1147,8 +1148,7 @@ public class ProcedureExecutor<TEnvironment> {
 
       if (proc.isSuccess()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Completed in " +
-              StringUtils.humanTimeDiff(proc.elapsedTime()) + ": " + proc);
+          LOG.debug("Finished " + proc + " in " + StringUtils.humanTimeDiff(proc.elapsedTime()));
         }
         // Finalize the procedure state
         if (proc.getProcId() == rootProcId) {
@@ -1242,8 +1242,7 @@ public class ProcedureExecutor<TEnvironment> {
 
     // Finalize the procedure state
     LOG.info("Rolled back " + rootProc +
-             " exec-time=" + StringUtils.humanTimeDiff(rootProc.elapsedTime()) +
-             " exception=" + exception.getMessage());
+             " exec-time=" + StringUtils.humanTimeDiff(rootProc.elapsedTime()));
     procedureFinished(rootProc);
     return LockState.LOCK_ACQUIRED;
   }
@@ -1342,7 +1341,7 @@ public class ProcedureExecutor<TEnvironment> {
         return;
       } catch (Throwable e) {
         // Catch NullPointerExceptions or similar errors...
-        String msg = "CODE-BUG: Uncatched runtime exception for procedure: " + procedure;
+        String msg = "CODE-BUG: Uncaught runtime exception: " + procedure;
         LOG.error(msg, e);
         procedure.setFailure(new RemoteProcedureException(msg, e));
       }
@@ -1558,7 +1557,7 @@ public class ProcedureExecutor<TEnvironment> {
     private final AtomicLong executionStartTime = new AtomicLong(Long.MAX_VALUE);
 
     public WorkerThread(final ThreadGroup group) {
-      super(group, "ProcedureExecutorWorker-" + workerId.incrementAndGet());
+      super(group, "ProcExecWorker-" + workerId.incrementAndGet());
     }
 
     @Override
@@ -1674,7 +1673,7 @@ public class ProcedureExecutor<TEnvironment> {
         // if the procedure is in a waiting state again, put it back in the queue
         procedure.updateTimestamp();
         if (procedure.isWaiting()) {
-          delayed.setTimeoutTimestamp(procedure.getTimeoutTimestamp());
+          delayed.setTimeout(procedure.getTimeoutTimestamp());
           queue.add(delayed);
         }
       } else {
@@ -1752,7 +1751,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     @Override
-    public long getTimeoutTimestamp() {
+    public long getTimeout() {
       return timeout;
     }
   }

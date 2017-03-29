@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -218,9 +219,7 @@ public class MasterWalManager {
   }
 
   public void splitLog(final ServerName serverName) throws IOException {
-    Set<ServerName> serverNames = new HashSet<>();
-    serverNames.add(serverName);
-    splitLog(serverNames);
+    splitLog(Collections.<ServerName>singleton(serverName));
   }
 
   /**
@@ -228,9 +227,7 @@ public class MasterWalManager {
    * @param serverName logs belonging to this server will be split
    */
   public void splitMetaLog(final ServerName serverName) throws IOException {
-    Set<ServerName> serverNames = new HashSet<>();
-    serverNames.add(serverName);
-    splitMetaLog(serverNames);
+    splitMetaLog(Collections.<ServerName>singleton(serverName));
   }
 
   /**

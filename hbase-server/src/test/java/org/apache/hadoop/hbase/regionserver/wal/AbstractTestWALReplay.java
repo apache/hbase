@@ -207,10 +207,9 @@ public abstract class AbstractTestWALReplay {
 
     // move region to another regionserver
     Region destRegion = regions.get(0);
-    int originServerNum = hbaseCluster
-        .getServerWith(destRegion.getRegionInfo().getRegionName());
-    assertTrue("Please start more than 1 regionserver", hbaseCluster
-        .getRegionServerThreads().size() > 1);
+    int originServerNum = hbaseCluster.getServerWith(destRegion.getRegionInfo().getRegionName());
+    assertTrue("Please start more than 1 regionserver",
+        hbaseCluster.getRegionServerThreads().size() > 1);
     int destServerNum = 0;
     while (destServerNum == originServerNum) {
       destServerNum++;

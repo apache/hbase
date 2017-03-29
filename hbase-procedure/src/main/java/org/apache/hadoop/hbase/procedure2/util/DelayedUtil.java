@@ -32,13 +32,19 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 public final class DelayedUtil {
   private DelayedUtil() { }
 
+  /**
+   * Add a timeout to a Delay
+   */
   public interface DelayedWithTimeout extends Delayed {
-    long getTimeoutTimestamp();
+    long getTimeout();
   }
 
+  /**
+   * POISON implementation; used to mark special state: e.g. shutdown.
+   */
   public static final DelayedWithTimeout DELAYED_POISON = new DelayedWithTimeout() {
     @Override
-    public long getTimeoutTimestamp() {
+    public long getTimeout() {
       return 0;
     }
 
@@ -49,7 +55,7 @@ public final class DelayedUtil {
 
     @Override
     public int compareTo(final Delayed o) {
-      return Long.compare(0, DelayedUtil.getTimeoutTimestamp(o));
+      return Long.compare(0, DelayedUtil.getTimeout(o));
     }
 
     @Override
@@ -63,6 +69,9 @@ public final class DelayedUtil {
     }
   };
 
+  /**
+   * @return null (if an interrupt) or an instance of E; resets interrupt on calling thread.
+   */
   public static <E extends Delayed> E takeWithoutInterrupt(final DelayQueue<E> queue) {
     try {
       return queue.take();
@@ -72,32 +81,41 @@ public final class DelayedUtil {
     }
   }
 
-  public static long getRemainingTime(final TimeUnit resultUnit, final long timeoutTime) {
+  /**
+   * @return Time remaining as milliseconds.
+   */
+  public static long getRemainingTime(final TimeUnit resultUnit, final long timeout) {
     final long currentTime = EnvironmentEdgeManager.currentTime();
-    if (currentTime >= timeoutTime) {
+    if (currentTime >= timeout) {
       return 0;
     }
-    return resultUnit.convert(timeoutTime - currentTime, TimeUnit.MILLISECONDS);
+    return resultUnit.convert(timeout - currentTime, TimeUnit.MILLISECONDS);
   }
 
   public static int compareDelayed(final Delayed o1, final Delayed o2) {
-    return Long.compare(getTimeoutTimestamp(o1), getTimeoutTimestamp(o2));
+    return Long.compare(getTimeout(o1), getTimeout(o2));
   }
 
-  private static long getTimeoutTimestamp(final Delayed o) {
+  private static long getTimeout(final Delayed o) {
     assert o instanceof DelayedWithTimeout : "expected DelayedWithTimeout instance, got " + o;
-    return ((DelayedWithTimeout)o).getTimeoutTimestamp();
+    return ((DelayedWithTimeout)o).getTimeout();
   }
 
   public static abstract class DelayedObject implements DelayedWithTimeout {
     @Override
     public long getDelay(final TimeUnit unit) {
-      return DelayedUtil.getRemainingTime(unit, getTimeoutTimestamp());
+      return DelayedUtil.getRemainingTime(unit, getTimeout());
     }
 
     @Override
     public int compareTo(final Delayed other) {
       return DelayedUtil.compareDelayed(this, other);
+    }
+
+    @Override
+    public String toString() {
+      long timeout = getTimeout();
+      return "timeout=" + timeout + ", delay=" + getDelay(TimeUnit.MILLISECONDS);
     }
   }
 
@@ -126,25 +144,25 @@ public final class DelayedUtil {
 
     @Override
     public String toString() {
-      return getClass().getSimpleName() + "(" + getObject() + ")";
+      return "containedObject=" + getObject() + ", " + super.toString();
     }
   }
 
   public static class DelayedContainerWithTimestamp<T> extends DelayedContainer<T> {
-    private long timeoutTimestamp;
+    private long timeout;
 
-    public DelayedContainerWithTimestamp(final T object, final long timeoutTimestamp) {
+    public DelayedContainerWithTimestamp(final T object, final long timeout) {
       super(object);
-      setTimeoutTimestamp(timeoutTimestamp);
+      setTimeout(timeout);
     }
 
     @Override
-    public long getTimeoutTimestamp() {
-      return timeoutTimestamp;
+    public long getTimeout() {
+      return timeout;
     }
 
-    public void setTimeoutTimestamp(final long timeoutTimestamp) {
-      this.timeoutTimestamp = timeoutTimestamp;
+    public void setTimeout(final long timeout) {
+      this.timeout = timeout;
     }
   }
 }

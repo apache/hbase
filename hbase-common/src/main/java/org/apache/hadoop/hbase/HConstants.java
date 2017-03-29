@@ -146,7 +146,7 @@ public final class HConstants {
   public static final int DEFAULT_HBASE_BALANCER_PERIOD = 300000;
 
   /** The name of the ensemble table */
-  public static final String ENSEMBLE_TABLE_NAME = "hbase:ensemble";
+  public static final TableName ENSEMBLE_TABLE_NAME = TableName.valueOf("hbase:ensemble");
 
   /** Config for pluggable region normalizer */
   public static final String HBASE_MASTER_NORMALIZER_CLASS =

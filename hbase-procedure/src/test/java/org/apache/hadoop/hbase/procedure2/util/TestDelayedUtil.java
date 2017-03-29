@@ -80,7 +80,7 @@ public class TestDelayedUtil {
     }
 
     @Override
-    public long getTimeoutTimestamp() {
+    public long getTimeout() {
       return 0;
     }
   }

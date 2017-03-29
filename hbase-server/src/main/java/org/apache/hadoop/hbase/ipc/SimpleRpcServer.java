@@ -1980,8 +1980,8 @@ public class SimpleRpcServer extends RpcServer {
           if (!running) {
             return;
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(Thread.currentThread().getName()+": task running");
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("running");
           }
           try {
             closeIdle(false);

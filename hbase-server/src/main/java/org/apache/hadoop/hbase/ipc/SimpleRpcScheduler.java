@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -37,8 +35,6 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObserver {
-  private static final Log LOG = LogFactory.getLog(SimpleRpcScheduler.class);
-
   private int port;
   private final PriorityFunction priority;
   private final RpcExecutor callExecutor;
@@ -82,14 +78,14 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     if (callqReadShare > 0) {
       // at least 1 read handler and 1 write handler
-      callExecutor = new RWQueueRpcExecutor("deafult.RWQ", Math.max(2, handlerCount),
+      callExecutor = new RWQueueRpcExecutor("default.RWQ", Math.max(2, handlerCount),
         maxQueueLength, priority, conf, server);
     } else {
       if (RpcExecutor.isFifoQueueType(callQueueType) || RpcExecutor.isCodelQueueType(callQueueType)) {
-        callExecutor = new FastPathBalancedQueueRpcExecutor("deafult.FPBQ", handlerCount,
+        callExecutor = new FastPathBalancedQueueRpcExecutor("default.FPBQ", handlerCount,
             maxQueueLength, priority, conf, server);
       } else {
-        callExecutor = new BalancedQueueRpcExecutor("deafult.BQ", handlerCount, maxQueueLength,
+        callExecutor = new BalancedQueueRpcExecutor("default.BQ", handlerCount, maxQueueLength,
             priority, conf, server);
       }
     }

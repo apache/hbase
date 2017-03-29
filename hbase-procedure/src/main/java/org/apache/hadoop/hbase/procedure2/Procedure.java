@@ -253,13 +253,12 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    */
   protected StringBuilder toStringSimpleSB() {
     final StringBuilder sb = new StringBuilder();
-    toStringClassDetails(sb);
 
-    sb.append(", procId=");
+    sb.append("procId=");
     sb.append(getProcId());
 
     if (hasParent()) {
-      sb.append(", parent=");
+      sb.append(", parentProcId=");
       sb.append(getParentProcId());
     }
 
@@ -274,6 +273,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     if (hasException()) {
       sb.append(", failed=" + getException());
     }
+
+    sb.append(", ");
+    toStringClassDetails(sb);
 
     return sb;
   }
@@ -631,7 +633,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    */
   @InterfaceAudience.Private
   protected synchronized boolean childrenCountDown() {
-    assert childrenLatch > 0;
+    assert childrenLatch > 0: this;
     return --childrenLatch == 0;
   }
 

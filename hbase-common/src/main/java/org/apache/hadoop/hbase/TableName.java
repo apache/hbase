@@ -89,7 +89,12 @@ public final class TableName implements Comparable<TableName> {
   public static final String OLD_META_STR = ".META.";
   public static final String OLD_ROOT_STR = "-ROOT-";
 
-
+  /**
+   * @return True if <code>tn</code> is the hbase:meta table name.
+   */
+  public static boolean isMetaTableName(final TableName tn) {
+    return tn.equals(TableName.META_TABLE_NAME);
+  }
 
   /**
    * TableName for old -ROOT- table. It is used to read/process old WALs which have

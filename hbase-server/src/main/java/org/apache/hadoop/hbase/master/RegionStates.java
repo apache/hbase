@@ -1033,7 +1033,7 @@ public class RegionStates {
     for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
       for (HRegionInfo hri: e.getValue()) {
         if (hri.isMetaRegion()) continue;
-        TableName tablename = bytable ? hri.getTable() : TableName.valueOf(HConstants.ENSEMBLE_TABLE_NAME);
+        TableName tablename = bytable ? hri.getTable() : HConstants.ENSEMBLE_TABLE_NAME;
         Map<ServerName, List<HRegionInfo>> svrToRegions = result.get(tablename);
         if (svrToRegions == null) {
           svrToRegions = new HashMap<>(serverHoldings.size());

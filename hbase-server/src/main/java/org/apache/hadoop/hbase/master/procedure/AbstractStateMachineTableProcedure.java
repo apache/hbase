@@ -69,9 +69,8 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   @Override
   public void toStringClassDetails(final StringBuilder sb) {
     sb.append(getClass().getSimpleName());
-    sb.append(" (table=");
+    sb.append(" table=");
     sb.append(getTableName());
-    sb.append(")");
   }
 
   @Override

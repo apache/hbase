@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +34,6 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface.TableOperationType;
 import org.apache.hadoop.hbase.procedure2.AbstractProcedureScheduler;
 import org.apache.hadoop.hbase.procedure2.LockStatus;
@@ -51,52 +51,51 @@ import org.apache.hadoop.hbase.util.AvlUtil.AvlTreeIterator;
  * This ProcedureScheduler tries to provide to the ProcedureExecutor procedures
  * that can be executed without having to wait on a lock.
  * Most of the master operations can be executed concurrently, if they
- * are operating on different tables (e.g. two create table can be performed
- * at the same, time assuming table A and table B) or against two different servers; say
- * two servers that crashed at about the same time.
+ * are operating on different tables (e.g. two create table procedures can be performed
+ * at the same time) or against two different servers; say two servers that crashed at
+ * about the same time.
  *
- * <p>Each procedure should implement an interface providing information for this queue.
- * for example table related procedures should implement TableProcedureInterface.
- * each procedure will be pushed in its own queue, and based on the operation type
- * we may take smarter decision. e.g. we can abort all the operations preceding
+ * <p>Each procedure should implement an Interface providing information for this queue.
+ * For example table related procedures should implement TableProcedureInterface.
+ * Each procedure will be pushed in its own queue, and based on the operation type
+ * we may make smarter decisions: e.g. we can abort all the operations preceding
  * a delete table, or similar.
  *
  * <h4>Concurrency control</h4>
  * Concurrent access to member variables (tableRunQueue, serverRunQueue, locking, tableMap,
- * serverBuckets) is controlled by schedLock(). That mainly includes:<br>
+ * serverBuckets) is controlled by schedLock(). This mainly includes:<br>
  * <ul>
  *   <li>
- *     {@link #push(Procedure, boolean, boolean)} : A push will add a Queue back to run-queue
+ *     {@link #push(Procedure, boolean, boolean)}: A push will add a Queue back to run-queue
  *     when:
  *     <ol>
- *       <li>queue was empty before push (so must have been out of run-queue)</li>
- *       <li>child procedure is added (which means parent procedure holds exclusive lock, and it
+ *       <li>Queue was empty before push (so must have been out of run-queue)</li>
+ *       <li>Child procedure is added (which means parent procedure holds exclusive lock, and it
  *           must have moved Queue out of run-queue)</li>
  *     </ol>
  *   </li>
  *   <li>
- *     {@link #poll(long)} : A poll will remove a Queue from run-queue when:
+ *     {@link #poll(long)}: A poll will remove a Queue from run-queue when:
  *     <ol>
- *       <li>queue becomes empty after poll</li>
- *       <li>exclusive lock is requested by polled procedure and lock is available (returns the
+ *       <li>Queue becomes empty after poll</li>
+ *       <li>Exclusive lock is requested by polled procedure and lock is available (returns the
  *           procedure)</li>
- *       <li>exclusive lock is requested but lock is not available (returns null)</li>
- *       <li>Polled procedure is child of parent holding exclusive lock, and the next procedure is
+ *       <li>Exclusive lock is requested but lock is not available (returns null)</li>
+ *       <li>Polled procedure is child of parent holding exclusive lock and the next procedure is
  *           not a child</li>
  *     </ol>
  *   </li>
  *   <li>
- *     namespace/table/region locks: Queue is added back to run-queue when lock being released is:
+ *     Namespace/table/region locks: Queue is added back to run-queue when lock being released is:
  *     <ol>
- *       <li>exclusive lock</li>
- *       <li>last shared lock (in case queue was removed because next procedure in queue required
+ *       <li>Exclusive lock</li>
+ *       <li>Last shared lock (in case queue was removed because next procedure in queue required
  *           exclusive lock)</li>
  *     </ol>
  *   </li>
  * </ul>
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   private static final Log LOG = LogFactory.getLog(MasterProcedureScheduler.class);
 
@@ -118,15 +117,15 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * TableQueue with priority 1.
    */
   private static class TablePriorities {
+    final int metaTablePriority;
+    final int userTablePriority;
+    final int sysTablePriority;
+
     TablePriorities(Configuration conf) {
       metaTablePriority = conf.getInt("hbase.master.procedure.queue.meta.table.priority", 3);
       sysTablePriority = conf.getInt("hbase.master.procedure.queue.system.table.priority", 2);
       userTablePriority = conf.getInt("hbase.master.procedure.queue.user.table.priority", 1);
     }
-
-    final int metaTablePriority;
-    final int userTablePriority;
-    final int sysTablePriority;
 
     int getPriority(TableName tableName) {
       if (tableName.equals(TableName.META_TABLE_NAME)) {
@@ -773,7 +772,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
           locking.getTableLock(TableName.NAMESPACE_TABLE_NAME);
       namespaceLock.releaseExclusiveLock(procedure);
       int waitingCount = 0;
-      if(systemNamespaceTableLock.releaseSharedLock()) {
+      if (systemNamespaceTableLock.releaseSharedLock()) {
         addToRunQueue(tableRunQueue, getTableQueue(TableName.NAMESPACE_TABLE_NAME));
         waitingCount += wakeWaitingProcedures(systemNamespaceTableLock);
       }
@@ -924,6 +923,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * locks.
    */
   private static class SchemaLocking {
+    final Map<ServerName, LockAndQueue> serverLocks = new HashMap<>();
+    final Map<String, LockAndQueue> namespaceLocks = new HashMap<>();
+    final Map<TableName, LockAndQueue> tableLocks = new HashMap<>();
+    // Single map for all regions irrespective of tables. Key is encoded region name.
+    final Map<String, LockAndQueue> regionLocks = new HashMap<>();
+
     private <T> LockAndQueue getLock(Map<T, LockAndQueue> map, T key) {
       LockAndQueue lock = map.get(key);
       if (lock == null) {
@@ -969,11 +974,29 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       regionLocks.clear();
     }
 
-    final Map<ServerName, LockAndQueue> serverLocks = new HashMap<>();
-    final Map<String, LockAndQueue> namespaceLocks = new HashMap<>();
-    final Map<TableName, LockAndQueue> tableLocks = new HashMap<>();
-    // Single map for all regions irrespective of tables. Key is encoded region name.
-    final Map<String, LockAndQueue> regionLocks = new HashMap<>();
+    @Override
+    public String toString() {
+      return "serverLocks=" + filterUnlocked(this.serverLocks) +
+        ", namespaceLocks=" + filterUnlocked(this.namespaceLocks) +
+        ", tableLocks=" + filterUnlocked(this.tableLocks) +
+        ", regionLocks=" + filterUnlocked(this.regionLocks);
+    }
+
+    private String filterUnlocked(Map<?, LockAndQueue> locks) {
+      StringBuilder sb = new StringBuilder("{");
+      int initialLength = sb.length();
+      for (Map.Entry<?, LockAndQueue> entry: locks.entrySet()) {
+        if (!entry.getValue().isLocked()) continue;
+        if (sb.length() > initialLength) sb.append(", ");
+          sb.append("{");
+          sb.append(entry.getKey());
+          sb.append("=");
+          sb.append(entry.getValue());
+          sb.append("}");
+        }
+        sb.append("}");
+        return sb.toString();
+     }
   }
 
   // ======================================================================
@@ -1056,5 +1079,15 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     private int calculateQuantum(final Queue queue) {
       return Math.max(1, queue.getPriority() * quantum); // TODO
     }
+  }
+
+  /**
+   * For debugging. Expensive.
+    * @throws IOException
+    */
+  @VisibleForTesting
+  public String dumpLocks() throws IOException {
+    // TODO: Refactor so we stream out locks for case when millions; i.e. take a PrintWriter
+    return this.locking.toString();
   }
 }

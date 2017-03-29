@@ -127,7 +127,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false);
     loadBalancer.setConf(conf);
 
-    TableName tableName = TableName.valueOf(HConstants.ENSEMBLE_TABLE_NAME);
+    TableName tableName = HConstants.ENSEMBLE_TABLE_NAME;
     Map<ServerName, List<HRegionInfo>> clusterState = mockClusterServers(mockCluster_ensemble);
     loadBalancer.balanceCluster(tableName, clusterState);
 

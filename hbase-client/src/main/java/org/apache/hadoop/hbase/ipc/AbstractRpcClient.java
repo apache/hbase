@@ -207,12 +207,12 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     long closeBeforeTime = EnvironmentEdgeManager.currentTime() - minIdleTimeBeforeClose;
     synchronized (connections) {
       for (T conn : connections.values()) {
-        // remove connection if it has not been chosen by anyone for more than maxIdleTime, and the
-        // connection itself has already shutdown. The latter check is because that we may still
+        // Remove connection if it has not been chosen by anyone for more than maxIdleTime, and the
+        // connection itself has already shutdown. The latter check is because we may still
         // have some pending calls on connection so we should not shutdown the connection outside.
         // The connection itself will disconnect if there is no pending call for maxIdleTime.
         if (conn.getLastTouched() < closeBeforeTime && !conn.isActive()) {
-          LOG.info("Cleanup idle connection to " + conn.remoteId().address);
+          if (LOG.isTraceEnabled()) LOG.trace("Cleanup idle connection to " + conn.remoteId().address);
           connections.removeValue(conn.remoteId(), conn);
           conn.cleanupConnection();
         }

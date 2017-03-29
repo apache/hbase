@@ -108,6 +108,9 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
     if (aborted.get() && isRollbackSupported(getCurrentState())) {
       setAbortFailure(getClass().getSimpleName(), "abort requested");
     } else {
+      if (aborted.get()) {
+        LOG.warn("ignoring abort request " + state);
+      }
       setNextState(getStateId(state));
     }
   }
