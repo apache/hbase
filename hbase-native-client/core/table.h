@@ -30,6 +30,7 @@
 #include "core/configuration.h"
 #include "core/get.h"
 #include "core/location-cache.h"
+#include "core/put.h"
 #include "core/raw-async-table.h"
 #include "core/result.h"
 #include "serde/table-name.h"

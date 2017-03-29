@@ -18,10 +18,14 @@
 cxx_library(
     name="utils",
     exported_headers=[
-        "user-util.h", "version.h", "connection-util.h", "sys-util.h",
-        "time-util.h"
+        "bytes-util.h",
+        "connection-util.h",
+        "sys-util.h",
+        "time-util.h",
+        "user-util.h",
+        "version.h",
     ],
-    srcs=["user-util.cc", "connection-util.cc"],
+    srcs=["bytes-util.cc", "connection-util.cc", "user-util.cc"],
     deps=['//third-party:folly',],
     tests=[":user-util-test"],
     visibility=['PUBLIC',],
@@ -29,4 +33,8 @@ cxx_library(
 cxx_test(
     name="user-util-test",
     srcs=["user-util-test.cc",],
+    deps=[":utils",],)
+cxx_test(
+    name="bytes-util-test",
+    srcs=["bytes-util-test.cc",],
     deps=[":utils",],)

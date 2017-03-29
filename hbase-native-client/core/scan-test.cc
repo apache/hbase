@@ -29,20 +29,20 @@ void CheckFamilies(Scan &scan) {
   EXPECT_EQ(false, scan.HasFamilies());
   scan.AddFamily("family-1");
   EXPECT_EQ(true, scan.HasFamilies());
-  EXPECT_EQ(1, scan.Family().size());
-  for (const auto &family : scan.Family()) {
+  EXPECT_EQ(1, scan.FamilyMap().size());
+  for (const auto &family : scan.FamilyMap()) {
     EXPECT_STREQ("family-1", family.first.c_str());
     EXPECT_EQ(0, family.second.size());
   }
   // Not allowed to add the same CF.
   scan.AddFamily("family-1");
-  EXPECT_EQ(1, scan.Family().size());
+  EXPECT_EQ(1, scan.FamilyMap().size());
   scan.AddFamily("family-2");
-  EXPECT_EQ(2, scan.Family().size());
+  EXPECT_EQ(2, scan.FamilyMap().size());
   scan.AddFamily("family-3");
-  EXPECT_EQ(3, scan.Family().size());
+  EXPECT_EQ(3, scan.FamilyMap().size());
   int i = 1;
-  for (const auto &family : scan.Family()) {
+  for (const auto &family : scan.FamilyMap()) {
     std::string family_name = "family-" + std::to_string(i);
     EXPECT_STREQ(family_name.c_str(), family.first.c_str());
     EXPECT_EQ(0, family.second.size());
@@ -55,8 +55,8 @@ void CheckFamilies(Scan &scan) {
   scan.AddColumn("family-1", "column-3");
   scan.AddColumn("family-2", "column-X");
 
-  EXPECT_EQ(3, scan.Family().size());
-  auto it = scan.Family().begin();
+  EXPECT_EQ(3, scan.FamilyMap().size());
+  auto it = scan.FamilyMap().begin();
   EXPECT_STREQ("family-1", it->first.c_str());
   EXPECT_EQ(4, it->second.size());
   EXPECT_STREQ("column-1", it->second[0].c_str());
@@ -71,20 +71,20 @@ void CheckFamilies(Scan &scan) {
   EXPECT_STREQ("family-3", it->first.c_str());
   EXPECT_EQ(0, it->second.size());
   ++it;
-  EXPECT_EQ(it, scan.Family().end());
+  EXPECT_EQ(it, scan.FamilyMap().end());
 }
 
 void CheckFamiliesAfterCopy(Scan &scan) {
   EXPECT_EQ(true, scan.HasFamilies());
-  EXPECT_EQ(3, scan.Family().size());
+  EXPECT_EQ(3, scan.FamilyMap().size());
   int i = 1;
-  for (const auto &family : scan.Family()) {
+  for (const auto &family : scan.FamilyMap()) {
     std::string family_name = "family-" + std::to_string(i);
     EXPECT_STREQ(family_name.c_str(), family.first.c_str());
     i += 1;
   }
   // Check if the alreaday added CF's and CQ's are as expected
-  auto it = scan.Family().begin();
+  auto it = scan.FamilyMap().begin();
   EXPECT_STREQ("family-1", it->first.c_str());
   EXPECT_EQ(4, it->second.size());
   EXPECT_STREQ("column-1", it->second[0].c_str());
@@ -99,7 +99,7 @@ void CheckFamiliesAfterCopy(Scan &scan) {
   EXPECT_STREQ("family-3", it->first.c_str());
   EXPECT_EQ(0, it->second.size());
   ++it;
-  EXPECT_EQ(it, scan.Family().end());
+  EXPECT_EQ(it, scan.FamilyMap().end());
 }
 
 void ScanMethods(Scan &scan) {
@@ -219,7 +219,7 @@ TEST(Scan, FromGet) {
   get.AddColumn("family-1", "column-3");
   get.AddColumn("family-2", "column-X");
 
-  EXPECT_EQ(3, get.Family().size());
+  EXPECT_EQ(3, get.FamilyMap().size());
 
   Scan scan(get);
   ScanMethods(scan);

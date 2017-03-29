@@ -28,7 +28,7 @@ enum CellType {
   MINIMUM = 0,
   PUT = 4,
   DELETE = 8,
-  DELETEFAMILYVERSION = 10,
+  DELETE_FAMILY_VERSION = 10,
   DELETE_COLUMN = 12,
   DELETE_FAMILY = 14,
   MAXIMUM = 255
@@ -46,6 +46,7 @@ class Cell {
   const std::string &Value() const;
   CellType Type() const;
   int64_t SequenceId() const;
+  std::string DebugString() const;
 
  private:
   std::string row_;
@@ -58,6 +59,9 @@ class Cell {
   hbase::CellType cell_type_;
   std::string value_;
   int64_t sequence_id_;
+
+ private:
+  static const char *TypeToString(CellType type);
 };
 
 }  // namespace hbase
