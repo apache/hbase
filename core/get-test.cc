@@ -29,20 +29,20 @@ void CheckFamilies(Get &get) {
   EXPECT_EQ(false, get.HasFamilies());
   get.AddFamily("family-1");
   EXPECT_EQ(true, get.HasFamilies());
-  EXPECT_EQ(1, get.Family().size());
-  for (const auto &family : get.Family()) {
+  EXPECT_EQ(1, get.FamilyMap().size());
+  for (const auto &family : get.FamilyMap()) {
     EXPECT_STREQ("family-1", family.first.c_str());
     EXPECT_EQ(0, family.second.size());
   }
   // Not allowed to add the same CF.
   get.AddFamily("family-1");
-  EXPECT_EQ(1, get.Family().size());
+  EXPECT_EQ(1, get.FamilyMap().size());
   get.AddFamily("family-2");
-  EXPECT_EQ(2, get.Family().size());
+  EXPECT_EQ(2, get.FamilyMap().size());
   get.AddFamily("family-3");
-  EXPECT_EQ(3, get.Family().size());
+  EXPECT_EQ(3, get.FamilyMap().size());
   int i = 1;
-  for (const auto &family : get.Family()) {
+  for (const auto &family : get.FamilyMap()) {
     std::string family_name = "family-" + std::to_string(i);
     EXPECT_STREQ(family_name.c_str(), family.first.c_str());
     EXPECT_EQ(0, family.second.size());
@@ -55,8 +55,8 @@ void CheckFamilies(Get &get) {
   get.AddColumn("family-1", "column-3");
   get.AddColumn("family-2", "column-X");
 
-  EXPECT_EQ(3, get.Family().size());
-  auto it = get.Family().begin();
+  EXPECT_EQ(3, get.FamilyMap().size());
+  auto it = get.FamilyMap().begin();
   EXPECT_STREQ("family-1", it->first.c_str());
   EXPECT_EQ(4, it->second.size());
   EXPECT_STREQ("column-1", it->second[0].c_str());
@@ -71,20 +71,20 @@ void CheckFamilies(Get &get) {
   EXPECT_STREQ("family-3", it->first.c_str());
   EXPECT_EQ(0, it->second.size());
   ++it;
-  EXPECT_EQ(it, get.Family().end());
+  EXPECT_EQ(it, get.FamilyMap().end());
 }
 
 void CheckFamiliesAfterCopy(Get &get) {
   EXPECT_EQ(true, get.HasFamilies());
-  EXPECT_EQ(3, get.Family().size());
+  EXPECT_EQ(3, get.FamilyMap().size());
   int i = 1;
-  for (const auto &family : get.Family()) {
+  for (const auto &family : get.FamilyMap()) {
     std::string family_name = "family-" + std::to_string(i);
     EXPECT_STREQ(family_name.c_str(), family.first.c_str());
     i += 1;
   }
   // Check if the alreaday added CF's and CQ's are as expected
-  auto it = get.Family().begin();
+  auto it = get.FamilyMap().begin();
   EXPECT_STREQ("family-1", it->first.c_str());
   EXPECT_EQ(4, it->second.size());
   EXPECT_STREQ("column-1", it->second[0].c_str());
@@ -99,7 +99,7 @@ void CheckFamiliesAfterCopy(Get &get) {
   EXPECT_STREQ("family-3", it->first.c_str());
   EXPECT_EQ(0, it->second.size());
   ++it;
-  EXPECT_EQ(it, get.Family().end());
+  EXPECT_EQ(it, get.FamilyMap().end());
 }
 
 void GetMethods(Get &get, const std::string &row) {
@@ -159,19 +159,19 @@ TEST(Get, SingleGet) {
   // Adding the below tests as there were some concerns raised that the same
   // vector of qualifiers in FamilyMap is being shared between copied objects
   // Verify the source object's family map size before using it to copy.
-  EXPECT_EQ(3, get.Family().size());
+  EXPECT_EQ(3, get.FamilyMap().size());
 
   Get getcp_fam(get);
   // address of family maps should be different.
-  EXPECT_NE(&(get.Family()), &(getcp_fam.Family()));
+  EXPECT_NE(&(get.FamilyMap()), &(getcp_fam.FamilyMap()));
 
   // Add family to the source object
   get.AddColumn("family-4", "column-A");
   get.AddColumn("family-4", "column-B");
   // Verify the source object's family map size
-  EXPECT_EQ(4, get.Family().size());
+  EXPECT_EQ(4, get.FamilyMap().size());
   // Verify the source object's family elements
-  auto it = get.Family().begin();
+  auto it = get.FamilyMap().begin();
   EXPECT_STREQ("family-1", it->first.c_str());
   EXPECT_EQ(4, it->second.size());
   EXPECT_STREQ("column-1", it->second[0].c_str());
@@ -191,7 +191,7 @@ TEST(Get, SingleGet) {
   EXPECT_STREQ("column-A", it->second[0].c_str());
   EXPECT_STREQ("column-B", it->second[1].c_str());
   ++it;
-  EXPECT_EQ(it, get.Family().end());
+  EXPECT_EQ(it, get.FamilyMap().end());
 
   // Verifying the copied object's families. It will remain unchanged and below
   // tests should pass

@@ -32,12 +32,6 @@
 using hbase::Row;
 namespace hbase {
 
-/**
- * @brief Map consisting of column families and qualifiers to be used for Get
- * operation
- */
-using FamilyMap = std::map<std::string, std::vector<std::string>>;
-
 class Get : public Row, public Query {
  public:
   /**
@@ -73,10 +67,10 @@ class Get : public Row, public Query {
   Get& SetCacheBlocks(bool cache_blocks);
 
   /**
-   * @brief Returns the Get family map (FamilyMap) for this Get operation. Used
+   * @brief Returns the Get family map for this Get operation. Used
    * for constructing Scan object with an already constructed Get
    */
-  const FamilyMap& Family() const;
+  const std::map<std::string, std::vector<std::string>>& FamilyMap() const;
 
   /**
    * @brief Returns the timerange for this Get
@@ -112,7 +106,7 @@ class Get : public Row, public Query {
   Get& AddColumn(const std::string& family, const std::string& qualifier);
 
   /**
-   * @brief Returns true if family map (FamilyMap) is non empty false otherwise
+   * @brief Returns true if family map is non empty false otherwise
    */
   bool HasFamilies() const;
 
@@ -131,7 +125,7 @@ class Get : public Row, public Query {
   int32_t max_versions_ = 1;
   bool cache_blocks_ = true;
   bool check_existence_only_ = false;
-  FamilyMap family_map_;
+  std::map<std::string, std::vector<std::string>> family_map_;
   hbase::pb::Consistency consistency_ = hbase::pb::Consistency::STRONG;
   std::unique_ptr<TimeRange> tr_ = std::make_unique<TimeRange>();
 };

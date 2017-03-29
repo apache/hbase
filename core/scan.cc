@@ -75,7 +75,7 @@ Scan::Scan(const Get &get) {
   cache_blocks_ = get.CacheBlocks();
   max_versions_ = get.MaxVersions();
   tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(), get.Timerange().MaxTimeStamp()));
-  family_map_.insert(get.Family().begin(), get.Family().end());
+  family_map_.insert(get.FamilyMap().begin(), get.FamilyMap().end());
 }
 
 Scan &Scan::AddFamily(const std::string &family) {
@@ -191,5 +191,7 @@ void Scan::CheckRow(const std::string &row) {
 
 bool Scan::HasFamilies() const { return !family_map_.empty(); }
 
-const FamilyMap &Scan::Family() const { return family_map_; }
+const std::map<std::string, std::vector<std::string>> &Scan::FamilyMap() const {
+  return family_map_;
+}
 }  // namespace hbase

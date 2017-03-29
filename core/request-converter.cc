@@ -47,6 +47,7 @@ std::unique_ptr<Request> RequestConverter::ToGetRequest(const Get &get,
   auto pb_msg = std::static_pointer_cast<GetRequest>(pb_req->req_msg());
   RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
   pb_msg->set_allocated_get((RequestConverter::ToGet(get)).release());
+
   return pb_req;
 }
 
@@ -78,7 +79,7 @@ std::unique_ptr<Request> RequestConverter::ToScanRequest(const Scan &scan,
   }
 
   if (scan.HasFamilies()) {
-    for (const auto &family : scan.Family()) {
+    for (const auto &family : scan.FamilyMap()) {
       auto column = pb_scan->add_column();
       column->set_family(family.first);
       for (const auto &qualifier : family.second) {
@@ -137,7 +138,7 @@ std::unique_ptr<hbase::pb::Get> RequestConverter::ToGet(const Get &get) {
   }
   pb_get->set_row(get.row());
   if (get.HasFamilies()) {
-    for (const auto &family : get.Family()) {
+    for (const auto &family : get.FamilyMap()) {
       auto column = pb_get->add_column();
       column->set_family(family.first);
       for (const auto &qualifier : family.second) {

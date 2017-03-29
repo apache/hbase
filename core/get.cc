@@ -87,7 +87,9 @@ Get &Get::SetConsistency(hbase::pb::Consistency consistency) {
 
 bool Get::HasFamilies() const { return !family_map_.empty(); }
 
-const FamilyMap &Get::Family() const { return family_map_; }
+const std::map<std::string, std::vector<std::string>> &Get::FamilyMap() const {
+  return family_map_;
+}
 
 int Get::MaxVersions() const { return max_versions_; }
 

@@ -91,8 +91,8 @@ int Result::Size() const { return cells_.size(); }
 
 const ResultMap &Result::Map() const { return result_map_; }
 
-const ResultFamilyMap Result::FamilyMap(const std::string &family) const {
-  ResultFamilyMap family_map;
+const std::map<std::string, std::string> Result::FamilyMap(const std::string &family) const {
+  std::map<std::string, std::string> family_map;
   if (!IsEmpty()) {
     for (auto itr = result_map_.begin(); itr != result_map_.end(); ++itr) {
       if (family == itr->first) {

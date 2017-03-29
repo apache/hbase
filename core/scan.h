@@ -30,12 +30,6 @@
 
 namespace hbase {
 
-/**
- * @brief Map consisting of column families and qualifiers to be used for Get
- * operation
- */
-using FamilyMap = std::map<std::string, std::vector<std::string>>;
-
 class Scan : public Query {
  public:
   /**
@@ -251,14 +245,14 @@ class Scan : public Query {
   const TimeRange &Timerange() const;
 
   /**
-   * @brief Returns true if family map (FamilyMap) is non empty false otherwise
+   * @brief Returns true if family map is non empty false otherwise
    */
   bool HasFamilies() const;
 
   /**
-   * @brief Returns the Scan family map (FamilyMap) for this Scan operation.
+   * @brief Returns the Scan family map for this Scan operation.
    */
-  const FamilyMap &Family() const;
+  const std::map<std::string, std::vector<std::string>> &FamilyMap() const;
 
  private:
   std::string start_row_ = "";
@@ -273,7 +267,7 @@ class Scan : public Query {
   bool allow_partial_results_ = false;
   hbase::pb::Consistency consistency_ = hbase::pb::Consistency::STRONG;
   std::unique_ptr<TimeRange> tr_ = std::make_unique<TimeRange>();
-  FamilyMap family_map_;
+  std::map<std::string, std::vector<std::string>> family_map_;
 
   /**
    * @brief Checks for row length validity, throws if length check fails,

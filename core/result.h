@@ -38,11 +38,6 @@ using ResultMap =
     std::map<std::string,
              std::map<std::string, std::map<int64_t, std::string, std::greater<int64_t> > > >;
 
-/**
- * @brief Map of qualifiers to values.
- */
-using ResultFamilyMap = std::map<std::string, std::string>;
-
 class Result {
  public:
   /**
@@ -116,7 +111,7 @@ class Result {
    * Returns a Map of the form: Map<qualifier,value>
    * @param family - column family to get
    */
-  const ResultFamilyMap FamilyMap(const std::string &family) const;
+  const std::map<std::string, std::string> FamilyMap(const std::string &family) const;
 
  private:
   bool exists_ = false;

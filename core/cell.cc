@@ -18,7 +18,11 @@
  */
 
 #include "core/cell.h"
+#include <climits>
 #include <stdexcept>
+
+#include "folly/Conv.h"
+#include "utils/bytes-util.h"
 
 namespace hbase {
 
@@ -32,8 +36,6 @@ Cell::Cell(const std::string &row, const std::string &family, const std::string 
       value_(value),
       sequence_id_(0) {
   if (0 == row.size()) throw std::runtime_error("Row size should be greater than 0");
-
-  if (0 == family.size()) throw std::runtime_error("Column family size should be greater than 0");
 
   if (0 >= timestamp) throw std::runtime_error("Timestamp should be greater than 0");
 }
@@ -53,5 +55,38 @@ const std::string &Cell::Value() const { return value_; }
 hbase::CellType Cell::Type() const { return cell_type_; }
 
 int64_t Cell::SequenceId() const { return sequence_id_; }
+
+std::string Cell::DebugString() const {
+  std::string timestamp_str;
+  if (timestamp_ == std::numeric_limits<int64_t>::max()) {
+    timestamp_str = "LATEST_TIMESTAMP";
+  } else {
+    timestamp_str = folly::to<std::string>(timestamp_);
+  }
+
+  return BytesUtil::ToStringBinary(row_) + "/" + BytesUtil::ToStringBinary(family_) +
+         (family_.empty() ? "" : ":") + BytesUtil::ToStringBinary(qualifier_) + "/" +
+         timestamp_str + "/" + TypeToString(cell_type_) + "/vlen=" +
+         folly::to<std::string>(value_.size()) + "/seqid=" + folly::to<std::string>(sequence_id_);
+}
+
+const char *Cell::TypeToString(CellType type) {
+  switch (type) {
+    case MINIMUM:
+      return "MINIMUM";
+    case PUT:
+      return "PUT";
+    case DELETE:
+      return "DELETE";
+    case DELETE_COLUMN:
+      return "DELETE_COLUMN";
+    case DELETE_FAMILY:
+      return "DELETE_FAMILY";
+    case MAXIMUM:
+      return "MAXIMUM";
+    default:
+      return "UNKNOWN";
+  }
+}
 
 } /* namespace hbase */

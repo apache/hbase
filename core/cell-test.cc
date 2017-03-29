@@ -31,7 +31,6 @@ TEST(CellTest, CellFailureTest) {
   std::string column = "column";
   std::string value = "value";
   int64_t timestamp = std::numeric_limits<int64_t>::max();
-  std::string tags = "";
   std::unique_ptr<Cell> cell(new Cell(row, family, column, timestamp, value, cell_type));
   if (cell.get()) {
     EXPECT_NE("row-value", cell.get()->Row());
@@ -165,4 +164,21 @@ TEST(CellTest, CellRowFamilyColumnValueTest) {
     EXPECT_EQ(timestamp, cell.get()->Timestamp());
     EXPECT_EQ(cell_type, cell.get()->Type());
   }
+}
+
+TEST(CellTest, CellDebugString) {
+  CellType cell_type = CellType::PUT;
+  std::string row = "row";
+  std::string family = "family";
+  std::string column = "column";
+  std::string value = "value";
+  int64_t timestamp = std::numeric_limits<int64_t>::max();
+
+  Cell cell{row, family, column, timestamp, value, cell_type};
+  LOG(INFO) << cell.DebugString();
+  EXPECT_EQ("row/family:column/LATEST_TIMESTAMP/PUT/vlen=5/seqid=0", cell.DebugString());
+
+  Cell cell2{row, "", column, 42, value, CellType::DELETE};
+  LOG(INFO) << cell2.DebugString();
+  EXPECT_EQ("row/column/42/DELETE/vlen=5/seqid=0", cell2.DebugString());
 }
