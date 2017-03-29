@@ -25,9 +25,11 @@
 #include <string>
 #include <vector>
 #include "core/query.h"
+#include "core/row.h"
 #include "core/time-range.h"
 #include "if/Client.pb.h"
 
+using hbase::Row;
 namespace hbase {
 
 /**
@@ -36,7 +38,7 @@ namespace hbase {
  */
 using FamilyMap = std::map<std::string, std::vector<std::string>>;
 
-class Get : public Query {
+class Get : public Row, public Query {
  public:
   /**
    * Constructors
@@ -110,11 +112,6 @@ class Get : public Query {
   Get& AddColumn(const std::string& family, const std::string& qualifier);
 
   /**
-   * @brief Returns the row for this Get operation
-   */
-  const std::string& Row() const;
-
-  /**
    * @brief Returns true if family map (FamilyMap) is non empty false otherwise
    */
   bool HasFamilies() const;
@@ -131,21 +128,12 @@ class Get : public Query {
   Get& SetConsistency(hbase::pb::Consistency consistency);
 
  private:
-  std::string row_ = "";
   int32_t max_versions_ = 1;
   bool cache_blocks_ = true;
   bool check_existence_only_ = false;
   FamilyMap family_map_;
   hbase::pb::Consistency consistency_ = hbase::pb::Consistency::STRONG;
   std::unique_ptr<TimeRange> tr_ = std::make_unique<TimeRange>();
-
-  /**
-   * @brief Checks if the row for this Get operation is proper or not
-   * @param row Row to check
-   * @throws std::runtime_error if row is empty or greater than
-   * MAX_ROW_LENGTH(i.e. std::numeric_limits<short>::max())
-   */
-  void CheckRow(const std::string& row);
 };
 
 }  // namespace hbase

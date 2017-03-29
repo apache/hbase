@@ -21,14 +21,23 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 #include "connection/request.h"
+#include "core/action.h"
 #include "core/get.h"
+#include "core/region-request.h"
 #include "core/scan.h"
+#include "core/server-request.h"
 #include "if/HBase.pb.h"
 
 using hbase::pb::RegionSpecifier;
+using hbase::pb::RegionAction;
+using hbase::pb::ServerName;
+using hbase::ServerRequest;
+
 namespace hbase {
 
+using ActionsByRegion = ServerRequest::ActionsByRegion;
 /**
  * RequestConverter class
  * This class converts a Client side Get, Scan, Mutate operation to corresponding PB message.
@@ -53,6 +62,8 @@ class RequestConverter {
    */
   static std::unique_ptr<Request> ToScanRequest(const Scan &scan, const std::string &region_name);
 
+  static std::unique_ptr<Request> ToMultiRequest(const ActionsByRegion &region_requests);
+
  private:
   // Constructor not required. We have all static methods to create PB requests.
   RequestConverter();
@@ -64,6 +75,7 @@ class RequestConverter {
    * Request.
    */
   static void SetRegion(const std::string &region_name, RegionSpecifier *region_specifier);
+  static std::unique_ptr<hbase::pb::Get> ToGet(const Get &get);
 };
 
 } /* namespace hbase */

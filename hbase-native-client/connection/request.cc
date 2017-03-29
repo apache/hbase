@@ -39,3 +39,7 @@ std::unique_ptr<Request> Request::scan() {
   return std::make_unique<Request>(std::make_shared<hbase::pb::ScanRequest>(),
                                    std::make_shared<hbase::pb::ScanResponse>(), "Scan");
 }
+std::unique_ptr<Request> Request::multi() {
+  return std::make_unique<Request>(std::make_shared<hbase::pb::MultiRequest>(),
+                                   std::make_shared<hbase::pb::MultiResponse>(), "Multi");
+}

@@ -26,7 +26,7 @@ namespace hbase {
 
 Get::~Get() {}
 
-Get::Get(const std::string &row) : row_(row) { CheckRow(row_); }
+Get::Get(const std::string &row) : Row(row) {}
 
 Get::Get(const Get &get) {
   row_ = get.row_;
@@ -78,8 +78,6 @@ Get &Get::AddColumn(const std::string &family, const std::string &qualifier) {
   return *this;
 }
 
-const std::string &Get::Row() const { return row_; }
-
 hbase::pb::Consistency Get::Consistency() const { return consistency_; }
 
 Get &Get::SetConsistency(hbase::pb::Consistency consistency) {
@@ -119,15 +117,4 @@ Get &Get::SetTimeStamp(int64_t timestamp) {
 
 const TimeRange &Get::Timerange() const { return *tr_; }
 
-void Get::CheckRow(const std::string &row) {
-  const int kMaxRowLength = std::numeric_limits<int16_t>::max();
-  int row_length = row.size();
-  if (0 == row_length) {
-    throw std::runtime_error("Row length can't be 0");
-  }
-  if (row_length > kMaxRowLength) {
-    throw std::runtime_error("Length of " + row + " is greater than max row size: " +
-                             std::to_string(kMaxRowLength));
-  }
-}
 }  // namespace hbase

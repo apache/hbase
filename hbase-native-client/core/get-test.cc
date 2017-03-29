@@ -21,7 +21,8 @@
 
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-using namespace hbase;
+
+using hbase::Get;
 const int NUMBER_OF_GETS = 5;
 
 void CheckFamilies(Get &get) {
@@ -102,7 +103,7 @@ void CheckFamiliesAfterCopy(Get &get) {
 }
 
 void GetMethods(Get &get, const std::string &row) {
-  EXPECT_EQ(row, get.Row());
+  EXPECT_EQ(row, get.row());
 
   CheckFamilies(get);
   EXPECT_EQ(true, get.CacheBlocks());

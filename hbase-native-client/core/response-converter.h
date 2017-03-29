@@ -21,11 +21,15 @@
 
 #include <memory>
 #include <vector>
+#include "connection/request.h"
 #include "connection/response.h"
+#include "core/multi-response.h"
 #include "core/result.h"
 #include "if/Client.pb.h"
 #include "serde/cell-scanner.h"
 
+using hbase::Request;
+using hbase::Response;
 namespace hbase {
 
 /**
@@ -46,6 +50,9 @@ class ResponseConverter {
   static std::shared_ptr<hbase::Result> FromGetResponse(const Response& resp);
 
   static std::vector<std::shared_ptr<Result>> FromScanResponse(const Response& resp);
+
+  static std::unique_ptr<hbase::MultiResponse> GetResults(std::shared_ptr<Request> req,
+                                                          const Response& resp);
 
  private:
   // Constructor not required. We have all static methods to extract response from PB messages.
