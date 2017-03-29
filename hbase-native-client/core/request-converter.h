@@ -24,16 +24,23 @@
 #include <vector>
 #include "connection/request.h"
 #include "core/action.h"
+#include "core/cell.h"
 #include "core/get.h"
 #include "core/region-request.h"
 #include "core/scan.h"
 #include "core/server-request.h"
+#include "core/mutation.h"
+#include "core/put.h"
+#include "if/Client.pb.h"
 #include "if/HBase.pb.h"
 
-using hbase::pb::RegionSpecifier;
+using hbase::pb::MutationProto;
 using hbase::pb::RegionAction;
+using hbase::pb::RegionSpecifier;
 using hbase::pb::ServerName;
 using hbase::ServerRequest;
+using MutationType = hbase::pb::MutationProto_MutationType;
+using DeleteType = hbase::pb::MutationProto_DeleteType;
 
 namespace hbase {
 
@@ -64,6 +71,11 @@ class RequestConverter {
 
   static std::unique_ptr<Request> ToMultiRequest(const ActionsByRegion &region_requests);
 
+  static std::unique_ptr<Request> ToMutateRequest(const Put &put, const std::string &region_name);
+
+  static std::unique_ptr<MutationProto> ToMutation(const MutationType type,
+                                                   const Mutation &mutation, const int64_t nonce);
+
  private:
   // Constructor not required. We have all static methods to create PB requests.
   RequestConverter();
@@ -76,6 +88,8 @@ class RequestConverter {
    */
   static void SetRegion(const std::string &region_name, RegionSpecifier *region_specifier);
   static std::unique_ptr<hbase::pb::Get> ToGet(const Get &get);
+  static DeleteType ToDeleteType(const CellType type);
+  static bool IsDelete(const CellType type);
 };
 
 } /* namespace hbase */

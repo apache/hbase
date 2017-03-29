@@ -18,6 +18,9 @@
  */
 
 #include "core/request-converter.h"
+
+#include <folly/Conv.h>
+
 #include <utility>
 #include "if/Client.pb.h"
 
@@ -151,5 +154,70 @@ std::unique_ptr<hbase::pb::Get> RequestConverter::ToGet(const Get &get) {
     pb_get->set_allocated_filter(Filter::ToProto(*(get.filter())).release());
   }
   return pb_get;
+}
+
+std::unique_ptr<MutationProto> RequestConverter::ToMutation(const MutationType type,
+                                                            const Mutation &mutation,
+                                                            const int64_t nonce) {
+  auto pb_mut = std::make_unique<MutationProto>();
+  pb_mut->set_row(mutation.row());
+  pb_mut->set_mutate_type(type);
+  pb_mut->set_durability(mutation.Durability());
+  pb_mut->set_timestamp(mutation.TimeStamp());
+  // TODO: set attributes from the mutation (key value pairs).
+
+  if (nonce > 0) {
+    pb_mut->set_nonce(nonce);
+  }
+
+  for (const auto &family : mutation.FamilyMap()) {
+    for (const auto &cell : family.second) {
+      auto column = pb_mut->add_column_value();
+      column->set_family(cell->Family());
+      auto qual = column->add_qualifier_value();
+      qual->set_qualifier(cell->Qualifier());
+      qual->set_timestamp(cell->Timestamp());
+      auto cell_type = cell->Type();
+      if (type == pb::MutationProto_MutationType_DELETE ||
+          (type == pb::MutationProto_MutationType_PUT && IsDelete(cell_type))) {
+        qual->set_delete_type(ToDeleteType(cell_type));
+      }
+
+      qual->set_value(cell->Value());
+    }
+  }
+  return std::move(pb_mut);
+}
+
+DeleteType RequestConverter::ToDeleteType(const CellType type) {
+  switch (type) {
+    case DELETE:
+      return pb::MutationProto_DeleteType_DELETE_ONE_VERSION;
+    case DELETE_COLUMN:
+      return pb::MutationProto_DeleteType_DELETE_MULTIPLE_VERSIONS;
+    case DELETE_FAMILY:
+      return pb::MutationProto_DeleteType_DELETE_FAMILY;
+    case DELETE_FAMILY_VERSION:
+      return pb::MutationProto_DeleteType_DELETE_FAMILY_VERSION;
+    default:
+      throw std::runtime_error("Unknown delete type: " + folly::to<std::string>(type));
+  }
+}
+
+bool RequestConverter::IsDelete(const CellType type) {
+  return CellType::DELETE <= type && type <= CellType::DELETE_FAMILY;
+}
+
+std::unique_ptr<Request> RequestConverter::ToMutateRequest(const Put &put,
+                                                           const std::string &region_name) {
+  auto pb_req = Request::mutate();
+  auto pb_msg = std::static_pointer_cast<hbase::pb::MutateRequest>(pb_req->req_msg());
+  RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
+
+  pb_msg->set_allocated_mutation(
+      ToMutation(MutationType::MutationProto_MutationType_PUT, put, -1).release());
+
+  VLOG(3) << "Req is " << pb_req->req_msg()->ShortDebugString();
+  return pb_req;
 }
 } /* namespace hbase */

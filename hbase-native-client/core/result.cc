@@ -109,4 +109,26 @@ const std::map<std::string, std::string> Result::FamilyMap(const std::string &fa
   }
   return family_map;
 }
+
+std::string Result::DebugString() const {
+  std::string ret{"keyvalues="};
+  if (IsEmpty()) {
+    ret += "NONE";
+    return ret;
+  }
+  ret += "{";
+  bool is_first = true;
+  for (const auto &cell : cells_) {
+    if (is_first) {
+      is_first = false;
+    } else {
+      ret += ", ";
+    }
+    ret += cell->DebugString();
+  }
+  ret += "}";
+
+  return ret;
+}
+
 } /* namespace hbase */

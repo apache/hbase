@@ -54,6 +54,11 @@ std::shared_ptr<hbase::Result> Table::Get(const hbase::Get &get) {
   return context.get(operation_timeout());
 }
 
+void Table::Put(const hbase::Put &put) {
+  auto future = async_table_->Put(put);
+  future.get(operation_timeout());
+}
+
 milliseconds Table::operation_timeout() const {
   return TimeUtil::ToMillis(async_connection_->connection_conf()->operation_timeout());
 }

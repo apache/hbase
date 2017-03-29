@@ -65,11 +65,6 @@ class Mutation: public Row {
   }
 
   /**
-   * @brief Returns the row for this operation
-   */
-  const std::string& row() const;
-
-  /**
    * @brief Returns true if family map is non empty false otherwise
    */
   bool HasFamilies() const;
@@ -85,8 +80,10 @@ class Mutation: public Row {
    */
   Mutation& SetDurability(pb::MutationProto_Durability durability);
 
- protected:
+ public:
   static const constexpr int64_t kLatestTimestamp = std::numeric_limits<int64_t>::max();
+
+ protected:
   std::map<std::string, std::vector<std::unique_ptr<Cell>>> family_map_;
   pb::MutationProto_Durability durability_ =
       hbase::pb::MutationProto_Durability::MutationProto_Durability_USE_DEFAULT;

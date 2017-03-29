@@ -19,6 +19,7 @@
 
 #include "core/cell.h"
 #include <climits>
+#include <limits>
 #include <stdexcept>
 
 #include "folly/Conv.h"
@@ -38,6 +39,27 @@ Cell::Cell(const std::string &row, const std::string &family, const std::string 
   if (0 == row.size()) throw std::runtime_error("Row size should be greater than 0");
 
   if (0 >= timestamp) throw std::runtime_error("Timestamp should be greater than 0");
+}
+
+Cell::Cell(const Cell &cell)
+    : row_(cell.row_),
+      family_(cell.family_),
+      qualifier_(cell.qualifier_),
+      timestamp_(cell.timestamp_),
+      cell_type_(cell.cell_type_),
+      value_(cell.value_),
+      sequence_id_(cell.sequence_id_) {}
+
+Cell &Cell::operator=(const Cell &cell) {
+  row_ = cell.row_;
+  family_ = cell.family_;
+  qualifier_ = cell.qualifier_;
+  timestamp_ = cell.timestamp_;
+  cell_type_ = cell.cell_type_;
+  value_ = cell.value_;
+  sequence_id_ = cell.sequence_id_;
+
+  return *this;
 }
 
 Cell::~Cell() {}

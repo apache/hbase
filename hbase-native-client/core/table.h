@@ -58,6 +58,14 @@ class Table {
   // std::vector<std::unique_ptr<hbase::Result>> Get(const std::vector<hbase::Get> &gets);
 
   /**
+   * @brief - Puts some data in the table.
+   * @param - put Put object to perform HBase Put operation.
+   */
+  void Put(const hbase::Put &put);
+
+  // TODO: Batch Puts
+
+  /**
    * @brief - Close the client connection.
    */
   void Close();

@@ -239,25 +239,6 @@ jobject MiniCluster::admin() {
   return admin;
 }
 
-jobject MiniCluster::TablePut(const std::string &table, const std::string &row,
-                              const std::string &family, const std::string &column,
-                              const std::string &value) {
-  env();
-  jobject conn = env_->CallObjectMethod(htu(), get_conn_mid_);
-  jobject put = env_->NewObject(put_class_, put_ctor_, StrToByteChar(row));
-  if (put == NULL) {
-    LOG(INFO) << "Couldn't create Put";
-    exit(-1);
-  }
-  env_->CallObjectMethod(put, add_col_mid_, StrToByteChar(family), StrToByteChar(column),
-                         StrToByteChar(value));
-  jobject table_name_obj = env_->CallStaticObjectMethod(table_name_class_, tbl_name_value_of_mid_,
-                                                        env_->NewStringUTF(table.c_str()));
-  jobject table_obj = env_->CallObjectMethod(conn, get_table_mid_, table_name_obj);
-  env_->CallObjectMethod(table_obj, put_mid_, put);
-  return table_obj;
-}
-
 // moves region to server
 void MiniCluster::MoveRegion(const std::string &region, const std::string &server) {
   jobject admin_ = admin();

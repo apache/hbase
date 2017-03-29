@@ -130,6 +130,11 @@ cxx_test(
     deps=[":core",],
     run_test_separately=True,)
 cxx_test(
+    name="put-test",
+    srcs=["put-test.cc",],
+    deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
     name="retry-test",
     srcs=["async-rpc-retrying-test.cc",],
     deps=[

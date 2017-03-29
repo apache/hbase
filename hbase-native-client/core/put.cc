@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <utility>
 
 namespace hbase {
 
@@ -35,7 +36,7 @@ namespace hbase {
  */
 Put& Put::AddColumn(const std::string& family, const std::string& qualifier,
                     const std::string& value) {
-  return AddColumn(family, qualifier, kLatestTimestamp, value);
+  return AddColumn(family, qualifier, timestamp_, value);
 }
 
 /**
@@ -57,7 +58,7 @@ Put& Put::AddColumn(const std::string& family, const std::string& qualifier, int
 
 Put& Put::Add(std::unique_ptr<Cell> cell) {
   if (cell->Row() != row_) {
-    throw std::runtime_error("The row in" + cell->DebugString() +
+    throw std::runtime_error("The row in " + cell->DebugString() +
                              " doesn't match the original one " + row_);
   }
 

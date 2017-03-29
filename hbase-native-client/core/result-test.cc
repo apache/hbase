@@ -17,8 +17,6 @@
  *
  */
 
-#include "core/result.h"
-
 #include <gtest/gtest.h>
 #include <limits>
 #include <memory>
@@ -26,7 +24,11 @@
 #include <vector>
 
 #include "core/cell.h"
-using namespace hbase;
+#include "core/result.h"
+
+using hbase::Cell;
+using hbase::CellType;
+using hbase::Result;
 
 void PopulateCells(std::vector<std::shared_ptr<Cell> > &cells) {
   // Populate some Results
