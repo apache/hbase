@@ -45,6 +45,12 @@ cxx_library(
         "async-rpc-retrying-caller.h",
         "hbase-rpc-controller.h",
         "zk-util.h",
+        "action.h",
+        "multi-response.h",
+        "region-request.h",
+        "region-result.h",
+        "row.h",
+        "server-request.h",
     ],
     srcs=[
         "async-connection.cc",
@@ -62,6 +68,8 @@ cxx_library(
         "response-converter.cc",
         "table.cc",
         "zk-util.cc",
+        "multi-response.cc",
+        "region-result.cc",
     ],
     deps=[
         "//exceptions:exceptions",

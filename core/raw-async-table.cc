@@ -56,7 +56,7 @@ folly::Future<RESP> RawAsyncTable::Call(
 
 Future<std::shared_ptr<Result>> RawAsyncTable::Get(const hbase::Get& get) {
   auto caller =
-      CreateCallerBuilder<std::shared_ptr<Result>>(get.Row(), connection_conf_->read_rpc_timeout())
+      CreateCallerBuilder<std::shared_ptr<Result>>(get.row(), connection_conf_->read_rpc_timeout())
           ->action([=, &get](std::shared_ptr<hbase::HBaseRpcController> controller,
                              std::shared_ptr<hbase::RegionLocation> loc,
                              std::shared_ptr<hbase::RpcClient> rpc_client)

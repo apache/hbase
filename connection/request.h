@@ -39,6 +39,8 @@ class Request {
   static std::unique_ptr<Request> mutate();
   /** Create a request object for a scan */
   static std::unique_ptr<Request> scan();
+  /** Create a request object for a multi */
+  static std::unique_ptr<Request> multi();
 
   /**
    * This should be private. Do not use this.
