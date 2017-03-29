@@ -202,6 +202,8 @@ See link:http://wiki.apache.org/hadoop/Distributions%20and%20Commercial%20Suppor
 Hadoop 2.x is faster and includes features, such as short-circuit reads, which will help improve your HBase random read profile.
 Hadoop 2.x also includes important bug fixes that will improve your overall HBase experience.
 HBase 0.98 drops support for Hadoop 1.0, deprecates use of Hadoop 1.1+, and HBase 1.0 will not support Hadoop 1.x.
+
+Hadoop 3.x is still in early access releases and has not yet been sufficiently tested by the HBase community for production use cases.
 ====
 
 Use the following legend to interpret this table:
@@ -249,7 +251,13 @@ data loss. This patch is present in Apache Hadoop releases 2.6.1+.
 .Hadoop 2.7.x
 [TIP]
 ====
-Hadoop version 2.7.0 is not tested or supported as the Hadoop PMC has explicitly labeled that release as not being stable.
+Hadoop version 2.7.0 is not tested or supported as the Hadoop PMC has explicitly labeled that release as not being stable. (reference the link:https://s.apache.org/hadoop-2.7.0-announcement[announcement of Apache Hadoop 2.7.0].)
+====
+
+.Hadoop 2.8.x
+[TIP]
+====
+Hadoop version 2.8.0 is not tested or supported as the Hadoop PMC has explicitly labeled that release as not being stable. (reference the link:https://s.apache.org/hadoop-2.8.0-announcement[announcement of Apache Hadoop 2.8.0].)
 ====
 
 .Replace the Hadoop Bundled With HBase!
