@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
@@ -68,6 +67,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
@@ -105,10 +106,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -260,7 +267,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
                 LOG.info("Failed to " + operationType + " table " + table.getTableName(), ex);
                 failed.add(table);
               }
-            })).toArray(size -> new CompletableFuture[size]);
+            })).<CompletableFuture> toArray(size -> new CompletableFuture[size]);
         CompletableFuture.allOf(futures).thenAccept((v) -> {
           future.complete(failed.toArray(new HTableDescriptor[failed.size()]));
         });
@@ -616,7 +623,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     return this.<DeleteNamespaceRequest, DeleteNamespaceResponse> procedureCall(
       RequestConverter.buildDeleteNamespaceRequest(name),
       (s, c, req, done) -> s.deleteNamespace(c, req, done), (resp) -> resp.getProcId(),
-      new ModifyNamespaceProcedureBiConsumer(this, name));
+      new DeleteNamespaceProcedureBiConsumer(this, name));
   }
 
   @Override
@@ -1006,6 +1013,140 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
             controller, stub, ProtobufUtil.buildSplitRegionRequest(hri.getRegionName(), splitPoint),
             (s, c, req, done) -> s.splitRegion(controller, req, done), resp -> null))
         .serverName(sn).call();
+  }
+
+  /**
+   * Turn regionNameOrEncodedRegionName into regionName, if region does not found, then it'll throw
+   * an IllegalArgumentException wrapped by a {@link CompletableFuture}
+   * @param regionNameOrEncodedRegionName
+   * @return
+   */
+  CompletableFuture<byte[]> getRegionName(byte[] regionNameOrEncodedRegionName) {
+    CompletableFuture<byte[]> future = new CompletableFuture<>();
+    if (Bytes
+        .equals(regionNameOrEncodedRegionName, HRegionInfo.FIRST_META_REGIONINFO.getRegionName())
+        || Bytes.equals(regionNameOrEncodedRegionName,
+          HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes())) {
+      future.complete(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+      return future;
+    }
+
+    getRegion(regionNameOrEncodedRegionName).whenComplete((p, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      }
+      if (p != null && p.getFirst() != null) {
+        future.complete(p.getFirst().getRegionName());
+      } else {
+        future.completeExceptionally(
+          new IllegalArgumentException("Invalid region name or encoded region name: "
+              + Bytes.toStringBinary(regionNameOrEncodedRegionName)));
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> assign(byte[] regionName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegionName(regionName).whenComplete((fullRegionName, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      } else {
+        this.<Void> newMasterCaller()
+            .action(
+              ((controller, stub) -> this.<AssignRegionRequest, AssignRegionResponse, Void> call(
+                controller, stub, RequestConverter.buildAssignRegionRequest(fullRegionName),
+                (s, c, req, done) -> s.assignRegion(c, req, done), resp -> null)))
+            .call().whenComplete((ret, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                future.complete(ret);
+              }
+            });
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> unassign(byte[] regionName, boolean force) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegionName(regionName).whenComplete((fullRegionName, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      } else {
+        this.<Void> newMasterCaller()
+            .action(((controller, stub) -> this
+                .<UnassignRegionRequest, UnassignRegionResponse, Void> call(controller, stub,
+                  RequestConverter.buildUnassignRegionRequest(fullRegionName, force),
+                  (s, c, req, done) -> s.unassignRegion(c, req, done), resp -> null)))
+            .call().whenComplete((ret, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                future.complete(ret);
+              }
+            });
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> offline(byte[] regionName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegionName(regionName).whenComplete((fullRegionName, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      } else {
+        this.<Void> newMasterCaller()
+            .action(
+              ((controller, stub) -> this.<OfflineRegionRequest, OfflineRegionResponse, Void> call(
+                controller, stub, RequestConverter.buildOfflineRegionRequest(fullRegionName),
+                (s, c, req, done) -> s.offlineRegion(c, req, done), resp -> null)))
+            .call().whenComplete((ret, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                future.complete(ret);
+              }
+            });
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> move(byte[] regionName, byte[] destServerName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegionName(regionName).whenComplete((fullRegionName, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      } else {
+        final MoveRegionRequest request;
+        try {
+          request = RequestConverter.buildMoveRegionRequest(
+            Bytes.toBytes(HRegionInfo.encodeRegionName(fullRegionName)), destServerName);
+        } catch (DeserializationException e) {
+          future.completeExceptionally(e);
+          return;
+        }
+        this.<Void> newMasterCaller()
+            .action((controller, stub) -> this.<MoveRegionRequest, MoveRegionResponse, Void> call(
+              controller, stub, request, (s, c, req, done) -> s.moveRegion(c, req, done),
+              resp -> null))
+            .call().whenComplete((ret, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                future.complete(ret);
+              }
+            });
+      }
+    });
+    return future;
   }
 
   private byte[][] getSplitKeys(byte[] startKey, byte[] endKey, int numRegions) {

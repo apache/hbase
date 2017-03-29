@@ -431,4 +431,40 @@ public interface AsyncAdmin {
    * @param splitPoint the explicit position to split on
    */
   CompletableFuture<Void> splitRegion(final byte[] regionName, final byte[] splitPoint);
+
+  /**
+   * @param regionName Encoded or full name of region to assign.
+   */
+  CompletableFuture<Void> assign(final byte[] regionName);
+
+  /**
+   * Unassign a region from current hosting regionserver. Region will then be assigned to a
+   * regionserver chosen at random. Region could be reassigned back to the same server. Use
+   * {@link #move(byte[], byte[])} if you want to control the region movement.
+   * @param regionName Encoded or full name of region to unassign. Will clear any existing
+   *          RegionPlan if one found.
+   * @param force If true, force unassign (Will remove region from regions-in-transition too if
+   *          present. If results in double assignment use hbck -fix to resolve. To be used by
+   *          experts).
+   */
+  CompletableFuture<Void> unassign(final byte[] regionName, final boolean force);
+
+  /**
+   * Offline specified region from master's in-memory state. It will not attempt to reassign the
+   * region as in unassign. This API can be used when a region not served by any region server and
+   * still online as per Master's in memory state. If this API is incorrectly used on active region
+   * then master will loose track of that region. This is a special method that should be used by
+   * experts or hbck.
+   * @param regionName Encoded or full name of region to offline
+   */
+  CompletableFuture<Void> offline(final byte[] regionName);
+
+  /**
+   * Move the region <code>r</code> to <code>dest</code>.
+   * @param regionName Encoded or full name of region to move.
+   * @param destServerName The servername of the destination regionserver. If passed the empty byte
+   *          array we'll assign to a random server. A server name is made of host, port and
+   *          startcode. Here is an example: <code> host187.example.com,60020,1289493121758</code>
+   */
+  CompletableFuture<Void> move(final byte[] regionName, final byte[] destServerName);
 }
