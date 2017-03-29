@@ -335,6 +335,11 @@ public class MasterFileSystem {
         }
         logDirs.add(splitDir);
       }
+    } catch (IOException ioe) {
+      if (!checkFileSystem()) {
+        this.services.abort("Aborting due to filesystem unavailable", ioe);
+        throw ioe;
+      }
     } finally {
       if (needReleaseLock) {
         this.splitLogLock.unlock();
