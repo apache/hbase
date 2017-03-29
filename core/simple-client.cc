@@ -19,111 +19,91 @@
 
 #include <folly/Logging.h>
 #include <folly/Random.h>
-#include <folly/futures/Future.h>
 #include <gflags/gflags.h>
-#include <wangle/concurrent/CPUThreadPoolExecutor.h>
-#include <wangle/concurrent/IOThreadPoolExecutor.h>
 
 #include <atomic>
 #include <chrono>
 #include <iostream>
 #include <thread>
 
-#include "connection/connection-pool.h"
 #include "core/client.h"
-#include "core/keyvalue-codec.h"
-#include "if/Client.pb.h"
-#include "if/ZooKeeper.pb.h"
+#include "core/get.h"
+#include "core/put.h"
+#include "core/table.h"
 #include "serde/server-name.h"
 #include "serde/table-name.h"
+#include "utils/time-util.h"
 
-using namespace folly;
-using namespace std;
-using namespace std::chrono;
+using hbase::Client;
 using hbase::Configuration;
-using hbase::Response;
-using hbase::Request;
-using hbase::HBaseService;
-using hbase::KeyValueCodec;
-using hbase::LocationCache;
-using hbase::ConnectionPool;
-using hbase::ConnectionFactory;
+using hbase::Get;
+using hbase::Put;
+using hbase::Table;
 using hbase::pb::TableName;
 using hbase::pb::ServerName;
-using hbase::pb::RegionSpecifier_RegionSpecifierType;
-using hbase::pb::MutateRequest;
-using hbase::pb::MutationProto_MutationType;
+using hbase::TimeUtil;
 
-// TODO(eclark): remove the need for this.
-DEFINE_string(table, "t", "What region to send a get");
-DEFINE_string(row, "test", "What row to get");
+DEFINE_string(table, "test_table", "What table to do the reads or writes");
+DEFINE_string(row, "row_", "row prefix");
 DEFINE_string(zookeeper, "localhost:2181", "What zk quorum to talk to");
-DEFINE_uint64(columns, 10000, "How many columns to write");
+DEFINE_uint64(num_rows, 10000, "How many rows to write and read");
+DEFINE_bool(display_results, false, "Whether to display the Results from Gets");
 DEFINE_int32(threads, 6, "How many cpu threads");
 
-std::unique_ptr<Request> MakeRequest(uint64_t col, std::string region_name) {
-  auto req = Request::mutate();
-  auto msg = std::static_pointer_cast<MutateRequest>(req->req_msg());
-  auto region = msg->mutable_region();
-  auto suf = folly::to<std::string>(col);
+std::unique_ptr<Put> MakePut(const std::string &row) {
+  auto put = std::make_unique<Put>(row);
+  put->AddColumn("f", "q", row);
+  return std::move(put);
+}
 
-  region->set_value(region_name);
-  region->set_type(
-      RegionSpecifier_RegionSpecifierType::RegionSpecifier_RegionSpecifierType_REGION_NAME);
-  auto mutation = msg->mutable_mutation();
-  mutation->set_row(FLAGS_row + suf);
-  mutation->set_mutate_type(MutationProto_MutationType::MutationProto_MutationType_PUT);
-  auto column = mutation->add_column_value();
-  column->set_family("d");
-  auto qual = column->add_qualifier_value();
-  qual->set_qualifier(suf);
-  qual->set_value(".");
-
-  return std::move(req);
+std::string Row(const std::string &prefix, uint64_t i) {
+  auto suf = folly::to<std::string>(i);
+  return prefix + suf;
 }
 
 int main(int argc, char *argv[]) {
   google::SetUsageMessage("Simple client to get a single row from HBase on the comamnd line");
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
-
-  // Set up thread pools.
-  auto cpu_pool = std::make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_threads);
-  auto io_pool = std::make_shared<wangle::IOThreadPoolExecutor>(5);
-  auto codec = std::make_shared<KeyValueCodec>();
-  auto cp = std::make_shared<ConnectionPool>(io_pool, codec);
+  google::InstallFailureSignalHandler();
+  FLAGS_logtostderr = 1;
+  FLAGS_stderrthreshold = 1;
 
   // Configuration
   auto conf = std::make_shared<Configuration>();
   conf->Set("hbase.zookeeper.quorum", FLAGS_zookeeper);
-
-  // Create the cache.
-  LocationCache cache{conf, cpu_pool, cp};
+  conf->SetInt("hbase.client.cpu.thread.pool.size", FLAGS_threads);
 
   auto row = FLAGS_row;
-  auto tn = folly::to<TableName>(FLAGS_table);
+  auto tn = std::make_shared<TableName>(folly::to<TableName>(FLAGS_table));
+  auto num_puts = FLAGS_num_rows;
 
-  auto loc = cache.LocateRegion(tn, row).get(milliseconds(5000));
-  auto connection = loc->service();
+  auto client = std::make_unique<Client>(*conf);
+  auto table = client->Table(*tn);
 
-  auto num_puts = FLAGS_columns;
-
-  auto results = std::vector<Future<std::unique_ptr<Response>>>{};
-  auto col = uint64_t{0};
-  for (; col < num_puts; col++) {
-    results.push_back(
-        folly::makeFuture(col)
-            .via(cpu_pool.get())
-            .then([loc](uint64_t col) { return MakeRequest(col, loc->region_name()); })
-            .then([connection](std::unique_ptr<Request> req) {
-              return (*connection)(std::move(req));
-            }));
+  // Do the Put requests
+  auto start_ns = TimeUtil::GetNowNanos();
+  for (uint64_t i = 0; i < num_puts; i++) {
+    table->Put(*MakePut(Row(FLAGS_row, i)));
   }
-  auto allf = folly::collect(results).get();
 
-  LOG(ERROR) << "Successfully sent  " << allf.size() << " requests.";
+  LOG(INFO) << "Successfully sent  " << num_puts << " Put requests in "
+            << TimeUtil::ElapsedMillis(start_ns) << " ms.";
 
-  io_pool->stop();
+  // Do the Get requests
+  start_ns = TimeUtil::GetNowNanos();
+  for (uint64_t i = 0; i < num_puts; i++) {
+    auto result = table->Get(Get{Row(FLAGS_row, i)});
+    if (FLAGS_display_results) {
+      LOG(INFO) << result->DebugString();
+    }
+  }
+
+  LOG(INFO) << "Successfully sent  " << num_puts << " Get requests in "
+            << TimeUtil::ElapsedMillis(start_ns) << " ms.";
+
+  table->Close();
+  client->Close();
 
   return 0;
 }

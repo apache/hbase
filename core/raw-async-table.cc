@@ -76,4 +76,19 @@ Future<std::shared_ptr<Result>> RawAsyncTable::Get(const hbase::Get& get) {
   return caller->Call().then([caller](const auto r) { return r; });
 }
 
+Future<Unit> RawAsyncTable::Put(const hbase::Put& put) {
+  auto caller =
+      CreateCallerBuilder<Unit>(put.row(), connection_conf_->write_rpc_timeout())
+          ->action([=, &put](std::shared_ptr<hbase::HBaseRpcController> controller,
+                             std::shared_ptr<hbase::RegionLocation> loc,
+                             std::shared_ptr<hbase::RpcClient> rpc_client) -> folly::Future<Unit> {
+            return Call<hbase::Put, hbase::Request, hbase::Response, Unit>(
+                rpc_client, controller, loc, put, &hbase::RequestConverter::ToMutateRequest,
+                [](const Response& r) -> Unit { return folly::unit; });
+          })
+          ->Build();
+
+  return caller->Call().then([caller](const auto r) { return r; });
+}
+
 } /* namespace hbase */

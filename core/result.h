@@ -113,6 +113,8 @@ class Result {
    */
   const std::map<std::string, std::string> FamilyMap(const std::string &family) const;
 
+  std::string DebugString() const;
+
  private:
   bool exists_ = false;
   bool stale_ = false;

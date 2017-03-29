@@ -39,9 +39,6 @@ class MiniCluster {
   jobject GetConf();
   // returns the value for config key retrieved from cluster
   const std::string GetConfValue(const std::string &key);
-  // Does Put into table for family fam, qualifier col with value
-  jobject TablePut(const std::string &table, const std::string &row, const std::string &family,
-                   const std::string &column, const std::string &value);
 
  private:
   JNIEnv *env_;

@@ -21,6 +21,7 @@
 #include "core/client.h"
 #include "core/configuration.h"
 #include "core/get.h"
+#include "core/put.h"
 #include "core/result.h"
 #include "core/table.h"
 #include "if/Comparator.pb.h"
@@ -30,6 +31,7 @@
 
 using hbase::Configuration;
 using hbase::Get;
+using hbase::Put;
 using hbase::FilterFactory;
 using hbase::Table;
 using hbase::TestUtil;
@@ -57,9 +59,6 @@ std::unique_ptr<TestUtil> FilterTest::test_util_ = nullptr;
 TEST_F(FilterTest, GetWithColumnPrefixFilter) {
   // write row1 with 3 columns (column_1, column_2, and foo_column)
   FilterTest::test_util_->CreateTable("t", "d");
-  FilterTest::test_util_->TablePut("t", "row1", "d", "column_1", "value1");
-  FilterTest::test_util_->TablePut("t", "row1", "d", "column_2", "value2");
-  FilterTest::test_util_->TablePut("t", "row1", "d", "foo_column", "value3");
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t");
@@ -75,10 +74,12 @@ TEST_F(FilterTest, GetWithColumnPrefixFilter) {
 
   // Create a client
   hbase::Client client(*(FilterTest::test_util_->conf()));
-
-  // Get connection to HBase Table
   auto table = client.Table(tn);
   ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  table->Put(Put{"row1"}.AddColumn("d", "column_1", "value1"));
+  table->Put(Put{"row1"}.AddColumn("d", "column_2", "value2"));
+  table->Put(Put{"row1"}.AddColumn("d", "foo_column", "value3"));
 
   // Perform the Get
   auto result_all = table->Get(get_all);
@@ -106,9 +107,6 @@ TEST_F(FilterTest, GetWithColumnPrefixFilter) {
 TEST_F(FilterTest, GetWithQualifierFilter) {
   // write row1 with 3 columns (a,b,c)
   FilterTest::test_util_->CreateTable("t1", "d");
-  FilterTest::test_util_->TablePut("t1", "row1", "d", "a", "value1");
-  FilterTest::test_util_->TablePut("t1", "row1", "d", "b", "value2");
-  FilterTest::test_util_->TablePut("t1", "row1", "d", "c", "value3");
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t1");
@@ -125,6 +123,10 @@ TEST_F(FilterTest, GetWithQualifierFilter) {
   // Get connection to HBase Table
   auto table = client.Table(tn);
   ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  table->Put(Put{"row1"}.AddColumn("d", "a", "value1"));
+  table->Put(Put{"row1"}.AddColumn("d", "b", "value2"));
+  table->Put(Put{"row1"}.AddColumn("d", "c", "value3"));
 
   // Perform the Get
   auto result = table->Get(get);

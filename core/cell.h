@@ -38,6 +38,8 @@ class Cell {
  public:
   Cell(const std::string &row, const std::string &family, const std::string &qualifier,
        const int64_t timestamp, const std::string &value, const hbase::CellType &cell_type);
+  Cell(const Cell &cell);
+  Cell &operator=(const Cell &cell);
   virtual ~Cell();
   const std::string &Row() const;
   const std::string &Family() const;

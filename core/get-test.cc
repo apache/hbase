@@ -17,12 +17,15 @@
  *
  */
 
+#include "core/cell.h"
 #include "core/get.h"
 
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
+using hbase::Cell;
 using hbase::Get;
+
 const int NUMBER_OF_GETS = 5;
 
 void CheckFamilies(Get &get) {
@@ -199,21 +202,16 @@ TEST(Get, SingleGet) {
 }
 
 TEST(Get, MultiGet) {
-  std::vector<Get *> gets;
+  std::vector<std::unique_ptr<Get>> gets;
   for (int i = 0; i < NUMBER_OF_GETS; i++) {
     std::string row_str = "row-test";
     row_str += std::to_string(i);
-    Get *get = new Get(row_str);
+    auto get = std::make_unique<Get>(row_str);
 
     GetMethods(*get, row_str);
-    gets.push_back(get);
+    gets.push_back(std::move(get));
   }
   EXPECT_EQ(NUMBER_OF_GETS, gets.size());
-
-  for (const auto &get : gets) {
-    delete get;
-  }
-  gets.clear();
 }
 
 TEST(Get, Exception) {

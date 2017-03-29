@@ -58,18 +58,16 @@ void TestUtil::StartMiniCluster(int32_t num_region_servers) {
   conf()->Set(ZKUtil::kHBaseZookeeperClientPort_,
               mini_->GetConfValue(ZKUtil::kHBaseZookeeperClientPort_));
 }
+
 void TestUtil::StopMiniCluster() { mini_->StopCluster(); }
 
 void TestUtil::CreateTable(const std::string &table, const std::string &family) {
   mini_->CreateTable(table, family);
 }
+
 void TestUtil::CreateTable(const std::string &table, const std::string &family,
                            const std::vector<std::string> &keys) {
   mini_->CreateTable(table, family, keys);
-}
-void TestUtil::TablePut(const std::string &table, const std::string &row, const std::string &family,
-                        const std::string &column, const std::string &value) {
-  mini_->TablePut(table, row, family, column, value);
 }
 
 void TestUtil::StartStandAloneInstance() {

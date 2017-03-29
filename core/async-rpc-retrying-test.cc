@@ -163,8 +163,6 @@ TEST(AsyncRpcRetryTest, TestGetBasic) {
   test_util->StartMiniCluster(2);
 
   test_util->CreateTable("t", "d");
-  test_util->TablePut("t", "test2", "d", "2", "value2");
-  test_util->TablePut("t", "test2", "d", "extra", "value for extra");
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t");
@@ -179,6 +177,9 @@ TEST(AsyncRpcRetryTest, TestGetBasic) {
   // Get connection to HBase Table
   auto table = client.Table(tn);
   ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  table->Put(Put{"test2"}.AddColumn("d", "2", "value2"));
+  table->Put(Put{"test2"}.AddColumn("d", "extra", "value for extra"));
 
   /* init region location and rpc channel */
   auto region_location = table->GetRegionLocation(row);

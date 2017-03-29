@@ -19,6 +19,7 @@
 #pragma once
 
 #include <folly/futures/Future.h>
+#include <folly/futures/Unit.h>
 
 #include <chrono>
 #include <memory>
@@ -29,9 +30,11 @@
 #include "core/async-rpc-retrying-caller.h"
 #include "core/connection-configuration.h"
 #include "core/get.h"
+#include "core/put.h"
 #include "core/result.h"
 
 using folly::Future;
+using folly::Unit;
 using hbase::pb::TableName;
 using std::chrono::nanoseconds;
 using std::chrono::milliseconds;
@@ -52,6 +55,8 @@ class RawAsyncTable {
   virtual ~RawAsyncTable() = default;
 
   Future<std::shared_ptr<Result>> Get(const hbase::Get& get);
+
+  Future<Unit> Put(const hbase::Put& put);
   void Close() {}
 
  private:

@@ -61,8 +61,6 @@ class TestUtil {
   void CreateTable(const std::string &table, const std::string &family);
   void CreateTable(const std::string &table, const std::string &family,
                    const std::vector<std::string> &keys);
-  void TablePut(const std::string &table, const std::string &row, const std::string &family,
-                const std::string &column, const std::string &value);
 
   void StartStandAloneInstance();
   void StopStandAloneInstance();
