@@ -23,6 +23,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
@@ -35,13 +37,39 @@ import org.junit.experimental.categories.Category;
 public class TestFileIOEngine {
   @Test
   public void testFileIOEngine() throws IOException {
-    int size = 2 * 1024 * 1024; // 2 MB
-    String filePath = "testFileIOEngine";
+    long totalCapacity = 6 * 1024 * 1024; // 6 MB
+    String[] filePaths = { "testFileIOEngine1", "testFileIOEngine2",
+        "testFileIOEngine3" };
+    long sizePerFile = totalCapacity / filePaths.length; // 2 MB per File
+    List<Long> boundaryStartPositions = new ArrayList<Long>();
+    boundaryStartPositions.add(0L);
+    for (int i = 1; i < filePaths.length; i++) {
+      boundaryStartPositions.add(sizePerFile * i - 1);
+      boundaryStartPositions.add(sizePerFile * i);
+      boundaryStartPositions.add(sizePerFile * i + 1);
+    }
+    List<Long> boundaryStopPositions = new ArrayList<Long>();
+    for (int i = 1; i < filePaths.length; i++) {
+      boundaryStopPositions.add(sizePerFile * i - 1);
+      boundaryStopPositions.add(sizePerFile * i);
+      boundaryStopPositions.add(sizePerFile * i + 1);
+    }
+    boundaryStopPositions.add(sizePerFile * filePaths.length - 1);
+    FileIOEngine fileIOEngine = new FileIOEngine(totalCapacity, filePaths);
     try {
-      FileIOEngine fileIOEngine = new FileIOEngine(filePath, size);
-      for (int i = 0; i < 50; i++) {
+      for (int i = 0; i < 500; i++) {
         int len = (int) Math.floor(Math.random() * 100);
-        long offset = (long) Math.floor(Math.random() * size % (size - len));
+        long offset = (long) Math.floor(Math.random() * totalCapacity % (totalCapacity - len));
+        if (i < boundaryStartPositions.size()) {
+          // make the boundary start positon
+          offset = boundaryStartPositions.get(i);
+        } else if ((i - boundaryStartPositions.size()) < boundaryStopPositions.size()) {
+          // make the boundary stop positon
+          offset = boundaryStopPositions.get(i - boundaryStartPositions.size()) - len + 1;
+        } else if (i % 2 == 0) {
+          // make the cross-files block writing/reading
+          offset = Math.max(1, i % filePaths.length) * sizePerFile - len / 2;
+        }
         byte[] data1 = new byte[len];
         for (int j = 0; j < data1.length; ++j) {
           data1[j] = (byte) (Math.random() * 255);
@@ -54,9 +82,12 @@ public class TestFileIOEngine {
         }
       }
     } finally {
-      File file = new File(filePath);
-      if (file.exists()) {
-        file.delete();
+      fileIOEngine.shutdown();
+      for (String filePath : filePaths) {
+        File file = new File(filePath);
+        if (file.exists()) {
+          file.delete();
+        }
       }
     }
 
