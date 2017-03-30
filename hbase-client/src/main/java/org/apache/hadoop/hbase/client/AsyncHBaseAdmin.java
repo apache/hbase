@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,9 +45,9 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -450,6 +451,112 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     return batchTableOperations(pattern, (table) -> disableTable(table), "DISABLE");
   }
 
+
+  @Override
+  public CompletableFuture<Boolean> isTableEnabled(TableName tableName) {
+    CompletableFuture<Boolean> future = new CompletableFuture<>();
+    AsyncMetaTableAccessor.getTableState(metaTable, tableName).whenComplete((state, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      if (state.isPresent()) {
+        future.complete(state.get().inStates(TableState.State.ENABLED));
+      } else {
+        future.completeExceptionally(new TableNotFoundException(tableName));
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isTableDisabled(TableName tableName) {
+    CompletableFuture<Boolean> future = new CompletableFuture<>();
+    AsyncMetaTableAccessor.getTableState(metaTable, tableName).whenComplete((state, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      if (state.isPresent()) {
+        future.complete(state.get().inStates(TableState.State.DISABLED));
+      } else {
+        future.completeExceptionally(new TableNotFoundException(tableName));
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isTableAvailable(TableName tableName) {
+    return isTableAvailable(tableName, null);
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys) {
+    CompletableFuture<Boolean> future = new CompletableFuture<>();
+    isTableEnabled(tableName).whenComplete(
+      (enabled, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+          return;
+        }
+        if (!enabled) {
+          future.complete(false);
+        } else {
+          AsyncMetaTableAccessor.getTableRegionsAndLocations(metaTable, Optional.of(tableName))
+              .whenComplete(
+                (locations, error1) -> {
+                  if (error1 != null) {
+                    future.completeExceptionally(error1);
+                    return;
+                  }
+                  int notDeployed = 0;
+                  int regionCount = 0;
+                  for (Pair<HRegionInfo, ServerName> pair : locations) {
+                    HRegionInfo info = pair.getFirst();
+                    if (pair.getSecond() == null) {
+                      if (LOG.isDebugEnabled()) {
+                        LOG.debug("Table " + tableName + " has not deployed region "
+                            + pair.getFirst().getEncodedName());
+                      }
+                      notDeployed++;
+                    } else if (splitKeys != null
+                        && !Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
+                      for (byte[] splitKey : splitKeys) {
+                        // Just check if the splitkey is available
+                        if (Bytes.equals(info.getStartKey(), splitKey)) {
+                          regionCount++;
+                          break;
+                        }
+                      }
+                    } else {
+                      // Always empty start row should be counted
+                      regionCount++;
+                    }
+                  }
+                  if (notDeployed > 0) {
+                    if (LOG.isDebugEnabled()) {
+                      LOG.debug("Table " + tableName + " has " + notDeployed + " regions");
+                    }
+                    future.complete(false);
+                  } else if (splitKeys != null && regionCount != splitKeys.length + 1) {
+                    if (LOG.isDebugEnabled()) {
+                      LOG.debug("Table " + tableName + " expected to have "
+                          + (splitKeys.length + 1) + " regions, but only " + regionCount
+                          + " available");
+                    }
+                    future.complete(false);
+                  } else {
+                    if (LOG.isDebugEnabled()) {
+                      LOG.debug("Table " + tableName + " should be available");
+                    }
+                    future.complete(true);
+                  }
+                });
+        }
+      });
+    return future;
+  }
 
   @Override
   public CompletableFuture<Pair<Integer, Integer>> getAlterStatus(TableName tableName) {

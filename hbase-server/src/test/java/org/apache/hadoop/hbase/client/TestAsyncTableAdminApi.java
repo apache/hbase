@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
+import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -213,7 +216,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   }
 
   @Test(timeout = 300000)
-  public void testCreateTableWithRegions() throws IOException, InterruptedException {
+  public void testCreateTableWithRegions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
@@ -224,6 +227,9 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys).join();
+
+    boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys).get();
+    assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
     List<HRegionLocation> regions;
     Iterator<HRegionLocation> hris;
@@ -833,6 +839,32 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     for (byte[] familyName : families) {
       assertTrue("Expected family " + Bytes.toString(familyName), htdFamilies.contains(familyName));
     }
+  }
+
+  @Test
+  public void testIsTableEnabledAndDisabled() throws Exception {
+    final TableName table = TableName.valueOf("testIsTableEnabledAndDisabled");
+    HTableDescriptor desc = new HTableDescriptor(table);
+    desc.addFamily(new HColumnDescriptor(FAMILY));
+    admin.createTable(desc).join();
+    assertTrue(admin.isTableEnabled(table).get());
+    assertFalse(admin.isTableDisabled(table).get());
+    admin.disableTable(table).join();
+    assertFalse(admin.isTableEnabled(table).get());
+    assertTrue(admin.isTableDisabled(table).get());
+    admin.deleteTable(table).join();
+  }
+
+  @Test
+  public void testTableAvailableWithRandomSplitKeys() throws Exception {
+    TableName tableName = TableName.valueOf("testTableAvailableWithRandomSplitKeys");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor("col"));
+    byte[][] splitKeys = new byte[1][];
+    splitKeys = new byte[][] { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 } };
+    admin.createTable(desc).join();
+    boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys).get();
+    assertFalse("Table should be created with 1 row in META", tableAvailable);
   }
 
 }

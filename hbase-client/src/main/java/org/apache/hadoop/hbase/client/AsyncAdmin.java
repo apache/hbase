@@ -222,6 +222,30 @@ public interface AsyncAdmin {
   CompletableFuture<HTableDescriptor[]> disableTables(Pattern pattern);
 
   /**
+   * @param tableName name of table to check
+   * @return true if table is off-line. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isTableDisabled(TableName tableName);
+
+  /**
+   * @param tableName name of table to check
+   * @return true if all regions of the table are available. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isTableAvailable(TableName tableName);
+
+  /**
+   * Use this api to check if the table has been created with the specified number of splitkeys
+   * which was used while creating the given table. Note : If this api is used after a table's
+   * region gets splitted, the api may return false. The return value will be wrapped by a
+   * {@link CompletableFuture}.
+   * @param tableName name of table to check
+   * @param splitKeys keys to check if the table has been created with all split keys
+   */
+  CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys);
+
+  /**
    * Get the status of alter command - indicates how many regions have received the updated schema
    * Asynchronous operation.
    * @param tableName TableName instance
@@ -284,6 +308,13 @@ public interface AsyncAdmin {
    * @return List of descriptors wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<NamespaceDescriptor[]> listNamespaceDescriptors();
+
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isTableEnabled(TableName tableName);
 
   /**
    * Turn the load balancer on or off.
