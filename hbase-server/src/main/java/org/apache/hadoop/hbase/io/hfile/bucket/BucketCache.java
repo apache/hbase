@@ -309,9 +309,14 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private IOEngine getIOEngineFromName(String ioEngineName, long capacity)
       throws IOException {
-    if (ioEngineName.startsWith("file:"))
-      return new FileIOEngine(ioEngineName.substring(5), capacity);
-    else if (ioEngineName.startsWith("offheap"))
+    if (ioEngineName.startsWith("file:") || ioEngineName.startsWith("files:")) {
+      // In order to make the usage simple, we only need the prefix 'files:' in
+      // document whether one or multiple file(s), but also support 'file:' for
+      // the compatibility
+      String[] filePaths =
+          ioEngineName.substring(ioEngineName.indexOf(":") + 1).split(FileIOEngine.FILE_DELIMITER);
+      return new FileIOEngine(capacity, filePaths);
+    } else if (ioEngineName.startsWith("offheap"))
       return new ByteBufferIOEngine(capacity, true);
     else if (ioEngineName.startsWith("heap"))
       return new ByteBufferIOEngine(capacity, false);

@@ -18,10 +18,12 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,38 +36,52 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public class FileIOEngine implements IOEngine {
   private static final Log LOG = LogFactory.getLog(FileIOEngine.class);
-  private final RandomAccessFile raf;
-  private final FileChannel fileChannel;
-  private final String path;
-  private long size;
+  public static final String FILE_DELIMITER = ",";
+  private final String[] filePaths;
+  private final FileChannel[] fileChannels;
+  private final RandomAccessFile[] rafs;
 
-  public FileIOEngine(String filePath, long fileSize) throws IOException {
-    this.path = filePath;
-    this.size = fileSize;
-    try {
-      raf = new RandomAccessFile(filePath, "rw");
-    } catch (java.io.FileNotFoundException fex) {
-      LOG.error("Can't create bucket cache file " + filePath, fex);
-      throw fex;
+  private final long sizePerFile;
+  private final long capacity;
+
+  private FileReadAccessor readAccessor = new FileReadAccessor();
+  private FileWriteAccessor writeAccessor = new FileWriteAccessor();
+
+  public FileIOEngine(long capacity, String... filePaths) throws IOException {
+    this.sizePerFile = capacity / filePaths.length;
+    this.capacity = this.sizePerFile * filePaths.length;
+    this.filePaths = filePaths;
+    this.fileChannels = new FileChannel[filePaths.length];
+    this.rafs = new RandomAccessFile[filePaths.length];
+    for (int i = 0; i < filePaths.length; i++) {
+      String filePath = filePaths[i];
+      try {
+        rafs[i] = new RandomAccessFile(filePath, "rw");
+        long totalSpace = new File(filePath).getTotalSpace();
+        if (totalSpace < sizePerFile) {
+          // The next setting length will throw exception,logging this message
+          // is just used for the detail reason of exception，
+          String msg = "Only " + StringUtils.byteDesc(totalSpace)
+              + " total space under " + filePath + ", not enough for requested "
+              + StringUtils.byteDesc(sizePerFile);
+          LOG.warn(msg);
+        }
+        rafs[i].setLength(sizePerFile);
+        fileChannels[i] = rafs[i].getChannel();
+        LOG.info("Allocating cache " + StringUtils.byteDesc(sizePerFile)
+            + ", on the path:" + filePath);
+      } catch (IOException fex) {
+        LOG.error("Failed allocating cache on " + filePath, fex);
+        shutdown();
+        throw fex;
+      }
     }
-
-    try {
-      raf.setLength(fileSize);
-    } catch (IOException ioex) {
-      LOG.error("Can't extend bucket cache file; insufficient space for "
-          + StringUtils.byteDesc(fileSize), ioex);
-      raf.close();
-      throw ioex;
-    }
-
-    fileChannel = raf.getChannel();
-    LOG.info("Allocating " + StringUtils.byteDesc(fileSize) + ", on the path:" + filePath);
   }
 
   @Override
   public String toString() {
-    return "ioengine=" + this.getClass().getSimpleName() + ", path=" + this.path +
-      ", size=" + String.format("%,d", this.size);
+    return "ioengine=" + this.getClass().getSimpleName() + ", paths="
+        + Arrays.asList(filePaths) + ", capacity=" + String.format("%,d", this.capacity);
   }
 
   /**
@@ -86,7 +102,7 @@ public class FileIOEngine implements IOEngine {
    */
   @Override
   public int read(ByteBuffer dstBuffer, long offset) throws IOException {
-    return fileChannel.read(dstBuffer, offset);
+    return accessFile(readAccessor, dstBuffer, offset);
   }
 
   /**
@@ -97,7 +113,7 @@ public class FileIOEngine implements IOEngine {
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
-    fileChannel.write(srcBuffer, offset);
+    accessFile(writeAccessor, srcBuffer, offset);
   }
 
   /**
@@ -106,7 +122,16 @@ public class FileIOEngine implements IOEngine {
    */
   @Override
   public void sync() throws IOException {
-    fileChannel.force(true);
+    for (int i = 0; i < fileChannels.length; i++) {
+      try {
+        if (fileChannels[i] != null) {
+          fileChannels[i].force(true);
+        }
+      } catch (IOException ie) {
+        LOG.warn("Failed syncing data to " + this.filePaths[i]);
+        throw ie;
+      }
+    }
   }
 
   /**
@@ -114,15 +139,93 @@ public class FileIOEngine implements IOEngine {
    */
   @Override
   public void shutdown() {
-    try {
-      fileChannel.close();
-    } catch (IOException ex) {
-      LOG.error("Can't shutdown cleanly", ex);
-    }
-    try {
-      raf.close();
-    } catch (IOException ex) {
-      LOG.error("Can't shutdown cleanly", ex);
+    for (int i = 0; i < filePaths.length; i++) {
+      try {
+        if (fileChannels[i] != null) {
+          fileChannels[i].close();
+        }
+        if (rafs[i] != null) {
+          rafs[i].close();
+        }
+      } catch (IOException ex) {
+        LOG.error("Failed closing " + filePaths[i] + " when shudown the IOEngine", ex);
+      }
     }
   }
+
+  private int accessFile(FileAccessor accessor, ByteBuffer buffer, long globalOffset)
+      throws IOException {
+    int startFileNum = getFileNum(globalOffset);
+    int remainingAccessDataLen = buffer.remaining();
+    int endFileNum = getFileNum(globalOffset + remainingAccessDataLen - 1);
+    int accessFileNum = startFileNum;
+    long accessOffset = getAbsoluteOffsetInFile(accessFileNum, globalOffset);
+    int bufLimit = buffer.limit();
+    while (true) {
+      FileChannel fileChannel = fileChannels[accessFileNum];
+      if (endFileNum > accessFileNum) {
+        // short the limit;
+        buffer.limit((int) (buffer.limit() - remainingAccessDataLen + sizePerFile - accessOffset));
+      }
+      int accessLen = accessor.access(fileChannel, buffer, accessOffset);
+      // recover the limit
+      buffer.limit(bufLimit);
+      if (accessLen < remainingAccessDataLen) {
+        remainingAccessDataLen -= accessLen;
+        accessFileNum++;
+        accessOffset = 0;
+      } else {
+        break;
+      }
+      if (accessFileNum >= fileChannels.length) {
+        throw new IOException("Required data len " + StringUtils.byteDesc(buffer.remaining())
+            + " exceed the engine's capacity " + StringUtils.byteDesc(capacity) + " where offset="
+            + globalOffset);
+      }
+    }
+    return bufLimit;
+  }
+
+  /**
+   * Get the absolute offset in given file with the relative global offset.
+   * @param fileNum
+   * @param globalOffset
+   * @return the absolute offset
+   */
+  private long getAbsoluteOffsetInFile(int fileNum, long globalOffset) {
+    return globalOffset - fileNum * sizePerFile;
+  }
+
+  private int getFileNum(long offset) {
+    if (offset < 0) {
+      throw new IllegalArgumentException("Unexpected offset " + offset);
+    }
+    int fileNum = (int) (offset / sizePerFile);
+    if (fileNum >= fileChannels.length) {
+      throw new RuntimeException("Not expected offset " + offset + " where capacity=" + capacity);
+    }
+    return fileNum;
+  }
+
+  private static interface FileAccessor {
+    int access(FileChannel fileChannel, ByteBuffer byteBuffer, long accessOffset)
+        throws IOException;
+  }
+
+  private static class FileReadAccessor implements FileAccessor {
+    @Override
+    public int access(FileChannel fileChannel, ByteBuffer byteBuffer, long accessOffset)
+        throws IOException {
+      return fileChannel.read(byteBuffer, accessOffset);
+    }
+  }
+
+  private static class FileWriteAccessor implements FileAccessor {
+    @Override
+    public int access(FileChannel fileChannel, ByteBuffer byteBuffer, long accessOffset)
+        throws IOException {
+      return fileChannel.write(byteBuffer, accessOffset);
+    }
+  }
+
 }
