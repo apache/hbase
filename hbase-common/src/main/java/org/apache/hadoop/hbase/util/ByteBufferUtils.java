@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -49,8 +50,10 @@ public final class ByteBufferUtils {
   public final static int VALUE_MASK = 0x7f;
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
-  private static final boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
-  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  @VisibleForTesting
+  static boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
+  @VisibleForTesting
+  static boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   private ByteBufferUtils() {
   }
@@ -668,7 +671,7 @@ public final class ByteBufferUtils {
     int end2 = o2 + l2;
     for (int i = o1, j = o2; i < end1 && j < end2; i++, j++) {
       int a = buf1[i] & 0xFF;
-      int b = buf2.get(i) & 0xFF;
+      int b = buf2.get(j) & 0xFF;
       if (a != b) {
         return a - b;
       }

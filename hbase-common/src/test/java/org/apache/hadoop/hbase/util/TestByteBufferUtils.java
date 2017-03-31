@@ -28,8 +28,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -38,15 +40,44 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.WritableUtils;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 @Category({MiscTests.class, SmallTests.class})
+@RunWith(Parameterized.class)
 public class TestByteBufferUtils {
 
   private byte[] array;
 
+  @AfterClass
+  public static void afterClass() throws Exception {
+    ByteBufferUtils.UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
+    ByteBufferUtils.UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> parameters() {
+    List<Object[]> paramList = new ArrayList<>(2);
+    {
+      paramList.add(new Object[] { false });
+      paramList.add(new Object[] { true });
+    }
+    return paramList;
+  }
+
+  public TestByteBufferUtils(boolean useUnsafeIfPossible) {
+    if (useUnsafeIfPossible) {
+      ByteBufferUtils.UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
+      ByteBufferUtils.UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+    } else {
+      ByteBufferUtils.UNSAFE_AVAIL = false;
+      ByteBufferUtils.UNSAFE_UNALIGNED = false;
+    }
+  }
   /**
    * Create an array with sample data.
    */
@@ -412,6 +443,14 @@ public class TestByteBufferUtils {
     assertTrue(result > 0);
     result = ByteBufferUtils.compareTo(bb3, 0, bb3.remaining(), b3, 0, b3.length);
     assertTrue(result < 0);
+
+    byte[] b4 = Bytes.toBytes("123");
+    ByteBuffer bb4 = ByteBuffer.allocate(10 + b4.length);
+    for (int i = 10; i < (bb4.capacity()); ++i) {
+      bb4.put(i, b4[i - 10]);
+    }
+    result = ByteBufferUtils.compareTo(b4, 0, b4.length, bb4, 10, b4.length);
+    assertEquals(0, result);
   }
 
   @Test
