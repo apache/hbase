@@ -98,7 +98,7 @@ class AsyncRegionLocator {
         && oldLoc.getServerName().equals(loc.getServerName());
   }
 
-  static void updateCachedLoation(HRegionLocation loc, Throwable exception,
+  static void updateCachedLocation(HRegionLocation loc, Throwable exception,
       Function<HRegionLocation, HRegionLocation> cachedLocationSupplier,
       Consumer<HRegionLocation> addToCache, Consumer<HRegionLocation> removeFromCache) {
     HRegionLocation oldLoc = cachedLocationSupplier.apply(loc);

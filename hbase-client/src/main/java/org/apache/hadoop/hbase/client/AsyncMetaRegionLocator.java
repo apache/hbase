@@ -94,25 +94,26 @@ class AsyncMetaRegionLocator {
   }
 
   void updateCachedLocation(HRegionLocation loc, Throwable exception) {
-    updateCachedLoation(loc, exception, l -> metaRegionLocation.get(), newLoc -> {
-      for (;;) {
-        HRegionLocation oldLoc = metaRegionLocation.get();
-        if (oldLoc != null && (oldLoc.getSeqNum() > newLoc.getSeqNum()
-            || oldLoc.getServerName().equals(newLoc.getServerName()))) {
-          return;
+    AsyncRegionLocator.updateCachedLocation(loc, exception, l -> metaRegionLocation.get(),
+      newLoc -> {
+        for (;;) {
+          HRegionLocation oldLoc = metaRegionLocation.get();
+          if (oldLoc != null && (oldLoc.getSeqNum() > newLoc.getSeqNum() ||
+              oldLoc.getServerName().equals(newLoc.getServerName()))) {
+            return;
+          }
+          if (metaRegionLocation.compareAndSet(oldLoc, newLoc)) {
+            return;
+          }
         }
-        if (metaRegionLocation.compareAndSet(oldLoc, newLoc)) {
-          return;
+      }, l -> {
+        for (;;) {
+          HRegionLocation oldLoc = metaRegionLocation.get();
+          if (!canUpdate(l, oldLoc) || metaRegionLocation.compareAndSet(oldLoc, null)) {
+            return;
+          }
         }
-      }
-    }, l -> {
-      for (;;) {
-        HRegionLocation oldLoc = metaRegionLocation.get();
-        if (!canUpdate(l, oldLoc) || metaRegionLocation.compareAndSet(oldLoc, null)) {
-          return;
-        }
-      }
-    });
+      });
   }
 
   void clearCache() {
