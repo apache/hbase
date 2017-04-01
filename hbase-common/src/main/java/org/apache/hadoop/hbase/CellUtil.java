@@ -1385,12 +1385,10 @@ public final class CellUtil {
    * @return Estimate of the <code>cell</code> size in bytes.
    */
   public static int estimatedSerializedSizeOf(final Cell cell) {
-    // If a KeyValue, we can give a good estimate of size.
-    if (cell instanceof KeyValue) {
-      return ((KeyValue)cell).getLength() + Bytes.SIZEOF_INT;
+    if (cell instanceof ExtendedCell) {
+      return ((ExtendedCell) cell).getSerializedSize(true) + Bytes.SIZEOF_INT;
     }
-    // TODO: Should we add to Cell a sizeOf?  Would it help? Does it make sense if Cell is
-    // prefix encoded or compressed?
+
     return getSumOfCellElementLengths(cell) +
       // Use the KeyValue's infrastructure size presuming that another implementation would have
       // same basic cost.

@@ -86,7 +86,7 @@ public class SplitLogTask {
   public ServerName getServerName() {
     return this.originServer;
   }
-  
+
   public ZooKeeperProtos.SplitLogTask.RecoveryMode getMode() {
     return this.mode;
   }
