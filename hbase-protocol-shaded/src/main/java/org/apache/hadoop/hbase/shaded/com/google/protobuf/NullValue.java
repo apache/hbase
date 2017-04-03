@@ -80,8 +80,7 @@ public enum NullValue
   }
   public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return org.apache.hadoop.hbase.shaded.com.google.protobuf.StructProto.getDescriptor()
-        .getEnumTypes().get(0);
+    return org.apache.hadoop.hbase.shaded.com.google.protobuf.StructProto.getDescriptor().getEnumTypes().get(0);
   }
 
   private static final NullValue[] VALUES = values();

@@ -622,7 +622,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegionInfo()) {
         hash = (37 * hash) + REGION_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getRegionInfo().hashCode();
@@ -1379,7 +1379,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasSpec()) {
         hash = (37 * hash) + SPEC_FIELD_NUMBER;
         hash = (53 * hash) + getSpec().hashCode();
@@ -2147,7 +2147,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasFamilyName()) {
         hash = (37 * hash) + FAMILY_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getFamilyName().hashCode();
@@ -2770,7 +2770,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasLastFlushedSequenceId()) {
         hash = (37 * hash) + LAST_FLUSHED_SEQUENCE_ID_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
@@ -4701,7 +4701,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegionSpecifier()) {
         hash = (37 * hash) + REGION_SPECIFIER_FIELD_NUMBER;
         hash = (53 * hash) + getRegionSpecifier().hashCode();
@@ -6762,7 +6762,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasAgeOfLastAppliedOp()) {
         hash = (37 * hash) + AGEOFLASTAPPLIEDOP_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
@@ -7501,7 +7501,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPeerID()) {
         hash = (37 * hash) + PEERID_FIELD_NUMBER;
         hash = (53 * hash) + getPeerID().hashCode();
@@ -9119,7 +9119,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasNumberOfRequests()) {
         hash = (37 * hash) + NUMBER_OF_REQUESTS_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
@@ -11442,7 +11442,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasServer()) {
         hash = (37 * hash) + SERVER_FIELD_NUMBER;
         hash = (53 * hash) + getServer().hashCode();
@@ -12785,7 +12785,7 @@ public final class ClusterStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasHbaseVersion()) {
         hash = (37 * hash) + HBASE_VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getHbaseVersion().hashCode();

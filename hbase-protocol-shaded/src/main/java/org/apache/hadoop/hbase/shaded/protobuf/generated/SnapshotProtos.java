@@ -496,7 +496,7 @@ public final class SnapshotProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasType()) {
         hash = (37 * hash) + TYPE_FIELD_NUMBER;
         hash = (53 * hash) + type_;
@@ -1549,7 +1549,7 @@ public final class SnapshotProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasName()) {
           hash = (37 * hash) + NAME_FIELD_NUMBER;
           hash = (53 * hash) + getName().hashCode();
@@ -2362,7 +2362,7 @@ public final class SnapshotProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasFamilyName()) {
           hash = (37 * hash) + FAMILY_NAME_FIELD_NUMBER;
           hash = (53 * hash) + getFamilyName().hashCode();
@@ -3131,7 +3131,7 @@ public final class SnapshotProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasVersion()) {
         hash = (37 * hash) + VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getVersion();
@@ -4146,7 +4146,7 @@ public final class SnapshotProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTableSchema()) {
         hash = (37 * hash) + TABLE_SCHEMA_FIELD_NUMBER;
         hash = (53 * hash) + getTableSchema().hashCode();

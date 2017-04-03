@@ -12,7 +12,7 @@ public interface UInt64ValueOrBuilder extends
    * The uint64 value.
    * </pre>
    *
-   * <code>optional uint64 value = 1;</code>
+   * <code>uint64 value = 1;</code>
    */
   long getValue();
 }

@@ -12,7 +12,7 @@ public interface EnumValueOrBuilder extends
    * Enum value name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   java.lang.String getName();
   /**
@@ -20,7 +20,7 @@ public interface EnumValueOrBuilder extends
    * Enum value name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes();
@@ -30,7 +30,7 @@ public interface EnumValueOrBuilder extends
    * Enum value number.
    * </pre>
    *
-   * <code>optional int32 number = 2;</code>
+   * <code>int32 number = 2;</code>
    */
   int getNumber();
 

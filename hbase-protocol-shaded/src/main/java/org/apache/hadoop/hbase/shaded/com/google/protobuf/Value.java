@@ -175,7 +175,7 @@ public  final class Value extends
    * Represents a null value.
    * </pre>
    *
-   * <code>optional .google.protobuf.NullValue null_value = 1;</code>
+   * <code>.google.protobuf.NullValue null_value = 1;</code>
    */
   public int getNullValueValue() {
     if (kindCase_ == 1) {
@@ -188,7 +188,7 @@ public  final class Value extends
    * Represents a null value.
    * </pre>
    *
-   * <code>optional .google.protobuf.NullValue null_value = 1;</code>
+   * <code>.google.protobuf.NullValue null_value = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.NullValue getNullValue() {
     if (kindCase_ == 1) {
@@ -205,7 +205,7 @@ public  final class Value extends
    * Represents a double value.
    * </pre>
    *
-   * <code>optional double number_value = 2;</code>
+   * <code>double number_value = 2;</code>
    */
   public double getNumberValue() {
     if (kindCase_ == 2) {
@@ -220,7 +220,7 @@ public  final class Value extends
    * Represents a string value.
    * </pre>
    *
-   * <code>optional string string_value = 3;</code>
+   * <code>string string_value = 3;</code>
    */
   public java.lang.String getStringValue() {
     java.lang.Object ref = "";
@@ -244,7 +244,7 @@ public  final class Value extends
    * Represents a string value.
    * </pre>
    *
-   * <code>optional string string_value = 3;</code>
+   * <code>string string_value = 3;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getStringValueBytes() {
@@ -271,7 +271,7 @@ public  final class Value extends
    * Represents a boolean value.
    * </pre>
    *
-   * <code>optional bool bool_value = 4;</code>
+   * <code>bool bool_value = 4;</code>
    */
   public boolean getBoolValue() {
     if (kindCase_ == 4) {
@@ -286,7 +286,7 @@ public  final class Value extends
    * Represents a structured value.
    * </pre>
    *
-   * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+   * <code>.google.protobuf.Struct struct_value = 5;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.Struct getStructValue() {
     if (kindCase_ == 5) {
@@ -299,7 +299,7 @@ public  final class Value extends
    * Represents a structured value.
    * </pre>
    *
-   * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+   * <code>.google.protobuf.Struct struct_value = 5;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.StructOrBuilder getStructValueOrBuilder() {
     if (kindCase_ == 5) {
@@ -314,7 +314,7 @@ public  final class Value extends
    * Represents a repeated `Value`.
    * </pre>
    *
-   * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+   * <code>.google.protobuf.ListValue list_value = 6;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValue getListValue() {
     if (kindCase_ == 6) {
@@ -327,7 +327,7 @@ public  final class Value extends
    * Represents a repeated `Value`.
    * </pre>
    *
-   * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+   * <code>.google.protobuf.ListValue list_value = 6;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValueOrBuilder getListValueOrBuilder() {
     if (kindCase_ == 6) {
@@ -458,7 +458,7 @@ public  final class Value extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     switch (kindCase_) {
       case 1:
         hash = (37 * hash) + NULL_VALUE_FIELD_NUMBER;
@@ -784,7 +784,7 @@ public  final class Value extends
      * Represents a null value.
      * </pre>
      *
-     * <code>optional .google.protobuf.NullValue null_value = 1;</code>
+     * <code>.google.protobuf.NullValue null_value = 1;</code>
      */
     public int getNullValueValue() {
       if (kindCase_ == 1) {
@@ -797,7 +797,7 @@ public  final class Value extends
      * Represents a null value.
      * </pre>
      *
-     * <code>optional .google.protobuf.NullValue null_value = 1;</code>
+     * <code>.google.protobuf.NullValue null_value = 1;</code>
      */
     public Builder setNullValueValue(int value) {
       kindCase_ = 1;
@@ -810,7 +810,7 @@ public  final class Value extends
      * Represents a null value.
      * </pre>
      *
-     * <code>optional .google.protobuf.NullValue null_value = 1;</code>
+     * <code>.google.protobuf.NullValue null_value = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.NullValue getNullValue() {
       if (kindCase_ == 1) {
@@ -825,7 +825,7 @@ public  final class Value extends
      * Represents a null value.
      * </pre>
      *
-     * <code>optional .google.protobuf.NullValue null_value = 1;</code>
+     * <code>.google.protobuf.NullValue null_value = 1;</code>
      */
     public Builder setNullValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.NullValue value) {
       if (value == null) {
@@ -841,7 +841,7 @@ public  final class Value extends
      * Represents a null value.
      * </pre>
      *
-     * <code>optional .google.protobuf.NullValue null_value = 1;</code>
+     * <code>.google.protobuf.NullValue null_value = 1;</code>
      */
     public Builder clearNullValue() {
       if (kindCase_ == 1) {
@@ -857,7 +857,7 @@ public  final class Value extends
      * Represents a double value.
      * </pre>
      *
-     * <code>optional double number_value = 2;</code>
+     * <code>double number_value = 2;</code>
      */
     public double getNumberValue() {
       if (kindCase_ == 2) {
@@ -870,7 +870,7 @@ public  final class Value extends
      * Represents a double value.
      * </pre>
      *
-     * <code>optional double number_value = 2;</code>
+     * <code>double number_value = 2;</code>
      */
     public Builder setNumberValue(double value) {
       kindCase_ = 2;
@@ -883,7 +883,7 @@ public  final class Value extends
      * Represents a double value.
      * </pre>
      *
-     * <code>optional double number_value = 2;</code>
+     * <code>double number_value = 2;</code>
      */
     public Builder clearNumberValue() {
       if (kindCase_ == 2) {
@@ -899,7 +899,7 @@ public  final class Value extends
      * Represents a string value.
      * </pre>
      *
-     * <code>optional string string_value = 3;</code>
+     * <code>string string_value = 3;</code>
      */
     public java.lang.String getStringValue() {
       java.lang.Object ref = "";
@@ -923,7 +923,7 @@ public  final class Value extends
      * Represents a string value.
      * </pre>
      *
-     * <code>optional string string_value = 3;</code>
+     * <code>string string_value = 3;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getStringValueBytes() {
@@ -948,7 +948,7 @@ public  final class Value extends
      * Represents a string value.
      * </pre>
      *
-     * <code>optional string string_value = 3;</code>
+     * <code>string string_value = 3;</code>
      */
     public Builder setStringValue(
         java.lang.String value) {
@@ -965,7 +965,7 @@ public  final class Value extends
      * Represents a string value.
      * </pre>
      *
-     * <code>optional string string_value = 3;</code>
+     * <code>string string_value = 3;</code>
      */
     public Builder clearStringValue() {
       if (kindCase_ == 3) {
@@ -980,7 +980,7 @@ public  final class Value extends
      * Represents a string value.
      * </pre>
      *
-     * <code>optional string string_value = 3;</code>
+     * <code>string string_value = 3;</code>
      */
     public Builder setStringValueBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -999,7 +999,7 @@ public  final class Value extends
      * Represents a boolean value.
      * </pre>
      *
-     * <code>optional bool bool_value = 4;</code>
+     * <code>bool bool_value = 4;</code>
      */
     public boolean getBoolValue() {
       if (kindCase_ == 4) {
@@ -1012,7 +1012,7 @@ public  final class Value extends
      * Represents a boolean value.
      * </pre>
      *
-     * <code>optional bool bool_value = 4;</code>
+     * <code>bool bool_value = 4;</code>
      */
     public Builder setBoolValue(boolean value) {
       kindCase_ = 4;
@@ -1025,7 +1025,7 @@ public  final class Value extends
      * Represents a boolean value.
      * </pre>
      *
-     * <code>optional bool bool_value = 4;</code>
+     * <code>bool bool_value = 4;</code>
      */
     public Builder clearBoolValue() {
       if (kindCase_ == 4) {
@@ -1043,7 +1043,7 @@ public  final class Value extends
      * Represents a structured value.
      * </pre>
      *
-     * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+     * <code>.google.protobuf.Struct struct_value = 5;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.Struct getStructValue() {
       if (structValueBuilder_ == null) {
@@ -1063,7 +1063,7 @@ public  final class Value extends
      * Represents a structured value.
      * </pre>
      *
-     * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+     * <code>.google.protobuf.Struct struct_value = 5;</code>
      */
     public Builder setStructValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.Struct value) {
       if (structValueBuilder_ == null) {
@@ -1083,7 +1083,7 @@ public  final class Value extends
      * Represents a structured value.
      * </pre>
      *
-     * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+     * <code>.google.protobuf.Struct struct_value = 5;</code>
      */
     public Builder setStructValue(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.Struct.Builder builderForValue) {
@@ -1101,7 +1101,7 @@ public  final class Value extends
      * Represents a structured value.
      * </pre>
      *
-     * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+     * <code>.google.protobuf.Struct struct_value = 5;</code>
      */
     public Builder mergeStructValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.Struct value) {
       if (structValueBuilder_ == null) {
@@ -1127,7 +1127,7 @@ public  final class Value extends
      * Represents a structured value.
      * </pre>
      *
-     * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+     * <code>.google.protobuf.Struct struct_value = 5;</code>
      */
     public Builder clearStructValue() {
       if (structValueBuilder_ == null) {
@@ -1150,7 +1150,7 @@ public  final class Value extends
      * Represents a structured value.
      * </pre>
      *
-     * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+     * <code>.google.protobuf.Struct struct_value = 5;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.Struct.Builder getStructValueBuilder() {
       return getStructValueFieldBuilder().getBuilder();
@@ -1160,7 +1160,7 @@ public  final class Value extends
      * Represents a structured value.
      * </pre>
      *
-     * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+     * <code>.google.protobuf.Struct struct_value = 5;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.StructOrBuilder getStructValueOrBuilder() {
       if ((kindCase_ == 5) && (structValueBuilder_ != null)) {
@@ -1177,7 +1177,7 @@ public  final class Value extends
      * Represents a structured value.
      * </pre>
      *
-     * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+     * <code>.google.protobuf.Struct struct_value = 5;</code>
      */
     private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
         org.apache.hadoop.hbase.shaded.com.google.protobuf.Struct, org.apache.hadoop.hbase.shaded.com.google.protobuf.Struct.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.StructOrBuilder> 
@@ -1205,7 +1205,7 @@ public  final class Value extends
      * Represents a repeated `Value`.
      * </pre>
      *
-     * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+     * <code>.google.protobuf.ListValue list_value = 6;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValue getListValue() {
       if (listValueBuilder_ == null) {
@@ -1225,7 +1225,7 @@ public  final class Value extends
      * Represents a repeated `Value`.
      * </pre>
      *
-     * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+     * <code>.google.protobuf.ListValue list_value = 6;</code>
      */
     public Builder setListValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValue value) {
       if (listValueBuilder_ == null) {
@@ -1245,7 +1245,7 @@ public  final class Value extends
      * Represents a repeated `Value`.
      * </pre>
      *
-     * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+     * <code>.google.protobuf.ListValue list_value = 6;</code>
      */
     public Builder setListValue(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValue.Builder builderForValue) {
@@ -1263,7 +1263,7 @@ public  final class Value extends
      * Represents a repeated `Value`.
      * </pre>
      *
-     * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+     * <code>.google.protobuf.ListValue list_value = 6;</code>
      */
     public Builder mergeListValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValue value) {
       if (listValueBuilder_ == null) {
@@ -1289,7 +1289,7 @@ public  final class Value extends
      * Represents a repeated `Value`.
      * </pre>
      *
-     * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+     * <code>.google.protobuf.ListValue list_value = 6;</code>
      */
     public Builder clearListValue() {
       if (listValueBuilder_ == null) {
@@ -1312,7 +1312,7 @@ public  final class Value extends
      * Represents a repeated `Value`.
      * </pre>
      *
-     * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+     * <code>.google.protobuf.ListValue list_value = 6;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValue.Builder getListValueBuilder() {
       return getListValueFieldBuilder().getBuilder();
@@ -1322,7 +1322,7 @@ public  final class Value extends
      * Represents a repeated `Value`.
      * </pre>
      *
-     * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+     * <code>.google.protobuf.ListValue list_value = 6;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValueOrBuilder getListValueOrBuilder() {
       if ((kindCase_ == 6) && (listValueBuilder_ != null)) {
@@ -1339,7 +1339,7 @@ public  final class Value extends
      * Represents a repeated `Value`.
      * </pre>
      *
-     * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+     * <code>.google.protobuf.ListValue list_value = 6;</code>
      */
     private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValue, org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValue.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValueOrBuilder> 

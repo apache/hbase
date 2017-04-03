@@ -210,7 +210,7 @@ public final class TestProcedureProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTableName()) {
         hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();

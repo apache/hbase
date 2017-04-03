@@ -30,9 +30,11 @@ public final class SourceContextProto {
     java.lang.String[] descriptorData = {
       "\n$google/protobuf/source_context.proto\022\017" +
       "google.protobuf\"\"\n\rSourceContext\022\021\n\tfile" +
-      "_name\030\001 \001(\tBR\n\023com.google.protobufB\022Sour" +
-      "ceContextProtoP\001\242\002\003GPB\252\002\036Google.Protobuf" +
-      ".WellKnownTypesb\006proto3"
+      "_name\030\001 \001(\tB\225\001\n\023com.google.protobufB\022Sou" +
+      "rceContextProtoP\001ZAgoogle.golang.org/gen" +
+      "proto/protobuf/source_context;source_con" +
+      "text\242\002\003GPB\252\002\036Google.Protobuf.WellKnownTy" +
+      "pesb\006proto3"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {

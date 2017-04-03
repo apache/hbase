@@ -12,7 +12,7 @@ public interface FieldOrBuilder extends
    * The field type.
    * </pre>
    *
-   * <code>optional .google.protobuf.Field.Kind kind = 1;</code>
+   * <code>.google.protobuf.Field.Kind kind = 1;</code>
    */
   int getKindValue();
   /**
@@ -20,7 +20,7 @@ public interface FieldOrBuilder extends
    * The field type.
    * </pre>
    *
-   * <code>optional .google.protobuf.Field.Kind kind = 1;</code>
+   * <code>.google.protobuf.Field.Kind kind = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Kind getKind();
 
@@ -29,7 +29,7 @@ public interface FieldOrBuilder extends
    * The field cardinality.
    * </pre>
    *
-   * <code>optional .google.protobuf.Field.Cardinality cardinality = 2;</code>
+   * <code>.google.protobuf.Field.Cardinality cardinality = 2;</code>
    */
   int getCardinalityValue();
   /**
@@ -37,7 +37,7 @@ public interface FieldOrBuilder extends
    * The field cardinality.
    * </pre>
    *
-   * <code>optional .google.protobuf.Field.Cardinality cardinality = 2;</code>
+   * <code>.google.protobuf.Field.Cardinality cardinality = 2;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Cardinality getCardinality();
 
@@ -46,7 +46,7 @@ public interface FieldOrBuilder extends
    * The field number.
    * </pre>
    *
-   * <code>optional int32 number = 3;</code>
+   * <code>int32 number = 3;</code>
    */
   int getNumber();
 
@@ -55,7 +55,7 @@ public interface FieldOrBuilder extends
    * The field name.
    * </pre>
    *
-   * <code>optional string name = 4;</code>
+   * <code>string name = 4;</code>
    */
   java.lang.String getName();
   /**
@@ -63,7 +63,7 @@ public interface FieldOrBuilder extends
    * The field name.
    * </pre>
    *
-   * <code>optional string name = 4;</code>
+   * <code>string name = 4;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes();
@@ -74,7 +74,7 @@ public interface FieldOrBuilder extends
    * types. Example: `"type.googleapis.org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp"`.
    * </pre>
    *
-   * <code>optional string type_url = 6;</code>
+   * <code>string type_url = 6;</code>
    */
   java.lang.String getTypeUrl();
   /**
@@ -83,7 +83,7 @@ public interface FieldOrBuilder extends
    * types. Example: `"type.googleapis.org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp"`.
    * </pre>
    *
-   * <code>optional string type_url = 6;</code>
+   * <code>string type_url = 6;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getTypeUrlBytes();
@@ -94,7 +94,7 @@ public interface FieldOrBuilder extends
    * types. The first type has index 1; zero means the type is not in the list.
    * </pre>
    *
-   * <code>optional int32 oneof_index = 7;</code>
+   * <code>int32 oneof_index = 7;</code>
    */
   int getOneofIndex();
 
@@ -103,7 +103,7 @@ public interface FieldOrBuilder extends
    * Whether to use alternative packed wire representation.
    * </pre>
    *
-   * <code>optional bool packed = 8;</code>
+   * <code>bool packed = 8;</code>
    */
   boolean getPacked();
 
@@ -156,7 +156,7 @@ public interface FieldOrBuilder extends
    * The field JSON name.
    * </pre>
    *
-   * <code>optional string json_name = 10;</code>
+   * <code>string json_name = 10;</code>
    */
   java.lang.String getJsonName();
   /**
@@ -164,7 +164,7 @@ public interface FieldOrBuilder extends
    * The field JSON name.
    * </pre>
    *
-   * <code>optional string json_name = 10;</code>
+   * <code>string json_name = 10;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getJsonNameBytes();
@@ -174,7 +174,7 @@ public interface FieldOrBuilder extends
    * The string value of the default value of this field. Proto2 syntax only.
    * </pre>
    *
-   * <code>optional string default_value = 11;</code>
+   * <code>string default_value = 11;</code>
    */
   java.lang.String getDefaultValue();
   /**
@@ -182,7 +182,7 @@ public interface FieldOrBuilder extends
    * The string value of the default value of this field. Proto2 syntax only.
    * </pre>
    *
-   * <code>optional string default_value = 11;</code>
+   * <code>string default_value = 11;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getDefaultValueBytes();

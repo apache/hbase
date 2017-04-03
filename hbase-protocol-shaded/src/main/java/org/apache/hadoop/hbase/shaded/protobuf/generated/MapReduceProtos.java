@@ -212,7 +212,7 @@ public final class MapReduceProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getMetricsCount() > 0) {
         hash = (37 * hash) + METRICS_FIELD_NUMBER;
         hash = (53 * hash) + getMetricsList().hashCode();
@@ -1079,7 +1079,7 @@ public final class MapReduceProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getLocationsCount() > 0) {
         hash = (37 * hash) + LOCATIONS_FIELD_NUMBER;
         hash = (53 * hash) + getLocationsList().hashCode();

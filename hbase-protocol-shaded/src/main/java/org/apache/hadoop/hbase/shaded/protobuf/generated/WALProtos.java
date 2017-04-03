@@ -505,7 +505,7 @@ public final class WALProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasHasCompression()) {
         hash = (37 * hash) + HAS_COMPRESSION_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
@@ -1894,7 +1894,7 @@ public final class WALProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasEncodedRegionName()) {
         hash = (37 * hash) + ENCODED_REGION_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getEncodedRegionName().hashCode();
@@ -3639,7 +3639,7 @@ public final class WALProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasFamily()) {
         hash = (37 * hash) + FAMILY_FIELD_NUMBER;
         hash = (53 * hash) + getFamily().hashCode();
@@ -4623,7 +4623,7 @@ public final class WALProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTableName()) {
         hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
@@ -6196,7 +6196,7 @@ public final class WALProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasFamilyName()) {
           hash = (37 * hash) + FAMILY_NAME_FIELD_NUMBER;
           hash = (53 * hash) + getFamilyName().hashCode();
@@ -7029,7 +7029,7 @@ public final class WALProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasAction()) {
         hash = (37 * hash) + ACTION_FIELD_NUMBER;
         hash = (53 * hash) + action_;
@@ -8280,7 +8280,7 @@ public final class WALProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasFamilyName()) {
         hash = (37 * hash) + FAMILY_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getFamilyName().hashCode();
@@ -9291,7 +9291,7 @@ public final class WALProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTableName()) {
         hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
@@ -10727,7 +10727,7 @@ public final class WALProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasEventType()) {
         hash = (37 * hash) + EVENT_TYPE_FIELD_NUMBER;
         hash = (53 * hash) + eventType_;
@@ -11853,7 +11853,7 @@ public final class WALProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;

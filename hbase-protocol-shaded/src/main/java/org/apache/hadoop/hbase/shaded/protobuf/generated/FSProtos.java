@@ -215,7 +215,7 @@ public final class FSProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasVersion()) {
         hash = (37 * hash) + VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getVersion().hashCode();
@@ -886,7 +886,7 @@ public final class FSProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasSplitkey()) {
         hash = (37 * hash) + SPLITKEY_FIELD_NUMBER;
         hash = (53 * hash) + getSplitkey().hashCode();

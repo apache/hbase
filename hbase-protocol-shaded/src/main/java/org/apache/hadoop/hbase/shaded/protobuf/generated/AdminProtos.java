@@ -241,7 +241,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegion()) {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegion().hashCode();
@@ -1077,7 +1077,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegionInfo()) {
         hash = (37 * hash) + REGION_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getRegionInfo().hashCode();
@@ -1831,7 +1831,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegion()) {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegion().hashCode();
@@ -2528,7 +2528,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getStoreFileCount() > 0) {
         hash = (37 * hash) + STORE_FILE_FIELD_NUMBER;
         hash = (53 * hash) + getStoreFileList().hashCode();
@@ -3017,7 +3017,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -3478,7 +3478,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getRegionInfoCount() > 0) {
         hash = (37 * hash) + REGION_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getRegionInfoList().hashCode();
@@ -4553,7 +4553,7 @@ public final class AdminProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasRegion()) {
           hash = (37 * hash) + REGION_FIELD_NUMBER;
           hash = (53 * hash) + getRegion().hashCode();
@@ -5526,7 +5526,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getOpenInfoCount() > 0) {
         hash = (37 * hash) + OPEN_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getOpenInfoList().hashCode();
@@ -6512,7 +6512,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getOpeningStateCount() > 0) {
         hash = (37 * hash) + OPENING_STATE_FIELD_NUMBER;
         hash = (53 * hash) + openingState_.hashCode();
@@ -7051,7 +7051,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegionInfo()) {
         hash = (37 * hash) + REGIONINFO_FIELD_NUMBER;
         hash = (53 * hash) + getRegionInfo().hashCode();
@@ -7574,7 +7574,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -8229,7 +8229,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegion()) {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegion().hashCode();
@@ -9104,7 +9104,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasClosed()) {
         hash = (37 * hash) + CLOSED_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
@@ -9624,7 +9624,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getRegionCount() > 0) {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegionList().hashCode();
@@ -10344,7 +10344,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasClosed()) {
         hash = (37 * hash) + CLOSED_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
@@ -10946,7 +10946,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegion()) {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegion().hashCode();
@@ -11716,7 +11716,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasLastFlushTime()) {
         hash = (37 * hash) + LAST_FLUSH_TIME_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
@@ -12354,7 +12354,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegion()) {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegion().hashCode();
@@ -12934,7 +12934,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -13467,7 +13467,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegion()) {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegion().hashCode();
@@ -14091,7 +14091,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -14727,7 +14727,7 @@ public final class AdminProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasRegion()) {
           hash = (37 * hash) + REGION_FIELD_NUMBER;
           hash = (53 * hash) + getRegion().hashCode();
@@ -15522,7 +15522,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getUpdateInfoCount() > 0) {
         hash = (37 * hash) + UPDATE_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getUpdateInfoList().hashCode();
@@ -16232,7 +16232,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasResponse()) {
         hash = (37 * hash) + RESPONSE_FIELD_NUMBER;
         hash = (53 * hash) + getResponse();
@@ -16882,7 +16882,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasKey()) {
         hash = (37 * hash) + KEY_FIELD_NUMBER;
         hash = (53 * hash) + getKey().hashCode();
@@ -17923,7 +17923,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getEntryCount() > 0) {
         hash = (37 * hash) + ENTRY_FIELD_NUMBER;
         hash = (53 * hash) + getEntryList().hashCode();
@@ -18871,7 +18871,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -19244,7 +19244,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -19708,7 +19708,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getRegionToFlushCount() > 0) {
         hash = (37 * hash) + REGION_TO_FLUSH_FIELD_NUMBER;
         hash = (53 * hash) + getRegionToFlushList().hashCode();
@@ -20289,7 +20289,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasReason()) {
         hash = (37 * hash) + REASON_FIELD_NUMBER;
         hash = (53 * hash) + getReason().hashCode();
@@ -20760,7 +20760,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -21133,7 +21133,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -21617,7 +21617,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasServerName()) {
         hash = (37 * hash) + SERVER_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getServerName().hashCode();
@@ -22254,7 +22254,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasServerInfo()) {
         hash = (37 * hash) + SERVER_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getServerInfo().hashCode();
@@ -22777,7 +22777,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -23150,7 +23150,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -23590,7 +23590,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTableName()) {
         hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
@@ -24200,7 +24200,7 @@ public final class AdminProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getRegionLoadsCount() > 0) {
         hash = (37 * hash) + REGION_LOADS_FIELD_NUMBER;
         hash = (53 * hash) + getRegionLoadsList().hashCode();

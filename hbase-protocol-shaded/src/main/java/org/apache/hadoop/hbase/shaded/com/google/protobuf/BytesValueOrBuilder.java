@@ -12,7 +12,7 @@ public interface BytesValueOrBuilder extends
    * The bytes value.
    * </pre>
    *
-   * <code>optional bytes value = 1;</code>
+   * <code>bytes value = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getValue();
 }

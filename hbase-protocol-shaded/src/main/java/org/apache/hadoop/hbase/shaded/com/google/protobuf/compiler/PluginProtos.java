@@ -14,6 +14,879 @@ public final class PluginProtos {
     registerAllExtensions(
         (org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite) registry);
   }
+  public interface VersionOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:google.protobuf.compiler.Version)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional int32 major = 1;</code>
+     */
+    boolean hasMajor();
+    /**
+     * <code>optional int32 major = 1;</code>
+     */
+    int getMajor();
+
+    /**
+     * <code>optional int32 minor = 2;</code>
+     */
+    boolean hasMinor();
+    /**
+     * <code>optional int32 minor = 2;</code>
+     */
+    int getMinor();
+
+    /**
+     * <code>optional int32 patch = 3;</code>
+     */
+    boolean hasPatch();
+    /**
+     * <code>optional int32 patch = 3;</code>
+     */
+    int getPatch();
+
+    /**
+     * <pre>
+     * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+     * be empty for mainline stable releases.
+     * </pre>
+     *
+     * <code>optional string suffix = 4;</code>
+     */
+    boolean hasSuffix();
+    /**
+     * <pre>
+     * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+     * be empty for mainline stable releases.
+     * </pre>
+     *
+     * <code>optional string suffix = 4;</code>
+     */
+    java.lang.String getSuffix();
+    /**
+     * <pre>
+     * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+     * be empty for mainline stable releases.
+     * </pre>
+     *
+     * <code>optional string suffix = 4;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getSuffixBytes();
+  }
+  /**
+   * <pre>
+   * The version number of protocol compiler.
+   * </pre>
+   *
+   * Protobuf type {@code google.protobuf.compiler.Version}
+   */
+  public  static final class Version extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:google.protobuf.compiler.Version)
+      VersionOrBuilder {
+    // Use Version.newBuilder() to construct.
+    private Version(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private Version() {
+      major_ = 0;
+      minor_ = 0;
+      patch_ = 0;
+      suffix_ = "";
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private Version(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              major_ = input.readInt32();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              minor_ = input.readInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              patch_ = input.readInt32();
+              break;
+            }
+            case 34: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000008;
+              suffix_ = bs;
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.internal_static_google_protobuf_compiler_Version_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.internal_static_google_protobuf_compiler_Version_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.class, org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int MAJOR_FIELD_NUMBER = 1;
+    private int major_;
+    /**
+     * <code>optional int32 major = 1;</code>
+     */
+    public boolean hasMajor() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional int32 major = 1;</code>
+     */
+    public int getMajor() {
+      return major_;
+    }
+
+    public static final int MINOR_FIELD_NUMBER = 2;
+    private int minor_;
+    /**
+     * <code>optional int32 minor = 2;</code>
+     */
+    public boolean hasMinor() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional int32 minor = 2;</code>
+     */
+    public int getMinor() {
+      return minor_;
+    }
+
+    public static final int PATCH_FIELD_NUMBER = 3;
+    private int patch_;
+    /**
+     * <code>optional int32 patch = 3;</code>
+     */
+    public boolean hasPatch() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional int32 patch = 3;</code>
+     */
+    public int getPatch() {
+      return patch_;
+    }
+
+    public static final int SUFFIX_FIELD_NUMBER = 4;
+    private volatile java.lang.Object suffix_;
+    /**
+     * <pre>
+     * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+     * be empty for mainline stable releases.
+     * </pre>
+     *
+     * <code>optional string suffix = 4;</code>
+     */
+    public boolean hasSuffix() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <pre>
+     * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+     * be empty for mainline stable releases.
+     * </pre>
+     *
+     * <code>optional string suffix = 4;</code>
+     */
+    public java.lang.String getSuffix() {
+      java.lang.Object ref = suffix_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          suffix_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+     * be empty for mainline stable releases.
+     * </pre>
+     *
+     * <code>optional string suffix = 4;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getSuffixBytes() {
+      java.lang.Object ref = suffix_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        suffix_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt32(1, major_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeInt32(2, minor_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt32(3, patch_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 4, suffix_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeInt32Size(1, major_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeInt32Size(2, minor_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeInt32Size(3, patch_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(4, suffix_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version other = (org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version) obj;
+
+      boolean result = true;
+      result = result && (hasMajor() == other.hasMajor());
+      if (hasMajor()) {
+        result = result && (getMajor()
+            == other.getMajor());
+      }
+      result = result && (hasMinor() == other.hasMinor());
+      if (hasMinor()) {
+        result = result && (getMinor()
+            == other.getMinor());
+      }
+      result = result && (hasPatch() == other.hasPatch());
+      if (hasPatch()) {
+        result = result && (getPatch()
+            == other.getPatch());
+      }
+      result = result && (hasSuffix() == other.hasSuffix());
+      if (hasSuffix()) {
+        result = result && getSuffix()
+            .equals(other.getSuffix());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasMajor()) {
+        hash = (37 * hash) + MAJOR_FIELD_NUMBER;
+        hash = (53 * hash) + getMajor();
+      }
+      if (hasMinor()) {
+        hash = (37 * hash) + MINOR_FIELD_NUMBER;
+        hash = (53 * hash) + getMinor();
+      }
+      if (hasPatch()) {
+        hash = (37 * hash) + PATCH_FIELD_NUMBER;
+        hash = (53 * hash) + getPatch();
+      }
+      if (hasSuffix()) {
+        hash = (37 * hash) + SUFFIX_FIELD_NUMBER;
+        hash = (53 * hash) + getSuffix().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * The version number of protocol compiler.
+     * </pre>
+     *
+     * Protobuf type {@code google.protobuf.compiler.Version}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:google.protobuf.compiler.Version)
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.VersionOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.internal_static_google_protobuf_compiler_Version_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.internal_static_google_protobuf_compiler_Version_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.class, org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        major_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        minor_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        patch_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        suffix_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.internal_static_google_protobuf_compiler_Version_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version build() {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version buildPartial() {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version result = new org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.major_ = major_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.minor_ = minor_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.patch_ = patch_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.suffix_ = suffix_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version other) {
+        if (other == org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.getDefaultInstance()) return this;
+        if (other.hasMajor()) {
+          setMajor(other.getMajor());
+        }
+        if (other.hasMinor()) {
+          setMinor(other.getMinor());
+        }
+        if (other.hasPatch()) {
+          setPatch(other.getPatch());
+        }
+        if (other.hasSuffix()) {
+          bitField0_ |= 0x00000008;
+          suffix_ = other.suffix_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private int major_ ;
+      /**
+       * <code>optional int32 major = 1;</code>
+       */
+      public boolean hasMajor() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional int32 major = 1;</code>
+       */
+      public int getMajor() {
+        return major_;
+      }
+      /**
+       * <code>optional int32 major = 1;</code>
+       */
+      public Builder setMajor(int value) {
+        bitField0_ |= 0x00000001;
+        major_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 major = 1;</code>
+       */
+      public Builder clearMajor() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        major_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private int minor_ ;
+      /**
+       * <code>optional int32 minor = 2;</code>
+       */
+      public boolean hasMinor() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional int32 minor = 2;</code>
+       */
+      public int getMinor() {
+        return minor_;
+      }
+      /**
+       * <code>optional int32 minor = 2;</code>
+       */
+      public Builder setMinor(int value) {
+        bitField0_ |= 0x00000002;
+        minor_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 minor = 2;</code>
+       */
+      public Builder clearMinor() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        minor_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private int patch_ ;
+      /**
+       * <code>optional int32 patch = 3;</code>
+       */
+      public boolean hasPatch() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional int32 patch = 3;</code>
+       */
+      public int getPatch() {
+        return patch_;
+      }
+      /**
+       * <code>optional int32 patch = 3;</code>
+       */
+      public Builder setPatch(int value) {
+        bitField0_ |= 0x00000004;
+        patch_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 patch = 3;</code>
+       */
+      public Builder clearPatch() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        patch_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object suffix_ = "";
+      /**
+       * <pre>
+       * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+       * be empty for mainline stable releases.
+       * </pre>
+       *
+       * <code>optional string suffix = 4;</code>
+       */
+      public boolean hasSuffix() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <pre>
+       * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+       * be empty for mainline stable releases.
+       * </pre>
+       *
+       * <code>optional string suffix = 4;</code>
+       */
+      public java.lang.String getSuffix() {
+        java.lang.Object ref = suffix_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            suffix_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+       * be empty for mainline stable releases.
+       * </pre>
+       *
+       * <code>optional string suffix = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getSuffixBytes() {
+        java.lang.Object ref = suffix_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          suffix_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+       * be empty for mainline stable releases.
+       * </pre>
+       *
+       * <code>optional string suffix = 4;</code>
+       */
+      public Builder setSuffix(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        suffix_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+       * be empty for mainline stable releases.
+       * </pre>
+       *
+       * <code>optional string suffix = 4;</code>
+       */
+      public Builder clearSuffix() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        suffix_ = getDefaultInstance().getSuffix();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
+       * be empty for mainline stable releases.
+       * </pre>
+       *
+       * <code>optional string suffix = 4;</code>
+       */
+      public Builder setSuffixBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        suffix_ = value;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:google.protobuf.compiler.Version)
+    }
+
+    // @@protoc_insertion_point(class_scope:google.protobuf.compiler.Version)
+    private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<Version>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<Version>() {
+      public Version parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new Version(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<Version> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<Version> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface CodeGeneratorRequestOrBuilder extends
       // @@protoc_insertion_point(interface_extends:google.protobuf.compiler.CodeGeneratorRequest)
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
@@ -175,6 +1048,31 @@ public final class PluginProtos {
      */
     org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.FileDescriptorProtoOrBuilder getProtoFileOrBuilder(
         int index);
+
+    /**
+     * <pre>
+     * The version number of protocol compiler.
+     * </pre>
+     *
+     * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+     */
+    boolean hasCompilerVersion();
+    /**
+     * <pre>
+     * The version number of protocol compiler.
+     * </pre>
+     *
+     * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version getCompilerVersion();
+    /**
+     * <pre>
+     * The version number of protocol compiler.
+     * </pre>
+     *
+     * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.VersionOrBuilder getCompilerVersionOrBuilder();
   }
   /**
    * <pre>
@@ -238,6 +1136,19 @@ public final class PluginProtos {
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000001;
               parameter_ = bs;
+              break;
+            }
+            case 26: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = compilerVersion_.toBuilder();
+              }
+              compilerVersion_ = input.readMessage(org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(compilerVersion_);
+                compilerVersion_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
               break;
             }
             case 122: {
@@ -487,6 +1398,39 @@ public final class PluginProtos {
       return protoFile_.get(index);
     }
 
+    public static final int COMPILER_VERSION_FIELD_NUMBER = 3;
+    private org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version compilerVersion_;
+    /**
+     * <pre>
+     * The version number of protocol compiler.
+     * </pre>
+     *
+     * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+     */
+    public boolean hasCompilerVersion() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <pre>
+     * The version number of protocol compiler.
+     * </pre>
+     *
+     * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version getCompilerVersion() {
+      return compilerVersion_ == null ? org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.getDefaultInstance() : compilerVersion_;
+    }
+    /**
+     * <pre>
+     * The version number of protocol compiler.
+     * </pre>
+     *
+     * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.VersionOrBuilder getCompilerVersionOrBuilder() {
+      return compilerVersion_ == null ? org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.getDefaultInstance() : compilerVersion_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -511,6 +1455,9 @@ public final class PluginProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 2, parameter_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(3, getCompilerVersion());
+      }
       for (int i = 0; i < protoFile_.size(); i++) {
         output.writeMessage(15, protoFile_.get(i));
       }
@@ -532,6 +1479,10 @@ public final class PluginProtos {
       }
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(2, parameter_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, getCompilerVersion());
       }
       for (int i = 0; i < protoFile_.size(); i++) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
@@ -563,6 +1514,11 @@ public final class PluginProtos {
       }
       result = result && getProtoFileList()
           .equals(other.getProtoFileList());
+      result = result && (hasCompilerVersion() == other.hasCompilerVersion());
+      if (hasCompilerVersion()) {
+        result = result && getCompilerVersion()
+            .equals(other.getCompilerVersion());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -573,7 +1529,7 @@ public final class PluginProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getFileToGenerateCount() > 0) {
         hash = (37 * hash) + FILE_TO_GENERATE_FIELD_NUMBER;
         hash = (53 * hash) + getFileToGenerateList().hashCode();
@@ -585,6 +1541,10 @@ public final class PluginProtos {
       if (getProtoFileCount() > 0) {
         hash = (37 * hash) + PROTO_FILE_FIELD_NUMBER;
         hash = (53 * hash) + getProtoFileList().hashCode();
+      }
+      if (hasCompilerVersion()) {
+        hash = (37 * hash) + COMPILER_VERSION_FIELD_NUMBER;
+        hash = (53 * hash) + getCompilerVersion().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -705,6 +1665,7 @@ public final class PluginProtos {
         if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
           getProtoFileFieldBuilder();
+          getCompilerVersionFieldBuilder();
         }
       }
       public Builder clear() {
@@ -719,6 +1680,12 @@ public final class PluginProtos {
         } else {
           protoFileBuilder_.clear();
         }
+        if (compilerVersionBuilder_ == null) {
+          compilerVersion_ = null;
+        } else {
+          compilerVersionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -760,6 +1727,14 @@ public final class PluginProtos {
           result.protoFile_ = protoFile_;
         } else {
           result.protoFile_ = protoFileBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (compilerVersionBuilder_ == null) {
+          result.compilerVersion_ = compilerVersion_;
+        } else {
+          result.compilerVersion_ = compilerVersionBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -843,6 +1818,9 @@ public final class PluginProtos {
               protoFileBuilder_.addAllMessages(other.protoFile_);
             }
           }
+        }
+        if (other.hasCompilerVersion()) {
+          mergeCompilerVersion(other.getCompilerVersion());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -1596,6 +2574,160 @@ public final class PluginProtos {
           protoFile_ = null;
         }
         return protoFileBuilder_;
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version compilerVersion_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version, org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.VersionOrBuilder> compilerVersionBuilder_;
+      /**
+       * <pre>
+       * The version number of protocol compiler.
+       * </pre>
+       *
+       * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+       */
+      public boolean hasCompilerVersion() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <pre>
+       * The version number of protocol compiler.
+       * </pre>
+       *
+       * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version getCompilerVersion() {
+        if (compilerVersionBuilder_ == null) {
+          return compilerVersion_ == null ? org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.getDefaultInstance() : compilerVersion_;
+        } else {
+          return compilerVersionBuilder_.getMessage();
+        }
+      }
+      /**
+       * <pre>
+       * The version number of protocol compiler.
+       * </pre>
+       *
+       * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+       */
+      public Builder setCompilerVersion(org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version value) {
+        if (compilerVersionBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          compilerVersion_ = value;
+          onChanged();
+        } else {
+          compilerVersionBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <pre>
+       * The version number of protocol compiler.
+       * </pre>
+       *
+       * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+       */
+      public Builder setCompilerVersion(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.Builder builderForValue) {
+        if (compilerVersionBuilder_ == null) {
+          compilerVersion_ = builderForValue.build();
+          onChanged();
+        } else {
+          compilerVersionBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <pre>
+       * The version number of protocol compiler.
+       * </pre>
+       *
+       * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+       */
+      public Builder mergeCompilerVersion(org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version value) {
+        if (compilerVersionBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+              compilerVersion_ != null &&
+              compilerVersion_ != org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.getDefaultInstance()) {
+            compilerVersion_ =
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.newBuilder(compilerVersion_).mergeFrom(value).buildPartial();
+          } else {
+            compilerVersion_ = value;
+          }
+          onChanged();
+        } else {
+          compilerVersionBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <pre>
+       * The version number of protocol compiler.
+       * </pre>
+       *
+       * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+       */
+      public Builder clearCompilerVersion() {
+        if (compilerVersionBuilder_ == null) {
+          compilerVersion_ = null;
+          onChanged();
+        } else {
+          compilerVersionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      /**
+       * <pre>
+       * The version number of protocol compiler.
+       * </pre>
+       *
+       * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.Builder getCompilerVersionBuilder() {
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return getCompilerVersionFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * The version number of protocol compiler.
+       * </pre>
+       *
+       * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.VersionOrBuilder getCompilerVersionOrBuilder() {
+        if (compilerVersionBuilder_ != null) {
+          return compilerVersionBuilder_.getMessageOrBuilder();
+        } else {
+          return compilerVersion_ == null ?
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.getDefaultInstance() : compilerVersion_;
+        }
+      }
+      /**
+       * <pre>
+       * The version number of protocol compiler.
+       * </pre>
+       *
+       * <code>optional .google.protobuf.compiler.Version compiler_version = 3;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version, org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.VersionOrBuilder> 
+          getCompilerVersionFieldBuilder() {
+        if (compilerVersionBuilder_ == null) {
+          compilerVersionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version, org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.Version.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.compiler.PluginProtos.VersionOrBuilder>(
+                  getCompilerVersion(),
+                  getParentForChildren(),
+                  isClean());
+          compilerVersion_ = null;
+        }
+        return compilerVersionBuilder_;
       }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -2470,7 +3602,7 @@ public final class PluginProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasName()) {
           hash = (37 * hash) + NAME_FIELD_NUMBER;
           hash = (53 * hash) + getName().hashCode();
@@ -3501,7 +4633,7 @@ public final class PluginProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasError()) {
         hash = (37 * hash) + ERROR_FIELD_NUMBER;
         hash = (53 * hash) + getError().hashCode();
@@ -4204,6 +5336,11 @@ public final class PluginProtos {
   }
 
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_google_protobuf_compiler_Version_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_google_protobuf_compiler_Version_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_google_protobuf_compiler_CodeGeneratorRequest_descriptor;
   private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -4229,16 +5366,19 @@ public final class PluginProtos {
     java.lang.String[] descriptorData = {
       "\n%google/protobuf/compiler/plugin.proto\022" +
       "\030google.protobuf.compiler\032 google/protob" +
-      "uf/descriptor.proto\"}\n\024CodeGeneratorRequ" +
-      "est\022\030\n\020file_to_generate\030\001 \003(\t\022\021\n\tparamet" +
-      "er\030\002 \001(\t\0228\n\nproto_file\030\017 \003(\0132$.google.pr" +
-      "otobuf.FileDescriptorProto\"\252\001\n\025CodeGener" +
-      "atorResponse\022\r\n\005error\030\001 \001(\t\022B\n\004file\030\017 \003(" +
-      "\01324.google.protobuf.compiler.CodeGenerat" +
-      "orResponse.File\032>\n\004File\022\014\n\004name\030\001 \001(\t\022\027\n" +
-      "\017insertion_point\030\002 \001(\t\022\017\n\007content\030\017 \001(\tB",
-      "7\n\034com.google.protobuf.compilerB\014PluginP" +
-      "rotosZ\tplugin_go"
+      "uf/descriptor.proto\"F\n\007Version\022\r\n\005major\030" +
+      "\001 \001(\005\022\r\n\005minor\030\002 \001(\005\022\r\n\005patch\030\003 \001(\005\022\016\n\006s" +
+      "uffix\030\004 \001(\t\"\272\001\n\024CodeGeneratorRequest\022\030\n\020" +
+      "file_to_generate\030\001 \003(\t\022\021\n\tparameter\030\002 \001(" +
+      "\t\0228\n\nproto_file\030\017 \003(\0132$.google.protobuf." +
+      "FileDescriptorProto\022;\n\020compiler_version\030" +
+      "\003 \001(\0132!.google.protobuf.compiler.Version" +
+      "\"\252\001\n\025CodeGeneratorResponse\022\r\n\005error\030\001 \001(",
+      "\t\022B\n\004file\030\017 \003(\01324.google.protobuf.compil" +
+      "er.CodeGeneratorResponse.File\032>\n\004File\022\014\n" +
+      "\004name\030\001 \001(\t\022\027\n\017insertion_point\030\002 \001(\t\022\017\n\007" +
+      "content\030\017 \001(\tB7\n\034com.google.protobuf.com" +
+      "pilerB\014PluginProtosZ\tplugin_go"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -4253,14 +5393,20 @@ public final class PluginProtos {
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.getDescriptor(),
         }, assigner);
-    internal_static_google_protobuf_compiler_CodeGeneratorRequest_descriptor =
+    internal_static_google_protobuf_compiler_Version_descriptor =
       getDescriptor().getMessageTypes().get(0);
+    internal_static_google_protobuf_compiler_Version_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_google_protobuf_compiler_Version_descriptor,
+        new java.lang.String[] { "Major", "Minor", "Patch", "Suffix", });
+    internal_static_google_protobuf_compiler_CodeGeneratorRequest_descriptor =
+      getDescriptor().getMessageTypes().get(1);
     internal_static_google_protobuf_compiler_CodeGeneratorRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_google_protobuf_compiler_CodeGeneratorRequest_descriptor,
-        new java.lang.String[] { "FileToGenerate", "Parameter", "ProtoFile", });
+        new java.lang.String[] { "FileToGenerate", "Parameter", "ProtoFile", "CompilerVersion", });
     internal_static_google_protobuf_compiler_CodeGeneratorResponse_descriptor =
-      getDescriptor().getMessageTypes().get(1);
+      getDescriptor().getMessageTypes().get(2);
     internal_static_google_protobuf_compiler_CodeGeneratorResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_google_protobuf_compiler_CodeGeneratorResponse_descriptor,

@@ -615,7 +615,7 @@ public final class QuotaProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTimeUnit()) {
         hash = (37 * hash) + TIME_UNIT_FIELD_NUMBER;
         hash = (53 * hash) + timeUnit_;
@@ -1577,7 +1577,7 @@ public final class QuotaProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasReqNum()) {
         hash = (37 * hash) + REQ_NUM_FIELD_NUMBER;
         hash = (53 * hash) + getReqNum().hashCode();
@@ -2939,7 +2939,7 @@ public final class QuotaProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasType()) {
         hash = (37 * hash) + TYPE_FIELD_NUMBER;
         hash = (53 * hash) + type_;
@@ -3619,7 +3619,7 @@ public final class QuotaProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasBypassGlobals()) {
         hash = (37 * hash) + BYPASS_GLOBALS_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
@@ -4187,7 +4187,7 @@ public final class QuotaProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;

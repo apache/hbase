@@ -258,7 +258,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTableName()) {
         hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
@@ -1426,7 +1426,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasClusterkey()) {
         hash = (37 * hash) + CLUSTERKEY_FIELD_NUMBER;
         hash = (53 * hash) + getClusterkey().hashCode();
@@ -3184,7 +3184,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasState()) {
         hash = (37 * hash) + STATE_FIELD_NUMBER;
         hash = (53 * hash) + state_;
@@ -3837,7 +3837,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasId()) {
         hash = (37 * hash) + ID_FIELD_NUMBER;
         hash = (53 * hash) + getId().hashCode();
@@ -4658,7 +4658,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPosition()) {
         hash = (37 * hash) + POSITION_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
@@ -5236,7 +5236,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPeerId()) {
         hash = (37 * hash) + PEER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getPeerId().hashCode();
@@ -5853,7 +5853,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -6306,7 +6306,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPeerId()) {
         hash = (37 * hash) + PEER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getPeerId().hashCode();
@@ -6777,7 +6777,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -7230,7 +7230,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPeerId()) {
         hash = (37 * hash) + PEER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getPeerId().hashCode();
@@ -7701,7 +7701,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -8154,7 +8154,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPeerId()) {
         hash = (37 * hash) + PEER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getPeerId().hashCode();
@@ -8625,7 +8625,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -9078,7 +9078,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPeerId()) {
         hash = (37 * hash) + PEER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getPeerId().hashCode();
@@ -9696,7 +9696,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPeerId()) {
         hash = (37 * hash) + PEER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getPeerId().hashCode();
@@ -10460,7 +10460,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPeerId()) {
         hash = (37 * hash) + PEER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getPeerId().hashCode();
@@ -11077,7 +11077,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -11526,7 +11526,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegex()) {
         hash = (37 * hash) + REGEX_FIELD_NUMBER;
         hash = (53 * hash) + getRegex().hashCode();
@@ -12082,7 +12082,7 @@ public final class ReplicationProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getPeerDescCount() > 0) {
         hash = (37 * hash) + PEER_DESC_FIELD_NUMBER;
         hash = (53 * hash) + getPeerDescList().hashCode();

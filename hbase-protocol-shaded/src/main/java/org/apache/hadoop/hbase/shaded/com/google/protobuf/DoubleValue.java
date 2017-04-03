@@ -83,7 +83,7 @@ public  final class DoubleValue extends
    * The double value.
    * </pre>
    *
-   * <code>optional double value = 1;</code>
+   * <code>double value = 1;</code>
    */
   public double getValue() {
     return value_;
@@ -144,7 +144,7 @@ public  final class DoubleValue extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + VALUE_FIELD_NUMBER;
     hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
         java.lang.Double.doubleToLongBits(getValue()));
@@ -372,7 +372,7 @@ public  final class DoubleValue extends
      * The double value.
      * </pre>
      *
-     * <code>optional double value = 1;</code>
+     * <code>double value = 1;</code>
      */
     public double getValue() {
       return value_;
@@ -382,7 +382,7 @@ public  final class DoubleValue extends
      * The double value.
      * </pre>
      *
-     * <code>optional double value = 1;</code>
+     * <code>double value = 1;</code>
      */
     public Builder setValue(double value) {
       
@@ -395,7 +395,7 @@ public  final class DoubleValue extends
      * The double value.
      * </pre>
      *
-     * <code>optional double value = 1;</code>
+     * <code>double value = 1;</code>
      */
     public Builder clearValue() {
       

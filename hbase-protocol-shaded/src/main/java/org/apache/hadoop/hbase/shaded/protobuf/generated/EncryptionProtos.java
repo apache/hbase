@@ -386,7 +386,7 @@ public final class EncryptionProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasAlgorithm()) {
         hash = (37 * hash) + ALGORITHM_FIELD_NUMBER;
         hash = (53 * hash) + getAlgorithm().hashCode();

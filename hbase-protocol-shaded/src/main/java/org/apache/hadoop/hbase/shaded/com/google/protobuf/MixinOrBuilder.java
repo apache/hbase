@@ -12,7 +12,7 @@ public interface MixinOrBuilder extends
    * The fully qualified name of the API which is included.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   java.lang.String getName();
   /**
@@ -20,7 +20,7 @@ public interface MixinOrBuilder extends
    * The fully qualified name of the API which is included.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes();
@@ -31,7 +31,7 @@ public interface MixinOrBuilder extends
    * are rooted.
    * </pre>
    *
-   * <code>optional string root = 2;</code>
+   * <code>string root = 2;</code>
    */
   java.lang.String getRoot();
   /**
@@ -40,7 +40,7 @@ public interface MixinOrBuilder extends
    * are rooted.
    * </pre>
    *
-   * <code>optional string root = 2;</code>
+   * <code>string root = 2;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getRootBytes();

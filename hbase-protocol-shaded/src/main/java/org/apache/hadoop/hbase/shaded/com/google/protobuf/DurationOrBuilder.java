@@ -13,7 +13,7 @@ public interface DurationOrBuilder extends
    * to +315,576,000,000 inclusive.
    * </pre>
    *
-   * <code>optional int64 seconds = 1;</code>
+   * <code>int64 seconds = 1;</code>
    */
   long getSeconds();
 
@@ -27,7 +27,7 @@ public interface DurationOrBuilder extends
    * to +999,999,999 inclusive.
    * </pre>
    *
-   * <code>optional int32 nanos = 2;</code>
+   * <code>int32 nanos = 2;</code>
    */
   int getNanos();
 }

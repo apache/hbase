@@ -1190,7 +1190,7 @@ public final class ProcedureProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasClassName()) {
         hash = (37 * hash) + CLASS_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getClassName().hashCode();
@@ -2683,7 +2683,7 @@ public final class ProcedureProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasExecuted()) {
         hash = (37 * hash) + EXECUTED_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
@@ -3194,7 +3194,7 @@ public final class ProcedureProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getStateCount() > 0) {
         hash = (37 * hash) + STATE_FIELD_NUMBER;
         hash = (53 * hash) + getStateList().hashCode();
@@ -3852,7 +3852,7 @@ public final class ProcedureProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasVersion()) {
         hash = (37 * hash) + VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getVersion();
@@ -4527,7 +4527,7 @@ public final class ProcedureProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasVersion()) {
         hash = (37 * hash) + VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getVersion();
@@ -5309,7 +5309,7 @@ public final class ProcedureProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasStartId()) {
           hash = (37 * hash) + START_ID_FIELD_NUMBER;
           hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
@@ -5890,7 +5890,7 @@ public final class ProcedureProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getNodeCount() > 0) {
         hash = (37 * hash) + NODE_FIELD_NUMBER;
         hash = (53 * hash) + getNodeList().hashCode();
@@ -6939,7 +6939,7 @@ public final class ProcedureProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasType()) {
         hash = (37 * hash) + TYPE_FIELD_NUMBER;
         hash = (53 * hash) + type_;

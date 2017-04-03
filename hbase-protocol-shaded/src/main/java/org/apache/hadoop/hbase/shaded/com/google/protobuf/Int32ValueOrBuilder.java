@@ -12,7 +12,7 @@ public interface Int32ValueOrBuilder extends
    * The int32 value.
    * </pre>
    *
-   * <code>optional int32 value = 1;</code>
+   * <code>int32 value = 1;</code>
    */
   int getValue();
 }

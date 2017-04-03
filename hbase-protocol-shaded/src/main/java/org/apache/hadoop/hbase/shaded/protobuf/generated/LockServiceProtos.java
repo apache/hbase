@@ -658,7 +658,7 @@ public final class LockServiceProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasLockType()) {
         hash = (37 * hash) + LOCK_TYPE_FIELD_NUMBER;
         hash = (53 * hash) + lockType_;
@@ -1845,7 +1845,7 @@ public final class LockServiceProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasProcId()) {
         hash = (37 * hash) + PROC_ID_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
@@ -2361,7 +2361,7 @@ public final class LockServiceProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasProcId()) {
         hash = (37 * hash) + PROC_ID_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
@@ -3035,7 +3035,7 @@ public final class LockServiceProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasLockStatus()) {
         hash = (37 * hash) + LOCK_STATUS_FIELD_NUMBER;
         hash = (53 * hash) + lockStatus_;
@@ -3921,7 +3921,7 @@ public final class LockServiceProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasLockType()) {
         hash = (37 * hash) + LOCK_TYPE_FIELD_NUMBER;
         hash = (53 * hash) + lockType_;

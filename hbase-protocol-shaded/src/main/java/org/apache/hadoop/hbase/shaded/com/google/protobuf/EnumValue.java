@@ -103,7 +103,7 @@ public  final class EnumValue extends
    * Enum value name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public java.lang.String getName() {
     java.lang.Object ref = name_;
@@ -122,7 +122,7 @@ public  final class EnumValue extends
    * Enum value name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes() {
@@ -145,7 +145,7 @@ public  final class EnumValue extends
    * Enum value number.
    * </pre>
    *
-   * <code>optional int32 number = 2;</code>
+   * <code>int32 number = 2;</code>
    */
   public int getNumber() {
     return number_;
@@ -276,7 +276,7 @@ public  final class EnumValue extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAME_FIELD_NUMBER;
     hash = (53 * hash) + getName().hashCode();
     hash = (37 * hash) + NUMBER_FIELD_NUMBER;
@@ -561,7 +561,7 @@ public  final class EnumValue extends
      * Enum value name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -580,7 +580,7 @@ public  final class EnumValue extends
      * Enum value name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getNameBytes() {
@@ -600,7 +600,7 @@ public  final class EnumValue extends
      * Enum value name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setName(
         java.lang.String value) {
@@ -617,7 +617,7 @@ public  final class EnumValue extends
      * Enum value name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder clearName() {
       
@@ -630,7 +630,7 @@ public  final class EnumValue extends
      * Enum value name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setNameBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -650,7 +650,7 @@ public  final class EnumValue extends
      * Enum value number.
      * </pre>
      *
-     * <code>optional int32 number = 2;</code>
+     * <code>int32 number = 2;</code>
      */
     public int getNumber() {
       return number_;
@@ -660,7 +660,7 @@ public  final class EnumValue extends
      * Enum value number.
      * </pre>
      *
-     * <code>optional int32 number = 2;</code>
+     * <code>int32 number = 2;</code>
      */
     public Builder setNumber(int value) {
       
@@ -673,7 +673,7 @@ public  final class EnumValue extends
      * Enum value number.
      * </pre>
      *
-     * <code>optional int32 number = 2;</code>
+     * <code>int32 number = 2;</code>
      */
     public Builder clearNumber() {
       

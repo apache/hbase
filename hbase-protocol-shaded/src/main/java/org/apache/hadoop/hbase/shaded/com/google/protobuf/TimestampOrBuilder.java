@@ -14,7 +14,7 @@ public interface TimestampOrBuilder extends
    * 9999-12-31T23:59:59Z inclusive.
    * </pre>
    *
-   * <code>optional int64 seconds = 1;</code>
+   * <code>int64 seconds = 1;</code>
    */
   long getSeconds();
 
@@ -26,7 +26,7 @@ public interface TimestampOrBuilder extends
    * inclusive.
    * </pre>
    *
-   * <code>optional int32 nanos = 2;</code>
+   * <code>int32 nanos = 2;</code>
    */
   int getNanos();
 }

@@ -253,7 +253,7 @@ public  final class Struct extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     if (!internalGetFields().getMap().isEmpty()) {
       hash = (37 * hash) + FIELDS_FIELD_NUMBER;
       hash = (53 * hash) + internalGetFields().hashCode();
@@ -597,7 +597,8 @@ public  final class Struct extends
     }
 
     public Builder clearFields() {
-      getMutableFields().clear();
+      internalGetMutableFields().getMutableMap()
+          .clear();
       return this;
     }
     /**
@@ -611,7 +612,8 @@ public  final class Struct extends
     public Builder removeFields(
         java.lang.String key) {
       if (key == null) { throw new java.lang.NullPointerException(); }
-      getMutableFields().remove(key);
+      internalGetMutableFields().getMutableMap()
+          .remove(key);
       return this;
     }
     /**
@@ -634,7 +636,8 @@ public  final class Struct extends
         org.apache.hadoop.hbase.shaded.com.google.protobuf.Value value) {
       if (key == null) { throw new java.lang.NullPointerException(); }
       if (value == null) { throw new java.lang.NullPointerException(); }
-      getMutableFields().put(key, value);
+      internalGetMutableFields().getMutableMap()
+          .put(key, value);
       return this;
     }
     /**
@@ -647,7 +650,8 @@ public  final class Struct extends
 
     public Builder putAllFields(
         java.util.Map<java.lang.String, org.apache.hadoop.hbase.shaded.com.google.protobuf.Value> values) {
-      getMutableFields().putAll(values);
+      internalGetMutableFields().getMutableMap()
+          .putAll(values);
       return this;
     }
     public final Builder setUnknownFields(

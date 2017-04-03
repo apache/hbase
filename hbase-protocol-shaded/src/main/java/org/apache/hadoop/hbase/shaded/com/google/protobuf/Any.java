@@ -160,7 +160,7 @@ public  final class Any extends
   }
 
   /**
-   * Packs a message uisng the given type URL prefix. The type URL will
+   * Packs a message using the given type URL prefix. The type URL will
    * be constructed by concatenating the message type's full name to the
    * prefix with an optional "/" separator if the prefix doesn't end
    * with "/" already.
@@ -225,7 +225,7 @@ public  final class Any extends
    * used with implementation specific semantics.
    * </pre>
    *
-   * <code>optional string type_url = 1;</code>
+   * <code>string type_url = 1;</code>
    */
   public java.lang.String getTypeUrl() {
     java.lang.Object ref = typeUrl_;
@@ -261,7 +261,7 @@ public  final class Any extends
    * used with implementation specific semantics.
    * </pre>
    *
-   * <code>optional string type_url = 1;</code>
+   * <code>string type_url = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getTypeUrlBytes() {
@@ -284,7 +284,7 @@ public  final class Any extends
    * Must be a valid serialized protocol buffer of the above specified type.
    * </pre>
    *
-   * <code>optional bytes value = 2;</code>
+   * <code>bytes value = 2;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getValue() {
     return value_;
@@ -351,7 +351,7 @@ public  final class Any extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + TYPE_URL_FIELD_NUMBER;
     hash = (53 * hash) + getTypeUrl().hashCode();
     hash = (37 * hash) + VALUE_FIELD_NUMBER;
@@ -657,7 +657,7 @@ public  final class Any extends
      * used with implementation specific semantics.
      * </pre>
      *
-     * <code>optional string type_url = 1;</code>
+     * <code>string type_url = 1;</code>
      */
     public java.lang.String getTypeUrl() {
       java.lang.Object ref = typeUrl_;
@@ -693,7 +693,7 @@ public  final class Any extends
      * used with implementation specific semantics.
      * </pre>
      *
-     * <code>optional string type_url = 1;</code>
+     * <code>string type_url = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getTypeUrlBytes() {
@@ -730,7 +730,7 @@ public  final class Any extends
      * used with implementation specific semantics.
      * </pre>
      *
-     * <code>optional string type_url = 1;</code>
+     * <code>string type_url = 1;</code>
      */
     public Builder setTypeUrl(
         java.lang.String value) {
@@ -764,7 +764,7 @@ public  final class Any extends
      * used with implementation specific semantics.
      * </pre>
      *
-     * <code>optional string type_url = 1;</code>
+     * <code>string type_url = 1;</code>
      */
     public Builder clearTypeUrl() {
       
@@ -794,7 +794,7 @@ public  final class Any extends
      * used with implementation specific semantics.
      * </pre>
      *
-     * <code>optional string type_url = 1;</code>
+     * <code>string type_url = 1;</code>
      */
     public Builder setTypeUrlBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -814,7 +814,7 @@ public  final class Any extends
      * Must be a valid serialized protocol buffer of the above specified type.
      * </pre>
      *
-     * <code>optional bytes value = 2;</code>
+     * <code>bytes value = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getValue() {
       return value_;
@@ -824,7 +824,7 @@ public  final class Any extends
      * Must be a valid serialized protocol buffer of the above specified type.
      * </pre>
      *
-     * <code>optional bytes value = 2;</code>
+     * <code>bytes value = 2;</code>
      */
     public Builder setValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
       if (value == null) {
@@ -840,7 +840,7 @@ public  final class Any extends
      * Must be a valid serialized protocol buffer of the above specified type.
      * </pre>
      *
-     * <code>optional bytes value = 2;</code>
+     * <code>bytes value = 2;</code>
      */
     public Builder clearValue() {
       

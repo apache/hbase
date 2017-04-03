@@ -130,7 +130,7 @@ public  final class Method extends
    * The simple name of this method.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public java.lang.String getName() {
     java.lang.Object ref = name_;
@@ -149,7 +149,7 @@ public  final class Method extends
    * The simple name of this method.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes() {
@@ -172,7 +172,7 @@ public  final class Method extends
    * A URL of the input message type.
    * </pre>
    *
-   * <code>optional string request_type_url = 2;</code>
+   * <code>string request_type_url = 2;</code>
    */
   public java.lang.String getRequestTypeUrl() {
     java.lang.Object ref = requestTypeUrl_;
@@ -191,7 +191,7 @@ public  final class Method extends
    * A URL of the input message type.
    * </pre>
    *
-   * <code>optional string request_type_url = 2;</code>
+   * <code>string request_type_url = 2;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getRequestTypeUrlBytes() {
@@ -214,7 +214,7 @@ public  final class Method extends
    * If true, the request is streamed.
    * </pre>
    *
-   * <code>optional bool request_streaming = 3;</code>
+   * <code>bool request_streaming = 3;</code>
    */
   public boolean getRequestStreaming() {
     return requestStreaming_;
@@ -227,7 +227,7 @@ public  final class Method extends
    * The URL of the output message type.
    * </pre>
    *
-   * <code>optional string response_type_url = 4;</code>
+   * <code>string response_type_url = 4;</code>
    */
   public java.lang.String getResponseTypeUrl() {
     java.lang.Object ref = responseTypeUrl_;
@@ -246,7 +246,7 @@ public  final class Method extends
    * The URL of the output message type.
    * </pre>
    *
-   * <code>optional string response_type_url = 4;</code>
+   * <code>string response_type_url = 4;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getResponseTypeUrlBytes() {
@@ -269,7 +269,7 @@ public  final class Method extends
    * If true, the response is streamed.
    * </pre>
    *
-   * <code>optional bool response_streaming = 5;</code>
+   * <code>bool response_streaming = 5;</code>
    */
   public boolean getResponseStreaming() {
     return responseStreaming_;
@@ -337,7 +337,7 @@ public  final class Method extends
    * The source syntax of this method.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+   * <code>.google.protobuf.Syntax syntax = 7;</code>
    */
   public int getSyntaxValue() {
     return syntax_;
@@ -347,7 +347,7 @@ public  final class Method extends
    * The source syntax of this method.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+   * <code>.google.protobuf.Syntax syntax = 7;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax getSyntax() {
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax result = org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax.valueOf(syntax_);
@@ -457,7 +457,7 @@ public  final class Method extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAME_FIELD_NUMBER;
     hash = (53 * hash) + getName().hashCode();
     hash = (37 * hash) + REQUEST_TYPE_URL_FIELD_NUMBER;
@@ -778,7 +778,7 @@ public  final class Method extends
      * The simple name of this method.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -797,7 +797,7 @@ public  final class Method extends
      * The simple name of this method.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getNameBytes() {
@@ -817,7 +817,7 @@ public  final class Method extends
      * The simple name of this method.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setName(
         java.lang.String value) {
@@ -834,7 +834,7 @@ public  final class Method extends
      * The simple name of this method.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder clearName() {
       
@@ -847,7 +847,7 @@ public  final class Method extends
      * The simple name of this method.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setNameBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -867,7 +867,7 @@ public  final class Method extends
      * A URL of the input message type.
      * </pre>
      *
-     * <code>optional string request_type_url = 2;</code>
+     * <code>string request_type_url = 2;</code>
      */
     public java.lang.String getRequestTypeUrl() {
       java.lang.Object ref = requestTypeUrl_;
@@ -886,7 +886,7 @@ public  final class Method extends
      * A URL of the input message type.
      * </pre>
      *
-     * <code>optional string request_type_url = 2;</code>
+     * <code>string request_type_url = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getRequestTypeUrlBytes() {
@@ -906,7 +906,7 @@ public  final class Method extends
      * A URL of the input message type.
      * </pre>
      *
-     * <code>optional string request_type_url = 2;</code>
+     * <code>string request_type_url = 2;</code>
      */
     public Builder setRequestTypeUrl(
         java.lang.String value) {
@@ -923,7 +923,7 @@ public  final class Method extends
      * A URL of the input message type.
      * </pre>
      *
-     * <code>optional string request_type_url = 2;</code>
+     * <code>string request_type_url = 2;</code>
      */
     public Builder clearRequestTypeUrl() {
       
@@ -936,7 +936,7 @@ public  final class Method extends
      * A URL of the input message type.
      * </pre>
      *
-     * <code>optional string request_type_url = 2;</code>
+     * <code>string request_type_url = 2;</code>
      */
     public Builder setRequestTypeUrlBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -956,7 +956,7 @@ public  final class Method extends
      * If true, the request is streamed.
      * </pre>
      *
-     * <code>optional bool request_streaming = 3;</code>
+     * <code>bool request_streaming = 3;</code>
      */
     public boolean getRequestStreaming() {
       return requestStreaming_;
@@ -966,7 +966,7 @@ public  final class Method extends
      * If true, the request is streamed.
      * </pre>
      *
-     * <code>optional bool request_streaming = 3;</code>
+     * <code>bool request_streaming = 3;</code>
      */
     public Builder setRequestStreaming(boolean value) {
       
@@ -979,7 +979,7 @@ public  final class Method extends
      * If true, the request is streamed.
      * </pre>
      *
-     * <code>optional bool request_streaming = 3;</code>
+     * <code>bool request_streaming = 3;</code>
      */
     public Builder clearRequestStreaming() {
       
@@ -994,7 +994,7 @@ public  final class Method extends
      * The URL of the output message type.
      * </pre>
      *
-     * <code>optional string response_type_url = 4;</code>
+     * <code>string response_type_url = 4;</code>
      */
     public java.lang.String getResponseTypeUrl() {
       java.lang.Object ref = responseTypeUrl_;
@@ -1013,7 +1013,7 @@ public  final class Method extends
      * The URL of the output message type.
      * </pre>
      *
-     * <code>optional string response_type_url = 4;</code>
+     * <code>string response_type_url = 4;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getResponseTypeUrlBytes() {
@@ -1033,7 +1033,7 @@ public  final class Method extends
      * The URL of the output message type.
      * </pre>
      *
-     * <code>optional string response_type_url = 4;</code>
+     * <code>string response_type_url = 4;</code>
      */
     public Builder setResponseTypeUrl(
         java.lang.String value) {
@@ -1050,7 +1050,7 @@ public  final class Method extends
      * The URL of the output message type.
      * </pre>
      *
-     * <code>optional string response_type_url = 4;</code>
+     * <code>string response_type_url = 4;</code>
      */
     public Builder clearResponseTypeUrl() {
       
@@ -1063,7 +1063,7 @@ public  final class Method extends
      * The URL of the output message type.
      * </pre>
      *
-     * <code>optional string response_type_url = 4;</code>
+     * <code>string response_type_url = 4;</code>
      */
     public Builder setResponseTypeUrlBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -1083,7 +1083,7 @@ public  final class Method extends
      * If true, the response is streamed.
      * </pre>
      *
-     * <code>optional bool response_streaming = 5;</code>
+     * <code>bool response_streaming = 5;</code>
      */
     public boolean getResponseStreaming() {
       return responseStreaming_;
@@ -1093,7 +1093,7 @@ public  final class Method extends
      * If true, the response is streamed.
      * </pre>
      *
-     * <code>optional bool response_streaming = 5;</code>
+     * <code>bool response_streaming = 5;</code>
      */
     public Builder setResponseStreaming(boolean value) {
       
@@ -1106,7 +1106,7 @@ public  final class Method extends
      * If true, the response is streamed.
      * </pre>
      *
-     * <code>optional bool response_streaming = 5;</code>
+     * <code>bool response_streaming = 5;</code>
      */
     public Builder clearResponseStreaming() {
       
@@ -1433,7 +1433,7 @@ public  final class Method extends
      * The source syntax of this method.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+     * <code>.google.protobuf.Syntax syntax = 7;</code>
      */
     public int getSyntaxValue() {
       return syntax_;
@@ -1443,7 +1443,7 @@ public  final class Method extends
      * The source syntax of this method.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+     * <code>.google.protobuf.Syntax syntax = 7;</code>
      */
     public Builder setSyntaxValue(int value) {
       syntax_ = value;
@@ -1455,7 +1455,7 @@ public  final class Method extends
      * The source syntax of this method.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+     * <code>.google.protobuf.Syntax syntax = 7;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax getSyntax() {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax result = org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax.valueOf(syntax_);
@@ -1466,7 +1466,7 @@ public  final class Method extends
      * The source syntax of this method.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+     * <code>.google.protobuf.Syntax syntax = 7;</code>
      */
     public Builder setSyntax(org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax value) {
       if (value == null) {
@@ -1482,7 +1482,7 @@ public  final class Method extends
      * The source syntax of this method.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+     * <code>.google.protobuf.Syntax syntax = 7;</code>
      */
     public Builder clearSyntax() {
       

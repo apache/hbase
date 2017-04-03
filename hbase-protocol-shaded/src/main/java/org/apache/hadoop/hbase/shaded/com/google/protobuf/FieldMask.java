@@ -336,7 +336,7 @@ public  final class FieldMask extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     if (getPathsCount() > 0) {
       hash = (37 * hash) + PATHS_FIELD_NUMBER;
       hash = (53 * hash) + getPathsList().hashCode();

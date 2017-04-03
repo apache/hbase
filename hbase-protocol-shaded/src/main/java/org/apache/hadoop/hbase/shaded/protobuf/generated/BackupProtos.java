@@ -334,7 +334,7 @@ public final class BackupProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasServerName()) {
         hash = (37 * hash) + SERVER_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getServerName().hashCode();
@@ -1067,7 +1067,7 @@ public final class BackupProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTableName()) {
         hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
@@ -2434,7 +2434,7 @@ public final class BackupProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasBackupId()) {
         hash = (37 * hash) + BACKUP_ID_FIELD_NUMBER;
         hash = (53 * hash) + getBackupId().hashCode();
@@ -4158,7 +4158,7 @@ public final class BackupProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTableName()) {
         hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
@@ -5690,7 +5690,7 @@ public final class BackupProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasBackupId()) {
         hash = (37 * hash) + BACKUP_ID_FIELD_NUMBER;
         hash = (53 * hash) + getBackupId().hashCode();

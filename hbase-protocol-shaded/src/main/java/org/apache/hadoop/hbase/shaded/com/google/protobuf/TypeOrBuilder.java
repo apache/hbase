@@ -12,7 +12,7 @@ public interface TypeOrBuilder extends
    * The fully qualified message name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   java.lang.String getName();
   /**
@@ -20,7 +20,7 @@ public interface TypeOrBuilder extends
    * The fully qualified message name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes();
@@ -153,7 +153,7 @@ public interface TypeOrBuilder extends
    * The source context.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+   * <code>.google.protobuf.SourceContext source_context = 5;</code>
    */
   boolean hasSourceContext();
   /**
@@ -161,7 +161,7 @@ public interface TypeOrBuilder extends
    * The source context.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+   * <code>.google.protobuf.SourceContext source_context = 5;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext getSourceContext();
   /**
@@ -169,7 +169,7 @@ public interface TypeOrBuilder extends
    * The source context.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+   * <code>.google.protobuf.SourceContext source_context = 5;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContextOrBuilder getSourceContextOrBuilder();
 
@@ -178,7 +178,7 @@ public interface TypeOrBuilder extends
    * The source syntax.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 6;</code>
+   * <code>.google.protobuf.Syntax syntax = 6;</code>
    */
   int getSyntaxValue();
   /**
@@ -186,7 +186,7 @@ public interface TypeOrBuilder extends
    * The source syntax.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 6;</code>
+   * <code>.google.protobuf.Syntax syntax = 6;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax getSyntax();
 }

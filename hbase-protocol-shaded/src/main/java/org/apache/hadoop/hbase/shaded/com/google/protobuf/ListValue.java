@@ -191,7 +191,7 @@ public  final class ListValue extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     if (getValuesCount() > 0) {
       hash = (37 * hash) + VALUES_FIELD_NUMBER;
       hash = (53 * hash) + getValuesList().hashCode();

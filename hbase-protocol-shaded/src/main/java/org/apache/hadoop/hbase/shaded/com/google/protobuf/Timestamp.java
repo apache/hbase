@@ -126,7 +126,7 @@ public  final class Timestamp extends
    * 9999-12-31T23:59:59Z inclusive.
    * </pre>
    *
-   * <code>optional int64 seconds = 1;</code>
+   * <code>int64 seconds = 1;</code>
    */
   public long getSeconds() {
     return seconds_;
@@ -142,7 +142,7 @@ public  final class Timestamp extends
    * inclusive.
    * </pre>
    *
-   * <code>optional int32 nanos = 2;</code>
+   * <code>int32 nanos = 2;</code>
    */
   public int getNanos() {
     return nanos_;
@@ -210,7 +210,7 @@ public  final class Timestamp extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + SECONDS_FIELD_NUMBER;
     hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
         getSeconds());
@@ -483,7 +483,7 @@ public  final class Timestamp extends
      * 9999-12-31T23:59:59Z inclusive.
      * </pre>
      *
-     * <code>optional int64 seconds = 1;</code>
+     * <code>int64 seconds = 1;</code>
      */
     public long getSeconds() {
       return seconds_;
@@ -495,7 +495,7 @@ public  final class Timestamp extends
      * 9999-12-31T23:59:59Z inclusive.
      * </pre>
      *
-     * <code>optional int64 seconds = 1;</code>
+     * <code>int64 seconds = 1;</code>
      */
     public Builder setSeconds(long value) {
       
@@ -510,7 +510,7 @@ public  final class Timestamp extends
      * 9999-12-31T23:59:59Z inclusive.
      * </pre>
      *
-     * <code>optional int64 seconds = 1;</code>
+     * <code>int64 seconds = 1;</code>
      */
     public Builder clearSeconds() {
       
@@ -528,7 +528,7 @@ public  final class Timestamp extends
      * inclusive.
      * </pre>
      *
-     * <code>optional int32 nanos = 2;</code>
+     * <code>int32 nanos = 2;</code>
      */
     public int getNanos() {
       return nanos_;
@@ -541,7 +541,7 @@ public  final class Timestamp extends
      * inclusive.
      * </pre>
      *
-     * <code>optional int32 nanos = 2;</code>
+     * <code>int32 nanos = 2;</code>
      */
     public Builder setNanos(int value) {
       
@@ -557,7 +557,7 @@ public  final class Timestamp extends
      * inclusive.
      * </pre>
      *
-     * <code>optional int32 nanos = 2;</code>
+     * <code>int32 nanos = 2;</code>
      */
     public Builder clearNanos() {
       
