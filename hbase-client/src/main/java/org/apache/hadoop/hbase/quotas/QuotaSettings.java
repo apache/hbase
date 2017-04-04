@@ -21,12 +21,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public abstract class QuotaSettings {
   private final String userName;
   private final String namespace;

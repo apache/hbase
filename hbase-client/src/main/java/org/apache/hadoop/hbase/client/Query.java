@@ -22,7 +22,6 @@ import java.util.Map;
 
 import com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -38,7 +37,6 @@ import com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public abstract class Query extends OperationWithAttributes {
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
   protected Filter filter = null;

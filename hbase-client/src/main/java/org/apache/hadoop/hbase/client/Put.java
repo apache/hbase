@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * setting the timestamp.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Put extends Mutation implements HeapSize, Comparable<Row> {
   /**
    * Create a Put operation for the specified row.

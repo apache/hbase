@@ -26,7 +26,6 @@ import java.util.Set;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.io.VersionedWritable;
 
@@ -50,7 +49,6 @@ import org.apache.hadoop.io.VersionedWritable;
  * </ul>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ClusterStatus extends VersionedWritable {
   /**
    * Version for object serialization.  Incremented for changes in serialized

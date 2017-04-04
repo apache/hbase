@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when a replication peer can not be found
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class ReplicationPeerNotFoundException extends DoNotRetryIOException {
 
   private static final long serialVersionUID = 1L;

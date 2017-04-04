@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.net;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.net.HostAndPort;
 
@@ -30,7 +29,6 @@ import com.google.common.net.HostAndPort;
  * <p>In implementation this class is a facade over Guava's {@link HostAndPort}.
  * We cannot have Guava classes in our API hence this Type.
  */
-@InterfaceStability.Evolving
 @InterfaceAudience.Public
 public class Address implements Comparable<Address> {
   private HostAndPort hostAndPort;

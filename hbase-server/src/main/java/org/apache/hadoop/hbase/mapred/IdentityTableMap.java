@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.mapred.JobConf;
@@ -33,7 +32,6 @@ import org.apache.hadoop.mapred.Reporter;
  * Pass the given key and record as-is to reduce
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class IdentityTableMap
 extends MapReduceBase
 implements TableMap<ImmutableBytesWritable, Result> {

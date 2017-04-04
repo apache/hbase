@@ -21,13 +21,11 @@ import java.io.OutputStream;
 import java.security.Key;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Encryptors apply a cipher to an OutputStream to produce ciphertext.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface Encryptor {
 
   /**

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown by a region server if it will block and wait to serve a request.
@@ -28,7 +27,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * region is compacting.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class RegionTooBusyException extends IOException {
   private static final long serialVersionUID = 1728345723728342L;
 

@@ -25,7 +25,6 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
@@ -42,7 +41,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * or {@link org.apache.hadoop.hbase.client.Scan#setTimeStamp(long)}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TimestampsFilter extends FilterBase {
 
   private final boolean canHint;

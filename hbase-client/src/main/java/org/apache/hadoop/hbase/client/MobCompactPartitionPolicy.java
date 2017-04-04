@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Enum describing the mob compact partition policy types.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum MobCompactPartitionPolicy {
   /**
    * Compact daily mob files into one file

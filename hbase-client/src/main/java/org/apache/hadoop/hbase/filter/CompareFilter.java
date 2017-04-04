@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -49,12 +48,10 @@ import com.google.common.base.Preconditions;
  * Multiple filters can be combined using {@link FilterList}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public abstract class CompareFilter extends FilterBase {
 
   /** Comparison operators. */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public enum CompareOp {
     /** less than */
     LESS,

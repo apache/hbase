@@ -21,14 +21,12 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Thrown if a table should be online/offline but is partially open
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TablePartiallyOpenException extends IOException {
   private static final long serialVersionUID = 3571982660065058361L;
 

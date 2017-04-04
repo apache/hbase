@@ -21,7 +21,6 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Specify Isolation levels in Scan operations.
@@ -33,7 +32,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * not have been committed yet.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public enum IsolationLevel {
 
   READ_COMMITTED(1),

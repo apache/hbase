@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.Tag;
 
@@ -29,7 +28,6 @@ import org.apache.hadoop.hbase.Tag;
  * Interface to convert visibility expressions into Tags for storing along with Cells in HFiles.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface VisibilityExpressionResolver extends Configurable {
 
   /**

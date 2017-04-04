@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -76,7 +75,6 @@ import org.apache.hadoop.util.StringUtils;
  * previous behavior of a range corresponding to 1 region.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class HRegionInfo implements Comparable<HRegionInfo> {
 
   private static final Log LOG = LogFactory.getLog(HRegionInfo.class);

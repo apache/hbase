@@ -33,7 +33,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
@@ -87,7 +86,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * instance per usage.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Scan extends Query {
   private static final Log LOG = LogFactory.getLog(Scan.class);
 
@@ -1131,7 +1129,6 @@ public class Scan extends Query {
   }
 
   @InterfaceAudience.Public
-  @InterfaceStability.Unstable
   public enum ReadType {
     DEFAULT, STREAM, PREAD
   }

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -41,7 +40,6 @@ import org.apache.hadoop.util.ToolRunner;
  * Uses a org.apache.hadoop.mapred.lib.IdentityReducer
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class RowCounter extends Configured implements Tool {
   // Name of this 'program'
   static final String NAME = "rowcounter";

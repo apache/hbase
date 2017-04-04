@@ -25,14 +25,12 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.net.Address;
 
 /**
  * Stores the group information of region server groups.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class RSGroupInfo {
   public static final String DEFAULT_GROUP = "default";
   public static final String NAMESPACE_DESC_PROP_GROUP = "hbase.rsgroup.name";

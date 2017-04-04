@@ -26,7 +26,6 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -54,7 +53,6 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  * @since 0.99.0
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ConnectionFactory {
 
   public static final String HBASE_CLIENT_ASYNC_CONNECTION_IMPL = "hbase.client.async.connection.impl";

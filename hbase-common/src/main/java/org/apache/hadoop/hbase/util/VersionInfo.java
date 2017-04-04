@@ -25,13 +25,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Version;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * This class finds the Version information for HBase.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class VersionInfo {
   private static final Log LOG = LogFactory.getLog(VersionInfo.class.getName());
 

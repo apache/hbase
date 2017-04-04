@@ -23,7 +23,6 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * 
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class RandomRowFilter extends FilterBase {
   protected static final Random random = new Random();
 

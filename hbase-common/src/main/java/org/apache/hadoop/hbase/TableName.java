@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
  * </p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class TableName implements Comparable<TableName> {
 
   /** See {@link #createTableNameIfNecessary(ByteBuffer, ByteBuffer)} */

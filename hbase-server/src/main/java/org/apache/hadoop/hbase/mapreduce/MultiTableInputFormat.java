@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Scan;
@@ -55,7 +54,6 @@ import org.apache.hadoop.hbase.client.Scan;
  * </pre>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class MultiTableInputFormat extends MultiTableInputFormatBase implements
     Configurable {
 

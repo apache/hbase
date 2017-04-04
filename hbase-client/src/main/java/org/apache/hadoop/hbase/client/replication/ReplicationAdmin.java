@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -86,7 +85,6 @@ import com.google.common.collect.Lists;
  * @deprecated use {@link org.apache.hadoop.hbase.client.Admin} instead.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 @Deprecated
 public class ReplicationAdmin implements Closeable {
   private static final Log LOG = LogFactory.getLog(ReplicationAdmin.class);

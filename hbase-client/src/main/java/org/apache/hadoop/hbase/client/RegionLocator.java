@@ -25,7 +25,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.util.Pair;
  * @since 0.99.0
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface RegionLocator extends Closeable {
   /**
    * Finds the region on which the given row is being served. Does not reload the cache.

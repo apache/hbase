@@ -36,7 +36,6 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -87,7 +86,6 @@ import org.apache.hadoop.util.Tool;
  * When everything is done, the second cluster can restore the snapshot.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   public static final String NAME = "exportsnapshot";
   /** Configuration prefix for overrides for the source filesystem */

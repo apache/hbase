@@ -18,13 +18,11 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Exception thrown when a read only byte range is modified
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ReadOnlyByteRangeException extends UnsupportedOperationException {
   public ReadOnlyByteRangeException() {
 

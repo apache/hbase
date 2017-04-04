@@ -29,7 +29,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.io.IOUtils;
@@ -43,7 +42,6 @@ import sun.nio.ch.DirectBuffer;
  */
 @SuppressWarnings("restriction")
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class ByteBufferUtils {
 
   // "Compressed integer" serialization helper constants.

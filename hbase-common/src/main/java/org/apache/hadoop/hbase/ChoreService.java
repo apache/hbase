@@ -32,7 +32,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore.ChoreServicer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * ChoreService is a service that can be used to schedule instances of {@link ScheduledChore} to run
@@ -54,7 +53,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * Calling this method ensures that all scheduled chores are cancelled and cleaned up properly.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class ChoreService implements ChoreServicer {
   private static final Log LOG = LogFactory.getLog(ChoreService.class);
 

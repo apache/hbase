@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client.metrics;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 
 /**
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * for now.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ScanMetrics extends ServerSideScanMetrics {
 
   // AtomicLongs to hold the metrics values. These are all updated through ClientScanner and

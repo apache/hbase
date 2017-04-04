@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.security.User;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.security.User;
  * visibility expression storage part and read time evaluation.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface VisibilityLabelService extends Configurable {
 
   /**

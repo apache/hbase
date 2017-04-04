@@ -23,14 +23,12 @@ import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Used by {@link org.apache.hadoop.hbase.client.Admin#listReplicatedTableCFs()}.
  * The cfs is a map of <ColumnFamily, ReplicationScope>.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TableCFs {
   private final TableName table;
   private final Map<String, Integer> cfs;

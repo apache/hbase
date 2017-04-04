@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -67,7 +66,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  * This class is thread safe.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class HTableMultiplexer {
   private static final Log LOG = LogFactory.getLog(HTableMultiplexer.class.getName());
 
@@ -271,7 +269,6 @@ public class HTableMultiplexer {
    * in total or on per region server basis.
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public static class HTableMultiplexerStatus {
     private long totalFailedPutCounter;
     private long totalBufferedPutCounter;

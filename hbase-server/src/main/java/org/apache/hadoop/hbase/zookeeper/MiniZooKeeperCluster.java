@@ -35,7 +35,6 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
@@ -50,7 +49,6 @@ import com.google.common.annotations.VisibleForTesting;
  * easily access testing helper objects.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class MiniZooKeeperCluster {
   private static final Log LOG = LogFactory.getLog(MiniZooKeeperCluster.class);
 

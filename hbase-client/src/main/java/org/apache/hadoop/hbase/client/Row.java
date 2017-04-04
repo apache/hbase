@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Has a row.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public interface Row extends Comparable<Row> {
   /**
    * @return The row.

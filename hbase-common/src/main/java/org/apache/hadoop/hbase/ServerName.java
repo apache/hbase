@@ -25,7 +25,6 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,7 +55,6 @@ import com.google.common.net.InetAddresses;
  * <p>Immutable.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ServerName implements Comparable<ServerName>, Serializable {
   private static final long serialVersionUID = 1367463982557264981L;
 

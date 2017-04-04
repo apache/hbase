@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
@@ -31,7 +30,6 @@ import org.apache.hadoop.util.StringUtils;
  * Procedure information
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ProcedureInfo implements Cloneable {
   private final long procId;
   private final String procName;

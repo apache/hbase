@@ -48,7 +48,6 @@ import org.apache.hadoop.conf.Configuration;
  * attempt as a bad request.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class RestCsrfPreventionFilter implements Filter {
 
   private static final Log LOG =

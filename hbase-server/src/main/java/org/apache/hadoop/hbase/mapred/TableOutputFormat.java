@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -41,7 +40,6 @@ import org.apache.hadoop.util.Progressable;
  * Convert Map/Reduce output and write it to an HBase table
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, Put> {
 
   /** JobConf parameter that specifies the output table */

@@ -26,7 +26,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -39,7 +38,6 @@ import org.apache.hadoop.mapreduce.Reducer;
  * @see TableMapReduceUtil
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
   private static final Log LOG = LogFactory.getLog(PutCombiner.class);
 

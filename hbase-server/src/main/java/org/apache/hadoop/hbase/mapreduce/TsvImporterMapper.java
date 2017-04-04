@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
@@ -45,7 +44,6 @@ import org.apache.hadoop.mapreduce.Mapper;
  * Write table content out to files in hdfs.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TsvImporterMapper
 extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
 {

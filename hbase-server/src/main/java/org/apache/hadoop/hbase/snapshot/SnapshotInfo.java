@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
@@ -66,7 +65,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * </ol>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class SnapshotInfo extends AbstractHBaseTool {
   private static final Log LOG = LogFactory.getLog(SnapshotInfo.class);
 

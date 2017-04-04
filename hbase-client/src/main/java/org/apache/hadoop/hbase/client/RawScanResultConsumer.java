@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
@@ -32,14 +31,12 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
  * consuming tasks in all methods below unless you know what you are doing.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface RawScanResultConsumer {
 
   /**
    * Used to resume a scan.
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Unstable
   interface ScanResumer {
 
     /**
@@ -60,7 +57,6 @@ public interface RawScanResultConsumer {
    * thrown if you have already called one of the methods.
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Unstable
   interface ScanController {
 
     /**

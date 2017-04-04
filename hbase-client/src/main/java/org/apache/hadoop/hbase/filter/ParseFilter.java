@@ -33,7 +33,6 @@ import java.util.Stack;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -47,7 +46,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Filter Language can be found at: https://issues.apache.org/jira/browse/HBASE-4176
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class ParseFilter {
   private static final Log LOG = LogFactory.getLog(ParseFilter.class);
 

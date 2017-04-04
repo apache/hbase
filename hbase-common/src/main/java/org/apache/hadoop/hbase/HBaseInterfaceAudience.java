@@ -18,13 +18,11 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * This class defines constants for different classes of hbase limited private apis
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class HBaseInterfaceAudience {
 
   /**

@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when a namespace exists but should not
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class NamespaceExistException extends DoNotRetryIOException {
 
   private static final long serialVersionUID = -1582357514338825412L;

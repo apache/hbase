@@ -22,7 +22,6 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * The asynchronous version of RegionLocator.
@@ -31,7 +30,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * from the returned {@link CompletableFuture}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface AsyncTableRegionLocator {
 
   /**

@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -79,7 +78,6 @@ import com.google.protobuf.ServiceException;
  * HTable interface to remote tables accessed via REST gateway
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class RemoteHTable implements Table {
 
   private static final Log LOG = LogFactory.getLog(RemoteHTable.class);

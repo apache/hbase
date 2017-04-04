@@ -26,7 +26,6 @@ import java.util.function.Function;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A low level asynchronous table.
@@ -47,7 +46,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * most features of AsyncTable, we can think about merge these two interfaces.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface RawAsyncTable extends AsyncTableBase {
 
   /**
@@ -93,7 +91,6 @@ public interface RawAsyncTable extends AsyncTableBase {
    * </pre>
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Unstable
   @FunctionalInterface
   interface CoprocessorCallable<S, R> {
 
@@ -175,7 +172,6 @@ public interface RawAsyncTable extends AsyncTableBase {
    * </pre>
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Unstable
   interface CoprocessorCallback<R> {
 
     /**

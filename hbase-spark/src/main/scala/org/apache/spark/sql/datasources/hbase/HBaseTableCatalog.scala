@@ -19,7 +19,6 @@ package org.apache.spark.sql.datasources.hbase
 
 import org.apache.avro.Schema
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.spark.SchemaConverters
 import org.apache.hadoop.hbase.spark.datasources._
 import org.apache.hadoop.hbase.spark.hbase._
@@ -210,7 +209,6 @@ case class HBaseTableCatalog(
 }
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 object HBaseTableCatalog {
   // If defined and larger than 3, a new table will be created with the nubmer of region specified.
   val newTable = "newtable"

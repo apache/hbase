@@ -24,7 +24,6 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 
 /**
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
  * @see FilterBase
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public abstract class Filter {
   protected transient boolean reversed;
   /**
@@ -156,7 +154,6 @@ public abstract class Filter {
    * Return codes for filterValue().
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public enum ReturnCode {
     /**
      * Include the Cell

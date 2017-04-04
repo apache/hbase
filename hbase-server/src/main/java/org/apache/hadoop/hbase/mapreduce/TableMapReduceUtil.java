@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -69,7 +68,6 @@ import com.codahale.metrics.MetricRegistry;
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TableMapReduceUtil {
   private static final Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
 

@@ -41,7 +41,6 @@ import java.util.zip.GZIPOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Encodes and decodes to and from Base64 notation.
@@ -118,7 +117,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * version: 2.2.1
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Base64 {
 
   /* ******** P U B L I C   F I E L D S ******** */
@@ -1290,7 +1288,6 @@ public class Base64 {
    * @since 1.3
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public static class Base64InputStream extends FilterInputStream {
     private boolean encode;                     // Encoding or decoding
     private int position;                       // Current position in the buffer
@@ -1492,7 +1489,6 @@ public class Base64 {
    * @since 1.3
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public static class Base64OutputStream extends FilterOutputStream {
     private boolean encode;
     private int position;
@@ -1538,7 +1534,6 @@ public class Base64 {
      * @since 1.3
      */
     @InterfaceAudience.Public
-    @InterfaceStability.Stable
     public Base64OutputStream(OutputStream out, int options) {
       super(out);
       this.breakLines = (options & DONT_BREAK_LINES) != DONT_BREAK_LINES;

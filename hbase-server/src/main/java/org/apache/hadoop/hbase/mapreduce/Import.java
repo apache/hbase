@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -84,7 +83,6 @@ import org.apache.zookeeper.KeeperException;
  * Import data written by {@link Export}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Import extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(Import.class);
   final static String NAME = "import";

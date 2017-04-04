@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 
 /**
@@ -29,7 +28,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * persisted into store files.  Response should include replay of wal content.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class DroppedSnapshotException extends IOException {
 
   private static final long serialVersionUID = -5463156580831677374L;

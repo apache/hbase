@@ -25,7 +25,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
@@ -40,7 +39,6 @@ import org.apache.hadoop.io.WritableComparator;
  * buffer is accessed when we go to serialize.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
     value="EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
     justification="It has been like this forever")
@@ -229,7 +227,6 @@ implements WritableComparable<ImmutableBytesWritable> {
   /** A Comparator optimized for ImmutableBytesWritable.
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public static class Comparator extends WritableComparator {
     private BytesWritable.Comparator comparator =
       new BytesWritable.Comparator();

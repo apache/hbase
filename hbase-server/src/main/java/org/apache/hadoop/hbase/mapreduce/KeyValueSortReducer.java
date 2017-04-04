@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -35,7 +34,6 @@ import org.apache.hadoop.mapreduce.Reducer;
  * @see HFileOutputFormat2
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class KeyValueSortReducer extends Reducer<ImmutableBytesWritable, KeyValue, ImmutableBytesWritable, KeyValue> {
   protected void reduce(ImmutableBytesWritable row, java.lang.Iterable<KeyValue> kvs,
       org.apache.hadoop.mapreduce.Reducer<ImmutableBytesWritable, KeyValue, ImmutableBytesWritable, KeyValue>.Context context)

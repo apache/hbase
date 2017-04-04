@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
@@ -49,7 +48,6 @@ import com.google.common.base.Preconditions;
  * It is used as input when creating a table or adding a column.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   // For future backward compatibility
 

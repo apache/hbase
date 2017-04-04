@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -60,7 +59,6 @@ import com.google.protobuf.ByteString;
  */
 @SuppressWarnings("restriction")
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
     value="EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
     justification="It has been like this forever")
@@ -335,7 +333,6 @@ public class Bytes implements Comparable<Bytes> {
    * Byte array comparator class.
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public static class ByteArrayComparator implements RawComparator<byte []> {
     /**
      * Constructor
@@ -363,7 +360,6 @@ public class Bytes implements Comparable<Bytes> {
   // while comparing row keys, start keys etc; but as the largest value for comparing
   // region boundaries for endKeys.
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public static class RowEndKeyComparator extends ByteArrayComparator {
     @Override
     public int compare(byte[] left, byte[] right) {

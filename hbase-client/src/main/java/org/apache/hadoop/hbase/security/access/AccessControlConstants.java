@@ -19,10 +19,8 @@
 package org.apache.hadoop.hbase.security.access;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface AccessControlConstants {
 
   /**

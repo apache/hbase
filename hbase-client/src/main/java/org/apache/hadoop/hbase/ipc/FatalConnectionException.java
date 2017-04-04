@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when server finds fatal issue w/ connection setup: e.g. bad rpc version
@@ -28,7 +27,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class FatalConnectionException extends DoNotRetryIOException {
   public FatalConnectionException() {
     super();

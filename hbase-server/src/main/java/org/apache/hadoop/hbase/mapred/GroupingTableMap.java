@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -39,7 +38,6 @@ import org.apache.hadoop.mapred.Reporter;
  * Extract grouping columns from input record
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class GroupingTableMap
 extends MapReduceBase
 implements TableMap<ImmutableBytesWritable,Result> {

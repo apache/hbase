@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -79,7 +78,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * in then use {@link #copyFrom(Result)}
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Result implements CellScannable, CellScanner {
   private Cell[] cells;
   private Boolean exists; // if the query was just to check existence.

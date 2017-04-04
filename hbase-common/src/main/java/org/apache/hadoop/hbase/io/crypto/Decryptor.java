@@ -21,13 +21,11 @@ import java.io.InputStream;
 import java.security.Key;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Decryptors apply a cipher to an InputStream to recover plaintext.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface Decryptor {
 
   /**

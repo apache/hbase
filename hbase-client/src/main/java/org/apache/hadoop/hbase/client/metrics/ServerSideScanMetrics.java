@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -30,7 +29,6 @@ import com.google.common.collect.ImmutableMap;
  * Provides server side metrics related to scan operations.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ServerSideScanMetrics {
   /**
    * Hash to hold the String -&gt; Atomic Long mappings for each metric

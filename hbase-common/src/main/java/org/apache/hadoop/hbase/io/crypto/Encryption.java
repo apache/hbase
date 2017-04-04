@@ -39,7 +39,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -48,7 +47,6 @@ import org.apache.hadoop.util.ReflectionUtils;
  * A facade for encryption algorithms and related support.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class Encryption {
 
   private static final Log LOG = LogFactory.getLog(Encryption.class);
@@ -57,7 +55,6 @@ public final class Encryption {
    * Crypto context
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public static class Context extends org.apache.hadoop.hbase.io.crypto.Context {
 
     /** The null crypto context */

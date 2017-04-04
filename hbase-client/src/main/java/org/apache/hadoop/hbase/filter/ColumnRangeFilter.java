@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -50,7 +49,6 @@ import com.google.common.base.Preconditions;
  * or not.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class ColumnRangeFilter extends FilterBase {
   protected byte[] minColumn = null;
   protected boolean minColumnInclusive = true;

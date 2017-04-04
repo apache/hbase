@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapred;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.WritableComparable;
@@ -33,7 +32,6 @@ import org.apache.hadoop.mapred.Mapper;
  * @param <V> Writable value class
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public interface TableMap<K extends WritableComparable<? super K>, V>
 extends Mapper<ImmutableBytesWritable, Result, K, V> {
 

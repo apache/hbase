@@ -21,13 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A helper for building {@link Struct} instances.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class StructBuilder {
 
   protected final List<DataType<?>> fields = new ArrayList<>();

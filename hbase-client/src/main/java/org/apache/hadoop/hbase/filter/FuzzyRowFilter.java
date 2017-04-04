@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -59,7 +58,6 @@ import com.google.common.annotations.VisibleForTesting;
  * mask is "????_99_????_01", where at ? can be any value.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class FuzzyRowFilter extends FilterBase {
   private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
   private List<Pair<byte[], byte[]>> fuzzyKeysData;

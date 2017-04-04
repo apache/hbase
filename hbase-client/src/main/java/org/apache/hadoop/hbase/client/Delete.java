@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -69,7 +68,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * timestamp.  The constructor timestamp is not referenced.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Delete extends Mutation implements Comparable<Row> {
   /**
    * Create a Delete operation for the specified row.

@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.security.visibility.InvalidLabelException;
 import org.apache.hadoop.hbase.util.Base64;
@@ -50,7 +49,6 @@ import org.apache.hadoop.util.StringUtils;
  * @see PutSortReducer
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TextSortReducer extends
     Reducer<ImmutableBytesWritable, Text, ImmutableBytesWritable, KeyValue> {
   

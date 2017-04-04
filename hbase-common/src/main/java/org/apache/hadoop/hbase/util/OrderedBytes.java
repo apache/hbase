@@ -27,7 +27,6 @@ import java.math.RoundingMode;
 import java.nio.charset.Charset;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -267,7 +266,6 @@ import com.google.common.annotations.VisibleForTesting;
  * </p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class OrderedBytes {
 
   /*

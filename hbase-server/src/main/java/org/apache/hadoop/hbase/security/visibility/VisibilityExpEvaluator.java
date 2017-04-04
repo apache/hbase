@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.security.visibility;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 
 /**
@@ -30,7 +29,6 @@ import org.apache.hadoop.hbase.Cell;
  * read results.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface VisibilityExpEvaluator {
 
   /**

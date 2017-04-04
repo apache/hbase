@@ -28,7 +28,6 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -36,7 +35,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Not thread safe!
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ByteBufferOutputStream extends OutputStream
     implements ByteBufferWriter {
   

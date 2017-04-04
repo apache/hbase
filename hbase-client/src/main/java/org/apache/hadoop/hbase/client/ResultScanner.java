@@ -26,14 +26,12 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
 /**
  * Interface for client-side scanning. Go to {@link Table} to obtain instances.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public interface ResultScanner extends Closeable, Iterable<Result> {
 
   @Override

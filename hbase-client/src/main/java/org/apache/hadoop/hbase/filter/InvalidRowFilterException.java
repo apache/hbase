@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Used to indicate an invalid RowFilter.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class InvalidRowFilterException extends RuntimeException {
   private static final long serialVersionUID = 2667894046345657865L;
 

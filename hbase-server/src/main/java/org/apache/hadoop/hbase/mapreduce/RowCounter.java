@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -49,7 +48,6 @@ import org.apache.hadoop.util.ToolRunner;
  * input row has columns that have content.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class RowCounter extends Configured implements Tool {
 
   private static final Log LOG = LogFactory.getLog(RowCounter.class);

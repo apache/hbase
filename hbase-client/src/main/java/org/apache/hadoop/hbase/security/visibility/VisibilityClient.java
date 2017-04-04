@@ -26,7 +26,6 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
@@ -53,7 +52,6 @@ import com.google.protobuf.ServiceException;
  * Utility client for doing visibility labels admin operations.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class VisibilityClient {
 
   /**

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.types;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -29,7 +28,6 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * {@link OrderedBytes#encodeInt32(PositionedByteRange, int, Order)}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class OrderedInt32 extends OrderedBytesBase<Integer> {
 
   public static final OrderedInt32 ASCENDING = new OrderedInt32(Order.ASCENDING);

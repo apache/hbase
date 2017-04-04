@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Addressing;
 
 /**
@@ -36,7 +35,6 @@ import org.apache.hadoop.hbase.util.Addressing;
  * <br>This interface has been marked InterfaceAudience.Public in 0.96 and 0.98.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class HRegionLocation implements Comparable<HRegionLocation> {
   private final HRegionInfo regionInfo;
   private final ServerName serverName;

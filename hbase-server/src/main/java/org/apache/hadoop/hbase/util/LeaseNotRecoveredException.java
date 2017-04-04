@@ -20,14 +20,12 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when the lease was expected to be recovered,
  * but the file can't be opened.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class LeaseNotRecoveredException extends HBaseIOException {
   public LeaseNotRecoveredException() {
     super();

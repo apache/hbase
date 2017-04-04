@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Utility client for doing access control admin operations.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class AccessControlClient {
   public static final TableName ACL_TABLE_NAME =
       TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");

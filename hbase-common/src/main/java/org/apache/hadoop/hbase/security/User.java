@@ -31,7 +31,6 @@ import java.util.concurrent.ExecutionException;
 import com.google.common.cache.LoadingCache;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.SecurityUtil;
@@ -51,7 +50,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
  * </p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public abstract class User {
   public static final String HBASE_SECURITY_CONF_KEY =
       "hbase.security.authentication";

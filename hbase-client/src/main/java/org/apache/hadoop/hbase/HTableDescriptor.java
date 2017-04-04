@@ -36,7 +36,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * when the region split should occur, coprocessors associated with it etc...
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   private static final Log LOG = LogFactory.getLog(HTableDescriptor.class);

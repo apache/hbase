@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -74,7 +73,6 @@ import com.google.common.collect.Lists;
  * @see ImportTsv#usage(String)
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class ImportTsv extends Configured implements Tool {
 
   protected static final Log LOG = LogFactory.getLog(ImportTsv.class);

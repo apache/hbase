@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -61,7 +60,6 @@ import java.util.List;
  * @since 1.0.0
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface BufferedMutator extends Closeable {
   /**
    * Key to use setting non-default BufferedMutator implementation in Configuration.
@@ -138,7 +136,6 @@ public interface BufferedMutator extends Closeable {
    * Listens for asynchronous exceptions on a {@link BufferedMutator}.
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   interface ExceptionListener {
     public void onException(RetriesExhaustedWithDetailsException exception,
         BufferedMutator mutator) throws RetriesExhaustedWithDetailsException;

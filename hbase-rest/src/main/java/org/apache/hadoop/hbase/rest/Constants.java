@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Common constants for org.apache.hadoop.hbase.rest
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public interface Constants {
   // All constants in a public interface are 'public static final'
 

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.exceptions;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when the size of the rpc request received by the server is too large.
@@ -29,7 +28,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * @since 1.3.0
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class RequestTooBigException extends DoNotRetryIOException {
   private static final long serialVersionUID = -1593339239809586516L;
 

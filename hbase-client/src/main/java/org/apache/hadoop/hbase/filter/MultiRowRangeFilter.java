@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * specified list and perform fast-forwarding during scan. Thus, the scan will be quite efficient.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class MultiRowRangeFilter extends FilterBase {
 
   private List<RowRange> rangeList;
@@ -413,7 +411,6 @@ public class MultiRowRangeFilter extends FilterBase {
   }
 
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public static class RowRange implements Comparable<RowRange> {
     private byte[] startRow;
     private boolean startRowInclusive = true;

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client.backoff;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Configurable policy for the amount of time a client should wait for a new request to the
@@ -29,7 +28,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * </p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface ClientBackoffPolicy {
 
   public static final String BACKOFF_POLICY_CLASS =

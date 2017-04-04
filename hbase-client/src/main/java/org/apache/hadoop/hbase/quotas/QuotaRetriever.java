@@ -29,7 +29,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -43,7 +42,6 @@ import org.apache.hadoop.util.StringUtils;
  * Scanner to iterate over the quota settings.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   private static final Log LOG = LogFactory.getLog(QuotaRetriever.class);
 

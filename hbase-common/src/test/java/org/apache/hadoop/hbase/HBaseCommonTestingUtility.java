@@ -28,14 +28,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
  * {@see org.apache.hadoop.hbase.HBaseTestingUtility}
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public class HBaseCommonTestingUtility {
   protected static final Log LOG = LogFactory.getLog(HBaseCommonTestingUtility.class);
 

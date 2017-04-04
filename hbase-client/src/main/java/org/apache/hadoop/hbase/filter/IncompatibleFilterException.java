@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Used to indicate a filter incompatibility
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class IncompatibleFilterException extends RuntimeException {
   private static final long serialVersionUID = 3236763276623198231L;
 

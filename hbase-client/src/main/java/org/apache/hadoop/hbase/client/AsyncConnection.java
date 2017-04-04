@@ -23,13 +23,11 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * The asynchronous version of Connection.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface AsyncConnection extends Closeable {
 
   /**

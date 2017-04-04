@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.spark
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes
 
 /**
@@ -33,7 +32,6 @@ import org.apache.hadoop.hbase.util.Bytes
  * @param qualifierLength    Length of the qualifier value with in the array
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 class ColumnFamilyQualifierMapKeyWrapper(val columnFamily:Array[Byte],
                                          val columnFamilyOffSet:Int,
                                          val columnFamilyLength:Int,

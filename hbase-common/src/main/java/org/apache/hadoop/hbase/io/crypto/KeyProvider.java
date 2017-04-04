@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.crypto;
 import java.security.Key;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * KeyProvider is a interface to abstract the different methods of retrieving
@@ -27,7 +26,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  *
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface KeyProvider {
 
   public static final String PASSWORD = "password";

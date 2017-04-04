@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.spark.datasources
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * This is the hbase configuration. User can either set them in SparkConf, which
@@ -26,7 +25,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * set in SparkConf. If not set, the default value will take effect.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 object HBaseSparkConf{
   /** Set to false to disable server-side caching of blocks for this scan,
    *  false by default, since full table scans generate too much BC churn.

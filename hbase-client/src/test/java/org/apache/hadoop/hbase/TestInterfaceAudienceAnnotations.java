@@ -40,26 +40,32 @@ import org.apache.hadoop.hbase.ClassFinder.Not;
 import org.apache.hadoop.hbase.ClassTestFinder.TestClassFilter;
 import org.apache.hadoop.hbase.ClassTestFinder.TestFileNameFilter;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test cases for ensuring our client visible classes have annotations
- * for {@link InterfaceAudience}.
- *
- * All classes in hbase-client and hbase-common module MUST have InterfaceAudience
- * annotations. All InterfaceAudience.Public annotated classes MUST also have InterfaceStability
- * annotations. Think twice about marking an interface InterfaceAudience.Public. Make sure that
- * it is an interface, not a class (for most cases), and clients will actually depend on it. Once
- * something is marked with Public, we cannot change the signatures within the major release. NOT
- * everything in the hbase-client module or every java public class has to be marked with
+ * Test cases for ensuring our client visible classes have annotations for
+ * {@link InterfaceAudience}.
+ * <p>
+ * All classes in hbase-client and hbase-common module MUST have InterfaceAudience annotations.
+ * Think twice about marking an interface InterfaceAudience.Public. Make sure that it is an
+ * interface, not a class (for most cases), and clients will actually depend on it. Once something
+ * is marked with Public, we cannot change the signatures within the major release. NOT everything
+ * in the hbase-client module or every java public class has to be marked with
  * InterfaceAudience.Public. ONLY the ones that an hbase application will directly use (Table, Get,
- * etc, versus ProtobufUtil).
- *
- * Also note that HBase has it's own annotations in hbase-annotations module with the same names
- * as in Hadoop. You should use the HBase's classes.
- *
- * See https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/InterfaceClassification.html
+ * etc, versus ProtobufUtil). And also, InterfaceAudience.Public annotated classes MUST NOT have
+ * InterfaceStability annotations. The stability of these classes only depends on versioning.
+ * <p>
+ * All classes which are marked as InterfaceAudience.LimitedPrivate MUST also have
+ * InterfaceStability annotations. The only exception is HBaseInterfaceAudience.CONFIG. It is used
+ * to indicate that the class name will be exposed in user facing configuration files.
+ * <p>
+ * Also note that HBase has it's own annotations in hbase-annotations module with the same names as
+ * in Hadoop. You should use the HBase's classes.
+ * <p>
+ * See
+ * https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/InterfaceClassification.html
  * and https://issues.apache.org/jira/browse/HBASE-10462.
  */
 @Category(SmallTests.class)
@@ -105,16 +111,15 @@ public class TestInterfaceAudienceAnnotations {
         return false;
       }
 
-      Class<?> ann = getAnnotation(c);
-      if (ann != null &&
-        !InterfaceAudience.Public.class.equals(ann)) {
+      Annotation ann = getAnnotation(c);
+      if (ann != null && !InterfaceAudience.Public.class.equals(ann.annotationType())) {
         return true;
       }
 
       return isAnnotatedPrivate(c.getEnclosingClass());
     }
 
-    protected Class<?> getAnnotation(Class<?> c) {
+    protected Annotation getAnnotation(Class<?> c) {
       // we should get only declared annotations, not inherited ones
       Annotation[] anns = c.getDeclaredAnnotations();
 
@@ -123,7 +128,7 @@ public class TestInterfaceAudienceAnnotations {
         // an enum instead we have three independent annotations!
         Class<?> type = ann.annotationType();
         if (isInterfaceAudienceClass(type)) {
-          return type;
+          return ann;
         }
       }
       return null;
@@ -159,13 +164,32 @@ public class TestInterfaceAudienceAnnotations {
     }
   }
 
-  /** Selects classes with one of the {@link InterfaceAudience.Public} annotation in their
-   * class declaration.
+  /**
+   * Selects classes with one of the {@link InterfaceAudience.Public} annotation in their class
+   * declaration.
    */
   class InterfaceAudiencePublicAnnotatedClassFilter extends InterfaceAudienceAnnotatedClassFilter {
     @Override
     public boolean isCandidateClass(Class<?> c) {
-      return (InterfaceAudience.Public.class.equals(getAnnotation(c)));
+      Annotation ann = getAnnotation(c);
+      return ann != null && InterfaceAudience.Public.class.equals(ann.annotationType());
+    }
+  }
+
+  /**
+   * Selects classes with one of the {@link InterfaceAudience.LimitedPrivate} annotation in their
+   * class declaration.
+   */
+  class InterfaceAudienceLimitedPrivateAnnotatedNotConfigClassFilter
+      extends InterfaceAudienceAnnotatedClassFilter {
+    @Override
+    public boolean isCandidateClass(Class<?> c) {
+      Annotation ann = getAnnotation(c);
+      if (ann == null || !InterfaceAudience.LimitedPrivate.class.equals(ann.annotationType())) {
+        return false;
+      }
+      InterfaceAudience.LimitedPrivate iaAnn = (InterfaceAudience.LimitedPrivate) ann;
+      return iaAnn.value().length == 0 || !HBaseInterfaceAudience.CONFIG.equals(iaAnn.value()[0]);
     }
   }
 
@@ -288,10 +312,11 @@ public class TestInterfaceAudienceAnnotations {
     );
 
     Set<Class<?>> classes = classFinder.findClasses(false);
-
-    LOG.info("These are the classes that DO NOT have @InterfaceAudience annotation:");
-    for (Class<?> clazz : classes) {
-      LOG.info(clazz);
+    if (!classes.isEmpty()) {
+      LOG.info("These are the classes that DO NOT have @InterfaceAudience annotation:");
+      for (Class<?> clazz : classes) {
+        LOG.info(clazz);
+      }
     }
 
     Assert.assertEquals("All classes should have @InterfaceAudience annotation",
@@ -300,10 +325,10 @@ public class TestInterfaceAudienceAnnotations {
 
   /**
    * Checks whether all the classes in client and common modules that are marked
-   * InterfaceAudience.Public also have {@link InterfaceStability} annotations.
+   * InterfaceAudience.Public do not have {@link InterfaceStability} annotations.
    */
   @Test
-  public void testInterfaceStabilityAnnotation()
+  public void testNoInterfaceStabilityAnnotationForPublicAPI()
       throws ClassNotFoundException, IOException, LinkageError {
 
     // find classes that are:
@@ -313,7 +338,7 @@ public class TestInterfaceAudienceAnnotations {
     // NOT test classes
     // AND NOT generated classes
     // AND are annotated with InterfaceAudience.Public
-    // AND NOT annotated with InterfaceStability
+    // AND annotated with InterfaceStability
     ClassFinder classFinder = new ClassFinder(
       new And(new MainCodeResourcePathFilter(),
               new TestFileNameFilter()),
@@ -324,18 +349,65 @@ public class TestInterfaceAudienceAnnotations {
               new Not(new ShadedProtobufClassFilter()),
               new InterfaceAudiencePublicAnnotatedClassFilter(),
               new Not(new IsInterfaceStabilityClassFilter()),
+              new InterfaceStabilityAnnotatedClassFilter())
+    );
+
+    Set<Class<?>> classes = classFinder.findClasses(false);
+
+    if (!classes.isEmpty()) {
+      LOG.info("These are the @InterfaceAudience.Public classes that have @InterfaceStability " +
+          "annotation:");
+      for (Class<?> clazz : classes) {
+        LOG.info(clazz);
+      }
+    }
+
+    Assert.assertEquals("All classes that are marked with @InterfaceAudience.Public should not "
+        + "have @InterfaceStability annotation",
+      0, classes.size());
+  }
+
+  /**
+   * Checks whether all the classes in client and common modules that are marked
+   * InterfaceAudience.Public do not have {@link InterfaceStability} annotations.
+   */
+  @Ignore
+  @Test
+  public void testInterfaceStabilityAnnotationForLimitedAPI()
+      throws ClassNotFoundException, IOException, LinkageError {
+
+    // find classes that are:
+    // In the main jar
+    // AND are not in a hadoop-compat module
+    // AND are public
+    // NOT test classes
+    // AND NOT generated classes
+    // AND are annotated with InterfaceAudience.LimitedPrivate
+    // AND NOT annotated with InterfaceStability
+    ClassFinder classFinder = new ClassFinder(
+      new And(new MainCodeResourcePathFilter(),
+              new TestFileNameFilter()),
+      new Not((FileNameFilter)new TestFileNameFilter()),
+      new And(new PublicClassFilter(),
+              new Not(new TestClassFilter()),
+              new Not(new GeneratedClassFilter()),
+              new Not(new ShadedProtobufClassFilter()),
+              new InterfaceAudienceLimitedPrivateAnnotatedNotConfigClassFilter(),
+              new Not(new IsInterfaceStabilityClassFilter()),
               new Not(new InterfaceStabilityAnnotatedClassFilter()))
     );
 
     Set<Class<?>> classes = classFinder.findClasses(false);
 
-    LOG.info("These are the classes that DO NOT have @InterfaceStability annotation:");
-    for (Class<?> clazz : classes) {
-      LOG.info(clazz);
+    if (!classes.isEmpty()) {
+      LOG.info("These are the @InterfaceAudience.LimitedPrivate classes that DO NOT " +
+          "have @InterfaceStability annotation:");
+      for (Class<?> clazz : classes) {
+        LOG.info(clazz);
+      }
     }
-
-    Assert.assertEquals("All classes that are marked with @InterfaceAudience.Public should "
-        + "have @InterfaceStability annotation as well",
+    Assert.assertEquals("All classes that are marked with @InterfaceAudience.LimitedPrivate " +
+        "should have @InterfaceStability annotation",
       0, classes.size());
   }
 

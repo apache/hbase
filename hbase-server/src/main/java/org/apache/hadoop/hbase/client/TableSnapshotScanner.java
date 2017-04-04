@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -65,7 +64,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * @see org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TableSnapshotScanner extends AbstractClientScanner {
 
   private static final Log LOG = LogFactory.getLog(TableSnapshotScanner.class);

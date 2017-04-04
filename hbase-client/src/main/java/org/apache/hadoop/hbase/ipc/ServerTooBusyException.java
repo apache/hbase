@@ -22,14 +22,12 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Throw this in RPC call if there are too many pending requests for one region server
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ServerTooBusyException extends DoNotRetryIOException {
   public ServerTooBusyException(InetSocketAddress address, long count) {
     super("Busy Server! " + count + " concurrent RPCs against " + address);

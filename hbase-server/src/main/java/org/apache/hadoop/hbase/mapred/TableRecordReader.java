@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -33,7 +32,6 @@ import org.apache.hadoop.mapred.RecordReader;
  * Iterate over an HBase table data, return (Text, RowResult) pairs
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TableRecordReader
 implements RecordReader<ImmutableBytesWritable, Result> {
 

@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * POJO representing the compaction state
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum CompactionState {
   NONE, MINOR, MAJOR, MAJOR_AND_MINOR;
 }

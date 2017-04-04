@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  *<p>Immutable. Thread-safe.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TimeRange {
   public static final long INITIAL_MIN_TIMESTAMP = 0L;
   public static final long INITIAL_MAX_TIMESTAMP = Long.MAX_VALUE;

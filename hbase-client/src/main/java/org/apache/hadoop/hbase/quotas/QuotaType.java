@@ -18,13 +18,11 @@
 package org.apache.hadoop.hbase.quotas;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Describe the Quota Type.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum QuotaType {
   THROTTLE,
   GLOBAL_BYPASS,
