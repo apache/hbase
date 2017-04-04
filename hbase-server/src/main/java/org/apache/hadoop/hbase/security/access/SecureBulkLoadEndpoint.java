@@ -145,16 +145,20 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     Set<String> fsSet = getFileSystemSchemesWithoutPermissionSupport(conf);
 
     try {
-      fs = FileSystem.get(conf);
-      fs.mkdirs(baseStagingDir, PERM_HIDDEN);
-      fs.setPermission(baseStagingDir, PERM_HIDDEN);
+      fs = baseStagingDir.getFileSystem(conf);
+      if (!fs.exists(baseStagingDir)) {
+        fs.mkdirs(baseStagingDir, PERM_HIDDEN);
+      } else {
+        fs.setPermission(baseStagingDir, PERM_HIDDEN);
+      }
       //no sticky bit in hadoop-1.0, making directory nonempty so it never gets erased
       fs.mkdirs(new Path(baseStagingDir,"DONOTERASE"), PERM_HIDDEN);
       FileStatus status = fs.getFileStatus(baseStagingDir);
       if(status == null) {
         throw new IllegalStateException("Failed to create staging directory");
       }
-      if(!status.getPermission().equals(PERM_HIDDEN)) {
+      String scheme = fs.getScheme().toLowerCase();
+      if (!fsSet.contains(scheme) && !status.getPermission().equals(PERM_HIDDEN)) {
         throw new IllegalStateException(
             "Staging directory of " + baseStagingDir + " already exists but permissions aren't set to '-rwx--x--x' ");
       }
