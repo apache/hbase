@@ -6391,4 +6391,28 @@ public class TestHRegion {
       this.region = null;
     }
   }
+
+  @Test
+  public void testMutateRow_WriteRequestCount() throws Exception {
+    byte[] row1 = Bytes.toBytes("row1");
+    byte[] fam1 = Bytes.toBytes("fam1");
+    byte[] qf1 = Bytes.toBytes("qualifier");
+    byte[] val1 = Bytes.toBytes("value1");
+
+    RowMutations rm = new RowMutations(row1);
+    Put put = new Put(row1);
+    put.addColumn(fam1, qf1, val1);
+    rm.add(put);
+
+    this.region = initHRegion(tableName, method, CONF, fam1);
+    try {
+      long beforeMutate = this.region.writeRequestsCount.longValue();
+      this.region.mutateRow(rm);
+      long afterMutate = this.region.writeRequestsCount.longValue();
+      Assert.assertNotEquals(beforeMutate, afterMutate);
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+    }
+  }
 }
