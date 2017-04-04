@@ -313,7 +313,7 @@ public class ProcedureExecutor<TEnvironment> {
       final NonceKey nonceKey;
       final long procId;
 
-      if (procIter.isNextCompleted()) {
+      if (procIter.isNextFinished()) {
         ProcedureInfo proc = procIter.nextAsProcedureInfo();
         nonceKey = proc.getNonceKey();
         procId = proc.getProcId();
@@ -351,7 +351,7 @@ public class ProcedureExecutor<TEnvironment> {
     HashSet<Procedure> waitingSet = null;
     procIter.reset();
     while (procIter.hasNext()) {
-      if (procIter.isNextCompleted()) {
+      if (procIter.isNextFinished()) {
         procIter.skipNext();
         continue;
       }
@@ -397,11 +397,9 @@ public class ProcedureExecutor<TEnvironment> {
           }
           waitingSet.add(proc);
           break;
-        case FINISHED:
-          if (proc.hasException()) {
-            // add the proc to the scheduler to perform the rollback
-            scheduler.addBack(proc);
-          }
+        case FAILED:
+          // add the proc to the scheduler to perform the rollback
+          scheduler.addBack(proc);
           break;
         case ROLLEDBACK:
         case INITIALIZING:
@@ -650,7 +648,7 @@ public class ProcedureExecutor<TEnvironment> {
    * @return whether the chore is removed, or it will be removed later
    */
   public boolean removeChore(final ProcedureInMemoryChore chore) {
-    chore.setState(ProcedureState.FINISHED);
+    chore.setState(ProcedureState.SUCCESS);
     return timeoutExecutor.remove(chore);
   }
 
@@ -1317,7 +1315,7 @@ public class ProcedureExecutor<TEnvironment> {
     Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE);
 
     // Execute the procedure
-    boolean isSuspended = false;
+    boolean suspended = false;
     boolean reExecute = false;
     Procedure[] subprocs = null;
     do {
@@ -1328,7 +1326,7 @@ public class ProcedureExecutor<TEnvironment> {
           subprocs = null;
         }
       } catch (ProcedureSuspendedException e) {
-        isSuspended = true;
+        suspended = true;
       } catch (ProcedureYieldException e) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Yield " + procedure + ": " + e.getMessage());
@@ -1358,9 +1356,9 @@ public class ProcedureExecutor<TEnvironment> {
           }
         } else if (procedure.getState() == ProcedureState.WAITING_TIMEOUT) {
           timeoutExecutor.add(procedure);
-        } else if (!isSuspended) {
+        } else if (!suspended) {
           // No subtask, so we are done
-          procedure.setState(ProcedureState.FINISHED);
+          procedure.setState(ProcedureState.SUCCESS);
         }
       }
 
@@ -1369,20 +1367,20 @@ public class ProcedureExecutor<TEnvironment> {
 
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
-      if (testing != null && testing.shouldKillBeforeStoreUpdate(isSuspended)) {
+      if (testing != null && testing.shouldKillBeforeStoreUpdate(suspended)) {
         LOG.debug("TESTING: Kill before store update: " + procedure);
         stop();
         return;
       }
 
-      // Commit the transaction
-      updateStoreOnExec(procStack, procedure, subprocs);
-
       // if the store is not running we are aborting
       if (!store.isRunning()) return;
 
+      // Commit the transaction
+      updateStoreOnExec(procStack, procedure, subprocs);
+
       // if the procedure is kind enough to pass the slot to someone else, yield
-      if (procedure.isRunnable() && !isSuspended &&
+      if (procedure.isRunnable() && !suspended &&
           procedure.isYieldAfterExecutionStep(getEnvironment())) {
         scheduler.yield(procedure);
         return;

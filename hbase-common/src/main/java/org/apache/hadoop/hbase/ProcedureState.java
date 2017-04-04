@@ -24,5 +24,5 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public enum ProcedureState {
-  INITIALIZING, RUNNABLE, WAITING, WAITING_TIMEOUT, ROLLEDBACK, FINISHED;
+  INITIALIZING, RUNNABLE, WAITING, WAITING_TIMEOUT, ROLLEDBACK, SUCCESS, FAILED;
 }

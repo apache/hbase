@@ -216,9 +216,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
-   * By default, the executor will try ro run procedures start to finish.
+   * By default, the executor will try to run procedures start to finish.
    * Return true to make the executor yield between each execution step to
-   * give other procedures time to run their steps.
+   * give other procedures a chance to run.
    * @param env the environment passed to the ProcedureExecutor
    * @return Return true if the executor should yield on completion of an execution step.
    *         Defaults to return false.
@@ -271,7 +271,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     toStringState(sb);
 
     if (hasException()) {
-      sb.append(", failed=" + getException());
+      sb.append(", exception=" + getException());
     }
 
     sb.append(", ");
@@ -506,6 +506,25 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   // ==============================================================================================
 
   /**
+   * Procedure has states which are defined in proto file. At some places in the code, we
+   * need to determine more about those states. Following Methods help determine:
+   *
+   * {@link #isFailed()} - A procedure has executed at least once and has failed. The procedure
+   *                       may or may not have rolled back yet. Any procedure in FAILED state
+   *                       will be eventually moved to ROLLEDBACK state.
+   *
+   * {@link #isSuccess()} - A procedure is completed successfully without any exception.
+   *
+   * {@link #isFinished()} - As a procedure in FAILED state will be tried forever for rollback, only
+   *                         condition when scheduler/ executor will drop procedure from further
+   *                         processing is when procedure state is ROLLEDBACK or isSuccess()
+   *                         returns true. This is a terminal state of the procedure.
+   *
+   * {@link #isWaiting()} - Procedure is in one of the two waiting states ({@link
+   *                        ProcedureState#WAITING}, {@link ProcedureState#WAITING_TIMEOUT}).
+   */
+
+  /**
    * @return true if the procedure is in a RUNNABLE state.
    */
   protected synchronized boolean isRunnable() {
@@ -517,34 +536,25 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
-   * @return true if the procedure has failed.
-   *         true may mean failed but not yet rolledback or failed and rolledback.
+   * @return true if the procedure has failed. It may or may not have rolled back.
    */
   public synchronized boolean isFailed() {
-    return exception != null || state == ProcedureState.ROLLEDBACK;
+    return state == ProcedureState.FAILED || state == ProcedureState.ROLLEDBACK;
   }
 
   /**
    * @return true if the procedure is finished successfully.
    */
   public synchronized boolean isSuccess() {
-    return state == ProcedureState.FINISHED && exception == null;
+    return state == ProcedureState.SUCCESS && !hasException();
   }
 
   /**
-   * @return true if the procedure is finished. The Procedure may be completed
-   *         successfuly or failed and rolledback.
+   * @return true if the procedure is finished. The Procedure may be completed successfully or
+   * rolledback.
    */
   public synchronized boolean isFinished() {
-    switch (state) {
-      case ROLLEDBACK:
-        return true;
-      case FINISHED:
-        return exception == null;
-      default:
-        break;
-    }
-    return false;
+    return isSuccess() || state == ProcedureState.ROLLEDBACK;
   }
 
   /**
@@ -580,7 +590,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   protected synchronized void setFailure(final RemoteProcedureException exception) {
     this.exception = exception;
     if (!isFinished()) {
-      setState(ProcedureState.FINISHED);
+      setState(ProcedureState.FAILED);
     }
   }
 

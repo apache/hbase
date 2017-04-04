@@ -409,7 +409,7 @@ public class ProcedureTestingUtility {
     }
 
     public void setFinishedState() {
-      setState(ProcedureState.FINISHED);
+      setState(ProcedureState.SUCCESS);
     }
 
     public void setData(final byte[] data) {
@@ -523,7 +523,7 @@ public class ProcedureTestingUtility {
     public void load(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
         long procId;
-        if (procIter.isNextCompleted()) {
+        if (procIter.isNextFinished()) {
           ProcedureInfo proc = procIter.nextAsProcedureInfo();
           procId = proc.getProcId();
           LOG.debug("loading completed procId=" + procId + ": " + proc);

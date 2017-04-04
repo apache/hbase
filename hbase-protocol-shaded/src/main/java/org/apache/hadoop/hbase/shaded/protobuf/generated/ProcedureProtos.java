@@ -61,12 +61,20 @@ public final class ProcedureProtos {
     ROLLEDBACK(5),
     /**
      * <pre>
-     * The procedure execution is completed. may need a rollback if failed.
+     * The procedure execution is completed successfully.
      * </pre>
      *
-     * <code>FINISHED = 6;</code>
+     * <code>SUCCESS = 6;</code>
      */
-    FINISHED(6),
+    SUCCESS(6),
+    /**
+     * <pre>
+     * The procedure execution is failed, may need to rollback
+     * </pre>
+     *
+     * <code>FAILED = 7;</code>
+     */
+    FAILED(7),
     ;
 
     /**
@@ -111,12 +119,20 @@ public final class ProcedureProtos {
     public static final int ROLLEDBACK_VALUE = 5;
     /**
      * <pre>
-     * The procedure execution is completed. may need a rollback if failed.
+     * The procedure execution is completed successfully.
      * </pre>
      *
-     * <code>FINISHED = 6;</code>
+     * <code>SUCCESS = 6;</code>
      */
-    public static final int FINISHED_VALUE = 6;
+    public static final int SUCCESS_VALUE = 6;
+    /**
+     * <pre>
+     * The procedure execution is failed, may need to rollback
+     * </pre>
+     *
+     * <code>FAILED = 7;</code>
+     */
+    public static final int FAILED_VALUE = 7;
 
 
     public final int getNumber() {
@@ -138,7 +154,8 @@ public final class ProcedureProtos {
         case 3: return WAITING;
         case 4: return WAITING_TIMEOUT;
         case 5: return ROLLEDBACK;
-        case 6: return FINISHED;
+        case 6: return SUCCESS;
+        case 7: return FAILED;
         default: return null;
       }
     }
@@ -7752,11 +7769,12 @@ public final class ProcedureProtos {
       "DURE_WAL_INIT\020\002\022\030\n\024PROCEDURE_WAL_INSERT\020" +
       "\003\022\030\n\024PROCEDURE_WAL_UPDATE\020\004\022\030\n\024PROCEDURE" +
       "_WAL_DELETE\020\005\022\031\n\025PROCEDURE_WAL_COMPACT\020\006" +
-      "*p\n\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014\n\010" +
+      "*{\n\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014\n\010" +
       "RUNNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_TIMEO" +
-      "UT\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n\010FINISHED\020\006BL\n1or",
-      "g.apache.hadoop.hbase.shaded.protobuf.ge" +
-      "neratedB\017ProcedureProtosH\001\210\001\001\240\001\001"
+      "UT\020\004\022\016\n\nROLLEDBACK\020\005\022\013\n\007SUCCESS\020\006\022\n\n\006FAI",
+      "LED\020\007BL\n1org.apache.hadoop.hbase.shaded." +
+      "protobuf.generatedB\017ProcedureProtosH\001\210\001\001" +
+      "\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {

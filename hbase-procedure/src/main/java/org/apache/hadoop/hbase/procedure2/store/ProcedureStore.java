@@ -70,7 +70,7 @@ public interface ProcedureStore {
     /**
      * @return true if the iterator next element is a completed procedure.
      */
-    boolean isNextCompleted();
+    boolean isNextFinished();
 
     /**
      * Skip the next procedure

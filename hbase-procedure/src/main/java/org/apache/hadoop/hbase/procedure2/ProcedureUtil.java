@@ -184,7 +184,7 @@ public final class ProcedureUtil {
     }
 
     if (proto.hasException()) {
-      assert proc.getState() == ProcedureProtos.ProcedureState.FINISHED ||
+      assert proc.getState() == ProcedureProtos.ProcedureState.FAILED ||
              proc.getState() == ProcedureProtos.ProcedureState.ROLLEDBACK :
              "The procedure must be failed (waiting to rollback) or rolledback";
       proc.setFailure(RemoteProcedureException.fromProto(proto.getException()));

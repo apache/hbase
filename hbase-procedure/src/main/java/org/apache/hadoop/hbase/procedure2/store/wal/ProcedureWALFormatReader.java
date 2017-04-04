@@ -49,7 +49,7 @@ public class ProcedureWALFormatReader {
   //   - INIT: Procedure submitted by the user (also known as 'root procedure')
   //   - INSERT: Children added to the procedure <parentId>:[<childId>, ...]
   //   - UPDATE: The specified procedure was updated
-  //   - DELETE: The procedure was removed (completed/rolledback and result TTL expired)
+  //   - DELETE: The procedure was removed (finished/rolledback and result TTL expired)
   //
   // In the WAL we can find multiple times the same procedure as UPDATE or INSERT.
   // We read the WAL from top to bottom, so every time we find an entry of the
@@ -326,15 +326,14 @@ public class ProcedureWALFormatReader {
     public boolean hasParent() { return proto.hasParentId(); }
     public boolean isReady() { return ready; }
 
-    public boolean isCompleted() {
+    public boolean isFinished() {
       if (!hasParent()) {
-        // we only consider 'root' procedures. because for the user 'completed'
-        // means when everything up to the 'root' is complete.
+        // we only consider 'root' procedures. because for the user 'finished'
+        // means when everything up to the 'root' is finished.
         switch (proto.getState()) {
           case ROLLEDBACK:
+          case SUCCESS:
             return true;
-          case FINISHED:
-            return !proto.hasException();
           default:
             break;
         }
@@ -387,8 +386,8 @@ public class ProcedureWALFormatReader {
     }
 
     @Override
-    public boolean isNextCompleted() {
-      return current != null && current.isCompleted();
+    public boolean isNextFinished() {
+      return current != null && current.isFinished();
     }
 
     @Override
@@ -676,8 +675,8 @@ public class ProcedureWALFormatReader {
     private boolean checkReadyToRun(Entry rootEntry) {
       assert !rootEntry.hasParent() : "expected root procedure, got " + rootEntry;
 
-      if (rootEntry.isCompleted()) {
-        // if the root procedure is completed, sub-procedures should be gone
+      if (rootEntry.isFinished()) {
+        // if the root procedure is finished, sub-procedures should be gone
         if (rootEntry.childHead != null) {
           LOG.error("unexpected active children for root-procedure: " + rootEntry);
           for (Entry p = rootEntry.childHead; p != null; p = p.linkNext) {
