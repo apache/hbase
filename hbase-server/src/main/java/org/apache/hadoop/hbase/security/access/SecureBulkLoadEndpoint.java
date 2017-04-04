@@ -72,9 +72,12 @@ import java.math.BigInteger;
 import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Coprocessor service for bulk loads in secure mode.
@@ -116,6 +119,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
 
   private final static FsPermission PERM_ALL_ACCESS = FsPermission.valueOf("-rwxrwxrwx");
   private final static FsPermission PERM_HIDDEN = FsPermission.valueOf("-rwx--x--x");
+  private final static String[] FsWithoutSupportPermission = {"s3", "s3a", "s3n", "wasb", "wasbs", "swift"};
 
   private SecureRandom random;
   private FileSystem fs;
@@ -139,18 +143,23 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     conf = env.getConfiguration();
     baseStagingDir = SecureBulkLoadUtil.getBaseStagingDir(conf);
     this.userProvider = UserProvider.instantiate(conf);
+    Set<String> fsSet = new HashSet<String>(Arrays.asList(FsWithoutSupportPermission));
 
     try {
-      fs = FileSystem.get(conf);
-      fs.mkdirs(baseStagingDir, PERM_HIDDEN);
-      fs.setPermission(baseStagingDir, PERM_HIDDEN);
+      fs = baseStagingDir.getFileSystem(conf);
+      if (!fs.exists(baseStagingDir)) {
+        fs.mkdirs(baseStagingDir, PERM_HIDDEN);
+      } else {
+        fs.setPermission(baseStagingDir, PERM_HIDDEN);
+      }
       //no sticky bit in hadoop-1.0, making directory nonempty so it never gets erased
       fs.mkdirs(new Path(baseStagingDir,"DONOTERASE"), PERM_HIDDEN);
       FileStatus status = fs.getFileStatus(baseStagingDir);
       if(status == null) {
         throw new IllegalStateException("Failed to create staging directory");
       }
-      if(!status.getPermission().equals(PERM_HIDDEN)) {
+      String scheme = fs.getScheme().toLowerCase();
+      if (!fsSet.contains(scheme) && !status.getPermission().equals(PERM_HIDDEN)) {
         throw new IllegalStateException(
             "Directory already exists but permissions aren't set to '-rwx--x--x' ");
       }
