@@ -21,6 +21,7 @@ Release Notes - HBase - Version 1.3.1 04/30/2017
     * [HBASE-17112] - Prevent setting timestamp of delta operations the same as previous value's
     * [HBASE-17175] - backport HBASE-17127 to 1.3.1
     * [HBASE-17187] - DoNotRetryExceptions from coprocessors should bubble up to the application
+    * [HBASE-17227] - Backport HBASE-17206 to branch-1.3
     * [HBASE-17264] - Processing RIT with offline state will always fail to open the first time
     * [HBASE-17265] - Region left unassigned in master failover when region failed to open
     * [HBASE-17275] - Assign timeout may cause region to be unassigned forever
