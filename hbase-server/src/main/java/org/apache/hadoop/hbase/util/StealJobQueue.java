@@ -48,6 +48,7 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
 
   public StealJobQueue() {
     this.stealFromQueue = new PriorityBlockingQueue<T>() {
+
       @Override
       public boolean offer(T t) {
         lock.lock();
@@ -61,6 +62,27 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
     };
   }
 
+  public StealJobQueue(int initCapacity, int stealFromQueueInitCapacity) {
+    super(initCapacity);
+    this.stealFromQueue = new PriorityBlockingQueue<T>(stealFromQueueInitCapacity) {
+
+      @Override
+      public boolean offer(T t) {
+        lock.lock();
+        try {
+          notEmpty.signal();
+          return super.offer(t);
+        } finally {
+          lock.unlock();
+        }
+      }
+    };
+  }
+
+  /**
+   * Get a queue whose job might be stolen by the consumer of this original queue
+   * @return the queue whose job could be stolen
+   */
   public BlockingQueue<T> getStealFromQueue() {
     return stealFromQueue;
   }
