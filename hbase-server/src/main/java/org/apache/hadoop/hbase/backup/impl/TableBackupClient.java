@@ -351,10 +351,6 @@ public abstract class TableBackupClient {
     // add and store the manifest for the backup
     addManifest(backupInfo, backupManager, type, conf);
 
-    // after major steps done and manifest persisted, do convert if needed for incremental backup
-    /* in-fly convert code here, provided by future jira */
-    LOG.debug("in-fly convert code here, provided by future jira");
-
     // compose the backup complete data
     String backupCompleteData =
         obtainBackupMetaDataStr(backupInfo) + ",startts=" + backupInfo.getStartTs()

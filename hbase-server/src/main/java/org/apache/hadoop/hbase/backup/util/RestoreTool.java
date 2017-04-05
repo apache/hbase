@@ -46,8 +46,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -63,19 +61,13 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 public class RestoreTool {
 
   public static final Log LOG = LogFactory.getLog(BackupUtils.class);
-
-  private final String[] ignoreDirs = { HConstants.RECOVERED_EDITS_DIR };
-
   private final static long TABLE_AVAILABILITY_WAIT_TIME = 180000;
 
+  private final String[] ignoreDirs = { HConstants.RECOVERED_EDITS_DIR };
   protected Configuration conf = null;
-
   protected Path backupRootPath;
-
   protected String backupId;
-
   protected FileSystem fs;
-  private final Path restoreTmpPath;
 
   // store table name and snapshot dir mapping
   private final HashMap<TableName, Path> snapshotMap = new HashMap<>();
@@ -86,9 +78,6 @@ public class RestoreTool {
     this.backupRootPath = backupRootPath;
     this.backupId = backupId;
     this.fs = backupRootPath.getFileSystem(conf);
-    this.restoreTmpPath =
-        new Path(conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY,
-          HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY), "restore");
   }
 
   /**
@@ -218,7 +207,7 @@ public class RestoreTool {
   public void fullRestoreTable(Connection conn, Path tableBackupPath, TableName tableName,
       TableName newTableName, boolean truncateIfExists, String lastIncrBackupId)
           throws IOException {
-    restoreTableAndCreate(conn, tableName, newTableName, tableBackupPath, truncateIfExists,
+    createAndRestoreTable(conn, tableName, newTableName, tableBackupPath, truncateIfExists,
       lastIncrBackupId);
   }
 
@@ -281,48 +270,6 @@ public class RestoreTool {
     return tableDescriptor;
   }
 
-  /**
-   * Duplicate the backup image if it's on local cluster
-   * @see HStore#bulkLoadHFile(org.apache.hadoop.hbase.regionserver.StoreFile)
-   * @see HRegionFileSystem#bulkLoadStoreFile(String familyName, Path srcPath, long seqNum)
-   * @param tableArchivePath archive path
-   * @return the new tableArchivePath
-   * @throws IOException exception
-   */
-  Path checkLocalAndBackup(Path tableArchivePath) throws IOException {
-    // Move the file if it's on local cluster
-    boolean isCopyNeeded = false;
-
-    FileSystem srcFs = tableArchivePath.getFileSystem(conf);
-    FileSystem desFs = FileSystem.get(conf);
-    if (tableArchivePath.getName().startsWith("/")) {
-      isCopyNeeded = true;
-    } else {
-      // This should match what is done in @see HRegionFileSystem#bulkLoadStoreFile(String, Path,
-      // long)
-      if (srcFs.getUri().equals(desFs.getUri())) {
-        LOG.debug("cluster hold the backup image: " + srcFs.getUri() + "; local cluster node: "
-            + desFs.getUri());
-        isCopyNeeded = true;
-      }
-    }
-    if (isCopyNeeded) {
-      LOG.debug("File " + tableArchivePath + " on local cluster, back it up before restore");
-      if (desFs.exists(restoreTmpPath)) {
-        try {
-          desFs.delete(restoreTmpPath, true);
-        } catch (IOException e) {
-          LOG.debug("Failed to delete path: " + restoreTmpPath
-              + ", need to check whether restore target DFS cluster is healthy");
-        }
-      }
-      FileUtil.copy(srcFs, tableArchivePath, desFs, restoreTmpPath, false, conf);
-      LOG.debug("Copied to temporary path on local cluster: " + restoreTmpPath);
-      tableArchivePath = restoreTmpPath;
-    }
-    return tableArchivePath;
-  }
-
   private HTableDescriptor getTableDescriptor(FileSystem fileSys, TableName tableName,
       String lastIncrBackupId) throws IOException {
     if (lastIncrBackupId != null) {
@@ -334,7 +281,7 @@ public class RestoreTool {
     return null;
   }
 
-  private void restoreTableAndCreate(Connection conn, TableName tableName, TableName newTableName,
+  private void createAndRestoreTable(Connection conn, TableName tableName, TableName newTableName,
       Path tableBackupPath, boolean truncateIfExists, String lastIncrBackupId) throws IOException {
     if (newTableName == null) {
       newTableName = tableName;
@@ -403,33 +350,13 @@ public class RestoreTool {
       // the regions in fine grain
       checkAndCreateTable(conn, tableBackupPath, tableName, newTableName, regionPathList,
         tableDescriptor, truncateIfExists);
-      if (tableArchivePath != null) {
-        // start real restore through bulkload
-        // if the backup target is on local cluster, special action needed
-        Path tempTableArchivePath = checkLocalAndBackup(tableArchivePath);
-        if (tempTableArchivePath.equals(tableArchivePath)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("TableArchivePath for bulkload using existPath: " + tableArchivePath);
-          }
-        } else {
-          regionPathList = getRegionList(tempTableArchivePath); // point to the tempDir
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("TableArchivePath for bulkload using tempPath: " + tempTableArchivePath);
-          }
-        }
+      RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
+      Path[] paths = new Path[regionPathList.size()];
+      regionPathList.toArray(paths);
+      restoreService.run(paths, new TableName[]{tableName}, new TableName[] {newTableName}, true);
 
-        LoadIncrementalHFiles loader = createLoader(tempTableArchivePath, false);
-        for (Path regionPath : regionPathList) {
-          String regionName = regionPath.toString();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Restoring HFiles from directory " + regionName);
-          }
-          String[] args = { regionName, newTableName.getNameAsString() };
-          loader.run(args);
-        }
-      }
-      // we do not recovered edits
     } catch (Exception e) {
+      LOG.error(e);
       throw new IllegalStateException("Cannot restore hbase table", e);
     }
   }
@@ -450,28 +377,6 @@ public class RestoreTool {
       regionDirList.add(child);
     }
     return regionDirList;
-  }
-
-  /**
-   * Create a {@link LoadIncrementalHFiles} instance to be used to restore the HFiles of a full
-   * backup.
-   * @return the {@link LoadIncrementalHFiles} instance
-   * @throws IOException exception
-   */
-  private LoadIncrementalHFiles createLoader(Path tableArchivePath, boolean multipleTables)
-      throws IOException {
-
-    // By default, it is 32 and loader will fail if # of files in any region exceed this
-    // limit. Bad for snapshot restore.
-    this.conf.setInt(LoadIncrementalHFiles.MAX_FILES_PER_REGION_PER_FAMILY, Integer.MAX_VALUE);
-    this.conf.set(LoadIncrementalHFiles.IGNORE_UNMATCHED_CF_CONF_KEY, "yes");
-    LoadIncrementalHFiles loader = null;
-    try {
-      loader = new LoadIncrementalHFiles(this.conf);
-    } catch (Exception e1) {
-      throw new IOException(e1);
-    }
-    return loader;
   }
 
   /**
@@ -591,17 +496,18 @@ public class RestoreTool {
           // create table using table descriptor and region boundaries
           admin.createTable(htd, keys);
         }
-        long startTime = EnvironmentEdgeManager.currentTime();
-        while (!admin.isTableAvailable(targetTableName, keys)) {
-          try {
-            Thread.sleep(100);
-          } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-          }
-          if (EnvironmentEdgeManager.currentTime() - startTime > TABLE_AVAILABILITY_WAIT_TIME) {
-            throw new IOException("Time out " + TABLE_AVAILABILITY_WAIT_TIME + "ms expired, table "
-                + targetTableName + " is still not available");
-          }
+
+      }
+      long startTime = EnvironmentEdgeManager.currentTime();
+      while (!admin.isTableAvailable(targetTableName)) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
+        if (EnvironmentEdgeManager.currentTime() - startTime > TABLE_AVAILABILITY_WAIT_TIME) {
+          throw new IOException("Time out " + TABLE_AVAILABILITY_WAIT_TIME + "ms expired, table "
+              + targetTableName + " is still not available");
         }
       }
     }

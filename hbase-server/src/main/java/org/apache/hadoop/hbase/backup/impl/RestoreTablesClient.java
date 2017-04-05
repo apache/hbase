@@ -169,8 +169,9 @@ public class RestoreTablesClient {
     // full backup path comes first
     for (int i = 1; i < images.length; i++) {
       BackupImage im = images[i];
-      String logBackupDir = HBackupFileSystem.getLogBackupDir(im.getRootDir(), im.getBackupId());
-      dirList.add(new Path(logBackupDir));
+      String fileBackupDir = HBackupFileSystem.getTableBackupDir(im.getRootDir(),
+                  im.getBackupId(), sTable)+ Path.SEPARATOR+"data";
+      dirList.add(new Path(fileBackupDir));
     }
 
     String dirs = StringUtils.join(dirList, ",");

@@ -107,11 +107,11 @@ public class HFileSplitterJob extends Configured implements Tool {
     String inputDirs = args[0];
     String tabName = args[1];
     conf.setStrings(TABLES_KEY, tabName);
+    conf.set(FileInputFormat.INPUT_DIR, inputDirs);
     Job job =
         Job.getInstance(conf,
           conf.get(JOB_NAME_CONF_KEY, NAME + "_" + EnvironmentEdgeManager.currentTime()));
     job.setJarByClass(HFileSplitterJob.class);
-    FileInputFormat.addInputPaths(job, inputDirs);
     job.setInputFormatClass(HFileInputFormat.class);
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);

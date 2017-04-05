@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.lang.StringUtils;
@@ -34,7 +35,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -45,11 +45,15 @@ import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.mapreduce.WALPlayer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.util.Tool;
 
 /**
  * Incremental backup implementation.
@@ -69,7 +73,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     FileSystem fs = FileSystem.get(conf);
     List<String> list = new ArrayList<String>();
     for (String file : incrBackupFileList) {
-      if (fs.exists(new Path(file))) {
+      Path p = new Path(file);
+      if (fs.exists(p) || isActiveWalPath(p)) {
         list.add(file);
       } else {
         LOG.warn("Can't find file: " + file);
@@ -78,90 +83,13 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     return list;
   }
 
-  private List<String> getMissingFiles(List<String> incrBackupFileList) throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    List<String> list = new ArrayList<String>();
-    for (String file : incrBackupFileList) {
-      if (!fs.exists(new Path(file))) {
-        list.add(file);
-      }
-    }
-    return list;
-
-  }
-
   /**
-   * Do incremental copy.
-   * @param backupInfo backup info
+   * Check if a given path is belongs to active WAL directory
+   * @param p path
+   * @return true, if yes
    */
-  private void incrementalCopy(BackupInfo backupInfo) throws Exception {
-
-    LOG.info("Incremental copy is starting.");
-    // set overall backup phase: incremental_copy
-    backupInfo.setPhase(BackupPhase.INCREMENTAL_COPY);
-    // get incremental backup file list and prepare parms for DistCp
-    List<String> incrBackupFileList = backupInfo.getIncrBackupFileList();
-    // filter missing files out (they have been copied by previous backups)
-    incrBackupFileList = filterMissingFiles(incrBackupFileList);
-    String[] strArr = incrBackupFileList.toArray(new String[incrBackupFileList.size() + 1]);
-    strArr[strArr.length - 1] = backupInfo.getHLogTargetDir();
-
-    BackupCopyJob copyService = BackupRestoreFactory.getBackupCopyJob(conf);
-    int counter = 0;
-    int MAX_ITERAIONS = 2;
-    while (counter++ < MAX_ITERAIONS) {
-      // We run DistCp maximum 2 times
-      // If it fails on a second time, we throw Exception
-      int res =
-          copyService.copy(backupInfo, backupManager, conf, BackupType.INCREMENTAL, strArr);
-
-      if (res != 0) {
-        LOG.error("Copy incremental log files failed with return code: " + res + ".");
-        throw new IOException("Failed of Hadoop Distributed Copy from "
-            + StringUtils.join(incrBackupFileList, ",") + " to "
-            + backupInfo.getHLogTargetDir());
-      }
-      List<String> missingFiles = getMissingFiles(incrBackupFileList);
-
-      if (missingFiles.isEmpty()) {
-        break;
-      } else {
-        // Repeat DistCp, some files have been moved from WALs to oldWALs during previous run
-        // update backupInfo and strAttr
-        if (counter == MAX_ITERAIONS) {
-          String msg =
-              "DistCp could not finish the following files: " + StringUtils.join(missingFiles, ",");
-          LOG.error(msg);
-          throw new IOException(msg);
-        }
-        List<String> converted = convertFilesFromWALtoOldWAL(missingFiles);
-        incrBackupFileList.removeAll(missingFiles);
-        incrBackupFileList.addAll(converted);
-        backupInfo.setIncrBackupFileList(incrBackupFileList);
-
-        // Run DistCp only for missing files (which have been moved from WALs to oldWALs
-        // during previous run)
-        strArr = converted.toArray(new String[converted.size() + 1]);
-        strArr[strArr.length - 1] = backupInfo.getHLogTargetDir();
-      }
-    }
-
-    LOG.info("Incremental copy from " + StringUtils.join(incrBackupFileList, ",") + " to "
-        + backupInfo.getHLogTargetDir() + " finished.");
-  }
-
-  private List<String> convertFilesFromWALtoOldWAL(List<String> missingFiles) throws IOException {
-    List<String> list = new ArrayList<String>();
-    for (String path : missingFiles) {
-      if (path.indexOf(Path.SEPARATOR + HConstants.HREGION_LOGDIR_NAME) < 0) {
-        LOG.error("Copy incremental log files failed, file is missing : " + path);
-        throw new IOException("Failed of Hadoop Distributed Copy to "
-            + backupInfo.getHLogTargetDir() + ", file is missing " + path);
-      }
-      list.add(path.replace(Path.SEPARATOR + HConstants.HREGION_LOGDIR_NAME, Path.SEPARATOR
-          + HConstants.HREGION_OLDLOGDIR_NAME));
-    }
-    return list;
+  private boolean isActiveWalPath(Path p) {
+    return !AbstractFSWALProvider.isArchivedLogFile(p);
   }
 
   static int getIndex(TableName tbl, List<TableName> sTableList) {
@@ -286,7 +214,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         + backupManager.getIncrementalBackupTableSet());
     try {
       newTimestamps =
-          ((IncrementalBackupManager) backupManager).getIncrBackupLogFileList(conn, backupInfo);
+          ((IncrementalBackupManager) backupManager).getIncrBackupLogFileMap();
     } catch (Exception e) {
       // fail the overall backup and return
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
@@ -297,13 +225,16 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     try {
       // copy out the table and region info files for each table
       BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
-      incrementalCopy(backupInfo);
+      // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
+      convertWALsToHFiles(backupInfo);
+      incrementalCopyHFiles(backupInfo);
       // Save list of WAL files copied
       backupManager.recordWALFiles(backupInfo.getIncrBackupFileList());
     } catch (Exception e) {
       String msg = "Unexpected exception in incremental-backup: incremental copy " + backupId;
       // fail the overall backup and return
       failBackup(conn, backupInfo, backupManager, e, msg, BackupType.INCREMENTAL, conf);
+      return;
     }
     // case INCR_BACKUP_COMPLETE:
     // set overall backup status: complete. Here we make sure to complete the backup.
@@ -323,8 +254,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
           backupManager.readLogTimestampMap();
 
       Long newStartCode =
-          BackupUtils.getMinValue(BackupUtils
-              .getRSLogTimestampMins(newTableSetTimestampMap));
+          BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
       backupManager.writeBackupStartCode(newStartCode);
 
       handleBulkLoad(backupInfo.getTableNames());
@@ -335,6 +265,111 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
         BackupType.INCREMENTAL, conf);
     }
+  }
+
+  private void incrementalCopyHFiles(BackupInfo backupInfo) throws Exception {
+
+    try {
+      LOG.debug("Incremental copy HFiles is starting.");
+      // set overall backup phase: incremental_copy
+      backupInfo.setPhase(BackupPhase.INCREMENTAL_COPY);
+      // get incremental backup file list and prepare parms for DistCp
+      List<String> incrBackupFileList = new ArrayList<String>();
+      // Add Bulk output
+      incrBackupFileList.add(getBulkOutputDir().toString());
+      String[] strArr = incrBackupFileList.toArray(new String[incrBackupFileList.size() + 1]);
+      strArr[strArr.length - 1] = backupInfo.getBackupRootDir();
+      BackupCopyJob copyService = BackupRestoreFactory.getBackupCopyJob(conf);
+      int res = copyService.copy(backupInfo, backupManager, conf, BackupType.INCREMENTAL, strArr);
+      if (res != 0) {
+        LOG.error("Copy incremental HFile files failed with return code: " + res + ".");
+        throw new IOException("Failed copy from " + StringUtils.join(incrBackupFileList, ',')
+            + " to " + backupInfo.getHLogTargetDir());
+      }
+      LOG.debug("Incremental copy HFiles from " + StringUtils.join(incrBackupFileList, ',')
+          + " to " + backupInfo.getBackupRootDir() + " finished.");
+    } finally {
+      deleteBulkLoadDirectory();
+    }
+  }
+
+  private void deleteBulkLoadDirectory() throws IOException {
+    // delete original bulk load directory on method exit
+    Path path = getBulkOutputDir();
+    FileSystem fs = FileSystem.get(conf);
+    boolean result = fs.delete(path, true);
+    if (!result) {
+      LOG.warn("Could not delete " + path);
+    }
+
+  }
+
+  private void convertWALsToHFiles(BackupInfo backupInfo) throws IOException {
+    // get incremental backup file list and prepare parameters for DistCp
+    List<String> incrBackupFileList = backupInfo.getIncrBackupFileList();
+    // Get list of tables in incremental backup set
+    Set<TableName> tableSet = backupManager.getIncrementalBackupTableSet();
+    // filter missing files out (they have been copied by previous backups)
+    incrBackupFileList = filterMissingFiles(incrBackupFileList);
+    for (TableName table : tableSet) {
+      // Check if table exists
+      if (tableExists(table, conn)) {
+        walToHFiles(incrBackupFileList, table);
+      } else {
+        LOG.warn("Table " + table + " does not exists. Skipping in WAL converter");
+      }
+    }
+  }
+
+
+  private boolean tableExists(TableName table, Connection conn) throws IOException {
+    try (Admin admin = conn.getAdmin();) {
+      return admin.tableExists(table);
+    }
+  }
+
+  private void walToHFiles(List<String> dirPaths, TableName tableName) throws IOException {
+
+    Tool player = new WALPlayer();
+
+    // Player reads all files in arbitrary directory structure and creates
+    // a Map task for each file. We use ';' as separator
+    // because WAL file names contains ','
+    String dirs = StringUtils.join(dirPaths, ';');
+
+    Path bulkOutputPath = getBulkOutputDirForTable(tableName);
+    conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
+    conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
+    String[] playerArgs = { dirs, tableName.getNameAsString() };
+
+    try {
+      player.setConf(conf);
+      int result = player.run(playerArgs);
+      if(result != 0) {
+        throw new IOException("WAL Player failed");
+      }
+      conf.unset(WALPlayer.INPUT_FILES_SEPARATOR_KEY);
+    } catch (IOException e) {
+      throw e;
+    } catch (Exception ee) {
+      throw new IOException("Can not convert from directory " + dirs
+          + " (check Hadoop, HBase and WALPlayer M/R job logs) ", ee);
+    }
+  }
+
+  private Path getBulkOutputDirForTable(TableName table) {
+    Path tablePath = getBulkOutputDir();
+    tablePath = new Path(tablePath, table.getNamespaceAsString());
+    tablePath = new Path(tablePath, table.getQualifierAsString());
+    return new Path(tablePath, "data");
+  }
+
+  private Path getBulkOutputDir() {
+    String backupId = backupInfo.getBackupId();
+    Path path = new Path(backupInfo.getBackupRootDir());
+    path = new Path(path, ".tmp");
+    path = new Path(path, backupId);
+    return path;
   }
 
 }

@@ -58,7 +58,7 @@ import org.apache.hadoop.util.ToolRunner;
 /**
  * A tool to replay WAL files as a M/R job.
  * The WAL can be replayed for a set of tables or all tables,
- * and a timerange can be provided (in milliseconds).
+ * and a time range can be provided (in milliseconds).
  * The WAL is filtered to the passed set of tables and  the output
  * can optionally be mapped to another set of tables.
  *
@@ -73,6 +73,9 @@ public class WALPlayer extends Configured implements Tool {
   public final static String BULK_OUTPUT_CONF_KEY = "wal.bulk.output";
   public final static String TABLES_KEY = "wal.input.tables";
   public final static String TABLE_MAP_KEY = "wal.input.tablesmap";
+  public final static String INPUT_FILES_SEPARATOR_KEY = "wal.input.separator";
+  public final static String IGNORE_MISSING_FILES = "wal.input.ignore.missing.files";
+
 
   // This relies on Hadoop Configuration to handle warning about deprecated configs and
   // to set the correct non-deprecated configs when an old one shows up.
@@ -128,7 +131,9 @@ public class WALPlayer extends Configured implements Tool {
         throw new IOException("Exactly one table must be specified for bulk HFile case.");
       }
       table = Bytes.toBytes(tables[0]);
+
     }
+
   }
 
   /**
@@ -280,10 +285,9 @@ public class WALPlayer extends Configured implements Tool {
     }
     conf.setStrings(TABLES_KEY, tables);
     conf.setStrings(TABLE_MAP_KEY, tableMap);
+    conf.set(FileInputFormat.INPUT_DIR, inputDirs);
     Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + System.currentTimeMillis()));
     job.setJarByClass(WALPlayer.class);
-
-    FileInputFormat.addInputPaths(job, inputDirs);
 
     job.setInputFormatClass(WALInputFormat.class);
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);

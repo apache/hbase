@@ -466,7 +466,7 @@ public class BackupManager implements Closeable {
 
   /**
    * Saves list of WAL files after incremental backup operation. These files will be stored until
-   * TTL expiration and are used by Backup Log Cleaner plugin to determine which WAL files can be
+   * TTL expiration and are used by Backup Log Cleaner plug-in to determine which WAL files can be
    * safely purged.
    */
   public void recordWALFiles(List<String> files) throws IOException {

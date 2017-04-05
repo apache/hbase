@@ -62,13 +62,8 @@ public class MapReduceRestoreJob implements RestoreJob {
 
     String bulkOutputConfKey;
 
-    if (fullBackupRestore) {
-      player = new HFileSplitterJob();
-      bulkOutputConfKey = HFileSplitterJob.BULK_OUTPUT_CONF_KEY;
-    } else {
-      player = new WALPlayer();
-      bulkOutputConfKey = WALPlayer.BULK_OUTPUT_CONF_KEY;
-    }
+    player = new HFileSplitterJob();
+    bulkOutputConfKey = HFileSplitterJob.BULK_OUTPUT_CONF_KEY;
     // Player reads all files in arbitrary directory structure and creates
     // a Map task for each file
     String dirs = StringUtils.join(dirPaths, ",");
@@ -88,7 +83,10 @@ public class MapReduceRestoreJob implements RestoreJob {
       Path bulkOutputPath = getBulkOutputDir(getFileNameCompatibleString(newTableNames[i]));
       Configuration conf = getConf();
       conf.set(bulkOutputConfKey, bulkOutputPath.toString());
-      String[] playerArgs = { dirs, tableNames[i].getNameAsString() };
+      String[] playerArgs =
+        { dirs,
+          fullBackupRestore? newTableNames[i].getNameAsString():tableNames[i].getNameAsString()
+        };
 
       int result = 0;
       int loaderResult = 0;
