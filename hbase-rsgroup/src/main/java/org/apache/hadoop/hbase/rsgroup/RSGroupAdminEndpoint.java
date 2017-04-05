@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesR
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
 public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService {
@@ -267,14 +268,7 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
     }
   }
 
-  /////////////////////////////////////////////////////////////////////////////
-  // MasterObserver overrides
-  /////////////////////////////////////////////////////////////////////////////
-
-  // Assign table to default RSGroup.
-  @Override
-  public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+  void assignTableToGroup(HTableDescriptor desc) throws IOException {
     String groupName =
         master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString())
                 .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
@@ -290,6 +284,17 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
       LOG.debug("Pre-moving table " + desc.getTableName() + " to RSGroup " + groupName);
       groupAdminServer.moveTables(Sets.newHashSet(desc.getTableName()), groupName);
     }
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // MasterObserver overrides
+  /////////////////////////////////////////////////////////////////////////////
+
+  // Assign table to default RSGroup.
+  @Override
+  public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+    assignTableToGroup(desc);
   }
 
   // Remove table from its RSGroup.
@@ -322,5 +327,12 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
                                  NamespaceDescriptor ns) throws IOException {
     preCreateNamespace(ctx, ns);
   }
+
+  @Override
+  public void preCloneSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      SnapshotDescription snapshot, HTableDescriptor desc) throws IOException {
+    assignTableToGroup(desc);
+  }
+
   /////////////////////////////////////////////////////////////////////////////
 }

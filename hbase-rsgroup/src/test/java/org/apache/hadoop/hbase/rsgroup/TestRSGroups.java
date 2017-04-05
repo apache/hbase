@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -77,6 +78,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     TEST_UTIL.getConfiguration().set(
         ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
         ""+NUM_SLAVES_BASE);
+    TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
 
     admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
@@ -270,4 +272,21 @@ public class TestRSGroups extends TestRSGroupsBase {
       }
     });
   }
+
+  @Test
+  public void testCloneSnapshot() throws Exception {
+    byte[] FAMILY = Bytes.toBytes("test");
+    String snapshotName = tableName.getNameAsString() + "_snap";
+    TableName clonedTableName = TableName.valueOf(tableName.getNameAsString() + "_clone");
+
+    // create base table
+    TEST_UTIL.createTable(tableName, FAMILY);
+
+    // create snapshot
+    admin.snapshot(snapshotName, tableName);
+
+    // clone
+    admin.cloneSnapshot(snapshotName, clonedTableName);
+  }
+
 }
