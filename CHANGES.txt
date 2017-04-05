@@ -1,5 +1,82 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.3.1 04/30/2017
+
+** Sub-task
+    * [HBASE-15386] - PREFETCH_BLOCKS_ON_OPEN in HColumnDescriptor is ignored
+    * [HBASE-17060] - backport HBASE-16570 to 1.3.1
+    * [HBASE-17561] - table status page should escape values that may contain arbitrary characters.
+
+** Bug
+    * [HBASE-14753] - TestShell is not invoked anymore
+    * [HBASE-15328] - Unvalidated Redirect in HMaster
+    * [HBASE-15635] - Mean age of Blocks in cache (seconds) on webUI should be greater than zero
+    * [HBASE-16630] - Fragmentation in long running Bucket Cache
+    * [HBASE-16886] - hbase-client: scanner with reversed=true and small=true gets no result
+    * [HBASE-16939] - ExportSnapshot: set owner and permission on right directory
+    * [HBASE-16948] - Fix inconsistency between HRegion and Region javadoc on getRowLock
+    * [HBASE-17059] - backport HBASE-17039 to 1.3.1
+    * [HBASE-17069] - RegionServer writes invalid META entries for split daughters in some circumstances
+    * [HBASE-17070] - backport HBASE-17020 to 1.3.1
+    * [HBASE-17112] - Prevent setting timestamp of delta operations the same as previous value's
+    * [HBASE-17175] - backport HBASE-17127 to 1.3.1
+    * [HBASE-17187] - DoNotRetryExceptions from coprocessors should bubble up to the application
+    * [HBASE-17264] - Processing RIT with offline state will always fail to open the first time
+    * [HBASE-17265] - Region left unassigned in master failover when region failed to open
+    * [HBASE-17275] - Assign timeout may cause region to be unassigned forever
+    * [HBASE-17287] - Master becomes a zombie if filesystem object closes
+    * [HBASE-17289] - Avoid adding a replication peer named "lock"
+    * [HBASE-17357] - PerformanceEvaluation parameters parsing triggers NPE.
+    * [HBASE-17381] - ReplicationSourceWorkerThread can die due to unhandled exceptions
+    * [HBASE-17387] - Reduce the overhead of exception report in RegionActionResult for multi()
+    * [HBASE-17445] - Count size of serialized exceptions in checking max result size quota
+    * [HBASE-17475] - Stack overflow in AsyncProcess if retry too much
+    * [HBASE-17489] - ClientScanner may send a next request to a RegionScanner which has been exhausted
+    * [HBASE-17501] - NullPointerException after Datanodes Decommissioned and Terminated
+    * [HBASE-17522] - RuntimeExceptions from MemoryMXBean should not take down server process
+    * [HBASE-17540] - Change SASL server GSSAPI callback log line from DEBUG to TRACE in RegionServer to reduce log volumes in DEBUG mode
+    * [HBASE-17558] - ZK dumping jsp should escape html 
+    * [HBASE-17572] - HMaster: Caught throwable while processing event C_M_MERGE_REGION
+    * [HBASE-17578] - Thrift per-method metrics should still update in the case of exceptions
+    * [HBASE-17587] - Do not Rethrow DoNotRetryIOException as UnknownScannerException
+    * [HBASE-17590] - Drop cache hint should work for StoreFile write path
+    * [HBASE-17597] - TestMetaWithReplicas.testMetaTableReplicaAssignment is flaky
+    * [HBASE-17601] - close() in TableRecordReaderImpl assumes the split has started
+    * [HBASE-17604] - Backport HBASE-15437 (fix request and response size metrics) to branch-1
+    * [HBASE-17611] - Thrift 2 per-call latency metrics are capped at ~ 2 seconds
+    * [HBASE-17616] - Incorrect actions performed by CM
+    * [HBASE-17649] - REST API for scan should return 410 when table is disabled
+    * [HBASE-17675] - ReplicationEndpoint should choose new sinks if a SaslException occurs 
+    * [HBASE-17677] - ServerName parsing from directory name should be more robust to errors from guava's HostAndPort
+    * [HBASE-17682] - Region stuck in merging_new state indefinitely
+    * [HBASE-17688] - MultiRowRangeFilter not working correctly if given same start and stop RowKey
+    * [HBASE-17698] - ReplicationEndpoint choosing sinks
+    * [HBASE-17716] - Formalize Scan Metric names
+    * [HBASE-17717] - Incorrect ZK ACL set for HBase superuser
+    * [HBASE-17722] - Metrics subsystem stop/start messages add a lot of useless bulk to operational logging
+    * [HBASE-17780] - BoundedByteBufferPool "At capacity" messages are not actionable
+    * [HBASE-17813] - backport HBASE-16983 to branch-1.3
+    * [HBASE-17868] - Backport HBASE-10205 to branch-1.3
+
+** Improvement
+    * [HBASE-12770] - Don't transfer all the queued hlogs of a dead server to the same alive server
+    * [HBASE-15429] - Add a split policy for busy regions
+    * [HBASE-15941] - HBCK repair should not unsplit healthy splitted region
+    * [HBASE-16562] - ITBLL should fail to start if misconfigured
+    * [HBASE-16755] - Honor flush policy under global memstore pressure
+    * [HBASE-16773] - AccessController should access local region if possible
+    * [HBASE-16947] - Some improvements for DumpReplicationQueues tool
+    * [HBASE-16977] - VerifyReplication should log a printable representation of the row keys
+    * [HBASE-17057] - Minor compactions should also drop page cache behind reads
+    * [HBASE-17579] - Backport HBASE-16302 to 1.3.1
+    * [HBASE-17627] - Active workers metric for thrift
+    * [HBASE-17637] - Update progress more frequently in IntegrationTestBigLinkedList.Generator.persist
+    * [HBASE-17837] - Backport HBASE-15314 to branch-1.3
+
+** Task
+    * [HBASE-17609] - Allow for region merging in the UI 
+
+
 Release Notes - HBase - Version 1.3.0 10/24/2016
 
 ** Sub-task
