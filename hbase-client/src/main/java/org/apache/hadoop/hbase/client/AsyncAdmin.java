@@ -37,9 +37,12 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
- *  The asynchronous administrative API for HBase.
+ * The asynchronous administrative API for HBase.
+ * <p>
+ * This feature is still under development, so marked as IA.Private. Will change to public when
+ * done. Use it with caution.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public interface AsyncAdmin {
 
   /**
