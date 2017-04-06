@@ -51,15 +51,21 @@ public class UnsafeAvailChecker {
     });
     // When Unsafe itself is not available/accessible consider unaligned as false.
     if (avail) {
-      try {
-        // Using java.nio.Bits#unaligned() to check for unaligned-access capability
-        Class<?> clazz = Class.forName("java.nio.Bits");
-        Method m = clazz.getDeclaredMethod("unaligned");
-        m.setAccessible(true);
-        unaligned = (Boolean) m.invoke(null);
-      } catch (Exception e) {
-        LOG.warn("java.nio.Bits#unaligned() check failed."
-            + "Unsafe based read/write of primitive types won't be used", e);
+      String arch = System.getProperty("os.arch");
+      if ("ppc64".equals(arch) || "ppc64le".equals(arch)) {
+        // java.nio.Bits.unaligned() wrongly returns false on ppc (JDK-8165231),
+        unaligned = true;
+      } else {
+        try {
+          // Using java.nio.Bits#unaligned() to check for unaligned-access capability
+          Class<?> clazz = Class.forName("java.nio.Bits");
+          Method m = clazz.getDeclaredMethod("unaligned");
+          m.setAccessible(true);
+          unaligned = (Boolean) m.invoke(null);
+        } catch (Exception e) {
+          LOG.warn("java.nio.Bits#unaligned() check failed."
+              + "Unsafe based read/write of primitive types won't be used", e);
+        }
       }
     }
   }
