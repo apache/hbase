@@ -140,7 +140,7 @@ public class CloseRegionHandler extends EventHandler {
           // of doing the setClosedState() below, let's just ignore cont
           // The split message will clean up the master state.
           LOG.warn("Can't close region: was already closed during close(): " +
-            regionInfo.getRegionNameAsString());
+            name);
           return;
         }
       } catch (IOException ioe) {
