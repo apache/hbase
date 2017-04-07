@@ -58,6 +58,7 @@ Release Notes - HBase - Version 1.3.1 04/30/2017
     * [HBASE-17780] - BoundedByteBufferPool "At capacity" messages are not actionable
     * [HBASE-17813] - backport HBASE-16983 to branch-1.3
     * [HBASE-17868] - Backport HBASE-10205 to branch-1.3
+    * [HBASE-17886] - Fix compatibility of ServerSideScanMetrics
 
 ** Improvement
     * [HBASE-12770] - Don't transfer all the queued hlogs of a dead server to the same alive server
