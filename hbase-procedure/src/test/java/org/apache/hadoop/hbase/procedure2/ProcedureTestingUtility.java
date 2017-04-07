@@ -408,7 +408,7 @@ public class ProcedureTestingUtility {
       addStackIndex(index);
     }
 
-    public void setFinishedState() {
+    public void setSuccessState() {
       setState(ProcedureState.SUCCESS);
     }
 

@@ -1373,11 +1373,16 @@ public class ProcedureExecutor<TEnvironment> {
         return;
       }
 
-      // if the store is not running we are aborting
-      if (!store.isRunning()) return;
-
+      // TODO: The code here doesn't check if store is running before persisting to the store as
+      // it relies on the method call below to throw RuntimeException to wind up the stack and
+      // executor thread to stop. The statement following the method call below seems to check if
+      // store is not running, to prevent scheduling children procedures, re-execution or yield
+      // of this procedure. This may need more scrutiny and subsequent cleanup in future
       // Commit the transaction
       updateStoreOnExec(procStack, procedure, subprocs);
+
+      // if the store is not running we are aborting
+      if (!store.isRunning()) return;
 
       // if the procedure is kind enough to pass the slot to someone else, yield
       if (procedure.isRunnable() && !suspended &&
