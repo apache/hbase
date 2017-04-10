@@ -831,6 +831,9 @@ public class ProcedureExecutor<TEnvironment> {
   private long pushProcedure(final Procedure proc) {
     final long currentProcId = proc.getProcId();
 
+    // Update metrics on start of a procedure
+    proc.updateMetricsOnSubmit(getEnvironment());
+
     // Create the rollback stack for the procedure
     RootProcedureState stack = new RootProcedureState();
     rollbackStack.put(currentProcId, stack);
@@ -1145,6 +1148,9 @@ public class ProcedureExecutor<TEnvironment> {
       }
 
       if (proc.isSuccess()) {
+        // update metrics on finishing the procedure
+        proc.updateMetricsOnFinish(getEnvironment(), proc.elapsedTime(), true);
+
         if (LOG.isDebugEnabled()) {
           LOG.debug("Finished " + proc + " in " + StringUtils.humanTimeDiff(proc.elapsedTime()));
         }
@@ -1276,6 +1282,10 @@ public class ProcedureExecutor<TEnvironment> {
 
     if (proc.removeStackIndex()) {
       proc.setState(ProcedureState.ROLLEDBACK);
+
+      // update metrics on finishing the procedure (fail)
+      proc.updateMetricsOnFinish(getEnvironment(), proc.elapsedTime(), false);
+
       if (proc.hasParent()) {
         store.delete(proc.getProcId());
         procedures.remove(proc.getProcId());
@@ -1444,6 +1454,7 @@ public class ProcedureExecutor<TEnvironment> {
   private void submitChildrenProcedures(final Procedure[] subprocs) {
     for (int i = 0; i < subprocs.length; ++i) {
       final Procedure subproc = subprocs[i];
+      subproc.updateMetricsOnSubmit(getEnvironment());
       assert !procedures.containsKey(subproc.getProcId());
       procedures.put(subproc.getProcId(), subproc);
       scheduler.addFront(subproc);

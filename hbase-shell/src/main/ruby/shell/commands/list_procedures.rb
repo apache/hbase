@@ -29,13 +29,13 @@ EOF
       end
 
       def command()
-        formatter.header([ "Id", "Name", "State", "Start_Time", "Last_Update" ])
+        formatter.header([ "Id", "Name", "State", "Submitted_Time", "Last_Update" ])
 
         list = admin.list_procedures()
         list.each do |proc|
-          start_time = Time.at(proc.getStartTime / 1000).to_s
+          submitted_time = Time.at(proc.getSubmittedTime / 1000).to_s
           last_update = Time.at(proc.getLastUpdate / 1000).to_s
-          formatter.row([ proc.getProcId, proc.getProcName, proc.getProcState, start_time, last_update ])
+          formatter.row([ proc.getProcId, proc.getProcName, proc.getProcState, submitted_time, last_update ])
         end
 
         formatter.footer(list.size)

@@ -166,7 +166,7 @@ implements ServerProcedureInterface {
 
   private void throwProcedureYieldException(final String msg) throws ProcedureYieldException {
     String logMsg = msg + "; cycle=" + this.cycles + ", running for " +
-        StringUtils.formatTimeDiff(System.currentTimeMillis(), getStartTime());
+        StringUtils.formatTimeDiff(System.currentTimeMillis(), getSubmittedTime());
     // The procedure executor logs ProcedureYieldException at trace level. For now, log these
     // yields for server crash processing at DEBUG. Revisit when stable.
     if (LOG.isDebugEnabled()) LOG.debug(logMsg);

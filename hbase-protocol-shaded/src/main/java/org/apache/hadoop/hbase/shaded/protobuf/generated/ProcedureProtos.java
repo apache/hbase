@@ -262,13 +262,13 @@ public final class ProcedureProtos {
     long getProcId();
 
     /**
-     * <code>required uint64 start_time = 4;</code>
+     * <code>required uint64 submitted_time = 4;</code>
      */
-    boolean hasStartTime();
+    boolean hasSubmittedTime();
     /**
-     * <code>required uint64 start_time = 4;</code>
+     * <code>required uint64 submitted_time = 4;</code>
      */
-    long getStartTime();
+    long getSubmittedTime();
 
     /**
      * <code>optional string owner = 5;</code>
@@ -449,7 +449,7 @@ public final class ProcedureProtos {
       className_ = "";
       parentId_ = 0L;
       procId_ = 0L;
-      startTime_ = 0L;
+      submittedTime_ = 0L;
       owner_ = "";
       state_ = 1;
       stackId_ = java.util.Collections.emptyList();
@@ -507,7 +507,7 @@ public final class ProcedureProtos {
             }
             case 32: {
               bitField0_ |= 0x00000008;
-              startTime_ = input.readUInt64();
+              submittedTime_ = input.readUInt64();
               break;
             }
             case 42: {
@@ -711,19 +711,19 @@ public final class ProcedureProtos {
       return procId_;
     }
 
-    public static final int START_TIME_FIELD_NUMBER = 4;
-    private long startTime_;
+    public static final int SUBMITTED_TIME_FIELD_NUMBER = 4;
+    private long submittedTime_;
     /**
-     * <code>required uint64 start_time = 4;</code>
+     * <code>required uint64 submitted_time = 4;</code>
      */
-    public boolean hasStartTime() {
+    public boolean hasSubmittedTime() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>required uint64 start_time = 4;</code>
+     * <code>required uint64 submitted_time = 4;</code>
      */
-    public long getStartTime() {
-      return startTime_;
+    public long getSubmittedTime() {
+      return submittedTime_;
     }
 
     public static final int OWNER_FIELD_NUMBER = 5;
@@ -987,7 +987,7 @@ public final class ProcedureProtos {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!hasStartTime()) {
+      if (!hasSubmittedTime()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -1015,7 +1015,7 @@ public final class ProcedureProtos {
         output.writeUInt64(3, procId_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeUInt64(4, startTime_);
+        output.writeUInt64(4, submittedTime_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 5, owner_);
@@ -1068,7 +1068,7 @@ public final class ProcedureProtos {
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(4, startTime_);
+          .computeUInt64Size(4, submittedTime_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(5, owner_);
@@ -1146,10 +1146,10 @@ public final class ProcedureProtos {
         result = result && (getProcId()
             == other.getProcId());
       }
-      result = result && (hasStartTime() == other.hasStartTime());
-      if (hasStartTime()) {
-        result = result && (getStartTime()
-            == other.getStartTime());
+      result = result && (hasSubmittedTime() == other.hasSubmittedTime());
+      if (hasSubmittedTime()) {
+        result = result && (getSubmittedTime()
+            == other.getSubmittedTime());
       }
       result = result && (hasOwner() == other.hasOwner());
       if (hasOwner()) {
@@ -1222,10 +1222,10 @@ public final class ProcedureProtos {
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
             getProcId());
       }
-      if (hasStartTime()) {
-        hash = (37 * hash) + START_TIME_FIELD_NUMBER;
+      if (hasSubmittedTime()) {
+        hash = (37 * hash) + SUBMITTED_TIME_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
-            getStartTime());
+            getSubmittedTime());
       }
       if (hasOwner()) {
         hash = (37 * hash) + OWNER_FIELD_NUMBER;
@@ -1400,7 +1400,7 @@ public final class ProcedureProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         procId_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000004);
-        startTime_ = 0L;
+        submittedTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000008);
         owner_ = "";
         bitField0_ = (bitField0_ & ~0x00000010);
@@ -1465,7 +1465,7 @@ public final class ProcedureProtos {
         if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
           to_bitField0_ |= 0x00000008;
         }
-        result.startTime_ = startTime_;
+        result.submittedTime_ = submittedTime_;
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
         }
@@ -1564,8 +1564,8 @@ public final class ProcedureProtos {
         if (other.hasProcId()) {
           setProcId(other.getProcId());
         }
-        if (other.hasStartTime()) {
-          setStartTime(other.getStartTime());
+        if (other.hasSubmittedTime()) {
+          setSubmittedTime(other.getSubmittedTime());
         }
         if (other.hasOwner()) {
           bitField0_ |= 0x00000010;
@@ -1618,7 +1618,7 @@ public final class ProcedureProtos {
         if (!hasProcId()) {
           return false;
         }
-        if (!hasStartTime()) {
+        if (!hasSubmittedTime()) {
           return false;
         }
         if (!hasState()) {
@@ -1829,34 +1829,34 @@ public final class ProcedureProtos {
         return this;
       }
 
-      private long startTime_ ;
+      private long submittedTime_ ;
       /**
-       * <code>required uint64 start_time = 4;</code>
+       * <code>required uint64 submitted_time = 4;</code>
        */
-      public boolean hasStartTime() {
+      public boolean hasSubmittedTime() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>required uint64 start_time = 4;</code>
+       * <code>required uint64 submitted_time = 4;</code>
        */
-      public long getStartTime() {
-        return startTime_;
+      public long getSubmittedTime() {
+        return submittedTime_;
       }
       /**
-       * <code>required uint64 start_time = 4;</code>
+       * <code>required uint64 submitted_time = 4;</code>
        */
-      public Builder setStartTime(long value) {
+      public Builder setSubmittedTime(long value) {
         bitField0_ |= 0x00000008;
-        startTime_ = value;
+        submittedTime_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>required uint64 start_time = 4;</code>
+       * <code>required uint64 submitted_time = 4;</code>
        */
-      public Builder clearStartTime() {
+      public Builder clearSubmittedTime() {
         bitField0_ = (bitField0_ & ~0x00000008);
-        startTime_ = 0L;
+        submittedTime_ = 0L;
         onChanged();
         return this;
       }
@@ -7743,38 +7743,38 @@ public final class ProcedureProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\017Procedure.proto\022\010hbase.pb\032\023ErrorHandli" +
-      "ng.proto\"\313\002\n\tProcedure\022\022\n\nclass_name\030\001 \002" +
-      "(\t\022\021\n\tparent_id\030\002 \001(\004\022\017\n\007proc_id\030\003 \002(\004\022\022" +
-      "\n\nstart_time\030\004 \002(\004\022\r\n\005owner\030\005 \001(\t\022\'\n\005sta" +
-      "te\030\006 \002(\0162\030.hbase.pb.ProcedureState\022\020\n\010st" +
-      "ack_id\030\007 \003(\r\022\023\n\013last_update\030\010 \002(\004\022\017\n\007tim" +
-      "eout\030\t \001(\r\0224\n\texception\030\n \001(\0132!.hbase.pb" +
-      ".ForeignExceptionMessage\022\016\n\006result\030\013 \001(\014" +
-      "\022\022\n\nstate_data\030\014 \001(\014\022\026\n\013nonce_group\030\r \001(" +
-      "\004:\0010\022\020\n\005nonce\030\016 \001(\004:\0010\"+\n\027SequentialProc",
-      "edureData\022\020\n\010executed\030\001 \002(\010\"*\n\031StateMach" +
-      "ineProcedureData\022\r\n\005state\030\001 \003(\r\"X\n\022Proce" +
-      "dureWALHeader\022\017\n\007version\030\001 \002(\r\022\014\n\004type\030\002" +
-      " \002(\r\022\016\n\006log_id\030\003 \002(\004\022\023\n\013min_proc_id\030\004 \002(" +
-      "\004\";\n\023ProcedureWALTrailer\022\017\n\007version\030\001 \002(" +
-      "\r\022\023\n\013tracker_pos\030\002 \002(\004\"\225\001\n\025ProcedureStor" +
-      "eTracker\0229\n\004node\030\001 \003(\0132+.hbase.pb.Proced" +
-      "ureStoreTracker.TrackerNode\032A\n\013TrackerNo" +
-      "de\022\020\n\010start_id\030\001 \002(\004\022\017\n\007updated\030\002 \003(\004\022\017\n" +
-      "\007deleted\030\003 \003(\004\"\257\002\n\021ProcedureWALEntry\022.\n\004",
-      "type\030\001 \002(\0162 .hbase.pb.ProcedureWALEntry." +
-      "Type\022&\n\tprocedure\030\002 \003(\0132\023.hbase.pb.Proce" +
-      "dure\022\017\n\007proc_id\030\003 \001(\004\022\020\n\010child_id\030\004 \003(\004\"" +
-      "\236\001\n\004Type\022\025\n\021PROCEDURE_WAL_EOF\020\001\022\026\n\022PROCE" +
-      "DURE_WAL_INIT\020\002\022\030\n\024PROCEDURE_WAL_INSERT\020" +
-      "\003\022\030\n\024PROCEDURE_WAL_UPDATE\020\004\022\030\n\024PROCEDURE" +
-      "_WAL_DELETE\020\005\022\031\n\025PROCEDURE_WAL_COMPACT\020\006" +
-      "*{\n\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014\n\010" +
-      "RUNNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_TIMEO" +
-      "UT\020\004\022\016\n\nROLLEDBACK\020\005\022\013\n\007SUCCESS\020\006\022\n\n\006FAI",
-      "LED\020\007BL\n1org.apache.hadoop.hbase.shaded." +
-      "protobuf.generatedB\017ProcedureProtosH\001\210\001\001" +
-      "\240\001\001"
+      "ng.proto\"\317\002\n\tProcedure\022\022\n\nclass_name\030\001 \002" +
+      "(\t\022\021\n\tparent_id\030\002 \001(\004\022\017\n\007proc_id\030\003 \002(\004\022\026" +
+      "\n\016submitted_time\030\004 \002(\004\022\r\n\005owner\030\005 \001(\t\022\'\n" +
+      "\005state\030\006 \002(\0162\030.hbase.pb.ProcedureState\022\020" +
+      "\n\010stack_id\030\007 \003(\r\022\023\n\013last_update\030\010 \002(\004\022\017\n" +
+      "\007timeout\030\t \001(\r\0224\n\texception\030\n \001(\0132!.hbas" +
+      "e.pb.ForeignExceptionMessage\022\016\n\006result\030\013" +
+      " \001(\014\022\022\n\nstate_data\030\014 \001(\014\022\026\n\013nonce_group\030" +
+      "\r \001(\004:\0010\022\020\n\005nonce\030\016 \001(\004:\0010\"+\n\027Sequential",
+      "ProcedureData\022\020\n\010executed\030\001 \002(\010\"*\n\031State" +
+      "MachineProcedureData\022\r\n\005state\030\001 \003(\r\"X\n\022P" +
+      "rocedureWALHeader\022\017\n\007version\030\001 \002(\r\022\014\n\004ty" +
+      "pe\030\002 \002(\r\022\016\n\006log_id\030\003 \002(\004\022\023\n\013min_proc_id\030" +
+      "\004 \002(\004\";\n\023ProcedureWALTrailer\022\017\n\007version\030" +
+      "\001 \002(\r\022\023\n\013tracker_pos\030\002 \002(\004\"\225\001\n\025Procedure" +
+      "StoreTracker\0229\n\004node\030\001 \003(\0132+.hbase.pb.Pr" +
+      "ocedureStoreTracker.TrackerNode\032A\n\013Track" +
+      "erNode\022\020\n\010start_id\030\001 \002(\004\022\017\n\007updated\030\002 \003(" +
+      "\004\022\017\n\007deleted\030\003 \003(\004\"\257\002\n\021ProcedureWALEntry",
+      "\022.\n\004type\030\001 \002(\0162 .hbase.pb.ProcedureWALEn" +
+      "try.Type\022&\n\tprocedure\030\002 \003(\0132\023.hbase.pb.P" +
+      "rocedure\022\017\n\007proc_id\030\003 \001(\004\022\020\n\010child_id\030\004 " +
+      "\003(\004\"\236\001\n\004Type\022\025\n\021PROCEDURE_WAL_EOF\020\001\022\026\n\022P" +
+      "ROCEDURE_WAL_INIT\020\002\022\030\n\024PROCEDURE_WAL_INS" +
+      "ERT\020\003\022\030\n\024PROCEDURE_WAL_UPDATE\020\004\022\030\n\024PROCE" +
+      "DURE_WAL_DELETE\020\005\022\031\n\025PROCEDURE_WAL_COMPA" +
+      "CT\020\006*{\n\016ProcedureState\022\020\n\014INITIALIZING\020\001" +
+      "\022\014\n\010RUNNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_T" +
+      "IMEOUT\020\004\022\016\n\nROLLEDBACK\020\005\022\013\n\007SUCCESS\020\006\022\n\n",
+      "\006FAILED\020\007BL\n1org.apache.hadoop.hbase.sha" +
+      "ded.protobuf.generatedB\017ProcedureProtosH" +
+      "\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -7794,7 +7794,7 @@ public final class ProcedureProtos {
     internal_static_hbase_pb_Procedure_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_Procedure_descriptor,
-        new java.lang.String[] { "ClassName", "ParentId", "ProcId", "StartTime", "Owner", "State", "StackId", "LastUpdate", "Timeout", "Exception", "Result", "StateData", "NonceGroup", "Nonce", });
+        new java.lang.String[] { "ClassName", "ParentId", "ProcId", "SubmittedTime", "Owner", "State", "StackId", "LastUpdate", "Timeout", "Exception", "Result", "StateData", "NonceGroup", "Nonce", });
     internal_static_hbase_pb_SequentialProcedureData_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_hbase_pb_SequentialProcedureData_fieldAccessorTable = new

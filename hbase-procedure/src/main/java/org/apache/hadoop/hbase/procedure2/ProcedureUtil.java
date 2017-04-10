@@ -97,7 +97,7 @@ public final class ProcedureUtil {
       .setClassName(proc.getClass().getName())
       .setProcId(proc.getProcId())
       .setState(proc.getState())
-      .setStartTime(proc.getStartTime())
+      .setSubmittedTime(proc.getSubmittedTime())
       .setLastUpdate(proc.getLastUpdate());
 
     if (proc.hasParent()) {
@@ -164,7 +164,7 @@ public final class ProcedureUtil {
     // set fields
     proc.setProcId(proto.getProcId());
     proc.setState(proto.getState());
-    proc.setStartTime(proto.getStartTime());
+    proc.setSubmittedTime(proto.getSubmittedTime());
     proc.setLastUpdate(proto.getLastUpdate());
 
     if (proto.hasParentId()) {
@@ -217,7 +217,7 @@ public final class ProcedureUtil {
 
     builder.setClassName(procInfo.getProcName());
     builder.setProcId(procInfo.getProcId());
-    builder.setStartTime(procInfo.getStartTime());
+    builder.setSubmittedTime(procInfo.getSubmittedTime());
     builder.setState(ProcedureProtos.ProcedureState.valueOf(procInfo.getProcState().name()));
     builder.setLastUpdate(procInfo.getLastUpdate());
 
@@ -257,7 +257,7 @@ public final class ProcedureUtil {
         procProto.hasParentId() ? procProto.getParentId() : -1, nonceKey,
         procProto.hasException() ?
           ForeignExceptionUtil.toIOException(procProto.getException()) : null,
-        procProto.getLastUpdate(), procProto.getStartTime(),
+        procProto.getLastUpdate(), procProto.getSubmittedTime(),
         procProto.hasResult() ? procProto.getResult().toByteArray() : null);
   }
 
@@ -279,6 +279,6 @@ public final class ProcedureUtil {
         convertToProcedureState(proc.getState()),
         proc.hasParent() ? proc.getParentProcId() : -1, nonceKey,
         exception != null ? exception.unwrapRemoteIOException() : null,
-        proc.getLastUpdate(), proc.getStartTime(), proc.getResult());
+        proc.getLastUpdate(), proc.getSubmittedTime(), proc.getResult());
   }
 }

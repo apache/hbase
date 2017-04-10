@@ -2114,7 +2114,7 @@ public class HBaseAdmin implements Admin {
         procedureState, procProto.hasParentId() ? procProto.getParentId() : -1, nonceKey,
             procProto.hasException()?
                 ForeignExceptionUtil.toIOException(procProto.getException()): null,
-            procProto.getLastUpdate(), procProto.getStartTime(),
+            procProto.getLastUpdate(), procProto.getSubmittedTime(),
             procProto.hasResult()? procProto.getResult().toByteArray() : null);
   }
 

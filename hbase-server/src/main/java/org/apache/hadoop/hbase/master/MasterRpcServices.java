@@ -1098,7 +1098,7 @@ public class MasterRpcServices extends RSRpcServices
       if (v.getFirst() != null) {
         ProcedureInfo result = v.getFirst();
         builder.setState(GetProcedureResultResponse.State.FINISHED);
-        builder.setStartTime(result.getStartTime());
+        builder.setSubmittedTime(result.getSubmittedTime());
         builder.setLastUpdate(result.getLastUpdate());
         if (result.isFailed()) {
           builder.setException(ForeignExceptionUtil.toProtoForeignException(result.getException()));
@@ -1113,7 +1113,7 @@ public class MasterRpcServices extends RSRpcServices
           builder.setState(GetProcedureResultResponse.State.NOT_FOUND);
         } else {
           builder.setState(GetProcedureResultResponse.State.RUNNING);
-          builder.setStartTime(proc.getStartTime());
+          builder.setSubmittedTime(proc.getSubmittedTime());
           builder.setLastUpdate(proc.getLastUpdate());
         }
       }

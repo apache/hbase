@@ -43,7 +43,7 @@ message Procedure {
   required string class_name = 1;        // full classname to be able to instantiate the procedure
   optional uint64 parent_id = 2;         // parent if not a root-procedure otherwise not set
   required uint64 proc_id = 3;
-  required uint64 start_time = 4;
+  required uint64 submitted_time = 4;
   optional string owner = 5;
 
   // internal "runtime" state

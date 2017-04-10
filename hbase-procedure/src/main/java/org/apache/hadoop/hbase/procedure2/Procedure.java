@@ -38,7 +38,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Base Procedure class responsible to handle the Procedure Metadata
- * e.g. state, startTime, lastUpdate, stack-indexes, ...
+ * e.g. state, submittedTime, lastUpdate, stack-indexes, ...
  *
  * execute() is called each time the procedure is executed.
  * it may be called multiple times in case of failure and restart, so the
@@ -73,7 +73,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   private long parentProcId = NO_PROC_ID;
   private long rootProcId = NO_PROC_ID;
   private long procId = NO_PROC_ID;
-  private long startTime;
+  private long submittedTime;
 
   // runtime state, updated every operation
   private ProcedureState state = ProcedureState.INITIALIZING;
@@ -240,6 +240,27 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return true;
   }
 
+  /**
+   * This function will be called just when procedure is submitted for execution. Override this
+   * method to update the metrics at the beginning of the procedure
+   */
+  protected void updateMetricsOnSubmit(final TEnvironment env) {}
+
+  /**
+   * This function will be called just after procedure execution is finished. Override this method
+   * to update metrics at the end of the procedure
+   *
+   * TODO: As any of the sub-procedures on failure rolls back all procedures in the stack,
+   * including successfully finished siblings, this function may get called twice in certain
+   * cases for certain procedures. Explore further if this can be called once.
+   *
+   * @param env
+   * @param runtime - Runtime of the procedure in milliseconds
+   * @param success - true if procedure is completed successfully
+   */
+  protected void updateMetricsOnFinish(final TEnvironment env, final long runtime,
+                                       boolean success) {}
+
   @Override
   public String toString() {
     // Return the simple String presentation of the procedure.
@@ -287,8 +308,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   public String toStringDetails() {
     final StringBuilder sb = toStringSimpleSB();
 
-    sb.append(" startTime=");
-    sb.append(getStartTime());
+    sb.append(" submittedTime=");
+    sb.append(getSubmittedTime());
 
     sb.append(" lastUpdate=");
     sb.append(getLastUpdate());
@@ -353,8 +374,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return nonceKey;
   }
 
-  public long getStartTime() {
-    return startTime;
+  public long getSubmittedTime() {
+    return submittedTime;
   }
 
   public String getOwner() {
@@ -372,7 +393,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   @InterfaceAudience.Private
   protected void setProcId(final long procId) {
     this.procId = procId;
-    this.startTime = EnvironmentEdgeManager.currentTime();
+    this.submittedTime = EnvironmentEdgeManager.currentTime();
     setState(ProcedureState.RUNNABLE);
   }
 
@@ -414,8 +435,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * the creation/deserialization.
    */
   @InterfaceAudience.Private
-  protected void setStartTime(final long startTime) {
-    this.startTime = startTime;
+  protected void setSubmittedTime(final long submittedTime) {
+    this.submittedTime = submittedTime;
   }
 
   // ==========================================================================
@@ -478,7 +499,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * @return the time elapsed between the last update and the start time of the procedure.
    */
   public long elapsedTime() {
-    return getLastUpdate() - getStartTime();
+    return getLastUpdate() - getSubmittedTime();
   }
 
   /**
