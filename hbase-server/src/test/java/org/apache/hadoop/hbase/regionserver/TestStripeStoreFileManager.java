@@ -58,9 +58,9 @@ public class TestStripeStoreFileManager {
   private static final Path CFDIR = HStore.getStoreHomedir(BASEDIR, "region", Bytes.toBytes("cf"));
 
   private static final byte[] KEY_A = Bytes.toBytes("aaa");
-  private static final byte[] KEY_B = Bytes.toBytes("bbb");
-  private static final byte[] KEY_C = Bytes.toBytes("ccc");
-  private static final byte[] KEY_D = Bytes.toBytes("ddd");
+  private static final byte[] KEY_B = Bytes.toBytes("aab");
+  private static final byte[] KEY_C = Bytes.toBytes("aac");
+  private static final byte[] KEY_D = Bytes.toBytes("aad");
 
   private static final KeyValue KV_A = new KeyValue(KEY_A, 0L);
   private static final KeyValue KV_B = new KeyValue(KEY_B, 0L);

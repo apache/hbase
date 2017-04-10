@@ -562,7 +562,7 @@ public class StripeStoreFileManager
    */
   private final int nonOpenRowCompare(byte[] k1, byte[] k2) {
     assert !isOpen(k1) && !isOpen(k2);
-    return cellComparator.compareRows(new KeyOnlyKeyValue(k1), k2, 0, k2.length);
+    return Bytes.compareTo(k1, k2);
   }
 
   private final int nonOpenRowCompare(Cell k1, byte[] k2) {
