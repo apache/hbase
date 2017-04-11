@@ -26,8 +26,8 @@
 
 namespace hbase {
 
-Mutation::Mutation(const std::string &row) : Row(row) { }
-Mutation::Mutation(const std::string &row, int64_t timestamp) : Row(row), timestamp_(timestamp) { }
+Mutation::Mutation(const std::string &row) : Row(row) {}
+Mutation::Mutation(const std::string &row, int64_t timestamp) : Row(row), timestamp_(timestamp) {}
 
 Mutation::Mutation(const Mutation &mutation) {
   row_ = mutation.row_;

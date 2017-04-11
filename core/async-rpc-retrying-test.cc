@@ -47,11 +47,23 @@
 #include "test-util/test-util.h"
 #include "utils/time-util.h"
 
-using namespace google::protobuf;
-using namespace hbase;
-using namespace hbase::pb;
-using namespace std::placeholders;
-using namespace testing;
+using hbase::AsyncRpcRetryingCallerFactory;
+using hbase::AsyncConnection;
+using hbase::AsyncRegionLocator;
+using hbase::ConnectionConfiguration;
+using hbase::Configuration;
+using hbase::HBaseRpcController;
+using hbase::RegionLocation;
+using hbase::RegionLocateType;
+using hbase::RpcClient;
+using hbase::RequestConverter;
+using hbase::ResponseConverter;
+using hbase::ReqConverter;
+using hbase::RespConverter;
+using hbase::Put;
+using hbase::TimeUtil;
+using hbase::Client;
+
 using ::testing::Return;
 using ::testing::_;
 using std::chrono::nanoseconds;
@@ -62,10 +74,10 @@ class MockAsyncRegionLocator : public AsyncRegionLocator {
       : region_location_(region_location) {}
   ~MockAsyncRegionLocator() = default;
 
-  folly::Future<std::shared_ptr<RegionLocation>> LocateRegion(const hbase::pb::TableName&,
-                                                              const std::string&,
-                                                              const RegionLocateType,
-                                                              const int64_t) override {
+  folly::Future<std::shared_ptr<hbase::RegionLocation>> LocateRegion(const hbase::pb::TableName&,
+                                                                     const std::string&,
+                                                                     const RegionLocateType,
+                                                                     const int64_t) override {
     folly::Promise<std::shared_ptr<RegionLocation>> promise;
     promise.setValue(region_location_);
     return promise.getFuture();

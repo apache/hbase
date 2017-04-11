@@ -26,11 +26,11 @@
 #include "core/action.h"
 #include "core/cell.h"
 #include "core/get.h"
+#include "core/mutation.h"
+#include "core/put.h"
 #include "core/region-request.h"
 #include "core/scan.h"
 #include "core/server-request.h"
-#include "core/mutation.h"
-#include "core/put.h"
 #include "if/Client.pb.h"
 #include "if/HBase.pb.h"
 

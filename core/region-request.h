@@ -34,9 +34,7 @@ class RegionRequest {
   explicit RegionRequest(const std::shared_ptr<hbase::RegionLocation> &region_loc)
       : region_loc_(region_loc) {}
   ~RegionRequest() {}
-  void AddAction(std::shared_ptr<Action> action) {
-    actions_.push_back(action);
-  }
+  void AddAction(std::shared_ptr<Action> action) { actions_.push_back(action); }
   std::shared_ptr<hbase::RegionLocation> region_location() const { return region_loc_; }
   const ActionList &actions() const { return actions_; }
 
