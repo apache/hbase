@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -64,6 +65,12 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
     long lowTimestamp = StoreUtils.getLowestTimestamp(filesToCompact);
     long now = EnvironmentEdgeManager.currentTime();
     if (lowTimestamp > 0L && lowTimestamp < (now - mcTime)) {
+      String regionInfo;
+      if (this.storeConfigInfo != null && this.storeConfigInfo instanceof HStore) {
+        regionInfo = ((HStore)this.storeConfigInfo).getRegionInfo().getRegionNameAsString();
+      } else {
+        regionInfo = this.toString();
+      }
       // Major compaction time has elapsed.
       long cfTTL = this.storeConfigInfo.getStoreFileTtl();
       if (filesToCompact.size() == 1) {
@@ -76,24 +83,24 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
             sf.getHDFSBlockDistribution().getBlockLocalityIndex(
             RSRpcServices.getHostname(comConf.conf, false));
           if (blockLocalityIndex < comConf.getMinLocalityToForceCompact()) {
-            LOG.debug("Major compaction triggered on only store " + this
+            LOG.debug("Major compaction triggered on only store " + regionInfo
               + "; to make hdfs blocks local, current blockLocalityIndex is "
               + blockLocalityIndex + " (min " + comConf.getMinLocalityToForceCompact() + ")");
             result = true;
           } else {
-            LOG.debug("Skipping major compaction of " + this
+            LOG.debug("Skipping major compaction of " + regionInfo
               + " because one (major) compacted file only, oldestTime " + oldest
               + "ms is < TTL=" + cfTTL + " and blockLocalityIndex is " + blockLocalityIndex
               + " (min " + comConf.getMinLocalityToForceCompact() + ")");
           }
         } else if (cfTTL != HConstants.FOREVER && oldest > cfTTL) {
-          LOG.debug("Major compaction triggered on store " + this
+          LOG.debug("Major compaction triggered on store " + regionInfo
             + ", because keyvalues outdated; time since last major compaction "
             + (now - lowTimestamp) + "ms");
           result = true;
         }
       } else {
-        LOG.debug("Major compaction triggered on store " + this
+        LOG.debug("Major compaction triggered on store " + regionInfo
           + "; time since last major compaction " + (now - lowTimestamp) + "ms");
       }
       result = true;
