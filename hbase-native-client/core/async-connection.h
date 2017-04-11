@@ -26,11 +26,11 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "connection/rpc-client.h"
 #include "core/async-region-locator.h"
 #include "core/configuration.h"
-#include "core/connection-configuration.h"
 #include "core/connection-configuration.h"
 #include "core/hbase-configuration-loader.h"
 #include "core/hbase-rpc-controller.h"
@@ -45,8 +45,8 @@ class AsyncRpcRetryingCallerFactory;
 
 class AsyncConnection {
  public:
-  AsyncConnection(){};
-  virtual ~AsyncConnection(){};
+  AsyncConnection() {}
+  virtual ~AsyncConnection() {}
   virtual std::shared_ptr<Configuration> conf() = 0;
   virtual std::shared_ptr<ConnectionConfiguration> connection_conf() = 0;
   virtual std::shared_ptr<AsyncRpcRetryingCallerFactory> caller_factory() = 0;
@@ -82,7 +82,7 @@ class AsyncConnectionImpl : public AsyncConnection,
     return std::make_shared<HBaseRpcController>();
   }
 
-  virtual void Close() override;
+  void Close() override;
 
  protected:
   AsyncConnectionImpl() {}
@@ -105,7 +105,7 @@ class AsyncConnectionImpl : public AsyncConnection,
   bool is_closed_ = false;
 
  private:
-  AsyncConnectionImpl(std::shared_ptr<Configuration> conf) : conf_(conf) {}
+  explicit AsyncConnectionImpl(std::shared_ptr<Configuration> conf) : conf_(conf) {}
   void Init();
 };
 }  // namespace hbase

@@ -20,6 +20,7 @@
 #pragma once
 
 #include <folly/futures/Future.h>
+#include <memory>
 #include <string>
 
 #include "core/region-location.h"

@@ -31,7 +31,7 @@
 
 namespace hbase {
 
-class Mutation: public Row {
+class Mutation : public Row {
  public:
   /**
    * Constructors

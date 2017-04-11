@@ -61,11 +61,11 @@ std::shared_ptr<Result> ResponseConverter::ToResult(
     int cells_read = 0;
     while (cells_read != result.associated_cell_count()) {
       if (cell_scanner->Advance()) {
-      vcells.push_back(cell_scanner->Current());
+        vcells.push_back(cell_scanner->Current());
         cells_read += 1;
       } else {
-        LOG(ERROR)<< "CellScanner::Advance() returned false unexpectedly. Cells Read:- "
-        << cells_read << "; Expected Cell Count:- " << result.associated_cell_count();
+        LOG(ERROR) << "CellScanner::Advance() returned false unexpectedly. Cells Read:- "
+                   << cells_read << "; Expected Cell Count:- " << result.associated_cell_count();
         std::runtime_error("CellScanner::Advance() returned false unexpectedly");
       }
     }
@@ -111,16 +111,15 @@ std::vector<std::shared_ptr<Result>> ResponseConverter::FromScanResponse(const R
 
 std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_ptr<Request> req,
                                                                     const Response& resp) {
-  auto multi_req = std::static_pointer_cast < hbase::pb::MultiRequest > (req->req_msg());
-  auto multi_resp = std::static_pointer_cast < hbase::pb::MultiResponse > (resp.resp_msg());
+  auto multi_req = std::static_pointer_cast<hbase::pb::MultiRequest>(req->req_msg());
+  auto multi_resp = std::static_pointer_cast<hbase::pb::MultiResponse>(resp.resp_msg());
   VLOG(3) << "GetResults:" << multi_resp->ShortDebugString();
   int req_region_action_count = multi_req->regionaction_size();
   int res_region_action_count = multi_resp->regionactionresult_size();
   if (req_region_action_count != res_region_action_count) {
-    throw std::runtime_error(
-        "Request mutation count=" + std::to_string(req_region_action_count)
-            + " does not match response mutation result count="
-            + std::to_string(res_region_action_count));
+    throw std::runtime_error("Request mutation count=" + std::to_string(req_region_action_count) +
+                             " does not match response mutation result count=" +
+                             std::to_string(res_region_action_count));
   }
   auto multi_response = std::make_unique<hbase::MultiResponse>();
   for (int32_t num = 0; num < res_region_action_count; num++) {
@@ -134,7 +133,7 @@ std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_
     auto region_name = rs.value();
     if (action_result.has_exception()) {
       if (action_result.exception().has_value()) {
-        auto exc = std::make_shared < hbase::IOException > (action_result.exception().value());
+        auto exc = std::make_shared<hbase::IOException>(action_result.exception().value());
         VLOG(8) << "Store Region Exception:- " << exc->what();
         multi_response->AddRegionException(region_name, exc);
       }
@@ -142,19 +141,18 @@ std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_
     }
 
     if (actions.action_size() != action_result.resultorexception_size()) {
-      throw std::runtime_error(
-          "actions.action_size=" + std::to_string(actions.action_size())
-              + ", action_result.resultorexception_size="
-              + std::to_string(action_result.resultorexception_size()) + " for region "
-              + actions.region().value());
+      throw std::runtime_error("actions.action_size=" + std::to_string(actions.action_size()) +
+                               ", action_result.resultorexception_size=" +
+                               std::to_string(action_result.resultorexception_size()) +
+                               " for region " + actions.region().value());
     }
 
     for (hbase::pb::ResultOrException roe : action_result.resultorexception()) {
-      std::shared_ptr < Result > result;
-      std::shared_ptr < std::exception > exc;
+      std::shared_ptr<Result> result;
+      std::shared_ptr<std::exception> exc;
       if (roe.has_exception()) {
         if (roe.exception().has_value()) {
-          exc = std::make_shared < hbase::IOException > (roe.exception().value());
+          exc = std::make_shared<hbase::IOException>(roe.exception().value());
           VLOG(8) << "Store ResultOrException:- " << exc->what();
         }
       } else if (roe.has_result()) {
@@ -165,9 +163,9 @@ std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_
         // Sometimes, the response is just "it was processed". Generally, this occurs for things
         // like mutateRows where either we get back 'processed' (or not) and optionally some
         // statistics about the regions we touched.
-        std::vector < std::shared_ptr < Cell >> empty_cells;
-        result = std::make_shared < Result
-            > (empty_cells, multi_resp->processed() ? true : false, false, false);
+        std::vector<std::shared_ptr<Cell>> empty_cells;
+        result = std::make_shared<Result>(empty_cells, multi_resp->processed() ? true : false,
+                                          false, false);
       }
       multi_response->AddRegionResult(region_name, roe.index(), std::move(result), exc);
     }
@@ -177,7 +175,7 @@ std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_
     hbase::pb::MultiRegionLoadStats stats = multi_resp->regionstatistics();
     for (int i = 0; i < stats.region_size(); i++) {
       multi_response->AddStatistic(stats.region(i).value(),
-                                   std::make_shared < RegionLoadStats > (stats.stat(i)));
+                                   std::make_shared<RegionLoadStats>(stats.stat(i)));
     }
   }
   return multi_response;
