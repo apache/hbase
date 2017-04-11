@@ -601,8 +601,15 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       // server is configured to abort.
       abortServer(env, e);
     } else {
-      LOG.error("Removing coprocessor '" + env.toString() + "' from " +
-          "environment because it threw:  " + e,e);
+      // If available, pull a table name out of the environment
+      if(env instanceof RegionCoprocessorEnvironment) {
+        String tableName = ((RegionCoprocessorEnvironment)env).getRegionInfo().getTable().getNameAsString();
+        LOG.error("Removing coprocessor '" + env.toString() + "' from table '"+ tableName + "'", e);
+      } else {
+        LOG.error("Removing coprocessor '" + env.toString() + "' from " +
+                "environment",e);
+      }
+
       coprocessors.remove(env);
       try {
         shutdown(env);
