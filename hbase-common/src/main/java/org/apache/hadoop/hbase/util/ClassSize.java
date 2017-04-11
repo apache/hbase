@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.concurrent.ConcurrentHashMap;
@@ -235,6 +236,12 @@ public class ClassSize {
   }
 
   private static final MemoryLayout memoryLayout = getMemoryLayout();
+  private static final boolean USE_UNSAFE_LAYOUT = (memoryLayout instanceof UnsafeLayout);
+
+  @VisibleForTesting
+  public static boolean useUnsafeLayout() {
+    return USE_UNSAFE_LAYOUT;
+  }
 
   /**
    * Method for reading the arc settings and setting overheads according

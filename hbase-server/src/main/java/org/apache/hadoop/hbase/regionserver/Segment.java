@@ -48,12 +48,13 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public abstract class Segment {
 
-  final static long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-      + 5 * ClassSize.REFERENCE // cellSet, comparator, memStoreLAB, size, timeRangeTracker
+  public final static long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
+      + 6 * ClassSize.REFERENCE // cellSet, comparator, memStoreLAB, dataSize,
+                                // heapSize, and timeRangeTracker
       + Bytes.SIZEOF_LONG // minSequenceId
       + Bytes.SIZEOF_BOOLEAN); // tagsPresent
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD + ClassSize.ATOMIC_REFERENCE
-      + ClassSize.CELL_SET + ClassSize.ATOMIC_LONG + ClassSize.TIMERANGE_TRACKER;
+      + ClassSize.CELL_SET + 2 * ClassSize.ATOMIC_LONG + ClassSize.TIMERANGE_TRACKER;
 
   private AtomicReference<CellSet> cellSet= new AtomicReference<>();
   private final CellComparator comparator;

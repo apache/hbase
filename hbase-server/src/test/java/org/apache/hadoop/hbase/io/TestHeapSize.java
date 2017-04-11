@@ -344,7 +344,7 @@ public class TestHeapSize  {
     cl = Segment.class;
     actual = Segment.DEEP_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
-    expected += ClassSize.estimateBase(AtomicLong.class, false);
+    expected += 2 * ClassSize.estimateBase(AtomicLong.class, false);
     expected += ClassSize.estimateBase(AtomicReference.class, false);
     expected += ClassSize.estimateBase(CellSet.class, false);
     expected += ClassSize.estimateBase(TimeRangeTracker.class, false);
@@ -361,7 +361,7 @@ public class TestHeapSize  {
     cl = MutableSegment.class;
     actual = MutableSegment.DEEP_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
-    expected += ClassSize.estimateBase(AtomicLong.class, false);
+    expected += 2 * ClassSize.estimateBase(AtomicLong.class, false);
     expected += ClassSize.estimateBase(AtomicReference.class, false);
     expected += ClassSize.estimateBase(CellSet.class, false);
     expected += ClassSize.estimateBase(TimeRangeTracker.class, false);
@@ -380,7 +380,7 @@ public class TestHeapSize  {
     cl = ImmutableSegment.class;
     actual = ImmutableSegment.DEEP_OVERHEAD_CSLM;
     expected = ClassSize.estimateBase(cl, false);
-    expected += ClassSize.estimateBase(AtomicLong.class, false);
+    expected += 2 * ClassSize.estimateBase(AtomicLong.class, false);
     expected += ClassSize.estimateBase(AtomicReference.class, false);
     expected += ClassSize.estimateBase(CellSet.class, false);
     expected += ClassSize.estimateBase(TimeRangeTracker.class, false);
@@ -398,7 +398,7 @@ public class TestHeapSize  {
     }
     actual = ImmutableSegment.DEEP_OVERHEAD_CAM;
     expected = ClassSize.estimateBase(cl, false);
-    expected += ClassSize.estimateBase(AtomicLong.class, false);
+    expected += 2 * ClassSize.estimateBase(AtomicLong.class, false);
     expected += ClassSize.estimateBase(AtomicReference.class, false);
     expected += ClassSize.estimateBase(CellSet.class, false);
     expected += ClassSize.estimateBase(TimeRangeTracker.class, false);
@@ -504,8 +504,11 @@ public class TestHeapSize  {
     } else {
       assertTrue(ClassSize.OBJECT == 12 || ClassSize.OBJECT == 16); // depending on CompressedOops
     }
-    assertEquals(ClassSize.OBJECT + 4, ClassSize.ARRAY);
+    if (ClassSize.useUnsafeLayout()) {
+      assertEquals(ClassSize.OBJECT + 4, ClassSize.ARRAY);
+    } else {
+      assertEquals(ClassSize.OBJECT + 8, ClassSize.ARRAY);
+    }
   }
-
 }
 
