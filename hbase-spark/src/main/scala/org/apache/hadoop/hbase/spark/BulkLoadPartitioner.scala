@@ -33,8 +33,8 @@ import org.apache.spark.Partitioner
 @InterfaceAudience.Public
 class BulkLoadPartitioner(startKeys:Array[Array[Byte]])
   extends Partitioner {
-
-  override def numPartitions: Int = startKeys.length
+  // when table not exist, startKeys = Byte[0][]
+  override def numPartitions: Int = if (startKeys.length == 0) 1 else startKeys.length
 
   override def getPartition(key: Any): Int = {
 
@@ -53,8 +53,11 @@ class BulkLoadPartitioner(startKeys:Array[Array[Byte]])
         case _ =>
           key.asInstanceOf[Array[Byte]]
       }
-    val partition = util.Arrays.binarySearch(startKeys, rowKey, comparator)
-    if (partition < 0) partition * -1 + -2
-    else partition
+    var partition = util.Arrays.binarySearch(startKeys, rowKey, comparator)
+    if (partition < 0)
+      partition = partition * -1 + -2
+    if (partition < 0)
+      partition = 0
+    partition
   }
 }

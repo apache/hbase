@@ -48,7 +48,7 @@ import org.apache.spark.streaming.dstream.DStream
 import java.io._
 import org.apache.hadoop.security.UserGroupInformation
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod
-import org.apache.hadoop.fs.{Path, FileSystem}
+import org.apache.hadoop.fs.{Path, FileAlreadyExistsException, FileSystem}
 import scala.collection.mutable
 
 /**
@@ -620,9 +620,17 @@ class HBaseContext(@transient sc: SparkContext,
                   compactionExclude: Boolean = false,
                   maxSize:Long = HConstants.DEFAULT_MAX_FILE_SIZE):
   Unit = {
+    val stagingPath = new Path(stagingDir)
+    val fs = stagingPath.getFileSystem(config)
+    if (fs.exists(stagingPath)) {
+      throw new FileAlreadyExistsException("Path " + stagingDir + " already exists")
+    }
     val conn = HBaseConnectionCache.getConnection(config)
     val regionLocator = conn.getRegionLocator(tableName)
     val startKeys = regionLocator.getStartKeys
+    if (startKeys.length == 0) {
+      logInfo("Table " + tableName.toString + " was not found")
+    }
     val defaultCompressionStr = config.get("hfile.compression",
       Compression.Algorithm.NONE.getName)
     val hfileCompression = HFileWriterImpl
@@ -743,9 +751,17 @@ class HBaseContext(@transient sc: SparkContext,
                   compactionExclude: Boolean = false,
                   maxSize:Long = HConstants.DEFAULT_MAX_FILE_SIZE):
   Unit = {
+    val stagingPath = new Path(stagingDir)
+    val fs = stagingPath.getFileSystem(config)
+    if (fs.exists(stagingPath)) {
+      throw new FileAlreadyExistsException("Path " + stagingDir + " already exists")
+    }
     val conn = HBaseConnectionCache.getConnection(config)
     val regionLocator = conn.getRegionLocator(tableName)
     val startKeys = regionLocator.getStartKeys
+    if (startKeys.length == 0) {
+      logInfo("Table " + tableName.toString + " was not found")
+    }
     val defaultCompressionStr = config.get("hfile.compression",
       Compression.Algorithm.NONE.getName)
     val defaultCompression = HFileWriterImpl
