@@ -306,37 +306,26 @@ See the <<hbase.unittests.cmds,hbase.unittests.cmds>> section in <<hbase.unittes
 [[maven.build.hadoop]]
 ==== Building against various hadoop versions.
 
-As of 0.96, Apache HBase supports building against Apache Hadoop versions: 1.0.3, 2.0.0-alpha and 3.0.0-SNAPSHOT.
-By default, in 0.96 and earlier, we will build with Hadoop-1.0.x.
-As of 0.98, Hadoop 1.x is deprecated and Hadoop 2.x is the default.
-To change the version to build against, add a hadoop.profile property when you invoke +mvn+:
+HBase supports building against Apache Hadoop versions: 2.y and 3.y (early release artifacts). By default we build against Hadoop 2.x.
+
+To build against a specific release from the Hadoop 2.y line, set e.g. `-Dhadoop-two.version=2.6.3`.
 
 [source,bourne]
 ----
-mvn -Dhadoop.profile=1.0 ...
+mvn -Dhadoop-two.version=2.6.3 ...
 ----
 
-The above will build against whatever explicit hadoop 1.x version we have in our _pom.xml_ as our '1.0' version.
+To change the major release line of Hadoop we build against, add a hadoop.profile property when you invoke +mvn+:
+
+[source,bourne]
+----
+mvn -Dhadoop.profile=3.0 ...
+----
+
+The above will build against whatever explicit hadoop 3.y version we have in our _pom.xml_ as our '3.0' version.
 Tests may not all pass so you may need to pass `-DskipTests` unless you are inclined to fix the failing tests.
 
-.'dependencyManagement.dependencies.dependency.artifactId' fororg.apache.hbase:${compat.module}:test-jar with value '${compat.module}'does not match a valid id pattern
-[NOTE]
-====
-You will see ERRORs like the above title if you pass the _default_ profile; e.g.
-if you pass +hadoop.profile=1.1+ when building 0.96 or +hadoop.profile=2.0+ when building hadoop 0.98; just drop the hadoop.profile stipulation in this case to get your build to run again.
-This seems to be a maven peculiarity that is probably fixable but we've not spent the time trying to figure it.
-====
-
-Similarly, for 3.0, you would just replace the profile value.
-Note that Hadoop-3.0.0-SNAPSHOT does not currently have a deployed maven artifact - you will need to build and install your own in your local maven repository if you want to run against this profile.
-
-In earlier versions of Apache HBase, you can build against older versions of Apache Hadoop, notably, Hadoop 0.22.x and 0.23.x.
-If you are running, for example HBase-0.94 and wanted to build against Hadoop 0.23.x, you would run with:
-
-[source,bourne]
-----
-mvn -Dhadoop.profile=22 ...
-----
+To pick a particular Hadoop 3.y release, you'd set e.g. `-Dhadoop-three.version=3.0.0-alpha1`.
 
 [[build.protobuf]]
 ==== Build Protobuf
@@ -426,27 +415,6 @@ HBase 1.x requires Java 7 to build.
 See <<java,java>> for Java requirements per HBase release.
 ====
 
-=== Building against HBase 0.96-0.98
-
-HBase 0.96.x will run on Hadoop 1.x or Hadoop 2.x.
-HBase 0.98 still runs on both, but HBase 0.98 deprecates use of Hadoop 1.
-HBase 1.x will _not_                run on Hadoop 1.
-In the following procedures, we make a distinction between HBase 1.x builds and the awkward process involved building HBase 0.96/0.98 for either Hadoop 1 or Hadoop 2 targets.
-
-You must choose which Hadoop to build against.
-It is not possible to build a single HBase binary that runs against both Hadoop 1 and Hadoop 2.
-Hadoop is included in the build, because it is needed to run HBase in standalone mode.
-Therefore, the set of modules included in the tarball changes, depending on the build target.
-To determine which HBase you have, look at the HBase version.
-The Hadoop version is embedded within it.
-
-Maven, our build system, natively does not allow a single product to be built against different dependencies.
-Also, Maven cannot change the set of included modules and write out the correct _pom.xml_ files with appropriate dependencies, even using two build targets, one for Hadoop 1 and another for Hadoop 2.
-A prerequisite step is required, which takes as input the current _pom.xml_s and generates Hadoop 1 or Hadoop 2 versions using a script in the _dev-tools/_ directory, called _generate-hadoopX-poms.sh_                where [replaceable]_X_ is either `1` or `2`.
-You then reference these generated poms when you build.
-For now, just be aware of the difference between HBase 1.x builds and those of HBase 0.96-0.98.
-This difference is important to the build instructions.
-
 [[maven.settings.xml]]
 .Example _~/.m2/settings.xml_ File
 ====
@@ -496,9 +464,7 @@ For the build to sign them for you, you a properly configured _settings.xml_ in 
 [[maven.release]]
 === Making a Release Candidate
 
-NOTE: These instructions are for building HBase 1.0.x.
-For building earlier versions, e.g. 0.98.x, the process is different.
-See this section under the respective release documentation folders.
+NOTE: These instructions are for building HBase 1.y.z
 
 .Point Releases
 If you are making a point release (for example to quickly address a critical incompatibility or security problem) off of a release branch instead of a development branch, the tagging instructions are slightly different.
@@ -1440,8 +1406,6 @@ The following interface classifications are commonly used:
 
 `@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)`::
   APIs for HBase coprocessor writers.
-  As of HBase 0.92/0.94/0.96/0.98 this api is still unstable.
-  No guarantees on compatibility with future versions.
 
 No `@InterfaceAudience` Classification::
   Packages without an `@InterfaceAudience` label are considered private.

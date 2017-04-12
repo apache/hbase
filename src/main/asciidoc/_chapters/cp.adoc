@@ -675,14 +675,9 @@ public class SumEndPoint extends Sum.SumService implements Coprocessor, Coproces
 [source, java]
 ----
 Configuration conf = HBaseConfiguration.create();
-// Use below code for HBase version 1.x.x or above.
 Connection connection = ConnectionFactory.createConnection(conf);
 TableName tableName = TableName.valueOf("users");
 Table table = connection.getTable(tableName);
-
-//Use below code HBase version 0.98.xx or below.
-//HConnection connection = HConnectionManager.createConnection(conf);
-//HTableInterface table = connection.getTable("users");
 
 final Sum.SumRequest request = Sum.SumRequest.newBuilder().setFamily("salaryDet").setColumn("gross").build();
 try {
@@ -760,14 +755,9 @@ Then you can read the configuration using code like the following:
 [source,java]
 ----
 Configuration conf = HBaseConfiguration.create();
-// Use below code for HBase version 1.x.x or above.
 Connection connection = ConnectionFactory.createConnection(conf);
 TableName tableName = TableName.valueOf("users");
 Table table = connection.getTable(tableName);
-
-//Use below code HBase version 0.98.xx or below.
-//HConnection connection = HConnectionManager.createConnection(conf);
-//HTableInterface table = connection.getTable("users");
 
 Get get = new Get(Bytes.toBytes("admin"));
 Result result = table.get(get);

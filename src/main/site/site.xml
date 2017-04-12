@@ -121,11 +121,6 @@
         <item name="X-Ref" href="1.1/xref/index.html" target="_blank" />
         <item name="Ref Guide (single-page)" href="1.1/book.html" target="_blank" />
       </item>
-      <item name="0.94 Documentation">
-        <item name="API" href="0.94/apidocs/index.html" target="_blank" />
-        <item name="X-Ref" href="0.94/xref/index.html" target="_blank" />
-        <item name="Ref Guide (single-page)" href="0.94/book.html" target="_blank" />
-      </item>
     </menu>
     <menu name="ASF">
       <item name="Apache Software Foundation" href="http://www.apache.org/foundation/" target="_blank" />
