@@ -116,12 +116,16 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     return System.nanoTime();
   }
 
+  ThriftHBaseServiceHandler(Configuration conf, UserProvider userProvider) throws IOException
+  {
+    this(conf, userProvider, conf.getInt(MAX_IDLETIME, 600000));
+  }
+
   ThriftHBaseServiceHandler(final Configuration conf,
-      final UserProvider userProvider) throws IOException {
+      final UserProvider userProvider, int max_idletime) throws IOException {
     int cleanInterval = conf.getInt(CLEANUP_INTERVAL, 10 * 1000);
-    int maxIdleTime = conf.getInt(MAX_IDLETIME, 10 * 60 * 1000);
     connectionCache = new ConnectionCache(
-      conf, userProvider, cleanInterval, maxIdleTime);
+      conf, userProvider, cleanInterval, max_idletime);
     tableFactory = new HTableFactory() {
       @Override
       public HTableInterface createHTableInterface(Configuration config,
@@ -134,7 +138,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
       }
     };
     htablePools = CacheBuilder.newBuilder().expireAfterAccess(
-      maxIdleTime, TimeUnit.MILLISECONDS).softValues().concurrencyLevel(4).build();
+      max_idletime, TimeUnit.MILLISECONDS).softValues().concurrencyLevel(4).build();
     maxPoolSize = conf.getInt("hbase.thrift.htablepool.size.max", 1000);
     htablePoolCreater = new Callable<HTablePool>() {
       public HTablePool call() {
