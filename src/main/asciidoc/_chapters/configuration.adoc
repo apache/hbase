@@ -93,43 +93,33 @@ This section lists required services and some required system configuration.
 
 [[java]]
 .Java
-[cols="1,1,1,4", options="header"]
+[cols="1,1,4", options="header"]
 |===
 |HBase Version
-|JDK 6
 |JDK 7
 |JDK 8
 
+|2.0
+|link:http://search-hadoop.com/m/YGbbsPxZ723m3as[Not Supported]
+|yes
+
+|1.3
+|yes
+|yes
+
 |1.2
-|link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
 |yes
 |yes
 
 |1.1
-|link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
 |yes
 |Running with JDK 8 will work but is not well tested.
 
-|1.0
-|link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
-|yes
-|Running with JDK 8 will work but is not well tested.
-
-|0.98
-|yes
-|yes
-|Running with JDK 8 works but is not well tested. Building with JDK 8 would require removal of the
-deprecated `remove()` method of the `PoolMap` class and is under consideration. See
-link:https://issues.apache.org/jira/browse/HBASE-7608[HBASE-7608] for more information about JDK 8
-support.
-
-|0.94
-|yes
-|yes
-|N/A
 |===
 
-NOTE: In HBase 0.98.5 and newer, you must set `JAVA_HOME` on each node of your cluster. _hbase-env.sh_ provides a handy mechanism to do this.
+NOTE: HBase will neither build nor compile with Java 6.
+
+NOTE: You must set `JAVA_HOME` on each node of your cluster. _hbase-env.sh_ provides a handy mechanism to do this.
 
 .Operating System Utilities
 ssh::
@@ -200,8 +190,8 @@ See link:http://wiki.apache.org/hadoop/Distributions%20and%20Commercial%20Suppor
 [TIP]
 ====
 Hadoop 2.x is faster and includes features, such as short-circuit reads, which will help improve your HBase random read profile.
-Hadoop 2.x also includes important bug fixes that will improve your overall HBase experience.
-HBase 0.98 drops support for Hadoop 1.0, deprecates use of Hadoop 1.1+, and HBase 1.0 will not support Hadoop 1.x.
+Hadoop 2.x also includes important bug fixes that will improve your overall HBase experience. HBase does not support running with
+earlier versions of Hadoop. See the table below for requirements specific to different HBase versions.
 
 Hadoop 3.x is still in early access releases and has not yet been sufficiently tested by the HBase community for production use cases.
 ====
@@ -271,107 +261,6 @@ Make sure you replace the jar in HBase everywhere on your cluster.
 Hadoop version mismatch issues have various manifestations but often all looks like its hung up.
 ====
 
-[[hadoop2.hbase_0.94]]
-==== Apache HBase 0.94 with Hadoop 2
-
-To get 0.94.x to run on Hadoop 2.2.0, you need to change the hadoop 2 and protobuf versions in the _pom.xml_: Here is a diff with pom.xml changes:
-
-[source]
-----
-$ svn diff pom.xml
-Index: pom.xml
-===================================================================
---- pom.xml     (revision 1545157)
-+++ pom.xml     (working copy)
-@@ -1034,7 +1034,7 @@
-     <slf4j.version>1.4.3</slf4j.version>
-     <log4j.version>1.2.16</log4j.version>
-     <mockito-all.version>1.8.5</mockito-all.version>
--    <protobuf.version>2.4.0a</protobuf.version>
-+    <protobuf.version>2.5.0</protobuf.version>
-     <stax-api.version>1.0.1</stax-api.version>
-     <thrift.version>0.8.0</thrift.version>
-     <zookeeper.version>3.4.5</zookeeper.version>
-@@ -2241,7 +2241,7 @@
-         </property>
-       </activation>
-       <properties>
--        <hadoop.version>2.0.0-alpha</hadoop.version>
-+        <hadoop.version>2.2.0</hadoop.version>
-         <slf4j.version>1.6.1</slf4j.version>
-       </properties>
-       <dependencies>
-----
-
-The next step is to regenerate Protobuf files and assuming that the Protobuf has been installed:
-
-* Go to the HBase root folder, using the command line;
-* Type the following commands:
-+
-
-[source,bourne]
-----
-$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/hbase.proto
-----
-+
-
-[source,bourne]
-----
-$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/ErrorHandling.proto
-----
-
-
-Building against the hadoop 2 profile by running something like the following command:
-
-----
-$  mvn clean install assembly:single -Dhadoop.profile=2.0 -DskipTests
-----
-
-[[hadoop.hbase_0.94]]
-==== Apache HBase 0.92 and 0.94
-
-HBase 0.92 and 0.94 versions can work with Hadoop versions, 0.20.205, 0.22.x, 1.0.x, and 1.1.x.
-HBase-0.94 can additionally work with Hadoop-0.23.x and 2.x, but you may have to recompile the code using the specific maven profile (see top level pom.xml)
-
-[[hadoop.hbase_0.96]]
-==== Apache HBase 0.96
-
-As of Apache HBase 0.96.x, Apache Hadoop 1.0.x at least is required.
-Hadoop 2 is strongly encouraged (faster but also has fixes that help MTTR). We will no longer run properly on older Hadoops such as 0.20.205 or branch-0.20-append.
-Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop. See link:http://search-hadoop.com/m/7vFVx4EsUb2[HBase, mail # dev - DISCUSS:
-                Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?]
-
-[[hadoop.older.versions]]
-==== Hadoop versions 0.20.x - 1.x
-
-HBase will lose data unless it is running on an HDFS that has a durable `sync` implementation.
-DO NOT use Hadoop 0.20.2, Hadoop 0.20.203.0, and Hadoop 0.20.204.0 which DO NOT have this attribute.
-Currently only Hadoop versions 0.20.205.x or any release in excess of this version -- this includes hadoop-1.0.0 -- have a working, durable sync.
-The Cloudera blog post link:http://www.cloudera.com/blog/2012/01/an-update-on-apache-hadoop-1-0/[An
-            update on Apache Hadoop 1.0] by Charles Zedlweski has a nice exposition on how all the Hadoop versions relate.
-It's worth checking out if you are having trouble making sense of the Hadoop version morass.
-
-Sync has to be explicitly enabled by setting `dfs.support.append` equal to true on both the client side -- in _hbase-site.xml_ -- and on the serverside in _hdfs-site.xml_ (The sync facility HBase needs is a subset of the append code path).
-
-[source,xml]
-----
-
-<property>
-  <name>dfs.support.append</name>
-  <value>true</value>
-</property>
-----
-
-You will have to restart your cluster after making this edit.
-Ignore the chicken-little comment you'll find in the _hdfs-default.xml_ in the description for the `dfs.support.append` configuration.
-
-[[hadoop.security]]
-==== Apache HBase on Secure Hadoop
-
-Apache HBase will run on any Hadoop 0.20.x that incorporates Hadoop security features as long as you do as suggested above and replace the Hadoop jar that ships with HBase with the secure version.
-If you want to read more about how to setup Secure HBase, see <<hbase.secure.configuration,hbase.secure.configuration>>.
-
-
 [[dfs.datanode.max.transfer.threads]]
 ==== `dfs.datanode.max.transfer.threads` (((dfs.datanode.max.transfer.threads)))
 
@@ -404,9 +293,10 @@ See also <<casestudies.max.transfer.threads,casestudies.max.transfer.threads>> a
 [[zookeeper.requirements]]
 === ZooKeeper Requirements
 
-ZooKeeper 3.4.x is required as of HBase 1.0.0.
-HBase makes use of the `multi` functionality that is only available since 3.4.0 (The `useMulti` configuration option defaults to `true` in HBase 1.0.0).
-See link:https://issues.apache.org/jira/browse/HBASE-12241[HBASE-12241 (The crash of regionServer when taking deadserver's replication queue breaks replication)] and link:https://issues.apache.org/jira/browse/HBASE-6775[HBASE-6775 (Use ZK.multi when available for HBASE-6710 0.92/0.94 compatibility fix)] for background.
+ZooKeeper 3.4.x is required.
+HBase makes use of the `multi` functionality that is only available since Zookeeper 3.4.0. The `hbase.zookeeper.useMulti` configuration property defaults to `true`.
+Refer to link:https://issues.apache.org/jira/browse/HBASE-12241[HBASE-12241 (The crash of regionServer when taking deadserver's replication queue breaks replication)] and link:https://issues.apache.org/jira/browse/HBASE-6775[HBASE-6775 (Use ZK.multi when available for HBASE-6710 0.92/0.94 compatibility fix)] for background.
+The property is deprecated and useMulti is always enabled in HBase 2.0.
 
 [[standalone_dist]]
 == HBase run modes: Standalone and Distributed
@@ -559,8 +449,6 @@ Check them out especially if HBase had trouble starting.
 
 HBase also puts up a UI listing vital attributes.
 By default it's deployed on the Master host at port 16010 (HBase RegionServers listen on port 16020 by default and put up an informational HTTP server at port 16030). If the Master is running on a host named `master.example.org` on the default port, point your browser at _http://master.example.org:16010_ to see the web interface.
-
-Prior to HBase 0.98 the master UI was deployed on port 60010, and the HBase RegionServers UI on port 60030.
 
 Once HBase has started, see the <<shell_exercises,shell exercises>> section for how to create tables, add data, scan your insertions, and finally disable and drop your tables.
 
@@ -767,7 +655,7 @@ example9
 [[hbase_env]]
 ==== _hbase-env.sh_
 
-The following lines in the _hbase-env.sh_ file show how to set the `JAVA_HOME` environment variable (required for HBase 0.98.5 and newer) and set the heap to 4 GB (rather than the default value of 1 GB). If you copy and paste this example, be sure to adjust the `JAVA_HOME` to suit your environment.
+The following lines in the _hbase-env.sh_ file show how to set the `JAVA_HOME` environment variable (required for HBase) and set the heap to 4 GB (rather than the default value of 1 GB). If you copy and paste this example, be sure to adjust the `JAVA_HOME` to suit your environment.
 
 ----
 # The java implementation to use.

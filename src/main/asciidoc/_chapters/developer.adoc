@@ -538,7 +538,12 @@ For the build to sign them for you, you a properly configured _settings.xml_ in 
 
 [[maven.release]]
 === Making a Release Candidate
-Only committers may make releases of hbase artifacts.
+
+NOTE: These instructions are for building HBase 1.y.z
+
+.Point Releases
+If you are making a point release (for example to quickly address a critical incompatibility or security problem) off of a release branch instead of a development branch, the tagging instructions are slightly different.
+I'll prefix those special steps with _Point Release Only_.
 
 .Before You Begin
 Make sure your environment is properly set up. Maven and Git are the main tooling

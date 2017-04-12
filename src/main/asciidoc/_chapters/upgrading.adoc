@@ -150,6 +150,9 @@ HBase Private API::
 [[hbase.versioning.pre10]]
 === Pre 1.0 versions
 
+.HBase Pre-1.0 versions are all EOM
+NOTE: For new installations, do not deploy 0.94.y, 0.96.y, or 0.98.y.  Deploy our stable version. See link:https://issues.apache.org/jira/browse/HBASE-11642[EOL 0.96], link:https://issues.apache.org/jira/browse/HBASE-16215[clean up of EOM releases], and link:http://www.apache.org/dist/hbase/[the header of our downloads].
+
 Before the semantic versioning scheme pre-1.0, HBase tracked either Hadoop's versions (0.2x) or 0.9x versions. If you are into the arcane, checkout our old wiki page on link:http://wiki.apache.org/hadoop/Hbase/HBaseVersions[HBase Versioning] which tries to connect the HBase version dots. Below sections cover ONLY the releases before 1.0.
 
 [[hbase.development.series]]
@@ -262,9 +265,6 @@ A rolling upgrade from 0.94.x directly to 0.98.x does not work. The upgrade path
 === Upgrading from 0.94.x to 0.96.x
 
 ==== The "Singularity"
-
-.HBase 0.96.x was EOL'd, September 1st, 2014
-NOTE: Do not deploy 0.96.x  Deploy at least 0.98.x. See link:https://issues.apache.org/jira/browse/HBASE-11642[EOL 0.96].
 
 You will have to stop your old 0.94.x cluster completely to upgrade. If you are replicating between clusters, both clusters will have to go down to upgrade. Make sure it is a clean shutdown. The less WAL files around, the faster the upgrade will run (the upgrade will split any log files it finds in the filesystem as part of the upgrade process). All clients must be upgraded to 0.96 too.
 
