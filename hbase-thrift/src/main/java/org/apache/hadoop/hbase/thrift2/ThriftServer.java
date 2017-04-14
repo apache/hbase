@@ -432,6 +432,9 @@ public class ThriftServer extends Configured implements Tool {
       throw new RuntimeException("Could not parse the value provided for the port option", e);
     }
 
+    // Thrift's implementation uses '0' as a placeholder for 'use the default.'
+    int backlog = conf.getInt(BACKLOG_CONF_KEY, 0);
+
     // Local hostname and user name,
     // used only if QOP is configured.
     String host = null;
