@@ -56,6 +56,9 @@ import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.MasterReques
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.quotas.QuotaFilter;
+import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -112,6 +115,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -1146,6 +1151,48 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
             });
       }
     });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> setQuota(QuotaSettings quota){
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.<SetQuotaRequest, SetQuotaResponse, Void> call(
+          controller, stub, QuotaSettings.buildSetQuotaRequestProto(quota),
+          (s, c, req, done) -> s.setQuota(c, req, done), (resp) -> null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<List<QuotaSettings>> getQuota(QuotaFilter filter) {
+    CompletableFuture<List<QuotaSettings>> future = new CompletableFuture<>();
+    Scan scan = QuotaTableUtil.makeScan(filter);
+    this.connection.getRawTableBuilder(QuotaTableUtil.QUOTA_TABLE_NAME).build().scan(scan,
+      new RawScanResultConsumer() {
+        List<QuotaSettings> settings = new ArrayList<>();
+
+        @Override
+        public void onNext(Result[] results, ScanController controller) {
+          for (Result result : results) {
+            try {
+              QuotaTableUtil.parseResultToCollection(result, settings);
+            } catch (IOException e) {
+              controller.terminate();
+              future.completeExceptionally(e);
+            }
+          }
+        }
+
+        @Override
+        public void onError(Throwable error) {
+          future.completeExceptionally(error);
+        }
+
+        @Override
+        public void onComplete() {
+          future.complete(settings);
+        }
+      });
     return future;
   }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
@@ -27,6 +28,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.quotas.QuotaFilter;
+import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -465,4 +468,17 @@ public interface AsyncAdmin {
    *          startcode. Here is an example: <code> host187.example.com,60020,1289493121758</code>
    */
   CompletableFuture<Void> move(final byte[] regionName, final byte[] destServerName);
+
+  /**
+   * Apply the new quota settings.
+   * @param quota the quota settings
+   */
+  CompletableFuture<Void> setQuota(final QuotaSettings quota);
+
+  /**
+   * List the quotas based on the filter.
+   * @param filter the quota settings filter
+   * @return the QuotaSetting list, which wrapped by a CompletableFuture.
+   */
+  CompletableFuture<List<QuotaSettings>> getQuota(QuotaFilter filter);
 }
