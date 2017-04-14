@@ -290,10 +290,6 @@
                     <artifactId>thrift</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>org.jruby</groupId>
-                    <artifactId>jruby-complete</artifactId>
-                </exclusion>
-                <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-log4j12</artifactId>
                 </exclusion>
@@ -336,10 +332,6 @@
                 <exclusion>
                     <groupId>tomcat</groupId>
                     <artifactId>jasper-compiler</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.jruby</groupId>
-                    <artifactId>jruby-complete</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.jboss.netty</groupId>
@@ -382,10 +374,6 @@
                     <artifactId>thrift</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>org.jruby</groupId>
-                    <artifactId>jruby-complete</artifactId>
-                </exclusion>
-                <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-log4j12</artifactId>
                 </exclusion>
@@ -428,10 +416,6 @@
                 <exclusion>
                     <groupId>tomcat</groupId>
                     <artifactId>jasper-compiler</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.jruby</groupId>
-                    <artifactId>jruby-complete</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.jboss.netty</groupId>
@@ -460,10 +444,6 @@
                     <artifactId>thrift</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>org.jruby</groupId>
-                    <artifactId>jruby-complete</artifactId>
-                </exclusion>
-                <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-log4j12</artifactId>
                 </exclusion>
@@ -506,10 +486,6 @@
                 <exclusion>
                     <groupId>tomcat</groupId>
                     <artifactId>jasper-compiler</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.jruby</groupId>
-                    <artifactId>jruby-complete</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.jboss.netty</groupId>
