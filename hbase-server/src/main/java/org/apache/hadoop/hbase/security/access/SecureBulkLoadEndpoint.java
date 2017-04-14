@@ -146,7 +146,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       }
       if(!status.getPermission().equals(PERM_HIDDEN)) {
         throw new IllegalStateException(
-            "Directory already exists but permissions aren't set to '-rwx--x--x' ");
+            "Staging directory of " + baseStagingDir + " already exists but permissions aren't set to '-rwx--x--x' ");
       }
     } catch (IOException e) {
       throw new IllegalStateException("Failed to get FileSystem instance",e);
