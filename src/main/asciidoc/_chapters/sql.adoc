@@ -37,6 +37,6 @@ link:http://phoenix.apache.org[Apache Phoenix]
 
 === Trafodion
 
-link:https://wiki.trafodion.org/[Trafodion: Transactional SQL-on-HBase]
+link:http://trafodion.incubator.apache.org/[Trafodion: Transactional SQL-on-HBase]
 
 :numbered:

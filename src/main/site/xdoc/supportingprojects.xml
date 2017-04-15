@@ -46,9 +46,9 @@ under the License.
     for HBase.</dd>
    <dt><a href="https://github.com/juwi/HBase-TAggregator">HBase TAggregator</a></dt>
    <dd>An HBase coprocessor for timeseries-based aggregations.</dd>
-   <dt><a href="http://www.trafodion.org">Trafodion</a></dt>
-   <dd>Trafodion is an HP-sponsored Apache-licensed open source SQL on HBase
-    DBMS with full-ACID distributed transaction support.</dd>
+   <dt><a href="http://trafodion.incubator.apache.org/">Apache Trafodion</a></dt>
+   <dd>Apache Trafodion is a webscale SQL-on-Hadoop solution enabling
+    transactional or operational workloads on Hadoop.</dd>
    <dt><a href="http://phoenix.apache.org/">Apache Phoenix</a></dt>
    <dd>Apache Phoenix is a relational database layer over HBase delivered as a
     client-embedded JDBC driver targeting low latency queries over HBase data.</dd>
