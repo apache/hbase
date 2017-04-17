@@ -636,6 +636,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     MemoryCompactionPolicy inMemoryCompaction =
         MemoryCompactionPolicy.valueOf(
             CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT);
+    boolean asyncPrefetch = false;
+    boolean cacheBlocks = true;
 
     public TestOptions() {}
 
@@ -1246,8 +1248,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      Scan scan = new Scan(getRandomRow(this.rand, opts.totalRows));
-      scan.setCaching(opts.caching);
+      Scan scan =
+          new Scan().withStartRow(getRandomRow(this.rand, opts.totalRows)).setCaching(opts.caching)
+              .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch);
       FilterList list = new FilterList();
       if (opts.addColumns) {
         scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
@@ -1282,8 +1285,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       Pair<byte[], byte[]> startAndStopRow = getStartAndStopRow();
-      Scan scan = new Scan(startAndStopRow.getFirst(), startAndStopRow.getSecond());
-      scan.setCaching(opts.caching);
+      Scan scan = new Scan().withStartRow(startAndStopRow.getFirst())
+          .withStopRow(startAndStopRow.getSecond()).setCaching(opts.caching)
+          .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch);
       if (opts.filterAll) {
         scan.setFilter(new FilterAllFilter());
       }
@@ -1477,8 +1481,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       if (this.testScanner == null) {
-        Scan scan = new Scan(format(opts.startRow));
-        scan.setCaching(opts.caching);
+        Scan scan = new Scan().withStartRow(format(opts.startRow)).setCaching(opts.caching)
+            .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch);
         if (opts.addColumns) {
           scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
         } else {
@@ -1487,7 +1491,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         if (opts.filterAll) {
           scan.setFilter(new FilterAllFilter());
         }
-       this.testScanner = table.getScanner(scan);
+        this.testScanner = table.getScanner(scan);
       }
       Result r = testScanner.next();
       updateValueSize(r);
@@ -1687,8 +1691,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if(opts.filterAll) {
         list.addFilter(new FilterAllFilter());
       }
-      Scan scan = new Scan();
-      scan.setCaching(opts.caching);
+      Scan scan = new Scan().setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
+          .setAsyncPrefetch(opts.asyncPrefetch);
       if (opts.addColumns) {
         scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       } else {
@@ -2138,8 +2142,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
       final String inMemoryCompaction = "--inmemoryCompaction=";
       if (cmd.startsWith(inMemoryCompaction)) {
-        opts.inMemoryCompaction = opts.inMemoryCompaction.valueOf(cmd.substring
-            (inMemoryCompaction.length()));
+        opts.inMemoryCompaction =
+            MemoryCompactionPolicy.valueOf(cmd.substring(inMemoryCompaction.length()));
         continue;
       }
 
@@ -2155,6 +2159,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
+      final String asyncPrefetch = "--asyncPrefetch";
+      if (cmd.startsWith(asyncPrefetch)) {
+        opts.asyncPrefetch = true;
+        continue;
+      }
+
+      final String cacheBlocks = "--cacheBlocks=";
+      if (cmd.startsWith(cacheBlocks)) {
+        opts.cacheBlocks = Boolean.parseBoolean(cmd.substring(cacheBlocks.length()));
+        continue;
+      }
       if (isCommandClass(cmd)) {
         opts.cmdName = cmd;
         try {
