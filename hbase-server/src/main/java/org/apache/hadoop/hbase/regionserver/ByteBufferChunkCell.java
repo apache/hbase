@@ -19,27 +19,30 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 
 /**
- * An on heap chunk implementation.
+ * ByteBuffer based cell which has the chunkid at the 0th offset
+ * @see MemStoreLAB
  */
+//TODO : When moving this cell to CellChunkMap we will have the following things
+// to be serialized
+// chunkId (Integer) + offset (Integer) + length (Integer) + seqId (Long) = 20 bytes
 @InterfaceAudience.Private
-public class OnheapChunk extends Chunk {
-
-  OnheapChunk(int size, int id) {
-    super(size, id);
+public class ByteBufferChunkCell extends ByteBufferKeyValue {
+  public ByteBufferChunkCell(ByteBuffer buf, int offset, int length) {
+    super(buf, offset, length);
   }
 
-  OnheapChunk(int size, int id, boolean fromPool) {
-    super(size, id, fromPool);
+  public ByteBufferChunkCell(ByteBuffer buf, int offset, int length, long seqId) {
+    super(buf, offset, length, seqId);
   }
 
   @Override
-  void allocateDataBuffer() {
-    if (data == null) {
-      data = ByteBuffer.allocate(this.size);
-      data.putLong(0, this.getId());
-    }
+  public int getChunkId() {
+    // The chunkId is embedded at the 0th offset of the bytebuffer
+    return ByteBufferUtils.toInt(buf, 0);
   }
 }
