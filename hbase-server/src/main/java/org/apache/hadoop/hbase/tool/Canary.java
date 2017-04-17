@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -107,6 +108,7 @@ import org.apache.zookeeper.data.Stat;
  * 3. zookeeper mode - for each zookeeper instance, selects a zNode and
  * outputs some information about failure or latency.
  */
+@InterfaceAudience.Private
 public final class Canary implements Tool {
   // Sink interface used by the canary to outputs information
   public interface Sink {
@@ -1106,49 +1108,6 @@ public final class Canary implements Tool {
       byte[][] splits = new RegionSplitter.HexStringSplit().split(numberOfRegions);
       admin.createTable(desc, splits);
     }
-  }
-
-  /**
-   * Canary entry point for specified table.
-   * @throws Exception
-   */
-  public static void sniff(final Admin admin, TableName tableName, boolean rawScanEnabled)
-      throws Exception {
-    sniff(admin, tableName, TaskType.READ, rawScanEnabled);
-  }
-  
-  /**
-   * Canary entry point for specified table.
-   * Keeping this method backward compatibility
-   * @throws Exception
-   */
-  public static void sniff(final Admin admin, TableName tableName)
-      throws Exception {
-    sniff(admin, tableName, TaskType.READ, false);
-  }
-
-  /**
-   * Canary entry point for specified table with task type(read/write)
-   * @throws Exception
-   */
-  public static void sniff(final Admin admin, TableName tableName, TaskType taskType,
-      boolean rawScanEnabled)   throws Exception {
-    List<Future<Void>> taskFutures =
-        Canary.sniff(admin, new StdOutSink(), tableName.getNameAsString(),
-          new ScheduledThreadPoolExecutor(1), taskType, rawScanEnabled);
-    for (Future<Void> future : taskFutures) {
-      future.get();
-    }
-  }
-  
-  /**
-   * Canary entry point for specified table with task type(read/write)
-   * Keeping this method backward compatible
-   * @throws Exception
-   */
-  public static void sniff(final Admin admin, TableName tableName, TaskType taskType)
-      throws Exception {
-    Canary.sniff(admin, tableName, taskType, false);
   }
 
   /**

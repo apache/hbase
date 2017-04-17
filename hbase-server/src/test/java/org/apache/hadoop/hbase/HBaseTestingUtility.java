@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -82,8 +86,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -100,7 +104,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
-import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -131,10 +134,6 @@ import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -4109,10 +4108,23 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       public boolean evaluate() throws IOException {
         boolean tableAvailable = getHBaseAdmin().isTableAvailable(tableName);
         if (tableAvailable) {
-          try {
-            Canary.sniff(getHBaseAdmin(), tableName);
-          } catch (Exception e) {
-            throw new IOException("Canary sniff failed for table " + tableName, e);
+          try (Table table = getConnection().getTable(tableName)) {
+            HTableDescriptor htd = table.getTableDescriptor();
+            for (HRegionLocation loc : getConnection().getRegionLocator(tableName)
+                .getAllRegionLocations()) {
+              Scan scan = new Scan();
+              scan.setStartRow(loc.getRegionInfo().getStartKey());
+              scan.setStopRow(loc.getRegionInfo().getEndKey());
+              scan.setMaxResultsPerColumnFamily(1);
+              scan.setCaching(1);
+              scan.setCacheBlocks(false);
+              for (byte[] family : htd.getFamiliesKeys()) {
+                scan.addFamily(family);
+              }
+              try (ResultScanner scanner = table.getScanner(scan)) {
+                scanner.next();
+              }
+            }
           }
         }
         return tableAvailable;
