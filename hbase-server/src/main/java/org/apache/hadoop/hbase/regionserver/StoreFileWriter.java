@@ -384,6 +384,15 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     }
 
     /**
+     * Creates Builder with cache configuration disabled
+     */
+    public Builder(Configuration conf, FileSystem fs) {
+      this.conf = conf;
+      this.cacheConf = CacheConfig.DISABLED;
+      this.fs = fs;
+    }
+
+    /**
      * @param trt A premade TimeRangeTracker to use rather than build one per append (building one
      * of these is expensive so good to pass one in if you have one).
      * @return this (for chained invocation)

@@ -115,7 +115,7 @@ public class TestHFile  {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), "TestHFile");
     HFileContext meta = new HFileContextBuilder().withBlockSize(64 * 1024).build();
     StoreFileWriter sfw =
-        new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(storeFileParentDir)
+        new StoreFileWriter.Builder(conf, fs).withOutputDir(storeFileParentDir)
             .withComparator(CellComparator.COMPARATOR).withFileContext(meta).build();
 
     final int rowLen = 32;
