@@ -21,25 +21,33 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
+import com.google.common.base.Preconditions;
+
 /**
  * An on heap chunk implementation.
  */
 @InterfaceAudience.Private
 public class OnheapChunk extends Chunk {
 
-  OnheapChunk(int size, int id) {
-    super(size, id);
+  OnheapChunk(int size) {
+    super(size);
   }
 
-  OnheapChunk(int size, int id, boolean fromPool) {
-    super(size, id, fromPool);
-  }
-
-  @Override
-  void allocateDataBuffer() {
-    if (data == null) {
-      data = ByteBuffer.allocate(this.size);
-      data.putLong(0, this.getId());
+  public void init() {
+    assert nextFreeOffset.get() == UNINITIALIZED;
+    try {
+      if (data == null) {
+        data = ByteBuffer.allocate(this.size);
+      }
+    } catch (OutOfMemoryError e) {
+      boolean failInit = nextFreeOffset.compareAndSet(UNINITIALIZED, OOM);
+      assert failInit; // should be true.
+      throw e;
     }
+    // Mark that it's ready for use
+    boolean initted = nextFreeOffset.compareAndSet(UNINITIALIZED, 0);
+    // We should always succeed the above CAS since only one thread
+    // calls init()!
+    Preconditions.checkState(initted, "Multiple threads tried to init same chunk");
   }
 }

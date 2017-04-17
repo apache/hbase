@@ -63,8 +63,8 @@ public class TestMemStoreLAB {
   public static void setUpBeforeClass() throws Exception {
     long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
         .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, globalMemStoreLimit,
-      0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+    MemStoreChunkPool.initialize(globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
+        MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false);
   }
 
   /**
@@ -76,7 +76,6 @@ public class TestMemStoreLAB {
     MemStoreLAB mslab = new MemStoreLABImpl();
     int expectedOff = 0;
     ByteBuffer lastBuffer = null;
-    long lastChunkId = -1;
     // 100K iterations by 0-1K alloc -> 50MB expected
     // should be reasonable for unit test and also cover wraparound
     // behavior
@@ -86,13 +85,8 @@ public class TestMemStoreLAB {
       int size = KeyValueUtil.length(kv);
       ByteBufferKeyValue newKv = (ByteBufferKeyValue) mslab.copyCellInto(kv);
       if (newKv.getBuffer() != lastBuffer) {
-        // since we add the chunkID at the 0th offset of the chunk and the
-        // chunkid is a long we need to account for those 8 bytes
-        expectedOff = Bytes.SIZEOF_LONG;
+        expectedOff = 0;
         lastBuffer = newKv.getBuffer();
-        long chunkId = newKv.getBuffer().getLong(0);
-        assertTrue("chunkid should be different", chunkId != lastChunkId);
-        lastChunkId = chunkId;
       }
       assertEquals(expectedOff, newKv.getOffset());
       assertTrue("Allocation overruns buffer",
@@ -142,21 +136,23 @@ public class TestMemStoreLAB {
       };
       ctx.addThread(t);
     }
-
+    
     ctx.startThreads();
     while (totalAllocated.get() < 50*1024*1024 && ctx.shouldRun()) {
       Thread.sleep(10);
     }
     ctx.stop();
+    
     // Partition the allocations by the actual byte[] they point into,
     // make sure offsets are unique for each chunk
     Map<ByteBuffer, Map<Integer, AllocRecord>> mapsByChunk =
       Maps.newHashMap();
-
+    
     int sizeCounted = 0;
     for (AllocRecord rec : Iterables.concat(allocations)) {
       sizeCounted += rec.size;
       if (rec.size == 0) continue;
+      
       Map<Integer, AllocRecord> mapForThisByteArray =
         mapsByChunk.get(rec.alloc);
       if (mapForThisByteArray == null) {
@@ -171,9 +167,7 @@ public class TestMemStoreLAB {
     
     // Now check each byte array to make sure allocations don't overlap
     for (Map<Integer, AllocRecord> allocsInChunk : mapsByChunk.values()) {
-      // since we add the chunkID at the 0th offset of the chunk and the
-      // chunkid is a long we need to account for those 8 bytes
-      int expectedOff = Bytes.SIZEOF_LONG;
+      int expectedOff = 0;
       for (AllocRecord alloc : allocsInChunk.values()) {
         assertEquals(expectedOff, alloc.offset);
         assertTrue("Allocation overruns buffer",
@@ -181,6 +175,7 @@ public class TestMemStoreLAB {
         expectedOff += alloc.size;
       }
     }
+
   }
 
   /**
@@ -199,7 +194,7 @@ public class TestMemStoreLAB {
     // set chunk size to default max alloc size, so we could easily trigger chunk retirement
     conf.setLong(MemStoreLABImpl.CHUNK_SIZE_KEY, MemStoreLABImpl.MAX_ALLOC_DEFAULT);
     // reconstruct mslab
-    ChunkCreator.clearDisableFlag();
+    MemStoreChunkPool.clearDisableFlag();
     mslab = new MemStoreLABImpl(conf);
     // launch multiple threads to trigger frequent chunk retirement
     List<Thread> threads = new ArrayList<>();
@@ -228,8 +223,6 @@ public class TestMemStoreLAB {
     }
     // close the mslab
     mslab.close();
-    // none of the chunkIds would have been returned back
-    assertTrue("All the chunks must have been cleared", ChunkCreator.INSTANCE.size() != 0);
     // make sure all chunks reclaimed or removed from chunk queue
     int queueLength = mslab.getPooledChunks().size();
     assertTrue("All chunks in chunk queue should be reclaimed or removed"
