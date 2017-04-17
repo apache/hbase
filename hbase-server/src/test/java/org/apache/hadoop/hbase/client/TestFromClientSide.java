@@ -5174,6 +5174,7 @@ public class TestFromClientSide {
       assertEquals(2, store.getStorefilesCount());
       store.triggerMajorCompaction();
       region.compact(true);
+      store.closeAndArchiveCompactedFiles();
       waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
       assertEquals(1, store.getStorefilesCount());
       expectedBlockCount -= 2; // evicted two blocks, cached none

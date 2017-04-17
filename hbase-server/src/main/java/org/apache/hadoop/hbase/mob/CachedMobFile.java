@@ -44,7 +44,9 @@ public class CachedMobFile extends MobFile implements Comparable<CachedMobFile> 
 
   public static CachedMobFile create(FileSystem fs, Path path, Configuration conf,
       CacheConfig cacheConf) throws IOException {
-    StoreFile sf = new StoreFile(fs, path, conf, cacheConf, BloomType.NONE);
+    // XXX: primaryReplica is only used for constructing the key of block cache so it is not a
+    // critical problem if we pass the wrong value, so here we always pass true. Need to fix later.
+    StoreFile sf = new StoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
     return new CachedMobFile(sf);
   }
 

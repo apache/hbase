@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -116,8 +117,7 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
 
     Path sfPath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
-    StoreFile sf = new StoreFile(this.fs, sfPath, conf, cacheConf,
-      BloomType.NONE);
+    StoreFile sf = new StoreFile(this.fs, sfPath, conf, cacheConf, BloomType.NONE, true);
     checkHalfHFile(regionFs, sf);
   }
 
@@ -169,9 +169,9 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
 
     Path hsfPath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
-    StoreFile hsf = new StoreFile(this.fs, hsfPath, conf, cacheConf,
-      BloomType.NONE);
-    StoreFileReader reader = hsf.createReader();
+    StoreFile hsf = new StoreFile(this.fs, hsfPath, conf, cacheConf, BloomType.NONE, true);
+    hsf.initReader();
+    StoreFileReader reader = hsf.getReader();
     // Split on a row, not in middle of row.  Midkey returned by reader
     // may be in middle of row.  Create new one with empty column and
     // timestamp.
@@ -184,11 +184,11 @@ public class TestStoreFile extends HBaseTestCase {
     // Make a reference
     HRegionInfo splitHri = new HRegionInfo(hri.getTable(), null, midRow);
     Path refPath = splitStoreFile(regionFs, splitHri, TEST_FAMILY, hsf, midRow, true);
-    StoreFile refHsf = new StoreFile(this.fs, refPath, conf, cacheConf,
-      BloomType.NONE);
+    StoreFile refHsf = new StoreFile(this.fs, refPath, conf, cacheConf, BloomType.NONE, true);
+    refHsf.initReader();
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
-    HFileScanner s = refHsf.createReader().getScanner(false, false);
+    HFileScanner s = refHsf.getReader().getScanner(false, false);
     for(boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
       ByteBuffer bb = ByteBuffer.wrap(((KeyValue) s.getKey()).getKey());
       kv = KeyValueUtil.createKeyValueFromKey(bb);
@@ -242,13 +242,14 @@ public class TestStoreFile extends HBaseTestCase {
 
     // Try to open store file from link
     StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath);
-    StoreFile hsf = new StoreFile(this.fs, storeFileInfo, testConf, cacheConf,
-      BloomType.NONE);
+    StoreFile hsf =
+        new StoreFile(this.fs, storeFileInfo, testConf, cacheConf, BloomType.NONE, true);
     assertTrue(storeFileInfo.isLink());
+    hsf.initReader();
 
     // Now confirm that I can read from the link
     int count = 1;
-    HFileScanner s = hsf.createReader().getScanner(false, false);
+    HFileScanner s = hsf.getReader().getScanner(false, false);
     s.seekTo();
     while (s.next()) {
       count++;
@@ -295,8 +296,8 @@ public class TestStoreFile extends HBaseTestCase {
     // <root>/clone/splitB/<cf>/<reftohfilelink>
     HRegionInfo splitHriA = new HRegionInfo(hri.getTable(), null, SPLITKEY);
     HRegionInfo splitHriB = new HRegionInfo(hri.getTable(), SPLITKEY, null);
-    StoreFile f = new StoreFile(fs, linkFilePath, testConf, cacheConf, BloomType.NONE);
-    f.createReader();
+    StoreFile f = new StoreFile(fs, linkFilePath, testConf, cacheConf, BloomType.NONE, true);
+    f.initReader();
     Path pathA = splitStoreFile(cloneRegionFs, splitHriA, TEST_FAMILY, f, SPLITKEY, true); // top
     Path pathB = splitStoreFile(cloneRegionFs, splitHriB, TEST_FAMILY, f, SPLITKEY, false);// bottom
     f.closeReader(true);
@@ -307,12 +308,12 @@ public class TestStoreFile extends HBaseTestCase {
     // reference to a hfile link.  This code in StoreFile that handles this case.
 
     // Try to open store file from link
-    StoreFile hsfA = new StoreFile(this.fs, pathA, testConf, cacheConf,
-      BloomType.NONE);
+    StoreFile hsfA = new StoreFile(this.fs, pathA, testConf, cacheConf, BloomType.NONE, true);
+    hsfA.initReader();
 
     // Now confirm that I can read from the ref to link
     int count = 1;
-    HFileScanner s = hsfA.createReader().getScanner(false, false);
+    HFileScanner s = hsfA.getReader().getScanner(false, false);
     s.seekTo();
     while (s.next()) {
       count++;
@@ -320,11 +321,11 @@ public class TestStoreFile extends HBaseTestCase {
     assertTrue(count > 0); // read some rows here
 
     // Try to open store file from link
-    StoreFile hsfB = new StoreFile(this.fs, pathB, testConf, cacheConf,
-      BloomType.NONE);
+    StoreFile hsfB = new StoreFile(this.fs, pathB, testConf, cacheConf, BloomType.NONE, true);
+    hsfB.initReader();
 
     // Now confirm that I can read from the ref to link
-    HFileScanner sB = hsfB.createReader().getScanner(false, false);
+    HFileScanner sB = hsfB.getReader().getScanner(false, false);
     sB.seekTo();
 
     //count++ as seekTo() will advance the scanner
@@ -339,7 +340,8 @@ public class TestStoreFile extends HBaseTestCase {
 
   private void checkHalfHFile(final HRegionFileSystem regionFs, final StoreFile f)
       throws IOException {
-    Cell midkey = f.createReader().midkey();
+    f.initReader();
+    Cell midkey = f.getReader().midkey();
     KeyValue midKV = (KeyValue)midkey;
     byte [] midRow = CellUtil.cloneRow(midKV);
     // Create top split.
@@ -351,10 +353,12 @@ public class TestStoreFile extends HBaseTestCase {
         midRow, null);
     Path bottomPath = splitStoreFile(regionFs, bottomHri, TEST_FAMILY, f, midRow, false);
     // Make readers on top and bottom.
-    StoreFileReader top = new StoreFile(
-      this.fs, topPath, conf, cacheConf, BloomType.NONE).createReader();
-    StoreFileReader bottom = new StoreFile(
-      this.fs, bottomPath, conf, cacheConf, BloomType.NONE).createReader();
+    StoreFile topF = new StoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE, true);
+    topF.initReader();
+    StoreFileReader top = topF.getReader();
+    StoreFile bottomF = new StoreFile(this.fs, bottomPath, conf, cacheConf, BloomType.NONE, true);
+    bottomF.initReader();
+    StoreFileReader bottom = bottomF.getReader();
     ByteBuffer previous = null;
     LOG.info("Midkey: " + midKV.toString());
     ByteBuffer bbMidkeyBytes = ByteBuffer.wrap(midKV.getKey());
@@ -412,7 +416,9 @@ public class TestStoreFile extends HBaseTestCase {
 
       assertNull(bottomPath);
 
-      top = new StoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE).createReader();
+      topF = new StoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE, true);
+      topF.initReader();
+      top = topF.getReader();
       // Now read from the top.
       first = true;
       topScanner = top.getScanner(false, false);
@@ -449,8 +455,10 @@ public class TestStoreFile extends HBaseTestCase {
       topPath = splitStoreFile(regionFs,topHri, TEST_FAMILY, f, badmidkey, true);
       bottomPath = splitStoreFile(regionFs, bottomHri, TEST_FAMILY, f, badmidkey, false);
       assertNull(topPath);
-      bottom = new StoreFile(this.fs, bottomPath, conf, cacheConf,
-        BloomType.NONE).createReader();
+
+      bottomF = new StoreFile(this.fs, bottomPath, conf, cacheConf, BloomType.NONE, true);
+      bottomF.initReader();
+      bottom = bottomF.getReader();
       first = true;
       bottomScanner = bottom.getScanner(false, false);
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
@@ -502,7 +510,8 @@ public class TestStoreFile extends HBaseTestCase {
     }
     writer.close();
 
-    StoreFileReader reader = new StoreFileReader(fs, f, cacheConf, conf);
+    StoreFileReader reader =
+        new StoreFileReader(fs, f, cacheConf, true, new AtomicInteger(0), true, conf);
     reader.loadFileInfo();
     reader.loadBloomfilter();
     StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
@@ -590,7 +599,8 @@ public class TestStoreFile extends HBaseTestCase {
     }
     writer.close();
 
-    StoreFileReader reader = new StoreFileReader(fs, f, cacheConf, conf);
+    StoreFileReader reader =
+        new StoreFileReader(fs, f, cacheConf, true, new AtomicInteger(0), true, conf);
     reader.loadFileInfo();
     reader.loadBloomfilter();
 
@@ -635,7 +645,8 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
     writer.close();
 
-    StoreFileReader reader = new StoreFileReader(fs, f, cacheConf, conf);
+    StoreFileReader reader =
+        new StoreFileReader(fs, f, cacheConf, true, new AtomicInteger(0), true, conf);
 
     // Now do reseek with empty KV to position to the beginning of the file
 
@@ -695,7 +706,8 @@ public class TestStoreFile extends HBaseTestCase {
       }
       writer.close();
 
-      StoreFileReader reader = new StoreFileReader(fs, f, cacheConf, conf);
+      StoreFileReader reader =
+          new StoreFileReader(fs, f, cacheConf, true, new AtomicInteger(0), true, conf);
       reader.loadFileInfo();
       reader.loadBloomfilter();
       StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
@@ -844,12 +856,13 @@ public class TestStoreFile extends HBaseTestCase {
     writer.close();
 
     StoreFile hsf = new StoreFile(this.fs, writer.getPath(), conf, cacheConf,
-      BloomType.NONE);
+      BloomType.NONE, true);
     Store store = mock(Store.class);
     HColumnDescriptor hcd = mock(HColumnDescriptor.class);
     when(hcd.getName()).thenReturn(family);
     when(store.getFamily()).thenReturn(hcd);
-    StoreFileReader reader = hsf.createReader();
+    hsf.initReader();
+    StoreFileReader reader = hsf.getReader();
     StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
     TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     columns.add(qualifier);
@@ -901,11 +914,12 @@ public class TestStoreFile extends HBaseTestCase {
     Path pathCowOff = new Path(baseDir, "123456789");
     StoreFileWriter writer = writeStoreFile(conf, cacheConf, pathCowOff, 3);
     StoreFile hsf = new StoreFile(this.fs, writer.getPath(), conf, cacheConf,
-      BloomType.NONE);
+      BloomType.NONE, true);
     LOG.debug(hsf.getPath().toString());
 
     // Read this file, we should see 3 misses
-    StoreFileReader reader = hsf.createReader();
+    hsf.initReader();
+    StoreFileReader reader = hsf.getReader();
     reader.loadFileInfo();
     StoreFileScanner scanner = getStoreFileScanner(reader, true, true);
     scanner.seek(KeyValue.LOWESTKEY);
@@ -923,10 +937,11 @@ public class TestStoreFile extends HBaseTestCase {
     Path pathCowOn = new Path(baseDir, "123456788");
     writer = writeStoreFile(conf, cacheConf, pathCowOn, 3);
     hsf = new StoreFile(this.fs, writer.getPath(), conf, cacheConf,
-      BloomType.NONE);
+      BloomType.NONE, true);
 
     // Read this file, we should see 3 hits
-    reader = hsf.createReader();
+    hsf.initReader();
+    reader = hsf.getReader();
     scanner = getStoreFileScanner(reader, true, true);
     scanner.seek(KeyValue.LOWESTKEY);
     while (scanner.next() != null);
@@ -938,15 +953,15 @@ public class TestStoreFile extends HBaseTestCase {
     reader.close(cacheConf.shouldEvictOnClose());
 
     // Let's read back the two files to ensure the blocks exactly match
-    hsf = new StoreFile(this.fs, pathCowOff, conf, cacheConf,
-      BloomType.NONE);
-    StoreFileReader readerOne = hsf.createReader();
+    hsf = new StoreFile(this.fs, pathCowOff, conf, cacheConf, BloomType.NONE, true);
+    hsf.initReader();
+    StoreFileReader readerOne = hsf.getReader();
     readerOne.loadFileInfo();
     StoreFileScanner scannerOne = getStoreFileScanner(readerOne, true, true);
     scannerOne.seek(KeyValue.LOWESTKEY);
-    hsf = new StoreFile(this.fs, pathCowOn, conf, cacheConf,
-      BloomType.NONE);
-    StoreFileReader readerTwo = hsf.createReader();
+    hsf = new StoreFile(this.fs, pathCowOn, conf, cacheConf, BloomType.NONE, true);
+    hsf.initReader();
+    StoreFileReader readerTwo = hsf.getReader();
     readerTwo.loadFileInfo();
     StoreFileScanner scannerTwo = getStoreFileScanner(readerTwo, true, true);
     scannerTwo.seek(KeyValue.LOWESTKEY);
@@ -977,9 +992,9 @@ public class TestStoreFile extends HBaseTestCase {
     // Let's close the first file with evict on close turned on
     conf.setBoolean("hbase.rs.evictblocksonclose", true);
     cacheConf = new CacheConfig(conf);
-    hsf = new StoreFile(this.fs, pathCowOff, conf, cacheConf,
-      BloomType.NONE);
-    reader = hsf.createReader();
+    hsf = new StoreFile(this.fs, pathCowOff, conf, cacheConf, BloomType.NONE, true);
+    hsf.initReader();
+    reader = hsf.getReader();
     reader.close(cacheConf.shouldEvictOnClose());
 
     // We should have 3 new evictions but the evict count stat should not change. Eviction because
@@ -991,9 +1006,9 @@ public class TestStoreFile extends HBaseTestCase {
     // Let's close the second file with evict on close turned off
     conf.setBoolean("hbase.rs.evictblocksonclose", false);
     cacheConf = new CacheConfig(conf);
-    hsf = new StoreFile(this.fs, pathCowOn, conf, cacheConf,
-      BloomType.NONE);
-    reader = hsf.createReader();
+    hsf = new StoreFile(this.fs, pathCowOn, conf, cacheConf, BloomType.NONE, true);
+    hsf.initReader();
+    reader = hsf.getReader();
     reader.close(cacheConf.shouldEvictOnClose());
 
     // We expect no changes
@@ -1078,9 +1093,10 @@ public class TestStoreFile extends HBaseTestCase {
             .build();
     writer.close();
 
-    StoreFile storeFile = new StoreFile(fs, writer.getPath(), conf,
-      cacheConf, BloomType.NONE);
-    StoreFileReader reader = storeFile.createReader();
+    StoreFile storeFile =
+        new StoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true);
+    storeFile.initReader();
+    StoreFileReader reader = storeFile.getReader();
 
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
     byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);

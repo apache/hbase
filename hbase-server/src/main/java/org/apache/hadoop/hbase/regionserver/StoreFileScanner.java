@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -124,26 +122,44 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
       boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean canUseDrop,
-      ScanQueryMatcher matcher, long readPt, boolean isPrimaryReplica) throws IOException {
+      ScanQueryMatcher matcher, long readPt) throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<>(files.size());
-    List<StoreFile> sorted_files = new ArrayList<>(files);
-    Collections.sort(sorted_files, StoreFile.Comparators.SEQ_ID);
-    for (int i = 0; i < sorted_files.size(); i++) {
-      StoreFileReader r = sorted_files.get(i).createReader(canUseDrop);
-      r.setReplicaStoreFile(isPrimaryReplica);
-      StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, usePread, isCompaction, readPt,
-        i, matcher != null ? !matcher.hasNullColumnInQuery() : false);
+    List<StoreFile> sortedFiles = new ArrayList<>(files);
+    Collections.sort(sortedFiles, StoreFile.Comparators.SEQ_ID);
+    for (int i = 0, n = sortedFiles.size(); i < n; i++) {
+      StoreFile sf = sortedFiles.get(i);
+      sf.initReader();
+      StoreFileScanner scanner = sf.getReader().getStoreFileScanner(cacheBlocks, usePread,
+        isCompaction, readPt, i, matcher != null ? !matcher.hasNullColumnInQuery() : false);
       scanners.add(scanner);
     }
     return scanners;
   }
 
-  public static List<StoreFileScanner> getScannersForStoreFiles(
-    Collection<StoreFile> files, boolean cacheBlocks, boolean usePread,
-    boolean isCompaction, boolean canUseDrop,
-    ScanQueryMatcher matcher, long readPt) throws IOException {
-    return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, canUseDrop,
-      matcher, readPt, true);
+  /**
+   * Get scanners for compaction. We will create a separated reader for each store file to avoid
+   * contention with normal read request.
+   */
+  public static List<StoreFileScanner> getScannersForCompaction(Collection<StoreFile> files,
+      boolean canUseDropBehind, long readPt) throws IOException {
+    List<StoreFileScanner> scanners = new ArrayList<>(files.size());
+    List<StoreFile> sortedFiles = new ArrayList<>(files);
+    Collections.sort(sortedFiles, StoreFile.Comparators.SEQ_ID);
+    boolean succ = false;
+    try {
+      for (int i = 0, n = sortedFiles.size(); i < n; i++) {
+        scanners.add(sortedFiles.get(i).getStreamScanner(canUseDropBehind, false, false, true,
+          readPt, i, false));
+      }
+      succ = true;
+    } finally {
+      if (!succ) {
+        for (StoreFileScanner scanner : scanners) {
+          scanner.close();
+        }
+      }
+    }
+    return scanners;
   }
 
   public String toString() {
@@ -262,7 +278,7 @@ public class StoreFileScanner implements KeyValueScanner {
     cur = null;
     this.hfs.close();
     if (this.reader != null) {
-      this.reader.decrementRefCount();
+      this.reader.readCompleted();
     }
     closed = true;
   }

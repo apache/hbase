@@ -403,7 +403,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void setUp() throws Exception {
-      reader = HFile.createReader(this.fs, this.mf, new CacheConfig(this.conf), this.conf);
+      reader = HFile.createReader(this.fs, this.mf, new CacheConfig(this.conf), true, this.conf);
       this.reader.loadFileInfo();
     }
 

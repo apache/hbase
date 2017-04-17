@@ -94,10 +94,10 @@ public class TestFSErrorsExposed {
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new StoreFile(fs, writer.getPath(),
-      util.getConfiguration(), cacheConf, BloomType.NONE);
-
-    StoreFileReader reader = sf.createReader();
+    StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
+        BloomType.NONE, true);
+    sf.initReader();
+    StoreFileReader reader = sf.getReader();
     HFileScanner scanner = reader.getScanner(false, true);
 
     FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
@@ -144,8 +144,8 @@ public class TestFSErrorsExposed {
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(),
-      cacheConf, BloomType.NONE);
+    StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
+        BloomType.NONE, true);
 
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
         Collections.singletonList(sf), false, true, false, false,

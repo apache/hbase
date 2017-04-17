@@ -620,8 +620,8 @@ public class TestLoadIncrementalHFiles {
 
   private int verifyHFile(Path p) throws IOException {
     Configuration conf = util.getConfiguration();
-    HFile.Reader reader = HFile.createReader(
-        p.getFileSystem(conf), p, new CacheConfig(conf), conf);
+    HFile.Reader reader =
+        HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, false);
     scanner.seekTo();

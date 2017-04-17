@@ -178,7 +178,7 @@ public class TestHFileEncryption {
     }
 
     // read it back in and validate correct crypto metadata
-    HFile.Reader reader = HFile.createReader(fs, path, cacheConf, conf);
+    HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
     try {
       reader.loadFileInfo();
       FixedFileTrailer trailer = reader.getTrailer();
@@ -230,7 +230,7 @@ public class TestHFileEncryption {
         LOG.info("Reading with " + fileContext);
         int i = 0;
         HFileScanner scanner = null;
-        HFile.Reader reader = HFile.createReader(fs, path, cacheConf, conf);
+        HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
         try {
           reader.loadFileInfo();
           FixedFileTrailer trailer = reader.getTrailer();
@@ -252,7 +252,7 @@ public class TestHFileEncryption {
 
         // Test random seeks with pread
         LOG.info("Random seeking with " + fileContext);
-        reader = HFile.createReader(fs, path, cacheConf, conf);
+        reader = HFile.createReader(fs, path, cacheConf, true, conf);
         try {
           scanner = reader.getScanner(false, true);
           assertTrue("Initial seekTo failed", scanner.seekTo());

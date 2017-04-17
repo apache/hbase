@@ -772,9 +772,7 @@ public class TestMobCompactor {
     ResultScanner results = table.getScanner(scan);
     int count = 0;
     for (Result res : results) {
-      for (Cell cell : res.listCells()) {
-        count++;
-      }
+      count += res.size();
     }
     results.close();
     return count;
@@ -817,8 +815,9 @@ public class TestMobCompactor {
       Path path = files[0].getPath();
       CacheConfig cacheConf = new CacheConfig(conf);
       StoreFile sf = new StoreFile(TEST_UTIL.getTestFileSystem(), path, conf, cacheConf,
-        BloomType.NONE);
-      HFile.Reader reader = sf.createReader().getHFileReader();
+        BloomType.NONE, true);
+      sf.initReader();
+      HFile.Reader reader = sf.getReader().getHFileReader();
       byte[] encryptionKey = reader.getTrailer().getEncryptionKey();
       Assert.assertTrue(null != encryptionKey);
       Assert.assertTrue(reader.getFileContext().getEncryptionContext().getCipher().getName()

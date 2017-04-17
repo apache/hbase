@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import java.io.Closeable;
 import java.io.IOException;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -31,11 +34,14 @@ import com.google.common.annotations.VisibleForTesting;
  * as well as closing streams. Initialization is not thread-safe, but normal operation is;
  * see method comments.
  */
-public class FSDataInputStreamWrapper {
+@InterfaceAudience.Private
+public class FSDataInputStreamWrapper implements Closeable {
   private final HFileSystem hfs;
   private final Path path;
   private final FileLink link;
   private final boolean doCloseStreams;
+  private final boolean dropBehind;
+  private final long readahead;
 
   /** Two stream handles, one with and one without FS-level checksum.
    * HDFS checksum setting is on FS level, not single read level, so you have to keep two
@@ -75,42 +81,51 @@ public class FSDataInputStreamWrapper {
   private volatile int hbaseChecksumOffCount = -1;
 
   public FSDataInputStreamWrapper(FileSystem fs, Path path) throws IOException {
-    this(fs, null, path, false);
+    this(fs, path, false, -1L);
   }
 
-  public FSDataInputStreamWrapper(FileSystem fs, Path path, boolean dropBehind) throws IOException {
-    this(fs, null, path, dropBehind);
+  public FSDataInputStreamWrapper(FileSystem fs, Path path, boolean dropBehind, long readahead) throws IOException {
+    this(fs, null, path, dropBehind, readahead);
   }
 
-  public FSDataInputStreamWrapper(FileSystem fs, FileLink link) throws IOException {
-    this(fs, link, null, false);
-  }
   public FSDataInputStreamWrapper(FileSystem fs, FileLink link,
-                                  boolean dropBehind) throws IOException {
-    this(fs, link, null, dropBehind);
+                                  boolean dropBehind, long readahead) throws IOException {
+    this(fs, link, null, dropBehind, readahead);
   }
 
-  private FSDataInputStreamWrapper(FileSystem fs, FileLink link,
-                                   Path path, boolean dropBehind) throws IOException {
+  private FSDataInputStreamWrapper(FileSystem fs, FileLink link, Path path, boolean dropBehind,
+      long readahead) throws IOException {
     assert (path == null) != (link == null);
     this.path = path;
     this.link = link;
     this.doCloseStreams = true;
+    this.dropBehind = dropBehind;
+    this.readahead = readahead;
     // If the fs is not an instance of HFileSystem, then create an instance of HFileSystem
     // that wraps over the specified fs. In this case, we will not be able to avoid
     // checksumming inside the filesystem.
-    this.hfs = (fs instanceof HFileSystem) ? (HFileSystem)fs : new HFileSystem(fs);
+    this.hfs = (fs instanceof HFileSystem) ? (HFileSystem) fs : new HFileSystem(fs);
 
     // Initially we are going to read the tail block. Open the reader w/FS checksum.
     this.useHBaseChecksumConfigured = this.useHBaseChecksum = false;
     this.stream = (link != null) ? link.open(hfs) : hfs.open(path);
+    setStreamOptions(stream);
+  }
+
+  private void setStreamOptions(FSDataInputStream in) {
     try {
       this.stream.setDropBehind(dropBehind);
     } catch (Exception e) {
       // Skipped.
     }
+    if (readahead >= 0) {
+      try {
+        this.stream.setReadahead(readahead);
+      } catch (Exception e) {
+        // Skipped.
+      }
+    }
   }
-
 
   /**
    * Prepares the streams for block reader. NOT THREAD SAFE. Must be called once, after any
@@ -127,6 +142,7 @@ public class FSDataInputStreamWrapper {
     if (useHBaseChecksum) {
       FileSystem fsNc = hfs.getNoChecksumFs();
       this.streamNoFsChecksum = (link != null) ? link.open(fsNc) : fsNc.open(path);
+      setStreamOptions(streamNoFsChecksum);
       this.useHBaseChecksumConfigured = this.useHBaseChecksum = useHBaseChecksum;
       // Close the checksum stream; we will reopen it if we get an HBase checksum failure.
       this.stream.close();
@@ -150,6 +166,8 @@ public class FSDataInputStreamWrapper {
     link = null;
     hfs = null;
     useHBaseChecksumConfigured = useHBaseChecksum = false;
+    dropBehind = false;
+    readahead = 0;
   }
 
   /**
@@ -201,19 +219,14 @@ public class FSDataInputStreamWrapper {
   }
 
   /** Close stream(s) if necessary. */
-  public void close() throws IOException {
-    if (!doCloseStreams) return;
-    try {
-      if (stream != streamNoFsChecksum && streamNoFsChecksum != null) {
-        streamNoFsChecksum.close();
-        streamNoFsChecksum = null;
-      }
-    } finally {
-      if (stream != null) {
-        stream.close();
-        stream = null;
-      }
+  @Override
+  public void close() {
+    if (!doCloseStreams) {
+      return;
     }
+    // we do not care about the close exception as it is for reading, no data loss issue.
+    IOUtils.closeQuietly(streamNoFsChecksum);
+    IOUtils.closeQuietly(stream);
   }
 
   public HFileSystem getHfs() {

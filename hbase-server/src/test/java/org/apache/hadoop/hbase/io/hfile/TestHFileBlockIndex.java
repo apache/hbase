@@ -565,7 +565,7 @@ public class TestHFileBlockIndex {
    conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, false);
 
    // Read the HFile
-   HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, conf);
+   HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, conf);
 
    boolean hasArrayIndexOutOfBoundsException = false;
    try {
@@ -644,7 +644,7 @@ public class TestHFileBlockIndex {
       }
 
       // Read the HFile
-      HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, conf);
+      HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, conf);
       assertEquals(expectedNumLevels,
           reader.getTrailer().getNumDataIndexLevels());
 
@@ -774,7 +774,7 @@ public class TestHFileBlockIndex {
     }
     hfw.close();
 
-    HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, conf);
+    HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, true, conf);
     // Scanner doesn't do Cells yet.  Fix.
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {

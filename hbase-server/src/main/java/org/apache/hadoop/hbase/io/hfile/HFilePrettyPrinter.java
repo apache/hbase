@@ -306,7 +306,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       return -2;
     }
 
-    HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(getConf()), getConf());
+    HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(getConf()), true, getConf());
 
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 

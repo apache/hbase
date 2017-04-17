@@ -285,7 +285,7 @@ public class SplitTableRegionProcedure
 
   @Override
   protected SplitTableRegionState getState(final int stateId) {
-    return SplitTableRegionState.valueOf(stateId);
+    return SplitTableRegionState.forNumber(stateId);
   }
 
   @Override
@@ -571,9 +571,9 @@ public class SplitTableRegionProcedure
       if (storeFiles != null && storeFiles.size() > 0) {
         final CacheConfig cacheConf = new CacheConfig(conf, hcd);
         for (StoreFileInfo storeFileInfo: storeFiles) {
-          StoreFileSplitter sfs = new StoreFileSplitter(regionFs, family.getBytes(),
-            new StoreFile(mfs.getFileSystem(), storeFileInfo, conf,
-              cacheConf, hcd.getBloomFilterType()));
+          StoreFileSplitter sfs =
+              new StoreFileSplitter(regionFs, family.getBytes(), new StoreFile(mfs.getFileSystem(),
+                  storeFileInfo, conf, cacheConf, hcd.getBloomFilterType(), true));
           futures.add(threadPool.submit(sfs));
         }
       }

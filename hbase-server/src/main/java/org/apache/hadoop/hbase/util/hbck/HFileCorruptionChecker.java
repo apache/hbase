@@ -98,7 +98,7 @@ public class HFileCorruptionChecker {
   protected void checkHFile(Path p) throws IOException {
     HFile.Reader r = null;
     try {
-      r = HFile.createReader(fs, p, cacheConf, conf);
+      r = HFile.createReader(fs, p, cacheConf, true, conf);
     } catch (CorruptHFileException che) {
       LOG.warn("Found corrupt HFile " + p, che);
       corrupted.add(p);
@@ -230,7 +230,7 @@ public class HFileCorruptionChecker {
   protected void checkMobFile(Path p) throws IOException {
     HFile.Reader r = null;
     try {
-      r = HFile.createReader(fs, p, cacheConf, conf);
+      r = HFile.createReader(fs, p, cacheConf, true, conf);
     } catch (CorruptHFileException che) {
       LOG.warn("Found corrupt mob file " + p, che);
       corruptedMobFiles.add(p);

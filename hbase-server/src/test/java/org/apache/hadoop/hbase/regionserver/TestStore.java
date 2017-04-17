@@ -276,7 +276,7 @@ public class TestStore {
     writer.close();
 
     // Verify that compression and encoding settings are respected
-    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), true, conf);
     Assert.assertEquals(hcd.getCompressionType(), reader.getCompressionAlgorithm());
     Assert.assertEquals(hcd.getDataBlockEncoding(), reader.getDataBlockEncoding());
     reader.close();

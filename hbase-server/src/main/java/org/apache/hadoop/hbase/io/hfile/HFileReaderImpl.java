@@ -85,7 +85,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   /** Filled when we read in the trailer. */
   private final Compression.Algorithm compressAlgo;
 
-  private boolean isPrimaryReplicaReader;
+  private final boolean primaryReplicaReader;
 
   /**
    * What kind of data block encoding should be used while reading, writing,
@@ -156,6 +156,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   /** Minor versions starting with this number have faked index key */
   static final int MINOR_VERSION_WITH_FAKED_KEY = 3;
 
+  @VisibleForTesting
+  @Deprecated
+  public HFileReaderImpl(Path path, FixedFileTrailer trailer, FSDataInputStreamWrapper fsdis,
+      long fileSize, CacheConfig cacheConf, HFileSystem hfs, Configuration conf)
+      throws IOException {
+    this(path, trailer, fsdis, fileSize, cacheConf, hfs, true, conf);
+  }
+
   /**
    * Opens a HFile. You must load the index before you can use it by calling
    * {@link #loadFileInfo()}.
@@ -175,11 +183,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    *          Configuration
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
-  public HFileReaderImpl(final Path path, FixedFileTrailer trailer,
-      final FSDataInputStreamWrapper fsdis,
-      final long fileSize, final CacheConfig cacheConf, final HFileSystem hfs,
-      final Configuration conf)
-  throws IOException {
+  public HFileReaderImpl(Path path, FixedFileTrailer trailer, FSDataInputStreamWrapper fsdis,
+      long fileSize, CacheConfig cacheConf, HFileSystem hfs, boolean primaryReplicaReader,
+      Configuration conf) throws IOException {
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
     this.cacheConf = cacheConf;
@@ -187,6 +193,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     this.path = path;
     this.name = path.getName();
     this.conf = conf;
+    this.primaryReplicaReader = primaryReplicaReader;
     checkFileVersion();
     this.hfileContext = createHFileContext(fsdis, fileSize, hfs, path, trailer);
     this.fsBlockReader = new HFileBlock.FSReaderImpl(fsdis, fileSize, hfs, path, hfileContext);
@@ -453,12 +460,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
   @Override
   public boolean isPrimaryReplicaReader() {
-    return isPrimaryReplicaReader;
-  }
-
-  @Override
-  public void setPrimaryReplicaReader(boolean isPrimaryReplicaReader) {
-    this.isPrimaryReplicaReader = isPrimaryReplicaReader;
+    return primaryReplicaReader;
   }
 
   @Override

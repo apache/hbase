@@ -294,7 +294,7 @@ public class HRegionFileSystem {
    */
   Path getStoreFilePath(final String familyName, final String fileName) {
     Path familyDir = getStoreDir(familyName);
-    return new Path(familyDir, fileName).makeQualified(this.fs);
+    return new Path(familyDir, fileName).makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
   /**
@@ -675,9 +675,7 @@ public class HRegionFileSystem {
     if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
-      if (f.getReader() == null) {
-        f.createReader();
-      }
+      f.initReader();
       try {
         if (top) {
           //check if larger than last key.

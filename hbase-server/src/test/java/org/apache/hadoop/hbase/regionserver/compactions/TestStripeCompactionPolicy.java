@@ -753,9 +753,6 @@ public class TestStripeCompactionPolicy {
     when(r.getStoreFileScanner(anyBoolean(), anyBoolean(), anyBoolean(), anyLong(), anyLong(),
       anyBoolean())).thenReturn(mock(StoreFileScanner.class));
     when(sf.getReader()).thenReturn(r);
-    when(sf.createReader(anyBoolean())).thenReturn(r);
-    when(sf.createReader()).thenReturn(r);
-    when(sf.cloneForReader()).thenReturn(sf);
     return sf;
   }
 

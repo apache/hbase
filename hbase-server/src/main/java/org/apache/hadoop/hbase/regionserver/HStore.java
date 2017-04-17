@@ -650,13 +650,11 @@ public class HStore implements Store {
     return createStoreFileAndReader(info);
   }
 
-  private StoreFile createStoreFileAndReader(final StoreFileInfo info)
-      throws IOException {
+  private StoreFile createStoreFileAndReader(final StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(this.region.getCoprocessorHost());
     StoreFile storeFile = new StoreFile(this.getFileSystem(), info, this.conf, this.cacheConf,
-      this.family.getBloomFilterType());
-    StoreFileReader r = storeFile.createReader();
-    r.setReplicaStoreFile(isPrimaryReplicaStore());
+        this.family.getBloomFilterType(), isPrimaryReplicaStore());
+    storeFile.initReader();
     return storeFile;
   }
 
@@ -726,8 +724,8 @@ public class HStore implements Store {
     try {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
           + "store " + this + " region " + this.getRegionInfo().getRegionNameAsString());
-      reader = HFile.createReader(srcPath.getFileSystem(conf),
-          srcPath, cacheConf, conf);
+      reader = HFile.createReader(srcPath.getFileSystem(conf), srcPath, cacheConf,
+        isPrimaryReplicaStore(), conf);
       reader.loadFileInfo();
 
       byte[] firstKey = reader.getFirstRowKey();
@@ -1180,7 +1178,7 @@ public class HStore implements Store {
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(storeFilesToScan,
-      cacheBlocks, usePread, isCompaction, false, matcher, readPt, isPrimaryReplicaStore());
+      cacheBlocks, usePread, isCompaction, false, matcher, readPt);
     List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
     scanners.addAll(sfScanners);
     // Then the memstore scanners
@@ -1203,7 +1201,7 @@ public class HStore implements Store {
       }
     }
     List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(files,
-      cacheBlocks, usePread, isCompaction, false, matcher, readPt, isPrimaryReplicaStore());
+      cacheBlocks, usePread, isCompaction, false, matcher, readPt);
     List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
     scanners.addAll(sfScanners);
     // Then the memstore scanners
@@ -2456,8 +2454,9 @@ public class HStore implements Store {
               LOG.debug("The file " + file + " was closed but still not archived.");
             }
             filesToRemove.add(file);
+            continue;
           }
-          if (r != null && r.isCompactedAway() && !r.isReferencedInReads()) {
+          if (file.isCompactedAway() && !file.isReferencedInReads()) {
             // Even if deleting fails we need not bother as any new scanners won't be
             // able to use the compacted file as the status is already compactedAway
             if (LOG.isTraceEnabled()) {

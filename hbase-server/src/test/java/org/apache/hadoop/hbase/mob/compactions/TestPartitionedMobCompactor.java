@@ -515,10 +515,11 @@ public class TestPartitionedMobCompactor {
       try {
         for (CompactionDelPartition delPartition : request.getDelPartitions()) {
           for (Path newDelPath : delPartition.listDelFiles()) {
-            StoreFile sf = new StoreFile(fs, newDelPath, conf, this.cacheConfig, BloomType.NONE);
-            // pre-create reader of a del file to avoid race condition when opening the reader in each
-            // partition.
-            sf.createReader();
+            StoreFile sf =
+                new StoreFile(fs, newDelPath, conf, this.cacheConfig, BloomType.NONE, true);
+            // pre-create reader of a del file to avoid race condition when opening the reader in
+            // each partition.
+            sf.initReader();
             delPartition.addStoreFile(sf);
           }
         }
@@ -768,7 +769,6 @@ public class TestPartitionedMobCompactor {
    * @param delPartitions all del partitions
    */
   private void compareDelFiles(List<CompactionDelPartition> delPartitions) {
-    int i = 0;
     Map<Path, Path> delMap = new HashMap<>();
     for (CompactionDelPartition delPartition : delPartitions) {
       for (Path f : delPartition.listDelFiles()) {
@@ -850,12 +850,12 @@ public class TestPartitionedMobCompactor {
   private int countDelCellsInDelFiles(List<Path> paths) throws IOException {
     List<StoreFile> sfs = new ArrayList<>();
     int size = 0;
-    for(Path path : paths) {
-      StoreFile sf = new StoreFile(fs, path, conf, cacheConf, BloomType.NONE);
+    for (Path path : paths) {
+      StoreFile sf = new StoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
       sfs.add(sf);
     }
-    List scanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true,
-        false, false, HConstants.LATEST_TIMESTAMP);
+    List<KeyValueScanner> scanners = new ArrayList<>(StoreFileScanner.getScannersForStoreFiles(sfs,
+      false, true, false, false, HConstants.LATEST_TIMESTAMP));
     Scan scan = new Scan();
     scan.setMaxVersions(hcd.getMaxVersions());
     long timeToPurgeDeletes = Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);

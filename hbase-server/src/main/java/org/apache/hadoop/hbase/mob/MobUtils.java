@@ -333,7 +333,8 @@ public final class MobUtils {
           if (LOG.isDebugEnabled()) {
             LOG.debug(fileName + " is an expired file");
           }
-          filesToClean.add(new StoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE));
+          filesToClean
+              .add(new StoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true));
         }
       } catch (Exception e) {
         LOG.error("Cannot parse the fileName " + fileName, e);
@@ -372,7 +373,7 @@ public final class MobUtils {
     Path hbaseDir = new Path(conf.get(HConstants.HBASE_DIR));
     Path mobRootDir = new Path(hbaseDir, MobConstants.MOB_DIR_NAME);
     FileSystem fs = mobRootDir.getFileSystem(conf);
-    return mobRootDir.makeQualified(fs);
+    return mobRootDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
   /**
@@ -697,7 +698,7 @@ public final class MobUtils {
       return null;
     }
     Path dstPath = new Path(targetPath, sourceFile.getName());
-    validateMobFile(conf, fs, sourceFile, cacheConfig);
+    validateMobFile(conf, fs, sourceFile, cacheConfig, true);
     String msg = "Renaming flushed file from " + sourceFile + " to " + dstPath;
     LOG.info(msg);
     Path parent = dstPath.getParent();
@@ -718,11 +719,11 @@ public final class MobUtils {
    * @param cacheConfig The current cache config.
    */
   private static void validateMobFile(Configuration conf, FileSystem fs, Path path,
-      CacheConfig cacheConfig) throws IOException {
+      CacheConfig cacheConfig, boolean primaryReplica) throws IOException {
     StoreFile storeFile = null;
     try {
-      storeFile = new StoreFile(fs, path, conf, cacheConfig, BloomType.NONE);
-      storeFile.createReader();
+      storeFile = new StoreFile(fs, path, conf, cacheConfig, BloomType.NONE, primaryReplica);
+      storeFile.initReader();
     } catch (IOException e) {
       LOG.error("Failed to open mob file[" + path + "], keep it in temp directory.", e);
       throw e;

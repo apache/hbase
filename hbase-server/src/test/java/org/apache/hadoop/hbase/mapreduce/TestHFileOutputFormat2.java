@@ -365,8 +365,8 @@ public class TestHFileOutputFormat2  {
       FileStatus[] file = fs.listStatus(sub1[0].getPath());
 
       // open as HFile Reader and pull out TIMERANGE FileInfo.
-      HFile.Reader rd = HFile.createReader(fs, file[0].getPath(),
-          new CacheConfig(conf), conf);
+      HFile.Reader rd =
+          HFile.createReader(fs, file[0].getPath(), new CacheConfig(conf), true, conf);
       Map<byte[],byte[]> finfo = rd.loadFileInfo();
       byte[] range = finfo.get("TIMERANGE".getBytes());
       assertNotNull(range);
@@ -458,8 +458,8 @@ public class TestHFileOutputFormat2  {
       RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(dir, true);
       while(iterator.hasNext()) {
         LocatedFileStatus keyFileStatus = iterator.next();
-        HFile.Reader reader = HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf),
-            conf);
+        HFile.Reader reader =
+            HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
         HFileScanner scanner = reader.getScanner(false, false, false);
         scanner.seekTo();
         Cell cell = scanner.getCell();
@@ -1043,7 +1043,7 @@ public class TestHFileOutputFormat2  {
         // verify that the compression on this file matches the configured
         // compression
         Path dataFilePath = fs.listStatus(f.getPath())[0].getPath();
-        Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), conf);
+        Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), true, conf);
         Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 
         byte[] bloomFilter = fileInfo.get(StoreFile.BLOOM_FILTER_TYPE_KEY);

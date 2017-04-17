@@ -135,7 +135,7 @@ class DefaultStoreFileManager implements StoreFileManager {
     this.compactedfiles = sortCompactedfiles(updatedCompactedfiles);
   }
 
-  // Mark the files as compactedAway once the storefiles and compactedfiles list is finalised
+  // Mark the files as compactedAway once the storefiles and compactedfiles list is finalized
   // Let a background thread close the actual reader on these compacted files and also
   // ensure to evict the blocks from block cache so that they are no longer in
   // cache

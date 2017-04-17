@@ -60,9 +60,9 @@ public class EncodedSeekPerformanceTest {
 
     // read all of the key values
     StoreFile storeFile = new StoreFile(testingUtility.getTestFileSystem(),
-        path, configuration, cacheConf, BloomType.NONE);
-
-    StoreFileReader reader = storeFile.createReader();
+        path, configuration, cacheConf, BloomType.NONE, true);
+    storeFile.initReader();
+    StoreFileReader reader = storeFile.getReader();
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
     Cell current;
 
@@ -90,11 +90,11 @@ public class EncodedSeekPerformanceTest {
       List<Cell> seeks) throws IOException {
     // read all of the key values
     StoreFile storeFile = new StoreFile(testingUtility.getTestFileSystem(),
-      path, configuration, cacheConf, BloomType.NONE);
-
+      path, configuration, cacheConf, BloomType.NONE, true);
+    storeFile.initReader();
     long totalSize = 0;
 
-    StoreFileReader reader = storeFile.createReader();
+    StoreFileReader reader = storeFile.getReader();
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
 
     long startReadingTime = System.nanoTime();

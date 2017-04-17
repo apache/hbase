@@ -223,12 +223,9 @@ public class PartitionedMobCompactor extends MobCompactor {
         // File in the Del Partition List
 
         // Get delId from the file
-        Reader reader = HFile.createReader(fs, linkedFile.getPath(), CacheConfig.DISABLED, conf);
-        try {
+        try (Reader reader = HFile.createReader(fs, linkedFile.getPath(), conf)) {
           delId.setStartKey(reader.getFirstRowKey());
           delId.setEndKey(reader.getLastRowKey());
-        } finally {
-          reader.close();
         }
         CompactionDelPartition delPartition = delFilesToCompact.get(delId);
         if (delPartition == null) {
@@ -267,12 +264,9 @@ public class PartitionedMobCompactor extends MobCompactor {
           if (withDelFiles) {
             // get startKey and endKey from the file and update partition
             // TODO: is it possible to skip read of most hfiles?
-            Reader reader = HFile.createReader(fs, linkedFile.getPath(), CacheConfig.DISABLED, conf);
-            try {
+            try (Reader reader = HFile.createReader(fs, linkedFile.getPath(), conf)) {
               compactionPartition.setStartKey(reader.getFirstRowKey());
               compactionPartition.setEndKey(reader.getLastRowKey());
-            } finally {
-              reader.close();
             }
           }
 
@@ -340,10 +334,11 @@ public class PartitionedMobCompactor extends MobCompactor {
     try {
       for (CompactionDelPartition delPartition : request.getDelPartitions()) {
         for (Path newDelPath : delPartition.listDelFiles()) {
-          StoreFile sf = new StoreFile(fs, newDelPath, conf, compactionCacheConfig, BloomType.NONE);
+          StoreFile sf =
+              new StoreFile(fs, newDelPath, conf, compactionCacheConfig, BloomType.NONE, true);
           // pre-create reader of a del file to avoid race condition when opening the reader in each
           // partition.
-          sf.createReader();
+          sf.initReader();
           delPartition.addStoreFile(sf);
           totalDelFileCount++;
         }
@@ -557,7 +552,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       List<StoreFile> filesToCompact = new ArrayList<>();
       for (int i = offset; i < batch + offset; i++) {
         StoreFile sf = new StoreFile(fs, files.get(i).getPath(), conf, compactionCacheConfig,
-          BloomType.NONE);
+            BloomType.NONE, true);
         filesToCompact.add(sf);
       }
       filesToCompact.addAll(delFiles);
@@ -739,7 +734,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       }
       for (int i = offset; i < batch + offset; i++) {
         batchedDelFiles.add(new StoreFile(fs, delFilePaths.get(i), conf, compactionCacheConfig,
-          BloomType.NONE));
+          BloomType.NONE, true));
       }
       // compact the del files in a batch.
       paths.add(compactDelFilesInBatch(request, batchedDelFiles));
@@ -809,8 +804,8 @@ public class PartitionedMobCompactor extends MobCompactor {
    */
   private StoreScanner createScanner(List<StoreFile> filesToCompact, ScanType scanType)
     throws IOException {
-    List scanners = StoreFileScanner.getScannersForStoreFiles(filesToCompact, false, true, false,
-      false, HConstants.LATEST_TIMESTAMP);
+    List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(filesToCompact,
+      false, true, false, false, HConstants.LATEST_TIMESTAMP);
     Scan scan = new Scan();
     scan.setMaxVersions(column.getMaxVersions());
     long ttl = HStore.determineTTLFromFamily(column);
@@ -893,7 +888,8 @@ public class PartitionedMobCompactor extends MobCompactor {
     for (StoreFile sf : storeFiles) {
       // the readers will be closed later after the merge.
       maxSeqId = Math.max(maxSeqId, sf.getMaxSequenceId());
-      byte[] count = sf.createReader().loadFileInfo().get(StoreFile.MOB_CELLS_COUNT);
+      sf.initReader();
+      byte[] count = sf.getReader().loadFileInfo().get(StoreFile.MOB_CELLS_COUNT);
       if (count != null) {
         maxKeyCount += Bytes.toLong(count);
       }

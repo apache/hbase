@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import com.google.common.io.Closeables;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -58,8 +59,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
-
-import com.google.common.io.Closeables;
 
 /**
  * A compactor is a compaction algorithm associated a given policy. Base class also contains
@@ -216,15 +215,9 @@ public abstract class Compactor<T extends CellSink> {
    * @param filesToCompact Files.
    * @return Scanners.
    */
-  protected List<StoreFileScanner> createFileScanners(
-      final Collection<StoreFile> filesToCompact,
-      long smallestReadPoint,
-      boolean useDropBehind) throws IOException {
-    return StoreFileScanner.getScannersForStoreFiles(filesToCompact,
-        /* cache blocks = */ false,
-        /* use pread = */ false,
-        /* is compaction */ true,
-        /* use Drop Behind */ useDropBehind,
+  protected List<StoreFileScanner> createFileScanners(Collection<StoreFile> filesToCompact,
+      long smallestReadPoint, boolean useDropBehind) throws IOException {
+    return StoreFileScanner.getScannersForCompaction(filesToCompact, useDropBehind,
       smallestReadPoint);
   }
 
@@ -281,8 +274,6 @@ public abstract class Compactor<T extends CellSink> {
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = getSmallestReadPoint();
 
-    List<StoreFileScanner> scanners;
-    Collection<StoreFile> readersToClose;
     T writer = null;
     boolean dropCache;
     if (request.isMajor() || request.isAllFiles()) {
@@ -291,22 +282,8 @@ public abstract class Compactor<T extends CellSink> {
       dropCache = this.dropCacheMinor;
     }
 
-    if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", true)) {
-      // clone all StoreFiles, so we'll do the compaction on a independent copy of StoreFiles,
-      // HFiles, and their readers
-      readersToClose = new ArrayList<>(request.getFiles().size());
-      for (StoreFile f : request.getFiles()) {
-        StoreFile clonedStoreFile = f.cloneForReader();
-        // create the reader after the store file is cloned in case
-        // the sequence id is used for sorting in scanners
-        clonedStoreFile.createReader();
-        readersToClose.add(clonedStoreFile);
-      }
-      scanners = createFileScanners(readersToClose, smallestReadPoint, dropCache);
-    } else {
-      readersToClose = Collections.emptyList();
-      scanners = createFileScanners(request.getFiles(), smallestReadPoint, dropCache);
-    }
+    List<StoreFileScanner> scanners =
+        createFileScanners(request.getFiles(), smallestReadPoint, dropCache);
     InternalScanner scanner = null;
     boolean finished = false;
     try {
@@ -336,13 +313,6 @@ public abstract class Compactor<T extends CellSink> {
       }
     } finally {
       Closeables.close(scanner, true);
-      for (StoreFile f : readersToClose) {
-        try {
-          f.closeReader(true);
-        } catch (IOException e) {
-          LOG.warn("Exception closing " + f, e);
-        }
-      }
       if (!finished && writer != null) {
         abortWriter(writer);
       }
