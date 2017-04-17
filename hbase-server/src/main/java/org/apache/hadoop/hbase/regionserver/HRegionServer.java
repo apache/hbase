@@ -1564,7 +1564,9 @@ public class HRegionServer extends HasThread implements
     private final HRegionServer instance;
     private final int majorCompactPriority;
     private final static int DEFAULT_PRIORITY = Integer.MAX_VALUE;
-    private long iteration = 0;
+    //Iteration is 1-based rather than 0-based so we don't check for compaction
+    // immediately upon region server startup
+    private long iteration = 1;
 
     CompactionChecker(final HRegionServer h, final int sleepTime,
         final Stoppable stopper) {
