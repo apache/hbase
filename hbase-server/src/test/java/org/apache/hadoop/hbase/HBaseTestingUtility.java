@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -106,7 +105,6 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -4045,10 +4043,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       public boolean evaluate() throws IOException {
         boolean tableAvailable = getAdmin().isTableAvailable(tableName);
         if (tableAvailable) {
-          try {
-            Canary.sniff(getAdmin(), tableName);
-          } catch (Exception e) {
-            throw new IOException("Canary sniff failed for table " + tableName, e);
+          try (Table table = getConnection().getTable(tableName)) {
+            HTableDescriptor htd = table.getTableDescriptor();
+            for (HRegionLocation loc : getConnection().getRegionLocator(tableName)
+                .getAllRegionLocations()) {
+              Scan scan = new Scan().withStartRow(loc.getRegionInfo().getStartKey())
+                  .withStopRow(loc.getRegionInfo().getEndKey()).setOneRowLimit()
+                  .setMaxResultsPerColumnFamily(1).setCacheBlocks(false);
+              for (byte[] family : htd.getFamiliesKeys()) {
+                scan.addFamily(family);
+              }
+              try (ResultScanner scanner = table.getScanner(scan)) {
+                scanner.next();
+              }
+            }
           }
         }
         return tableAvailable;
