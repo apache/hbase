@@ -16,35 +16,48 @@
  */
 package org.apache.hadoop.hbase.quotas.policies;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.quotas.SpaceLimitingException;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
 
 /**
- * A {@link SpaceViolationPolicyEnforcement} instance which only checks for bulk loads. Useful for tables
- * which have no violation policy. This is the default case for tables, as we want to make sure that
- * a single bulk load call would violate the quota.
+ * A {@link SpaceViolationPolicyEnforcement} which can be treated as a singleton. When a quota is
+ * not defined on a table or we lack quota information, we want to avoid creating a policy, keeping
+ * this path fast.
  */
-@InterfaceAudience.Private
-public class BulkLoadVerifyingViolationPolicyEnforcement extends AbstractViolationPolicyEnforcement {
+public class MissingSnapshotViolationPolicyEnforcement extends AbstractViolationPolicyEnforcement {
+  private static final MissingSnapshotViolationPolicyEnforcement SINGLETON =
+      new MissingSnapshotViolationPolicyEnforcement();
 
-  @Override
-  public void enable() {}
+  private MissingSnapshotViolationPolicyEnforcement() {}
 
-  @Override
-  public void disable() {}
-
-  @Override
-  public String getPolicyName() {
-    return "BulkLoadVerifying";
+  public static SpaceViolationPolicyEnforcement getInstance() {
+    return SINGLETON;
   }
 
   @Override
-  public boolean areCompactionsDisabled() {
+  public boolean shouldCheckBulkLoads() {
     return false;
   }
 
   @Override
+  public void checkBulkLoad(FileSystem fs, List<String> paths) {}
+
+  @Override
+  public void enable() throws IOException {}
+
+  @Override
+  public void disable() throws IOException {}
+
+  @Override
   public void check(Mutation m) throws SpaceLimitingException {}
+
+  @Override
+  public String getPolicyName() {
+    return "NoQuota";
+  }
 }

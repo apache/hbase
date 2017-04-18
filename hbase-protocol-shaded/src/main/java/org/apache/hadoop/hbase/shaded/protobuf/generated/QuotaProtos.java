@@ -4362,7 +4362,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder>
           getSpaceFieldBuilder() {
         if (spaceBuilder_ == null) {
           spaceBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -6077,7 +6077,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder>
           getQuotaFieldBuilder() {
         if (quotaBuilder_ == null) {
           quotaBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -6143,13 +6143,13 @@ public final class QuotaProtos {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>optional .hbase.pb.SpaceViolationPolicy policy = 1;</code>
+     * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 1;</code>
      */
-    boolean hasPolicy();
+    boolean hasViolationPolicy();
     /**
-     * <code>optional .hbase.pb.SpaceViolationPolicy policy = 1;</code>
+     * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 1;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy getPolicy();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy getViolationPolicy();
 
     /**
      * <code>optional bool in_violation = 2;</code>
@@ -6163,7 +6163,7 @@ public final class QuotaProtos {
   /**
    * <pre>
    * Represents the state of a quota on a table. Either the quota is not in violation
-   * or it is in violatino there is a violation policy which should be in effect.
+   * or it is in violation there is a violation policy which should be in effect.
    * </pre>
    *
    * Protobuf type {@code hbase.pb.SpaceQuotaStatus}
@@ -6177,7 +6177,7 @@ public final class QuotaProtos {
       super(builder);
     }
     private SpaceQuotaStatus() {
-      policy_ = 1;
+      violationPolicy_ = 1;
       inViolation_ = false;
     }
 
@@ -6216,7 +6216,7 @@ public final class QuotaProtos {
                 unknownFields.mergeVarintField(1, rawValue);
               } else {
                 bitField0_ |= 0x00000001;
-                policy_ = rawValue;
+                violationPolicy_ = rawValue;
               }
               break;
             }
@@ -6250,19 +6250,19 @@ public final class QuotaProtos {
     }
 
     private int bitField0_;
-    public static final int POLICY_FIELD_NUMBER = 1;
-    private int policy_;
+    public static final int VIOLATION_POLICY_FIELD_NUMBER = 1;
+    private int violationPolicy_;
     /**
-     * <code>optional .hbase.pb.SpaceViolationPolicy policy = 1;</code>
+     * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 1;</code>
      */
-    public boolean hasPolicy() {
+    public boolean hasViolationPolicy() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .hbase.pb.SpaceViolationPolicy policy = 1;</code>
+     * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 1;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy getPolicy() {
-      org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy result = org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy.valueOf(policy_);
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy getViolationPolicy() {
+      org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy result = org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy.valueOf(violationPolicy_);
       return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy.DISABLE : result;
     }
 
@@ -6294,7 +6294,7 @@ public final class QuotaProtos {
     public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeEnum(1, policy_);
+        output.writeEnum(1, violationPolicy_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBool(2, inViolation_);
@@ -6309,7 +6309,7 @@ public final class QuotaProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeEnumSize(1, policy_);
+          .computeEnumSize(1, violationPolicy_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
@@ -6332,9 +6332,9 @@ public final class QuotaProtos {
       org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus other = (org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus) obj;
 
       boolean result = true;
-      result = result && (hasPolicy() == other.hasPolicy());
-      if (hasPolicy()) {
-        result = result && policy_ == other.policy_;
+      result = result && (hasViolationPolicy() == other.hasViolationPolicy());
+      if (hasViolationPolicy()) {
+        result = result && violationPolicy_ == other.violationPolicy_;
       }
       result = result && (hasInViolation() == other.hasInViolation());
       if (hasInViolation()) {
@@ -6352,9 +6352,9 @@ public final class QuotaProtos {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
-      if (hasPolicy()) {
-        hash = (37 * hash) + POLICY_FIELD_NUMBER;
-        hash = (53 * hash) + policy_;
+      if (hasViolationPolicy()) {
+        hash = (37 * hash) + VIOLATION_POLICY_FIELD_NUMBER;
+        hash = (53 * hash) + violationPolicy_;
       }
       if (hasInViolation()) {
         hash = (37 * hash) + IN_VIOLATION_FIELD_NUMBER;
@@ -6446,7 +6446,7 @@ public final class QuotaProtos {
     /**
      * <pre>
      * Represents the state of a quota on a table. Either the quota is not in violation
-     * or it is in violatino there is a violation policy which should be in effect.
+     * or it is in violation there is a violation policy which should be in effect.
      * </pre>
      *
      * Protobuf type {@code hbase.pb.SpaceQuotaStatus}
@@ -6484,7 +6484,7 @@ public final class QuotaProtos {
       }
       public Builder clear() {
         super.clear();
-        policy_ = 1;
+        violationPolicy_ = 1;
         bitField0_ = (bitField0_ & ~0x00000001);
         inViolation_ = false;
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -6515,7 +6515,7 @@ public final class QuotaProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        result.policy_ = policy_;
+        result.violationPolicy_ = violationPolicy_;
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
@@ -6562,8 +6562,8 @@ public final class QuotaProtos {
 
       public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus other) {
         if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance()) return this;
-        if (other.hasPolicy()) {
-          setPolicy(other.getPolicy());
+        if (other.hasViolationPolicy()) {
+          setViolationPolicy(other.getViolationPolicy());
         }
         if (other.hasInViolation()) {
           setInViolation(other.getInViolation());
@@ -6596,38 +6596,38 @@ public final class QuotaProtos {
       }
       private int bitField0_;
 
-      private int policy_ = 1;
+      private int violationPolicy_ = 1;
       /**
-       * <code>optional .hbase.pb.SpaceViolationPolicy policy = 1;</code>
+       * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 1;</code>
        */
-      public boolean hasPolicy() {
+      public boolean hasViolationPolicy() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional .hbase.pb.SpaceViolationPolicy policy = 1;</code>
+       * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 1;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy getPolicy() {
-        org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy result = org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy.valueOf(policy_);
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy getViolationPolicy() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy result = org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy.valueOf(violationPolicy_);
         return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy.DISABLE : result;
       }
       /**
-       * <code>optional .hbase.pb.SpaceViolationPolicy policy = 1;</code>
+       * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 1;</code>
        */
-      public Builder setPolicy(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy value) {
+      public Builder setViolationPolicy(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy value) {
         if (value == null) {
           throw new NullPointerException();
         }
         bitField0_ |= 0x00000001;
-        policy_ = value.getNumber();
+        violationPolicy_ = value.getNumber();
         onChanged();
         return this;
       }
       /**
-       * <code>optional .hbase.pb.SpaceViolationPolicy policy = 1;</code>
+       * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 1;</code>
        */
-      public Builder clearPolicy() {
+      public Builder clearViolationPolicy() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        policy_ = 1;
+        violationPolicy_ = 1;
         onChanged();
         return this;
       }
@@ -6717,35 +6717,35 @@ public final class QuotaProtos {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+     * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
      */
-    boolean hasStatus();
+    boolean hasQuotaStatus();
     /**
-     * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+     * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus getStatus();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus getQuotaStatus();
     /**
-     * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+     * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder getStatusOrBuilder();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder getQuotaStatusOrBuilder();
 
     /**
-     * <code>optional uint64 usage = 2;</code>
+     * <code>optional uint64 quota_usage = 2;</code>
      */
-    boolean hasUsage();
+    boolean hasQuotaUsage();
     /**
-     * <code>optional uint64 usage = 2;</code>
+     * <code>optional uint64 quota_usage = 2;</code>
      */
-    long getUsage();
+    long getQuotaUsage();
 
     /**
-     * <code>optional uint64 limit = 3;</code>
+     * <code>optional uint64 quota_limit = 3;</code>
      */
-    boolean hasLimit();
+    boolean hasQuotaLimit();
     /**
-     * <code>optional uint64 limit = 3;</code>
+     * <code>optional uint64 quota_limit = 3;</code>
      */
-    long getLimit();
+    long getQuotaLimit();
   }
   /**
    * <pre>
@@ -6764,8 +6764,8 @@ public final class QuotaProtos {
       super(builder);
     }
     private SpaceQuotaSnapshot() {
-      usage_ = 0L;
-      limit_ = 0L;
+      quotaUsage_ = 0L;
+      quotaLimit_ = 0L;
     }
 
     @java.lang.Override
@@ -6799,24 +6799,24 @@ public final class QuotaProtos {
             case 10: {
               org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder subBuilder = null;
               if (((bitField0_ & 0x00000001) == 0x00000001)) {
-                subBuilder = status_.toBuilder();
+                subBuilder = quotaStatus_.toBuilder();
               }
-              status_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.PARSER, extensionRegistry);
+              quotaStatus_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom(status_);
-                status_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom(quotaStatus_);
+                quotaStatus_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000001;
               break;
             }
             case 16: {
               bitField0_ |= 0x00000002;
-              usage_ = input.readUInt64();
+              quotaUsage_ = input.readUInt64();
               break;
             }
             case 24: {
               bitField0_ |= 0x00000004;
-              limit_ = input.readUInt64();
+              quotaLimit_ = input.readUInt64();
               break;
             }
           }
@@ -6844,55 +6844,55 @@ public final class QuotaProtos {
     }
 
     private int bitField0_;
-    public static final int STATUS_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus status_;
+    public static final int QUOTA_STATUS_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus quotaStatus_;
     /**
-     * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+     * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
      */
-    public boolean hasStatus() {
+    public boolean hasQuotaStatus() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+     * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus getStatus() {
-      return status_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance() : status_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus getQuotaStatus() {
+      return quotaStatus_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance() : quotaStatus_;
     }
     /**
-     * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+     * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder getStatusOrBuilder() {
-      return status_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance() : status_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder getQuotaStatusOrBuilder() {
+      return quotaStatus_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance() : quotaStatus_;
     }
 
-    public static final int USAGE_FIELD_NUMBER = 2;
-    private long usage_;
+    public static final int QUOTA_USAGE_FIELD_NUMBER = 2;
+    private long quotaUsage_;
     /**
-     * <code>optional uint64 usage = 2;</code>
+     * <code>optional uint64 quota_usage = 2;</code>
      */
-    public boolean hasUsage() {
+    public boolean hasQuotaUsage() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional uint64 usage = 2;</code>
+     * <code>optional uint64 quota_usage = 2;</code>
      */
-    public long getUsage() {
-      return usage_;
+    public long getQuotaUsage() {
+      return quotaUsage_;
     }
 
-    public static final int LIMIT_FIELD_NUMBER = 3;
-    private long limit_;
+    public static final int QUOTA_LIMIT_FIELD_NUMBER = 3;
+    private long quotaLimit_;
     /**
-     * <code>optional uint64 limit = 3;</code>
+     * <code>optional uint64 quota_limit = 3;</code>
      */
-    public boolean hasLimit() {
+    public boolean hasQuotaLimit() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional uint64 limit = 3;</code>
+     * <code>optional uint64 quota_limit = 3;</code>
      */
-    public long getLimit() {
-      return limit_;
+    public long getQuotaLimit() {
+      return quotaLimit_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -6908,13 +6908,13 @@ public final class QuotaProtos {
     public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, getStatus());
+        output.writeMessage(1, getQuotaStatus());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeUInt64(2, usage_);
+        output.writeUInt64(2, quotaUsage_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeUInt64(3, limit_);
+        output.writeUInt64(3, quotaLimit_);
       }
       unknownFields.writeTo(output);
     }
@@ -6926,15 +6926,15 @@ public final class QuotaProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, getStatus());
+          .computeMessageSize(1, getQuotaStatus());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(2, usage_);
+          .computeUInt64Size(2, quotaUsage_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(3, limit_);
+          .computeUInt64Size(3, quotaLimit_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -6953,20 +6953,20 @@ public final class QuotaProtos {
       org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot other = (org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot) obj;
 
       boolean result = true;
-      result = result && (hasStatus() == other.hasStatus());
-      if (hasStatus()) {
-        result = result && getStatus()
-            .equals(other.getStatus());
+      result = result && (hasQuotaStatus() == other.hasQuotaStatus());
+      if (hasQuotaStatus()) {
+        result = result && getQuotaStatus()
+            .equals(other.getQuotaStatus());
       }
-      result = result && (hasUsage() == other.hasUsage());
-      if (hasUsage()) {
-        result = result && (getUsage()
-            == other.getUsage());
+      result = result && (hasQuotaUsage() == other.hasQuotaUsage());
+      if (hasQuotaUsage()) {
+        result = result && (getQuotaUsage()
+            == other.getQuotaUsage());
       }
-      result = result && (hasLimit() == other.hasLimit());
-      if (hasLimit()) {
-        result = result && (getLimit()
-            == other.getLimit());
+      result = result && (hasQuotaLimit() == other.hasQuotaLimit());
+      if (hasQuotaLimit()) {
+        result = result && (getQuotaLimit()
+            == other.getQuotaLimit());
       }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
@@ -6979,19 +6979,19 @@ public final class QuotaProtos {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
-      if (hasStatus()) {
-        hash = (37 * hash) + STATUS_FIELD_NUMBER;
-        hash = (53 * hash) + getStatus().hashCode();
+      if (hasQuotaStatus()) {
+        hash = (37 * hash) + QUOTA_STATUS_FIELD_NUMBER;
+        hash = (53 * hash) + getQuotaStatus().hashCode();
       }
-      if (hasUsage()) {
-        hash = (37 * hash) + USAGE_FIELD_NUMBER;
+      if (hasQuotaUsage()) {
+        hash = (37 * hash) + QUOTA_USAGE_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
-            getUsage());
+            getQuotaUsage());
       }
-      if (hasLimit()) {
-        hash = (37 * hash) + LIMIT_FIELD_NUMBER;
+      if (hasQuotaLimit()) {
+        hash = (37 * hash) + QUOTA_LIMIT_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
-            getLimit());
+            getQuotaLimit());
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -7112,20 +7112,20 @@ public final class QuotaProtos {
       private void maybeForceBuilderInitialization() {
         if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
-          getStatusFieldBuilder();
+          getQuotaStatusFieldBuilder();
         }
       }
       public Builder clear() {
         super.clear();
-        if (statusBuilder_ == null) {
-          status_ = null;
+        if (quotaStatusBuilder_ == null) {
+          quotaStatus_ = null;
         } else {
-          statusBuilder_.clear();
+          quotaStatusBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
-        usage_ = 0L;
+        quotaUsage_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000002);
-        limit_ = 0L;
+        quotaLimit_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
@@ -7154,19 +7154,19 @@ public final class QuotaProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        if (statusBuilder_ == null) {
-          result.status_ = status_;
+        if (quotaStatusBuilder_ == null) {
+          result.quotaStatus_ = quotaStatus_;
         } else {
-          result.status_ = statusBuilder_.build();
+          result.quotaStatus_ = quotaStatusBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        result.usage_ = usage_;
+        result.quotaUsage_ = quotaUsage_;
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
         }
-        result.limit_ = limit_;
+        result.quotaLimit_ = quotaLimit_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -7209,14 +7209,14 @@ public final class QuotaProtos {
 
       public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot other) {
         if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot.getDefaultInstance()) return this;
-        if (other.hasStatus()) {
-          mergeStatus(other.getStatus());
+        if (other.hasQuotaStatus()) {
+          mergeQuotaStatus(other.getQuotaStatus());
         }
-        if (other.hasUsage()) {
-          setUsage(other.getUsage());
+        if (other.hasQuotaUsage()) {
+          setQuotaUsage(other.getQuotaUsage());
         }
-        if (other.hasLimit()) {
-          setLimit(other.getLimit());
+        if (other.hasQuotaLimit()) {
+          setQuotaLimit(other.getQuotaLimit());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -7246,184 +7246,184 @@ public final class QuotaProtos {
       }
       private int bitField0_;
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus status_ = null;
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus quotaStatus_ = null;
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder> statusBuilder_;
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder> quotaStatusBuilder_;
       /**
-       * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+       * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
-      public boolean hasStatus() {
+      public boolean hasQuotaStatus() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+       * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus getStatus() {
-        if (statusBuilder_ == null) {
-          return status_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance() : status_;
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus getQuotaStatus() {
+        if (quotaStatusBuilder_ == null) {
+          return quotaStatus_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance() : quotaStatus_;
         } else {
-          return statusBuilder_.getMessage();
+          return quotaStatusBuilder_.getMessage();
         }
       }
       /**
-       * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+       * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
-      public Builder setStatus(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus value) {
-        if (statusBuilder_ == null) {
+      public Builder setQuotaStatus(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus value) {
+        if (quotaStatusBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          status_ = value;
+          quotaStatus_ = value;
           onChanged();
         } else {
-          statusBuilder_.setMessage(value);
+          quotaStatusBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
       /**
-       * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+       * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
-      public Builder setStatus(
+      public Builder setQuotaStatus(
           org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder builderForValue) {
-        if (statusBuilder_ == null) {
-          status_ = builderForValue.build();
+        if (quotaStatusBuilder_ == null) {
+          quotaStatus_ = builderForValue.build();
           onChanged();
         } else {
-          statusBuilder_.setMessage(builderForValue.build());
+          quotaStatusBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000001;
         return this;
       }
       /**
-       * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+       * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
-      public Builder mergeStatus(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus value) {
-        if (statusBuilder_ == null) {
+      public Builder mergeQuotaStatus(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus value) {
+        if (quotaStatusBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              status_ != null &&
-              status_ != org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance()) {
-            status_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.newBuilder(status_).mergeFrom(value).buildPartial();
+              quotaStatus_ != null &&
+              quotaStatus_ != org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance()) {
+            quotaStatus_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.newBuilder(quotaStatus_).mergeFrom(value).buildPartial();
           } else {
-            status_ = value;
+            quotaStatus_ = value;
           }
           onChanged();
         } else {
-          statusBuilder_.mergeFrom(value);
+          quotaStatusBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
       /**
-       * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+       * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
-      public Builder clearStatus() {
-        if (statusBuilder_ == null) {
-          status_ = null;
+      public Builder clearQuotaStatus() {
+        if (quotaStatusBuilder_ == null) {
+          quotaStatus_ = null;
           onChanged();
         } else {
-          statusBuilder_.clear();
+          quotaStatusBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
       /**
-       * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+       * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder getStatusBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder getQuotaStatusBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
-        return getStatusFieldBuilder().getBuilder();
+        return getQuotaStatusFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+       * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder getStatusOrBuilder() {
-        if (statusBuilder_ != null) {
-          return statusBuilder_.getMessageOrBuilder();
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder getQuotaStatusOrBuilder() {
+        if (quotaStatusBuilder_ != null) {
+          return quotaStatusBuilder_.getMessageOrBuilder();
         } else {
-          return status_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance() : status_;
+          return quotaStatus_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.getDefaultInstance() : quotaStatus_;
         }
       }
       /**
-       * <code>optional .hbase.pb.SpaceQuotaStatus status = 1;</code>
+       * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder> 
-          getStatusFieldBuilder() {
-        if (statusBuilder_ == null) {
-          statusBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder>
+          getQuotaStatusFieldBuilder() {
+        if (quotaStatusBuilder_ == null) {
+          quotaStatusBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
               org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder>(
-                  getStatus(),
+                  getQuotaStatus(),
                   getParentForChildren(),
                   isClean());
-          status_ = null;
+          quotaStatus_ = null;
         }
-        return statusBuilder_;
+        return quotaStatusBuilder_;
       }
 
-      private long usage_ ;
+      private long quotaUsage_ ;
       /**
-       * <code>optional uint64 usage = 2;</code>
+       * <code>optional uint64 quota_usage = 2;</code>
        */
-      public boolean hasUsage() {
+      public boolean hasQuotaUsage() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional uint64 usage = 2;</code>
+       * <code>optional uint64 quota_usage = 2;</code>
        */
-      public long getUsage() {
-        return usage_;
+      public long getQuotaUsage() {
+        return quotaUsage_;
       }
       /**
-       * <code>optional uint64 usage = 2;</code>
+       * <code>optional uint64 quota_usage = 2;</code>
        */
-      public Builder setUsage(long value) {
+      public Builder setQuotaUsage(long value) {
         bitField0_ |= 0x00000002;
-        usage_ = value;
+        quotaUsage_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional uint64 usage = 2;</code>
+       * <code>optional uint64 quota_usage = 2;</code>
        */
-      public Builder clearUsage() {
+      public Builder clearQuotaUsage() {
         bitField0_ = (bitField0_ & ~0x00000002);
-        usage_ = 0L;
+        quotaUsage_ = 0L;
         onChanged();
         return this;
       }
 
-      private long limit_ ;
+      private long quotaLimit_ ;
       /**
-       * <code>optional uint64 limit = 3;</code>
+       * <code>optional uint64 quota_limit = 3;</code>
        */
-      public boolean hasLimit() {
+      public boolean hasQuotaLimit() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional uint64 limit = 3;</code>
+       * <code>optional uint64 quota_limit = 3;</code>
        */
-      public long getLimit() {
-        return limit_;
+      public long getQuotaLimit() {
+        return quotaLimit_;
       }
       /**
-       * <code>optional uint64 limit = 3;</code>
+       * <code>optional uint64 quota_limit = 3;</code>
        */
-      public Builder setLimit(long value) {
+      public Builder setQuotaLimit(long value) {
         bitField0_ |= 0x00000004;
-        limit_ = value;
+        quotaLimit_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional uint64 limit = 3;</code>
+       * <code>optional uint64 quota_limit = 3;</code>
        */
-      public Builder clearLimit() {
+      public Builder clearQuotaLimit() {
         bitField0_ = (bitField0_ & ~0x00000004);
-        limit_ = 0L;
+        quotaLimit_ = 0L;
         onChanged();
         return this;
       }
@@ -7856,7 +7856,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaRegionSizesResponse.RegionSizes sizes = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes>
         getSizesList();
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaRegionSizesResponse.RegionSizes sizes = 1;</code>
@@ -7869,7 +7869,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaRegionSizesResponse.RegionSizes sizes = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizesOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizesOrBuilder>
         getSizesOrBuilderList();
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaRegionSizesResponse.RegionSizes sizes = 1;</code>
@@ -8540,7 +8540,7 @@ public final class QuotaProtos {
          * <code>optional .hbase.pb.TableName table_name = 1;</code>
          */
         private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
             getTableNameFieldBuilder() {
           if (tableNameBuilder_ == null) {
             tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -8644,7 +8644,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaRegionSizesResponse.RegionSizes sizes = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizesOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizesOrBuilder>
         getSizesOrBuilderList() {
       return sizes_;
     }
@@ -8951,7 +8951,7 @@ public final class QuotaProtos {
               sizesBuilder_ = null;
               sizes_ = other.sizes_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              sizesBuilder_ = 
+              sizesBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getSizesFieldBuilder() : null;
             } else {
@@ -9187,7 +9187,7 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetSpaceQuotaRegionSizesResponse.RegionSizes sizes = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizesOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizesOrBuilder>
            getSizesOrBuilderList() {
         if (sizesBuilder_ != null) {
           return sizesBuilder_.getMessageOrBuilderList();
@@ -9213,12 +9213,12 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetSpaceQuotaRegionSizesResponse.RegionSizes sizes = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes.Builder>
            getSizesBuilderList() {
         return getSizesFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizesOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizesOrBuilder>
           getSizesFieldBuilder() {
         if (sizesBuilder_ == null) {
           sizesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -9660,7 +9660,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot snapshots = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot>
         getSnapshotsList();
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot snapshots = 1;</code>
@@ -9673,7 +9673,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot snapshots = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshotOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshotOrBuilder>
         getSnapshotsOrBuilderList();
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot snapshots = 1;</code>
@@ -10377,7 +10377,7 @@ public final class QuotaProtos {
          * <code>optional .hbase.pb.TableName table_name = 1;</code>
          */
         private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
             getTableNameFieldBuilder() {
           if (tableNameBuilder_ == null) {
             tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -10495,7 +10495,7 @@ public final class QuotaProtos {
          * <code>optional .hbase.pb.SpaceQuotaSnapshot snapshot = 2;</code>
          */
         private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-            org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshotOrBuilder> 
+            org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshotOrBuilder>
             getSnapshotFieldBuilder() {
           if (snapshotBuilder_ == null) {
             snapshotBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -10567,7 +10567,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot snapshots = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshotOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshotOrBuilder>
         getSnapshotsOrBuilderList() {
       return snapshots_;
     }
@@ -10874,7 +10874,7 @@ public final class QuotaProtos {
               snapshotsBuilder_ = null;
               snapshots_ = other.snapshots_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              snapshotsBuilder_ = 
+              snapshotsBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getSnapshotsFieldBuilder() : null;
             } else {
@@ -11110,7 +11110,7 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot snapshots = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshotOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshotOrBuilder>
            getSnapshotsOrBuilderList() {
         if (snapshotsBuilder_ != null) {
           return snapshotsBuilder_.getMessageOrBuilderList();
@@ -11136,12 +11136,12 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot snapshots = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot.Builder>
            getSnapshotsBuilderList() {
         return getSnapshotsFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshotOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshotOrBuilder>
           getSnapshotsFieldBuilder() {
         if (snapshotsBuilder_ == null) {
           snapshotsBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -11583,7 +11583,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy violation_policies = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy>
         getViolationPoliciesList();
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy violation_policies = 1;</code>
@@ -11596,7 +11596,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy violation_policies = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicyOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicyOrBuilder>
         getViolationPoliciesOrBuilderList();
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy violation_policies = 1;</code>
@@ -12280,7 +12280,7 @@ public final class QuotaProtos {
          * <code>optional .hbase.pb.TableName table_name = 1;</code>
          */
         private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
             getTableNameFieldBuilder() {
           if (tableNameBuilder_ == null) {
             tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -12388,7 +12388,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy violation_policies = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicyOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicyOrBuilder>
         getViolationPoliciesOrBuilderList() {
       return violationPolicies_;
     }
@@ -12695,7 +12695,7 @@ public final class QuotaProtos {
               violationPoliciesBuilder_ = null;
               violationPolicies_ = other.violationPolicies_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              violationPoliciesBuilder_ = 
+              violationPoliciesBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getViolationPoliciesFieldBuilder() : null;
             } else {
@@ -12931,7 +12931,7 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy violation_policies = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicyOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicyOrBuilder>
            getViolationPoliciesOrBuilderList() {
         if (violationPoliciesBuilder_ != null) {
           return violationPoliciesBuilder_.getMessageOrBuilderList();
@@ -12957,12 +12957,12 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy violation_policies = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy.Builder>
            getViolationPoliciesBuilderList() {
         return getViolationPoliciesFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicyOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicyOrBuilder>
           getViolationPoliciesFieldBuilder() {
         if (violationPoliciesBuilder_ == null) {
           violationPoliciesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -13404,7 +13404,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.TableQuotaSnapshot table_snapshots = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshot> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshot>
         getTableSnapshotsList();
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.TableQuotaSnapshot table_snapshots = 1;</code>
@@ -13417,7 +13417,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.TableQuotaSnapshot table_snapshots = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshotOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshotOrBuilder>
         getTableSnapshotsOrBuilderList();
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.TableQuotaSnapshot table_snapshots = 1;</code>
@@ -13428,7 +13428,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.NamespaceQuotaSnapshot ns_snapshots = 2;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot>
         getNsSnapshotsList();
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.NamespaceQuotaSnapshot ns_snapshots = 2;</code>
@@ -13441,7 +13441,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.NamespaceQuotaSnapshot ns_snapshots = 2;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshotOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshotOrBuilder>
         getNsSnapshotsOrBuilderList();
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.NamespaceQuotaSnapshot ns_snapshots = 2;</code>
@@ -14150,7 +14150,7 @@ public final class QuotaProtos {
          * <code>optional .hbase.pb.TableName table_name = 1;</code>
          */
         private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
             getTableNameFieldBuilder() {
           if (tableNameBuilder_ == null) {
             tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -14268,7 +14268,7 @@ public final class QuotaProtos {
          * <code>optional .hbase.pb.SpaceQuotaSnapshot snapshot = 2;</code>
          */
         private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-            org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshotOrBuilder> 
+            org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshotOrBuilder>
             getSnapshotFieldBuilder() {
           if (snapshotBuilder_ == null) {
             snapshotBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -14463,7 +14463,7 @@ public final class QuotaProtos {
         if (ref instanceof java.lang.String) {
           return (java.lang.String) ref;
         } else {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
               (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
@@ -14479,7 +14479,7 @@ public final class QuotaProtos {
           getNamespaceBytes() {
         java.lang.Object ref = namespace_;
         if (ref instanceof java.lang.String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           namespace_ = b;
@@ -14861,7 +14861,7 @@ public final class QuotaProtos {
             getNamespaceBytes() {
           java.lang.Object ref = namespace_;
           if (ref instanceof String) {
-            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                     (java.lang.String) ref);
             namespace_ = b;
@@ -15011,7 +15011,7 @@ public final class QuotaProtos {
          * <code>optional .hbase.pb.SpaceQuotaSnapshot snapshot = 2;</code>
          */
         private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-            org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshotOrBuilder> 
+            org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuotaSnapshotOrBuilder>
             getSnapshotFieldBuilder() {
           if (snapshotBuilder_ == null) {
             snapshotBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -15083,7 +15083,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.TableQuotaSnapshot table_snapshots = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshotOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshotOrBuilder>
         getTableSnapshotsOrBuilderList() {
       return tableSnapshots_;
     }
@@ -15118,7 +15118,7 @@ public final class QuotaProtos {
     /**
      * <code>repeated .hbase.pb.GetQuotaStatesResponse.NamespaceQuotaSnapshot ns_snapshots = 2;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshotOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshotOrBuilder>
         getNsSnapshotsOrBuilderList() {
       return nsSnapshots_;
     }
@@ -15454,7 +15454,7 @@ public final class QuotaProtos {
               tableSnapshotsBuilder_ = null;
               tableSnapshots_ = other.tableSnapshots_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              tableSnapshotsBuilder_ = 
+              tableSnapshotsBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getTableSnapshotsFieldBuilder() : null;
             } else {
@@ -15480,7 +15480,7 @@ public final class QuotaProtos {
               nsSnapshotsBuilder_ = null;
               nsSnapshots_ = other.nsSnapshots_;
               bitField0_ = (bitField0_ & ~0x00000002);
-              nsSnapshotsBuilder_ = 
+              nsSnapshotsBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getNsSnapshotsFieldBuilder() : null;
             } else {
@@ -15716,7 +15716,7 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetQuotaStatesResponse.TableQuotaSnapshot table_snapshots = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshotOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshotOrBuilder>
            getTableSnapshotsOrBuilderList() {
         if (tableSnapshotsBuilder_ != null) {
           return tableSnapshotsBuilder_.getMessageOrBuilderList();
@@ -15742,12 +15742,12 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetQuotaStatesResponse.TableQuotaSnapshot table_snapshots = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshot.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshot.Builder>
            getTableSnapshotsBuilderList() {
         return getTableSnapshotsFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshotOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshotOrBuilder>
           getTableSnapshotsFieldBuilder() {
         if (tableSnapshotsBuilder_ == null) {
           tableSnapshotsBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -15956,7 +15956,7 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetQuotaStatesResponse.NamespaceQuotaSnapshot ns_snapshots = 2;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshotOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshotOrBuilder>
            getNsSnapshotsOrBuilderList() {
         if (nsSnapshotsBuilder_ != null) {
           return nsSnapshotsBuilder_.getMessageOrBuilderList();
@@ -15982,12 +15982,12 @@ public final class QuotaProtos {
       /**
        * <code>repeated .hbase.pb.GetQuotaStatesResponse.NamespaceQuotaSnapshot ns_snapshots = 2;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot.Builder>
            getNsSnapshotsBuilderList() {
         return getNsSnapshotsFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshotOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshotOrBuilder>
           getNsSnapshotsFieldBuilder() {
         if (nsSnapshotsBuilder_ == null) {
           nsSnapshotsBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -16051,112 +16051,112 @@ public final class QuotaProtos {
 
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_TimedQuota_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_TimedQuota_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_Throttle_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_Throttle_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ThrottleRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ThrottleRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_Quotas_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_Quotas_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_QuotaUsage_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_QuotaUsage_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SpaceQuota_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SpaceQuota_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SpaceLimitRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SpaceLimitRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SpaceQuotaStatus_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SpaceQuotaStatus_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SpaceQuotaSnapshot_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SpaceQuotaSnapshot_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSpaceQuotaRegionSizesRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSpaceQuotaRegionSizesRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSpaceQuotaRegionSizesResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSpaceQuotaRegionSizesResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSpaceQuotaRegionSizesResponse_RegionSizes_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSpaceQuotaRegionSizesResponse_RegionSizes_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSpaceQuotaSnapshotsRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSpaceQuotaSnapshotsRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSpaceQuotaSnapshotsResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSpaceQuotaSnapshotsResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSpaceQuotaSnapshotsResponse_TableQuotaSnapshot_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSpaceQuotaSnapshotsResponse_TableQuotaSnapshot_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSpaceQuotaEnforcementsRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSpaceQuotaEnforcementsRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSpaceQuotaEnforcementsResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSpaceQuotaEnforcementsResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSpaceQuotaEnforcementsResponse_TableViolationPolicy_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSpaceQuotaEnforcementsResponse_TableViolationPolicy_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetQuotaStatesRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetQuotaStatesRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetQuotaStatesResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetQuotaStatesResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetQuotaStatesResponse_TableQuotaSnapshot_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetQuotaStatesResponse_TableQuotaSnapshot_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetQuotaStatesResponse_NamespaceQuotaSnapshot_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetQuotaStatesResponse_NamespaceQuotaSnapshot_fieldAccessorTable;
 
@@ -16188,50 +16188,51 @@ public final class QuotaProtos {
       "limit\030\001 \001(\004\0228\n\020violation_policy\030\002 \001(\0162\036." +
       "hbase.pb.SpaceViolationPolicy\022\025\n\006remove\030" +
       "\003 \001(\010:\005false\"8\n\021SpaceLimitRequest\022#\n\005quo",
-      "ta\030\001 \001(\0132\024.hbase.pb.SpaceQuota\"X\n\020SpaceQ" +
-      "uotaStatus\022.\n\006policy\030\001 \001(\0162\036.hbase.pb.Sp" +
-      "aceViolationPolicy\022\024\n\014in_violation\030\002 \001(\010" +
-      "\"^\n\022SpaceQuotaSnapshot\022*\n\006status\030\001 \001(\0132\032" +
-      ".hbase.pb.SpaceQuotaStatus\022\r\n\005usage\030\002 \001(" +
-      "\004\022\r\n\005limit\030\003 \001(\004\"!\n\037GetSpaceQuotaRegionS" +
-      "izesRequest\"\257\001\n GetSpaceQuotaRegionSizes" +
-      "Response\022E\n\005sizes\030\001 \003(\01326.hbase.pb.GetSp" +
-      "aceQuotaRegionSizesResponse.RegionSizes\032" +
-      "D\n\013RegionSizes\022\'\n\ntable_name\030\001 \001(\0132\023.hba",
-      "se.pb.TableName\022\014\n\004size\030\002 \001(\004\"\037\n\035GetSpac" +
-      "eQuotaSnapshotsRequest\"\337\001\n\036GetSpaceQuota" +
-      "SnapshotsResponse\022N\n\tsnapshots\030\001 \003(\0132;.h" +
-      "base.pb.GetSpaceQuotaSnapshotsResponse.T" +
-      "ableQuotaSnapshot\032m\n\022TableQuotaSnapshot\022" +
-      "\'\n\ntable_name\030\001 \001(\0132\023.hbase.pb.TableName" +
-      "\022.\n\010snapshot\030\002 \001(\0132\034.hbase.pb.SpaceQuota" +
-      "Snapshot\"\"\n GetSpaceQuotaEnforcementsReq" +
-      "uest\"\374\001\n!GetSpaceQuotaEnforcementsRespon" +
-      "se\022\\\n\022violation_policies\030\001 \003(\0132@.hbase.p",
-      "b.GetSpaceQuotaEnforcementsResponse.Tabl" +
-      "eViolationPolicy\032y\n\024TableViolationPolicy" +
-      "\022\'\n\ntable_name\030\001 \001(\0132\023.hbase.pb.TableNam" +
-      "e\0228\n\020violation_policy\030\002 \001(\0162\036.hbase.pb.S" +
-      "paceViolationPolicy\"\027\n\025GetQuotaStatesReq" +
-      "uest\"\201\003\n\026GetQuotaStatesResponse\022L\n\017table" +
-      "_snapshots\030\001 \003(\01323.hbase.pb.GetQuotaStat" +
-      "esResponse.TableQuotaSnapshot\022M\n\014ns_snap" +
-      "shots\030\002 \003(\01327.hbase.pb.GetQuotaStatesRes" +
-      "ponse.NamespaceQuotaSnapshot\032m\n\022TableQuo",
-      "taSnapshot\022\'\n\ntable_name\030\001 \001(\0132\023.hbase.p" +
-      "b.TableName\022.\n\010snapshot\030\002 \001(\0132\034.hbase.pb" +
-      ".SpaceQuotaSnapshot\032[\n\026NamespaceQuotaSna" +
-      "pshot\022\021\n\tnamespace\030\001 \001(\t\022.\n\010snapshot\030\002 \001" +
-      "(\0132\034.hbase.pb.SpaceQuotaSnapshot*&\n\nQuot" +
-      "aScope\022\013\n\007CLUSTER\020\001\022\013\n\007MACHINE\020\002*v\n\014Thro" +
-      "ttleType\022\022\n\016REQUEST_NUMBER\020\001\022\020\n\014REQUEST_" +
-      "SIZE\020\002\022\020\n\014WRITE_NUMBER\020\003\022\016\n\nWRITE_SIZE\020\004" +
-      "\022\017\n\013READ_NUMBER\020\005\022\r\n\tREAD_SIZE\020\006*$\n\tQuot" +
-      "aType\022\014\n\010THROTTLE\020\001\022\t\n\005SPACE\020\002*]\n\024SpaceV",
-      "iolationPolicy\022\013\n\007DISABLE\020\001\022\031\n\025NO_WRITES" +
-      "_COMPACTIONS\020\002\022\r\n\tNO_WRITES\020\003\022\016\n\nNO_INSE" +
-      "RTS\020\004BH\n1org.apache.hadoop.hbase.shaded." +
-      "protobuf.generatedB\013QuotaProtosH\001\210\001\001\240\001\001"
+      "ta\030\001 \001(\0132\024.hbase.pb.SpaceQuota\"b\n\020SpaceQ" +
+      "uotaStatus\0228\n\020violation_policy\030\001 \001(\0162\036.h" +
+      "base.pb.SpaceViolationPolicy\022\024\n\014in_viola" +
+      "tion\030\002 \001(\010\"p\n\022SpaceQuotaSnapshot\0220\n\014quot" +
+      "a_status\030\001 \001(\0132\032.hbase.pb.SpaceQuotaStat" +
+      "us\022\023\n\013quota_usage\030\002 \001(\004\022\023\n\013quota_limit\030\003" +
+      " \001(\004\"!\n\037GetSpaceQuotaRegionSizesRequest\"" +
+      "\257\001\n GetSpaceQuotaRegionSizesResponse\022E\n\005" +
+      "sizes\030\001 \003(\01326.hbase.pb.GetSpaceQuotaRegi" +
+      "onSizesResponse.RegionSizes\032D\n\013RegionSiz",
+      "es\022\'\n\ntable_name\030\001 \001(\0132\023.hbase.pb.TableN" +
+      "ame\022\014\n\004size\030\002 \001(\004\"\037\n\035GetSpaceQuotaSnapsh" +
+      "otsRequest\"\337\001\n\036GetSpaceQuotaSnapshotsRes" +
+      "ponse\022N\n\tsnapshots\030\001 \003(\0132;.hbase.pb.GetS" +
+      "paceQuotaSnapshotsResponse.TableQuotaSna" +
+      "pshot\032m\n\022TableQuotaSnapshot\022\'\n\ntable_nam" +
+      "e\030\001 \001(\0132\023.hbase.pb.TableName\022.\n\010snapshot" +
+      "\030\002 \001(\0132\034.hbase.pb.SpaceQuotaSnapshot\"\"\n " +
+      "GetSpaceQuotaEnforcementsRequest\"\374\001\n!Get" +
+      "SpaceQuotaEnforcementsResponse\022\\\n\022violat",
+      "ion_policies\030\001 \003(\0132@.hbase.pb.GetSpaceQu" +
+      "otaEnforcementsResponse.TableViolationPo" +
+      "licy\032y\n\024TableViolationPolicy\022\'\n\ntable_na" +
+      "me\030\001 \001(\0132\023.hbase.pb.TableName\0228\n\020violati" +
+      "on_policy\030\002 \001(\0162\036.hbase.pb.SpaceViolatio" +
+      "nPolicy\"\027\n\025GetQuotaStatesRequest\"\201\003\n\026Get" +
+      "QuotaStatesResponse\022L\n\017table_snapshots\030\001" +
+      " \003(\01323.hbase.pb.GetQuotaStatesResponse.T" +
+      "ableQuotaSnapshot\022M\n\014ns_snapshots\030\002 \003(\0132" +
+      "7.hbase.pb.GetQuotaStatesResponse.Namesp",
+      "aceQuotaSnapshot\032m\n\022TableQuotaSnapshot\022\'" +
+      "\n\ntable_name\030\001 \001(\0132\023.hbase.pb.TableName\022" +
+      ".\n\010snapshot\030\002 \001(\0132\034.hbase.pb.SpaceQuotaS" +
+      "napshot\032[\n\026NamespaceQuotaSnapshot\022\021\n\tnam" +
+      "espace\030\001 \001(\t\022.\n\010snapshot\030\002 \001(\0132\034.hbase.p" +
+      "b.SpaceQuotaSnapshot*&\n\nQuotaScope\022\013\n\007CL" +
+      "USTER\020\001\022\013\n\007MACHINE\020\002*v\n\014ThrottleType\022\022\n\016" +
+      "REQUEST_NUMBER\020\001\022\020\n\014REQUEST_SIZE\020\002\022\020\n\014WR" +
+      "ITE_NUMBER\020\003\022\016\n\nWRITE_SIZE\020\004\022\017\n\013READ_NUM" +
+      "BER\020\005\022\r\n\tREAD_SIZE\020\006*$\n\tQuotaType\022\014\n\010THR",
+      "OTTLE\020\001\022\t\n\005SPACE\020\002*]\n\024SpaceViolationPoli" +
+      "cy\022\013\n\007DISABLE\020\001\022\031\n\025NO_WRITES_COMPACTIONS" +
+      "\020\002\022\r\n\tNO_WRITES\020\003\022\016\n\nNO_INSERTS\020\004BH\n1org" +
+      ".apache.hadoop.hbase.shaded.protobuf.gen" +
+      "eratedB\013QuotaProtosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -16293,13 +16294,13 @@ public final class QuotaProtos {
     internal_static_hbase_pb_SpaceQuotaStatus_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SpaceQuotaStatus_descriptor,
-        new java.lang.String[] { "Policy", "InViolation", });
+        new java.lang.String[] { "ViolationPolicy", "InViolation", });
     internal_static_hbase_pb_SpaceQuotaSnapshot_descriptor =
       getDescriptor().getMessageTypes().get(8);
     internal_static_hbase_pb_SpaceQuotaSnapshot_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SpaceQuotaSnapshot_descriptor,
-        new java.lang.String[] { "Status", "Usage", "Limit", });
+        new java.lang.String[] { "QuotaStatus", "QuotaUsage", "QuotaLimit", });
     internal_static_hbase_pb_GetSpaceQuotaRegionSizesRequest_descriptor =
       getDescriptor().getMessageTypes().get(9);
     internal_static_hbase_pb_GetSpaceQuotaRegionSizesRequest_fieldAccessorTable = new

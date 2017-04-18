@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.client.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.quotas.policies.BulkLoadVerifyingViolationPolicyEnforcement;
+import org.apache.hadoop.hbase.quotas.policies.DefaultViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -108,29 +108,17 @@ public class TestSpaceQuotas {
   @Before
   public void removeAllQuotas() throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
+    if (helper == null) {
+      helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
+    }
     // Wait for the quota table to be created
     if (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)) {
-      do {
-        LOG.debug("Quota table does not yet exist");
-        Thread.sleep(1000);
-      } while (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME));
+      helper.waitForQuotaTable(conn);
     } else {
       // Or, clean up any quotas from previous test runs.
-      QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration());
-      for (QuotaSettings quotaSettings : scanner) {
-        final String namespace = quotaSettings.getNamespace();
-        final TableName tableName = quotaSettings.getTableName();
-        if (null != namespace) {
-          LOG.debug("Deleting quota for namespace: " + namespace);
-          QuotaUtil.deleteNamespaceQuota(conn, namespace);
-        } else {
-          assert null != tableName;
-          LOG.debug("Deleting quota for table: "+ tableName);
-          QuotaUtil.deleteTableQuota(conn, tableName);
-        }
-      }
+      helper.removeAllQuotas(conn);
+      assertEquals(0, helper.listNumDefinedQuotas(conn));
     }
-    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
   }
 
   @Test
@@ -285,7 +273,7 @@ public class TestSpaceQuotas {
     Map<HRegionInfo,Long> regionSizes = getReportedSizesForTable(tn);
     while (true) {
       SpaceQuotaSnapshot snapshot = snapshots.get(tn);
-      if (null != snapshot && snapshot.getLimit() > 0) {
+      if (snapshot != null && snapshot.getLimit() > 0) {
         break;
       }
       LOG.debug(
@@ -305,7 +293,7 @@ public class TestSpaceQuotas {
     SpaceViolationPolicyEnforcement enforcement = activePolicies.getPolicyEnforcement(tn);
     assertTrue(
         "Expected to find Noop policy, but got " + enforcement.getClass().getSimpleName(),
-        enforcement instanceof BulkLoadVerifyingViolationPolicyEnforcement);
+        enforcement instanceof DefaultViolationPolicyEnforcement);
 
     // Should generate two files, each of which is over 25KB each
     ClientServiceCallable<Void> callable = generateFileToLoad(tn, 2, 500);

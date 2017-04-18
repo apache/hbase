@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -28,7 +29,12 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 /**
  * A class to ease dealing with tables that have and do not have violation policies
- * being enforced in a uniform manner. Immutable.
+ * being enforced. This class is immutable, expect for {@code locallyCachedPolicies}.
+ *
+ * The {@code locallyCachedPolicies} are mutable given the current {@code activePolicies}
+ * and {@code snapshots}. It is expected that when a new instance of this class is
+ * instantiated, we also want to invalidate those previously cached policies (as they
+ * may now be invalidate if we received new quota usage information).
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -36,12 +42,23 @@ public class ActivePolicyEnforcement {
   private final Map<TableName,SpaceViolationPolicyEnforcement> activePolicies;
   private final Map<TableName,SpaceQuotaSnapshot> snapshots;
   private final RegionServerServices rss;
+  private final SpaceViolationPolicyEnforcementFactory factory;
+  private final Map<TableName,SpaceViolationPolicyEnforcement> locallyCachedPolicies;
 
   public ActivePolicyEnforcement(Map<TableName,SpaceViolationPolicyEnforcement> activePolicies,
       Map<TableName,SpaceQuotaSnapshot> snapshots, RegionServerServices rss) {
+    this(activePolicies, snapshots, rss, SpaceViolationPolicyEnforcementFactory.getInstance());
+  }
+
+  public ActivePolicyEnforcement(Map<TableName,SpaceViolationPolicyEnforcement> activePolicies,
+      Map<TableName,SpaceQuotaSnapshot> snapshots, RegionServerServices rss,
+      SpaceViolationPolicyEnforcementFactory factory) {
     this.activePolicies = activePolicies;
     this.snapshots = snapshots;
     this.rss = rss;
+    this.factory = factory;
+    // Mutable!
+    this.locallyCachedPolicies = new HashMap<>();
   }
 
   /**
@@ -65,16 +82,25 @@ public class ActivePolicyEnforcement {
    */
   public SpaceViolationPolicyEnforcement getPolicyEnforcement(TableName tableName) {
     SpaceViolationPolicyEnforcement policy = activePolicies.get(Objects.requireNonNull(tableName));
-    if (null == policy) {
-      synchronized (activePolicies) {
-        // If we've never seen a snapshot, assume no use, and infinite limit
-        SpaceQuotaSnapshot snapshot = snapshots.get(tableName);
-        if (null == snapshot) {
-          snapshot = SpaceQuotaSnapshot.getNoSuchSnapshot();
+    if (policy == null) {
+      synchronized (locallyCachedPolicies) {
+        // When we don't have an policy enforcement for the table, there could be one of two cases:
+        //  1) The table has no quota defined
+        //  2) The table is not in violation of its quota
+        // In both of these cases, we want to make sure that access remains fast and we minimize
+        // object creation. We can accomplish this by locally caching policies instead of creating
+        // a new instance of the policy each time.
+        policy = locallyCachedPolicies.get(tableName);
+        // We have already created/cached the enforcement, use it again. `activePolicies` and
+        // `snapshots` are immutable, thus this policy is valid for the lifetime of `this`.
+        if (policy != null) {
+          return policy;
         }
-        // Create the default policy and cache it
-        return SpaceViolationPolicyEnforcementFactory.getInstance().createWithoutViolation(
-            rss, tableName, snapshot);
+        // Create a PolicyEnforcement for this table and snapshot. The snapshot may be null
+        // which is OK.
+        policy = factory.createWithoutViolation(rss, tableName, snapshots.get(tableName));
+        // Cache the policy we created
+        locallyCachedPolicies.put(tableName, policy);
       }
     }
     return policy;
@@ -85,6 +111,14 @@ public class ActivePolicyEnforcement {
    */
   public Map<TableName,SpaceViolationPolicyEnforcement> getPolicies() {
     return Collections.unmodifiableMap(activePolicies);
+  }
+
+  /**
+   * Returns an unmodifiable version of the policy enforcements that were cached because they are
+   * not in violation of their quota.
+   */
+  Map<TableName,SpaceViolationPolicyEnforcement> getLocallyCachedPolicies() {
+    return Collections.unmodifiableMap(locallyCachedPolicies);
   }
 
   @Override

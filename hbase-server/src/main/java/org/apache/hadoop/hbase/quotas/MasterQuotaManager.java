@@ -580,19 +580,19 @@ public class MasterQuotaManager implements RegionStateListener {
 
   @VisibleForTesting
   void initializeRegionSizes() {
-    assert null == regionSizes;
+    assert regionSizes == null;
     this.regionSizes = new ConcurrentHashMap<>();
   }
 
   public void addRegionSize(HRegionInfo hri, long size, long time) {
-    if (null == regionSizes) {
+    if (regionSizes == null) {
       return;
     }
     regionSizes.put(hri, new SizeSnapshotWithTimestamp(size, time));
   }
 
   public Map<HRegionInfo, Long> snapshotRegionSizes() {
-    if (null == regionSizes) {
+    if (regionSizes == null) {
       return EMPTY_MAP;
     }
 
@@ -604,7 +604,7 @@ public class MasterQuotaManager implements RegionStateListener {
   }
 
   int pruneEntriesOlderThan(long timeToPruneBefore) {
-    if (null == regionSizes) {
+    if (regionSizes == null) {
       return 0;
     }
     int numEntriesRemoved = 0;

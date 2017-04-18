@@ -36,7 +36,8 @@ public class SpaceQuotaSnapshot {
 
   /**
    * Encapsulates the state of a quota on a table. The quota may or may not be in violation.
-   * If it is in violation, there will be a non-null violation policy.
+   * If the quota is not in violation, the violation may be null. If the quota is in violation,
+   * there is guaranteed to be a non-null violation policy.
    */
   @InterfaceAudience.Private
   public static class SpaceQuotaStatus {
@@ -44,9 +45,17 @@ public class SpaceQuotaSnapshot {
     final SpaceViolationPolicy policy;
     final boolean inViolation;
 
+    /**
+     * Constructs a {@code SpaceQuotaSnapshot} which is in violation of the provided {@code policy}.
+     *
+     * Use {@link #notInViolation()} to obtain an instance of this class for the cases when the
+     * quota is not in violation.
+     *
+     * @param policy The non-null policy being violated.
+     */
     public SpaceQuotaStatus(SpaceViolationPolicy policy) {
-      this.policy = Objects.requireNonNull(policy);
-      this.inViolation = true;
+      // If the caller is instantiating a status, the policy must be non-null
+      this (Objects.requireNonNull(policy), true);
     }
 
     private SpaceQuotaStatus(SpaceViolationPolicy policy, boolean inViolation) {
@@ -55,16 +64,15 @@ public class SpaceQuotaSnapshot {
     }
 
     /**
-     * The violation policy which may be null. Is guaranteed to be non-null if
-     * {@link #isInViolation()} is <code>true</code>, and <code>false</code>
-     * otherwise.
+     * Returns the violation policy, which may be null. It is guaranteed to be non-null if
+     * {@link #isInViolation()} is {@code true}, but may be null otherwise.
      */
     public SpaceViolationPolicy getPolicy() {
       return policy;
     }
 
     /**
-     * <code>true</code> if the quota is being violated, <code>false</code> otherwise.
+     * @return {@code true} if the quota is being violated, {@code false} otherwise.
      */
     public boolean isInViolation() {
       return inViolation;
@@ -104,14 +112,14 @@ public class SpaceQuotaSnapshot {
       QuotaProtos.SpaceQuotaStatus.Builder builder = QuotaProtos.SpaceQuotaStatus.newBuilder();
       builder.setInViolation(status.inViolation);
       if (status.isInViolation()) {
-        builder.setPolicy(ProtobufUtil.toProtoViolationPolicy(status.getPolicy()));
+        builder.setViolationPolicy(ProtobufUtil.toProtoViolationPolicy(status.getPolicy()));
       }
       return builder.build();
     }
 
     public static SpaceQuotaStatus toStatus(QuotaProtos.SpaceQuotaStatus proto) {
       if (proto.getInViolation()) {
-        return new SpaceQuotaStatus(ProtobufUtil.toViolationPolicy(proto.getPolicy()));
+        return new SpaceQuotaStatus(ProtobufUtil.toViolationPolicy(proto.getViolationPolicy()));
       } else {
         return NOT_IN_VIOLATION;
       }
@@ -173,14 +181,14 @@ public class SpaceQuotaSnapshot {
 
   // ProtobufUtil is in hbase-client, and this doesn't need to be public.
   public static SpaceQuotaSnapshot toSpaceQuotaSnapshot(QuotaProtos.SpaceQuotaSnapshot proto) {
-    return new SpaceQuotaSnapshot(SpaceQuotaStatus.toStatus(proto.getStatus()),
-        proto.getUsage(), proto.getLimit());
+    return new SpaceQuotaSnapshot(SpaceQuotaStatus.toStatus(proto.getQuotaStatus()),
+        proto.getQuotaUsage(), proto.getQuotaLimit());
   }
 
   public static QuotaProtos.SpaceQuotaSnapshot toProtoSnapshot(SpaceQuotaSnapshot snapshot) {
     return QuotaProtos.SpaceQuotaSnapshot.newBuilder()
-        .setStatus(SpaceQuotaStatus.toProto(snapshot.getQuotaStatus()))
-        .setUsage(snapshot.getUsage()).setLimit(snapshot.getLimit()).build();
+        .setQuotaStatus(SpaceQuotaStatus.toProto(snapshot.getQuotaStatus()))
+        .setQuotaUsage(snapshot.getUsage()).setQuotaLimit(snapshot.getLimit()).build();
   }
 
   /**

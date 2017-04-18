@@ -69,6 +69,8 @@ public class MetricsMaster {
 
   /**
    * Sets the number of space quotas defined.
+   *
+   * @see MetricsMasterQuotaSource#updateNumSpaceQuotas(long)
    */
   public void setNumSpaceQuotas(final long numSpaceQuotas) {
     masterQuotaSource.updateNumSpaceQuotas(numSpaceQuotas);
@@ -76,6 +78,8 @@ public class MetricsMaster {
 
   /**
    * Sets the number of table in violation of a space quota.
+   *
+   * @see MetricsMasterQuotaSource#updateNumTablesInSpaceQuotaViolation(long)
    */
   public void setNumTableInSpaceQuotaViolation(final long numTablesInViolation) {
     masterQuotaSource.updateNumTablesInSpaceQuotaViolation(numTablesInViolation);
@@ -83,13 +87,17 @@ public class MetricsMaster {
 
   /**
    * Sets the number of namespaces in violation of a space quota.
+   *
+   * @see MetricsMasterQuotaSource#updateNumNamespacesInSpaceQuotaViolation(long)
    */
   public void setNumNamespacesInSpaceQuotaViolation(final long numNamespacesInViolation) {
     masterQuotaSource.updateNumNamespacesInSpaceQuotaViolation(numNamespacesInViolation);
   }
 
   /**
-   * Sets the number of region size reports the master has seen.
+   * Sets the number of region size reports the master currently has in memory.
+   *
+   * @see MetricsMasterQuotaSource#updateNumCurrentSpaceQuotaRegionSizeReports(long)
    */
   public void setNumRegionSizeReports(final long numRegionReports) {
     masterQuotaSource.updateNumCurrentSpaceQuotaRegionSizeReports(numRegionReports);
@@ -97,6 +105,9 @@ public class MetricsMaster {
 
   /**
    * Sets the execution time of a period of the QuotaObserverChore.
+   *
+   * @param executionTime The execution time in milliseconds.
+   * @see MetricsMasterQuotaSource#incrementSpaceQuotaObserverChoreTime(long)
    */
   public void incrementQuotaObserverTime(final long executionTime) {
     masterQuotaSource.incrementSpaceQuotaObserverChoreTime(executionTime);

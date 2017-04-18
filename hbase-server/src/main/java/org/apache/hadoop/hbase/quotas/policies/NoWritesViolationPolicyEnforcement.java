@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
  * into HBase. The enforcement counterpart to {@link SpaceViolationPolicy#NO_WRITES}.
  */
 @InterfaceAudience.Private
-public class NoWritesViolationPolicyEnforcement extends AbstractViolationPolicyEnforcement {
+public class NoWritesViolationPolicyEnforcement extends DefaultViolationPolicyEnforcement {
 
   @Override
   public void enable() {}

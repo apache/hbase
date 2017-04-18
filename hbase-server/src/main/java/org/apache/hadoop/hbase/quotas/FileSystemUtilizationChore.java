@@ -81,7 +81,7 @@ public class FileSystemUtilizationChore extends ScheduledChore {
     Iterator<Region> oldRegionsToProcess = getLeftoverRegions();
     final Iterator<Region> iterator;
     final boolean processingLeftovers;
-    if (null == oldRegionsToProcess) {
+    if (oldRegionsToProcess == null) {
       iterator = onlineRegions.iterator();
       processingLeftovers = false;
     } else {
@@ -179,6 +179,8 @@ public class FileSystemUtilizationChore extends ScheduledChore {
    * Reports the computed region sizes to the currently active Master.
    *
    * @param onlineRegionSizes The computed region sizes to report.
+   * @return {@code false} if FileSystemUtilizationChore should pause reporting to master,
+   *    {@code true} otherwise.
    */
   boolean reportRegionSizesToMaster(Map<HRegionInfo,Long> onlineRegionSizes) {
     return this.rs.reportRegionSizesForQuotas(onlineRegionSizes);

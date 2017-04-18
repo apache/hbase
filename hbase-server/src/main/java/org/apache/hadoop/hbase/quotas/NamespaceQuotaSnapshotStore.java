@@ -57,7 +57,7 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
   @Override
   public SpaceQuota getSpaceQuota(String namespace) throws IOException {
     Quotas quotas = getQuotaForNamespace(namespace);
-    if (null != quotas && quotas.hasSpace()) {
+    if (quotas != null && quotas.hasSpace()) {
       return quotas.getSpace();
     }
     return null;

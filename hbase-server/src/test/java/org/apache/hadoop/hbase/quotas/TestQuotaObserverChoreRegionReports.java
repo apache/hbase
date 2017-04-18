@@ -90,7 +90,7 @@ public class TestQuotaObserverChoreRegionReports {
     final String FAM1 = "f1";
     final HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     // Wait for the master to finish initialization.
-    while (null == master.getMasterQuotaManager()) {
+    while (master.getMasterQuotaManager() == null) {
       LOG.debug("MasterQuotaManager is null, waiting...");
       Thread.sleep(500);
     }
@@ -170,7 +170,7 @@ public class TestQuotaObserverChoreRegionReports {
       @Override
       public boolean evaluate() throws Exception {
         SpaceQuotaSnapshot snapshot = getSnapshotForTable(conn, tn);
-        if (null == snapshot) {
+        if (snapshot == null) {
           return false;
         }
         return snapshot.getQuotaStatus().isInViolation();
@@ -188,7 +188,7 @@ public class TestQuotaObserverChoreRegionReports {
       @Override
       public boolean evaluate() throws Exception {
         SpaceQuotaSnapshot snapshot = getSnapshotForTable(conn, tn);
-        if (null == snapshot) {
+        if (snapshot == null) {
           return false;
         }
         return !snapshot.getQuotaStatus().isInViolation();

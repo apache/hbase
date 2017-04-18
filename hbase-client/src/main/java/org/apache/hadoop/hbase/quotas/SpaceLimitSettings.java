@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 
 /**
- * A {@link QuotaSettings} implementation for implementing filesystem-use quotas.
+ * A {@link QuotaSettings} implementation for configuring filesystem-use quotas.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -38,33 +38,33 @@ class SpaceLimitSettings extends QuotaSettings {
 
   SpaceLimitSettings(TableName tableName, long sizeLimit, SpaceViolationPolicy violationPolicy) {
     super(null, Objects.requireNonNull(tableName), null);
-    if (0L > sizeLimit) {
+    if (sizeLimit < 0L) {
       throw new IllegalArgumentException("Size limit must be a non-negative value.");
     }
     proto = buildProtoAddQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
   }
 
-  SpaceLimitSettings(TableName tableName, boolean remove) {
+  /**
+   * Constructs a {@code SpaceLimitSettings} to remove a space quota on the given {@code tableName}.
+   */
+  SpaceLimitSettings(TableName tableName) {
     super(null, Objects.requireNonNull(tableName), null);
-    if (!remove) {
-      throw new IllegalArgumentException("A value of 'false' for removing a quota makes no sense");
-    }
     proto = buildProtoRemoveQuota();
   }
 
   SpaceLimitSettings(String namespace, long sizeLimit, SpaceViolationPolicy violationPolicy) {
     super(null, null, Objects.requireNonNull(namespace));
-    if (0L > sizeLimit) {
+    if (sizeLimit < 0L) {
       throw new IllegalArgumentException("Size limit must be a non-negative value.");
     }
     proto = buildProtoAddQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
   }
 
-  SpaceLimitSettings(String namespace, boolean remove) {
+  /**
+   * Constructs a {@code SpaceLimitSettings} to remove a space quota on the given {@code namespace}.
+   */
+  SpaceLimitSettings(String namespace) {
     super(null, null, Objects.requireNonNull(namespace));
-    if (!remove) {
-      throw new IllegalArgumentException("A value of 'false' for removing a quota makes no sense");
-    }
     proto = buildProtoRemoveQuota();
   }
 
@@ -183,10 +183,10 @@ class SpaceLimitSettings extends QuotaSettings {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("TYPE => SPACE");
-    if (null != getTableName()) {
+    if (getTableName() != null) {
       sb.append(", TABLE => ").append(getTableName());
     }
-    if (null != getNamespace()) {
+    if (getNamespace() != null) {
       sb.append(", NAMESPACE => ").append(getNamespace());
     }
     if (proto.getQuota().getRemove()) {

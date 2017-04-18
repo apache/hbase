@@ -28,7 +28,7 @@ public class MetricsMasterQuotaSourceFactoryImpl implements MetricsMasterQuotaSo
 
   @Override
   public synchronized MetricsMasterQuotaSource create(MetricsMasterWrapper masterWrapper) {
-    if (null == quotaSource) {
+    if (quotaSource == null) {
       quotaSource = new MetricsMasterQuotaSourceImpl(masterWrapper);
     }
     return quotaSource;

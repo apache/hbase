@@ -58,7 +58,7 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
   @Override
   public SpaceQuota getSpaceQuota(TableName subject) throws IOException {
     Quotas quotas = getQuotaForTable(subject);
-    if (null != quotas && quotas.hasSpace()) {
+    if (quotas != null && quotas.hasSpace()) {
       return quotas.getSpace();
     }
     return null;

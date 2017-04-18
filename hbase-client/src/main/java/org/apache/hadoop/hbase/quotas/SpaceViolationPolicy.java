@@ -21,6 +21,9 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Enumeration that represents the action HBase will take when a space quota is violated.
+ *
+ * The target for a violation policy is either an HBase table or namespace. In the case of a
+ * namespace, it is treated as a collection of tables (all tables are subject to the same policy).
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -40,5 +43,5 @@ public enum SpaceViolationPolicy {
   /**
    * Disallows any updates (but allows deletes and compactions) on the table(s).
    */
-  NO_INSERTS,
+  NO_INSERTS;
 }

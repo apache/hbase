@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.rules.TestName;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 
 @InterfaceAudience.Private
@@ -68,6 +70,64 @@ public class SpaceQuotaHelperForTests {
   //
   // Helpers
   //
+
+  /**
+   * Returns the number of quotas defined in the HBase quota table.
+   */
+  long listNumDefinedQuotas(Connection conn) throws IOException {
+    QuotaRetriever scanner = QuotaRetriever.open(conn.getConfiguration());
+    try {
+      return Iterables.size(scanner);
+    } finally {
+      if (scanner != null) {
+        scanner.close();
+      }
+    }
+  }
+
+  /**
+   * Removes all quotas defined in the HBase quota table.
+   */
+  void removeAllQuotas(Connection conn) throws IOException {
+    QuotaRetriever scanner = QuotaRetriever.open(conn.getConfiguration());
+    try {
+      for (QuotaSettings quotaSettings : scanner) {
+        final String namespace = quotaSettings.getNamespace();
+        final TableName tableName = quotaSettings.getTableName();
+        if (namespace != null) {
+          LOG.debug("Deleting quota for namespace: " + namespace);
+          QuotaUtil.deleteNamespaceQuota(conn, namespace);
+        } else {
+          assert tableName != null;
+          LOG.debug("Deleting quota for table: "+ tableName);
+          QuotaUtil.deleteTableQuota(conn, tableName);
+        }
+      }
+    } finally {
+      if (scanner != null) {
+        scanner.close();
+      }
+    }
+  }
+
+  /**
+   * Waits 30seconds for the HBase quota table to exist.
+   */
+  void waitForQuotaTable(Connection conn) throws IOException {
+    waitForQuotaTable(conn, 30_000);
+  }
+
+  /**
+   * Waits {@code timeout} milliseconds for the HBase quota table to exist.
+   */
+  void waitForQuotaTable(Connection conn, long timeout) throws IOException {
+    testUtil.waitFor(timeout, 1000, new Predicate<IOException>() {
+      @Override
+      public boolean evaluate() throws IOException {
+        return conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME);
+      }
+    });
+  }
 
   void writeData(TableName tn, long sizeInBytes) throws IOException {
     final Connection conn = testUtil.getConnection();
@@ -213,14 +273,14 @@ public class SpaceQuotaHelperForTests {
     for (Entry<TableName, QuotaSettings> entry : quotas.entries()) {
       SpaceLimitSettings settings = (SpaceLimitSettings) entry.getValue();
       TableName tn = entry.getKey();
-      if (null != settings.getTableName()) {
+      if (settings.getTableName() != null) {
         tablesWithTableQuota.add(tn);
       }
-      if (null != settings.getNamespace()) {
+      if (settings.getNamespace() != null) {
         tablesWithNamespaceQuota.add(tn);
       }
 
-      if (null == settings.getTableName() && null == settings.getNamespace()) {
+      if (settings.getTableName() == null && settings.getNamespace() == null) {
         fail("Unexpected table name with null tableName and namespace: " + tn);
       }
     }

@@ -39,7 +39,7 @@ public class SpaceLimitingException extends QuotaExceededException {
 
     // Hack around ResponseConverter expecting to invoke a single-arg String constructor
     // on this class
-    if (null != msg) {
+    if (msg != null) {
       for (SpaceViolationPolicy definedPolicy : SpaceViolationPolicy.values()) {
         if (msg.indexOf(definedPolicy.name()) != -1) {
           policyName = definedPolicy.name();
@@ -74,7 +74,7 @@ public class SpaceLimitingException extends QuotaExceededException {
     // exists. Best effort... Looks something like:
     // "org.apache.hadoop.hbase.quotas.SpaceLimitingException: NO_INSERTS A Put is disallowed due
     // to a space quota."
-    if (null != originalMessage && originalMessage.startsWith(MESSAGE_PREFIX)) {
+    if (originalMessage != null && originalMessage.startsWith(MESSAGE_PREFIX)) {
       // If it starts with the class name, rip off the policy too.
       try {
         int index = originalMessage.indexOf(' ', MESSAGE_PREFIX.length());
@@ -90,6 +90,6 @@ public class SpaceLimitingException extends QuotaExceededException {
 
   @Override
   public String getMessage() {
-    return (null == policyName ? "(unknown policy)" : policyName) + " " + super.getMessage();
+    return (policyName == null ? "(unknown policy)" : policyName) + " " + super.getMessage();
   }
 }

@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
  * counterpart to {@link SpaceViolationPolicy#DISABLE}.
  */
 @InterfaceAudience.Private
-public class DisableTableViolationPolicyEnforcement extends AbstractViolationPolicyEnforcement {
+public class DisableTableViolationPolicyEnforcement extends DefaultViolationPolicyEnforcement {
   private static final Log LOG = LogFactory.getLog(DisableTableViolationPolicyEnforcement.class);
 
   @Override

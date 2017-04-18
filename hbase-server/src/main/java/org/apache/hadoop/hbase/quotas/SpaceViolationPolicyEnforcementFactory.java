@@ -20,8 +20,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
-import org.apache.hadoop.hbase.quotas.policies.BulkLoadVerifyingViolationPolicyEnforcement;
+import org.apache.hadoop.hbase.quotas.policies.DefaultViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.quotas.policies.DisableTableViolationPolicyEnforcement;
+import org.apache.hadoop.hbase.quotas.policies.MissingSnapshotViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.quotas.policies.NoInsertsViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.quotas.policies.NoWritesCompactionsViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.quotas.policies.NoWritesViolationPolicyEnforcement;
@@ -79,16 +80,29 @@ public class SpaceViolationPolicyEnforcementFactory {
 
   /**
    * Creates the "default" {@link SpaceViolationPolicyEnforcement} for a table that isn't in
-   * violation. This is used to have uniform policy checking for tables in and not quotas.
+   * violation. This is used to have uniform policy checking for tables in and not quotas. This
+   * policy will still verify that new bulk loads do not exceed the configured quota limit.
+   *
+   * @param rss RegionServerServices instance the policy enforcement should use.
+   * @param tableName The target HBase table.
+   * @param snapshot The current quota snapshot for the {@code tableName}, can be null.
    */
   public SpaceViolationPolicyEnforcement createWithoutViolation(
       RegionServerServices rss, TableName tableName, SpaceQuotaSnapshot snapshot) {
+    if (snapshot == null) {
+      // If we have no snapshot, this is equivalent to no quota for this table.
+      // We should do use the (singleton instance) of this policy to do nothing.
+      return MissingSnapshotViolationPolicyEnforcement.getInstance();
+    }
+    // We have a snapshot which means that there is a quota set on this table, but it's not in
+    // violation of that quota. We need to construct a policy for this table.
     SpaceQuotaStatus status = snapshot.getQuotaStatus();
     if (status.isInViolation()) {
       throw new IllegalArgumentException(
           tableName + " is in violation. Logic error. Snapshot=" + snapshot);
     }
-    BulkLoadVerifyingViolationPolicyEnforcement enforcement = new BulkLoadVerifyingViolationPolicyEnforcement();
+    // We have a unique size snapshot to use. Create an instance for this tablename + snapshot.
+    DefaultViolationPolicyEnforcement enforcement = new DefaultViolationPolicyEnforcement();
     enforcement.initialize(rss, tableName, snapshot);
     return enforcement;
   }

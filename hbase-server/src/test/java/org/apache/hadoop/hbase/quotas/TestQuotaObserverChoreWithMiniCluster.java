@@ -95,35 +95,24 @@ public class TestQuotaObserverChoreWithMiniCluster {
   @Before
   public void removeAllQuotas() throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
+    if (helper == null) {
+      helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
+    }
     // Wait for the quota table to be created
     if (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)) {
-      do {
-        LOG.debug("Quota table does not yet exist");
-        Thread.sleep(DEFAULT_WAIT_MILLIS);
-      } while (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME));
+      helper.waitForQuotaTable(conn);
     } else {
       // Or, clean up any quotas from previous test runs.
-      QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration());
-      for (QuotaSettings quotaSettings : scanner) {
-        final String namespace = quotaSettings.getNamespace();
-        final TableName tableName = quotaSettings.getTableName();
-        if (null != namespace) {
-          LOG.debug("Deleting quota for namespace: " + namespace);
-          QuotaUtil.deleteNamespaceQuota(conn, namespace);
-        } else {
-          assert null != tableName;
-          LOG.debug("Deleting quota for table: "+ tableName);
-          QuotaUtil.deleteTableQuota(conn, tableName);
-        }
-      }
+      helper.removeAllQuotas(conn);
+      assertEquals(0, helper.listNumDefinedQuotas(conn));
     }
 
     master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     snapshotNotifier =
         (SpaceQuotaSnapshotNotifierForTest) master.getSpaceQuotaSnapshotNotifier();
+    assertNotNull(snapshotNotifier);
     snapshotNotifier.clearSnapshots();
     chore = master.getQuotaObserverChore();
-    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
   }
 
   @Test
@@ -382,7 +371,7 @@ public class TestQuotaObserverChoreWithMiniCluster {
       @Override
       int getNumReportedRegions(TableName table, QuotaSnapshotStore<TableName> tableStore) {
         Integer i = mockReportedRegions.get(table);
-        if (null == i) {
+        if (i == null) {
           return 0;
         }
         return i;
@@ -424,10 +413,10 @@ public class TestQuotaObserverChoreWithMiniCluster {
           qs instanceof SpaceLimitSettings);
 
       SpaceQuota spaceQuota = null;
-      if (null != qs.getTableName()) {
+      if (qs.getTableName() != null) {
         spaceQuota = chore.getTableSnapshotStore().getSpaceQuota(table);
         assertNotNull("Could not find table space quota for " + table, spaceQuota);
-      } else if (null != qs.getNamespace()) {
+      } else if (qs.getNamespace() != null) {
         spaceQuota = chore.getNamespaceSnapshotStore().getSpaceQuota(table.getNamespaceAsString());
         assertNotNull("Could not find namespace space quota for " + table.getNamespaceAsString(), spaceQuota);
       } else {

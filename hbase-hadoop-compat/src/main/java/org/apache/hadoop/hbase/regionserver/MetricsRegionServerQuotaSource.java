@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 
 /**
- * A collection of exposed metrics for HBase quotas from an HBase RegionServer.
+ * A collection of exposed metrics for space quotas from an HBase RegionServer.
  */
 public interface MetricsRegionServerQuotaSource extends BaseSource {
 
@@ -37,18 +37,24 @@ public interface MetricsRegionServerQuotaSource extends BaseSource {
   /**
    * Updates the metric tracking how many tables this RegionServer has received
    * {@code SpaceQuotaSnapshot}s for.
+   *
+   * @param numSnapshots The number of {@code SpaceQuotaSnapshot}s received from the Master.
    */
   void updateNumTableSpaceQuotaSnapshots(long numSnapshots);
 
   /**
    * Updates the metric tracking how much time was spent scanning the filesystem to compute
    * the size of each region hosted by this RegionServer.
+   *
+   * @param time The execution time of the chore in milliseconds.
    */
   void incrementSpaceQuotaFileSystemScannerChoreTime(long time);
 
   /**
    * Updates the metric tracking how much time was spent updating the RegionServer with the
-   * lastest information on space quotas from the {@code hbase:quota} table.
+   * latest information on space quotas from the {@code hbase:quota} table.
+   *
+   * @param time The execution time of the chore in milliseconds.
    */
   void incrementSpaceQuotaRefresherChoreTime(long time);
 }

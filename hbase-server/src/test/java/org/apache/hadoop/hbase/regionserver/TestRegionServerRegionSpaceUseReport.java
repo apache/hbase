@@ -63,11 +63,11 @@ public class TestRegionServerRegionSpaceUseReport {
     RegionSpaceUseReportRequest requests = rs.buildRegionSpaceUseReportRequest(sizes);
     assertEquals(sizes.size(), requests.getSpaceUseCount());
     for (RegionSpaceUse spaceUse : requests.getSpaceUseList()) {
-      RegionInfo ri = spaceUse.getRegion();
+      RegionInfo ri = spaceUse.getRegionInfo();
       HRegionInfo hri = HRegionInfo.convert(ri);
       Long expectedSize = sizes.remove(hri);
       assertNotNull("Could not find size for HRI: " + hri, expectedSize);
-      assertEquals(expectedSize.longValue(), spaceUse.getSize());
+      assertEquals(expectedSize.longValue(), spaceUse.getRegionSize());
     }
     assertTrue("Should not have any space use entries left: " + sizes, sizes.isEmpty());
   }

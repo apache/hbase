@@ -133,7 +133,7 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
    * @return true if the snapshot is in violation, false otherwise.
    */
   boolean isInViolation(SpaceQuotaSnapshot snapshot) {
-    if (null == snapshot) {
+    if (snapshot == null) {
       return false;
     }
     return snapshot.getQuotaStatus().isInViolation();

@@ -68,10 +68,10 @@ public class TestTableSpaceQuotaViolationNotifier {
 
     final Put expectedPut = new Put(Bytes.toBytes("t." + tn.getNameAsString()));
     final QuotaProtos.SpaceQuotaSnapshot protoQuota = QuotaProtos.SpaceQuotaSnapshot.newBuilder()
-        .setStatus(QuotaProtos.SpaceQuotaStatus.newBuilder().setInViolation(true).setPolicy(
-            org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy.NO_INSERTS))
-        .setLimit(512L)
-        .setUsage(1024L)
+        .setQuotaStatus(QuotaProtos.SpaceQuotaStatus.newBuilder().setInViolation(true)
+        .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.NO_INSERTS))
+        .setQuotaLimit(512L)
+        .setQuotaUsage(1024L)
         .build();
     expectedPut.addColumn(Bytes.toBytes("u"), Bytes.toBytes("p"), protoQuota.toByteArray());
 

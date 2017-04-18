@@ -57,7 +57,7 @@ public class MasterSpaceQuotaObserver implements MasterObserver {
     final MasterServices master = ctx.getEnvironment().getMasterServices();
     final Connection conn = master.getConnection();
     Quotas quotas = QuotaUtil.getTableQuota(master.getConnection(), tableName);
-    if (null != quotas && quotas.hasSpace()) {
+    if (quotas != null && quotas.hasSpace()) {
       QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
       try (Admin admin = conn.getAdmin()) {
         admin.setQuota(settings);
@@ -75,7 +75,7 @@ public class MasterSpaceQuotaObserver implements MasterObserver {
     final MasterServices master = ctx.getEnvironment().getMasterServices();
     final Connection conn = master.getConnection();
     Quotas quotas = QuotaUtil.getNamespaceQuota(master.getConnection(), namespace);
-    if (null != quotas && quotas.hasSpace()) {
+    if (quotas != null && quotas.hasSpace()) {
       QuotaSettings settings = QuotaSettingsFactory.removeNamespaceSpaceLimit(namespace);
       try (Admin admin = conn.getAdmin()) {
         admin.setQuota(settings);
