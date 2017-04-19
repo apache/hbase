@@ -3503,6 +3503,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       doRollBackMemstore = false;
+      // update memstore size
+      this.addAndGetGlobalMemstoreSize(addedSize);
+
       // calling the post CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
         MiniBatchOperationInProgress<Mutation> miniBatchOp =
@@ -3560,7 +3563,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         if (writeEntry != null) mvcc.complete(writeEntry);
       } else {
-        this.addAndGetGlobalMemstoreSize(addedSize);
         if (writeEntry != null) {
           mvcc.completeAndWait(writeEntry);
         }
