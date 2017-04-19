@@ -1907,6 +1907,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" replicas        Enable region replica testing. Defaults: 1.");
     System.err.println(" randomSleep     Do a random sleep before each get between 0 and entered value. Defaults: 0");
     System.err.println(" caching         Scan caching to use. Default: 30");
+    System.err.println(" asyncPrefetch   Enable asyncPrefetch for scan");
+    System.err.println(" cacheBlocks     Set the cacheBlocks option for scan. Default: true");
+    System.err.println(" scanReadType    Set the readType option for scan, stream/pread/default. Default: default");
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
@@ -2175,7 +2178,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
 
       final String scanReadType = "--scanReadType=";
-      if (cmd.startsWith(cacheBlocks)) {
+      if (cmd.startsWith(scanReadType)) {
         opts.scanReadType =
             Scan.ReadType.valueOf(cmd.substring(scanReadType.length()).toUpperCase());
         continue;
