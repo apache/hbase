@@ -219,20 +219,17 @@ For applications which require high-end multithreaded access (e.g., web-servers 
 ----
 // Create a connection to the cluster.
 Configuration conf = HBaseConfiguration.create();
-try (Connection connection = ConnectionFactory.createConnection(conf)) {
-  try (Table table = connection.getTable(TableName.valueOf(tablename)) {
-    // use table as needed, the table returned is lightweight
-  }
+try (Connection connection = ConnectionFactory.createConnection(conf);
+     Table table = connection.getTable(TableName.valueOf(tablename))) {
+  // use table as needed, the table returned is lightweight
 }
 ----
 ====
 
-Constructing HTableInterface implementation is very lightweight and resources are controlled.
-
 .`HTablePool` is Deprecated
 [WARNING]
 ====
-Previous versions of this guide discussed `HTablePool`, which was deprecated in HBase 0.94, 0.95, and 0.96, and removed in 0.98.1, by link:https://issues.apache.org/jira/browse/HBASE-6580[HBASE-6500], or `HConnection`, which is deprecated in HBase 1.0 by `Connection`.
+Previous versions of this guide discussed `HTablePool`, which was deprecated in HBase 0.94, 0.95, and 0.96, and removed in 0.98.1, by link:https://issues.apache.org/jira/browse/HBASE-6580[HBASE-6580], or `HConnection`, which is deprecated in HBase 1.0 by `Connection`.
 Please use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Connection.html[Connection] instead.
 ====
 
@@ -398,7 +395,7 @@ Example: Find all columns in a row and family that start with "abc"
 
 [source,java]
 ----
-HTableInterface t = ...;
+Table t = ...;
 byte[] row = ...;
 byte[] family = ...;
 byte[] prefix = Bytes.toBytes("abc");
@@ -428,7 +425,7 @@ Example: Find all columns in a row and family that start with "abc" or "xyz"
 
 [source,java]
 ----
-HTableInterface t = ...;
+Table t = ...;
 byte[] row = ...;
 byte[] family = ...;
 byte[][] prefixes = new byte[][] {Bytes.toBytes("abc"), Bytes.toBytes("xyz")};
@@ -463,7 +460,7 @@ Example: Find all columns in a row and family between "bbbb" (inclusive) and "bb
 
 [source,java]
 ----
-HTableInterface t = ...;
+Table t = ...;
 byte[] row = ...;
 byte[] family = ...;
 byte[] startColumn = Bytes.toBytes("bbbb");
@@ -1414,11 +1411,6 @@ admin.createTable(tableDesc);
 ----
 hbase> create 'test', {METADATA => {'SPLIT_POLICY' => 'org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy'}},{NAME => 'cf1'}
 ----
-
-The default split policy can be overwritten using a custom
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy(HBase 0.94+)].
-Typically a custom split policy should extend HBase's default split policy:
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/ConstantSizeRegionSplitPolicy.html[ConstantSizeRegionSplitPolicy].
 
 The policy can be set globally through the HBaseConfiguration used or on a per table basis:
 [source,java]

@@ -100,12 +100,10 @@ AOP::
 
 === Coprocessor Implementation Overview
 
-. Either your class should extend one of the Coprocessor classes, such as
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseRegionObserver.html[BaseRegionObserver],
-or it should implement the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/Coprocessor.html[Coprocessor]
-or
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/CoprocessorService.html[CoprocessorService]
-interface.
+. Your class should implement one of the Coprocessor interfaces -
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/Coprocessor.html[Coprocessor],
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html[RegionObserver],
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/CoprocessorService.html[CoprocessorService] - to name a few.
 
 . Load the coprocessor, either statically (from the configuration) or dynamically,
 using HBase Shell. For more details see <<cp_loading,Loading Coprocessors>>.
@@ -150,36 +148,22 @@ RegionObserver::
   A RegionObserver coprocessor allows you to observe events on a region, such as `Get`
   and `Put` operations. See
   link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html[RegionObserver].
-  Consider overriding the convenience class
-  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseRegionObserver.html[BaseRegionObserver],
-  which implements the `RegionObserver` interface and will not break if new methods are added.
 
 RegionServerObserver::
   A RegionServerObserver allows you to observe events related to the RegionServer's
   operation, such as starting, stopping, or performing merges, commits, or rollbacks.
   See
   link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionServerObserver.html[RegionServerObserver].
-  Consider overriding the convenience class
-  https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseMasterAndRegionObserver.html[BaseMasterAndRegionObserver]
-  which implements both `MasterObserver` and `RegionServerObserver` interfaces and
-  will not break if new methods are added.
 
-MasterOvserver::
+MasterObserver::
   A MasterObserver allows you to observe events related to the HBase Master, such
   as table creation, deletion, or schema modification. See
   link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/MasterObserver.html[MasterObserver].
-  Consider overriding the convenience class
-  https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseMasterAndRegionObserver.html[BaseMasterAndRegionObserver],
-  which implements both `MasterObserver` and `RegionServerObserver` interfaces and
-  will not break if new methods are added.
 
 WalObserver::
   A WalObserver allows you to observe events related to writes to the Write-Ahead
   Log (WAL). See
   link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/WALObserver.html[WALObserver].
-  Consider overriding the convenience class
-  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseWALObserver.html[BaseWALObserver],
-  which implements the `WalObserver` interface and will not break if new methods are added.
 
 <<cp_example,Examples>> provides working examples of observer coprocessors.
 
@@ -196,8 +180,7 @@ In contrast to observer coprocessors, where your code is run transparently, endp
 coprocessors must be explicitly invoked using the
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#coprocessorService%28java.lang.Class,%20byte%5B%5D,%20byte%5B%5D,%20org.apache.hadoop.hbase.client.coprocessor.Batch.Call%29[CoprocessorService()]
 method available in
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table],
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTableInterface.html[HTableInterface],
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table]
 or
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable].
 
@@ -499,8 +482,8 @@ of the `users` table.
 The following Observer coprocessor prevents the details of the user `admin` from being
 returned in a `Get` or `Scan` of the `users` table.
 
-. Write a class that extends the
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/BaseRegionObserver.html[BaseRegionObserver]
+. Write a class that implements the
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html[RegionObserver]
 class.
 
 . Override the `preGetOp()` method (the `preGet()` method is deprecated) to check
@@ -520,7 +503,7 @@ Following are the implementation of the above steps:
 
 [source,java]
 ----
-public class RegionObserverExample extends BaseRegionObserver {
+public class RegionObserverExample implements RegionObserver {
 
     private static final byte[] ADMIN = Bytes.toBytes("admin");
     private static final byte[] COLUMN_FAMILY = Bytes.toBytes("details");
@@ -627,7 +610,7 @@ The effect is that the duplicate coprocessor is effectively ignored.
 +
 [source, java]
 ----
-public class SumEndPoint extends SumService implements Coprocessor, CoprocessorService {
+public class SumEndPoint extends Sum.SumService implements Coprocessor, CoprocessorService {
 
     private RegionCoprocessorEnvironment env;
 
@@ -647,31 +630,33 @@ public class SumEndPoint extends SumService implements Coprocessor, CoprocessorS
 
     @Override
     public void stop(CoprocessorEnvironment env) throws IOException {
-        // do mothing
+        // do nothing
     }
 
     @Override
-    public void getSum(RpcController controller, SumRequest request, RpcCallback done) {
+    public void getSum(RpcController controller, Sum.SumRequest request, RpcCallback<Sum.SumResponse> done) {
         Scan scan = new Scan();
         scan.addFamily(Bytes.toBytes(request.getFamily()));
         scan.addColumn(Bytes.toBytes(request.getFamily()), Bytes.toBytes(request.getColumn()));
-        SumResponse response = null;
+
+        Sum.SumResponse response = null;
         InternalScanner scanner = null;
+
         try {
             scanner = env.getRegion().getScanner(scan);
-            List results = new ArrayList();
+            List<Cell> results = new ArrayList<>();
             boolean hasMore = false;
-                        long sum = 0L;
-                do {
-                        hasMore = scanner.next(results);
-                        for (Cell cell : results) {
-                            sum = sum + Bytes.toLong(CellUtil.cloneValue(cell));
-                     }
-                        results.clear();
-                } while (hasMore);
+            long sum = 0L;
 
-                response = SumResponse.newBuilder().setSum(sum).build();
+            do {
+                hasMore = scanner.next(results);
+                for (Cell cell : results) {
+                    sum = sum + Bytes.toLong(CellUtil.cloneValue(cell));
+                }
+                results.clear();
+            } while (hasMore);
 
+            response = Sum.SumResponse.newBuilder().setSum(sum).build();
         } catch (IOException ioe) {
             ResponseConverter.setControllerException(controller, ioe);
         } finally {
@@ -681,6 +666,7 @@ public class SumEndPoint extends SumService implements Coprocessor, CoprocessorS
                 } catch (IOException ignored) {}
             }
         }
+
         done.run(response);
     }
 }
@@ -689,33 +675,33 @@ public class SumEndPoint extends SumService implements Coprocessor, CoprocessorS
 [source, java]
 ----
 Configuration conf = HBaseConfiguration.create();
-// Use below code for HBase version 1.x.x or above.
 Connection connection = ConnectionFactory.createConnection(conf);
 TableName tableName = TableName.valueOf("users");
 Table table = connection.getTable(tableName);
 
-//Use below code HBase version 0.98.xx or below.
-//HConnection connection = HConnectionManager.createConnection(conf);
-//HTableInterface table = connection.getTable("users");
-
-final SumRequest request = SumRequest.newBuilder().setFamily("salaryDet").setColumn("gross")
-                            .build();
+final Sum.SumRequest request = Sum.SumRequest.newBuilder().setFamily("salaryDet").setColumn("gross").build();
 try {
-Map<byte[], Long> results = table.CoprocessorService (SumService.class, null, null,
-new Batch.Call<SumService, Long>() {
-    @Override
-        public Long call(SumService aggregate) throws IOException {
-BlockingRpcCallback rpcCallback = new BlockingRpcCallback();
-            aggregate.getSum(null, request, rpcCallback);
-            SumResponse response = rpcCallback.get();
-            return response.hasSum() ? response.getSum() : 0L;
+    Map<byte[], Long> results = table.coprocessorService(
+        Sum.SumService.class,
+        null,  /* start key */
+        null,  /* end   key */
+        new Batch.Call<Sum.SumService, Long>() {
+            @Override
+            public Long call(Sum.SumService aggregate) throws IOException {
+                BlockingRpcCallback<Sum.SumResponse> rpcCallback = new BlockingRpcCallback<>();
+                aggregate.getSum(null, request, rpcCallback);
+                Sum.SumResponse response = rpcCallback.get();
+
+                return response.hasSum() ? response.getSum() : 0L;
+            }
         }
-    });
+    );
+
     for (Long sum : results.values()) {
         System.out.println("Sum = " + sum);
     }
 } catch (ServiceException e) {
-e.printStackTrace();
+    e.printStackTrace();
 } catch (Throwable e) {
     e.printStackTrace();
 }
@@ -769,14 +755,9 @@ Then you can read the configuration using code like the following:
 [source,java]
 ----
 Configuration conf = HBaseConfiguration.create();
-// Use below code for HBase version 1.x.x or above.
 Connection connection = ConnectionFactory.createConnection(conf);
 TableName tableName = TableName.valueOf("users");
 Table table = connection.getTable(tableName);
-
-//Use below code HBase version 0.98.xx or below.
-//HConnection connection = HConnectionManager.createConnection(conf);
-//HTableInterface table = connection.getTable("users");
 
 Get get = new Get(Bytes.toBytes("admin"));
 Result result = table.get(get);
