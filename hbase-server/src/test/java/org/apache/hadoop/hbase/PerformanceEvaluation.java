@@ -638,6 +638,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
             CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT);
     boolean asyncPrefetch = false;
     boolean cacheBlocks = true;
+    Scan.ReadType scanReadType = Scan.ReadType.DEFAULT;
 
     public TestOptions() {}
 
@@ -1248,9 +1249,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      Scan scan =
-          new Scan().withStartRow(getRandomRow(this.rand, opts.totalRows)).setCaching(opts.caching)
-              .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch);
+      Scan scan = new Scan().withStartRow(getRandomRow(this.rand, opts.totalRows))
+          .setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
+          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType);
       FilterList list = new FilterList();
       if (opts.addColumns) {
         scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
@@ -1287,7 +1288,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       Pair<byte[], byte[]> startAndStopRow = getStartAndStopRow();
       Scan scan = new Scan().withStartRow(startAndStopRow.getFirst())
           .withStopRow(startAndStopRow.getSecond()).setCaching(opts.caching)
-          .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch);
+          .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
+          .setReadType(opts.scanReadType);
       if (opts.filterAll) {
         scan.setFilter(new FilterAllFilter());
       }
@@ -1482,7 +1484,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(final int i) throws IOException {
       if (this.testScanner == null) {
         Scan scan = new Scan().withStartRow(format(opts.startRow)).setCaching(opts.caching)
-            .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch);
+            .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
+            .setReadType(opts.scanReadType);
         if (opts.addColumns) {
           scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
         } else {
@@ -1692,7 +1695,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         list.addFilter(new FilterAllFilter());
       }
       Scan scan = new Scan().setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
-          .setAsyncPrefetch(opts.asyncPrefetch);
+          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType);
       if (opts.addColumns) {
         scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       } else {
@@ -2168,6 +2171,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String cacheBlocks = "--cacheBlocks=";
       if (cmd.startsWith(cacheBlocks)) {
         opts.cacheBlocks = Boolean.parseBoolean(cmd.substring(cacheBlocks.length()));
+        continue;
+      }
+
+      final String scanReadType = "--scanReadType=";
+      if (cmd.startsWith(cacheBlocks)) {
+        opts.scanReadType =
+            Scan.ReadType.valueOf(cmd.substring(scanReadType.length()).toUpperCase());
         continue;
       }
       if (isCommandClass(cmd)) {
