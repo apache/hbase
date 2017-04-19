@@ -44,17 +44,13 @@ import java.util.List;
 public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore {
 
   private static final Log LOG = LogFactory.getLog(TestCompactingToCellArrayMapMemStore.class);
-  //private static MemStoreChunkPool chunkPool;
-  //private HRegion region;
-  //private RegionServicesForStores regionServicesForStores;
-  //private HStore store;
 
   //////////////////////////////////////////////////////////////////////////////
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
 
   @Override public void tearDown() throws Exception {
-    chunkPool.clearChunks();
+    chunkCreator.clearChunksInPool();
   }
 
   @Override public void setUp() throws Exception {
@@ -408,16 +404,16 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     }
     memstore.clearSnapshot(snapshot.getId());
 
-    assertTrue(chunkPool.getPoolSize() == 0);
+    assertTrue(chunkCreator.getPoolSize() == 0);
 
     // Chunks will be put back to pool after close scanners;
     for (KeyValueScanner scanner : scanners) {
       scanner.close();
     }
-    assertTrue(chunkPool.getPoolSize() > 0);
+    assertTrue(chunkCreator.getPoolSize() > 0);
 
     // clear chunks
-    chunkPool.clearChunks();
+    chunkCreator.clearChunksInPool();
 
     // Creating another snapshot
 
@@ -438,7 +434,7 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
       scanner.close();
     }
     memstore.clearSnapshot(snapshot.getId());
-    assertTrue(chunkPool.getPoolSize() > 0);
+    assertTrue(chunkCreator.getPoolSize() > 0);
   }
 
   @Test
@@ -472,7 +468,7 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     }
     memstore.clearSnapshot(snapshot.getId());
 
-    int chunkCount = chunkPool.getPoolSize();
+    int chunkCount = chunkCreator.getPoolSize();
     assertTrue(chunkCount > 0);
   }
 

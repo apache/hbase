@@ -18,23 +18,26 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.nio.ByteBuffer;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
 /**
  * A memstore-local allocation buffer.
  * <p>
@@ -55,8 +58,8 @@ import com.google.common.base.Preconditions;
  * would provide a performance improvement - probably would speed up the
  * Bytes.toLong/Bytes.toInt calls in KeyValue, but some of those are cached
  * anyway.
- * The chunks created by this MemStoreLAB can get pooled at {@link MemStoreChunkPool}.
- * When the Chunk comes pool, it can be either an on heap or an off heap backed chunk. The chunks,
+ * The chunks created by this MemStoreLAB can get pooled at {@link ChunkCreator}.
+ * When the Chunk comes from pool, it can be either an on heap or an off heap backed chunk. The chunks,
  * which this MemStoreLAB creates on its own (when no chunk available from pool), those will be
  * always on heap backed.
  */
@@ -66,14 +69,15 @@ public class MemStoreLABImpl implements MemStoreLAB {
   static final Log LOG = LogFactory.getLog(MemStoreLABImpl.class);
 
   private AtomicReference<Chunk> curChunk = new AtomicReference<>();
-  // A queue of chunks from pool contained by this memstore LAB
-  // TODO: in the future, it would be better to have List implementation instead of Queue,
-  // as FIFO order is not so important here
+  // Lock to manage multiple handlers requesting for a chunk
+  private ReentrantLock lock = new ReentrantLock();
+
+  // A set of chunks contained by this memstore LAB
   @VisibleForTesting
-  BlockingQueue<Chunk> pooledChunkQueue = null;
+  Set<Integer> chunks = new ConcurrentSkipListSet<Integer>();
   private final int chunkSize;
   private final int maxAlloc;
-  private final MemStoreChunkPool chunkPool;
+  private final ChunkCreator chunkCreator;
 
   // This flag is for closing this instance, its set when clearing snapshot of
   // memstore
@@ -92,19 +96,11 @@ public class MemStoreLABImpl implements MemStoreLAB {
   public MemStoreLABImpl(Configuration conf) {
     chunkSize = conf.getInt(CHUNK_SIZE_KEY, CHUNK_SIZE_DEFAULT);
     maxAlloc = conf.getInt(MAX_ALLOC_KEY, MAX_ALLOC_DEFAULT);
-    this.chunkPool = MemStoreChunkPool.getPool();
-    // currently chunkQueue is only used for chunkPool
-    if (this.chunkPool != null) {
-      // set queue length to chunk pool max count to avoid keeping reference of
-      // too many non-reclaimable chunks
-      pooledChunkQueue = new LinkedBlockingQueue<>(chunkPool.getMaxCount());
-    }
-
+    this.chunkCreator = ChunkCreator.getInstance();
     // if we don't exclude allocations >CHUNK_SIZE, we'd infiniteloop on one!
     Preconditions.checkArgument(maxAlloc <= chunkSize,
         MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
   }
-
 
   @Override
   public Cell copyCellInto(Cell cell) {
@@ -118,19 +114,52 @@ public class MemStoreLABImpl implements MemStoreLAB {
     Chunk c = null;
     int allocOffset = 0;
     while (true) {
+      // Try to get the chunk
       c = getOrMakeChunk();
+      // we may get null because the some other thread succeeded in getting the lock
+      // and so the current thread has to try again to make its chunk or grab the chunk
+      // that the other thread created
       // Try to allocate from this chunk
-      allocOffset = c.alloc(size);
-      if (allocOffset != -1) {
-        // We succeeded - this is the common case - small alloc
-        // from a big buffer
-        break;
+      if (c != null) {
+        allocOffset = c.alloc(size);
+        if (allocOffset != -1) {
+          // We succeeded - this is the common case - small alloc
+          // from a big buffer
+          break;
+        }
+        // not enough space!
+        // try to retire this chunk
+        tryRetireChunk(c);
       }
-      // not enough space!
-      // try to retire this chunk
-      tryRetireChunk(c);
     }
-    return CellUtil.copyCellTo(cell, c.getData(), allocOffset, size);
+    return copyToChunkCell(cell, c.getData(), allocOffset, size);
+  }
+
+  /**
+   * Clone the passed cell by copying its data into the passed buf and create a cell with a chunkid
+   * out of it
+   */
+  private Cell copyToChunkCell(Cell cell, ByteBuffer buf, int offset, int len) {
+    int tagsLen = cell.getTagsLength();
+    if (cell instanceof ExtendedCell) {
+      ((ExtendedCell) cell).write(buf, offset);
+    } else {
+      // Normally all Cell impls within Server will be of type ExtendedCell. Just considering the
+      // other case also. The data fragments within Cell is copied into buf as in KeyValue
+      // serialization format only.
+      KeyValueUtil.appendTo(cell, buf, offset, true);
+    }
+    // TODO : write the seqid here. For writing seqId we should create a new cell type so
+    // that seqId is not used as the state
+    if (tagsLen == 0) {
+      // When tagsLen is 0, make a NoTagsByteBufferKeyValue version. This is an optimized class
+      // which directly return tagsLen as 0. So we avoid parsing many length components in
+      // reading the tagLength stored in the backing buffer. The Memstore addition of every Cell
+      // call getTagsLength().
+      return new NoTagByteBufferChunkCell(buf, offset, len, cell.getSequenceId());
+    } else {
+      return new ByteBufferChunkCell(buf, offset, len, cell.getSequenceId());
+    }
   }
 
   /**
@@ -142,9 +171,9 @@ public class MemStoreLABImpl implements MemStoreLAB {
     this.closed = true;
     // We could put back the chunks to pool for reusing only when there is no
     // opening scanner which will read their data
-    if (chunkPool != null && openScannerCount.get() == 0
-        && reclaimed.compareAndSet(false, true)) {
-      chunkPool.putbackChunks(this.pooledChunkQueue);
+    int count  = openScannerCount.get();
+    if(count == 0) {
+      recycleChunks();
     }
   }
 
@@ -162,9 +191,14 @@ public class MemStoreLABImpl implements MemStoreLAB {
   @Override
   public void decScannerCount() {
     int count = this.openScannerCount.decrementAndGet();
-    if (this.closed && chunkPool != null && count == 0
-        && reclaimed.compareAndSet(false, true)) {
-      chunkPool.putbackChunks(this.pooledChunkQueue);
+    if (this.closed && count == 0) {
+      recycleChunks();
+    }
+  }
+
+  private void recycleChunks() {
+    if (reclaimed.compareAndSet(false, true)) {
+      chunkCreator.putbackChunks(chunks);
     }
   }
 
@@ -190,45 +224,33 @@ public class MemStoreLABImpl implements MemStoreLAB {
    * allocate a new one from the JVM.
    */
   private Chunk getOrMakeChunk() {
-    while (true) {
-      // Try to get the chunk
-      Chunk c = curChunk.get();
-      if (c != null) {
-        return c;
-      }
-
-      // No current chunk, so we want to allocate one. We race
-      // against other allocators to CAS in an uninitialized chunk
-      // (which is cheap to allocate)
-      if (chunkPool != null) {
-        c = chunkPool.getChunk();
-      }
-      boolean pooledChunk = false;
-      if (c != null) {
-        // This is chunk from pool
-        pooledChunk = true;
-      } else {
-        c = new OnheapChunk(chunkSize);// When chunk is not from pool, always make it as on heap.
-      }
-      if (curChunk.compareAndSet(null, c)) {
-        // we won race - now we need to actually do the expensive
-        // allocation step
-        c.init();
-        if (pooledChunk) {
-          if (!this.closed && !this.pooledChunkQueue.offer(c)) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Chunk queue is full, won't reuse this new chunk. Current queue size: "
-                  + pooledChunkQueue.size());
-            }
-          }
-        }
-        return c;
-      } else if (pooledChunk) {
-        chunkPool.putbackChunk(c);
-      }
-      // someone else won race - that's fine, we'll try to grab theirs
-      // in the next iteration of the loop.
+    // Try to get the chunk
+    Chunk c = curChunk.get();
+    if (c != null) {
+      return c;
     }
+    // No current chunk, so we want to allocate one. We race
+    // against other allocators to CAS in an uninitialized chunk
+    // (which is cheap to allocate)
+    if (lock.tryLock()) {
+      try {
+        // once again check inside the lock
+        c = curChunk.get();
+        if (c != null) {
+          return c;
+        }
+        c = this.chunkCreator.getChunk();
+        if (c != null) {
+          // set the curChunk. No need of CAS as only one thread will be here
+          curChunk.set(c);
+          chunks.add(c.getId());
+          return c;
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+    return null;
   }
 
   @VisibleForTesting
@@ -236,8 +258,15 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return this.curChunk.get();
   }
 
-
+  @VisibleForTesting
   BlockingQueue<Chunk> getPooledChunks() {
-    return this.pooledChunkQueue;
+    BlockingQueue<Chunk> pooledChunks = new LinkedBlockingQueue<>();
+    for (Integer id : this.chunks) {
+      Chunk chunk = chunkCreator.getChunk(id);
+      if (chunk != null && chunk.isFromPool()) {
+        pooledChunks.add(chunk);
+      }
+    }
+    return pooledChunks;
   }
 }

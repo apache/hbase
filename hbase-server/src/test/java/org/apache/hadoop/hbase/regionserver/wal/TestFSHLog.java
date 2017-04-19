@@ -37,7 +37,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -153,7 +155,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
           new HTableDescriptor(TableName.valueOf(this.name.getMethodName())).addFamily(new HColumnDescriptor(b));
       HRegionInfo hri =
           new HRegionInfo(htd.getTableName(), HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-
+      ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
       final HRegion region = TEST_UTIL.createLocalHRegion(hri, htd, log);
       ExecutorService exec = Executors.newFixedThreadPool(2);
 

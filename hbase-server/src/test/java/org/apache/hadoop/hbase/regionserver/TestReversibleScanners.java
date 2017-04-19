@@ -60,12 +60,13 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import com.google.common.collect.Lists;
-import org.junit.rules.TestName;
 
 /**
  * Test cases against ReversibleKeyValueScanner
@@ -91,6 +92,10 @@ public class TestReversibleScanners {
   @Rule
   public TestName name = new TestName();
 
+  @BeforeClass
+  public static void setUp() {
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+  }
   @Test
   public void testReversibleStoreFileScanner() throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();

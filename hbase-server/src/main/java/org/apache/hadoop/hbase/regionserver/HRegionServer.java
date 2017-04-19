@@ -1472,7 +1472,7 @@ public class HRegionServer extends HasThread implements
       startServiceThreads();
       startHeapMemoryManager();
       // Call it after starting HeapMemoryManager.
-      initializeMemStoreChunkPool();
+      initializeMemStoreChunkCreator();
       LOG.info("Serving as " + this.serverName +
         ", RpcServer on " + rpcServices.isa +
         ", sessionid=0x" +
@@ -1492,7 +1492,7 @@ public class HRegionServer extends HasThread implements
     }
   }
 
-  private void initializeMemStoreChunkPool() {
+  protected void initializeMemStoreChunkCreator() {
     if (MemStoreLAB.isEnabled(conf)) {
       // MSLAB is enabled. So initialize MemStoreChunkPool
       // By this time, the MemstoreFlusher is already initialized. We can get the global limits from
@@ -1506,12 +1506,10 @@ public class HRegionServer extends HasThread implements
       float initialCountPercentage = conf.getFloat(MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY,
           MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT);
       int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);
-      MemStoreChunkPool pool = MemStoreChunkPool.initialize(globalMemStoreSize, poolSizePercentage,
-          initialCountPercentage, chunkSize, offheap);
-      if (pool != null && this.hMemManager != null) {
-        // Register with Heap Memory manager
-        this.hMemManager.registerTuneObserver(pool);
-      }
+      // init the chunkCreator
+      ChunkCreator chunkCreator =
+          ChunkCreator.initialize(chunkSize, offheap, globalMemStoreSize, poolSizePercentage,
+            initialCountPercentage, this.hMemManager);
     }
   }
 

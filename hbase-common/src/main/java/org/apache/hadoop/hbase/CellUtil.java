@@ -3135,28 +3135,4 @@ public final class CellUtil {
       return Type.DeleteFamily.getCode();
     }
   }
-
-  /**
-   * Clone the passed cell by copying its data into the passed buf.
-   */
-  public static Cell copyCellTo(Cell cell, ByteBuffer buf, int offset, int len) {
-    int tagsLen = cell.getTagsLength();
-    if (cell instanceof ExtendedCell) {
-      ((ExtendedCell) cell).write(buf, offset);
-    } else {
-      // Normally all Cell impls within Server will be of type ExtendedCell. Just considering the
-      // other case also. The data fragments within Cell is copied into buf as in KeyValue
-      // serialization format only.
-      KeyValueUtil.appendTo(cell, buf, offset, true);
-    }
-    if (tagsLen == 0) {
-      // When tagsLen is 0, make a NoTagsByteBufferKeyValue version. This is an optimized class
-      // which directly return tagsLen as 0. So we avoid parsing many length components in
-      // reading the tagLength stored in the backing buffer. The Memstore addition of every Cell
-      // call getTagsLength().
-      return new NoTagsByteBufferKeyValue(buf, offset, len, cell.getSequenceId());
-    } else {
-      return new ByteBufferKeyValue(buf, offset, len, cell.getSequenceId());
-    }
-  }
 }
