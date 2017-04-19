@@ -1,5 +1,20 @@
 HBase Change Log
 
+
+Release Notes - HBase - Version 1.1.10 04/18/2017
+
+** Sub-task
+    * [HBASE-17561] - table status page should escape values that may contain arbitrary characters.
+
+** Bug
+    * [HBASE-15328] - Unvalidated Redirect in HMaster
+    * [HBASE-17675] - ReplicationEndpoint should choose new sinks if a SaslException occurs
+    * [HBASE-17677] - ServerName parsing from directory name should be more robust to errors from guava's HostAndPort
+    * [HBASE-17682] - Region stuck in merging_new state indefinitely
+    * [HBASE-17688] - MultiRowRangeFilter not working correctly if given same start and stop RowKey
+    * [HBASE-17717] - Incorrect ZK ACL set for HBase superuser
+    * [HBASE-17722] - Metrics subsystem stop/start messages add a lot of useless bulk to operational logging
+
 Release Notes - HBase - Version 1.1.9 02/20/2017
 
 ** Sub-task
