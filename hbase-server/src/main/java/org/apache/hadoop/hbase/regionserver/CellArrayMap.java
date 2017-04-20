@@ -48,7 +48,7 @@ public class CellArrayMap extends CellFlatMap {
 
   @Override
   protected Cell getCell(int i) {
-    if( (i < minCellIdx) && (i >= maxCellIdx) ) return null;
+    if( (i < minCellIdx) || (i >= maxCellIdx) ) return null;
     return block[i];
   }
 }
