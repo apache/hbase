@@ -34,7 +34,7 @@ import org.junit.BeforeClass;
  */
 public abstract class TestAsyncAdminBase {
 
-  protected static final Log LOG = LogFactory.getLog(TestAdmin1.class);
+  protected static final Log LOG = LogFactory.getLog(TestAsyncAdminBase.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static byte[] FAMILY = Bytes.toBytes("testFamily");
   protected static final byte[] FAMILY_0 = Bytes.toBytes("cf0");

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.List;
+import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
@@ -30,6 +32,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.client.replication.TableCFs;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -481,4 +486,91 @@ public interface AsyncAdmin {
    * @return the QuotaSetting list, which wrapped by a CompletableFuture.
    */
   CompletableFuture<List<QuotaSettings>> getQuota(QuotaFilter filter);
+
+  /**
+   * Add a new replication peer for replicating data to slave cluster
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig configuration for the replication slave cluster
+   */
+  CompletableFuture<Void> addReplicationPeer(final String peerId,
+      final ReplicationPeerConfig peerConfig);
+
+  /**
+   * Remove a peer and stop the replication
+   * @param peerId a short name that identifies the peer
+   */
+  CompletableFuture<Void> removeReplicationPeer(final String peerId);
+
+  /**
+   * Restart the replication stream to the specified peer
+   * @param peerId a short name that identifies the peer
+   */
+  CompletableFuture<Void> enableReplicationPeer(final String peerId);
+
+  /**
+   * Stop the replication stream to the specified peer
+   * @param peerId a short name that identifies the peer
+   */
+  CompletableFuture<Void> disableReplicationPeer(final String peerId);
+
+  /**
+   * Returns the configured ReplicationPeerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
+   * @return ReplicationPeerConfig for the peer wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<ReplicationPeerConfig> getReplicationPeerConfig(final String peerId);
+
+  /**
+   * Update the peerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig new config for the peer
+   */
+  CompletableFuture<Void> updateReplicationPeerConfig(final String peerId,
+      final ReplicationPeerConfig peerConfig);
+
+  /**
+   * Append the replicable table-cf config of the specified peer
+   * @param id a short that identifies the cluster
+   * @param tableCfs A map from tableName to column family names
+   */
+  CompletableFuture<Void> appendReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs);
+
+  /**
+   * Remove some table-cfs from config of the specified peer
+   * @param id a short name that identifies the cluster
+   * @param tableCfs A map from tableName to column family names
+   */
+  CompletableFuture<Void> removeReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs);
+
+  /**
+   * Return a list of replication peers.
+   * @return a list of replication peers description. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers();
+
+  /**
+   * Return a list of replication peers.
+   * @param regex The regular expression to match peer id
+   * @return a list of replication peers description. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(String regex);
+
+  /**
+   * Return a list of replication peers.
+   * @param pattern The compiled regular expression to match peer id
+   * @return a list of replication peers description. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(Pattern pattern);
+
+  /**
+   * Find all table and column families that are replicated from this cluster
+   * @return the replicated table-cfs list of this cluster. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableCFs>> listReplicatedTableCFs();
 }

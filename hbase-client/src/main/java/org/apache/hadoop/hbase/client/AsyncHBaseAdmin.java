@@ -22,16 +22,21 @@ import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -54,11 +59,16 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.AdminRequestCallerBuilder;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.MasterRequestCallerBuilder;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
+import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
+import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -121,6 +131,20 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1155,42 +1179,209 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> setQuota(QuotaSettings quota){
-    return this.<Void> newMasterCaller()
-        .action((controller, stub) -> this.<SetQuotaRequest, SetQuotaResponse, Void> call(
-          controller, stub, QuotaSettings.buildSetQuotaRequestProto(quota),
-          (s, c, req, done) -> s.setQuota(c, req, done), (resp) -> null))
-        .call();
+  public CompletableFuture<Void> setQuota(QuotaSettings quota) {
+    return this
+        .<Void> newMasterCaller()
+        .action(
+          (controller, stub) -> this.<SetQuotaRequest, SetQuotaResponse, Void> call(controller,
+            stub, QuotaSettings.buildSetQuotaRequestProto(quota),
+            (s, c, req, done) -> s.setQuota(c, req, done), (resp) -> null)).call();
   }
 
   @Override
   public CompletableFuture<List<QuotaSettings>> getQuota(QuotaFilter filter) {
     CompletableFuture<List<QuotaSettings>> future = new CompletableFuture<>();
     Scan scan = QuotaTableUtil.makeScan(filter);
-    this.connection.getRawTableBuilder(QuotaTableUtil.QUOTA_TABLE_NAME).build().scan(scan,
-      new RawScanResultConsumer() {
-        List<QuotaSettings> settings = new ArrayList<>();
+    this.connection.getRawTableBuilder(QuotaTableUtil.QUOTA_TABLE_NAME).build()
+        .scan(scan, new RawScanResultConsumer() {
+          List<QuotaSettings> settings = new ArrayList<>();
 
-        @Override
-        public void onNext(Result[] results, ScanController controller) {
-          for (Result result : results) {
-            try {
-              QuotaTableUtil.parseResultToCollection(result, settings);
-            } catch (IOException e) {
-              controller.terminate();
-              future.completeExceptionally(e);
+          @Override
+          public void onNext(Result[] results, ScanController controller) {
+            for (Result result : results) {
+              try {
+                QuotaTableUtil.parseResultToCollection(result, settings);
+              } catch (IOException e) {
+                controller.terminate();
+                future.completeExceptionally(e);
+              }
             }
           }
-        }
 
-        @Override
-        public void onError(Throwable error) {
-          future.completeExceptionally(error);
-        }
+          @Override
+          public void onError(Throwable error) {
+            future.completeExceptionally(error);
+          }
 
-        @Override
-        public void onComplete() {
-          future.complete(settings);
+          @Override
+          public void onComplete() {
+            future.complete(settings);
+          }
+        });
+    return future;
+  }
+
+  public CompletableFuture<Void> addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig) {
+    return this
+        .<Void> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<AddReplicationPeerRequest, AddReplicationPeerResponse, Void> call(controller, stub,
+                RequestConverter.buildAddReplicationPeerRequest(peerId, peerConfig), (s, c, req,
+                    done) -> s.addReplicationPeer(c, req, done), (resp) -> null)).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> removeReplicationPeer(String peerId) {
+    return this
+        .<Void> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<RemoveReplicationPeerRequest, RemoveReplicationPeerResponse, Void> call(controller,
+                stub, RequestConverter.buildRemoveReplicationPeerRequest(peerId),
+                (s, c, req, done) -> s.removeReplicationPeer(c, req, done), (resp) -> null)).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> enableReplicationPeer(String peerId) {
+    return this
+        .<Void> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<EnableReplicationPeerRequest, EnableReplicationPeerResponse, Void> call(controller,
+                stub, RequestConverter.buildEnableReplicationPeerRequest(peerId),
+                (s, c, req, done) -> s.enableReplicationPeer(c, req, done), (resp) -> null)).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> disableReplicationPeer(String peerId) {
+    return this
+        .<Void> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<DisableReplicationPeerRequest, DisableReplicationPeerResponse, Void> call(
+                controller, stub, RequestConverter.buildDisableReplicationPeerRequest(peerId), (s,
+                    c, req, done) -> s.disableReplicationPeer(c, req, done), (resp) -> null))
+        .call();
+  }
+
+  public CompletableFuture<ReplicationPeerConfig> getReplicationPeerConfig(String peerId) {
+    return this
+        .<ReplicationPeerConfig> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<GetReplicationPeerConfigRequest, GetReplicationPeerConfigResponse, ReplicationPeerConfig> call(
+                controller, stub, RequestConverter.buildGetReplicationPeerConfigRequest(peerId), (
+                    s, c, req, done) -> s.getReplicationPeerConfig(c, req, done),
+                (resp) -> ReplicationSerDeHelper.convert(resp.getPeerConfig()))).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> updateReplicationPeerConfig(String peerId,
+      ReplicationPeerConfig peerConfig) {
+    return this
+        .<Void> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<UpdateReplicationPeerConfigRequest, UpdateReplicationPeerConfigResponse, Void> call(
+                controller, stub, RequestConverter.buildUpdateReplicationPeerConfigRequest(peerId,
+                  peerConfig), (s, c, req, done) -> s.updateReplicationPeerConfig(c, req, done), (
+                    resp) -> null)).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> appendReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs) {
+    if (tableCfs == null) {
+      return failedFuture(new ReplicationException("tableCfs is null"));
+    }
+
+    CompletableFuture<Void> future = new CompletableFuture<Void>();
+    getReplicationPeerConfig(id).whenComplete((peerConfig, error) -> {
+      if (!completeExceptionally(future, error)) {
+        ReplicationSerDeHelper.appendTableCFsToReplicationPeerConfig(tableCfs, peerConfig);
+        updateReplicationPeerConfig(id, peerConfig).whenComplete((result, err) -> {
+          if (!completeExceptionally(future, error)) {
+            future.complete(result);
+          }
+        });
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> removeReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs) {
+    if (tableCfs == null) {
+      return failedFuture(new ReplicationException("tableCfs is null"));
+    }
+
+    CompletableFuture<Void> future = new CompletableFuture<Void>();
+    getReplicationPeerConfig(id).whenComplete((peerConfig, error) -> {
+      if (!completeExceptionally(future, error)) {
+        try {
+          ReplicationSerDeHelper.removeTableCFsFromReplicationPeerConfig(tableCfs, peerConfig, id);
+        } catch (ReplicationException e) {
+          future.completeExceptionally(e);
+          return;
+        }
+        updateReplicationPeerConfig(id, peerConfig).whenComplete((result, err) -> {
+          if (!completeExceptionally(future, error)) {
+            future.complete(result);
+          }
+        });
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers() {
+    return listReplicationPeers((Pattern) null);
+  }
+
+  @Override
+  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(String regex) {
+    return listReplicationPeers(Pattern.compile(regex));
+  }
+
+  @Override
+  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(Pattern pattern) {
+    return this
+        .<List<ReplicationPeerDescription>> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<ListReplicationPeersRequest, ListReplicationPeersResponse, List<ReplicationPeerDescription>> call(
+                controller,
+                stub,
+                RequestConverter.buildListReplicationPeersRequest(pattern),
+                (s, c, req, done) -> s.listReplicationPeers(c, req, done),
+                (resp) -> resp.getPeerDescList().stream()
+                    .map(ReplicationSerDeHelper::toReplicationPeerDescription)
+                    .collect(Collectors.toList()))).call();
+  }
+
+  @Override
+  public CompletableFuture<List<TableCFs>> listReplicatedTableCFs() {
+    CompletableFuture<List<TableCFs>> future = new CompletableFuture<List<TableCFs>>();
+    listTables().whenComplete(
+      (tables, error) -> {
+        if (!completeExceptionally(future, error)) {
+          List<TableCFs> replicatedTableCFs = new ArrayList<>();
+          Arrays.asList(tables).forEach(
+            table -> {
+              Map<String, Integer> cfs = new HashMap<>();
+              Arrays.asList(table.getColumnFamilies()).stream()
+                  .filter(column -> column.getScope() != HConstants.REPLICATION_SCOPE_LOCAL)
+                  .forEach(column -> {
+                    cfs.put(column.getNameAsString(), column.getScope());
+                  });
+              if (!cfs.isEmpty()) {
+                replicatedTableCFs.add(new TableCFs(table.getTableName(), cfs));
+              }
+            });
+          future.complete(replicatedTableCFs);
         }
       });
     return future;
@@ -1469,5 +1660,13 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<T> future = new CompletableFuture<>();
     future.completeExceptionally(error);
     return future;
+  }
+
+  private <T> boolean completeExceptionally(CompletableFuture<T> future, Throwable error) {
+    if (error != null) {
+      future.completeExceptionally(error);
+      return true;
+    }
+    return false;
   }
 }

@@ -30,10 +30,13 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -366,5 +369,69 @@ public final class ReplicationSerDeHelper {
     builder.setState(stateBuilder.build());
     builder.setConfig(convert(desc.getPeerConfig()));
     return builder.build();
+  }
+
+  public static void appendTableCFsToReplicationPeerConfig(
+      Map<TableName, ? extends Collection<String>> tableCfs, ReplicationPeerConfig peerConfig) {
+    Map<TableName, List<String>> preTableCfs = peerConfig.getTableCFsMap();
+    if (preTableCfs == null) {
+      peerConfig.setTableCFsMap(tableCfs);
+    } else {
+      for (Map.Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
+        TableName table = entry.getKey();
+        Collection<String> appendCfs = entry.getValue();
+        if (preTableCfs.containsKey(table)) {
+          List<String> cfs = preTableCfs.get(table);
+          if (cfs == null || appendCfs == null || appendCfs.isEmpty()) {
+            preTableCfs.put(table, null);
+          } else {
+            Set<String> cfSet = new HashSet<String>(cfs);
+            cfSet.addAll(appendCfs);
+            preTableCfs.put(table, Lists.newArrayList(cfSet));
+          }
+        } else {
+          if (appendCfs == null || appendCfs.isEmpty()) {
+            preTableCfs.put(table, null);
+          } else {
+            preTableCfs.put(table, Lists.newArrayList(appendCfs));
+          }
+        }
+      }
+    }
+  }
+
+  public static void removeTableCFsFromReplicationPeerConfig(
+      Map<TableName, ? extends Collection<String>> tableCfs, ReplicationPeerConfig peerConfig,
+      String id) throws ReplicationException {
+    Map<TableName, List<String>> preTableCfs = peerConfig.getTableCFsMap();
+    if (preTableCfs == null) {
+      throw new ReplicationException("Table-Cfs for peer: " + id + " is null");
+    }
+    for (Map.Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
+      TableName table = entry.getKey();
+      Collection<String> removeCfs = entry.getValue();
+      if (preTableCfs.containsKey(table)) {
+        List<String> cfs = preTableCfs.get(table);
+        if (cfs == null && (removeCfs == null || removeCfs.isEmpty())) {
+          preTableCfs.remove(table);
+        } else if (cfs != null && (removeCfs != null && !removeCfs.isEmpty())) {
+          Set<String> cfSet = new HashSet<String>(cfs);
+          cfSet.removeAll(removeCfs);
+          if (cfSet.isEmpty()) {
+            preTableCfs.remove(table);
+          } else {
+            preTableCfs.put(table, Lists.newArrayList(cfSet));
+          }
+        } else if (cfs == null && (removeCfs != null && !removeCfs.isEmpty())) {
+          throw new ReplicationException("Cannot remove cf of table: " + table
+              + " which doesn't specify cfs from table-cfs config in peer: " + id);
+        } else if (cfs != null && (removeCfs == null || removeCfs.isEmpty())) {
+          throw new ReplicationException("Cannot remove table: " + table
+              + " which has specified cfs from table-cfs config in peer: " + id);
+        }
+      } else {
+        throw new ReplicationException("No table: " + table + " in table-cfs config of peer: " + id);
+      }
+    }
   }
 }
