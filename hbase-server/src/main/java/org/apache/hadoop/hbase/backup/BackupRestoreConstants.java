@@ -30,7 +30,7 @@ public interface BackupRestoreConstants {
    * Backup/Restore constants
    */
   public final static String BACKUP_SYSTEM_TABLE_NAME_KEY = "hbase.backup.system.table.name";
-  public final static String BACKUP_SYSTEM_TABLE_NAME_DEFAULT = "hbase:backup";
+  public final static String BACKUP_SYSTEM_TABLE_NAME_DEFAULT = "backup:system";
 
   public final static String BACKUP_SYSTEM_TTL_KEY = "hbase.backup.system.ttl";
 

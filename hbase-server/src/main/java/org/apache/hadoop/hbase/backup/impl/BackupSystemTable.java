@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -165,6 +166,8 @@ public final class BackupSystemTable implements Closeable {
   private void checkSystemTable() throws IOException {
     try (Admin admin = connection.getAdmin();) {
 
+      verifyNamespaceExists(admin);
+
       if (!admin.tableExists(tableName)) {
         HTableDescriptor backupHTD =
             BackupSystemTable.getSystemTableDescriptor(connection.getConfiguration());
@@ -172,6 +175,22 @@ public final class BackupSystemTable implements Closeable {
       }
       waitForSystemTable(admin);
     }
+  }
+
+  private void verifyNamespaceExists(Admin admin) throws IOException {
+      String namespaceName  = tableName.getNamespaceAsString();
+      NamespaceDescriptor ns = NamespaceDescriptor.create(namespaceName).build();
+      NamespaceDescriptor[] list = admin.listNamespaceDescriptors();
+      boolean exists = false;
+      for( NamespaceDescriptor nsd: list) {
+        if (nsd.getName().equals(ns.getName())) {
+          exists = true;
+          break;
+        }
+      }
+      if (!exists) {
+        admin.createNamespace(ns);
+      }
   }
 
   private void waitForSystemTable(Admin admin) throws IOException {

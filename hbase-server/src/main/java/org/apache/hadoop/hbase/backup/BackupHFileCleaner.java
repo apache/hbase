@@ -54,9 +54,9 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
   private boolean aborted;
   private Configuration conf;
   private Connection connection;
-  private long prevReadFromBackupTbl = 0, // timestamp of most recent read from hbase:backup table
-      secondPrevReadFromBackupTbl = 0; // timestamp of 2nd most recent read from hbase:backup table
-  //used by unit test to skip reading hbase:backup
+  private long prevReadFromBackupTbl = 0, // timestamp of most recent read from backup:system table
+      secondPrevReadFromBackupTbl = 0; // timestamp of 2nd most recent read from backup:system table
+  //used by unit test to skip reading backup:system
   private boolean checkForFullyBackedUpTables = true;
   private List<TableName> fullyBackedUpTables = null;
 
@@ -117,7 +117,7 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
     Iterable<FileStatus> deletables = Iterables.filter(files, new Predicate<FileStatus>() {
       @Override
       public boolean apply(FileStatus file) {
-        // If the file is recent, be conservative and wait for one more scan of hbase:backup table
+        // If the file is recent, be conservative and wait for one more scan of backup:system table
         if (file.getModificationTime() > secondPrevReadFromBackupTbl) {
           return false;
         }
