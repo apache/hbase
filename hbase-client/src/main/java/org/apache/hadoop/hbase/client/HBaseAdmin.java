@@ -2498,7 +2498,8 @@ public class HBaseAdmin implements Admin {
   public void restoreSnapshot(final String snapshotName)
       throws IOException, RestoreSnapshotException {
     boolean takeFailSafeSnapshot =
-      conf.getBoolean("hbase.snapshot.restore.take.failsafe.snapshot", false);
+        conf.getBoolean(HConstants.SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT,
+          HConstants.DEFAULT_SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT);
     restoreSnapshot(snapshotName, takeFailSafeSnapshot);
   }
 

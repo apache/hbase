@@ -37,6 +37,8 @@ import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import io.netty.util.Timeout;
+import io.netty.util.TimerTask;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -50,6 +52,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -77,6 +80,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnResponse;
@@ -110,6 +114,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
@@ -123,10 +129,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -145,7 +155,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Remov
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -1385,6 +1398,138 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
         }
       });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> snapshot(String snapshotName, TableName tableName) {
+    return snapshot(snapshotName, tableName, SnapshotType.FLUSH);
+  }
+
+  @Override
+  public CompletableFuture<Void> snapshot(String snapshotName, TableName tableName,
+      SnapshotType type) {
+    return snapshot(new SnapshotDescription(snapshotName, tableName, type));
+  }
+
+  @Override
+  public CompletableFuture<Void> snapshot(SnapshotDescription snapshotDesc) {
+    HBaseProtos.SnapshotDescription snapshot =
+        ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc);
+    try {
+      ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
+    } catch (IllegalArgumentException e) {
+      return failedFuture(e);
+    }
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot).build();
+    this.<Long> newMasterCaller()
+        .action((controller, stub) -> this.<SnapshotRequest, SnapshotResponse, Long> call(
+          controller, stub, request, (s, c, req, done) -> s.snapshot(c, req, done),
+          resp -> resp.getExpectedTimeout()))
+        .call().whenComplete((expectedTimeout, err) -> {
+          if (err != null) {
+            future.completeExceptionally(err);
+            return;
+          }
+          TimerTask pollingTask = new TimerTask() {
+            int tries = 0;
+            long startTime = EnvironmentEdgeManager.currentTime();
+            long endTime = startTime + expectedTimeout;
+            long maxPauseTime = expectedTimeout / maxAttempts;
+
+            @Override
+            public void run(Timeout timeout) throws Exception {
+              if (EnvironmentEdgeManager.currentTime() < endTime) {
+                isSnapshotFinished(snapshotDesc).whenComplete((done, err) -> {
+                  if (err != null) {
+                    future.completeExceptionally(err);
+                  } else if (done) {
+                    future.complete(null);
+                  } else {
+                    // retry again after pauseTime.
+                    long pauseTime = ConnectionUtils
+                        .getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
+                    pauseTime = Math.min(pauseTime, maxPauseTime);
+                    AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
+                      TimeUnit.MILLISECONDS);
+                  }
+                });
+              } else {
+                future.completeExceptionally(new SnapshotCreationException(
+                    "Snapshot '" + snapshot.getName() + "' wasn't completed in expectedTime:"
+                        + expectedTimeout + " ms",
+                    snapshotDesc));
+              }
+            }
+          };
+          AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
+        });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isSnapshotFinished(SnapshotDescription snapshot) {
+    return this.<Boolean> newMasterCaller()
+        .action((controller, stub) -> this
+            .<IsSnapshotDoneRequest, IsSnapshotDoneResponse, Boolean> call(controller, stub,
+              IsSnapshotDoneRequest.newBuilder()
+                  .setSnapshot(ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot)).build(),
+              (s, c, req, done) -> s.isSnapshotDone(c, req, done), resp -> resp.getDone()))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> restoreSnapshot(String snapshotName) {
+    boolean takeFailSafeSnapshot = this.connection.getConfiguration().getBoolean(
+      HConstants.SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT,
+      HConstants.DEFAULT_SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT);
+    return restoreSnapshot(snapshotName, takeFailSafeSnapshot);
+  }
+
+  @Override
+  public CompletableFuture<Void> restoreSnapshot(String snapshotName,
+      boolean takeFailSafeSnapshot) {
+    // TODO It depend on listSnapshots() method.
+    return failedFuture(new UnsupportedOperationException("restoreSnapshot do not supported yet"));
+  }
+
+  @Override
+  public CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    tableExists(tableName).whenComplete((exists, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      } else if (exists) {
+        future.completeExceptionally(new TableExistsException(tableName));
+      } else {
+        internalRestoreSnapshot(snapshotName, tableName).whenComplete((ret, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else {
+            future.complete(ret);
+          }
+        });
+      }
+    });
+    return future;
+  }
+
+  private CompletableFuture<Void> internalRestoreSnapshot(String snapshotName,
+      TableName tableName) {
+    HBaseProtos.SnapshotDescription snapshot = HBaseProtos.SnapshotDescription.newBuilder()
+        .setName(snapshotName).setTable(tableName.getNameAsString()).build();
+    try {
+      ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
+    } catch (IllegalArgumentException e) {
+      return failedFuture(e);
+    }
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this
+            .<RestoreSnapshotRequest, RestoreSnapshotResponse, Void> call(controller, stub,
+              RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot)
+                  .setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce()).build(),
+              (s, c, req, done) -> s.restoreSnapshot(c, req, done), resp -> null))
+        .call();
   }
 
   private byte[][] getSplitKeys(byte[] startKey, byte[] endKey, int numRegions) {

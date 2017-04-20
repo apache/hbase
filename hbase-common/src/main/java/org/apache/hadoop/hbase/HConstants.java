@@ -1351,6 +1351,10 @@ public final class HConstants {
   public static final String DEFAULT_TEMPORARY_HDFS_DIRECTORY = "/user/"
       + System.getProperty("user.name") + "/hbase-staging";
 
+  public static final String SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT =
+      "hbase.snapshot.restore.take.failsafe.snapshot";
+  public static final boolean DEFAULT_SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

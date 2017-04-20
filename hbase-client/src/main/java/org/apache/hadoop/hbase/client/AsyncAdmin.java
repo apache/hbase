@@ -573,4 +573,92 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}.
    */
   CompletableFuture<List<TableCFs>> listReplicatedTableCFs();
+
+  /**
+   * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be
+   * taken. If the table is disabled, an offline snapshot is taken. Snapshots are considered unique
+   * based on <b>the name of the snapshot</b>. Attempts to take a snapshot with the same name (even
+   * a different type or with different parameters) will fail with a
+   * {@link org.apache.hadoop.hbase.snapshot.SnapshotCreationException} indicating the duplicate
+   * naming. Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
+   * @param snapshotName name of the snapshot to be created
+   * @param tableName name of the table for which snapshot is created
+   */
+  CompletableFuture<Void> snapshot(String snapshotName, TableName tableName);
+
+  /**
+   * Create typed snapshot of the table. Snapshots are considered unique based on <b>the name of the
+   * snapshot</b>. Attempts to take a snapshot with the same name (even a different type or with
+   * different parameters) will fail with a
+   * {@link org.apache.hadoop.hbase.snapshot.SnapshotCreationException} indicating the duplicate
+   * naming. Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
+   * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
+   *          snapshots stored on the cluster
+   * @param tableName name of the table to snapshot
+   * @param type type of snapshot to take
+   */
+  CompletableFuture<Void> snapshot(final String snapshotName, final TableName tableName,
+      SnapshotType type);
+
+  /**
+   * Take a snapshot and wait for the server to complete that snapshot asynchronously. Only a single
+   * snapshot should be taken at a time for an instance of HBase, or results may be undefined (you
+   * can tell multiple HBase clusters to snapshot at the same time, but only one at a time for a
+   * single cluster). Snapshots are considered unique based on <b>the name of the snapshot</b>.
+   * Attempts to take a snapshot with the same name (even a different type or with different
+   * parameters) will fail with a {@link org.apache.hadoop.hbase.snapshot.SnapshotCreationException}
+   * indicating the duplicate naming. Snapshot names follow the same naming constraints as tables in
+   * HBase. See {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
+   * You should probably use {@link #snapshot(String, org.apache.hadoop.hbase.TableName)} unless you
+   * are sure about the type of snapshot that you want to take.
+   * @param snapshot snapshot to take
+   */
+  CompletableFuture<Void> snapshot(SnapshotDescription snapshot);
+
+  /**
+   * Check the current state of the passed snapshot. There are three possible states:
+   * <ol>
+   * <li>running - returns <tt>false</tt></li>
+   * <li>finished - returns <tt>true</tt></li>
+   * <li>finished with error - throws the exception that caused the snapshot to fail</li>
+   * </ol>
+   * The cluster only knows about the most recent snapshot. Therefore, if another snapshot has been
+   * run/started since the snapshot your are checking, you will recieve an
+   * {@link org.apache.hadoop.hbase.snapshot.UnknownSnapshotException}.
+   * @param snapshot description of the snapshot to check
+   * @return <tt>true</tt> if the snapshot is completed, <tt>false</tt> if the snapshot is still
+   *         running
+   */
+  CompletableFuture<Boolean> isSnapshotFinished(final SnapshotDescription snapshot);
+
+  /**
+   * Restore the specified snapshot on the original table. (The table must be disabled) If the
+   * "hbase.snapshot.restore.take.failsafe.snapshot" configuration property is set to true, a
+   * snapshot of the current table is taken before executing the restore operation. In case of
+   * restore failure, the failsafe snapshot will be restored. If the restore completes without
+   * problem the failsafe snapshot is deleted.
+   * @param snapshotName name of the snapshot to restore
+   */
+  CompletableFuture<Void> restoreSnapshot(String snapshotName);
+
+  /**
+   * Restore the specified snapshot on the original table. (The table must be disabled) If
+   * 'takeFailSafeSnapshot' is set to true, a snapshot of the current table is taken before
+   * executing the restore operation. In case of restore failure, the failsafe snapshot will be
+   * restored. If the restore completes without problem the failsafe snapshot is deleted. The
+   * failsafe snapshot name is configurable by using the property
+   * "hbase.snapshot.restore.failsafe.name".
+   * @param snapshotName name of the snapshot to restore
+   * @param takeFailSafeSnapshot true if the failsafe snapshot should be taken
+   */
+  CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot);
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   * @param snapshotName name of the snapshot to be cloned
+   * @param tableName name of the table where the snapshot will be restored
+   */
+  CompletableFuture<Void> cloneSnapshot(final String snapshotName, final TableName tableName);
 }
