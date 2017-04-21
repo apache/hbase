@@ -87,7 +87,7 @@ public class PrefixTreeCell extends ByteBufferCell implements SettableSequenceId
   protected int tagsOffset;
   protected int tagsLength;
   // Pair to set the value ByteBuffer and its offset
-  protected ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
+  protected ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<>();
 
   /********************** Cell methods ******************/
 

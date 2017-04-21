@@ -143,10 +143,10 @@ public class TestBucketCache {
     final List<Integer> BLOCKSIZES = Arrays.asList(4 * 1024, 8 * 1024, 64 * 1024, 96 * 1024);
 
     boolean full = false;
-    ArrayList<Long> allocations = new ArrayList<Long>();
+    ArrayList<Long> allocations = new ArrayList<>();
     // Fill the allocated extents by choosing a random blocksize. Continues selecting blocks until
     // the cache is completely filled.
-    List<Integer> tmp = new ArrayList<Integer>(BLOCKSIZES);
+    List<Integer> tmp = new ArrayList<>(BLOCKSIZES);
     while (!full) {
       Integer blockSize = null;
       try {

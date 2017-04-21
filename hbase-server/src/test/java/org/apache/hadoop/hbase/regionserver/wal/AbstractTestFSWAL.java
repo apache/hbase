@@ -54,7 +54,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -255,11 +257,11 @@ public abstract class AbstractTestFSWAL {
         new HRegionInfo(t2.getTableName(), HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
     // add edits and roll the wal
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-    NavigableMap<byte[], Integer> scopes1 = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes1 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : t1.getFamiliesKeys()) {
       scopes1.put(fam, 0);
     }
-    NavigableMap<byte[], Integer> scopes2 = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes2 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : t2.getFamiliesKeys()) {
       scopes2.put(fam, 0);
     }
@@ -362,7 +364,7 @@ public abstract class AbstractTestFSWAL {
     HBaseTestingUtility.closeRegionAndWAL(r);
     final int countPerFamily = 10;
     final AtomicBoolean goslow = new AtomicBoolean(false);
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
@@ -402,7 +404,7 @@ public abstract class AbstractTestFSWAL {
         }
       }
       // Add any old cluster id.
-      List<UUID> clusterIds = new ArrayList<UUID>(1);
+      List<UUID> clusterIds = new ArrayList<>(1);
       clusterIds.add(UUID.randomUUID());
       // Now make appends run slow.
       goslow.set(true);

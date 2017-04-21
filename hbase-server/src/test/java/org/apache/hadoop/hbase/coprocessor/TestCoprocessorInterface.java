@@ -27,6 +27,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,8 +50,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -144,7 +147,7 @@ public class TestCoprocessorInterface {
     }
   }
 
-  public static class CoprocessorImpl extends BaseRegionObserver {
+  public static class CoprocessorImpl implements RegionObserver {
 
     private boolean startCalled;
     private boolean stopCalled;
@@ -237,7 +240,7 @@ public class TestCoprocessorInterface {
     }
   }
 
-  public static class CoprocessorII extends BaseRegionObserver {
+  public static class CoprocessorII implements RegionObserver {
     private ConcurrentMap<String, Object> sharedData;
     @Override
     public void start(CoprocessorEnvironment e) {
@@ -349,7 +352,7 @@ public class TestCoprocessorInterface {
     RegionScanner scanner = region.getCoprocessorHost().postScannerOpen(s, region.getScanner(s));
     assertTrue(scanner instanceof CustomScanner);
     // this would throw an exception before HBASE-4197
-    scanner.next(new ArrayList<Cell>());
+    scanner.next(new ArrayList<>());
 
     HBaseTestingUtility.closeRegionAndWAL(region);
     Coprocessor c = region.getCoprocessorHost().
@@ -397,6 +400,7 @@ public class TestCoprocessorInterface {
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Path path = new Path(DIR + callingMethod);
     Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);

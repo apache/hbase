@@ -147,7 +147,7 @@ public class Threads {
     try {
       Thread.sleep(millis);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      LOG.warn("sleep interrupted", e);
       Thread.currentThread().interrupt();
     }
   }
@@ -191,7 +191,7 @@ public class Threads {
       ThreadFactory threadFactory) {
     ThreadPoolExecutor boundedCachedThreadPool =
       new ThreadPoolExecutor(maxCachedThread, maxCachedThread, timeout,
-        unit, new LinkedBlockingQueue<Runnable>(), threadFactory);
+        unit, new LinkedBlockingQueue<>(), threadFactory);
     // allow the core pool threads timeout and terminate
     boundedCachedThreadPool.allowCoreThreadTimeOut(true);
     return boundedCachedThreadPool;

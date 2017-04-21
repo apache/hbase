@@ -170,10 +170,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   //  be waiting for the master lock => deadlock.
   private final Object masterAndZKLock = new Object();
 
-  // thread executor shared by all HTableInterface instances created
+  // thread executor shared by all Table instances created
   // by this connection
   private volatile ExecutorService batchPool = null;
-  // meta thread executor shared by all HTableInterface instances created
+  // meta thread executor shared by all Table instances created
   // by this connection
   private volatile ExecutorService metaLookupPool = null;
   private volatile boolean cleanupPool = false;
@@ -415,7 +415,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     BlockingQueue<Runnable> workQueue = passedWorkQueue;
     if (workQueue == null) {
       workQueue =
-        new LinkedBlockingQueue<Runnable>(maxThreads *
+        new LinkedBlockingQueue<>(maxThreads *
             conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
                 HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
       coreThreads = maxThreads;
@@ -443,7 +443,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           this.metaLookupPool = getThreadPool(
              threads,
              threads,
-             "-metaLookup-shared-", new LinkedBlockingQueue<Runnable>());
+             "-metaLookup-shared-", new LinkedBlockingQueue<>());
         }
       }
     }
@@ -661,7 +661,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       final boolean useCache, final boolean offlined) throws IOException {
     List<HRegionInfo> regions = MetaTableAccessor
         .getTableRegions(this, tableName, !offlined);
-    final List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
+    final List<HRegionLocation> locations = new ArrayList<>();
     for (HRegionInfo regionInfo : regions) {
       RegionLocations list = locateRegion(tableName, regionInfo.getStartKey(), useCache, true);
       if (list != null) {
@@ -967,7 +967,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   // Map keyed by service name + regionserver to service stub implementation
-  private final ConcurrentMap<String, Object> stubs = new ConcurrentHashMap<String, Object>();
+  private final ConcurrentMap<String, Object> stubs = new ConcurrentHashMap<>();
 
   /**
    * State of the MasterService connection/setup.
@@ -1012,8 +1012,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    */
   static class ServerErrorTracker {
     // We need a concurrent map here, as we could have multiple threads updating it in parallel.
-    private final ConcurrentMap<ServerName, ServerErrors> errorsByServer =
-        new ConcurrentHashMap<ServerName, ServerErrors>();
+    private final ConcurrentMap<ServerName, ServerErrors> errorsByServer = new ConcurrentHashMap<>();
     private final long canRetryUntil;
     private final int maxTries;// max number to try
     private final long startTrackingTime;

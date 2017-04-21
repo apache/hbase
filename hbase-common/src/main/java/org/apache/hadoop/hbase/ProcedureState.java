@@ -18,13 +18,11 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * POJO representing Procedure State
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum ProcedureState {
-  INITIALIZING, RUNNABLE, WAITING, WAITING_TIMEOUT, ROLLEDBACK, FINISHED;
+  INITIALIZING, RUNNABLE, WAITING, WAITING_TIMEOUT, ROLLEDBACK, SUCCESS, FAILED;
 }

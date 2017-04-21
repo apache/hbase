@@ -35,8 +35,7 @@ import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 @InterfaceAudience.Private
 public class ServerStatisticTracker implements StatisticTrackable {
 
-  private final ConcurrentHashMap<ServerName, ServerStatistics> stats =
-      new ConcurrentHashMap<ServerName, ServerStatistics>();
+  private final ConcurrentHashMap<ServerName, ServerStatistics> stats = new ConcurrentHashMap<>();
 
   @Override
   public void updateRegionStats(ServerName server, byte[] region, RegionLoadStats currentStats) {

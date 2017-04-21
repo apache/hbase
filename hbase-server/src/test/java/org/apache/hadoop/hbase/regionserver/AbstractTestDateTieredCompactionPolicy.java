@@ -39,7 +39,7 @@ public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy
     EnvironmentEdgeManager.injectEdge(timeMachine);
     // Has to be > 0 and < now.
     timeMachine.setValue(1);
-    ArrayList<Long> ageInDisk = new ArrayList<Long>();
+    ArrayList<Long> ageInDisk = new ArrayList<>();
     for (int i = 0; i < sizes.length; i++) {
       ageInDisk.add(0L);
     }

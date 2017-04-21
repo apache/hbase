@@ -167,7 +167,7 @@ public class ResultBoundedCompletionService<V> {
 
 
   public void submit(RetryingCallable<V> task, int callTimeout, int id) {
-    QueueingFuture<V> newFuture = new QueueingFuture<V>(task, callTimeout, id);
+    QueueingFuture<V> newFuture = new QueueingFuture<>(task, callTimeout, id);
     executor.execute(Trace.wrap(newFuture));
     tasks[id] = newFuture;
   }

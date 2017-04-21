@@ -283,11 +283,10 @@ public class CacheConfig {
   }
 
   /**
-   * Create a block cache configuration with the specified cache and
-   * configuration parameters.
+   * Create a block cache configuration with the specified cache and configuration parameters.
    * @param blockCache reference to block cache, null if completely disabled
    * @param cacheDataOnRead whether DATA blocks should be cached on read (we always cache INDEX
-   * blocks and BLOOM blocks; this cannot be disabled).
+   *          blocks and BLOOM blocks; this cannot be disabled).
    * @param inMemory whether blocks should be flagged as in-memory
    * @param cacheDataOnWrite whether data blocks should be cached on write
    * @param cacheIndexesOnWrite whether index blocks should be cached on write
@@ -296,7 +295,9 @@ public class CacheConfig {
    * @param cacheDataCompressed whether to store blocks as compressed in the cache
    * @param prefetchOnOpen whether to prefetch blocks upon open
    * @param cacheDataInL1 If more than one cache tier deployed, if true, cache this column families
-   * data blocks up in the L1 tier.
+   *          data blocks up in the L1 tier.
+   * @param dropBehindCompaction indicate that we should set drop behind to true when open a store
+   *          file reader for compaction
    */
   CacheConfig(final BlockCache blockCache,
       final boolean cacheDataOnRead, final boolean inMemory,

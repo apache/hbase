@@ -23,12 +23,12 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TestCellUtil.ByteBufferCellImpl;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyByteBufferCell;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyCell;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -48,7 +48,7 @@ public class TestKeyOnlyFilter {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<Object[]>(2);
+    List<Object[]> paramList = new ArrayList<>(2);
     {
       paramList.add(new Object[] { false });
       paramList.add(new Object[] { true });
@@ -71,7 +71,7 @@ public class TestKeyOnlyFilter {
         v.length, tags);
 
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
-    ByteBufferCellImpl bbCell = new ByteBufferCellImpl(buffer, 0,
+    ByteBufferKeyValue bbCell = new ByteBufferKeyValue(buffer, 0,
         buffer.remaining());
 
     // KV format: <keylen:4><valuelen:4><key:keylen><value:valuelen>

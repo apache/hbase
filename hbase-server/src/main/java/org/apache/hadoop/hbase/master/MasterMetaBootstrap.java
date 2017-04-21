@@ -100,7 +100,7 @@ public class MasterMetaBootstrap {
       throws IOException, InterruptedException, KeeperException {
     int numReplicas = master.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
            HConstants.DEFAULT_META_REPLICA_NUM);
-    final Set<ServerName> EMPTY_SET = new HashSet<ServerName>();
+    final Set<ServerName> EMPTY_SET = new HashSet<>();
     for (int i = 1; i < numReplicas; i++) {
       assignMeta(EMPTY_SET, i);
     }
@@ -241,7 +241,7 @@ public class MasterMetaBootstrap {
    */
   private Set<ServerName> getPreviouselyFailedMetaServersFromZK() throws KeeperException {
     final ZooKeeperWatcher zooKeeper = master.getZooKeeper();
-    Set<ServerName> result = new HashSet<ServerName>();
+    Set<ServerName> result = new HashSet<>();
     String metaRecoveringZNode = ZKUtil.joinZNode(zooKeeper.znodePaths.recoveringRegionsZNode,
       HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
     List<String> regionFailedServers = ZKUtil.listChildrenNoWatch(zooKeeper, metaRecoveringZNode);

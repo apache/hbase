@@ -40,12 +40,12 @@ public class TestFirstKeyValueMatchingQualifiersFilter extends TestCase {
 
   /**
    * Test the functionality of
-   * {@link FirstKeyValueMatchingQualifiersFilter#filterKeyValue(KeyValue)}
+   * {@link FirstKeyValueMatchingQualifiersFilter#filterKeyValue(org.apache.hadoop.hbase.Cell)}
    * 
    * @throws Exception
    */
   public void testFirstKeyMatchingQualifierFilter() throws Exception {
-    Set<byte[]> quals = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    Set<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     quals.add(COLUMN_QUALIFIER_1);
     quals.add(COLUMN_QUALIFIER_2);
     Filter filter = new FirstKeyValueMatchingQualifiersFilter(quals);

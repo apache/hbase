@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.filterCells;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 
 import java.io.IOException;
@@ -29,9 +29,8 @@ import java.util.Queue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
 /**
  * The {@link ResultScanner} implementation for {@link AsyncTable}. It will fetch data automatically
@@ -45,11 +44,11 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
 
   private final RawAsyncTable rawTable;
 
-  private final Scan scan;
-
   private final long maxCacheSize;
 
   private final Queue<Result> queue = new ArrayDeque<>();
+
+  private ScanMetrics scanMetrics;
 
   private long cacheSize;
 
@@ -57,16 +56,10 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
 
   private Throwable error;
 
-  private boolean prefetchStopped;
-
-  private int numberOfOnCompleteToIgnore;
-
-  // used to filter out cells that already returned when we restart a scan
-  private Cell lastCell;
+  private ScanResumer resumer;
 
   public AsyncTableResultScanner(RawAsyncTable table, Scan scan, long maxCacheSize) {
     this.rawTable = table;
-    this.scan = scan;
     this.maxCacheSize = maxCacheSize;
     table.scan(scan, this);
   }
@@ -76,71 +69,36 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
     cacheSize += calcEstimatedSize(result);
   }
 
-  private void stopPrefetch(Result lastResult) {
-    prefetchStopped = true;
-    if (lastResult.isPartial() || scan.getBatch() > 0) {
-      scan.withStartRow(lastResult.getRow());
-      lastCell = lastResult.rawCells()[lastResult.rawCells().length - 1];
-    } else {
-      scan.withStartRow(lastResult.getRow(), false);
-    }
+  private void stopPrefetch(ScanController controller) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug(
-        String.format("0x%x", System.identityHashCode(this)) + " stop prefetching when scanning "
-            + rawTable.getName() + " as the cache size " + cacheSize
-            + " is greater than the maxCacheSize " + maxCacheSize + ", the next start row is "
-            + Bytes.toStringBinary(scan.getStartRow()) + ", lastCell is " + lastCell);
+      LOG.debug(String.format("0x%x", System.identityHashCode(this)) +
+          " stop prefetching when scanning " + rawTable.getName() + " as the cache size " +
+          cacheSize + " is greater than the maxCacheSize " + maxCacheSize);
     }
-    // Ignore an onComplete call as the scan is stopped by us.
-    // Here we can not use a simple boolean flag. A scan operation can cross multiple regions and
-    // the regions may be located on different regionservers, so it is possible that the methods of
-    // RawScanResultConsumer are called in different rpc framework threads and overlapped with each
-    // other. It may happen that
-    // 1. we stop scan1
-    // 2. we start scan2
-    // 3. we stop scan2
-    // 4. onComplete for scan1 is called
-    // 5. onComplete for scan2 is called
-    // So if we use a boolean flag here then we can only ignore the onComplete in step4 and think
-    // that the onComplete in step 5 tells us there is no data.
-    numberOfOnCompleteToIgnore++;
+    resumer = controller.suspend();
   }
 
   @Override
-  public synchronized boolean onNext(Result[] results) {
+  public synchronized void onNext(Result[] results, ScanController controller) {
     assert results.length > 0;
     if (closed) {
-      return false;
+      controller.terminate();
+      return;
     }
-    Result firstResult = results[0];
-    if (lastCell != null) {
-      firstResult = filterCells(firstResult, lastCell);
-      if (firstResult != null) {
-        // do not set lastCell to null if the result after filtering is null as there may still be
-        // other cells that can be filtered out
-        lastCell = null;
-        addToCache(firstResult);
-      } else if (results.length == 1) {
-        // the only one result is null
-        return true;
-      }
-    } else {
-      addToCache(firstResult);
-    }
-    for (int i = 1; i < results.length; i++) {
-      addToCache(results[i]);
+    for (Result result : results) {
+      addToCache(result);
     }
     notifyAll();
-    if (cacheSize < maxCacheSize) {
-      return true;
+    if (cacheSize >= maxCacheSize) {
+      stopPrefetch(controller);
     }
-    stopPrefetch(results[results.length - 1]);
-    return false;
   }
 
   @Override
-  public synchronized boolean onHeartbeat() {
-    return !closed;
+  public synchronized void onHeartbeat(ScanController controller) {
+    if (closed) {
+      controller.terminate();
+    }
   }
 
   @Override
@@ -150,22 +108,21 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
 
   @Override
   public synchronized void onComplete() {
-    // Do not mark the scanner as closed if the scan is stopped by us due to cache size limit since
-    // we may resume later by starting a new scan. See resumePrefetch.
-    if (numberOfOnCompleteToIgnore > 0) {
-      numberOfOnCompleteToIgnore--;
-      return;
-    }
     closed = true;
     notifyAll();
+  }
+
+  @Override
+  public void onScanMetricsCreated(ScanMetrics scanMetrics) {
+    this.scanMetrics = scanMetrics;
   }
 
   private void resumePrefetch() {
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("0x%x", System.identityHashCode(this)) + " resume prefetching");
     }
-    prefetchStopped = false;
-    rawTable.scan(scan, this);
+    resumer.resume();
+    resumer = null;
   }
 
   @Override
@@ -186,7 +143,7 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
     }
     Result result = queue.poll();
     cacheSize -= calcEstimatedSize(result);
-    if (prefetchStopped && cacheSize <= maxCacheSize / 2) {
+    if (resumer != null && cacheSize <= maxCacheSize / 2) {
       resumePrefetch();
     }
     return result;
@@ -197,13 +154,27 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
     closed = true;
     queue.clear();
     cacheSize = 0;
+    if (resumer != null) {
+      resumePrefetch();
+    }
     notifyAll();
   }
 
   @Override
   public boolean renewLease() {
-    // we will do prefetching in the background and if there is no space we will just terminate the
-    // background scan operation. So there is no reason to renew lease here.
+    // we will do prefetching in the background and if there is no space we will just suspend the
+    // scanner. The renew lease operation will be handled in the background.
     return false;
+  }
+
+  // used in tests to test whether the scanner has been suspended
+  @VisibleForTesting
+  synchronized boolean isSuspended() {
+    return resumer != null;
+  }
+
+  @Override
+  public ScanMetrics getScanMetrics() {
+    return scanMetrics;
   }
 }

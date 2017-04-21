@@ -112,11 +112,10 @@ public class TestStore {
   byte [] qf5 = Bytes.toBytes("qf5");
   byte [] qf6 = Bytes.toBytes("qf6");
 
-  NavigableSet<byte[]> qualifiers =
-    new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
+  NavigableSet<byte[]> qualifiers = new ConcurrentSkipListSet<>(Bytes.BYTES_COMPARATOR);
 
-  List<Cell> expected = new ArrayList<Cell>();
-  List<Cell> result = new ArrayList<Cell>();
+  List<Cell> expected = new ArrayList<>();
+  List<Cell> result = new ArrayList<>();
 
   long id = System.currentTimeMillis();
   Get get = new Get(row);
@@ -179,6 +178,7 @@ public class TestStore {
     } else {
       htd.addFamily(hcd);
     }
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
@@ -246,7 +246,8 @@ public class TestStore {
         Assert.assertEquals(kvSize2, size);
         flushStore(store, id++);
         size = store.memstore.getFlushableSize();
-        Assert.assertEquals(MemstoreSize.EMPTY_SIZE, size);
+        assertEquals(0, size.getDataSize());
+        assertEquals(0, size.getHeapSize());
         return null;
       }
     });
@@ -276,7 +277,7 @@ public class TestStore {
     writer.close();
 
     // Verify that compression and encoding settings are respected
-    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), true, conf);
     Assert.assertEquals(hcd.getCompressionType(), reader.getCompressionAlgorithm());
     Assert.assertEquals(hcd.getDataBlockEncoding(), reader.getDataBlockEncoding());
     reader.close();
@@ -624,8 +625,7 @@ public class TestStore {
    * only; thereafter it will succeed.  Used by {@link TestHRegion} too.
    */
   static class FaultyFileSystem extends FilterFileSystem {
-    List<SoftReference<FaultyOutputStream>> outStreams =
-      new ArrayList<SoftReference<FaultyOutputStream>>();
+    List<SoftReference<FaultyOutputStream>> outStreams = new ArrayList<>();
     private long faultPos = 200;
     AtomicBoolean fault = new AtomicBoolean(true);
 
@@ -699,7 +699,7 @@ public class TestStore {
    */
   List<Cell> getKeyValueSet(long[] timestamps, int numRows,
       byte[] qualifier, byte[] family) {
-    List<Cell> kvList = new ArrayList<Cell>();
+    List<Cell> kvList = new ArrayList<>();
     for (int i=1;i<=numRows;i++) {
       byte[] b = Bytes.toBytes(i);
       for (long timestamp: timestamps) {

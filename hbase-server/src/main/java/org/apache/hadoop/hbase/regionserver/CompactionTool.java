@@ -248,7 +248,7 @@ public class CompactionTool extends Configured implements Tool {
      */
     @Override
     public List<InputSplit> getSplits(JobContext job) throws IOException {
-      List<InputSplit> splits = new ArrayList<InputSplit>();
+      List<InputSplit> splits = new ArrayList<>();
       List<FileStatus> files = listStatus(job);
 
       Text key = new Text();
@@ -301,7 +301,7 @@ public class CompactionTool extends Configured implements Tool {
     public static void createInputFile(final FileSystem fs, final Path path,
         final Set<Path> toCompactDirs) throws IOException {
       // Extract the list of store dirs
-      List<Path> storeDirs = new LinkedList<Path>();
+      List<Path> storeDirs = new LinkedList<>();
       for (Path compactDir: toCompactDirs) {
         if (isFamilyDir(fs, compactDir)) {
           storeDirs.add(compactDir);
@@ -389,7 +389,7 @@ public class CompactionTool extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    Set<Path> toCompactDirs = new HashSet<Path>();
+    Set<Path> toCompactDirs = new HashSet<>();
     boolean compactOnce = false;
     boolean major = false;
     boolean mapred = false;

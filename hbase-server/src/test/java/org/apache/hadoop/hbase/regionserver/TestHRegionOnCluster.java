@@ -159,7 +159,7 @@ public class TestHRegionOnCluster {
     put.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes(value));
     table.put(put);
     ResultScanner resultScanner = table.getScanner(new Scan());
-    List<Result> results = new ArrayList<Result>();
+    List<Result> results = new ArrayList<>();
     while (true) {
       Result r = resultScanner.next();
       if (r == null)

@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
@@ -236,10 +235,6 @@ public class RegionCoprocessorHost
             hasCustomPostScannerFilterRow = true;
             break out;
           }
-          if (clazz == BaseRegionObserver.class) {
-            // we reached BaseRegionObserver, try next coprocessor
-            break;
-          }
           try {
             clazz.getDeclaredMethod("postScannerFilterRow", ObserverContext.class,
               InternalScanner.class, Cell.class, boolean.class);
@@ -366,7 +361,7 @@ public class RegionCoprocessorHost
 
     // scan the table attributes for coprocessor load specifications
     // initialize the coprocessors
-    List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
+    List<RegionEnvironment> configured = new ArrayList<>();
     for (TableCoprocessorAttribute attr: getTableCoprocessorAttrsFromSchema(conf, 
         region.getTableDesc())) {
       // Load encompasses classloading and coprocessor initialization
@@ -410,7 +405,7 @@ public class RegionCoprocessorHost
       // remain in this map
       classData = (ConcurrentMap<String, Object>)sharedDataMap.get(implClass.getName());
       if (classData == null) {
-        classData = new ConcurrentHashMap<String, Object>();
+        classData = new ConcurrentHashMap<>();
         sharedDataMap.put(implClass.getName(), classData);
       }
     }
@@ -634,17 +629,16 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preFlushScannerOpen(ObserverContext,
-   *    Store, KeyValueScanner, InternalScanner, long)}
+   * {@link RegionObserver#preFlushScannerOpen(ObserverContext, Store, List, InternalScanner, long)}
    */
   public InternalScanner preFlushScannerOpen(final Store store,
-      final KeyValueScanner memstoreScanner, final long readPoint) throws IOException {
+      final List<KeyValueScanner> scanners, final long readPoint) throws IOException {
     return execOperationWithResult(null,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        setResult(oserver.preFlushScannerOpen(ctx, store, memstoreScanner, getResult(), readPoint));
+        setResult(oserver.preFlushScannerOpen(ctx, store, scanners, getResult(), readPoint));
       }
     });
   }

@@ -19,8 +19,10 @@
 
 package org.apache.hadoop.hbase.spark
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes
 
+@InterfaceAudience.Public
 class ByteArrayComparable(val bytes:Array[Byte], val offset:Int = 0, var length:Int = -1)
   extends Comparable[ByteArrayComparable] {
 

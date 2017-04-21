@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.concurrent.Callable;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,17 +39,13 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
-import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Threads;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class ProcedureTestingUtility {
   private static final Log LOG = LogFactory.getLog(ProcedureTestingUtility.class);
@@ -183,7 +183,7 @@ public class ProcedureTestingUtility {
   public static <TEnv> long submitAndWait(Configuration conf, TEnv env, Procedure<TEnv> proc)
       throws IOException {
     NoopProcedureStore procStore = new NoopProcedureStore();
-    ProcedureExecutor<TEnv> procExecutor = new ProcedureExecutor<TEnv>(conf, env, procStore);
+    ProcedureExecutor<TEnv> procExecutor = new ProcedureExecutor<>(conf, env, procStore);
     procStore.start(1);
     procExecutor.start(1, false);
     try {
@@ -408,8 +408,8 @@ public class ProcedureTestingUtility {
       addStackIndex(index);
     }
 
-    public void setFinishedState() {
-      setState(ProcedureState.FINISHED);
+    public void setSuccessState() {
+      setState(ProcedureState.SUCCESS);
     }
 
     public void setData(final byte[] data) {
@@ -446,9 +446,9 @@ public class ProcedureTestingUtility {
   }
 
   public static class LoadCounter implements ProcedureStore.ProcedureLoader {
-    private final ArrayList<Procedure> corrupted = new ArrayList<Procedure>();
-    private final ArrayList<ProcedureInfo> completed = new ArrayList<ProcedureInfo>();
-    private final ArrayList<Procedure> runnable = new ArrayList<Procedure>();
+    private final ArrayList<Procedure> corrupted = new ArrayList<>();
+    private final ArrayList<ProcedureInfo> completed = new ArrayList<>();
+    private final ArrayList<Procedure> runnable = new ArrayList<>();
 
     private Set<Long> procIds;
     private long maxProcId = 0;
@@ -523,7 +523,7 @@ public class ProcedureTestingUtility {
     public void load(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
         long procId;
-        if (procIter.isNextCompleted()) {
+        if (procIter.isNextFinished()) {
           ProcedureInfo proc = procIter.nextAsProcedureInfo();
           procId = proc.getProcId();
           LOG.debug("loading completed procId=" + procId + ": " + proc);

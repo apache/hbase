@@ -39,7 +39,7 @@ public class TestConcatenatedLists {
   @Test
   public void testUnsupportedOps() {
     // If adding support, add tests.
-    ConcatenatedLists<Long> c = new ConcatenatedLists<Long>();
+    ConcatenatedLists<Long> c = new ConcatenatedLists<>();
     c.addSublist(Arrays.asList(0L, 1L));
     try {
       c.add(2L);
@@ -82,19 +82,19 @@ public class TestConcatenatedLists {
 
   @Test
   public void testEmpty() {
-    verify(new ConcatenatedLists<Long>(), -1);
+    verify(new ConcatenatedLists<>(), -1);
   }
 
   @Test
   public void testOneOne() {
-    ConcatenatedLists<Long> c = new ConcatenatedLists<Long>();
+    ConcatenatedLists<Long> c = new ConcatenatedLists<>();
     c.addSublist(Arrays.asList(0L));
     verify(c, 0);
   }
 
   @Test
   public void testOneMany() {
-    ConcatenatedLists<Long> c = new ConcatenatedLists<Long>();
+    ConcatenatedLists<Long> c = new ConcatenatedLists<>();
     c.addSublist(Arrays.asList(0L, 1L, 2L));
     verify(c, 2);
   }
@@ -102,7 +102,7 @@ public class TestConcatenatedLists {
   @Test
   @SuppressWarnings("unchecked")
   public void testManyOne() {
-    ConcatenatedLists<Long> c = new ConcatenatedLists<Long>();
+    ConcatenatedLists<Long> c = new ConcatenatedLists<>();
     c.addSublist(Arrays.asList(0L));
     c.addAllSublists(Arrays.asList(Arrays.asList(1L), Arrays.asList(2L)));
     verify(c, 2);
@@ -111,7 +111,7 @@ public class TestConcatenatedLists {
   @Test
   @SuppressWarnings("unchecked")
   public void testManyMany() {
-    ConcatenatedLists<Long> c = new ConcatenatedLists<Long>();
+    ConcatenatedLists<Long> c = new ConcatenatedLists<>();
     c.addAllSublists(Arrays.asList(Arrays.asList(0L, 1L)));
     c.addSublist(Arrays.asList(2L, 3L, 4L));
     c.addAllSublists(Arrays.asList(Arrays.asList(5L), Arrays.asList(6L, 7L)));
@@ -123,7 +123,7 @@ public class TestConcatenatedLists {
     assertEquals(last + 1, c.size());
     assertTrue(c.containsAll(c));
     Long[] array = c.toArray(new Long[c.size()]);
-    List<Long> all = new ArrayList<Long>();
+    List<Long> all = new ArrayList<>();
     Iterator<Long> iter = c.iterator();
     for (Long i = 0L; i <= last; ++i) {
       assertTrue(iter.hasNext());

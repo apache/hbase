@@ -99,7 +99,7 @@ implements ServerProcedureInterface {
 
   public static final int DEFAULT_WAIT_ON_RIT = 30000;
 
-  private static final Set<HRegionInfo> META_REGION_SET = new HashSet<HRegionInfo>();
+  private static final Set<HRegionInfo> META_REGION_SET = new HashSet<>();
   static {
     META_REGION_SET.add(HRegionInfo.FIRST_META_REGIONINFO);
   }
@@ -166,7 +166,7 @@ implements ServerProcedureInterface {
 
   private void throwProcedureYieldException(final String msg) throws ProcedureYieldException {
     String logMsg = msg + "; cycle=" + this.cycles + ", running for " +
-        StringUtils.formatTimeDiff(System.currentTimeMillis(), getStartTime());
+        StringUtils.formatTimeDiff(System.currentTimeMillis(), getSubmittedTime());
     // The procedure executor logs ProcedureYieldException at trace level. For now, log these
     // yields for server crash processing at DEBUG. Revisit when stable.
     if (LOG.isDebugEnabled()) LOG.debug(logMsg);
@@ -424,7 +424,7 @@ implements ServerProcedureInterface {
   private List<HRegionInfo> calcRegionsToAssign(final MasterProcedureEnv env)
   throws IOException {
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
-    List<HRegionInfo> regionsToAssignAggregator = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> regionsToAssignAggregator = new ArrayList<>();
     int replicaCount = env.getMasterConfiguration().getInt(HConstants.META_REPLICAS_NUM,
       HConstants.DEFAULT_META_REPLICA_NUM);
     for (int i = 1; i < replicaCount; i++) {
@@ -625,14 +625,14 @@ implements ServerProcedureInterface {
     this.shouldSplitWal = state.getShouldSplitWal();
     int size = state.getRegionsOnCrashedServerCount();
     if (size > 0) {
-      this.regionsOnCrashedServer = new HashSet<HRegionInfo>(size);
+      this.regionsOnCrashedServer = new HashSet<>(size);
       for (RegionInfo ri: state.getRegionsOnCrashedServerList()) {
         this.regionsOnCrashedServer.add(HRegionInfo.convert(ri));
       }
     }
     size = state.getRegionsAssignedCount();
     if (size > 0) {
-      this.regionsAssigned = new ArrayList<HRegionInfo>(size);
+      this.regionsAssigned = new ArrayList<>(size);
       for (RegionInfo ri: state.getRegionsOnCrashedServerList()) {
         this.regionsAssigned.add(HRegionInfo.convert(ri));
       }

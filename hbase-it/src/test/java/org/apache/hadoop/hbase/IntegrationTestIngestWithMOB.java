@@ -61,7 +61,7 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
 
   @Override
   protected String[] getArgsForLoadTestToolInitTable() {
-    List<String> args = new ArrayList<String>();
+    List<String> args = new ArrayList<>();
     args.add("-tn");
     args.add(getTablename().getNameAsString());
     // pass all remaining args from conf with keys <test class name>.<load test tool arg>
@@ -133,7 +133,7 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
       long numKeys) {
     String[] args = super.getArgsForLoadTestTool(mode, modeSpecificArg, startKey, numKeys);
-    List<String> tmp = new ArrayList<String>(Arrays.asList(args));
+    List<String> tmp = new ArrayList<>(Arrays.asList(args));
     // LoadTestDataGeneratorMOB:mobColumnFamily:minMobDataSize:maxMobDataSize
     tmp.add(HIPHEN + LoadTestTool.OPT_GENERATOR);
     StringBuilder sb = new StringBuilder(LoadTestDataGeneratorWithMOB.class.getName());

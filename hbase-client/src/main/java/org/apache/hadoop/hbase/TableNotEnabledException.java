@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -27,7 +26,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Thrown if a table should be enabled but is not
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TableNotEnabledException extends DoNotRetryIOException {
   private static final long serialVersionUID = 262144L;
   /** default constructor */

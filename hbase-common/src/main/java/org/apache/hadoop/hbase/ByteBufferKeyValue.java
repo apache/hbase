@@ -40,7 +40,7 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
   protected final int length;
   private long seqId = 0;
 
-  private static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
+  public static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
       + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_LONG;
 
   public ByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId) {
@@ -252,7 +252,10 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public long heapSize() {
-    return ClassSize.align(FIXED_OVERHEAD + ClassSize.align(length));
+    if (this.buf.hasArray()) {
+      return ClassSize.align(FIXED_OVERHEAD + length);
+    }
+    return ClassSize.align(FIXED_OVERHEAD);
   }
 
   @Override
@@ -296,11 +299,6 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
   public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
     ByteBufferUtils.copyFromArrayToBuffer(this.buf, this.getTimestampOffset(), ts, tsOffset,
         Bytes.SIZEOF_LONG);
-  }
-
-  @Override
-  public long heapOverhead() {
-    return FIXED_OVERHEAD;
   }
 
   @Override

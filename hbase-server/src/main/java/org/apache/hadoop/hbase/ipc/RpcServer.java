@@ -145,12 +145,10 @@ public abstract class RpcServer implements RpcServerInterface,
   /** This is set to Call object before Handler invokes an RPC and ybdie
    * after the call returns.
    */
-  protected static final ThreadLocal<RpcCall> CurCall =
-      new ThreadLocal<RpcCall>();
+  protected static final ThreadLocal<RpcCall> CurCall = new ThreadLocal<>();
 
   /** Keeps MonitoredRPCHandler per handler thread. */
-  protected static final ThreadLocal<MonitoredRPCHandler> MONITORED_RPC
-      = new ThreadLocal<MonitoredRPCHandler>();
+  protected static final ThreadLocal<MonitoredRPCHandler> MONITORED_RPC = new ThreadLocal<>();
 
   protected final InetSocketAddress bindAddress;
 
@@ -413,7 +411,7 @@ public abstract class RpcServer implements RpcServerInterface,
               this.connection.compressionCodec, cells);
           if (b != null) {
             cellBlockSize = b.remaining();
-            cellBlock = new ArrayList<ByteBuffer>(1);
+            cellBlock = new ArrayList<>(1);
             cellBlock.add(b);
           }
         }
@@ -1177,7 +1175,7 @@ public abstract class RpcServer implements RpcServerInterface,
             status.getClient(), startTime, processingTime, qTime,
             responseSize);
       }
-      return new Pair<Message, CellScanner>(result, controller.cellScanner());
+      return new Pair<>(result, controller.cellScanner());
     } catch (Throwable e) {
       // The above callBlockingMethod will always return a SE.  Strip the SE wrapper before
       // putting it on the wire.  Its needed to adhere to the pb Service Interface but we don't
@@ -1218,7 +1216,7 @@ public abstract class RpcServer implements RpcServerInterface,
       String clientAddress, long startTime, int processingTime, int qTime,
       long responseSize) throws IOException {
     // base information that is reported regardless of type of call
-    Map<String, Object> responseInfo = new HashMap<String, Object>();
+    Map<String, Object> responseInfo = new HashMap<>();
     responseInfo.put("starttimems", startTime);
     responseInfo.put("processingtimems", processingTime);
     responseInfo.put("queuetimems", qTime);
@@ -1299,7 +1297,7 @@ public abstract class RpcServer implements RpcServerInterface,
   static Pair<ByteBuff, CallCleanup> allocateByteBuffToReadInto(ByteBufferPool pool,
       int minSizeForPoolUse, int reqLen) {
     ByteBuff resultBuf;
-    List<ByteBuffer> bbs = new ArrayList<ByteBuffer>((reqLen / pool.getBufferSize()) + 1);
+    List<ByteBuffer> bbs = new ArrayList<>((reqLen / pool.getBufferSize()) + 1);
     int remain = reqLen;
     ByteBuffer buf = null;
     while (remain >= minSizeForPoolUse && (buf = pool.getBuffer()) != null) {
@@ -1325,14 +1323,14 @@ public abstract class RpcServer implements RpcServerInterface,
     resultBuf.limit(reqLen);
     if (bufsFromPool != null) {
       final ByteBuffer[] bufsFromPoolFinal = bufsFromPool;
-      return new Pair<ByteBuff, RpcServer.CallCleanup>(resultBuf, () -> {
+      return new Pair<>(resultBuf, () -> {
         // Return back all the BBs to pool
         for (int i = 0; i < bufsFromPoolFinal.length; i++) {
           pool.putbackBuffer(bufsFromPoolFinal[i]);
         }
       });
     }
-    return new Pair<ByteBuff, RpcServer.CallCleanup>(resultBuf, null);
+    return new Pair<>(resultBuf, null);
   }
 
   /**
@@ -1341,7 +1339,7 @@ public abstract class RpcServer implements RpcServerInterface,
    * call.
    * @return An RpcCallContext backed by the currently ongoing call (gotten from a thread local)
    */
-  public static RpcCallContext getCurrentCall() {
+  public static RpcCall getCurrentCall() {
     return CurCall.get();
   }
 

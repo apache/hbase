@@ -38,8 +38,7 @@ public class BoundedGroupingStrategy implements RegionGroupingStrategy{
   static final String NUM_REGION_GROUPS = "hbase.wal.regiongrouping.numgroups";
   static final int DEFAULT_NUM_REGION_GROUPS = 2;
 
-  private ConcurrentHashMap<String, String> groupNameCache =
-      new ConcurrentHashMap<String, String>();
+  private ConcurrentHashMap<String, String> groupNameCache = new ConcurrentHashMap<>();
   private AtomicInteger counter = new AtomicInteger(0);
   private String[] groupNames;
 

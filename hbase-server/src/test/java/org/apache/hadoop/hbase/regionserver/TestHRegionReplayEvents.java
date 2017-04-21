@@ -153,7 +153,7 @@ public class TestHRegionReplayEvents {
     }
 
     time = System.currentTimeMillis();
-
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     primaryHri = new HRegionInfo(htd.getTableName(),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
       false, time, 0);
@@ -179,7 +179,7 @@ public class TestHRegionReplayEvents {
     when(rss.getExecutorService()).thenReturn(es);
     primaryRegion = HRegion.createHRegion(primaryHri, rootDir, CONF, htd, walPrimary);
     primaryRegion.close();
-    List<Region> regions = new ArrayList<Region>();
+    List<Region> regions = new ArrayList<>();
     regions.add(primaryRegion);
     when(rss.getOnlineRegions()).thenReturn(regions);
 
@@ -1391,7 +1391,7 @@ public class TestHRegionReplayEvents {
 
     // Test case 3: compact primary files
     primaryRegion.compactStores();
-    List<Region> regions = new ArrayList<Region>();
+    List<Region> regions = new ArrayList<>();
     regions.add(primaryRegion);
     when(rss.getOnlineRegions()).thenReturn(regions);
     CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null, rss, false);
@@ -1486,11 +1486,10 @@ public class TestHRegionReplayEvents {
     random.nextBytes(randomValues);
     Path testPath = TEST_UTIL.getDataTestDirOnTestFS();
 
-    List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>();
+    List<Pair<byte[], String>> familyPaths = new ArrayList<>();
     int expectedLoadFileCount = 0;
     for (byte[] family : families) {
-      familyPaths.add(new Pair<byte[], String>(family, createHFileForFamilies(testPath, family,
-        randomValues)));
+      familyPaths.add(new Pair<>(family, createHFileForFamilies(testPath, family, randomValues)));
       expectedLoadFileCount++;
     }
     primaryRegion.bulkLoadHFiles(familyPaths, false, null);
@@ -1519,7 +1518,7 @@ public class TestHRegionReplayEvents {
     secondaryRegion.replayWALBulkLoadEventMarker(bulkloadEvent);
 
 
-    List<String> storeFileName = new ArrayList<String>();
+    List<String> storeFileName = new ArrayList<>();
     for (StoreDescriptor storeDesc : bulkloadEvent.getStoresList()) {
       storeFileName.addAll(storeDesc.getStoreFileList());
     }

@@ -143,14 +143,14 @@ public class HFileArchiveTestingUtil {
    * @return <expected, gotten, backup>, where each is sorted
    */
   private static List<List<String>> getFileLists(FileStatus[] previous, FileStatus[] archived) {
-    List<List<String>> files = new ArrayList<List<String>>(3);
+    List<List<String>> files = new ArrayList<>(3);
 
     // copy over the original files
     List<String> originalFileNames = convertToString(previous);
     files.add(originalFileNames);
 
-    List<String> currentFiles = new ArrayList<String>(previous.length);
-    List<FileStatus> backedupFiles = new ArrayList<FileStatus>(previous.length);
+    List<String> currentFiles = new ArrayList<>(previous.length);
+    List<FileStatus> backedupFiles = new ArrayList<>(previous.length);
     for (FileStatus f : archived) {
       String name = f.getPath().getName();
       // if the file has been backed up
@@ -177,7 +177,7 @@ public class HFileArchiveTestingUtil {
   }
 
   private static List<String> convertToString(List<FileStatus> files) {
-    List<String> originalFileNames = new ArrayList<String>(files.size());
+    List<String> originalFileNames = new ArrayList<>(files.size());
     for (FileStatus f : files) {
       originalFileNames.add(f.getPath().getName());
     }
@@ -188,7 +188,7 @@ public class HFileArchiveTestingUtil {
   private static String compareFileLists(List<String> expected, List<String> gotten) {
     StringBuilder sb = new StringBuilder("Expected (" + expected.size() + "): \t\t Gotten ("
         + gotten.size() + "):\n");
-    List<String> notFound = new ArrayList<String>();
+    List<String> notFound = new ArrayList<>();
     for (String s : expected) {
       if (gotten.contains(s)) sb.append(s + "\t\t" + s + "\n");
       else notFound.add(s);

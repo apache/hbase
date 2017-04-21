@@ -151,7 +151,7 @@ public class HttpDoAsClient {
     //
     // Create the demo table with two column families, entry: and unused:
     //
-    ArrayList<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>(2);
+    ArrayList<ColumnDescriptor> columns = new ArrayList<>(2);
     ColumnDescriptor col;
     col = new ColumnDescriptor();
     col.name = ByteBuffer.wrap(bytes("entry:"));
@@ -236,7 +236,7 @@ public class HttpDoAsClient {
   private void printRow(TRowResult rowResult) {
     // copy values into a TreeMap to get them in sorted order
 
-    TreeMap<String, TCell> sorted = new TreeMap<String, TCell>();
+    TreeMap<String, TCell> sorted = new TreeMap<>();
     for (Map.Entry<ByteBuffer, TCell> column : rowResult.columns.entrySet()) {
       sorted.put(utf8(column.getKey().array()), column.getValue());
     }
@@ -261,7 +261,7 @@ public class HttpDoAsClient {
         new Configuration() {
           @Override
           public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-            Map<String, String> options = new HashMap<String, String>();
+            Map<String, String> options = new HashMap<>();
             options.put("useKeyTab", "false");
             options.put("storeKey", "false");
             options.put("doNotPrompt", "true");

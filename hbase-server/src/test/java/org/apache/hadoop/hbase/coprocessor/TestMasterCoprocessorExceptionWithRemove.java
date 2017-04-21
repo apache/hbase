@@ -72,7 +72,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     }
   }
 
-  public static class BuggyMasterObserver extends BaseMasterObserver {
+  public static class BuggyMasterObserver implements MasterObserver {
     private boolean preCreateTableCalled;
     private boolean postCreateTableCalled;
     private boolean startCalled;

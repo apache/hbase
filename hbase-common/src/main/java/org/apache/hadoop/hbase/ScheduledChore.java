@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -42,7 +41,6 @@ import com.google.common.annotations.VisibleForTesting;
  * an entry being added to a queue, etc.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public abstract class ScheduledChore implements Runnable {
   private static final Log LOG = LogFactory.getLog(ScheduledChore.class);
 

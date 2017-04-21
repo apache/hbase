@@ -27,8 +27,12 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.HRegionLocation;
+
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.AfterClass;
@@ -74,7 +78,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
     TEST_UTIL.startMiniCluster(3);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("testhbck"));
+        new SynchronousQueue<>(), Threads.newDaemonThreadFactory("testhbck"));
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 
@@ -255,7 +259,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
       }
       // get all the online regions in the regionservers
       Collection<ServerName> servers = admin.getClusterStatus().getServers();
-      Set<HRegionInfo> onlineRegions = new HashSet<HRegionInfo>();
+      Set<HRegionInfo> onlineRegions = new HashSet<>();
       for (ServerName s : servers) {
         List<HRegionInfo> list = admin.getOnlineRegions(s);
         onlineRegions.addAll(list);
@@ -271,4 +275,73 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
     }
   }
 
+  /**
+   * Creates and fixes a bad table with a successful split that have a deployed
+   * start and end keys and region replicas enabled
+   */
+  @Test (timeout=180000)
+  public void testSplitAndDupeRegionWithRegionReplica() throws Exception {
+    TableName table =
+      TableName.valueOf("testSplitAndDupeRegionWithRegionReplica");
+    Table meta = null;
+
+    try {
+      setupTableWithRegionReplica(table, 2);
+
+      assertNoErrors(doFsck(conf, false));
+      assertEquals(ROWKEYS.length, countRows());
+
+      // No Catalog Janitor running
+      admin.enableCatalogJanitor(false);
+      meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
+      HRegionLocation loc = this.connection.getRegionLocation(table, SPLITS[0], false);
+      HRegionInfo hriParent = loc.getRegionInfo();
+
+      // Split Region A just before B
+      this.connection.getAdmin().split(table, Bytes.toBytes("A@"));
+      Thread.sleep(1000);
+
+      // We need to make sure the parent region is not in a split state, so we put it in CLOSED state.
+      regionStates.updateRegionState(hriParent, RegionState.State.CLOSED);
+      TEST_UTIL.assignRegion(hriParent);
+      MetaTableAccessor.addRegionToMeta(meta, hriParent);
+      ServerName server = regionStates.getRegionServerOfRegion(hriParent);
+
+      if (server != null)
+        TEST_UTIL.assertRegionOnServer(hriParent, server, REGION_ONLINE_TIMEOUT);
+
+      while (findDeployedHSI(getDeployedHRIs((HBaseAdmin) admin), hriParent) == null) {
+        Thread.sleep(250);
+      }
+
+      LOG.debug("Finished assignment of parent region");
+
+      // TODO why is dupe region different from dupe start keys?
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_DEPLOYED,
+        HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS,
+        HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS, HBaseFsck.ErrorReporter.ERROR_CODE.OVERLAP_IN_REGION_CHAIN});
+      assertEquals(3, hbck.getOverlapGroups(table).size());
+
+      // fix the degenerate region.
+      hbck = new HBaseFsck(conf, hbfsckExecutorService);
+      hbck.setDisplayFullReport(); // i.e. -details
+      hbck.setTimeLag(0);
+      hbck.setFixHdfsOverlaps(true);
+      hbck.setRemoveParents(true);
+      hbck.setFixReferenceFiles(true);
+      hbck.setFixHFileLinks(true);
+      hbck.connect();
+      hbck.onlineHbck();
+      hbck.close();
+
+      hbck = doFsck(conf, false);
+
+      assertNoErrors(hbck);
+      assertEquals(0, hbck.getOverlapGroups(table).size());
+      assertEquals(ROWKEYS.length, countRows());
+    } finally {
+      cleanupTable(table);
+    }
+  }
 }

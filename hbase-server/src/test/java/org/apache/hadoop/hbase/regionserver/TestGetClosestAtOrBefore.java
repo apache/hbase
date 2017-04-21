@@ -101,7 +101,7 @@ public class TestGetClosestAtOrBefore  {
     }
     InternalScanner s = mr.getScanner(new Scan());
     try {
-      List<Cell> keys = new ArrayList<Cell>();
+      List<Cell> keys = new ArrayList<>();
         while (s.next(keys)) {
         LOG.info(keys);
         keys.clear();
@@ -125,7 +125,7 @@ public class TestGetClosestAtOrBefore  {
     Scan scan = new Scan(firstRowInC);
     s = mr.getScanner(scan);
     try {
-      List<Cell> keys = new ArrayList<Cell>();
+      List<Cell> keys = new ArrayList<>();
         while (s.next(keys)) {
         mr.delete(new Delete(CellUtil.cloneRow(keys.get(0))));
         keys.clear();

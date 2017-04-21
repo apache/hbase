@@ -21,16 +21,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Strings;
 
 /**
  * Filter to use to filter the QuotaRetriever results.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class QuotaFilter {
-  private Set<QuotaType> types = new HashSet<QuotaType>();
+  private Set<QuotaType> types = new HashSet<>();
   private boolean hasFilters = false;
   private String namespaceRegex;
   private String tableRegex;

@@ -83,7 +83,7 @@ public  final class Int32Value extends
    * The int32 value.
    * </pre>
    *
-   * <code>optional int32 value = 1;</code>
+   * <code>int32 value = 1;</code>
    */
   public int getValue() {
     return value_;
@@ -142,7 +142,7 @@ public  final class Int32Value extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + VALUE_FIELD_NUMBER;
     hash = (53 * hash) + getValue();
     hash = (29 * hash) + unknownFields.hashCode();
@@ -369,7 +369,7 @@ public  final class Int32Value extends
      * The int32 value.
      * </pre>
      *
-     * <code>optional int32 value = 1;</code>
+     * <code>int32 value = 1;</code>
      */
     public int getValue() {
       return value_;
@@ -379,7 +379,7 @@ public  final class Int32Value extends
      * The int32 value.
      * </pre>
      *
-     * <code>optional int32 value = 1;</code>
+     * <code>int32 value = 1;</code>
      */
     public Builder setValue(int value) {
       
@@ -392,7 +392,7 @@ public  final class Int32Value extends
      * The int32 value.
      * </pre>
      *
-     * <code>optional int32 value = 1;</code>
+     * <code>int32 value = 1;</code>
      */
     public Builder clearValue() {
       

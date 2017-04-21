@@ -18,6 +18,7 @@
 package org.apache.spark.sql.datasources.hbase
 
 import org.apache.avro.Schema
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.spark.SchemaConverters
 import org.apache.hadoop.hbase.spark.datasources._
 import org.apache.hadoop.hbase.spark.hbase._
@@ -32,6 +33,7 @@ import scala.collection.mutable
 // Due the access issue defined in spark, we have to locate the file in this package.
 // The definition of each column cell, which may be composite type
 // TODO: add avro support
+@InterfaceAudience.Private
 case class Field(
     colName: String,
     cf: String,
@@ -112,6 +114,7 @@ case class Field(
 
 // The row key definition, with each key refer to the col defined in Field, e.g.,
 // key1:key2:key3
+@InterfaceAudience.Private
 case class RowKey(k: String) {
   val keys = k.split(":")
   var fields: Seq[Field] = _
@@ -127,6 +130,7 @@ case class RowKey(k: String) {
   }
 }
 // The map between the column presented to Spark and the HBase field
+@InterfaceAudience.Private
 case class SchemaMap(map: mutable.HashMap[String, Field]) {
   def toFields = map.map { case (name, field) =>
     StructField(name, field.dt)
@@ -139,6 +143,7 @@ case class SchemaMap(map: mutable.HashMap[String, Field]) {
 
 
 // The definition of HBase and Relation relation schema
+@InterfaceAudience.Private
 case class HBaseTableCatalog(
      namespace: String,
      name: String,
@@ -203,6 +208,7 @@ case class HBaseTableCatalog(
   initRowKey
 }
 
+@InterfaceAudience.Public
 object HBaseTableCatalog {
   // If defined and larger than 3, a new table will be created with the nubmer of region specified.
   val newTable = "newtable"
@@ -286,6 +292,7 @@ object HBaseTableCatalog {
                       |}""".stripMargin
    */
   @deprecated("Please use new json format to define HBaseCatalog")
+  // TODO: There is no need to deprecate since this is the first release.
   def convert(parameters: Map[String, String]): Map[String, String] = {
     val tableName = parameters.get(TABLE_KEY).getOrElse(null)
     // if the hbase.table is not defined, we assume it is json format already.
@@ -319,6 +326,7 @@ object HBaseTableCatalog {
     * @param schemaMappingString The schema mapping string from the SparkSQL map
     * @return                    A map of definitions keyed by the SparkSQL column name
     */
+  @InterfaceAudience.Private
   def generateSchemaMappingMap(schemaMappingString:String):
   java.util.HashMap[String, SchemaQualifierDefinition] = {
     println(schemaMappingString)
@@ -362,6 +370,7 @@ object HBaseTableCatalog {
   * @param columnFamily HBase column family
   * @param qualifier    HBase qualifier name
   */
+@InterfaceAudience.Private
 case class SchemaQualifierDefinition(columnName:String,
     colType:String,
     columnFamily:String,

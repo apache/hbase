@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -58,7 +57,6 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable,
     HeapSize {
   public static final long MUTATION_OVERHEAD = ClassSize.align(
@@ -92,8 +90,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   protected Durability durability = Durability.USE_DEFAULT;
 
   // A Map sorted by column family.
-  protected NavigableMap<byte [], List<Cell>> familyMap =
-    new TreeMap<byte [], List<Cell>>(Bytes.BYTES_COMPARATOR);
+  protected NavigableMap<byte [], List<Cell>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   @Override
   public CellScanner cellScanner() {
@@ -110,7 +107,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   List<Cell> getCellList(byte[] family) {
     List<Cell> list = this.familyMap.get(family);
     if (list == null) {
-      list = new ArrayList<Cell>();
+      list = new ArrayList<>();
     }
     return list;
   }
@@ -158,8 +155,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   @Override
   public Map<String, Object> getFingerprint() {
-    Map<String, Object> map = new HashMap<String, Object>();
-    List<String> families = new ArrayList<String>(this.familyMap.entrySet().size());
+    Map<String, Object> map = new HashMap<>();
+    List<String> families = new ArrayList<>(this.familyMap.entrySet().size());
     // ideally, we would also include table information, but that information
     // is not stored in each Operation instance.
     map.put("families", families);
@@ -182,15 +179,14 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     Map<String, Object> map = getFingerprint();
     // replace the fingerprint's simple list of families with a
     // map from column families to lists of qualifiers and kv details
-    Map<String, List<Map<String, Object>>> columns =
-      new HashMap<String, List<Map<String, Object>>>();
+    Map<String, List<Map<String, Object>>> columns = new HashMap<>();
     map.put("families", columns);
     map.put("row", Bytes.toStringBinary(this.row));
     int colCount = 0;
     // iterate through all column families affected
     for (Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
       // map from this family to details for each cell affected within the family
-      List<Map<String, Object>> qualifierDetails = new ArrayList<Map<String, Object>>();
+      List<Map<String, Object>> qualifierDetails = new ArrayList<>();
       columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
       colCount += entry.getValue().size();
       if (maxCols <= 0) {
@@ -220,14 +216,14 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   private static Map<String, Object> cellToStringMap(Cell c) {
-    Map<String, Object> stringMap = new HashMap<String, Object>();
+    Map<String, Object> stringMap = new HashMap<>();
     stringMap.put("qualifier", Bytes.toStringBinary(c.getQualifierArray(), c.getQualifierOffset(),
                 c.getQualifierLength()));
     stringMap.put("timestamp", c.getTimestamp());
     stringMap.put("vlen", c.getValueLength());
     List<Tag> tags = CellUtil.getTags(c);
     if (tags != null) {
-      List<String> tagsString = new ArrayList<String>(tags.size());
+      List<String> tagsString = new ArrayList<>(tags.size());
       for (Tag t : tags) {
         tagsString.add((t.getType()) + ":" + Bytes.toStringBinary(TagUtil.cloneValue(t)));
       }
@@ -317,7 +313,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @return the set of clusterIds that have consumed the mutation
    */
   public List<UUID> getClusterIds() {
-    List<UUID> clusterIds = new ArrayList<UUID>();
+    List<UUID> clusterIds = new ArrayList<>();
     byte[] bytes = getAttribute(CONSUMED_CLUSTER_IDS);
     if(bytes != null) {
       ByteArrayDataInput in = ByteStreams.newDataInput(bytes);

@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -38,7 +37,6 @@ import org.apache.hadoop.util.StringUtils;
  * Convert HBase tabular data into a format that is consumable by Map/Reduce.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TableInputFormat extends TableInputFormatBase implements
     JobConfigurable {
   private static final Log LOG = LogFactory.getLog(TableInputFormat.class);

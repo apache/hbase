@@ -509,7 +509,7 @@ public class HFileLink extends FileLink {
     String tableSubstr = name.substring(separatorIndex + 1)
         .replace('=', TableName.NAMESPACE_DELIM);
     TableName linkTableName = TableName.valueOf(tableSubstr);
-    return new Pair<TableName, String>(linkTableName, linkRegionName);
+    return new Pair<>(linkTableName, linkRegionName);
   }
 
   /**

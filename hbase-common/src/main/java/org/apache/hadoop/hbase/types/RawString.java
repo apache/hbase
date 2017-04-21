@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.types;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -32,7 +31,6 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * @see RawStringTerminated
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class RawString implements DataType<String> {
 
   public static final RawString ASCENDING = new RawString(Order.ASCENDING);

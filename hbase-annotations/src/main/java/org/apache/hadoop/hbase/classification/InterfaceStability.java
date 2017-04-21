@@ -39,7 +39,6 @@ import java.lang.annotation.RetentionPolicy;
  * </ul>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class InterfaceStability {
   /**
    * Can evolve while retaining compatibility for minor release boundaries.;

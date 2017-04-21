@@ -163,7 +163,7 @@ public class TestFastFail {
     final AtomicInteger numBlockedWorkers = new AtomicInteger(0);
     final AtomicInteger numPreemptiveFastFailExceptions = new AtomicInteger(0);
 
-    List<Future<Boolean>> futures = new ArrayList<Future<Boolean>>();
+    List<Future<Boolean>> futures = new ArrayList<>();
     for (int i = 0; i < nThreads; i++) {
       futures.add(service.submit(new Callable<Boolean>() {
         /**

@@ -124,7 +124,7 @@ public class TestMultiColumnScanner {
 
   @Parameters
   public static final Collection<Object[]> parameters() {
-    List<Object[]> parameters = new ArrayList<Object[]>();
+    List<Object[]> parameters = new ArrayList<>();
     for (Object[] bloomAndCompressionParams :
         HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS) {
       for (boolean useDataBlockEncoding : new boolean[]{false, true}) {
@@ -154,15 +154,15 @@ public class TestMultiColumnScanner {
     );
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    Set<String> keySet = new HashSet<String>();
+    List<KeyValue> kvs = new ArrayList<>();
+    Set<String> keySet = new HashSet<>();
 
     // A map from <row>_<qualifier> to the most recent delete timestamp for
     // that column.
-    Map<String, Long> lastDelTimeMap = new HashMap<String, Long>();
+    Map<String, Long> lastDelTimeMap = new HashMap<>();
 
     Random rand = new Random(29372937L);
-    Set<String> rowQualSkip = new HashSet<String>();
+    Set<String> rowQualSkip = new HashSet<>();
 
     // Skip some columns in some rows. We need to test scanning over a set
     // of columns when some of the columns are not there.
@@ -228,7 +228,7 @@ public class TestMultiColumnScanner {
       for (int columnBitMask = 1; columnBitMask <= MAX_COLUMN_BIT_MASK; ++columnBitMask) {
         Scan scan = new Scan();
         scan.setMaxVersions(maxVersions);
-        Set<String> qualSet = new TreeSet<String>();
+        Set<String> qualSet = new TreeSet<>();
         {
           int columnMaskTmp = columnBitMask;
           for (String qual : qualifiers) {
@@ -242,7 +242,7 @@ public class TestMultiColumnScanner {
         }
 
         InternalScanner scanner = region.getScanner(scan);
-        List<Cell> results = new ArrayList<Cell>();
+        List<Cell> results = new ArrayList<>();
 
         int kvPos = 0;
         int numResults = 0;
@@ -317,7 +317,7 @@ public class TestMultiColumnScanner {
   }
 
   private static List<String> sequentialStrings(String prefix, int n) {
-    List<String> lst = new ArrayList<String>();
+    List<String> lst = new ArrayList<>();
     for (int i = 0; i < n; ++i) {
       StringBuilder sb = new StringBuilder();
       sb.append(prefix + i);

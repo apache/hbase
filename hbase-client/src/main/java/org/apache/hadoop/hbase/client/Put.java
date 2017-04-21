@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * setting the timestamp.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Put extends Mutation implements HeapSize, Comparable<Row> {
   /**
    * Create a Put operation for the specified row.
@@ -161,9 +159,9 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    */
   public Put(Put putToCopy) {
     this(putToCopy.getRow(), putToCopy.ts);
-    this.familyMap = new TreeMap<byte [], List<Cell>>(Bytes.BYTES_COMPARATOR);
+    this.familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(Map.Entry<byte [], List<Cell>> entry: putToCopy.getFamilyCellMap().entrySet()) {
-      this.familyMap.put(entry.getKey(), new ArrayList<Cell>(entry.getValue()));
+      this.familyMap.put(entry.getKey(), new ArrayList<>(entry.getValue()));
     }
     this.durability = putToCopy.durability;
     for (Map.Entry<String, byte[]> entry : putToCopy.getAttributesMap().entrySet()) {
@@ -464,7 +462,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * returns an empty list if one doesn't exist for the given family.
    */
   public List<Cell> get(byte[] family, byte[] qualifier) {
-    List<Cell> filteredList = new ArrayList<Cell>();
+    List<Cell> filteredList = new ArrayList<>();
     for (Cell cell: getCellList(family)) {
       if (CellUtil.matchingQualifier(cell, qualifier)) {
         filteredList.add(cell);

@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -339,7 +338,7 @@ public class TestFromClientSide3 {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
-    List<Get> gets = new ArrayList<Get>();
+    List<Get> gets = new ArrayList<>();
     gets.add(new Get(ROW));
     gets.add(null);
     gets.add(new Get(ANOTHERROW));
@@ -433,7 +432,7 @@ public class TestFromClientSide3 {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put (put);
 
-    List<Get> gets = new ArrayList<Get>();
+    List<Get> gets = new ArrayList<>();
     gets.add(new Get(ANOTHERROW));
     gets.add(new Get(Bytes.add(ROW, new byte[] { 0x00 })));
     gets.add(new Get(ROW));
@@ -451,7 +450,7 @@ public class TestFromClientSide3 {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
-    gets = new ArrayList<Get>();
+    gets = new ArrayList<>();
     gets.add(new Get(new byte[] { 0x00 }));
     gets.add(new Get(new byte[] { 0x00, 0x00 }));
     results = table.existsAll(gets);
@@ -463,7 +462,7 @@ public class TestFromClientSide3 {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
-    gets = new ArrayList<Get>();
+    gets = new ArrayList<>();
     gets.add(new Get(new byte[] { (byte) 0xff }));
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff }));
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff }));
@@ -827,7 +826,7 @@ public class TestFromClientSide3 {
     return clz.cast(cp);
   }
 
-  public static class WatiingForMultiMutationsObserver extends BaseRegionObserver {
+  public static class WatiingForMultiMutationsObserver implements RegionObserver {
     final CountDownLatch latch = new CountDownLatch(1);
     @Override
     public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -840,7 +839,7 @@ public class TestFromClientSide3 {
     }
   }
 
-  public static class WatiingForScanObserver extends BaseRegionObserver {
+  public static class WatiingForScanObserver implements RegionObserver {
     private final CountDownLatch latch = new CountDownLatch(1);
     @Override
     public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,

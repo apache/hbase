@@ -74,7 +74,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
  * A sample region observer that tests the RegionObserver interface.
  * It works with TestRegionObserverInterface to provide the test case.
  */
-public class SimpleRegionObserver extends BaseRegionObserver {
+public class SimpleRegionObserver implements RegionObserver {
 
   final AtomicInteger ctBeforeDelete = new AtomicInteger(1);
   final AtomicInteger ctPreOpen = new AtomicInteger(0);
@@ -187,7 +187,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+      Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
     ctPreFlushScannerOpen.incrementAndGet();
     return null;
   }

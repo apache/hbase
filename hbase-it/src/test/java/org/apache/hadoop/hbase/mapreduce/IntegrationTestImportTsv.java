@@ -194,7 +194,7 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
         util.getDataTestDirOnTestFS(table.getNameAsString()), "hfiles");
 
 
-    Map<String, String> args = new HashMap<String, String>();
+    Map<String, String> args = new HashMap<>();
     args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
     args.put(ImportTsv.COLUMNS_CONF_KEY,
         format("HBASE_ROW_KEY,HBASE_TS_KEY,%s:c1,%s:c2", cf, cf));

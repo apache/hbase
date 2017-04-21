@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
@@ -31,7 +30,6 @@ import org.apache.hadoop.util.StringUtils;
  * Procedure information
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ProcedureInfo implements Cloneable {
   private final long procId;
   private final String procName;
@@ -41,7 +39,7 @@ public class ProcedureInfo implements Cloneable {
   private final NonceKey nonceKey;
   private final IOException exception;
   private final long lastUpdate;
-  private final long startTime;
+  private final long submittedTime;
   private final byte[] result;
 
   private long clientAckTime = -1;
@@ -56,7 +54,7 @@ public class ProcedureInfo implements Cloneable {
       final NonceKey nonceKey,
       final IOException exception,
       final long lastUpdate,
-      final long startTime,
+      final long submittedTime,
       final byte[] result) {
     this.procId = procId;
     this.procName = procName;
@@ -65,7 +63,7 @@ public class ProcedureInfo implements Cloneable {
     this.parentId = parentId;
     this.nonceKey = nonceKey;
     this.lastUpdate = lastUpdate;
-    this.startTime = startTime;
+    this.submittedTime = submittedTime;
 
     // If the procedure is completed, we should treat exception and result differently
     this.exception = exception;
@@ -76,7 +74,7 @@ public class ProcedureInfo implements Cloneable {
       justification="Intentional; calling super class clone doesn't make sense here.")
   public ProcedureInfo clone() {
     return new ProcedureInfo(procId, procName, procOwner, procState, parentId, nonceKey,
-      exception, lastUpdate, startTime, result);
+      exception, lastUpdate, submittedTime, result);
   }
 
   @Override
@@ -98,10 +96,10 @@ public class ProcedureInfo implements Cloneable {
     sb.append(procState);
 
     long now = EnvironmentEdgeManager.currentTime();
-    sb.append(", startTime=");
-    sb.append(StringUtils.formatTime(now - startTime));
+    sb.append(", submittedTime=");
+    sb.append(StringUtils.formatTime(now - submittedTime));
     sb.append(" ago, lastUpdate=");
-    sb.append(StringUtils.formatTime(now - startTime));
+    sb.append(StringUtils.formatTime(now - submittedTime));
     sb.append(" ago");
 
     if (isFailed()) {
@@ -170,8 +168,8 @@ public class ProcedureInfo implements Cloneable {
     return result;
   }
 
-  public long getStartTime() {
-    return startTime;
+  public long getSubmittedTime() {
+    return submittedTime;
   }
 
   public long getLastUpdate() {
@@ -179,7 +177,7 @@ public class ProcedureInfo implements Cloneable {
   }
 
   public long executionTime() {
-    return lastUpdate - startTime;
+    return lastUpdate - submittedTime;
   }
 
   @InterfaceAudience.Private

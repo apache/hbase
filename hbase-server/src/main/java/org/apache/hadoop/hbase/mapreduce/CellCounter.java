@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -71,7 +70,6 @@ import com.google.common.base.Preconditions;
  * start time and/or end time to limit the count to a time range.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class CellCounter extends Configured implements Tool {
   private static final Log LOG =
     LogFactory.getLog(CellCounter.class.getName());

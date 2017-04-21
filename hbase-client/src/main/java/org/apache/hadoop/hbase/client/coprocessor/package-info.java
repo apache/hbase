@@ -44,8 +44,8 @@ must:
  for more details on defining services.</li>
  <li>Generate the Service and Message code using the protoc compiler</li>
  <li>Implement the generated Service interface in your coprocessor class and implement the
- {@link org.apache.hadoop.hbase.coprocessor.CoprocessorService} interface.  The
- {@link org.apache.hadoop.hbase.coprocessor.CoprocessorService#getService()}
+ org.apache.hadoop.hbase.coprocessor.CoprocessorService interface.  The
+ org.apache.hadoop.hbase.coprocessor.CoprocessorService#getService()
  method should return a reference to the Endpoint's protocol buffer Service instance.
 </ul>
 <p>
@@ -146,10 +146,10 @@ public static abstract class RowCountService
 </pre></blockquote></div>
 
 <p>
-Our coprocessor Service will need to implement this interface and the {@link org.apache.hadoop.hbase.coprocessor.CoprocessorService}
+Our coprocessor Service will need to implement this interface and the org.apache.hadoop.hbase.coprocessor.CoprocessorService
 in order to be registered correctly as an endpoint.  For the sake of simplicity the server-side
 implementation is omitted.  To see the implementing code, please see the
-{@link org.apache.hadoop.hbase.coprocessor.example.RowCountEndpoint} class in the HBase source code.
+org.apache.hadoop.hbase.coprocessor.example.RowCountEndpoint class in the HBase source code.
 </p>
 
 <p>

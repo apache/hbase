@@ -67,7 +67,7 @@ public class PerformanceEvaluationCommons {
   public static void concurrentReads(final Runnable r) {
     final int count = 1;
     long now = System.currentTimeMillis();
-    List<Thread> threads = new ArrayList<Thread>(count);
+    List<Thread> threads = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
       threads.add(new Thread(r, "concurrentRead-" + i));
     }

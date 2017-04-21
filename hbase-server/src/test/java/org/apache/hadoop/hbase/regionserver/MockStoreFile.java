@@ -36,7 +36,7 @@ public class MockStoreFile extends StoreFile {
   boolean isRef = false;
   long ageInDisk;
   long sequenceid;
-  private Map<byte[], byte[]> metadata = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], byte[]> metadata = new TreeMap<>(Bytes.BYTES_COMPARATOR);
   byte[] splitPoint = null;
   TimeRangeTracker timeRangeTracker;
   long entryCount;
@@ -48,7 +48,7 @@ public class MockStoreFile extends StoreFile {
   MockStoreFile(HBaseTestingUtility testUtil, Path testPath,
       long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
     super(testUtil.getTestFileSystem(), testPath, testUtil.getConfiguration(),
-      new CacheConfig(testUtil.getConfiguration()), BloomType.NONE);
+        new CacheConfig(testUtil.getConfiguration()), BloomType.NONE, true);
     this.length = length;
     this.isRef = isRef;
     this.ageInDisk = ageInDisk;
@@ -126,6 +126,11 @@ public class MockStoreFile extends StoreFile {
   }
 
   @Override
+  public boolean isCompactedAway() {
+    return compactedAway;
+  }
+
+  @Override
   public long getModificationTimeStamp() {
     return modificationTime;
   }
@@ -136,11 +141,22 @@ public class MockStoreFile extends StoreFile {
   }
 
   @Override
+  public void initReader() throws IOException {
+  }
+
+  @Override
+  public StoreFileScanner getStreamScanner(boolean canUseDropBehind, boolean cacheBlocks,
+      boolean pread, boolean isCompaction, long readPt, long scannerOrder,
+      boolean canOptimizeForNonNullColumn) throws IOException {
+    return getReader().getStoreFileScanner(cacheBlocks, pread, isCompaction, readPt, scannerOrder,
+      canOptimizeForNonNullColumn);
+  }
+
+  @Override
   public StoreFileReader getReader() {
     final long len = this.length;
     final TimeRangeTracker timeRangeTracker = this.timeRangeTracker;
     final long entries = this.entryCount;
-    final boolean compactedAway = this.compactedAway;
     return new StoreFileReader() {
       @Override
       public long length() {
@@ -155,11 +171,6 @@ public class MockStoreFile extends StoreFile {
       @Override
       public long getEntries() {
         return entries;
-      }
-
-      @Override
-      public boolean isCompactedAway() {
-        return compactedAway;
       }
 
       @Override

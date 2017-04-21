@@ -97,12 +97,12 @@ public final class MasterDDLOperationHelper {
       regionLocations = locator.getAllRegionLocations();
     }
     // Convert List<HRegionLocation> to Map<HRegionInfo, ServerName>.
-    NavigableMap<HRegionInfo, ServerName> hri2Sn = new TreeMap<HRegionInfo, ServerName>();
+    NavigableMap<HRegionInfo, ServerName> hri2Sn = new TreeMap<>();
     for (HRegionLocation location : regionLocations) {
       hri2Sn.put(location.getRegionInfo(), location.getServerName());
     }
     TreeMap<ServerName, List<HRegionInfo>> serverToRegions = Maps.newTreeMap();
-    List<HRegionInfo> reRegions = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> reRegions = new ArrayList<>();
     for (HRegionInfo hri : regionInfoList) {
       ServerName sn = hri2Sn.get(hri);
       // Skip the offlined split parent region

@@ -85,24 +85,24 @@ public class TestZKMulti {
     ZKUtil.multiOrSequential(zkw, null, false);
 
     // empty multi
-    ZKUtil.multiOrSequential(zkw, new LinkedList<ZKUtilOp>(), false);
+    ZKUtil.multiOrSequential(zkw, new LinkedList<>(), false);
 
     // single create
     String path = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSimpleMulti");
-    LinkedList<ZKUtilOp> singleCreate = new LinkedList<ZKUtilOp>();
+    LinkedList<ZKUtilOp> singleCreate = new LinkedList<>();
     singleCreate.add(ZKUtilOp.createAndFailSilent(path, new byte[0]));
     ZKUtil.multiOrSequential(zkw, singleCreate, false);
     assertTrue(ZKUtil.checkExists(zkw, path) != -1);
 
     // single setdata
-    LinkedList<ZKUtilOp> singleSetData = new LinkedList<ZKUtilOp>();
+    LinkedList<ZKUtilOp> singleSetData = new LinkedList<>();
     byte [] data = Bytes.toBytes("foobar");
     singleSetData.add(ZKUtilOp.setData(path, data));
     ZKUtil.multiOrSequential(zkw, singleSetData, false);
     assertTrue(Bytes.equals(ZKUtil.getData(zkw, path), data));
 
     // single delete
-    LinkedList<ZKUtilOp> singleDelete = new LinkedList<ZKUtilOp>();
+    LinkedList<ZKUtilOp> singleDelete = new LinkedList<>();
     singleDelete.add(ZKUtilOp.deleteNodeFailSilent(path));
     ZKUtil.multiOrSequential(zkw, singleDelete, false);
     assertTrue(ZKUtil.checkExists(zkw, path) == -1);
@@ -117,7 +117,7 @@ public class TestZKMulti {
     String path5 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testComplexMulti5");
     String path6 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testComplexMulti6");
     // create 4 nodes that we'll setData on or delete later
-    LinkedList<ZKUtilOp> create4Nodes = new LinkedList<ZKUtilOp>();
+    LinkedList<ZKUtilOp> create4Nodes = new LinkedList<>();
     create4Nodes.add(ZKUtilOp.createAndFailSilent(path1, Bytes.toBytes(path1)));
     create4Nodes.add(ZKUtilOp.createAndFailSilent(path2, Bytes.toBytes(path2)));
     create4Nodes.add(ZKUtilOp.createAndFailSilent(path3, Bytes.toBytes(path3)));
@@ -129,7 +129,7 @@ public class TestZKMulti {
     assertTrue(Bytes.equals(ZKUtil.getData(zkw, path4), Bytes.toBytes(path4)));
 
     // do multiple of each operation (setData, delete, create)
-    LinkedList<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
+    LinkedList<ZKUtilOp> ops = new LinkedList<>();
     // setData
     ops.add(ZKUtilOp.setData(path1, Bytes.add(Bytes.toBytes(path1), Bytes.toBytes(path1))));
     ops.add(ZKUtilOp.setData(path2, Bytes.add(Bytes.toBytes(path2), Bytes.toBytes(path2))));
@@ -155,7 +155,7 @@ public class TestZKMulti {
     // try to delete a node that doesn't exist
     boolean caughtNoNode = false;
     String path = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSingleFailureZ");
-    LinkedList<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
+    LinkedList<ZKUtilOp> ops = new LinkedList<>();
     ops.add(ZKUtilOp.deleteNodeFailSilent(path));
     try {
       ZKUtil.multiOrSequential(zkw, ops, false);
@@ -166,7 +166,7 @@ public class TestZKMulti {
 
     // try to setData on a node that doesn't exist
     caughtNoNode = false;
-    ops = new LinkedList<ZKUtilOp>();
+    ops = new LinkedList<>();
     ops.add(ZKUtilOp.setData(path, Bytes.toBytes(path)));
     try {
       ZKUtil.multiOrSequential(zkw, ops, false);
@@ -177,7 +177,7 @@ public class TestZKMulti {
 
     // try to create on a node that already exists
     boolean caughtNodeExists = false;
-    ops = new LinkedList<ZKUtilOp>();
+    ops = new LinkedList<>();
     ops.add(ZKUtilOp.createAndFailSilent(path, Bytes.toBytes(path)));
     ZKUtil.multiOrSequential(zkw, ops, false);
     try {
@@ -194,7 +194,7 @@ public class TestZKMulti {
     String pathA = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSingleFailureInMultiA");
     String pathB = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSingleFailureInMultiB");
     String pathC = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSingleFailureInMultiC");
-    LinkedList<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
+    LinkedList<ZKUtilOp> ops = new LinkedList<>();
     ops.add(ZKUtilOp.createAndFailSilent(pathA, Bytes.toBytes(pathA)));
     ops.add(ZKUtilOp.createAndFailSilent(pathB, Bytes.toBytes(pathB)));
     ops.add(ZKUtilOp.deleteNodeFailSilent(pathC));
@@ -217,14 +217,14 @@ public class TestZKMulti {
     String pathY = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testMultiFailureY");
     String pathZ = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testMultiFailureZ");
     // create X that we will use to fail create later
-    LinkedList<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
+    LinkedList<ZKUtilOp> ops = new LinkedList<>();
     ops.add(ZKUtilOp.createAndFailSilent(pathX, Bytes.toBytes(pathX)));
     ZKUtil.multiOrSequential(zkw, ops, false);
 
     // fail one of each create ,setData, delete
     String pathV = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testMultiFailureV");
     String pathW = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testMultiFailureW");
-    ops = new LinkedList<ZKUtilOp>();
+    ops = new LinkedList<>();
     ops.add(ZKUtilOp.createAndFailSilent(pathX, Bytes.toBytes(pathX))); // fail  -- already exists
     ops.add(ZKUtilOp.setData(pathY, Bytes.toBytes(pathY))); // fail -- doesn't exist
     ops.add(ZKUtilOp.deleteNodeFailSilent(pathZ)); // fail -- doesn't exist
@@ -246,7 +246,7 @@ public class TestZKMulti {
     assertTrue(ZKUtil.checkExists(zkw, pathV) == -1);
 
     // test that with multiple failures, throws an exception corresponding to first failure in list
-    ops = new LinkedList<ZKUtilOp>();
+    ops = new LinkedList<>();
     ops.add(ZKUtilOp.setData(pathY, Bytes.toBytes(pathY))); // fail -- doesn't exist
     ops.add(ZKUtilOp.createAndFailSilent(pathX, Bytes.toBytes(pathX))); // fail -- exists
     boolean caughtNoNode = false;
@@ -273,14 +273,14 @@ public class TestZKMulti {
     String path4 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "runSequential4");
 
     // create some nodes that we will use later
-    LinkedList<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
+    LinkedList<ZKUtilOp> ops = new LinkedList<>();
     ops.add(ZKUtilOp.createAndFailSilent(path1, Bytes.toBytes(path1)));
     ops.add(ZKUtilOp.createAndFailSilent(path2, Bytes.toBytes(path2)));
     ZKUtil.multiOrSequential(zkw, ops, false);
 
     // test that, even with operations that fail, the ones that would pass will pass
     // with runSequentialOnMultiFailure
-    ops = new LinkedList<ZKUtilOp>();
+    ops = new LinkedList<>();
     ops.add(ZKUtilOp.setData(path1, Bytes.add(Bytes.toBytes(path1), Bytes.toBytes(path1)))); // pass
     ops.add(ZKUtilOp.deleteNodeFailSilent(path2)); // pass
     ops.add(ZKUtilOp.deleteNodeFailSilent(path3)); // fail -- node doesn't exist
@@ -368,7 +368,7 @@ public class TestZKMulti {
 
   private void createZNodeTree(String rootZNode) throws KeeperException,
       InterruptedException {
-    List<Op> opList = new ArrayList<Op>();
+    List<Op> opList = new ArrayList<>();
     opList.add(Op.create(rootZNode, new byte[0], Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT));
     int level = 0;

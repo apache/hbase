@@ -142,5 +142,19 @@ module Hbase
       res
     end
 
+    #--------------------------------------------------------------------------
+    # move server and table to a group
+    def move_servers_tables(dest, *args)
+      servers = java.util.HashSet.new
+      tables = java.util.HashSet.new;
+      args[0].each do |s|
+        servers.add(org.apache.hadoop.hbase.net.Address.fromString(s))
+      end
+      args[1].each do |t|
+        tables.add(org.apache.hadoop.hbase.TableName.valueOf(t))
+      end
+      @admin.moveServersAndTables(servers, tables, dest)
+    end
+
   end
 end

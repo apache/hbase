@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.filterCells;
+
 import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -36,39 +39,59 @@ class AllowPartialScanResultCache implements ScanResultCache {
   // beginning of a row when retry.
   private Cell lastCell;
 
-  private Result filterCells(Result result) {
-    return lastCell == null ? result : ConnectionUtils.filterCells(result, lastCell);
-  }
+  private boolean lastResultPartial;
 
-  private void updateLastCell(Result result) {
+  private int numberOfCompleteRows;
+
+  private void recordLastResult(Result result) {
     lastCell = result.rawCells()[result.rawCells().length - 1];
+    lastResultPartial = result.mayHaveMoreCellsInRow();
   }
 
   @Override
   public Result[] addAndGet(Result[] results, boolean isHeartbeatMessage) throws IOException {
     if (results.length == 0) {
+      if (!isHeartbeatMessage && lastResultPartial) {
+        // An empty non heartbeat result indicate that there must be a row change. So if the
+        // lastResultPartial is true then we need to increase numberOfCompleteRows.
+        numberOfCompleteRows++;
+      }
       return EMPTY_RESULT_ARRAY;
     }
-    Result first = filterCells(results[0]);
-    if (results.length == 1) {
-      if (first == null) {
-        // do not update last cell if we filter out all cells
-        return EMPTY_RESULT_ARRAY;
+    int i;
+    for (i = 0; i < results.length; i++) {
+      Result r = filterCells(results[i], lastCell);
+      if (r != null) {
+        results[i] = r;
+        break;
       }
-      updateLastCell(results[0]);
-      results[0] = first;
-      return results;
     }
-    updateLastCell(results[results.length - 1]);
-    if (first == null) {
-      return Arrays.copyOfRange(results, 1, results.length);
+    if (i == results.length) {
+      return EMPTY_RESULT_ARRAY;
     }
-    results[0] = first;
+    if (lastResultPartial && !CellUtil.matchingRow(lastCell, results[0].getRow())) {
+      // there is a row change, so increase numberOfCompleteRows
+      numberOfCompleteRows++;
+    }
+    recordLastResult(results[results.length - 1]);
+    if (i > 0) {
+      results = Arrays.copyOfRange(results, i, results.length);
+    }
+    for (Result result : results) {
+      if (!result.mayHaveMoreCellsInRow()) {
+        numberOfCompleteRows++;
+      }
+    }
     return results;
   }
 
   @Override
   public void clear() {
     // we do not cache anything
+  }
+
+  @Override
+  public int numberOfCompleteRows() {
+    return numberOfCompleteRows;
   }
 }

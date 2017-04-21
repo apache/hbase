@@ -207,7 +207,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   protected String[] getArgsForLoadTestToolInitTable() {
-    List<String> args = new ArrayList<String>();
+    List<String> args = new ArrayList<>();
     args.add("-tn");
     args.add(getTablename().getNameAsString());
     // pass all remaining args from conf with keys <test class name>.<load test tool arg>
@@ -225,7 +225,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
 
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
       long numKeys) {
-    List<String> args = new ArrayList<String>(11);
+    List<String> args = new ArrayList<>(11);
     args.add("-tn");
     args.add(getTablename().getNameAsString());
     args.add("-families");

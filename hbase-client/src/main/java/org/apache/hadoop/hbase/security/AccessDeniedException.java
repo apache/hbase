@@ -19,14 +19,12 @@ package org.apache.hadoop.hbase.security;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 
 /**
  * Exception thrown by access-related methods.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class AccessDeniedException extends DoNotRetryIOException {
   private static final long serialVersionUID = 1913879564363001780L;
 

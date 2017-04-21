@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -40,7 +39,6 @@ import com.google.common.base.Preconditions;
  * Use this filter to include the stop row, eg: [A,Z].
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class InclusiveStopFilter extends FilterBase {
   private byte [] stopRowKey;
   private boolean done = false;

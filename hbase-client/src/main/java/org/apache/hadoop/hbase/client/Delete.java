@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -69,7 +68,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * timestamp.  The constructor timestamp is not referenced.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Delete extends Mutation implements Comparable<Row> {
   /**
    * Create a Delete operation for the specified row.
@@ -172,7 +170,7 @@ public class Delete extends Mutation implements Comparable<Row> {
     byte [] family = CellUtil.cloneFamily(kv);
     List<Cell> list = familyMap.get(family);
     if (list == null) {
-      list = new ArrayList<Cell>(1);
+      list = new ArrayList<>(1);
     }
     list.add(kv);
     familyMap.put(family, list);
@@ -209,7 +207,7 @@ public class Delete extends Mutation implements Comparable<Row> {
     }
     List<Cell> list = familyMap.get(family);
     if(list == null) {
-      list = new ArrayList<Cell>(1);
+      list = new ArrayList<>(1);
     } else if(!list.isEmpty()) {
       list.clear();
     }
@@ -229,7 +227,7 @@ public class Delete extends Mutation implements Comparable<Row> {
   public Delete addFamilyVersion(final byte [] family, final long timestamp) {
     List<Cell> list = familyMap.get(family);
     if(list == null) {
-      list = new ArrayList<Cell>(1);
+      list = new ArrayList<>(1);
     }
     list.add(new KeyValue(row, family, null, timestamp,
           KeyValue.Type.DeleteFamilyVersion));
@@ -262,7 +260,7 @@ public class Delete extends Mutation implements Comparable<Row> {
     }
     List<Cell> list = familyMap.get(family);
     if (list == null) {
-      list = new ArrayList<Cell>(1);
+      list = new ArrayList<>(1);
     }
     list.add(new KeyValue(this.row, family, qualifier, timestamp,
         KeyValue.Type.DeleteColumn));
@@ -297,7 +295,7 @@ public class Delete extends Mutation implements Comparable<Row> {
     }
     List<Cell> list = familyMap.get(family);
     if(list == null) {
-      list = new ArrayList<Cell>(1);
+      list = new ArrayList<>(1);
     }
     KeyValue kv = new KeyValue(this.row, family, qualifier, timestamp, KeyValue.Type.Delete);
     list.add(kv);

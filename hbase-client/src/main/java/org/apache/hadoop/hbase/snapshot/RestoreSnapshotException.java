@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 
 /**
@@ -27,7 +26,6 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class RestoreSnapshotException extends HBaseSnapshotException {
   public RestoreSnapshotException(String msg, SnapshotDescription desc) {
     super(msg, desc);

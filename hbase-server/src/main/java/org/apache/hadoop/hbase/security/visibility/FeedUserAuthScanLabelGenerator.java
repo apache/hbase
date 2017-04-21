@@ -65,10 +65,10 @@ public class FeedUserAuthScanLabelGenerator implements ScanLabelGenerator {
     if (authorizations == null || authorizations.getLabels() == null
         || authorizations.getLabels().isEmpty()) {
       String userName = user.getShortName();
-      Set<String> auths = new HashSet<String>();
+      Set<String> auths = new HashSet<>();
       auths.addAll(this.labelsCache.getUserAuths(userName));
       auths.addAll(this.labelsCache.getGroupAuths(user.getGroupNames()));
-      return new ArrayList<String>(auths);
+      return new ArrayList<>(auths);
     }
     return authorizations.getLabels();
   }

@@ -43,6 +43,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -146,7 +147,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private static final BigDecimal BYTES_PER_MB = BigDecimal.valueOf(1024 * 1024);
   private static final TestOptions DEFAULT_OPTS = new TestOptions();
 
-  private static Map<String, CmdDescriptor> COMMANDS = new TreeMap<String, CmdDescriptor>();
+  private static Map<String, CmdDescriptor> COMMANDS = new TreeMap<>();
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
 
   static {
@@ -325,7 +326,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // recreate the table when user has requested presplit or when existing
     // {RegionSplitPolicy,replica count} does not match requested.
     if ((exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions)
-      || (!isReadCmd && desc != null && desc.getRegionSplitPolicyClassName() != opts.splitPolicy)
+      || (!isReadCmd && desc != null &&
+          !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy))
       || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)) {
       needsDelete = true;
       // wait, why did it delete my table?!?
@@ -536,7 +538,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     Path inputFile = new Path(inputDir, JOB_INPUT_FILENAME);
     PrintStream out = new PrintStream(fs.create(inputFile));
     // Make input random.
-    Map<Integer, String> m = new TreeMap<Integer, String>();
+    Map<Integer, String> m = new TreeMap<>();
     Hash h = MurmurHash.getInstance();
     int perClientRows = (opts.totalRows / opts.numClientThreads);
     try {
@@ -634,6 +636,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     MemoryCompactionPolicy inMemoryCompaction =
         MemoryCompactionPolicy.valueOf(
             CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT);
+    boolean asyncPrefetch = false;
+    boolean cacheBlocks = true;
+    Scan.ReadType scanReadType = Scan.ReadType.DEFAULT;
 
     public TestOptions() {}
 
@@ -1244,8 +1249,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      Scan scan = new Scan(getRandomRow(this.rand, opts.totalRows));
-      scan.setCaching(opts.caching);
+      Scan scan = new Scan().withStartRow(getRandomRow(this.rand, opts.totalRows))
+          .setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
+          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType);
       FilterList list = new FilterList();
       if (opts.addColumns) {
         scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
@@ -1280,8 +1286,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       Pair<byte[], byte[]> startAndStopRow = getStartAndStopRow();
-      Scan scan = new Scan(startAndStopRow.getFirst(), startAndStopRow.getSecond());
-      scan.setCaching(opts.caching);
+      Scan scan = new Scan().withStartRow(startAndStopRow.getFirst())
+          .withStopRow(startAndStopRow.getSecond()).setCaching(opts.caching)
+          .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
+          .setReadType(opts.scanReadType);
       if (opts.filterAll) {
         scan.setFilter(new FilterAllFilter());
       }
@@ -1311,7 +1319,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected Pair<byte[], byte[]> generateStartAndStopRows(int maxRange) {
       int start = this.rand.nextInt(Integer.MAX_VALUE) % opts.totalRows;
       int stop = start + maxRange;
-      return new Pair<byte[],byte[]>(format(start), format(stop));
+      return new Pair<>(format(start), format(stop));
     }
 
     @Override
@@ -1375,7 +1383,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       consistency = options.replicas == DEFAULT_OPTS.replicas ? null : Consistency.TIMELINE;
       if (opts.multiGet > 0) {
         LOG.info("MultiGet enabled. Sending GETs in batches of " + opts.multiGet + ".");
-        this.gets = new ArrayList<Get>(opts.multiGet);
+        this.gets = new ArrayList<>(opts.multiGet);
       }
     }
 
@@ -1475,8 +1483,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       if (this.testScanner == null) {
-        Scan scan = new Scan(format(opts.startRow));
-        scan.setCaching(opts.caching);
+        Scan scan = new Scan().withStartRow(format(opts.startRow)).setCaching(opts.caching)
+            .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
+            .setReadType(opts.scanReadType);
         if (opts.addColumns) {
           scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
         } else {
@@ -1485,7 +1494,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         if (opts.filterAll) {
           scan.setFilter(new FilterAllFilter());
         }
-       this.testScanner = table.getScanner(scan);
+        this.testScanner = table.getScanner(scan);
       }
       Result r = testScanner.next();
       updateValueSize(r);
@@ -1685,8 +1694,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if(opts.filterAll) {
         list.addFilter(new FilterAllFilter());
       }
-      Scan scan = new Scan();
-      scan.setCaching(opts.caching);
+      Scan scan = new Scan().setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
+          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType);
       if (opts.addColumns) {
         scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       } else {
@@ -1898,6 +1907,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" replicas        Enable region replica testing. Defaults: 1.");
     System.err.println(" randomSleep     Do a random sleep before each get between 0 and entered value. Defaults: 0");
     System.err.println(" caching         Scan caching to use. Default: 30");
+    System.err.println(" asyncPrefetch   Enable asyncPrefetch for scan");
+    System.err.println(" cacheBlocks     Set the cacheBlocks option for scan. Default: true");
+    System.err.println(" scanReadType    Set the readType option for scan, stream/pread/default. Default: default");
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
@@ -2136,8 +2148,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
       final String inMemoryCompaction = "--inmemoryCompaction=";
       if (cmd.startsWith(inMemoryCompaction)) {
-        opts.inMemoryCompaction = opts.inMemoryCompaction.valueOf(cmd.substring
-            (inMemoryCompaction.length()));
+        opts.inMemoryCompaction =
+            MemoryCompactionPolicy.valueOf(cmd.substring(inMemoryCompaction.length()));
         continue;
       }
 
@@ -2153,6 +2165,24 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
+      final String asyncPrefetch = "--asyncPrefetch";
+      if (cmd.startsWith(asyncPrefetch)) {
+        opts.asyncPrefetch = true;
+        continue;
+      }
+
+      final String cacheBlocks = "--cacheBlocks=";
+      if (cmd.startsWith(cacheBlocks)) {
+        opts.cacheBlocks = Boolean.parseBoolean(cmd.substring(cacheBlocks.length()));
+        continue;
+      }
+
+      final String scanReadType = "--scanReadType=";
+      if (cmd.startsWith(scanReadType)) {
+        opts.scanReadType =
+            Scan.ReadType.valueOf(cmd.substring(scanReadType.length()).toUpperCase());
+        continue;
+      }
       if (isCommandClass(cmd)) {
         opts.cmdName = cmd;
         try {
@@ -2207,7 +2237,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     try {
-      LinkedList<String> argv = new LinkedList<String>();
+      LinkedList<String> argv = new LinkedList<>();
       argv.addAll(Arrays.asList(args));
       TestOptions opts = parseOpts(argv);
 

@@ -96,7 +96,7 @@ public class TestFilterWithScanLimits extends FilterTestingCluster {
     try {
       createTable(tableName, columnFamily);
       Table table = openTable(tableName);
-      List<Put> puts = new ArrayList<Put>();
+      List<Put> puts = new ArrayList<>();
 
       // row1 => <f1:c1, 1_c1>, <f1:c2, 1_c2>, <f1:c3, 1_c3>, <f1:c4,1_c4>,
       // <f1:c5, 1_c5>

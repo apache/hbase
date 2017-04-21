@@ -85,7 +85,7 @@ public class TestSCVFWithMiniCluster {
     htable = util.getConnection().getTable(HBASE_TABLE_NAME);
 
     /* Add some values */
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
 
     /* Add a row with 'a:foo' = false */
     Put put = new Put(Bytes.toBytes("1"));

@@ -21,8 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.client.Scan;
@@ -35,9 +34,7 @@ import java.util.List;
 
 /**
  * ImmutableSegment is an abstract class that extends the API supported by a {@link Segment},
- * and is not needed for a {@link MutableSegment}. Specifically, the method
- * {@link ImmutableSegment#getSnapshotScanner()} builds a special scanner for the
- * {@link MemStoreSnapshot} object.
+ * and is not needed for a {@link MutableSegment}.
  */
 @InterfaceAudience.Private
 public class ImmutableSegment extends Segment {
@@ -102,7 +99,7 @@ public class ImmutableSegment extends Segment {
     super(null, // initiailize the CellSet with NULL
         comparator, memStoreLAB);
     this.type = type;
-    // build the true CellSet based on CellArrayMap
+    // build the new CellSet based on CellArrayMap
     CellSet cs = createCellArrayMapSet(numOfCells, iterator, merge);
 
     this.setCellSet(null, cs);            // update the CellSet of the new Segment
@@ -119,27 +116,18 @@ public class ImmutableSegment extends Segment {
     super(new CellSet(comparator), // initiailize the CellSet with empty CellSet
         comparator, memStoreLAB);
     type = Type.SKIPLIST_MAP_BASED;
-    MemstoreSize memstoreSize = new MemstoreSize();
     while (iterator.hasNext()) {
       Cell c = iterator.next();
       // The scanner is doing all the elimination logic
       // now we just copy it to the new segment
       Cell newKV = maybeCloneWithAllocator(c);
       boolean usedMSLAB = (newKV != c);
-      internalAdd(newKV, usedMSLAB, memstoreSize);
+      internalAdd(newKV, usedMSLAB, null);
     }
     this.timeRange = this.timeRangeTracker == null ? null : this.timeRangeTracker.toTimeRange();
   }
 
   /////////////////////  PUBLIC METHODS  /////////////////////
-  /**
-   * Builds a special scanner for the MemStoreSnapshot object that is different than the
-   * general segment scanner.
-   * @return a special scanner for the MemStoreSnapshot object
-   */
-  public KeyValueScanner getSnapshotScanner() {
-    return new SnapshotScanner(this);
-  }
 
   @Override
   public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
@@ -157,7 +145,7 @@ public class ImmutableSegment extends Segment {
   }
 
   public List<Segment> getAllSegments() {
-    List<Segment> res = new ArrayList<Segment>(Arrays.asList(this));
+    List<Segment> res = new ArrayList<>(Arrays.asList(this));
     return res;
   }
 
@@ -215,7 +203,7 @@ public class ImmutableSegment extends Segment {
         cells[i] = maybeCloneWithAllocator(c);
       }
       boolean useMSLAB = (getMemStoreLAB()!=null);
-      // second parameter true, because in compaction addition of the cell to new segment
+      // second parameter true, because in compaction/merge the addition of the cell to new segment
       // is always successful
       updateMetaInfo(c, true, useMSLAB, null); // updates the size per cell
       i++;
@@ -226,17 +214,13 @@ public class ImmutableSegment extends Segment {
   }
 
   @Override
-  protected long heapOverheadChange(Cell cell, boolean succ) {
+  protected long heapSizeChange(Cell cell, boolean succ) {
     if (succ) {
       switch (this.type) {
       case SKIPLIST_MAP_BASED:
-        return super.heapOverheadChange(cell, succ);
+        return super.heapSizeChange(cell, succ);
       case ARRAY_MAP_BASED:
-        if (cell instanceof ExtendedCell) {
-          return ClassSize
-              .align(ClassSize.CELL_ARRAY_MAP_ENTRY + ((ExtendedCell) cell).heapOverhead());
-        }
-        return ClassSize.align(ClassSize.CELL_ARRAY_MAP_ENTRY + KeyValue.FIXED_OVERHEAD);
+        return ClassSize.align(ClassSize.CELL_ARRAY_MAP_ENTRY + CellUtil.estimatedHeapSizeOf(cell));
       }
     }
     return 0;

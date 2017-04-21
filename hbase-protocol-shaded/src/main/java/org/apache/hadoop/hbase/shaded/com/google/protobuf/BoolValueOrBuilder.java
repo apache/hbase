@@ -12,7 +12,7 @@ public interface BoolValueOrBuilder extends
    * The bool value.
    * </pre>
    *
-   * <code>optional bool value = 1;</code>
+   * <code>bool value = 1;</code>
    */
   boolean getValue();
 }

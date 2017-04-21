@@ -76,8 +76,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
   private volatile double maxThroughput;
   private volatile double maxThroughputPerOperation;
 
-  protected final ConcurrentMap<String, ActiveOperation> activeOperations =
-      new ConcurrentHashMap<String, ActiveOperation>();
+  protected final ConcurrentMap<String, ActiveOperation> activeOperations = new ConcurrentHashMap<>();
 
   @Override
   public abstract void setup(final RegionServerServices server);

@@ -68,11 +68,11 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
@@ -190,7 +190,7 @@ public class TestFromClientSide {
   @Test
   public void testDuplicateAppend() throws Exception {
     HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(name.getMethodName());
-    Map<String, String> kvs = new HashMap<String, String>();
+    Map<String, String> kvs = new HashMap<>();
     kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
     hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
     TEST_UTIL.createTable(hdt, new byte[][] { ROW }).close();
@@ -554,7 +554,7 @@ public class TestFromClientSide {
    * This is a coprocessor to inject a test failure so that a store scanner.reseek() call will
    * fail with an IOException() on the first call.
    */
-  public static class ExceptionInReseekRegionObserver extends BaseRegionObserver {
+  public static class ExceptionInReseekRegionObserver implements RegionObserver {
     static AtomicLong reqCount = new AtomicLong(0);
     static AtomicBoolean isDoNotRetry = new AtomicBoolean(false); // whether to throw DNRIOE
     static AtomicBoolean throwOnce = new AtomicBoolean(true); // whether to only throw once
@@ -2299,7 +2299,7 @@ public class TestFromClientSide {
       result = ht.get(get);
       assertTrue(result.size() == 1);
     }
-    ArrayList<Delete> deletes = new ArrayList<Delete>();
+    ArrayList<Delete> deletes = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       byte [] bytes = Bytes.toBytes(i);
       delete = new Delete(bytes);
@@ -4707,7 +4707,7 @@ public class TestFromClientSide {
 
     final Object waitLock = new Object();
     ExecutorService executorService = Executors.newFixedThreadPool(numVersions);
-    final AtomicReference<AssertionError> error = new AtomicReference<AssertionError>(null);
+    final AtomicReference<AssertionError> error = new AtomicReference<>(null);
     for (int versions = numVersions; versions < numVersions * 2; versions++) {
       final int versionsCopy = versions;
       executorService.submit(new Callable<Void>() {
@@ -5174,6 +5174,7 @@ public class TestFromClientSide {
       assertEquals(2, store.getStorefilesCount());
       store.triggerMajorCompaction();
       region.compact(true);
+      store.closeAndArchiveCompactedFiles();
       waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
       assertEquals(1, store.getStorefilesCount());
       expectedBlockCount -= 2; // evicted two blocks, cached none
@@ -5315,7 +5316,7 @@ public class TestFromClientSide {
 
   private List<HRegionLocation> getRegionsInRange(TableName tableName, byte[] startKey,
       byte[] endKey) throws IOException {
-    List<HRegionLocation> regionsInRange = new ArrayList<HRegionLocation>();
+    List<HRegionLocation> regionsInRange = new ArrayList<>();
     byte[] currentKey = startKey;
     final boolean endKeyIsEndOfTable = Bytes.equals(endKey, HConstants.EMPTY_END_ROW);
     try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName);) {
@@ -6237,7 +6238,7 @@ public class TestFromClientSide {
     HRegionLocator locator =
         (HRegionLocator) admin.getConnection().getRegionLocator(htd.getTableName());
     for (int regionReplication = 1; regionReplication < 4; regionReplication++) {
-      List<RegionLocations> regionLocations = new ArrayList<RegionLocations>();
+      List<RegionLocations> regionLocations = new ArrayList<>();
 
       // mock region locations coming from meta with multiple replicas
       for (HRegionInfo region : regions) {

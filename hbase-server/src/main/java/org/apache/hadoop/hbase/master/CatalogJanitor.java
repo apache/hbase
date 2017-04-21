@@ -151,9 +151,8 @@ public class CatalogJanitor extends ScheduledChore {
     final AtomicInteger count = new AtomicInteger(0);
     // Keep Map of found split parents.  There are candidates for cleanup.
     // Use a comparator that has split parents come before its daughters.
-    final Map<HRegionInfo, Result> splitParents =
-      new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
-    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<HRegionInfo, Result>();
+    final Map<HRegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
+    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<>();
     // This visitor collects split parents and counts rows in the hbase:meta table
 
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
@@ -181,8 +180,7 @@ public class CatalogJanitor extends ScheduledChore {
     // the start row
     MetaTableAccessor.scanMetaForTableRegions(this.connection, visitor, tableName);
 
-    return new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
-        count.get(), mergedRegions, splitParents);
+    return new Triple<>(count.get(), mergedRegions, splitParents);
   }
 
   /**
@@ -275,7 +273,7 @@ public class CatalogJanitor extends ScheduledChore {
       // Now work on our list of found parents. See if any we can clean up.
       int splitCleaned = 0;
       // regions whose parents are still around
-      HashSet<String> parentNotCleaned = new HashSet<String>();
+      HashSet<String> parentNotCleaned = new HashSet<>();
       for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
@@ -398,7 +396,7 @@ public class CatalogJanitor extends ScheduledChore {
   Pair<Boolean, Boolean> checkDaughterInFs(final HRegionInfo parent, final HRegionInfo daughter)
   throws IOException {
     if (daughter == null)  {
-      return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
+      return new Pair<>(Boolean.FALSE, Boolean.FALSE);
     }
 
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
@@ -411,12 +409,12 @@ public class CatalogJanitor extends ScheduledChore {
 
     try {
       if (!FSUtils.isExists(fs, daughterRegionDir)) {
-        return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
+        return new Pair<>(Boolean.FALSE, Boolean.FALSE);
       }
     } catch (IOException ioe) {
       LOG.error("Error trying to determine if daughter region exists, " +
                "assuming exists and has references", ioe);
-      return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.TRUE);
+      return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
 
     boolean references = false;
@@ -433,9 +431,9 @@ public class CatalogJanitor extends ScheduledChore {
     } catch (IOException e) {
       LOG.error("Error trying to determine referenced files from : " + daughter.getEncodedName()
           + ", to: " + parent.getEncodedName() + " assuming has references", e);
-      return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.TRUE);
+      return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
-    return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.valueOf(references));
+    return new Pair<>(Boolean.TRUE, Boolean.valueOf(references));
   }
 
   private HTableDescriptor getTableDescriptor(final TableName tableName)

@@ -29,7 +29,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -43,11 +42,10 @@ import org.apache.hadoop.util.StringUtils;
  * Scanner to iterate over the quota settings.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   private static final Log LOG = LogFactory.getLog(QuotaRetriever.class);
 
-  private final Queue<QuotaSettings> cache = new LinkedList<QuotaSettings>();
+  private final Queue<QuotaSettings> cache = new LinkedList<>();
   private ResultScanner scanner;
   /**
    * Connection to use.
@@ -88,34 +86,10 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   public QuotaSettings next() throws IOException {
     if (cache.isEmpty()) {
       Result result = scanner.next();
-      if (result == null) return null;
-
-      QuotaTableUtil.parseResult(result, new QuotaTableUtil.QuotasVisitor() {
-        @Override
-        public void visitUserQuotas(String userName, Quotas quotas) {
-          cache.addAll(QuotaSettingsFactory.fromUserQuotas(userName, quotas));
-        }
-
-        @Override
-        public void visitUserQuotas(String userName, TableName table, Quotas quotas) {
-          cache.addAll(QuotaSettingsFactory.fromUserQuotas(userName, table, quotas));
-        }
-
-        @Override
-        public void visitUserQuotas(String userName, String namespace, Quotas quotas) {
-          cache.addAll(QuotaSettingsFactory.fromUserQuotas(userName, namespace, quotas));
-        }
-
-        @Override
-        public void visitTableQuotas(TableName tableName, Quotas quotas) {
-          cache.addAll(QuotaSettingsFactory.fromTableQuotas(tableName, quotas));
-        }
-
-        @Override
-        public void visitNamespaceQuotas(String namespace, Quotas quotas) {
-          cache.addAll(QuotaSettingsFactory.fromNamespaceQuotas(namespace, quotas));
-        }
-      });
+      if (result == null) {
+        return null;
+      }
+      QuotaTableUtil.parseResultToCollection(result, cache);
     }
     return cache.poll();
   }

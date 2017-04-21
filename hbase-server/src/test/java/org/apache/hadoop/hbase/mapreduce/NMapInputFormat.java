@@ -46,15 +46,14 @@ public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
   public RecordReader<NullWritable, NullWritable> createRecordReader(
       InputSplit split,
       TaskAttemptContext tac) throws IOException, InterruptedException {
-    return new SingleRecordReader<NullWritable, NullWritable>(
-        NullWritable.get(), NullWritable.get());
+    return new SingleRecordReader<>(NullWritable.get(), NullWritable.get());
   }
 
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException,
       InterruptedException {
     int count = getNumMapTasks(context.getConfiguration());
-    List<InputSplit> splits = new ArrayList<InputSplit>(count);
+    List<InputSplit> splits = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
       splits.add(new NullInputSplit());
     }

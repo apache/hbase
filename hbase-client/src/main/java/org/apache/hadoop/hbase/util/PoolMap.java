@@ -57,7 +57,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
   private int poolMaxSize;
 
-  private Map<K, Pool<V>> pools = new ConcurrentHashMap<K, Pool<V>>();
+  private Map<K, Pool<V>> pools = new ConcurrentHashMap<>();
 
   public PoolMap(PoolType poolType) {
     this.poolType = poolType;
@@ -107,7 +107,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
   @Override
   public Collection<V> values() {
-    Collection<V> values = new ArrayList<V>();
+    Collection<V> values = new ArrayList<>();
     for (Pool<V> pool : pools.values()) {
       Collection<V> poolValues = pool.values();
       if (poolValues != null) {
@@ -118,7 +118,7 @@ public class PoolMap<K, V> implements Map<K, V> {
   }
 
   public Collection<V> values(K key) {
-    Collection<V> values = new ArrayList<V>();
+    Collection<V> values = new ArrayList<>();
     Pool<V> pool = pools.get(key);
     if (pool != null) {
       Collection<V> poolValues = pool.values();
@@ -185,7 +185,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
   @Override
   public Set<Map.Entry<K, V>> entrySet() {
-    Set<Map.Entry<K, V>> entries = new HashSet<Entry<K, V>>();
+    Set<Map.Entry<K, V>> entries = new HashSet<>();
     for (Map.Entry<K, Pool<V>> poolEntry : pools.entrySet()) {
       final K poolKey = poolEntry.getKey();
       final Pool<V> pool = poolEntry.getValue();
@@ -271,11 +271,11 @@ public class PoolMap<K, V> implements Map<K, V> {
   protected Pool<V> createPool() {
     switch (poolType) {
     case Reusable:
-      return new ReusablePool<V>(poolMaxSize);
+      return new ReusablePool<>(poolMaxSize);
     case RoundRobin:
-      return new RoundRobinPool<V>(poolMaxSize);
+      return new RoundRobinPool<>(poolMaxSize);
     case ThreadLocal:
-      return new ThreadLocalPool<V>();
+      return new ThreadLocalPool<>();
     }
     return null;
   }
@@ -389,7 +389,7 @@ public class PoolMap<K, V> implements Map<K, V> {
    *          the type of the resource
    */
   static class ThreadLocalPool<R> extends ThreadLocal<R> implements Pool<R> {
-    private static final Map<ThreadLocalPool<?>, AtomicInteger> poolSizes = new HashMap<ThreadLocalPool<?>, AtomicInteger>();
+    private static final Map<ThreadLocalPool<?>, AtomicInteger> poolSizes = new HashMap<>();
 
     public ThreadLocalPool() {
     }
@@ -441,7 +441,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
     @Override
     public Collection<R> values() {
-      List<R> values = new ArrayList<R>();
+      List<R> values = new ArrayList<>();
       values.add(get());
       return values;
     }

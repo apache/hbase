@@ -193,7 +193,7 @@ public class TestSnapshotMetadata {
     final byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
 
     // restore the snapshot into a cloned table and examine the output
-    List<byte[]> familiesList = new ArrayList<byte[]>();
+    List<byte[]> familiesList = new ArrayList<>();
     Collections.addAll(familiesList, families);
 
     // Create a snapshot in which all families are empty
@@ -262,8 +262,8 @@ public class TestSnapshotMetadata {
     // populate it with data
     final byte[] familyForUpdate = BLOCKSIZE_FAM;
 
-    List<byte[]> familiesWithDataList = new ArrayList<byte[]>();
-    List<byte[]> emptyFamiliesList = new ArrayList<byte[]>();
+    List<byte[]> familiesWithDataList = new ArrayList<>();
+    List<byte[]> emptyFamiliesList = new ArrayList<>();
     if (addData) {
       Table original = UTIL.getConnection().getTable(originalTableName);
       UTIL.loadTable(original, familyForUpdate); // family arbitrarily chosen

@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.filter;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
@@ -34,12 +33,10 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * with the specified byte array. Then returns whether the result is non-zero.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class BitComparator extends ByteArrayComparable {
 
   /** Bit operators. */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public enum BitwiseOp {
     /** and */
     AND,

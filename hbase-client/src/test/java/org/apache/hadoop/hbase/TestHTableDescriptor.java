@@ -117,7 +117,7 @@ public class TestHTableDescriptor {
   public void testGetSetRemoveCP() throws Exception {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     // simple CP
-    String className = "org.apache.hadoop.hbase.coprocessor.BaseRegionObserver";
+    String className = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
     // add and check that it is present
     desc.addCoprocessor(className);
     assertTrue(desc.hasCoprocessor(className));
@@ -134,7 +134,7 @@ public class TestHTableDescriptor {
   public void testSetListRemoveCP() throws Exception {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     // simple CP
-    String className1 = "org.apache.hadoop.hbase.coprocessor.BaseRegionObserver";
+    String className1 = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
     String className2 = "org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver";
     // Check that any coprocessor is present.
     assertTrue(desc.getCoprocessors().isEmpty());

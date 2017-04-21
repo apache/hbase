@@ -126,7 +126,7 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
     protected BlockingQueue<Long> createWriteKeysQueue(Configuration conf) {
       this.delayMs = conf.getLong(String.format("%s.%s",
         IntegrationTestRegionReplicaReplication.class.getSimpleName(), OPT_READ_DELAY_MS), 5000);
-      return new ConstantDelayQueue<Long>(TimeUnit.MILLISECONDS, delayMs);
+      return new ConstantDelayQueue<>(TimeUnit.MILLISECONDS, delayMs);
     }
   }
 
@@ -145,7 +145,7 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
     protected BlockingQueue<Long> createWriteKeysQueue(Configuration conf) {
       this.delayMs = conf.getLong(String.format("%s.%s",
         IntegrationTestRegionReplicaReplication.class.getSimpleName(), OPT_READ_DELAY_MS), 5000);
-      return new ConstantDelayQueue<Long>(TimeUnit.MILLISECONDS, delayMs);
+      return new ConstantDelayQueue<>(TimeUnit.MILLISECONDS, delayMs);
     }
   }
 

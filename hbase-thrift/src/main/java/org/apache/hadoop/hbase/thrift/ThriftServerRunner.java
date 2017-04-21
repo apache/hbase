@@ -299,7 +299,7 @@ public class ThriftServerRunner implements Runnable {
     }
 
     public static List<String> serversThatCannotSpecifyBindIP() {
-      List<String> l = new ArrayList<String>();
+      List<String> l = new ArrayList<>();
       for (ImplType t : values()) {
         if (!t.canSpecifyBindIP) {
           l.add(t.simpleClassName());
@@ -396,7 +396,7 @@ public class ThriftServerRunner implements Runnable {
 
   private void setupHTTPServer() throws IOException {
     TProtocolFactory protocolFactory = new TBinaryProtocol.Factory();
-    TProcessor processor = new Hbase.Processor<Hbase.Iface>(handler);
+    TProcessor processor = new Hbase.Processor<>(handler);
     TServlet thriftHttpServlet = new ThriftHttpServlet(processor, protocolFactory, realUser,
         conf, hbaseHandler, securityEnabled, doAsEnabled);
 
@@ -496,7 +496,7 @@ public class ThriftServerRunner implements Runnable {
       protocolFactory = new TBinaryProtocol.Factory();
     }
 
-    final TProcessor p = new Hbase.Processor<Hbase.Iface>(handler);
+    final TProcessor p = new Hbase.Processor<>(handler);
     ImplType implType = ImplType.getServerImpl(conf);
     TProcessor processor = p;
 
@@ -516,7 +516,7 @@ public class ThriftServerRunner implements Runnable {
       // Extract the name from the principal
       String name = SecurityUtil.getUserFromPrincipal(
         conf.get("hbase.thrift.kerberos.principal"));
-      Map<String, String> saslProperties = new HashMap<String, String>();
+      Map<String, String> saslProperties = new HashMap<>();
       saslProperties.put(Sasl.QOP, qop);
       TSaslServerTransport.Factory saslFactory = new TSaslServerTransport.Factory();
       saslFactory.addServerDefinition("GSSAPI", name, host, saslProperties,
@@ -591,8 +591,7 @@ public class ThriftServerRunner implements Runnable {
         tserver = new TNonblockingServer(serverArgs);
       } else if (implType == ImplType.HS_HA) {
         THsHaServer.Args serverArgs = new THsHaServer.Args(serverTransport);
-        CallQueue callQueue =
-            new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
+        CallQueue callQueue = new CallQueue(new LinkedBlockingQueue<>(), metrics);
         ExecutorService executorService = createExecutor(
             callQueue, serverArgs.getMaxWorkerThreads(), serverArgs.getMaxWorkerThreads());
         serverArgs.executorService(executorService)
@@ -603,8 +602,7 @@ public class ThriftServerRunner implements Runnable {
       } else { // THREADED_SELECTOR
         TThreadedSelectorServer.Args serverArgs =
             new HThreadedSelectorServerArgs(serverTransport, conf);
-        CallQueue callQueue =
-            new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
+        CallQueue callQueue = new CallQueue(new LinkedBlockingQueue<>(), metrics);
         ExecutorService executorService = createExecutor(
             callQueue, serverArgs.getWorkerThreads(), serverArgs.getWorkerThreads());
         serverArgs.executorService(executorService)
@@ -781,7 +779,7 @@ public class ThriftServerRunner implements Runnable {
     protected HBaseHandler(final Configuration c,
         final UserProvider userProvider) throws IOException {
       this.conf = c;
-      scannerMap = new HashMap<Integer, ResultScannerWrapper>();
+      scannerMap = new HashMap<>();
       this.coalescer = new IncrementCoalescer(this);
 
       int cleanInterval = conf.getInt(CLEANUP_INTERVAL, 10 * 1000);
@@ -869,7 +867,7 @@ public class ThriftServerRunner implements Runnable {
     public List<ByteBuffer> getTableNames() throws IOError {
       try {
         TableName[] tableNames = this.getAdmin().listTableNames();
-        ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>(tableNames.length);
+        ArrayList<ByteBuffer> list = new ArrayList<>(tableNames.length);
         for (int i = 0; i < tableNames.length; i++) {
           list.add(ByteBuffer.wrap(tableNames[i].getName()));
         }
@@ -888,7 +886,7 @@ public class ThriftServerRunner implements Runnable {
     throws IOError {
       try (RegionLocator locator = connectionCache.getRegionLocator(getBytes(tableName))) {
         List<HRegionLocation> regionLocations = locator.getAllRegionLocations();
-        List<TRegionInfo> results = new ArrayList<TRegionInfo>(regionLocations.size());
+        List<TRegionInfo> results = new ArrayList<>(regionLocations.size());
         for (HRegionLocation regionLocation : regionLocations) {
           HRegionInfo info = regionLocation.getRegionInfo();
           ServerName serverName = regionLocation.getServerName();
@@ -1151,7 +1149,7 @@ public class ThriftServerRunner implements Runnable {
       
       Table table= null;
       try {
-        List<Get> gets = new ArrayList<Get>(rows.size());
+        List<Get> gets = new ArrayList<>(rows.size());
         table = getTable(tableName);
         if (metrics != null) {
           metrics.incNumRowKeysInBatchGet(rows.size());
@@ -1363,8 +1361,8 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, IllegalArgument, TException {
-      List<Put> puts = new ArrayList<Put>();
-      List<Delete> deletes = new ArrayList<Delete>();
+      List<Put> puts = new ArrayList<>();
+      List<Delete> deletes = new ArrayList<>();
 
       for (BatchMutation batch : rowBatches) {
         byte[] row = getBytes(batch.row);
@@ -1479,7 +1477,7 @@ public class ThriftServerRunner implements Runnable {
       try {
         results = resultScannerWrapper.getScanner().next(nbRows);
         if (null == results) {
-          return new ArrayList<TRowResult>();
+          return new ArrayList<>();
         }
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
@@ -1709,8 +1707,7 @@ public class ThriftServerRunner implements Runnable {
       
       Table table = null;
       try {
-        TreeMap<ByteBuffer, ColumnDescriptor> columns =
-          new TreeMap<ByteBuffer, ColumnDescriptor>();
+        TreeMap<ByteBuffer, ColumnDescriptor> columns = new TreeMap<>();
 
         table = getTable(tableName);
         HTableDescriptor desc = table.getTableDescriptor();

@@ -94,10 +94,10 @@ public class TestFSErrorsExposed {
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new StoreFile(fs, writer.getPath(),
-      util.getConfiguration(), cacheConf, BloomType.NONE);
-
-    StoreFileReader reader = sf.createReader();
+    StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
+        BloomType.NONE, true);
+    sf.initReader();
+    StoreFileReader reader = sf.getReader();
     HFileScanner scanner = reader.getScanner(false, true);
 
     FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
@@ -144,8 +144,8 @@ public class TestFSErrorsExposed {
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(),
-      cacheConf, BloomType.NONE);
+    StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
+        BloomType.NONE, true);
 
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
         Collections.singletonList(sf), false, true, false, false,
@@ -233,8 +233,7 @@ public class TestFSErrorsExposed {
   }
 
   static class FaultyFileSystem extends FilterFileSystem {
-    List<SoftReference<FaultyInputStream>> inStreams =
-      new ArrayList<SoftReference<FaultyInputStream>>();
+    List<SoftReference<FaultyInputStream>> inStreams = new ArrayList<>();
 
     public FaultyFileSystem(FileSystem testFileSystem) {
       super(testFileSystem);
@@ -244,7 +243,7 @@ public class TestFSErrorsExposed {
     public FSDataInputStream open(Path p, int bufferSize) throws IOException  {
       FSDataInputStream orig = fs.open(p, bufferSize);
       FaultyInputStream faulty = new FaultyInputStream(orig);
-      inStreams.add(new SoftReference<FaultyInputStream>(faulty));
+      inStreams.add(new SoftReference<>(faulty));
       return faulty;
     }
 

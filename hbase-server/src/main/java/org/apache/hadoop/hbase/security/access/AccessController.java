@@ -68,14 +68,15 @@ import org.apache.hadoop.hbase.client.Query;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseMasterAndRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -168,8 +169,7 @@ import com.google.protobuf.Service;
  * </p>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class AccessController extends BaseMasterAndRegionObserver
-    implements RegionServerObserver,
+public class AccessController implements MasterObserver, RegionObserver, RegionServerObserver,
       AccessControlService.Interface, CoprocessorService, EndpointObserver, BulkLoadObserver {
 
   private static final Log LOG = LogFactory.getLog(AccessController.class);
@@ -259,8 +259,7 @@ public class AccessController extends BaseMasterAndRegionObserver
    */
   void updateACL(RegionCoprocessorEnvironment e,
       final Map<byte[], List<Cell>> familyMap) {
-    Set<byte[]> entries =
-        new TreeSet<byte[]>(Bytes.BYTES_RAWCOMPARATOR);
+    Set<byte[]> entries = new TreeSet<>(Bytes.BYTES_RAWCOMPARATOR);
     for (Map.Entry<byte[], List<Cell>> f : familyMap.entrySet()) {
       List<Cell> cells = f.getValue();
       for (Cell cell: cells) {
@@ -793,7 +792,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     // This Map is identical to familyMap. The key is a BR rather than byte[].
     // It will be easy to do gets over this new Map as we can create get keys over the Cell cf by
     // new SimpleByteRange(cell.familyArray, cell.familyOffset, cell.familyLen)
-    Map<ByteRange, List<Cell>> familyMap1 = new HashMap<ByteRange, List<Cell>>();
+    Map<ByteRange, List<Cell>> familyMap1 = new HashMap<>();
     for (Entry<byte[], ? extends Collection<?>> entry : familyMap.entrySet()) {
       if (entry.getValue() instanceof List) {
         familyMap1.put(new SimpleMutableByteRange(entry.getKey()), (List<Cell>) entry.getValue());
@@ -882,7 +881,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       List<Cell> newCells = Lists.newArrayList();
       for (Cell cell: e.getValue()) {
         // Prepend the supplied perms in a new ACL tag to an update list of tags for the cell
-        List<Tag> tags = new ArrayList<Tag>();
+        List<Tag> tags = new ArrayList<>();
         tags.add(new ArrayBackedTag(AccessControlLists.ACL_TAG_TYPE, perms));
         Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell);
         while (tagIterator.hasNext()) {
@@ -990,7 +989,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
     Set<byte[]> families = desc.getFamiliesKeys();
-    Map<byte[], Set<byte[]>> familyMap = new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], Set<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] family: families) {
       familyMap.put(family, null);
     }
@@ -2125,7 +2124,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // Impl in BaseRegionObserver might do unnecessary copy for Off heap backed Cells.
+    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
     return hasMore;
   }
 
@@ -2246,7 +2245,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           @Override
           public Void run() throws Exception {
             AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm,
-                regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME));
+              regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME), request.getMergeExistingPermissions());
             return null;
           }
         });
@@ -2407,8 +2406,7 @@ public class AccessController extends BaseMasterAndRegionObserver
                   tperm.getTableName()));
             }
 
-            Map<byte[], Set<byte[]>> familyMap =
-                new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
+            Map<byte[], Set<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
             if (tperm.getFamily() != null) {
               if (tperm.getQualifier() != null) {
                 Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
@@ -2515,7 +2513,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       return null;
     }
 
-    Map<byte[], Collection<byte[]>> familyMap = new TreeMap<byte[], Collection<byte[]>>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], Collection<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     familyMap.put(family, qualifier != null ? ImmutableSet.of(qualifier) : null);
     return familyMap;
   }
@@ -2667,6 +2665,12 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void postReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
       List<WALEntry> entries, CellScanner cells) throws IOException {
+  }
+
+  @Override
+  public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    requirePermission(getActiveUser(ctx), "moveServersAndTables", Action.ADMIN);
   }
 
   @Override

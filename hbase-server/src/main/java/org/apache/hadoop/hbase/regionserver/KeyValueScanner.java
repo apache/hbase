@@ -42,6 +42,8 @@ public interface KeyValueScanner extends Shipper, Closeable {
 
   /**
    * Look at the next Cell in this scanner, but do not iterate scanner.
+   * NOTICE: The returned cell has not been passed into ScanQueryMatcher. So it may not be what the
+   * user need.
    * @return the next Cell
    */
   Cell peek();

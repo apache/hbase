@@ -40,15 +40,12 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
 public class TestCompactionPolicy {
   private final static Log LOG = LogFactory.getLog(TestCompactionPolicy.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -104,6 +101,7 @@ public class TestCompactionPolicy {
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
 
     hlog = new FSHLog(fs, basedir, logName, conf);
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     region = HRegion.createHRegion(info, basedir, conf, htd, hlog);
     region.close();
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
@@ -136,7 +134,7 @@ public class TestCompactionPolicy {
   }
 
   ArrayList<Long> toArrayList(long... numbers) {
-    ArrayList<Long> result = new ArrayList<Long>();
+    ArrayList<Long> result = new ArrayList<>();
     for (long i : numbers) {
       result.add(i);
     }
@@ -144,7 +142,7 @@ public class TestCompactionPolicy {
   }
 
   List<StoreFile> sfCreate(long... sizes) throws IOException {
-    ArrayList<Long> ageInDisk = new ArrayList<Long>();
+    ArrayList<Long> ageInDisk = new ArrayList<>();
     for (int i = 0; i < sizes.length; i++) {
       ageInDisk.add(0L);
     }
@@ -156,7 +154,7 @@ public class TestCompactionPolicy {
   }
 
   List<StoreFile> sfCreate(boolean isReference, long... sizes) throws IOException {
-    ArrayList<Long> ageInDisk = new ArrayList<Long>(sizes.length);
+    ArrayList<Long> ageInDisk = new ArrayList<>(sizes.length);
     for (int i = 0; i < sizes.length; i++) {
       ageInDisk.add(0L);
     }
@@ -196,8 +194,8 @@ public class TestCompactionPolicy {
     // Test Default compactions
     CompactionRequest result =
         ((RatioBasedCompactionPolicy) store.storeEngine.getCompactionPolicy()).selectCompaction(
-          candidates, new ArrayList<StoreFile>(), false, isOffPeak, forcemajor);
-    List<StoreFile> actual = new ArrayList<StoreFile>(result.getFiles());
+          candidates, new ArrayList<>(), false, isOffPeak, forcemajor);
+    List<StoreFile> actual = new ArrayList<>(result.getFiles());
     if (isOffPeak && !forcemajor) {
       Assert.assertTrue(result.isOffPeak());
     }

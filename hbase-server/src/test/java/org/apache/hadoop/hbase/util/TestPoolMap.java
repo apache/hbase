@@ -46,7 +46,7 @@ public class TestPoolMap {
 
     @Override
     protected void setUp() throws Exception {
-      this.poolMap = new PoolMap<String, String>(getPoolType(), POOL_SIZE);
+      this.poolMap = new PoolMap<>(getPoolType(), POOL_SIZE);
     }
 
     protected abstract PoolType getPoolType();
@@ -117,7 +117,7 @@ public class TestPoolMap {
 
     public void testPoolCap() throws InterruptedException, ExecutionException {
       String randomKey = String.valueOf(random.nextInt());
-      List<String> randomValues = new ArrayList<String>();
+      List<String> randomValues = new ArrayList<>();
       for (int i = 0; i < POOL_SIZE * 2; i++) {
         String randomValue = String.valueOf(random.nextInt());
         randomValues.add(randomValue);
@@ -219,7 +219,7 @@ public class TestPoolMap {
     public void testPoolCap() throws InterruptedException, ExecutionException {
       // As long as we poll values we put, the pool size should remain zero
       String randomKey = String.valueOf(random.nextInt());
-      List<String> randomValues = new ArrayList<String>();
+      List<String> randomValues = new ArrayList<>();
       for (int i = 0; i < POOL_SIZE * 2; i++) {
         String randomValue = String.valueOf(random.nextInt());
         randomValues.add(randomValue);

@@ -39,7 +39,7 @@ public class MetricsSource implements BaseSource {
   private static final Log LOG = LogFactory.getLog(MetricsSource.class);
 
   // tracks last shipped timestamp for each wal group
-  private Map<String, Long> lastTimeStamps = new HashMap<String, Long>();
+  private Map<String, Long> lastTimeStamps = new HashMap<>();
   private int lastQueueSize = 0;
   private long lastHFileRefsQueueSize = 0;
   private String id;

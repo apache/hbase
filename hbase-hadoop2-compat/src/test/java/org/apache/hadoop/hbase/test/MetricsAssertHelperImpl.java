@@ -37,9 +37,9 @@ import static org.junit.Assert.*;
  *  A helper class that will allow tests to get into hadoop2's metrics2 values.
  */
 public class MetricsAssertHelperImpl implements MetricsAssertHelper {
-  private Map<String, String> tags = new HashMap<String, String>();
-  private Map<String, Number> gauges = new HashMap<String, Number>();
-  private Map<String, Long> counters = new HashMap<String, Long>();
+  private Map<String, String> tags = new HashMap<>();
+  private Map<String, Number> gauges = new HashMap<>();
+  private Map<String, Long> counters = new HashMap<>();
 
   public class MockMetricsBuilder implements MetricsCollector {
 

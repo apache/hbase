@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * into Sets or using them as keys in Maps.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class RowMutations implements Row {
   private final List<Mutation> mutations;
   private final byte [] row;

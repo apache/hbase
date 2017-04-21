@@ -52,7 +52,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
 
   private ZooKeeperWatcher zkw = null; // FindBugs: MT_CORRECTNESS
 
-  private List<ServerName> regionServers = new ArrayList<ServerName>(0);
+  private List<ServerName> regionServers = new ArrayList<>(0);
   private long lastRegionServerUpdate;
 
   protected void disconnect() {
@@ -151,7 +151,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     if (children == null) {
       return Collections.emptyList();
     }
-    List<ServerName> addresses = new ArrayList<ServerName>(children.size());
+    List<ServerName> addresses = new ArrayList<>(children.size());
     for (String child : children) {
       addresses.add(ServerName.parseServerName(child));
     }

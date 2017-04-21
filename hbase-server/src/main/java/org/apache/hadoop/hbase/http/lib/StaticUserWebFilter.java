@@ -124,7 +124,7 @@ public class StaticUserWebFilter extends FilterInitializer {
 
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
-    HashMap<String, String> options = new HashMap<String, String>();
+    HashMap<String, String> options = new HashMap<>();
     
     String username = getUsernameFromConf(conf);
     options.put(HBASE_HTTP_STATIC_USER, username);

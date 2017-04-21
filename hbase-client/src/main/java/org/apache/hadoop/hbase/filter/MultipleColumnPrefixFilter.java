@@ -25,7 +25,6 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * columns like 'and', 'anti' but not keys with columns like 'ball', 'act'.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class MultipleColumnPrefixFilter extends FilterBase {
   protected byte [] hint = null;
   protected TreeSet<byte []> sortedPrefixes = createTreeSet();
@@ -164,7 +162,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   }
 
   public TreeSet<byte []> createTreeSet() {
-    return new TreeSet<byte []>(new Comparator<Object>() {
+    return new TreeSet<>(new Comparator<Object>() {
         @Override
           public int compare (Object o1, Object o2) {
           if (o1 == null || o2 == null)

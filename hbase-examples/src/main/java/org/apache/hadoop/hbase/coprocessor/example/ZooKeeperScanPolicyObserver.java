@@ -29,9 +29,9 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
@@ -63,7 +63,7 @@ import org.apache.zookeeper.ZooKeeper;
  * because RegionObservers come and go and currently
  * listeners registered with ZooKeeperWatcher cannot be removed.
  */
-public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
+public class ZooKeeperScanPolicyObserver implements RegionObserver {
   public static final String node = "/backup/example/lastbackup";
   public static final String zkkey = "ZK";
   private static final Log LOG = LogFactory.getLog(ZooKeeperScanPolicyObserver.class);
@@ -171,11 +171,6 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
     }
   }
 
-  @Override
-  public void stop(CoprocessorEnvironment e) throws IOException {
-    // nothing to do here
-  }
-
   protected ScanInfo getScanInfo(Store store, RegionCoprocessorEnvironment e) {
     byte[] data = ((ZKWatcher)e.getSharedData().get(zkkey)).getData();
     if (data == null) {
@@ -193,7 +188,7 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
 
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+      Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
     ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
     if (scanInfo == null) {
       // take default action
@@ -201,7 +196,7 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
     }
     Scan scan = new Scan();
     scan.setMaxVersions(scanInfo.getMaxVersions());
-    return new StoreScanner(store, scanInfo, scan, Collections.singletonList(memstoreScanner),
+    return new StoreScanner(store, scanInfo, scan, scanners,
         ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 

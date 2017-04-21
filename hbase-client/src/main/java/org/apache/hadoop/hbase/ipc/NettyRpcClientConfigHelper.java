@@ -28,7 +28,6 @@ import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.util.Pair;
  * the whole process.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class NettyRpcClientConfigHelper {
 
   public static final String EVENT_LOOP_CONFIG = "hbase.rpc.client.event-loop.config";

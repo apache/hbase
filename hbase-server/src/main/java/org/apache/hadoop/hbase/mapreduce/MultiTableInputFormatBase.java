@@ -25,7 +25,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -54,7 +53,6 @@ import java.util.Iterator;
  * filters etc. Subclasses may use other TableRecordReader implementations.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public abstract class MultiTableInputFormatBase extends
     InputFormat<ImmutableBytesWritable, Result> {
 
@@ -163,7 +161,7 @@ public abstract class MultiTableInputFormatBase extends
       throw new IOException("No scans were provided.");
     }
 
-    Map<TableName, List<Scan>> tableMaps = new HashMap<TableName, List<Scan>>();
+    Map<TableName, List<Scan>> tableMaps = new HashMap<>();
     for (Scan scan : scans) {
       byte[] tableNameBytes = scan.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME);
       if (tableNameBytes == null)
@@ -173,13 +171,13 @@ public abstract class MultiTableInputFormatBase extends
 
       List<Scan> scanList = tableMaps.get(tableName);
       if (scanList == null) {
-        scanList = new ArrayList<Scan>();
+        scanList = new ArrayList<>();
         tableMaps.put(tableName, scanList);
       }
       scanList.add(scan);
     }
 
-    List<InputSplit> splits = new ArrayList<InputSplit>();
+    List<InputSplit> splits = new ArrayList<>();
     Iterator iter = tableMaps.entrySet().iterator();
     while (iter.hasNext()) {
       Map.Entry<TableName, List<Scan>> entry = (Map.Entry<TableName, List<Scan>>) iter.next();

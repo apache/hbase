@@ -12,7 +12,7 @@ public interface ValueOrBuilder extends
    * Represents a null value.
    * </pre>
    *
-   * <code>optional .google.protobuf.NullValue null_value = 1;</code>
+   * <code>.google.protobuf.NullValue null_value = 1;</code>
    */
   int getNullValueValue();
   /**
@@ -20,7 +20,7 @@ public interface ValueOrBuilder extends
    * Represents a null value.
    * </pre>
    *
-   * <code>optional .google.protobuf.NullValue null_value = 1;</code>
+   * <code>.google.protobuf.NullValue null_value = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.NullValue getNullValue();
 
@@ -29,7 +29,7 @@ public interface ValueOrBuilder extends
    * Represents a double value.
    * </pre>
    *
-   * <code>optional double number_value = 2;</code>
+   * <code>double number_value = 2;</code>
    */
   double getNumberValue();
 
@@ -38,7 +38,7 @@ public interface ValueOrBuilder extends
    * Represents a string value.
    * </pre>
    *
-   * <code>optional string string_value = 3;</code>
+   * <code>string string_value = 3;</code>
    */
   java.lang.String getStringValue();
   /**
@@ -46,7 +46,7 @@ public interface ValueOrBuilder extends
    * Represents a string value.
    * </pre>
    *
-   * <code>optional string string_value = 3;</code>
+   * <code>string string_value = 3;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getStringValueBytes();
@@ -56,7 +56,7 @@ public interface ValueOrBuilder extends
    * Represents a boolean value.
    * </pre>
    *
-   * <code>optional bool bool_value = 4;</code>
+   * <code>bool bool_value = 4;</code>
    */
   boolean getBoolValue();
 
@@ -65,7 +65,7 @@ public interface ValueOrBuilder extends
    * Represents a structured value.
    * </pre>
    *
-   * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+   * <code>.google.protobuf.Struct struct_value = 5;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.Struct getStructValue();
   /**
@@ -73,7 +73,7 @@ public interface ValueOrBuilder extends
    * Represents a structured value.
    * </pre>
    *
-   * <code>optional .google.protobuf.Struct struct_value = 5;</code>
+   * <code>.google.protobuf.Struct struct_value = 5;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.StructOrBuilder getStructValueOrBuilder();
 
@@ -82,7 +82,7 @@ public interface ValueOrBuilder extends
    * Represents a repeated `Value`.
    * </pre>
    *
-   * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+   * <code>.google.protobuf.ListValue list_value = 6;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValue getListValue();
   /**
@@ -90,7 +90,7 @@ public interface ValueOrBuilder extends
    * Represents a repeated `Value`.
    * </pre>
    *
-   * <code>optional .google.protobuf.ListValue list_value = 6;</code>
+   * <code>.google.protobuf.ListValue list_value = 6;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ListValueOrBuilder getListValueOrBuilder();
 

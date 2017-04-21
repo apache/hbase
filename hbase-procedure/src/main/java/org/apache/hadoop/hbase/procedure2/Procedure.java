@@ -38,7 +38,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Base Procedure class responsible to handle the Procedure Metadata
- * e.g. state, startTime, lastUpdate, stack-indexes, ...
+ * e.g. state, submittedTime, lastUpdate, stack-indexes, ...
  *
  * execute() is called each time the procedure is executed.
  * it may be called multiple times in case of failure and restart, so the
@@ -73,7 +73,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   private long parentProcId = NO_PROC_ID;
   private long rootProcId = NO_PROC_ID;
   private long procId = NO_PROC_ID;
-  private long startTime;
+  private long submittedTime;
 
   // runtime state, updated every operation
   private ProcedureState state = ProcedureState.INITIALIZING;
@@ -216,9 +216,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
-   * By default, the executor will try ro run procedures start to finish.
+   * By default, the executor will try to run procedures start to finish.
    * Return true to make the executor yield between each execution step to
-   * give other procedures time to run their steps.
+   * give other procedures a chance to run.
    * @param env the environment passed to the ProcedureExecutor
    * @return Return true if the executor should yield on completion of an execution step.
    *         Defaults to return false.
@@ -240,6 +240,27 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return true;
   }
 
+  /**
+   * This function will be called just when procedure is submitted for execution. Override this
+   * method to update the metrics at the beginning of the procedure
+   */
+  protected void updateMetricsOnSubmit(final TEnvironment env) {}
+
+  /**
+   * This function will be called just after procedure execution is finished. Override this method
+   * to update metrics at the end of the procedure
+   *
+   * TODO: As any of the sub-procedures on failure rolls back all procedures in the stack,
+   * including successfully finished siblings, this function may get called twice in certain
+   * cases for certain procedures. Explore further if this can be called once.
+   *
+   * @param env
+   * @param runtime - Runtime of the procedure in milliseconds
+   * @param success - true if procedure is completed successfully
+   */
+  protected void updateMetricsOnFinish(final TEnvironment env, final long runtime,
+                                       boolean success) {}
+
   @Override
   public String toString() {
     // Return the simple String presentation of the procedure.
@@ -253,13 +274,12 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    */
   protected StringBuilder toStringSimpleSB() {
     final StringBuilder sb = new StringBuilder();
-    toStringClassDetails(sb);
 
-    sb.append(", procId=");
+    sb.append("procId=");
     sb.append(getProcId());
 
     if (hasParent()) {
-      sb.append(", parent=");
+      sb.append(", parentProcId=");
       sb.append(getParentProcId());
     }
 
@@ -272,8 +292,11 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     toStringState(sb);
 
     if (hasException()) {
-      sb.append(", failed=" + getException());
+      sb.append(", exception=" + getException());
     }
+
+    sb.append(", ");
+    toStringClassDetails(sb);
 
     return sb;
   }
@@ -285,8 +308,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   public String toStringDetails() {
     final StringBuilder sb = toStringSimpleSB();
 
-    sb.append(" startTime=");
-    sb.append(getStartTime());
+    sb.append(" submittedTime=");
+    sb.append(getSubmittedTime());
 
     sb.append(" lastUpdate=");
     sb.append(getLastUpdate());
@@ -351,8 +374,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return nonceKey;
   }
 
-  public long getStartTime() {
-    return startTime;
+  public long getSubmittedTime() {
+    return submittedTime;
   }
 
   public String getOwner() {
@@ -370,7 +393,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   @InterfaceAudience.Private
   protected void setProcId(final long procId) {
     this.procId = procId;
-    this.startTime = EnvironmentEdgeManager.currentTime();
+    this.submittedTime = EnvironmentEdgeManager.currentTime();
     setState(ProcedureState.RUNNABLE);
   }
 
@@ -412,8 +435,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * the creation/deserialization.
    */
   @InterfaceAudience.Private
-  protected void setStartTime(final long startTime) {
-    this.startTime = startTime;
+  protected void setSubmittedTime(final long submittedTime) {
+    this.submittedTime = submittedTime;
   }
 
   // ==========================================================================
@@ -476,7 +499,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * @return the time elapsed between the last update and the start time of the procedure.
    */
   public long elapsedTime() {
-    return getLastUpdate() - getStartTime();
+    return getLastUpdate() - getSubmittedTime();
   }
 
   /**
@@ -504,6 +527,25 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   // ==============================================================================================
 
   /**
+   * Procedure has states which are defined in proto file. At some places in the code, we
+   * need to determine more about those states. Following Methods help determine:
+   *
+   * {@link #isFailed()} - A procedure has executed at least once and has failed. The procedure
+   *                       may or may not have rolled back yet. Any procedure in FAILED state
+   *                       will be eventually moved to ROLLEDBACK state.
+   *
+   * {@link #isSuccess()} - A procedure is completed successfully without any exception.
+   *
+   * {@link #isFinished()} - As a procedure in FAILED state will be tried forever for rollback, only
+   *                         condition when scheduler/ executor will drop procedure from further
+   *                         processing is when procedure state is ROLLEDBACK or isSuccess()
+   *                         returns true. This is a terminal state of the procedure.
+   *
+   * {@link #isWaiting()} - Procedure is in one of the two waiting states ({@link
+   *                        ProcedureState#WAITING}, {@link ProcedureState#WAITING_TIMEOUT}).
+   */
+
+  /**
    * @return true if the procedure is in a RUNNABLE state.
    */
   protected synchronized boolean isRunnable() {
@@ -515,34 +557,25 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
-   * @return true if the procedure has failed.
-   *         true may mean failed but not yet rolledback or failed and rolledback.
+   * @return true if the procedure has failed. It may or may not have rolled back.
    */
   public synchronized boolean isFailed() {
-    return exception != null || state == ProcedureState.ROLLEDBACK;
+    return state == ProcedureState.FAILED || state == ProcedureState.ROLLEDBACK;
   }
 
   /**
    * @return true if the procedure is finished successfully.
    */
   public synchronized boolean isSuccess() {
-    return state == ProcedureState.FINISHED && exception == null;
+    return state == ProcedureState.SUCCESS && !hasException();
   }
 
   /**
-   * @return true if the procedure is finished. The Procedure may be completed
-   *         successfuly or failed and rolledback.
+   * @return true if the procedure is finished. The Procedure may be completed successfully or
+   * rolledback.
    */
   public synchronized boolean isFinished() {
-    switch (state) {
-      case ROLLEDBACK:
-        return true;
-      case FINISHED:
-        return exception == null;
-      default:
-        break;
-    }
-    return false;
+    return isSuccess() || state == ProcedureState.ROLLEDBACK;
   }
 
   /**
@@ -578,7 +611,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   protected synchronized void setFailure(final RemoteProcedureException exception) {
     this.exception = exception;
     if (!isFinished()) {
-      setState(ProcedureState.FINISHED);
+      setState(ProcedureState.FAILED);
     }
   }
 
@@ -631,7 +664,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    */
   @InterfaceAudience.Private
   protected synchronized boolean childrenCountDown() {
-    assert childrenLatch > 0;
+    assert childrenLatch > 0: this;
     return --childrenLatch == 0;
   }
 

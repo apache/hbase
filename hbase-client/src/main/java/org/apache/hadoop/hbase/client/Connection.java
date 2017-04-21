@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A cluster connection encapsulating lower level individual connections to actual servers and
@@ -50,7 +49,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * @since 0.99.0
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface Connection extends Abortable, Closeable {
 
   /*

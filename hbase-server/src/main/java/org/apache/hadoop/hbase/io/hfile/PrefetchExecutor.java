@@ -42,8 +42,7 @@ public class PrefetchExecutor {
   private static final Log LOG = LogFactory.getLog(PrefetchExecutor.class);
 
   /** Futures for tracking block prefetch activity */
-  private static final Map<Path,Future<?>> prefetchFutures =
-    new ConcurrentSkipListMap<Path,Future<?>>();
+  private static final Map<Path,Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
   /** Executor pool shared among all HFiles for block prefetch */
   private static final ScheduledExecutorService prefetchExecutorPool;
   /** Delay before beginning prefetch */

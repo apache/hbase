@@ -26,8 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class EncoderPoolImpl implements EncoderPool {
 
-  private BlockingQueue<PrefixTreeEncoder> unusedEncoders = 
-      new LinkedBlockingQueue<PrefixTreeEncoder>();
+  private BlockingQueue<PrefixTreeEncoder> unusedEncoders = new LinkedBlockingQueue<>();
 
   @Override
   public PrefixTreeEncoder checkOut(OutputStream outputStream, boolean includeMvccVersion) {

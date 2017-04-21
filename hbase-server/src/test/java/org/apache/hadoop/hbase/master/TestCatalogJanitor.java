@@ -65,6 +65,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
+import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -73,6 +75,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Triple;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -88,6 +91,10 @@ public class TestCatalogJanitor {
   @Rule
   public TestName name = new TestName();
 
+  @BeforeClass
+  public static void setup() throws Exception {
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+  }
   /**
    * Mock MasterServices for tests below.
    */
@@ -340,8 +347,7 @@ public class TestCatalogJanitor {
 
     // First test that our Comparator works right up in CatalogJanitor.
     // Just fo kicks.
-    SortedMap<HRegionInfo, Result> regions =
-      new TreeMap<HRegionInfo, Result>(new CatalogJanitor.SplitParentFirstComparator());
+    SortedMap<HRegionInfo, Result> regions = new TreeMap<>(new CatalogJanitor.SplitParentFirstComparator());
     // Now make sure that this regions map sorts as we expect it to.
     regions.put(parent, createResult(parent, splita, splitb));
     regions.put(splitb, createResult(splitb, splitba, splitbb));
@@ -434,16 +440,14 @@ public class TestCatalogJanitor {
         new byte[0]);
     Thread.sleep(1001);
 
-    final Map<HRegionInfo, Result> splitParents =
-        new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
+    final Map<HRegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
     splitParents.put(parent, createResult(parent, splita, splitb));
     splita.setOffline(true); //simulate that splita goes offline when it is split
     splitParents.put(splita, createResult(splita, splitaa,splitab));
 
-    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<HRegionInfo, Result>();
+    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<>();
     CatalogJanitor janitor = spy(new CatalogJanitor(services));
-    doReturn(new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
-            10, mergedRegions, splitParents)).when(janitor)
+    doReturn(new Triple<>(10, mergedRegions, splitParents)).when(janitor)
         .getMergedRegionsAndSplitParents();
 
     //create ref from splita to parent

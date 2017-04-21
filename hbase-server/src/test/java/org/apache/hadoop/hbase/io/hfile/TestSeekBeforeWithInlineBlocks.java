@@ -136,7 +136,7 @@ public class TestSeekBeforeWithInlineBlocks {
           }
   
           // Read the HFile
-          HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, conf);
+          HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, conf);
           
           // Sanity check the HFile index level
           assertEquals(expectedNumLevels, reader.getTrailer().getNumDataIndexLevels());

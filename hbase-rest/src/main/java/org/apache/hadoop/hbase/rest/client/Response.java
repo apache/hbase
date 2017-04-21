@@ -25,7 +25,6 @@ import java.io.InputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 
@@ -33,7 +32,6 @@ import org.apache.http.HttpResponse;
  * The HTTP result code, response headers, and body of a HTTP response.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Response {
   private static final Log LOG = LogFactory.getLog(Response.class);
 

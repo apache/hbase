@@ -161,7 +161,7 @@ public class TestProcedureSuspended {
   }
 
   public static class TestLockProcedure extends Procedure<TestProcEnv> {
-    private final ArrayList<Long> timestamps = new ArrayList<Long>();
+    private final ArrayList<Long> timestamps = new ArrayList<>();
     private final String key;
 
     private boolean triggerRollback = false;

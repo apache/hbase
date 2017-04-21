@@ -273,4 +273,14 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    */
   EntityLock regionLock(List<HRegionInfo> regionInfos, String description,
       Abortable abort) throws IOException;
+
+  /**
+   * Unassign the given region from the current regionserver and assign it randomly. Could still be
+   * assigned to us. This is used to solve some tough problems for which you need to reset the state
+   * of a region. For example, if you hit FileNotFound exception and want to refresh the store file
+   * list.
+   * <p>
+   * See HBASE-17712 for more details.
+   */
+  void unassign(byte[] regionName) throws IOException;
 }

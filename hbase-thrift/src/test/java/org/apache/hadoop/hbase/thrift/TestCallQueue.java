@@ -56,7 +56,7 @@ public class TestCallQueue {
 
   @Parameters
   public static Collection<Object[]> getParameters() {
-    Collection<Object[]> parameters = new ArrayList<Object[]>();
+    Collection<Object[]> parameters = new ArrayList<>();
     for (int elementsAdded : new int[] {100, 200, 300}) {
       for (int elementsRemoved : new int[] {0, 20, 100}) {
         parameters.add(new Object[]{new Integer(elementsAdded),
@@ -77,8 +77,7 @@ public class TestCallQueue {
   @Test(timeout = 60000)
   public void testPutTake() throws Exception {
     ThriftMetrics metrics = createMetrics();
-    CallQueue callQueue = new CallQueue(
-        new LinkedBlockingQueue<Call>(), metrics);
+    CallQueue callQueue = new CallQueue(new LinkedBlockingQueue<>(), metrics);
     for (int i = 0; i < elementsAdded; ++i) {
       callQueue.put(createDummyRunnable());
     }
@@ -91,8 +90,7 @@ public class TestCallQueue {
   @Test(timeout = 60000)
   public void testOfferPoll() throws Exception {
     ThriftMetrics metrics = createMetrics();
-    CallQueue callQueue = new CallQueue(
-        new LinkedBlockingQueue<Call>(), metrics);
+    CallQueue callQueue = new CallQueue(new LinkedBlockingQueue<>(), metrics);
     for (int i = 0; i < elementsAdded; ++i) {
       callQueue.offer(createDummyRunnable());
     }

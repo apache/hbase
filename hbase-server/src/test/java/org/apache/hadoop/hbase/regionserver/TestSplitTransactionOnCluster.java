@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TestReplicasClient.SlowMeCopro;
-import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -268,7 +268,7 @@ public class TestSplitTransactionOnCluster {
     assertEquals(2, cluster.getRegions(tableName).size());
   }
 
-  public static class FailingSplitMasterObserver extends BaseMasterObserver {
+  public static class FailingSplitMasterObserver implements MasterObserver {
     volatile CountDownLatch latch;
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {

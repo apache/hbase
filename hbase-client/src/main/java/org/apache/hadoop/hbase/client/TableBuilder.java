@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * For creating {@link Table} instance.
@@ -28,7 +27,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * Table instance.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface TableBuilder {
 
   /**

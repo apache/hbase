@@ -402,7 +402,7 @@ public final class ErrorHandlingProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasDeclaringClass()) {
         hash = (37 * hash) + DECLARING_CLASS_FIELD_NUMBER;
         hash = (53 * hash) + getDeclaringClass().hashCode();
@@ -1384,7 +1384,7 @@ public final class ErrorHandlingProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasClassName()) {
         hash = (37 * hash) + CLASS_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getClassName().hashCode();
@@ -2426,7 +2426,7 @@ public final class ErrorHandlingProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasSource()) {
         hash = (37 * hash) + SOURCE_FIELD_NUMBER;
         hash = (53 * hash) + getSource().hashCode();

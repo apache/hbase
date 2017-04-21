@@ -22,14 +22,12 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * High scalable counter. Thread safe.
  * @deprecated use {@link java.util.concurrent.atomic.LongAdder} instead.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 @Deprecated
 public class Counter {
   private static final int MAX_CELLS_LENGTH = 1 << 20;
@@ -94,7 +92,7 @@ public class Counter {
   }
 
   private Counter(Cell initCell) {
-    containerRef = new AtomicReference<Container>(new Container(initCell));
+    containerRef = new AtomicReference<>(new Container(initCell));
   }
 
   private static int hash() {

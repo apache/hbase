@@ -139,7 +139,7 @@ public class TestHBaseFsckEncryption {
   }
 
   private List<Path> findStorefilePaths(TableName tableName) throws Exception {
-    List<Path> paths = new ArrayList<Path>();
+    List<Path> paths = new ArrayList<>();
     for (Region region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {
       for (Store store: region.getStores()) {
@@ -153,7 +153,7 @@ public class TestHBaseFsckEncryption {
 
   private byte[] extractHFileKey(Path path) throws Exception {
     HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(), path,
-      new CacheConfig(conf), conf);
+      new CacheConfig(conf), true, conf);
     try {
       reader.loadFileInfo();
       Encryption.Context cryptoContext = reader.getFileContext().getEncryptionContext();

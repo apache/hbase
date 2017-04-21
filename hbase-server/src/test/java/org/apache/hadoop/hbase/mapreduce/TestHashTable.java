@@ -146,8 +146,7 @@ public class TestHashTable {
       .put(95, new ImmutableBytesWritable(Bytes.fromHex("f57c447e32a08f4bf1abb2892839ac56")))
       .build();
   
-    Map<Integer, ImmutableBytesWritable> actualHashes
-      = new HashMap<Integer, ImmutableBytesWritable>();
+    Map<Integer, ImmutableBytesWritable> actualHashes = new HashMap<>();
     Path dataDir = new Path(testDir, HashTable.HASH_DATA_DIR);
     for (int i = 0; i < numHashFiles; i++) {
       Path hashPath = new Path(dataDir, HashTable.TableHash.getDataFileName(i));

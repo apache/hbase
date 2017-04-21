@@ -12,7 +12,7 @@ public interface EnumOrBuilder extends
    * Enum type name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   java.lang.String getName();
   /**
@@ -20,7 +20,7 @@ public interface EnumOrBuilder extends
    * Enum type name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes();
@@ -118,7 +118,7 @@ public interface EnumOrBuilder extends
    * The source context.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 4;</code>
+   * <code>.google.protobuf.SourceContext source_context = 4;</code>
    */
   boolean hasSourceContext();
   /**
@@ -126,7 +126,7 @@ public interface EnumOrBuilder extends
    * The source context.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 4;</code>
+   * <code>.google.protobuf.SourceContext source_context = 4;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext getSourceContext();
   /**
@@ -134,7 +134,7 @@ public interface EnumOrBuilder extends
    * The source context.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 4;</code>
+   * <code>.google.protobuf.SourceContext source_context = 4;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContextOrBuilder getSourceContextOrBuilder();
 
@@ -143,7 +143,7 @@ public interface EnumOrBuilder extends
    * The source syntax.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 5;</code>
+   * <code>.google.protobuf.Syntax syntax = 5;</code>
    */
   int getSyntaxValue();
   /**
@@ -151,7 +151,7 @@ public interface EnumOrBuilder extends
    * The source syntax.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 5;</code>
+   * <code>.google.protobuf.Syntax syntax = 5;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax getSyntax();
 }

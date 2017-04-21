@@ -185,7 +185,7 @@ public class TestVisibilityLablesWithGroups {
         } catch (Throwable e) {
           fail("Should not have failed");
         }
-        List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
+        List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
           authsList.add(Bytes.toString(authBS.toByteArray()));
         }
@@ -302,7 +302,7 @@ public class TestVisibilityLablesWithGroups {
         } catch (Throwable e) {
           fail("Should not have failed");
         }
-        List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
+        List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
           authsList.add(Bytes.toString(authBS.toByteArray()));
         }

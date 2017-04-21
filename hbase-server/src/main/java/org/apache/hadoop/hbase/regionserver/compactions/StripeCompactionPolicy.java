@@ -68,7 +68,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     // We sincerely hope nobody is messing with us with their coprocessors.
     // If they do, they are very likely to shoot themselves in the foot.
     // We'll just exclude all the filesCompacting from the list.
-    ArrayList<StoreFile> candidateFiles = new ArrayList<StoreFile>(si.getStorefiles());
+    ArrayList<StoreFile> candidateFiles = new ArrayList<>(si.getStorefiles());
     candidateFiles.removeAll(filesCompacting);
     return candidateFiles;
   }
@@ -217,7 +217,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       LOG.debug("No good compaction is possible in any stripe");
       return null;
     }
-    List<StoreFile> filesToCompact = new ArrayList<StoreFile>(bqSelection);
+    List<StoreFile> filesToCompact = new ArrayList<>(bqSelection);
     // See if we can, and need to, split this stripe.
     int targetCount = 1;
     long targetKvs = Long.MAX_VALUE;
@@ -246,7 +246,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       assert hasAllFiles;
       List<StoreFile> l0Files = si.getLevel0Files();
       LOG.debug("Adding " + l0Files.size() + " files to compaction to be able to drop deletes");
-      ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<StoreFile>();
+      ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<>();
       sfs.addSublist(filesToCompact);
       sfs.addSublist(l0Files);
       req = new BoundaryStripeCompactionRequest(sfs, si.getStripeBoundaries());
@@ -345,7 +345,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     }
     LOG.debug("Merging " + bestLength + " stripes to delete expired store files");
     int endIndex = bestStart + bestLength - 1;
-    ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<StoreFile>();
+    ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<>();
     sfs.addAllSublists(stripes.subList(bestStart, endIndex + 1));
     SplitStripeCompactionRequest result = new SplitStripeCompactionRequest(sfs,
         si.getStartRow(bestStart), si.getEndRow(endIndex), 1, Long.MAX_VALUE);
@@ -388,7 +388,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       splitCount += 1.0;
     }
     long kvCount = (long)(getTotalKvCount(files) / splitCount);
-    return new Pair<Long, Integer>(kvCount, (int)Math.ceil(splitCount));
+    return new Pair<>(kvCount, (int)Math.ceil(splitCount));
   }
 
   /** Stripe compaction request wrapper. */

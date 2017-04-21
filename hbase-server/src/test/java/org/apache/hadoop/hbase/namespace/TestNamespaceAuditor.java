@@ -55,13 +55,12 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionServerObserver;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormatBase;
@@ -282,7 +281,7 @@ public class TestNamespaceAuditor {
     assertNull("Namespace state not found to be null.", stateInfo);
   }
 
-  public static class CPRegionServerObserver extends BaseRegionServerObserver {
+  public static class CPRegionServerObserver implements RegionServerObserver {
     private volatile boolean shouldFailMerge = false;
 
     public void failMerge(boolean fail) {
@@ -308,7 +307,7 @@ public class TestNamespaceAuditor {
     }
   }
 
-  public static class CPMasterObserver extends BaseMasterObserver {
+  public static class CPMasterObserver implements MasterObserver {
     private volatile boolean shouldFailMerge = false;
 
     public void failMerge(boolean fail) {
@@ -591,7 +590,7 @@ public class TestNamespaceAuditor {
     return Bytes.toBytes("" + key);
   }
 
-  public static class CustomObserver extends BaseRegionObserver{
+  public static class CustomObserver implements RegionObserver {
     volatile CountDownLatch postSplit;
     volatile CountDownLatch postCompact;
 
@@ -676,7 +675,7 @@ public class TestNamespaceAuditor {
         .getMasterQuotaManager().getNamespaceQuotaManager();
   }
 
-  public static class MasterSyncObserver extends BaseMasterObserver {
+  public static class MasterSyncObserver implements MasterObserver {
     volatile CountDownLatch tableDeletionLatch;
     static boolean throwExceptionInPreCreateTableAction;
 

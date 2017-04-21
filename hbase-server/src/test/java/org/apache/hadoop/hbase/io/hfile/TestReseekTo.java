@@ -72,8 +72,8 @@ public class TestReseekTo {
 
     String valueString = "Value";
 
-    List<Integer> keyList = new ArrayList<Integer>();
-    List<String> valueList = new ArrayList<String>();
+    List<Integer> keyList = new ArrayList<>();
+    List<String> valueList = new ArrayList<>();
 
     for (int key = 0; key < numberOfKeys; key++) {
       String value = valueString + key;
@@ -109,8 +109,8 @@ public class TestReseekTo {
     writer.close();
     fout.close();
 
-    HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(),
-        ncTFile, cacheConf, TEST_UTIL.getConfiguration());
+    HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(), ncTFile, cacheConf,
+      true, TEST_UTIL.getConfiguration());
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
 

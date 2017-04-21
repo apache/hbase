@@ -171,7 +171,7 @@ public class RedundantKVGenerator {
 
   private List<byte[]> generateRows() {
     // generate prefixes
-    List<byte[]> prefixes = new ArrayList<byte[]>();
+    List<byte[]> prefixes = new ArrayList<>();
     prefixes.add(new byte[0]);
     for (int i = 1; i < numberOfRowPrefixes; ++i) {
       int prefixLength = averagePrefixLength;
@@ -184,7 +184,7 @@ public class RedundantKVGenerator {
     }
 
     // generate rest of the row
-    List<byte[]> rows = new ArrayList<byte[]>();
+    List<byte[]> rows = new ArrayList<>();
     for (int i = 0; i < numberOfRows; ++i) {
       int suffixLength = averageSuffixLength;
       suffixLength += randomizer.nextInt(2 * suffixLengthVariance + 1) -
@@ -213,10 +213,10 @@ public class RedundantKVGenerator {
    * @return sorted list of key values
    */
   public List<KeyValue> generateTestKeyValues(int howMany, boolean useTags) {
-    List<KeyValue> result = new ArrayList<KeyValue>();
+    List<KeyValue> result = new ArrayList<>();
 
     List<byte[]> rows = generateRows();
-    Map<Integer, List<byte[]>> rowsToQualifier = new HashMap<Integer, List<byte[]>>();
+    Map<Integer, List<byte[]>> rowsToQualifier = new HashMap<>();
 
     if(family==null){
       family = new byte[columnFamilyLength];
@@ -249,7 +249,7 @@ public class RedundantKVGenerator {
 
         // add it to map
         if (!rowsToQualifier.containsKey(rowId)) {
-          rowsToQualifier.put(rowId, new ArrayList<byte[]>());
+          rowsToQualifier.put(rowId, new ArrayList<>());
         }
         rowsToQualifier.get(rowId).add(qualifier);
       } else if (qualifierChance > chanceForSameQualifier) {
@@ -299,9 +299,9 @@ public class RedundantKVGenerator {
    * @return sorted list of key values
    */
   public List<Cell> generateTestExtendedOffheapKeyValues(int howMany, boolean useTags) {
-    List<Cell> result = new ArrayList<Cell>();
+    List<Cell> result = new ArrayList<>();
     List<byte[]> rows = generateRows();
-    Map<Integer, List<byte[]>> rowsToQualifier = new HashMap<Integer, List<byte[]>>();
+    Map<Integer, List<byte[]>> rowsToQualifier = new HashMap<>();
 
     if (family == null) {
       family = new byte[columnFamilyLength];
@@ -334,7 +334,7 @@ public class RedundantKVGenerator {
 
         // add it to map
         if (!rowsToQualifier.containsKey(rowId)) {
-          rowsToQualifier.put(rowId, new ArrayList<byte[]>());
+          rowsToQualifier.put(rowId, new ArrayList<>());
         }
         rowsToQualifier.get(rowId).add(qualifier);
       } else if (qualifierChance > chanceForSameQualifier) {

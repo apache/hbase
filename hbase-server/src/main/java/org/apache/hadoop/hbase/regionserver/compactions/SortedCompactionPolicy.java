@@ -43,7 +43,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
   public List<StoreFile> preSelectCompactionForCoprocessor(final Collection<StoreFile> candidates,
       final List<StoreFile> filesCompacting) {
-    return getCurrentEligibleFiles(new ArrayList<StoreFile>(candidates), filesCompacting);
+    return getCurrentEligibleFiles(new ArrayList<>(candidates), filesCompacting);
   }
 
   /**
@@ -56,7 +56,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
       final List<StoreFile> filesCompacting, final boolean isUserCompaction,
       final boolean mayUseOffPeak, final boolean forceMajor) throws IOException {
     // Preliminary compaction subject to filters
-    ArrayList<StoreFile> candidateSelection = new ArrayList<StoreFile>(candidateFiles);
+    ArrayList<StoreFile> candidateSelection = new ArrayList<>(candidateFiles);
     // Stuck and not compacting enough (estimate). It is not guaranteed that we will be
     // able to compact more if stuck and compacting, because ratio policy excludes some
     // non-compacting files from consideration during compaction (see getCurrentEligibleFiles).

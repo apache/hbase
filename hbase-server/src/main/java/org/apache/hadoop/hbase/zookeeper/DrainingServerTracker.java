@@ -50,7 +50,7 @@ public class DrainingServerTracker extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(DrainingServerTracker.class);
 
   private ServerManager serverManager;
-  private final NavigableSet<ServerName> drainingServers = new TreeSet<ServerName>();
+  private final NavigableSet<ServerName> drainingServers = new TreeSet<>();
   private Abortable abortable;
 
   public DrainingServerTracker(ZooKeeperWatcher watcher,
@@ -70,22 +70,14 @@ public class DrainingServerTracker extends ZooKeeperListener {
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
     // Add a ServerListener to check if a server is draining when it's added.
-    serverManager.registerListener(
-        new ServerListener() {
-
-          @Override
-          public void serverAdded(ServerName sn) {
-            if (drainingServers.contains(sn)){
-              serverManager.addServerToDrainList(sn);
-            }
-          }
-
-          @Override
-          public void serverRemoved(ServerName serverName) {
-            // no-op
-          }
+    serverManager.registerListener(new ServerListener() {
+      @Override
+      public void serverAdded(ServerName sn) {
+        if (drainingServers.contains(sn)){
+          serverManager.addServerToDrainList(sn);
         }
-    );
+      }
+    });
     List<String> servers =
       ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.drainingZNode);
     add(servers);

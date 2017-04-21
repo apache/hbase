@@ -85,7 +85,7 @@ public class TableAuthManager implements Closeable {
 
     /**
      * Returns a combined map of user and group permissions, with group names
-     * distinguished according to {@link AuthUtil.isGroupPrincipal}
+     * distinguished according to {@link AuthUtil#isGroupPrincipal(String)}.
      */
     public ListMultimap<String,T> getAllPermissions() {
       ListMultimap<String,T> tmp = ArrayListMultimap.create();
@@ -103,10 +103,10 @@ public class TableAuthManager implements Closeable {
   private volatile PermissionCache<Permission> globalCache;
 
   private ConcurrentSkipListMap<TableName, PermissionCache<TablePermission>> tableCache =
-      new ConcurrentSkipListMap<TableName, PermissionCache<TablePermission>>();
+      new ConcurrentSkipListMap<>();
 
   private ConcurrentSkipListMap<String, PermissionCache<TablePermission>> nsCache =
-    new ConcurrentSkipListMap<String, PermissionCache<TablePermission>>();
+    new ConcurrentSkipListMap<>();
 
   private Configuration conf;
   private ZKPermissionWatcher zkperms;
@@ -143,7 +143,7 @@ public class TableAuthManager implements Closeable {
       throw new IOException("Unable to obtain the current user, " +
           "authorization checks for internal operations will not work correctly!");
     }
-    PermissionCache<Permission> newCache = new PermissionCache<Permission>();
+    PermissionCache<Permission> newCache = new PermissionCache<>();
     String currentUser = user.getShortName();
 
     // the system user is always included
@@ -239,7 +239,7 @@ public class TableAuthManager implements Closeable {
    */
   private void updateTableCache(TableName table,
                                 ListMultimap<String,TablePermission> tablePerms) {
-    PermissionCache<TablePermission> newTablePerms = new PermissionCache<TablePermission>();
+    PermissionCache<TablePermission> newTablePerms = new PermissionCache<>();
 
     for (Map.Entry<String,TablePermission> entry : tablePerms.entries()) {
       if (AuthUtil.isGroupPrincipal(entry.getKey())) {
@@ -263,7 +263,7 @@ public class TableAuthManager implements Closeable {
    */
   private void updateNsCache(String namespace,
                              ListMultimap<String, TablePermission> tablePerms) {
-    PermissionCache<TablePermission> newTablePerms = new PermissionCache<TablePermission>();
+    PermissionCache<TablePermission> newTablePerms = new PermissionCache<>();
 
     for (Map.Entry<String, TablePermission> entry : tablePerms.entries()) {
       if (AuthUtil.isGroupPrincipal(entry.getKey())) {
@@ -734,8 +734,7 @@ public class TableAuthManager implements Closeable {
     return mtime.get();
   }
 
-  private static Map<ZooKeeperWatcher,TableAuthManager> managerMap =
-    new HashMap<ZooKeeperWatcher,TableAuthManager>();
+  private static Map<ZooKeeperWatcher,TableAuthManager> managerMap = new HashMap<>();
 
   private static Map<TableAuthManager, Integer> refCount = new HashMap<>();
 

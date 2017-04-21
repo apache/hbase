@@ -65,12 +65,9 @@ public class QuotaCache implements Stoppable {
   // for testing purpose only, enforce the cache to be always refreshed
   static boolean TEST_FORCE_REFRESH = false;
 
-  private final ConcurrentHashMap<String, QuotaState> namespaceQuotaCache =
-      new ConcurrentHashMap<String, QuotaState>();
-  private final ConcurrentHashMap<TableName, QuotaState> tableQuotaCache =
-      new ConcurrentHashMap<TableName, QuotaState>();
-  private final ConcurrentHashMap<String, UserQuotaState> userQuotaCache =
-      new ConcurrentHashMap<String, UserQuotaState>();
+  private final ConcurrentHashMap<String, QuotaState> namespaceQuotaCache = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<TableName, QuotaState> tableQuotaCache = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, UserQuotaState> userQuotaCache = new ConcurrentHashMap<>();
   private final RegionServerServices rsServices;
 
   private QuotaRefresherChore refreshChore;
@@ -262,8 +259,8 @@ public class QuotaCache implements Stoppable {
       long evictPeriod = refreshPeriod * EVICT_PERIOD_FACTOR;
 
       // Find the quota entries to update
-      List<Get> gets = new ArrayList<Get>();
-      List<K> toRemove = new ArrayList<K>();
+      List<Get> gets = new ArrayList<>();
+      List<K> toRemove = new ArrayList<>();
       for (Map.Entry<K, V> entry: quotasMap.entrySet()) {
         long lastUpdate = entry.getValue().getLastUpdate();
         long lastQuery = entry.getValue().getLastQuery();

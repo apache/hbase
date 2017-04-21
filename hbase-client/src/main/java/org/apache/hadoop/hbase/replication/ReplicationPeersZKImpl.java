@@ -87,7 +87,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       final ReplicationQueuesClient queuesClient, Abortable abortable) {
     super(zk, conf, abortable);
     this.abortable = abortable;
-    this.peerClusters = new ConcurrentHashMap<String, ReplicationPeerZKImpl>();
+    this.peerClusters = new ConcurrentHashMap<>();
     this.queuesClient = queuesClient;
   }
 
@@ -128,7 +128,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
 
-      List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>(2);
+      List<ZKUtilOp> listOfOps = new ArrayList<>(2);
       ZKUtilOp op1 = ZKUtilOp.createAndFailSilent(getPeerNode(id),
         ReplicationSerDeHelper.toByteArray(peerConfig));
       // b/w PeerWatcher and ReplicationZookeeper#add method to create the
@@ -246,7 +246,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
   @Override
   public Map<String, ReplicationPeerConfig> getAllPeerConfigs() {
-    Map<String, ReplicationPeerConfig> peers = new TreeMap<String, ReplicationPeerConfig>();
+    Map<String, ReplicationPeerConfig> peers = new TreeMap<>();
     List<String> ids = null;
     try {
       ids = ZKUtil.listChildrenNoWatch(this.zookeeper, this.peersZNode);
@@ -331,10 +331,10 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       CompoundConfiguration compound = new CompoundConfiguration();
       compound.add(otherConf);
       compound.addStringMap(peerConfig.getConfiguration());
-      return new Pair<ReplicationPeerConfig, Configuration>(peerConfig, compound);
+      return new Pair<>(peerConfig, compound);
     }
 
-    return new Pair<ReplicationPeerConfig, Configuration>(peerConfig, otherConf);
+    return new Pair<>(peerConfig, otherConf);
   }
 
   @Override

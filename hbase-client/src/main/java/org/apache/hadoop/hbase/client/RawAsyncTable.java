@@ -26,7 +26,6 @@ import java.util.function.Function;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A low level asynchronous table.
@@ -47,18 +46,17 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * most features of AsyncTable, we can think about merge these two interfaces.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface RawAsyncTable extends AsyncTableBase {
 
   /**
    * The basic scan API uses the observer pattern. All results that match the given scan object will
-   * be passed to the given {@code consumer} by calling
-   * {@link RawScanResultConsumer#onNext(Result[])}. {@link RawScanResultConsumer#onComplete()}
-   * means the scan is finished, and {@link RawScanResultConsumer#onError(Throwable)} means we hit
-   * an unrecoverable error and the scan is terminated. {@link RawScanResultConsumer#onHeartbeat()}
-   * means the RS is still working but we can not get a valid result to call
-   * {@link RawScanResultConsumer#onNext(Result[])}. This is usually because the matched results are
-   * too sparse, for example, a filter which almost filters out everything is specified.
+   * be passed to the given {@code consumer} by calling {@code RawScanResultConsumer.onNext}.
+   * {@code RawScanResultConsumer.onComplete} means the scan is finished, and
+   * {@code RawScanResultConsumer.onError} means we hit an unrecoverable error and the scan is
+   * terminated. {@code RawScanResultConsumer.onHeartbeat} means the RS is still working but we can
+   * not get a valid result to call {@code RawScanResultConsumer.onNext}. This is usually because
+   * the matched results are too sparse, for example, a filter which almost filters out everything
+   * is specified.
    * <p>
    * Notice that, the methods of the given {@code consumer} will be called directly in the rpc
    * framework's callback thread, so typically you should not do any time consuming work inside
@@ -93,7 +91,6 @@ public interface RawAsyncTable extends AsyncTableBase {
    * </pre>
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Unstable
   @FunctionalInterface
   interface CoprocessorCallable<S, R> {
 
@@ -175,7 +172,6 @@ public interface RawAsyncTable extends AsyncTableBase {
    * </pre>
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Unstable
   interface CoprocessorCallback<R> {
 
     /**

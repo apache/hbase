@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Exception thrown when the result needs to be chunked on the server side.
@@ -27,7 +26,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * retries because some of the multi was a success.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class MultiActionResultTooLarge extends RetryImmediatelyException {
   public MultiActionResultTooLarge(String s) {
     super(s);

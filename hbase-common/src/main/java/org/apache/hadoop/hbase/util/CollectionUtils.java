@@ -34,8 +34,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class CollectionUtils {
 
-  private static final List<Object> EMPTY_LIST = Collections.unmodifiableList(
-    new ArrayList<Object>(0));
+  private static final List<Object> EMPTY_LIST = Collections.unmodifiableList(new ArrayList<>(0));
 
   
   @SuppressWarnings("unchecked")

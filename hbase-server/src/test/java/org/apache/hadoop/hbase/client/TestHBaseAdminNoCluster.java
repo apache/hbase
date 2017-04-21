@@ -170,7 +170,7 @@ public class TestHBaseAdminNoCluster {
     testMasterOperationIsRetried(new MethodCaller() {
       @Override
       public void call(Admin admin) throws Exception {
-        admin.getTableDescriptorsByTableName(new ArrayList<TableName>());
+        admin.getTableDescriptorsByTableName(new ArrayList<>());
       }
       @Override
       public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {

@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class GzipFilter implements Filter {
-  private Set<String> mimeTypes = new HashSet<String>();
+  private Set<String> mimeTypes = new HashSet<>();
 
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {

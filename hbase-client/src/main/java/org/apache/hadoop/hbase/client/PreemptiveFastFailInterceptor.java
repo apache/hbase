@@ -75,8 +75,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
 
   // Keeps track of failures when we cannot talk to a server. Helps in
   // fast failing clients if the server is down for a long time.
-  protected final ConcurrentMap<ServerName, FailureInfo> repeatedFailuresMap =
-      new ConcurrentHashMap<ServerName, FailureInfo>();
+  protected final ConcurrentMap<ServerName, FailureInfo> repeatedFailuresMap = new ConcurrentHashMap<>();
 
   // We populate repeatedFailuresMap every time there is a failure. So, to
   // keep it from growing unbounded, we garbage collect the failure information
@@ -90,8 +89,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   // fast fail mode for any reason.
   private long fastFailClearingTimeMilliSec;
 
-  private final ThreadLocal<MutableBoolean> threadRetryingInFastFailMode =
-      new ThreadLocal<MutableBoolean>();
+  private final ThreadLocal<MutableBoolean> threadRetryingInFastFailMode = new ThreadLocal<>();
 
   public PreemptiveFastFailInterceptor(Configuration conf) {
     this.fastFailThresholdMilliSec = conf.getLong(
@@ -293,7 +291,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
     // If we were able to connect to the server, reset the failure
     // information.
     if (couldNotCommunicate == false) {
-      LOG.info("Clearing out PFFE for server " + server.getServerName());
+      LOG.info("Clearing out PFFE for server " + server);
       repeatedFailuresMap.remove(server);
     } else {
       // update time of last attempt

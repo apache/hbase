@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -84,7 +83,6 @@ import org.apache.zookeeper.KeeperException;
  * Import data written by {@link Export}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Import extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(Import.class);
   final static String NAME = "import";
@@ -471,7 +469,7 @@ public class Import extends Configured implements Tool {
   }
 
   private static ArrayList<byte[]> toQuotedByteArrays(String... stringArgs) {
-    ArrayList<byte[]> quotedArgs = new ArrayList<byte[]>();
+    ArrayList<byte[]> quotedArgs = new ArrayList<>();
     for (String stringArg : stringArgs) {
       // all the filters' instantiation methods expected quoted args since they are coming from
       // the shell, so add them here, though it shouldn't really be needed :-/
@@ -536,7 +534,7 @@ public class Import extends Configured implements Tool {
       String[] allMappings = allMappingsPropVal.split(",");
       for (String mapping: allMappings) {
         if(cfRenameMap == null) {
-            cfRenameMap = new TreeMap<byte[],byte[]>(Bytes.BYTES_COMPARATOR);
+            cfRenameMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         }
         String [] srcAndDest = mapping.split(":");
         if(srcAndDest.length != 2) {

@@ -112,7 +112,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
       Permission.Action.READ);
 
     // put some test data
-    List<Put> puts = new ArrayList<Put>(100);
+    List<Put> puts = new ArrayList<>(100);
     for (int i=0; i<100; i++) {
       Put p = new Put(Bytes.toBytes(i));
       p.addColumn(FAMILY, PRIVATE_COL, Bytes.toBytes("secret " + i));

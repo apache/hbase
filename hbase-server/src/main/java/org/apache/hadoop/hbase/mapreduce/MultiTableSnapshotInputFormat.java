@@ -22,7 +22,6 @@ import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -78,7 +77,6 @@ import java.util.Map;
  * @see org.apache.hadoop.hbase.client.TableSnapshotScanner
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat {
 
   private final MultiTableSnapshotInputFormatImpl delegate;

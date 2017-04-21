@@ -199,12 +199,12 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
 
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -237,7 +237,7 @@ public class HRegionServer extends HasThread implements
   //true - if open region action in progress
   //false - if close region action in progress
   protected final ConcurrentMap<byte[], Boolean> regionsInTransitionInRS =
-    new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
+    new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
 
   // Cache flushing
   protected MemStoreFlusher cacheFlusher;
@@ -280,7 +280,7 @@ public class HRegionServer extends HasThread implements
    * Map of regions currently being served by this region server. Key is the
    * encoded region name.  All access should be synchronized.
    */
-  protected final Map<String, Region> onlineRegions = new ConcurrentHashMap<String, Region>();
+  protected final Map<String, Region> onlineRegions = new ConcurrentHashMap<>();
 
   /**
    * Map of encoded region names to the DataNode locations they should be hosted on
@@ -292,7 +292,7 @@ public class HRegionServer extends HasThread implements
    * and here we really mean DataNode locations.
    */
   protected final Map<String, InetSocketAddress[]> regionFavoredNodesMap =
-      new ConcurrentHashMap<String, InetSocketAddress[]>();
+      new ConcurrentHashMap<>();
 
   /**
    * Set of regions currently being in recovering state which means it can accept writes(edits from
@@ -321,13 +321,13 @@ public class HRegionServer extends HasThread implements
   // debugging and unit tests.
   private volatile boolean abortRequested;
 
-  ConcurrentMap<String, Integer> rowlocks = new ConcurrentHashMap<String, Integer>();
+  ConcurrentMap<String, Integer> rowlocks = new ConcurrentHashMap<>();
 
   // A state before we go into stopped state.  At this stage we're closing user
   // space regions.
   private boolean stopping = false;
 
-  private volatile boolean killed = false;
+  volatile boolean killed = false;
 
   protected final Configuration conf;
 
@@ -385,7 +385,7 @@ public class HRegionServer extends HasThread implements
 
   // WAL roller. log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
-  final LogRoller walRoller;
+  protected final LogRoller walRoller;
 
   // flag set after we're done setting up server threads
   final AtomicBoolean online = new AtomicBoolean(false);
@@ -438,9 +438,10 @@ public class HRegionServer extends HasThread implements
   // key to the config parameter of server hostname
   // the specification of server hostname is optional. The hostname should be resolvable from
   // both master and region server
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   final static String RS_HOSTNAME_KEY = "hbase.regionserver.hostname";
-
-  final static String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+  protected final static String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
 
   /**
    * This servers startcode.
@@ -534,7 +535,6 @@ public class HRegionServer extends HasThread implements
 
     // Disable usage of meta replicas in the regionserver
     this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
-
     // Config'ed params
     this.numRetries = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
@@ -639,7 +639,7 @@ public class HRegionServer extends HasThread implements
     int cleanerInterval =
         conf.getInt("hbase.hfile.compaction.discharger.interval", 2 * 60 * 1000);
     this.compactedFileDischarger =
-        new CompactedHFilesDischarger(cleanerInterval, (Stoppable)this, (RegionServerServices)this);
+        new CompactedHFilesDischarger(cleanerInterval, this, this);
     choreService.scheduleChore(compactedFileDischarger);
   }
 
@@ -858,7 +858,7 @@ public class HRegionServer extends HasThread implements
       rspmHost.loadProcedures(conf);
       rspmHost.initialize(this);
     } catch (KeeperException e) {
-      this.abort("Failed to reach zk cluster when creating procedure handler.", e);
+      this.abort("Failed to reach coordination cluster when creating procedure handler.", e);
     }
     // register watcher for recovering regions
     this.recoveringRegionWatcher = new RecoveringRegionWatcher(this.zooKeeper, this);
@@ -964,8 +964,6 @@ public class HRegionServer extends HasThread implements
     try {
       if (!isStopped() && !isAborted()) {
         ShutdownHook.install(conf, fs, this, Thread.currentThread());
-        // Set our ephemeral znode up in zookeeper now we have a name.
-        createMyEphemeralNode();
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -1324,7 +1322,7 @@ public class HRegionServer extends HasThread implements
     // Wait till all regions are closed before going out.
     int lastCount = -1;
     long previousLogTime = 0;
-    Set<String> closedRegions = new HashSet<String>();
+    Set<String> closedRegions = new HashSet<>();
     boolean interrupted = false;
     try {
       while (!isOnlineRegionsEmpty()) {
@@ -1445,6 +1443,8 @@ public class HRegionServer extends HasThread implements
         }
         this.conf.set(key, value);
       }
+      // Set our ephemeral znode up in zookeeper now we have a name.
+      createMyEphemeralNode();
 
       if (updateRootDir) {
         // initialize file system by the config fs.defaultFS and hbase.rootdir from master
@@ -1472,7 +1472,7 @@ public class HRegionServer extends HasThread implements
       startServiceThreads();
       startHeapMemoryManager();
       // Call it after starting HeapMemoryManager.
-      initializeMemStoreChunkPool();
+      initializeMemStoreChunkCreator();
       LOG.info("Serving as " + this.serverName +
         ", RpcServer on " + rpcServices.isa +
         ", sessionid=0x" +
@@ -1492,7 +1492,7 @@ public class HRegionServer extends HasThread implements
     }
   }
 
-  private void initializeMemStoreChunkPool() {
+  protected void initializeMemStoreChunkCreator() {
     if (MemStoreLAB.isEnabled(conf)) {
       // MSLAB is enabled. So initialize MemStoreChunkPool
       // By this time, the MemstoreFlusher is already initialized. We can get the global limits from
@@ -1506,12 +1506,10 @@ public class HRegionServer extends HasThread implements
       float initialCountPercentage = conf.getFloat(MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY,
           MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT);
       int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);
-      MemStoreChunkPool pool = MemStoreChunkPool.initialize(globalMemStoreSize, poolSizePercentage,
-          initialCountPercentage, chunkSize, offheap);
-      if (pool != null && this.hMemManager != null) {
-        // Register with Heap Memory manager
-        this.hMemManager.registerTuneObserver(pool);
-      }
+      // init the chunkCreator
+      ChunkCreator chunkCreator =
+          ChunkCreator.initialize(chunkSize, offheap, globalMemStoreSize, poolSizePercentage,
+            initialCountPercentage, this.hMemManager);
     }
   }
 
@@ -1628,7 +1626,9 @@ public class HRegionServer extends HasThread implements
     private final HRegionServer instance;
     private final int majorCompactPriority;
     private final static int DEFAULT_PRIORITY = Integer.MAX_VALUE;
-    private long iteration = 0;
+    //Iteration is 1-based rather than 0-based so we don't check for compaction
+    // immediately upon region server startup
+    private long iteration = 1;
 
     CompactionChecker(final HRegionServer h, final int sleepTime,
         final Stoppable stopper) {
@@ -1659,6 +1659,7 @@ public class HRegionServer extends HasThread implements
               this.instance.compactSplitThread.requestSystemCompaction(r, s, getName()
                   + " requests compaction");
             } else if (s.isMajorCompaction()) {
+              s.triggerMajorCompaction();
               if (majorCompactPriority == DEFAULT_PRIORITY
                   || majorCompactPriority > ((HRegion)r).getCompactPriority()) {
                 this.instance.compactSplitThread.requestCompaction(r, s, getName()
@@ -1744,7 +1745,7 @@ public class HRegionServer extends HasThread implements
     createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir);
 
     // listeners the wal factory will add to wals it creates.
-    final List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
+    final List<WALActionsListener> listeners = new ArrayList<>();
     listeners.add(new MetricsWAL());
     if (this.replicationSourceHandler != null &&
         this.replicationSourceHandler.getWALActionsListener() != null) {
@@ -1944,6 +1945,10 @@ public class HRegionServer extends HasThread implements
     }
     walRoller.addWAL(wal);
     return wal;
+  }
+
+  public LogRoller getWalRoller() {
+    return walRoller;
   }
 
   @Override
@@ -2295,6 +2300,7 @@ public class HRegionServer extends HasThread implements
    * logs but it does close socket in case want to bring up server on old
    * hostname+port immediately.
    */
+  @VisibleForTesting
   protected void kill() {
     this.killed = true;
     abort("Simulated kill");
@@ -2654,7 +2660,7 @@ public class HRegionServer extends HasThread implements
    */
   SortedMap<Long, Region> getCopyOfOnlineRegionsSortedBySize() {
     // we'll sort the regions in reverse
-    SortedMap<Long, Region> sortedRegions = new TreeMap<Long, Region>(
+    SortedMap<Long, Region> sortedRegions = new TreeMap<>(
         new Comparator<Long>() {
           @Override
           public int compare(Long a, Long b) {
@@ -2688,7 +2694,7 @@ public class HRegionServer extends HasThread implements
    * the first N regions being served regardless of load.)
    */
   protected HRegionInfo[] getMostLoadedRegions() {
-    ArrayList<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+    ArrayList<HRegionInfo> regions = new ArrayList<>();
     for (Region r : onlineRegions.values()) {
       if (!r.isAvailable()) {
         continue;
@@ -2900,7 +2906,7 @@ public class HRegionServer extends HasThread implements
    */
   @Override
   public List<Region> getOnlineRegions(TableName tableName) {
-     List<Region> tableRegions = new ArrayList<Region>();
+     List<Region> tableRegions = new ArrayList<>();
      synchronized (this.onlineRegions) {
        for (Region region: this.onlineRegions.values()) {
          HRegionInfo regionInfo = region.getRegionInfo();
@@ -2914,7 +2920,7 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public List<Region> getOnlineRegions() {
-    List<Region> allRegions = new ArrayList<Region>();
+    List<Region> allRegions = new ArrayList<>();
     synchronized (this.onlineRegions) {
       // Return a clone copy of the onlineRegions
       allRegions.addAll(onlineRegions.values());
@@ -2928,7 +2934,7 @@ public class HRegionServer extends HasThread implements
    */
   @Override
   public Set<TableName> getOnlineTables() {
-    Set<TableName> tables = new HashSet<TableName>();
+    Set<TableName> tables = new HashSet<>();
     synchronized (this.onlineRegions) {
       for (Region region: this.onlineRegions.values()) {
         tables.add(region.getTableDesc().getTableName());
@@ -2939,7 +2945,7 @@ public class HRegionServer extends HasThread implements
 
   // used by org/apache/hbase/tmpl/regionserver/RSStatusTmpl.jamon (HBASE-4070).
   public String[] getRegionServerCoprocessors() {
-    TreeSet<String> coprocessors = new TreeSet<String>();
+    TreeSet<String> coprocessors = new TreeSet<>();
     try {
       coprocessors.addAll(getWAL(null).getCoprocessorHost().getCoprocessors());
     } catch (IOException exception) {
@@ -3303,7 +3309,7 @@ public class HRegionServer extends HasThread implements
   // This map will contains all the regions that we closed for a move.
   //  We add the time it was moved as we don't want to keep too old information
   protected Map<String, MovedRegionInfo> movedRegions =
-      new ConcurrentHashMap<String, MovedRegionInfo>(3000);
+      new ConcurrentHashMap<>(3000);
 
   // We need a timeout. If not there is a risk of giving a wrong information: this would double
   //  the number of network calls instead of reducing them.
@@ -3647,5 +3653,10 @@ public class HRegionServer extends HasThread implements
       Abortable abort) throws IOException {
     return new LockServiceClient(conf, lockStub, clusterConnection.getNonceGenerator())
       .regionLock(regionInfos, description, abort);
+  }
+
+  @Override
+  public void unassign(byte[] regionName) throws IOException {
+    clusterConnection.getAdmin().unassign(regionName, false);
   }
 }

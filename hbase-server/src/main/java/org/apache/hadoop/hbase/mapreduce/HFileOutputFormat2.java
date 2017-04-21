@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -92,7 +91,6 @@ import com.google.common.annotations.VisibleForTesting;
  * using {@link #configureIncrementalLoad(Job, HTableDescriptor, RegionLocator, Class)}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class HFileOutputFormat2
     extends FileOutputFormat<ImmutableBytesWritable, Cell> {
   private static final Log LOG = LogFactory.getLog(HFileOutputFormat2.class);
@@ -137,7 +135,7 @@ public class HFileOutputFormat2
 
   static <V extends Cell> RecordWriter<ImmutableBytesWritable, V>
   createRecordWriter(final TaskAttemptContext context) throws IOException {
-    return new HFileRecordWriter<V>(context, null);
+    return new HFileRecordWriter<>(context, null);
   }
 
   protected static class HFileRecordWriter<V extends Cell>
@@ -211,7 +209,7 @@ public class HFileOutputFormat2
         overriddenEncoding = null;
       }
 
-      writers = new TreeMap<byte[], WriterLength>(Bytes.BYTES_COMPARATOR);
+      writers = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       previousRow = HConstants.EMPTY_BYTE_ARRAY;
       now = Bytes.toBytes(EnvironmentEdgeManager.currentTime());
       rollRequested = false;
@@ -418,8 +416,7 @@ public class HFileOutputFormat2
   private static List<ImmutableBytesWritable> getRegionStartKeys(RegionLocator table)
   throws IOException {
     byte[][] byteKeys = table.getStartKeys();
-    ArrayList<ImmutableBytesWritable> ret =
-      new ArrayList<ImmutableBytesWritable>(byteKeys.length);
+    ArrayList<ImmutableBytesWritable> ret = new ArrayList<>(byteKeys.length);
     for (byte[] byteKey : byteKeys) {
       ret.add(new ImmutableBytesWritable(byteKey));
     }
@@ -442,8 +439,7 @@ public class HFileOutputFormat2
     // have keys < the first region (which has an empty start key)
     // so we need to remove it. Otherwise we would end up with an
     // empty reducer with index 0
-    TreeSet<ImmutableBytesWritable> sorted =
-      new TreeSet<ImmutableBytesWritable>(startKeys);
+    TreeSet<ImmutableBytesWritable> sorted = new TreeSet<>(startKeys);
 
     ImmutableBytesWritable first = sorted.first();
     if (!first.equals(HConstants.EMPTY_BYTE_ARRAY)) {
@@ -587,8 +583,7 @@ public class HFileOutputFormat2
       conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
         COMPRESSION_FAMILIES_CONF_KEY);
-    Map<byte[], Algorithm> compressionMap = new TreeMap<byte[],
-        Algorithm>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], Algorithm> compressionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
       Algorithm algorithm = HFileWriterImpl.compressionByName(e.getValue());
       compressionMap.put(e.getKey(), algorithm);
@@ -607,8 +602,7 @@ public class HFileOutputFormat2
   static Map<byte[], BloomType> createFamilyBloomTypeMap(Configuration conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
         BLOOM_TYPE_FAMILIES_CONF_KEY);
-    Map<byte[], BloomType> bloomTypeMap = new TreeMap<byte[],
-        BloomType>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], BloomType> bloomTypeMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
       BloomType bloomType = BloomType.valueOf(e.getValue());
       bloomTypeMap.put(e.getKey(), bloomType);
@@ -627,8 +621,7 @@ public class HFileOutputFormat2
   static Map<byte[], Integer> createFamilyBlockSizeMap(Configuration conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
         BLOCK_SIZE_FAMILIES_CONF_KEY);
-    Map<byte[], Integer> blockSizeMap = new TreeMap<byte[],
-        Integer>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], Integer> blockSizeMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
       Integer blockSize = Integer.parseInt(e.getValue());
       blockSizeMap.put(e.getKey(), blockSize);
@@ -649,8 +642,7 @@ public class HFileOutputFormat2
       Configuration conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
         DATABLOCK_ENCODING_FAMILIES_CONF_KEY);
-    Map<byte[], DataBlockEncoding> encoderMap = new TreeMap<byte[],
-        DataBlockEncoding>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], DataBlockEncoding> encoderMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
       encoderMap.put(e.getKey(), DataBlockEncoding.valueOf((e.getValue())));
     }
@@ -667,7 +659,7 @@ public class HFileOutputFormat2
    */
   private static Map<byte[], String> createFamilyConfValueMap(
       Configuration conf, String confName) {
-    Map<byte[], String> confValMap = new TreeMap<byte[], String>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], String> confValMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     String confVal = conf.get(confName, "");
     for (String familyConf : confVal.split("&")) {
       String[] familySplit = familyConf.split("=");

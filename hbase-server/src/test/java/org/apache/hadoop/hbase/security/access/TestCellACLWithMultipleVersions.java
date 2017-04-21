@@ -248,7 +248,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   }
 
   private Map<String, Permission> prepareCellPermissions(String[] users, Action... action) {
-    Map<String, Permission> perms = new HashMap<String, Permission>(2);
+    Map<String, Permission> perms = new HashMap<>(2);
     for (String user : users) {
       perms.put(user, new Permission(action));
     }

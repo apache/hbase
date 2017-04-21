@@ -57,7 +57,7 @@ implements RowProcessor<S,T> {
 
   @Override
   public List<UUID> getClusterIds() {
-    return new ArrayList<UUID>();
+    return new ArrayList<>();
   }
 
   @Override

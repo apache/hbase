@@ -283,10 +283,10 @@ public class WALPrettyPrinter {
         if (region != null && !((String) txn.get("region")).equals(region))
           continue;
         // initialize list into which we will store atomic actions
-        List<Map> actions = new ArrayList<Map>();
+        List<Map> actions = new ArrayList<>();
         for (Cell cell : edit.getCells()) {
           // add atomic operation to txn
-          Map<String, Object> op = new HashMap<String, Object>(toStringMap(cell));
+          Map<String, Object> op = new HashMap<>(toStringMap(cell));
           if (outputValues) op.put("value", Bytes.toStringBinary(CellUtil.cloneValue(cell)));
           // check row output filter
           if (row == null || ((String) op.get("row")).equals(row)) {
@@ -328,7 +328,7 @@ public class WALPrettyPrinter {
   }
 
   private static Map<String, Object> toStringMap(Cell cell) {
-    Map<String, Object> stringMap = new HashMap<String, Object>();
+    Map<String, Object> stringMap = new HashMap<>();
     stringMap.put("row",
         Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
     stringMap.put("family", Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(),
@@ -339,7 +339,7 @@ public class WALPrettyPrinter {
     stringMap.put("timestamp", cell.getTimestamp());
     stringMap.put("vlen", cell.getValueLength());
     if (cell.getTagsLength() > 0) {
-      List<String> tagsString = new ArrayList<String>();
+      List<String> tagsString = new ArrayList<>();
       Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
       while (tagsIterator.hasNext()) {
         Tag tag = tagsIterator.next();

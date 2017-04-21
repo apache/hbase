@@ -40,11 +40,11 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -1329,7 +1329,7 @@ public class TestBlockEvictionFromClient {
 
   private static class MultiGetThread extends Thread {
     private final Table table;
-    private final List<Get> gets = new ArrayList<Get>();
+    private final List<Get> gets = new ArrayList<>();
     public MultiGetThread(Table table) {
       this.table = table;
     }
@@ -1558,14 +1558,14 @@ public class TestBlockEvictionFromClient {
     }
   }
 
-  public static class CustomInnerRegionObserver extends BaseRegionObserver {
+  public static class CustomInnerRegionObserver implements RegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(0);
     static final AtomicBoolean slowDownNext = new AtomicBoolean(false);
     static final AtomicInteger countOfNext = new AtomicInteger(0);
     static final AtomicInteger countOfGets = new AtomicInteger(0);
     static final AtomicBoolean waitForGets = new AtomicBoolean(false);
     static final AtomicBoolean throwException = new AtomicBoolean(false);
-    private static final AtomicReference<CountDownLatch> cdl = new AtomicReference<CountDownLatch>(
+    private static final AtomicReference<CountDownLatch> cdl = new AtomicReference<>(
         new CountDownLatch(0));
 
     @Override
@@ -1578,14 +1578,13 @@ public class TestBlockEvictionFromClient {
         } catch (InterruptedException e1) {
         }
       }
-      return super.postScannerNext(e, s, results, limit, hasMore);
+      return hasMore;
     }
 
     @Override
     public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
         List<Cell> results) throws IOException {
       slowdownCode(e, true);
-      super.postGetOp(e, get, results);
     }
 
     public static AtomicReference<CountDownLatch> getCdl() {

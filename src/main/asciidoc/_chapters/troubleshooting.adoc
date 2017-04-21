@@ -1050,7 +1050,7 @@ If you wish to increase the session timeout, add the following to your _hbase-si
 ----
 <property>
   <name>zookeeper.session.timeout</name>
-  <value>1200000</value>
+  <value>120000</value>
 </property>
 <property>
   <name>hbase.zookeeper.property.tickTime</name>
@@ -1365,13 +1365,13 @@ on the HBase balancer, since the HDFS balancer would degrade locality. This advi
 is still valid if your HDFS version is lower than 2.7.1.
 +
 link:https://issues.apache.org/jira/browse/HDFS-6133[HDFS-6133] provides the ability
-to exclude a given directory from the HDFS load balancer, by setting the
-`dfs.datanode.block-pinning.enabled` property to `true` in your HDFS
-configuration and running the following hdfs command:
+to exclude favored-nodes (pinned) blocks from the HDFS load balancer, by setting the
+`dfs.datanode.block-pinning.enabled` property to `true` in the HDFS service
+configuration.
 +
-----
-$ sudo -u hdfs hdfs balancer -exclude /hbase
-----
+HBase can be enabled to use the HDFS favored-nodes feature by switching the HBase balancer
+class (conf: `hbase.master.loadbalancer.class`) to `org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer`
+which is documented link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/favored/FavoredNodeLoadBalancer.html[here].
 +
 NOTE: HDFS-6133 is available in HDFS 2.7.0 and higher, but HBase does not support
 running on HDFS 2.7.0, so you must be using HDFS 2.7.1 or higher to use this feature

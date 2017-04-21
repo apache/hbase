@@ -33,7 +33,6 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.RawAsyncTable;
 import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallback;
 import org.apache.hadoop.hbase.client.RawScanResultConsumer;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  * summing/processing the individual results obtained from the AggregateService for each region.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public class AsyncAggregationClient {
 
   private static abstract class AbstractAggregationCallback<T>
@@ -407,7 +405,7 @@ public class AsyncAggregationClient {
       private R value = null;
 
       @Override
-      public boolean onNext(Result[] results) {
+      public void onNext(Result[] results, ScanController controller) {
         try {
           for (Result result : results) {
             Cell weightCell = result.getColumnLatestCell(family, weightQualifier);
@@ -419,15 +417,15 @@ public class AsyncAggregationClient {
               } else {
                 future.completeExceptionally(new NoSuchElementException());
               }
-              return false;
+              controller.terminate();
+              return;
             }
             Cell valueCell = result.getColumnLatestCell(family, valueQualifier);
             value = ci.getValue(family, valueQualifier, valueCell);
           }
-          return true;
         } catch (IOException e) {
           future.completeExceptionally(e);
-          return false;
+          controller.terminate();
         }
       }
 

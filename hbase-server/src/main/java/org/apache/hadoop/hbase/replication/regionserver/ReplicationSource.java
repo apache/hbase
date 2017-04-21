@@ -94,8 +94,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   private static final Log LOG = LogFactory.getLog(ReplicationSource.class);
   // Queues of logs to process, entry in format of walGroupId->queue,
   // each presents a queue for one wal group
-  private Map<String, PriorityBlockingQueue<Path>> queues =
-      new HashMap<String, PriorityBlockingQueue<Path>>();
+  private Map<String, PriorityBlockingQueue<Path>> queues = new HashMap<>();
   // per group queue size, keep no more than this number of logs in each wal group
   private int queueSizePerGroup;
   private ReplicationQueues replicationQueues;
@@ -140,8 +139,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   private ReplicationThrottler throttler;
   private long defaultBandwidth;
   private long currentBandwidth;
-  private ConcurrentHashMap<String, ReplicationSourceShipperThread> workerThreads =
-      new ConcurrentHashMap<String, ReplicationSourceShipperThread>();
+  private ConcurrentHashMap<String, ReplicationSourceShipperThread> workerThreads = new ConcurrentHashMap<>();
 
   private AtomicLong totalBufferUsed;
 
@@ -209,7 +207,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log.getName());
     PriorityBlockingQueue<Path> queue = queues.get(logPrefix);
     if (queue == null) {
-      queue = new PriorityBlockingQueue<Path>(queueSizePerGroup, new LogsComparator());
+      queue = new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator());
       queues.put(logPrefix, queue);
       if (this.sourceRunning) {
         // new wal group observed after source startup, start a new worker thread to track it

@@ -34,8 +34,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
 
-  private final NavigableMap<Long, StoreFileWriter> lowerBoundary2Writer
-    = new TreeMap<Long, StoreFileWriter>();
+  private final NavigableMap<Long, StoreFileWriter> lowerBoundary2Writer = new TreeMap<>();
 
   private final boolean needEmptyFile;
 

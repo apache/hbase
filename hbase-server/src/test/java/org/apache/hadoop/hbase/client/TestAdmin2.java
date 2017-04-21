@@ -776,7 +776,7 @@ public class TestAdmin2 {
 
     // Drain all region servers.
     Collection<ServerName> clusterServers = admin.getClusterStatus().getServers();
-    drainingServers = new ArrayList<ServerName>();
+    drainingServers = new ArrayList<>();
     for (ServerName server : clusterServers) {
       drainingServers.add(server);
     }

@@ -19,14 +19,12 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Enum describing the durability guarantees for tables and {@link Mutation}s
  * Note that the items must be sorted in order of increasing durability
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum Durability {
   /* Developer note: Do not rename the enum field names. They are serialized in HTableDescriptor */
   /**

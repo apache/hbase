@@ -26,9 +26,9 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
@@ -42,7 +42,7 @@ import java.util.List;
 /**
  * Simple test coprocessor for injecting exceptions on Get requests.
  */
-public class ErrorThrowingGetObserver extends BaseRegionObserver {
+public class ErrorThrowingGetObserver implements RegionObserver {
   public static final String SHOULD_ERROR_ATTRIBUTE = "error";
 
   @Override
@@ -75,7 +75,6 @@ public class ErrorThrowingGetObserver extends BaseRegionObserver {
           throw new DoNotRetryIOException("Failing for test");
       }
     }
-    super.preGetOp(e, get, results);
   }
 
   public enum ErrorType {

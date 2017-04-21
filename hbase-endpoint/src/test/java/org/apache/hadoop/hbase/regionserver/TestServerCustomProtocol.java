@@ -198,7 +198,7 @@ public class TestServerCustomProtocol {
         @Override
         public Integer call(PingProtos.PingService instance) throws IOException {
           CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.CountResponse> rpcCallback =
-            new CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.CountResponse>();
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
           instance.count(null, PingProtos.CountRequest.newBuilder().build(), rpcCallback);
           return rpcCallback.get().getCount();
         }
@@ -215,7 +215,7 @@ public class TestServerCustomProtocol {
         @Override
         public Integer call(PingProtos.PingService instance) throws IOException {
           CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.IncrementCountResponse> rpcCallback =
-            new CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.IncrementCountResponse>();
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
           instance.increment(null,
               PingProtos.IncrementCountRequest.newBuilder().setDiff(diff).build(),
             rpcCallback);
@@ -253,7 +253,7 @@ public class TestServerCustomProtocol {
           @Override
           public String call(PingProtos.PingService instance) throws IOException {
             CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.HelloResponse> rpcCallback =
-              new CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.HelloResponse>();
+              new CoprocessorRpcUtils.BlockingRpcCallback<>();
             PingProtos.HelloRequest.Builder builder = PingProtos.HelloRequest.newBuilder();
             if (send != null) builder.setName(send);
             instance.hello(null, builder.build(), rpcCallback);
@@ -272,7 +272,7 @@ public class TestServerCustomProtocol {
           @Override
           public String call(PingProtos.PingService instance) throws IOException {
             CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.HelloResponse> rpcCallback =
-              new CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.HelloResponse>();
+              new CoprocessorRpcUtils.BlockingRpcCallback<>();
             PingProtos.HelloRequest.Builder builder = PingProtos.HelloRequest.newBuilder();
             // Call ping on same instance.  Use result calling hello on same instance.
             builder.setName(doPing(instance));
@@ -291,7 +291,7 @@ public class TestServerCustomProtocol {
           @Override
           public String call(PingProtos.PingService instance) throws IOException {
             CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.NoopResponse> rpcCallback =
-              new CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.NoopResponse>();
+              new CoprocessorRpcUtils.BlockingRpcCallback<>();
             PingProtos.NoopRequest.Builder builder = PingProtos.NoopRequest.newBuilder();
             instance.noop(null, builder.build(), rpcCallback);
             rpcCallback.get();
@@ -311,7 +311,7 @@ public class TestServerCustomProtocol {
           @Override
           public String call(PingProtos.PingService instance) throws IOException {
             CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.PingResponse> rpcCallback =
-              new CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.PingResponse>();
+              new CoprocessorRpcUtils.BlockingRpcCallback<>();
             instance.ping(null, PingProtos.PingRequest.newBuilder().build(), rpcCallback);
             return rpcCallback.get().getPong();
           }
@@ -406,7 +406,7 @@ public class TestServerCustomProtocol {
 
   private static String doPing(PingProtos.PingService instance) throws IOException {
     CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.PingResponse> rpcCallback =
-        new CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.PingResponse>();
+        new CoprocessorRpcUtils.BlockingRpcCallback<>();
       instance.ping(null, PingProtos.PingRequest.newBuilder().build(), rpcCallback);
       return rpcCallback.get().getPong();
   }

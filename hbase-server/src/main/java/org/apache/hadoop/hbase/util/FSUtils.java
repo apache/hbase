@@ -252,7 +252,7 @@ public abstract class FSUtils {
    * @return True is <code>fs</code> is instance of DistributedFileSystem
    * @throws IOException
    */
-  private static boolean isDistributedFileSystem(final FileSystem fs) throws IOException {
+  public static boolean isDistributedFileSystem(final FileSystem fs) throws IOException {
     FileSystem fileSystem = fs;
     // If passed an instance of HFileSystem, it fails instanceof DistributedFileSystem.
     // Check its backing fs for dfs-ness.
@@ -1240,7 +1240,7 @@ public abstract class FSUtils {
   public static Map<String, Integer> getTableFragmentation(
     final FileSystem fs, final Path hbaseRootDir)
   throws IOException {
-    Map<String, Integer> frags = new HashMap<String, Integer>();
+    Map<String, Integer> frags = new HashMap<>();
     int cfCountTotal = 0;
     int cfFragTotal = 0;
     PathFilter regionFilter = new RegionDirFilter(fs);
@@ -1434,7 +1434,7 @@ public abstract class FSUtils {
 
   public static List<Path> getTableDirs(final FileSystem fs, final Path rootdir)
       throws IOException {
-    List<Path> tableDirs = new LinkedList<Path>();
+    List<Path> tableDirs = new LinkedList<>();
 
     for(FileStatus status :
         fs.globStatus(new Path(rootdir,
@@ -1455,7 +1455,7 @@ public abstract class FSUtils {
       throws IOException {
     // presumes any directory under hbase.rootdir is a table
     FileStatus[] dirs = fs.listStatus(rootdir, new UserTableDirFilter(fs));
-    List<Path> tabledirs = new ArrayList<Path>(dirs.length);
+    List<Path> tabledirs = new ArrayList<>(dirs.length);
     for (FileStatus dir: dirs) {
       tabledirs.add(dir.getPath());
     }
@@ -1511,9 +1511,9 @@ public abstract class FSUtils {
     // assumes we are in a table dir.
     List<FileStatus> rds = listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
     if (rds == null) {
-      return new ArrayList<Path>();
+      return new ArrayList<>();
     }
-    List<Path> regionDirs = new ArrayList<Path>(rds.size());
+    List<Path> regionDirs = new ArrayList<>(rds.size());
     for (FileStatus rdfs: rds) {
       Path rdPath = rdfs.getPath();
       regionDirs.add(rdPath);
@@ -1563,7 +1563,7 @@ public abstract class FSUtils {
   public static List<Path> getFamilyDirs(final FileSystem fs, final Path regionDir) throws IOException {
     // assumes we are in a region dir.
     FileStatus[] fds = fs.listStatus(regionDir, new FamilyDirFilter(fs));
-    List<Path> familyDirs = new ArrayList<Path>(fds.length);
+    List<Path> familyDirs = new ArrayList<>(fds.length);
     for (FileStatus fdfs: fds) {
       Path fdPath = fdfs.getPath();
       familyDirs.add(fdPath);
@@ -1574,9 +1574,9 @@ public abstract class FSUtils {
   public static List<Path> getReferenceFilePaths(final FileSystem fs, final Path familyDir) throws IOException {
     List<FileStatus> fds = listStatusWithStatusFilter(fs, familyDir, new ReferenceFileFilter(fs));
     if (fds == null) {
-      return new ArrayList<Path>();
+      return new ArrayList<>();
     }
-    List<Path> referenceFiles = new ArrayList<Path>(fds.size());
+    List<Path> referenceFiles = new ArrayList<>(fds.size());
     for (FileStatus fdfs: fds) {
       Path fdPath = fdfs.getPath();
       referenceFiles.add(fdPath);
@@ -1709,14 +1709,14 @@ public abstract class FSUtils {
       ExecutorService executor, final ErrorReporter errors) throws IOException, InterruptedException {
 
     final Map<String, Path> finalResultMap =
-        resultMap == null ? new ConcurrentHashMap<String, Path>(128, 0.75f, 32) : resultMap;
+        resultMap == null ? new ConcurrentHashMap<>(128, 0.75f, 32) : resultMap;
 
     // only include the directory paths to tables
     Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
     // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
     // should be regions.
     final FamilyDirFilter familyFilter = new FamilyDirFilter(fs);
-    final Vector<Exception> exceptions = new Vector<Exception>();
+    final Vector<Exception> exceptions = new Vector<>();
 
     try {
       List<FileStatus> regionDirs = FSUtils.listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
@@ -1724,7 +1724,7 @@ public abstract class FSUtils {
         return finalResultMap;
       }
 
-      final List<Future<?>> futures = new ArrayList<Future<?>>(regionDirs.size());
+      final List<Future<?>> futures = new ArrayList<>(regionDirs.size());
 
       for (FileStatus regionDir : regionDirs) {
         if (null != errors) {
@@ -1740,7 +1740,7 @@ public abstract class FSUtils {
           @Override
           public void run() {
             try {
-              HashMap<String,Path> regionStoreFileMap = new HashMap<String, Path>();
+              HashMap<String,Path> regionStoreFileMap = new HashMap<>();
               List<FileStatus> familyDirs = FSUtils.listStatusWithStatusFilter(fs, dd, familyFilter);
               if (familyDirs == null) {
                 if (!fs.exists(dd)) {
@@ -1785,7 +1785,7 @@ public abstract class FSUtils {
           Future<?> future = executor.submit(getRegionStoreFileMapCall);
           futures.add(future);
         } else {
-          FutureTask<?> future = new FutureTask<Object>(getRegionStoreFileMapCall, null);
+          FutureTask<?> future = new FutureTask<>(getRegionStoreFileMapCall, null);
           future.run();
           futures.add(future);
         }
@@ -1871,7 +1871,7 @@ public abstract class FSUtils {
     final FileSystem fs, final Path hbaseRootDir, PathFilter sfFilter,
     ExecutorService executor, ErrorReporter errors)
   throws IOException, InterruptedException {
-    ConcurrentHashMap<String, Path> map = new ConcurrentHashMap<String, Path>(1024, 0.75f, 32);
+    ConcurrentHashMap<String, Path> map = new ConcurrentHashMap<>(1024, 0.75f, 32);
 
     // if this method looks similar to 'getTableFragmentation' that is because
     // it was borrowed from it.
@@ -1907,7 +1907,7 @@ public abstract class FSUtils {
   public static List<FileStatus> filterFileStatuses(Iterator<FileStatus> input,
       FileStatusFilter filter) {
     if (input == null) return null;
-    ArrayList<FileStatus> results = new ArrayList<FileStatus>();
+    ArrayList<FileStatus> results = new ArrayList<>();
     while (input.hasNext()) {
       FileStatus f = input.next();
       if (filter.accept(f)) {
@@ -2167,8 +2167,7 @@ public abstract class FSUtils {
   public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
       final Configuration conf, final String desiredTable, int threadPoolSize)
       throws IOException {
-    Map<String, Map<String, Float>> regionDegreeLocalityMapping =
-        new ConcurrentHashMap<String, Map<String, Float>>();
+    Map<String, Map<String, Float>> regionDegreeLocalityMapping = new ConcurrentHashMap<>();
     getRegionLocalityMappingFromFS(conf, desiredTable, threadPoolSize, null,
         regionDegreeLocalityMapping);
     return regionDegreeLocalityMapping;
@@ -2253,7 +2252,7 @@ public abstract class FSUtils {
     // run in multiple threads
     ThreadPoolExecutor tpe = new ThreadPoolExecutor(threadPoolSize,
         threadPoolSize, 60, TimeUnit.SECONDS,
-        new ArrayBlockingQueue<Runnable>(statusList.length));
+        new ArrayBlockingQueue<>(statusList.length));
     try {
       // ignore all file status items that are not of interest
       for (FileStatus regionStatus : statusList) {

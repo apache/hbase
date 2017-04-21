@@ -264,7 +264,7 @@ public class MergeTableRegionsProcedure
 
   @Override
   protected MergeTableRegionsState getState(final int stateId) {
-    return MergeTableRegionsState.valueOf(stateId);
+    return MergeTableRegionsState.forNumber(stateId);
   }
 
   @Override
@@ -613,11 +613,8 @@ public class MergeTableRegionsProcedure
         final CacheConfig cacheConf = new CacheConfig(conf, hcd);
         for (StoreFileInfo storeFileInfo: storeFiles) {
           // Create reference file(s) of the region in mergedDir
-          regionFs.mergeStoreFile(
-            mergedRegionInfo,
-            family,
-            new StoreFile(
-              mfs.getFileSystem(), storeFileInfo, conf, cacheConf, hcd.getBloomFilterType()),
+          regionFs.mergeStoreFile(mergedRegionInfo, family, new StoreFile(mfs.getFileSystem(),
+              storeFileInfo, conf, cacheConf, hcd.getBloomFilterType(), true),
             mergedDir);
         }
       }
@@ -678,7 +675,7 @@ public class MergeTableRegionsProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       @MetaMutationAnnotation
-      final List<Mutation> metaEntries = new ArrayList<Mutation>();
+      final List<Mutation> metaEntries = new ArrayList<>();
       boolean ret = cpHost.preMergeRegionsCommit(regionsToMerge, metaEntries, getUser());
 
       if (ret) {

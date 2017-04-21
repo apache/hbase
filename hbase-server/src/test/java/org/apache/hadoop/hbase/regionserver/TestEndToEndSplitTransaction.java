@@ -245,7 +245,7 @@ public class TestEndToEndSplitTransaction {
           verifyStartEndKeys(keys);
 
           //HTable.getRegionsInfo()
-          Set<HRegionInfo> regions = new TreeSet<HRegionInfo>();
+          Set<HRegionInfo> regions = new TreeSet<>();
           for (HRegionLocation loc : rl.getAllRegionLocations()) {
             regions.add(loc.getRegionInfo());
           }
@@ -275,7 +275,7 @@ public class TestEndToEndSplitTransaction {
         i++;
       }
 
-      Pair<byte[][], byte[][]> keys = new Pair<byte[][], byte[][]>(startKeys, endKeys);
+      Pair<byte[][], byte[][]> keys = new Pair<>(startKeys, endKeys);
       verifyStartEndKeys(keys);
     }
 

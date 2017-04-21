@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Extends the basic {@link SimpleMutableByteRange} implementation with position
@@ -29,7 +28,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * {@link #equals(Object)}. {@code Position} is retained by copy operations.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 @edu.umd.cs.findbugs.annotations.SuppressWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
 public class SimplePositionedByteRange extends AbstractPositionedByteRange {
 

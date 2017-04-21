@@ -25,7 +25,6 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
@@ -42,7 +41,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * or {@link org.apache.hadoop.hbase.client.Scan#setTimeStamp(long)}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TimestampsFilter extends FilterBase {
 
   private final boolean canHint;
@@ -77,7 +75,7 @@ public class TimestampsFilter extends FilterBase {
       Preconditions.checkArgument(timestamp >= 0, "must be positive %s", timestamp);
     }
     this.canHint = canHint;
-    this.timestamps = new TreeSet<Long>(timestamps);
+    this.timestamps = new TreeSet<>(timestamps);
     init();
   }
 
@@ -85,7 +83,7 @@ public class TimestampsFilter extends FilterBase {
    * @return the list of timestamps
    */
   public List<Long> getTimestamps() {
-    List<Long> list = new ArrayList<Long>(timestamps.size());
+    List<Long> list = new ArrayList<>(timestamps.size());
     list.addAll(timestamps);
     return list;
   }
@@ -157,7 +155,7 @@ public class TimestampsFilter extends FilterBase {
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    ArrayList<Long> timestamps = new ArrayList<Long>(filterArguments.size());
+    ArrayList<Long> timestamps = new ArrayList<>(filterArguments.size());
     for (int i = 0; i<filterArguments.size(); i++) {
       long timestamp = ParseFilter.convertByteArrayToLong(filterArguments.get(i));
       timestamps.add(timestamp);

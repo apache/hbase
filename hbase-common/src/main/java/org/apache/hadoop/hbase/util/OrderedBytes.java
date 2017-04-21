@@ -27,7 +27,6 @@ import java.math.RoundingMode;
 import java.nio.charset.Charset;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -267,7 +266,6 @@ import com.google.common.annotations.VisibleForTesting;
  * </p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class OrderedBytes {
 
   /*
@@ -341,7 +339,7 @@ public class OrderedBytes {
 
   /**
    * Perform unsigned comparison between two long values. Conforms to the same interface as
-   * {@link Comparator#compare(Object, Object)}.
+   * {@link org.apache.hadoop.hbase.CellComparator#COMPARATOR#compare(Object, Object)}.
    */
   private static int unsignedCmp(long x1, long x2) {
     int cmp;

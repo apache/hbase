@@ -25,7 +25,6 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -59,8 +58,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  *
  * <p>Some Transactional edits (START, COMMIT, ABORT) will not have an associated row.
  *
- * Note that protected members marked @InterfaceAudience.Private are only protected
- * to support the legacy HLogKey class, which is in a different package.
  */
 // TODO: Key and WALEdit are never used separately, or in one-to-many relation, for practical
 //       purposes. They need to be merged into WALEntry.
@@ -100,60 +97,9 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     this.sequenceId = writeEntry.getWriteNumber();
   }
 
-  // REMOVE!!!! No more Writables!!!!
-  // Should be < 0 (@see HLogKey#readFields(DataInput))
-  // version 2 supports WAL compression
-  // public members here are only public because of HLogKey
-  @InterfaceAudience.Private
-  protected enum Version {
-    UNVERSIONED(0),
-    // Initial number we put on WALKey when we introduced versioning.
-    INITIAL(-1),
-    // Version -2 introduced a dictionary compression facility.  Only this
-    // dictionary-based compression is available in version -2.
-    COMPRESSED(-2);
+  private byte [] encodedRegionName;
 
-    public final int code;
-    static final Version[] byCode;
-    static {
-      byCode = Version.values();
-      for (int i = 0; i < byCode.length; i++) {
-        if (byCode[i].code != -1 * i) {
-          throw new AssertionError("Values in this enum should be descending by one");
-        }
-      }
-    }
-
-    Version(int code) {
-      this.code = code;
-    }
-
-    public boolean atLeast(Version other) {
-      return code <= other.code;
-    }
-
-    public static Version fromCode(int code) {
-      return byCode[code * -1];
-    }
-  }
-
-  /*
-   * This is used for reading the log entries created by the previous releases
-   * (0.94.11) which write the clusters information to the scopes of WALEdit.
-   */
-  private static final String PREFIX_CLUSTER_KEY = ".";
-
-
-  // visible for deprecated HLogKey
-  @InterfaceAudience.Private
-  protected static final Version VERSION = Version.COMPRESSED;
-
-  // visible for deprecated HLogKey
-  @InterfaceAudience.Private
-  protected byte [] encodedRegionName;
-  // visible for deprecated HLogKey
-  @InterfaceAudience.Private
-  protected TableName tablename;
+  private TableName tablename;
   /**
    * SequenceId for this edit. Set post-construction at write-to-WAL time. Until then it is
    * NO_SEQUENCE_ID. Change it so multiple threads can read it -- e.g. access is synchronized.
@@ -165,15 +111,11 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    */
   private long origLogSeqNum = 0;
 
-  // Time at which this edit was written.
-  // visible for deprecated HLogKey
-  @InterfaceAudience.Private
-  protected long writeTime;
+  /** Time at which this edit was written. */
+  private long writeTime;
 
-  // The first element in the list is the cluster id on which the change has originated
-  // visible for deprecated HLogKey
-  @InterfaceAudience.Private
-  protected List<UUID> clusterIds;
+  /** The first element in the list is the cluster id on which the change has originated */
+  private List<UUID> clusterIds;
 
   private NavigableMap<byte[], Integer> replicationScope;
 
@@ -186,25 +128,23 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   private MultiVersionConcurrencyControl.WriteEntry writeEntry;
   public static final List<UUID> EMPTY_UUIDS = Collections.unmodifiableList(new ArrayList<UUID>());
 
-  // visible for deprecated HLogKey
-  @InterfaceAudience.Private
-  protected CompressionContext compressionContext;
+  private CompressionContext compressionContext;
 
   public WALKey() {
     init(null, null, 0L, HConstants.LATEST_TIMESTAMP,
-        new ArrayList<UUID>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
+        new ArrayList<>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
   }
 
   public WALKey(final NavigableMap<byte[], Integer> replicationScope) {
     init(null, null, 0L, HConstants.LATEST_TIMESTAMP,
-        new ArrayList<UUID>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, replicationScope);
+        new ArrayList<>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, replicationScope);
   }
 
   @VisibleForTesting
   public WALKey(final byte[] encodedRegionName, final TableName tablename,
                 long logSeqNum,
       final long now, UUID clusterId) {
-    List<UUID> clusterIds = new ArrayList<UUID>(1);
+    List<UUID> clusterIds = new ArrayList<>(1);
     clusterIds.add(clusterId);
     init(encodedRegionName, tablename, logSeqNum, now, clusterIds,
         HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
@@ -397,7 +337,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     this.replicationScope = replicationScope;
   }
 
-  // For HLogKey and deserialization. DO NOT USE. See setWriteEntry below.
+  // For deserialization. DO NOT USE. See setWriteEntry below.
   @InterfaceAudience.Private
   protected void setSequenceId(long sequenceId) {
     this.sequenceId = sequenceId;
@@ -486,25 +426,6 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     }
   }
 
-  public void readOlderScopes(NavigableMap<byte[], Integer> scopes) {
-    if (scopes != null) {
-      Iterator<Map.Entry<byte[], Integer>> iterator = scopes.entrySet()
-          .iterator();
-      while (iterator.hasNext()) {
-        Map.Entry<byte[], Integer> scope = iterator.next();
-        String key = Bytes.toString(scope.getKey());
-        if (key.startsWith(PREFIX_CLUSTER_KEY)) {
-          addClusterId(UUID.fromString(key.substring(PREFIX_CLUSTER_KEY
-              .length())));
-          iterator.remove();
-        }
-      }
-      if (scopes.size() > 0) {
-        this.replicationScope = scopes;
-      }
-    }
-  }
-
   /**
    * Marks that the cluster with the given clusterId has consumed the change
    */
@@ -543,7 +464,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    * @return a Map containing data from this key
    */
   public Map<String, Object> toStringMap() {
-    Map<String, Object> stringMap = new HashMap<String, Object>();
+    Map<String, Object> stringMap = new HashMap<>();
     stringMap.put("table", tablename);
     stringMap.put("region", Bytes.toStringBinary(encodedRegionName));
     stringMap.put("sequence", getSequenceId());
@@ -684,7 +605,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     }
     this.replicationScope = null;
     if (walKey.getScopesCount() > 0) {
-      this.replicationScope = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      this.replicationScope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (FamilyScope scope : walKey.getScopesList()) {
         byte[] family = (compressionContext == null) ? scope.getFamily().toByteArray() :
           uncompressor.uncompress(scope.getFamily(), compressionContext.familyDict);

@@ -470,6 +470,7 @@ Shell.load_command_group(
     balance_rsgroup
     move_servers_rsgroup
     move_tables_rsgroup
+    move_servers_tables_rsgroup
     get_server_rsgroup
     get_table_rsgroup
   ]

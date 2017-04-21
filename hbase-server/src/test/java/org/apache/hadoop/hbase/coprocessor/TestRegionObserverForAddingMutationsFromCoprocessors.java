@@ -194,7 +194,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestMultiMutationCoprocessor extends BaseRegionObserver {
+  public static class TestMultiMutationCoprocessor implements RegionObserver {
     @Override
     public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
         MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -211,7 +211,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestDeleteCellCoprocessor extends BaseRegionObserver {
+  public static class TestDeleteCellCoprocessor implements RegionObserver {
     @Override
     public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
         MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -230,7 +230,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestDeleteFamilyCoprocessor extends BaseRegionObserver {
+  public static class TestDeleteFamilyCoprocessor implements RegionObserver {
     @Override
     public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
         MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -249,7 +249,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestDeleteRowCoprocessor extends BaseRegionObserver {
+  public static class TestDeleteRowCoprocessor implements RegionObserver {
     @Override
     public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
         MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -268,7 +268,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestWALObserver extends BaseWALObserver {
+  public static class TestWALObserver implements WALObserver {
     static WALEdit savedEdit = null;
     @Override
     public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
@@ -276,7 +276,6 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
       if (info.getTable().equals(TableName.valueOf("testCPMutationsAreWrittenToWALEdit"))) {
         savedEdit = logEdit;
       }
-      super.postWALWrite(ctx, info, logKey, logEdit);
     }
   }
 }

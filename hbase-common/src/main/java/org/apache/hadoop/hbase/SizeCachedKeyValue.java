@@ -62,9 +62,4 @@ public class SizeCachedKeyValue extends KeyValue {
   public long heapSize() {
     return super.heapSize() + FIXED_OVERHEAD;
   }
-
-  @Override
-  public long heapOverhead() {
-    return super.heapOverhead() + FIXED_OVERHEAD;
-  }
 }

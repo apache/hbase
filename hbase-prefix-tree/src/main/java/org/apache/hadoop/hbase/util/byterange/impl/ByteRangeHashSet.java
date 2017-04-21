@@ -39,7 +39,7 @@ public class ByteRangeHashSet extends ByteRangeSet {
   /************************ constructors *****************************/
 
   public ByteRangeHashSet() {
-    this.uniqueIndexByUniqueRange = new HashMap<ByteRange, Integer>();
+    this.uniqueIndexByUniqueRange = new HashMap<>();
   }
 
   public ByteRangeHashSet(List<ByteRange> rawByteArrays) {

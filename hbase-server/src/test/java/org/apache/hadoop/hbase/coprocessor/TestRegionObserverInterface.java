@@ -409,7 +409,7 @@ public class TestRegionObserverInterface {
   }
 
   /* Overrides compaction to only output rows with keys that are even numbers */
-  public static class EvenOnlyCompactor extends BaseRegionObserver {
+  public static class EvenOnlyCompactor implements RegionObserver {
     long lastCompaction;
     long lastFlush;
 
@@ -424,7 +424,7 @@ public class TestRegionObserverInterface {
 
         @Override
         public boolean next(List<Cell> results, ScannerContext scannerContext) throws IOException {
-          List<Cell> internalResults = new ArrayList<Cell>();
+          List<Cell> internalResults = new ArrayList<>();
           boolean hasMore;
           do {
             hasMore = scanner.next(internalResults, scannerContext);

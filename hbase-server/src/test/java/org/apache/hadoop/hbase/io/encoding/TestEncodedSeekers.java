@@ -81,7 +81,7 @@ public class TestEncodedSeekers {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<Object[]>();
+    List<Object[]> paramList = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       for (boolean includeTags : new boolean[] { false, true }) {
         for (boolean compressTags : new boolean[] { false, true }) {

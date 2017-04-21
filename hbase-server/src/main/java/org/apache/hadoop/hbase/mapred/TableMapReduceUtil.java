@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -49,7 +48,6 @@ import java.util.Map;
  * Utility for {@link TableMap} and {@link TableReduce}
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class TableMapReduceUtil {
 

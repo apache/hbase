@@ -64,7 +64,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
 
   @JsonProperty("Cell")
   @XmlElement(name="Cell")
-  private List<CellModel> cells = new ArrayList<CellModel>();
+  private List<CellModel> cells = new ArrayList<>();
 
 
   /**
@@ -86,7 +86,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
    */
   public RowModel(final byte[] key) {
     this.key = key;
-    cells = new ArrayList<CellModel>();
+    cells = new ArrayList<>();
   }
 
   /**

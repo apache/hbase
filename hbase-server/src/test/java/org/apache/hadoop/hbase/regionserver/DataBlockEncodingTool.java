@@ -69,7 +69,7 @@ public class DataBlockEncodingTool {
   /**
    * How many times to run the benchmark. More times means better data in terms
    * of statistics but slower execution. Has to be strictly larger than
-   * {@link DEFAULT_BENCHMARK_N_OMIT}.
+   * {@link #DEFAULT_BENCHMARK_N_OMIT}.
    */
   private static final int DEFAULT_BENCHMARK_N_TIMES = 12;
 
@@ -117,7 +117,7 @@ public class DataBlockEncodingTool {
   private static int benchmarkNTimes = DEFAULT_BENCHMARK_N_TIMES;
   private static int benchmarkNOmit = DEFAULT_BENCHMARK_N_OMIT;
 
-  private List<EncodedDataBlock> codecs = new ArrayList<EncodedDataBlock>();
+  private List<EncodedDataBlock> codecs = new ArrayList<>();
   private long totalPrefixLength = 0;
   private long totalKeyLength = 0;
   private long totalValueLength = 0;
@@ -236,8 +236,7 @@ public class DataBlockEncodingTool {
     KeyValue currentKv;
 
     scanner.seek(KeyValue.LOWESTKEY);
-    List<Iterator<Cell>> codecIterators =
-        new ArrayList<Iterator<Cell>>();
+    List<Iterator<Cell>> codecIterators = new ArrayList<>();
     for(EncodedDataBlock codec : codecs) {
       codecIterators.add(codec.getIterator(HFileBlock.headerSize(useHBaseChecksum)));
     }
@@ -326,7 +325,7 @@ public class DataBlockEncodingTool {
     int totalSize = 0;
 
     // decompression time
-    List<Long> durations = new ArrayList<Long>();
+    List<Long> durations = new ArrayList<>();
     for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
       totalSize = 0;
 
@@ -352,7 +351,7 @@ public class DataBlockEncodingTool {
       prevTotalSize = totalSize;
     }
 
-    List<Long> encodingDurations = new ArrayList<Long>();
+    List<Long> encodingDurations = new ArrayList<>();
     for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
       final long startTime = System.nanoTime();
       codec.encodeData();
@@ -390,7 +389,7 @@ public class DataBlockEncodingTool {
     System.out.println(name + ":");
 
     // compress it
-    List<Long> compressDurations = new ArrayList<Long>();
+    List<Long> compressDurations = new ArrayList<>();
     ByteArrayOutputStream compressedStream = new ByteArrayOutputStream();
     CompressionOutputStream compressingStream =
         algorithm.createPlainCompressionStream(compressedStream, compressor);
@@ -421,7 +420,7 @@ public class DataBlockEncodingTool {
     byte[] compBuffer = compressedStream.toByteArray();
 
     // uncompress it several times and measure performance
-    List<Long> durations = new ArrayList<Long>();
+    List<Long> durations = new ArrayList<>();
     for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
       final long startTime = System.nanoTime();
       byte[] newBuf = new byte[length + 1];
@@ -593,10 +592,9 @@ public class DataBlockEncodingTool {
     Path path = new Path(hfilePath);
     CacheConfig cacheConf = new CacheConfig(conf);
     FileSystem fs = FileSystem.get(conf);
-    StoreFile hsf = new StoreFile(fs, path, conf, cacheConf,
-      BloomType.NONE);
-
-    StoreFileReader reader = hsf.createReader();
+    StoreFile hsf = new StoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
+    hsf.initReader();
+    StoreFileReader reader = hsf.getReader();
     reader.loadFileInfo();
     KeyValueScanner scanner = reader.getStoreFileScanner(true, true, false, 0, 0, false);
 

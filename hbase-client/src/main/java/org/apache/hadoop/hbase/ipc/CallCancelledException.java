@@ -19,13 +19,11 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Client side call cancelled.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class CallCancelledException extends HBaseIOException {
 
   private static final long serialVersionUID = 309775809470318208L;

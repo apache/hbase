@@ -92,8 +92,7 @@ public class IntegrationTestLazyCfLoading {
     public static final byte[] VALUE_COLUMN = Bytes.toBytes("val");
     public static final long ACCEPTED_VALUE = 1L;
 
-    private static final Map<byte[], byte[][]> columnMap = new TreeMap<byte[], byte[][]>(
-        Bytes.BYTES_COMPARATOR);
+    private static final Map<byte[], byte[][]> columnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
     private final AtomicLong expectedNumberOfKeys = new AtomicLong(0);
     private final AtomicLong totalNumberOfKeys = new AtomicLong(0);

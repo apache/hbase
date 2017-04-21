@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -78,7 +79,6 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.tool.Canary.RegionTask.TaskType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -110,6 +110,7 @@ import org.apache.zookeeper.data.Stat;
  * 3. zookeeper mode - for each zookeeper instance, selects a zNode and
  * outputs some information about failure or latency.
  */
+@InterfaceAudience.Private
 public final class Canary implements Tool {
   // Sink interface used by the canary to outputs information
   public interface Sink {
@@ -140,8 +141,8 @@ public final class Canary implements Tool {
     private AtomicLong readFailureCount = new AtomicLong(0),
         writeFailureCount = new AtomicLong(0);
 
-    private Map<String, String> readFailures = new ConcurrentHashMap<String, String>();
-    private Map<String, String> writeFailures = new ConcurrentHashMap<String, String>();
+    private Map<String, String> readFailures = new ConcurrentHashMap<>();
+    private Map<String, String> writeFailures = new ConcurrentHashMap<>();
 
     @Override
     public long getReadFailureCount() {
@@ -949,7 +950,7 @@ public final class Canary implements Tool {
     public void run() {
       if (this.initAdmin()) {
         try {
-          List<Future<Void>> taskFutures = new LinkedList<Future<Void>>();
+          List<Future<Void>> taskFutures = new LinkedList<>();
           if (this.targets != null && this.targets.length > 0) {
             String[] tables = generateMonitorTables(this.targets);
             this.initialized = true;
@@ -996,7 +997,7 @@ public final class Canary implements Tool {
       if (this.useRegExp) {
         Pattern pattern = null;
         HTableDescriptor[] tds = null;
-        Set<String> tmpTables = new TreeSet<String>();
+        Set<String> tmpTables = new TreeSet<>();
         try {
           if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("reading list of tables"));
@@ -1040,7 +1041,7 @@ public final class Canary implements Tool {
       if (LOG.isDebugEnabled()) {
         LOG.debug(String.format("reading list of tables"));
       }
-      List<Future<Void>> taskFutures = new LinkedList<Future<Void>>();
+      List<Future<Void>> taskFutures = new LinkedList<>();
       for (HTableDescriptor table : admin.listTables()) {
         if (admin.isTableEnabled(table.getTableName())
             && (!table.getTableName().equals(writeTableName))) {
@@ -1078,7 +1079,7 @@ public final class Canary implements Tool {
         admin.deleteTable(writeTableName);
         createWriteTable(numberOfServers);
       }
-      HashSet<ServerName> serverSet = new HashSet<ServerName>();
+      HashSet<ServerName> serverSet = new HashSet<>();
       for (Pair<HRegionInfo, ServerName> pair : pairs) {
         serverSet.add(pair.getSecond());
       }
@@ -1110,49 +1111,6 @@ public final class Canary implements Tool {
    * Canary entry point for specified table.
    * @throws Exception
    */
-  public static void sniff(final Admin admin, TableName tableName, boolean rawScanEnabled)
-      throws Exception {
-    sniff(admin, tableName, TaskType.READ, rawScanEnabled);
-  }
-  
-  /**
-   * Canary entry point for specified table.
-   * Keeping this method backward compatibility
-   * @throws Exception
-   */
-  public static void sniff(final Admin admin, TableName tableName)
-      throws Exception {
-    sniff(admin, tableName, TaskType.READ, false);
-  }
-
-  /**
-   * Canary entry point for specified table with task type(read/write)
-   * @throws Exception
-   */
-  public static void sniff(final Admin admin, TableName tableName, TaskType taskType,
-      boolean rawScanEnabled)   throws Exception {
-    List<Future<Void>> taskFutures =
-        Canary.sniff(admin, new StdOutSink(), tableName.getNameAsString(),
-          new ScheduledThreadPoolExecutor(1), taskType, rawScanEnabled);
-    for (Future<Void> future : taskFutures) {
-      future.get();
-    }
-  }
-  
-  /**
-   * Canary entry point for specified table with task type(read/write)
-   * Keeping this method backward compatible
-   * @throws Exception
-   */
-  public static void sniff(final Admin admin, TableName tableName, TaskType taskType)
-      throws Exception {
-    Canary.sniff(admin, tableName, taskType, false);
-  }
-
-  /**
-   * Canary entry point for specified table.
-   * @throws Exception
-   */
   private static List<Future<Void>> sniff(final Admin admin, final Sink sink, String tableName,
       ExecutorService executor, TaskType taskType, boolean rawScanEnabled) throws Exception {
     if (LOG.isDebugEnabled()) {
@@ -1165,7 +1123,7 @@ public final class Canary implements Tool {
     } else {
       LOG.warn(String.format("Table %s is not enabled", tableName));
     }
-    return new LinkedList<Future<Void>>();
+    return new LinkedList<>();
   }
 
   /*
@@ -1183,7 +1141,7 @@ public final class Canary implements Tool {
     try {
       table = admin.getConnection().getTable(tableDesc.getTableName());
     } catch (TableNotFoundException e) {
-      return new ArrayList<Future<Void>>();
+      return new ArrayList<>();
     }
     finally {
       if (table !=null) {
@@ -1191,7 +1149,7 @@ public final class Canary implements Tool {
       }
     }
 
-    List<RegionTask> tasks = new ArrayList<RegionTask>();
+    List<RegionTask> tasks = new ArrayList<>();
     RegionLocator regionLocator = null;
     try {
       regionLocator = admin.getConnection().getRegionLocator(tableDesc.getTableName());
@@ -1290,7 +1248,7 @@ public final class Canary implements Tool {
     }
 
     private boolean checkNoTableNames() {
-      List<String> foundTableNames = new ArrayList<String>();
+      List<String> foundTableNames = new ArrayList<>();
       TableName[] tableNames = null;
 
       if (LOG.isDebugEnabled()) {
@@ -1323,8 +1281,8 @@ public final class Canary implements Tool {
     }
 
     private void monitorRegionServers(Map<String, List<HRegionInfo>> rsAndRMap) {
-      List<RegionServerTask> tasks = new ArrayList<RegionServerTask>();
-      Map<String, AtomicLong> successMap = new HashMap<String, AtomicLong>();
+      List<RegionServerTask> tasks = new ArrayList<>();
+      Map<String, AtomicLong> successMap = new HashMap<>();
       Random rand = new Random();
       for (Map.Entry<String, List<HRegionInfo>> entry : rsAndRMap.entrySet()) {
         String serverName = entry.getKey();
@@ -1379,7 +1337,7 @@ public final class Canary implements Tool {
     }
 
     private Map<String, List<HRegionInfo>> getAllRegionServerByName() {
-      Map<String, List<HRegionInfo>> rsAndRMap = new HashMap<String, List<HRegionInfo>>();
+      Map<String, List<HRegionInfo>> rsAndRMap = new HashMap<>();
       Table table = null;
       RegionLocator regionLocator = null;
       try {
@@ -1400,7 +1358,7 @@ public final class Canary implements Tool {
             if (rsAndRMap.containsKey(rsName)) {
               regions = rsAndRMap.get(rsName);
             } else {
-              regions = new ArrayList<HRegionInfo>();
+              regions = new ArrayList<>();
               rsAndRMap.put(rsName, regions);
             }
             regions.add(r);
@@ -1438,7 +1396,7 @@ public final class Canary implements Tool {
       Map<String, List<HRegionInfo>> filteredRsAndRMap = null;
 
       if (this.targets != null && this.targets.length > 0) {
-        filteredRsAndRMap = new HashMap<String, List<HRegionInfo>>();
+        filteredRsAndRMap = new HashMap<>();
         Pattern pattern = null;
         Matcher matcher = null;
         boolean regExpFound = false;

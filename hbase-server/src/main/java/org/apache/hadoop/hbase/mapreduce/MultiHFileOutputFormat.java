@@ -16,7 +16,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,7 +43,6 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 @VisibleForTesting
 public class MultiHFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, Cell> {
   private static final Log LOG = LogFactory.getLog(MultiHFileOutputFormat.class);
@@ -65,8 +63,7 @@ public class MultiHFileOutputFormat extends FileOutputFormat<ImmutableBytesWrita
     final FileSystem fs = outputDir.getFileSystem(conf);
 
     // Map of tables to writers
-    final Map<ImmutableBytesWritable, RecordWriter<ImmutableBytesWritable, V>> tableWriters =
-        new HashMap<ImmutableBytesWritable, RecordWriter<ImmutableBytesWritable, V>>();
+    final Map<ImmutableBytesWritable, RecordWriter<ImmutableBytesWritable, V>> tableWriters = new HashMap<>();
 
     return new RecordWriter<ImmutableBytesWritable, V>() {
       @Override
@@ -82,7 +79,7 @@ public class MultiHFileOutputFormat extends FileOutputFormat<ImmutableBytesWrita
               + tableOutputDir.toString());
 
           // Create writer for one specific table
-          tableWriter = new HFileOutputFormat2.HFileRecordWriter<V>(context, tableOutputDir);
+          tableWriter = new HFileOutputFormat2.HFileRecordWriter<>(context, tableOutputDir);
           // Put table into map
           tableWriters.put(tableName, tableWriter);
         }

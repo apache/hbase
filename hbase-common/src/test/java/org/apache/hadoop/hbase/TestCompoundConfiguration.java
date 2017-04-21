@@ -121,8 +121,7 @@ public class TestCompoundConfiguration extends TestCase {
 
   @Test
   public void testWithIbwMap() {
-    Map<Bytes, Bytes> map =
-      new HashMap<Bytes, Bytes>();
+    Map<Bytes, Bytes> map = new HashMap<>();
     map.put(strToIb("B"), strToIb("2b"));
     map.put(strToIb("C"), strToIb("33"));
     map.put(strToIb("D"), strToIb("4"));
@@ -162,7 +161,7 @@ public class TestCompoundConfiguration extends TestCase {
 
   @Test
   public void testWithStringMap() {
-    Map<String, String> map = new HashMap<String, String>();
+    Map<String, String> map = new HashMap<>();
     map.put("B", "2b");
     map.put("C", "33");
     map.put("D", "4");
@@ -199,10 +198,10 @@ public class TestCompoundConfiguration extends TestCase {
 
   @Test
   public void testLaterConfigsOverrideEarlier() {
-    Map<String, String> map1 = new HashMap<String, String>();
+    Map<String, String> map1 = new HashMap<>();
     map1.put("A", "2");
     map1.put("D", "5");
-    Map<String, String> map2 = new HashMap<String, String>();
+    Map<String, String> map2 = new HashMap<>();
     String newValueForA = "3", newValueForB = "4";
     map2.put("A", newValueForA);
     map2.put("B", newValueForB);

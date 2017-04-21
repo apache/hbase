@@ -53,7 +53,7 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
   private static final Log LOG = LogFactory.getLog(DefaultVisibilityExpressionResolver.class);
 
   private Configuration conf;
-  private final Map<String, Integer> labels = new HashMap<String, Integer>();
+  private final Map<String, Integer> labels = new HashMap<>();
 
   @Override
   public Configuration getConf() {

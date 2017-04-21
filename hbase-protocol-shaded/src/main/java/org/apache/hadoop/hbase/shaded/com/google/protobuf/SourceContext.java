@@ -85,7 +85,7 @@ public  final class SourceContext extends
    * protobuf element.  For example: `"google/protobuf/source_context.proto"`.
    * </pre>
    *
-   * <code>optional string file_name = 1;</code>
+   * <code>string file_name = 1;</code>
    */
   public java.lang.String getFileName() {
     java.lang.Object ref = fileName_;
@@ -105,7 +105,7 @@ public  final class SourceContext extends
    * protobuf element.  For example: `"google/protobuf/source_context.proto"`.
    * </pre>
    *
-   * <code>optional string file_name = 1;</code>
+   * <code>string file_name = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getFileNameBytes() {
@@ -173,7 +173,7 @@ public  final class SourceContext extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + FILE_NAME_FIELD_NUMBER;
     hash = (53 * hash) + getFileName().hashCode();
     hash = (29 * hash) + unknownFields.hashCode();
@@ -402,7 +402,7 @@ public  final class SourceContext extends
      * protobuf element.  For example: `"google/protobuf/source_context.proto"`.
      * </pre>
      *
-     * <code>optional string file_name = 1;</code>
+     * <code>string file_name = 1;</code>
      */
     public java.lang.String getFileName() {
       java.lang.Object ref = fileName_;
@@ -422,7 +422,7 @@ public  final class SourceContext extends
      * protobuf element.  For example: `"google/protobuf/source_context.proto"`.
      * </pre>
      *
-     * <code>optional string file_name = 1;</code>
+     * <code>string file_name = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getFileNameBytes() {
@@ -443,7 +443,7 @@ public  final class SourceContext extends
      * protobuf element.  For example: `"google/protobuf/source_context.proto"`.
      * </pre>
      *
-     * <code>optional string file_name = 1;</code>
+     * <code>string file_name = 1;</code>
      */
     public Builder setFileName(
         java.lang.String value) {
@@ -461,7 +461,7 @@ public  final class SourceContext extends
      * protobuf element.  For example: `"google/protobuf/source_context.proto"`.
      * </pre>
      *
-     * <code>optional string file_name = 1;</code>
+     * <code>string file_name = 1;</code>
      */
     public Builder clearFileName() {
       
@@ -475,7 +475,7 @@ public  final class SourceContext extends
      * protobuf element.  For example: `"google/protobuf/source_context.proto"`.
      * </pre>
      *
-     * <code>optional string file_name = 1;</code>
+     * <code>string file_name = 1;</code>
      */
     public Builder setFileNameBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {

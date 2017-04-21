@@ -31,7 +31,7 @@ public class DoActionsOncePolicy extends PeriodicPolicy {
 
   public DoActionsOncePolicy(long periodMs, List<Action> actions) {
     super(periodMs);
-    this.actions = new ArrayList<Action>(actions);
+    this.actions = new ArrayList<>(actions);
   }
 
   public DoActionsOncePolicy(long periodMs, Action... actions) {

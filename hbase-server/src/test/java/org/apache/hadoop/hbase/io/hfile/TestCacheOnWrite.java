@@ -154,7 +154,7 @@ public class TestCacheOnWrite {
 
   private static List<BlockCache> getBlockCaches() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
-    List<BlockCache> blockcaches = new ArrayList<BlockCache>();
+    List<BlockCache> blockcaches = new ArrayList<>();
     // default
     blockcaches.add(new CacheConfig(conf).getBlockCache());
 
@@ -176,7 +176,7 @@ public class TestCacheOnWrite {
 
   @Parameters
   public static Collection<Object[]> getParameters() throws IOException {
-    List<Object[]> params = new ArrayList<Object[]>();
+    List<Object[]> params = new ArrayList<>();
     for (BlockCache blockCache : getBlockCaches()) {
       for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
         for (Compression.Algorithm compress : HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
@@ -248,7 +248,7 @@ public class TestCacheOnWrite {
   }
 
   private void readStoreFile(boolean useTags) throws IOException {
-    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, conf);
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
     LOG.info("HFile information: " + reader);
     HFileContext meta = new HFileContextBuilder().withCompression(compress)
       .withBytesPerCheckSum(CKBYTES).withChecksumType(ChecksumType.NULL)
@@ -261,12 +261,11 @@ public class TestCacheOnWrite {
     assertTrue(testDescription, scanner.seekTo());
 
     long offset = 0;
-    EnumMap<BlockType, Integer> blockCountByType =
-        new EnumMap<BlockType, Integer>(BlockType.class);
+    EnumMap<BlockType, Integer> blockCountByType = new EnumMap<>(BlockType.class);
 
     DataBlockEncoding encodingInCache = NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding();
-    List<Long> cachedBlocksOffset = new ArrayList<Long>();
-    Map<Long, HFileBlock> cachedBlocks = new HashMap<Long, HFileBlock>();
+    List<Long> cachedBlocksOffset = new ArrayList<>();
+    Map<Long, HFileBlock> cachedBlocks = new HashMap<>();
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       // Flags: don't cache the block, use pread, this is not a compaction.
       // Also, pass null for expected block type to avoid checking it.
@@ -383,7 +382,7 @@ public class TestCacheOnWrite {
       KeyValue kv;
       if(useTags) {
         Tag t = new ArrayBackedTag((byte) 1, "visibility");
-        List<Tag> tagList = new ArrayList<Tag>();
+        List<Tag> tagList = new ArrayList<>();
         tagList.add(t);
         Tag[] tags = new Tag[1];
         tags[0] = t;

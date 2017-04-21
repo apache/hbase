@@ -224,7 +224,7 @@ public class TestFlushSnapshotFromClient {
     // take a snapshot of the enabled table
     String snapshotString = "offlineTableSnapshot";
     byte[] snapshot = Bytes.toBytes(snapshotString);
-    Map<String, String> props = new HashMap<String, String>();
+    Map<String, String> props = new HashMap<>();
     props.put("table", TABLE_NAME.getNameAsString());
     admin.execProcedure(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION,
         snapshotString, props);

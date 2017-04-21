@@ -301,12 +301,12 @@ public class TestMetaTableLocator {
    * want to pass a mocked HRS; can be null.
    * @param client A mocked ClientProtocol instance, can be null
    * @return Mock up a connection that returns a {@link Configuration} when
-   * {@link HConnection#getConfiguration()} is called, a 'location' when
-   * {@link HConnection#getRegionLocation(byte[], byte[], boolean)} is called,
+   * {@link org.apache.hadoop.hbase.client.ClusterConnection#getConfiguration()} is called, a 'location' when
+   * {@link org.apache.hadoop.hbase.client.RegionLocator#getRegionLocation(byte[], boolean)} is called,
    * and that returns the passed {@link AdminProtos.AdminService.BlockingInterface} instance when
-   * {@link HConnection#getAdmin(ServerName)} is called, returns the passed
+   * {@link org.apache.hadoop.hbase.client.ClusterConnection#getAdmin(ServerName)} is called, returns the passed
    * {@link ClientProtos.ClientService.BlockingInterface} instance when
-   * {@link HConnection#getClient(ServerName)} is called.
+   * {@link org.apache.hadoop.hbase.client.ClusterConnection#getClient(ServerName)} is called.
    * @throws IOException
    */
   private ClusterConnection mockConnection(final AdminProtos.AdminService.BlockingInterface admin,

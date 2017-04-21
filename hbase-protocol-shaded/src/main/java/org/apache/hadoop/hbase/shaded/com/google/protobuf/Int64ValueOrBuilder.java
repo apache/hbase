@@ -12,7 +12,7 @@ public interface Int64ValueOrBuilder extends
    * The int64 value.
    * </pre>
    *
-   * <code>optional int64 value = 1;</code>
+   * <code>int64 value = 1;</code>
    */
   long getValue();
 }

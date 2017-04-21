@@ -27,7 +27,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionedWritable;
 
@@ -40,12 +39,10 @@ import com.google.common.collect.Maps;
  * @see TablePermission
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class Permission extends VersionedWritable {
   protected static final byte VERSION = 0;
 
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public enum Action {
     READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A');
 

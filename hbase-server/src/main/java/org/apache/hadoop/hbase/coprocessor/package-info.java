@@ -127,11 +127,6 @@ observe and mediate client actions on the region:
   <li>preCheckAndDelete, postCheckAndDelete: Called before and after the client
   calls checkAndDelete().</li>
 </ul>
-You can also extend abstract class <code>BaseRegionObserverCoprocessor</code>
-which
-implements both <code>Coprocessor</code> and <code>RegionObserver</code>.
-In addition, it overrides all methods with default behaviors so you don't
-have to override all of them.
 <p>
 Here's an example of what a simple RegionObserver might look like. This
 example shows how to implement access control for HBase. This

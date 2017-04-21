@@ -21,17 +21,18 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
@@ -233,25 +234,24 @@ public class StoreFileInfo {
    * @param cacheConf The cache configuration and block cache reference.
    * @return The StoreFile.Reader for the file
    */
-  public StoreFileReader open(final FileSystem fs,
-      final CacheConfig cacheConf, final boolean canUseDropBehind) throws IOException {
+  public StoreFileReader open(FileSystem fs, CacheConfig cacheConf, boolean canUseDropBehind,
+      long readahead, boolean isPrimaryReplicaStoreFile, AtomicInteger refCount, boolean shared)
+      throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
 
     final boolean doDropBehind = canUseDropBehind && cacheConf.shouldDropBehindCompaction();
     if (this.link != null) {
       // HFileLink
-      in = new FSDataInputStreamWrapper(fs, this.link, doDropBehind);
+      in = new FSDataInputStreamWrapper(fs, this.link, doDropBehind, readahead);
       status = this.link.getFileStatus(fs);
     } else if (this.reference != null) {
       // HFile Reference
       Path referencePath = getReferredToFile(this.getPath());
-      in = new FSDataInputStreamWrapper(fs, referencePath,
-          doDropBehind);
+      in = new FSDataInputStreamWrapper(fs, referencePath, doDropBehind, readahead);
       status = fs.getFileStatus(referencePath);
     } else {
-      in = new FSDataInputStreamWrapper(fs, this.getPath(),
-          doDropBehind);
+      in = new FSDataInputStreamWrapper(fs, this.getPath(), doDropBehind, readahead);
       status = fs.getFileStatus(initialPath);
     }
     long length = status.getLen();
@@ -265,9 +265,10 @@ public class StoreFileInfo {
     if (reader == null) {
       if (this.reference != null) {
         reader = new HalfStoreFileReader(fs, this.getPath(), in, length, cacheConf, reference,
-          conf);
+            isPrimaryReplicaStoreFile, refCount, shared, conf);
       } else {
-        reader = new StoreFileReader(fs, status.getPath(), in, length, cacheConf, conf);
+        reader = new StoreFileReader(fs, status.getPath(), in, length, cacheConf,
+            isPrimaryReplicaStoreFile, refCount, shared, conf);
       }
     }
     if (this.coprocessorHost != null) {

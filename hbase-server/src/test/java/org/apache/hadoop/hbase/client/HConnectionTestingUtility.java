@@ -23,15 +23,14 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -160,7 +159,7 @@ public class HConnectionTestingUtility {
   /**
    * This coproceesor sleep 2s at first increment/append rpc call.
    */
-  public static class SleepAtFirstRpcCall extends BaseRegionObserver {
+  public static class SleepAtFirstRpcCall implements RegionObserver {
     static final AtomicLong ct = new AtomicLong(0);
     static final String SLEEP_TIME_CONF_KEY =
         "hbase.coprocessor.SleepAtFirstRpcCall.sleepTime";

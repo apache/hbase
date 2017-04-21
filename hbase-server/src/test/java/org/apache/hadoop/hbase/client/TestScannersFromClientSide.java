@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import org.apache.commons.logging.Log;
@@ -152,7 +152,7 @@ public class TestScannersFromClientSide {
     scanner = ht.getScanner(scan);
 
     // c4:4, c5:5, c6:6, c7:7
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[4], 4, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[5], 5, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[6], 6, VALUE));
@@ -167,14 +167,14 @@ public class TestScannersFromClientSide {
     scanner = ht.getScanner(scan);
 
     // First batch: c4:4, c5:5
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[4], 4, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[5], 5, VALUE));
     result = scanner.next();
     verifyResult(result, kvListExp, toLog, "Testing first batch of scan");
 
     // Second batch: c6:6, c7:7
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[6], 6, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[7], 7, VALUE));
     result = scanner.next();
@@ -205,7 +205,7 @@ public class TestScannersFromClientSide {
     byte[] cellValue = Bytes.createMaxByteArray(cellSize);
 
     Put put;
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     for (int row = 0; row < ROWS.length; row++) {
       put = new Put(ROWS[row]);
       for (int qual = 0; qual < QUALIFIERS.length; qual++) {
@@ -245,7 +245,7 @@ public class TestScannersFromClientSide {
     Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
     Put put;
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     for (int row = 0; row < ROWS.length; row++) {
       put = new Put(ROWS[row]);
       for (int qual = 0; qual < QUALIFIERS.length; qual++) {
@@ -328,7 +328,7 @@ public class TestScannersFromClientSide {
     boolean toLog = true;
     List<Cell> kvListExp;
 
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     // Insert one CF for row[0]
     put = new Put(ROW);
     for (int i=0; i < 10; i++) {
@@ -345,7 +345,7 @@ public class TestScannersFromClientSide {
     get = new Get(ROW);
     get.setMaxResultsPerColumnFamily(2);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[0], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[1], 1, VALUE));
     verifyResult(result, kvListExp, toLog, "Testing basic setMaxResults");
@@ -356,7 +356,7 @@ public class TestScannersFromClientSide {
     get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5],
                                         true));
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[2], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[3], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[4], 1, VALUE));
@@ -384,7 +384,7 @@ public class TestScannersFromClientSide {
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     //Exp: CF1:q0, ..., q9, CF2: q0, q1, q10, q11, ..., q19
     for (int i=0; i < 10; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE));
@@ -402,7 +402,7 @@ public class TestScannersFromClientSide {
     get.setMaxResultsPerColumnFamily(3);
     get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, null, true));
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     for (int i=2; i < 5; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE));
     }
@@ -418,7 +418,7 @@ public class TestScannersFromClientSide {
     get.setMaxResultsPerColumnFamily(7);
     get.setFilter(new ColumnPrefixFilter(QUALIFIERS[1]));
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[1], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[1], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[1], 1, VALUE));
@@ -449,7 +449,7 @@ public class TestScannersFromClientSide {
     boolean toLog = true;
     List<Cell> kvListExp, kvListScan;
 
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
 
     for (int r=0; r < ROWS.length; r++) {
       put = new Put(ROWS[r]);
@@ -468,7 +468,7 @@ public class TestScannersFromClientSide {
     scan = new Scan();
     scan.setMaxResultsPerColumnFamily(4);
     ResultScanner scanner = ht.getScanner(scan);
-    kvListScan = new ArrayList<Cell>();
+    kvListScan = new ArrayList<>();
     while ((result = scanner.next()) != null) {
       for (Cell kv : result.listCells()) {
         kvListScan.add(kv);
@@ -499,7 +499,7 @@ public class TestScannersFromClientSide {
     List<Cell> kvListExp;
 
     // Insert one CF for row
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     put = new Put(ROW);
     for (int i=0; i < 10; i++) {
       KeyValue kv = new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE);
@@ -520,7 +520,7 @@ public class TestScannersFromClientSide {
     get = new Get(ROW);
     get.setRowOffsetPerColumnFamily(20);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     verifyResult(result, kvListExp, toLog, "Testing offset > #kvs");
 
     //offset + maxResultPerCF
@@ -528,7 +528,7 @@ public class TestScannersFromClientSide {
     get.setRowOffsetPerColumnFamily(4);
     get.setMaxResultsPerColumnFamily(5);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     for (int i=4; i < 9; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE));
     }
@@ -541,7 +541,7 @@ public class TestScannersFromClientSide {
     get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5],
                                         true));
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[3], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[4], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[5], 1, VALUE));
@@ -564,7 +564,7 @@ public class TestScannersFromClientSide {
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     //Exp: CF1:q4, q5, CF2: q4, q5
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[4], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[5], 1, VALUE));
@@ -645,7 +645,7 @@ public class TestScannersFromClientSide {
     }
 
     // c0:0, c1:1
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[0], 0, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[1], 1, VALUE));
     result = scanner.next();
@@ -657,7 +657,9 @@ public class TestScannersFromClientSide {
     testAsyncScanner(TableName.valueOf(name.getMethodName()),
       2,
       3,
-      10);
+      10,
+      -1,
+      null);
   }
 
   @Test
@@ -665,11 +667,28 @@ public class TestScannersFromClientSide {
     testAsyncScanner(TableName.valueOf(name.getMethodName()),
       30000,
       1,
-      1);
+      1,
+      -1,
+      null);
+  }
+
+  @Test
+  public void testAsyncScannerWithoutCaching() throws Exception {
+    testAsyncScanner(TableName.valueOf(name.getMethodName()),
+      5,
+      1,
+      1,
+      1,
+      (b) -> {
+        try {
+          TimeUnit.MILLISECONDS.sleep(500);
+        } catch (InterruptedException ex) {
+        }
+      });
   }
 
   private void testAsyncScanner(TableName table, int rowNumber, int familyNumber,
-      int qualifierNumber) throws Exception {
+      int qualifierNumber, int caching, Consumer<Boolean> listener) throws Exception {
     assert rowNumber > 0;
     assert familyNumber > 0;
     assert qualifierNumber > 0;
@@ -708,23 +727,33 @@ public class TestScannersFromClientSide {
 
     Scan scan = new Scan();
     scan.setAsyncPrefetch(true);
-    ResultScanner scanner = ht.getScanner(scan);
-    List<Cell> kvListScan = new ArrayList<>();
-    Result result;
-    boolean first = true;
-    while ((result = scanner.next()) != null) {
-      // waiting for cache. see HBASE-17376
-      if (first) {
-        TimeUnit.SECONDS.sleep(1);
-        first = false;
-      }
-      for (Cell kv : result.listCells()) {
-        kvListScan.add(kv);
-      }
+    if (caching > 0) {
+      scan.setCaching(caching);
     }
-    result = Result.create(kvListScan);
-    assertTrue("Not instance of async scanner",scanner instanceof ClientAsyncPrefetchScanner);
-    verifyResult(result, kvListExp, toLog, "Testing async scan");
+    try (ResultScanner scanner = ht.getScanner(scan)) {
+      assertTrue("Not instance of async scanner",scanner instanceof ClientAsyncPrefetchScanner);
+      ((ClientAsyncPrefetchScanner) scanner).setPrefetchListener(listener);
+      List<Cell> kvListScan = new ArrayList<>();
+      Result result;
+      boolean first = true;
+      int actualRows = 0;
+      while ((result = scanner.next()) != null) {
+        ++actualRows;
+        // waiting for cache. see HBASE-17376
+        if (first) {
+          TimeUnit.SECONDS.sleep(1);
+          first = false;
+        }
+        for (Cell kv : result.listCells()) {
+          kvListScan.add(kv);
+        }
+      }
+      assertEquals(rowNumber, actualRows);
+      // These cells may have different rows but it is ok. The Result#getRow
+      // isn't used in the verifyResult()
+      result = Result.create(kvListScan);
+      verifyResult(result, kvListExp, toLog, "Testing async scan");
+    }
     TEST_UTIL.deleteTable(table);
   }
 
@@ -765,75 +794,5 @@ public class TestScannersFromClientSide {
     }
 
     assertEquals(expKvList.size(), result.size());
-  }
-
-  private void assertResultEquals(Result result, int i) {
-    assertEquals(String.format("%02d", i), Bytes.toString(result.getRow()));
-    assertEquals(i, Bytes.toInt(result.getValue(FAMILY, QUALIFIER)));
-  }
-
-  private void testStartRowStopRowInclusive(Table table, int start, boolean startInclusive,
-      int stop, boolean stopInclusive) throws IOException {
-    int actualStart = startInclusive ? start : start + 1;
-    int actualStop = stopInclusive ? stop + 1 : stop;
-    int expectedCount = actualStop - actualStart;
-    Result[] results;
-    try (ResultScanner scanner = table.getScanner(
-      new Scan().withStartRow(Bytes.toBytes(String.format("%02d", start)), startInclusive)
-          .withStopRow(Bytes.toBytes(String.format("%02d", stop)), stopInclusive))) {
-      results = scanner.next(expectedCount);
-    }
-    assertEquals(expectedCount, results.length);
-    for (int i = 0; i < expectedCount; i++) {
-      assertResultEquals(results[i], actualStart + i);
-    }
-  }
-
-  private void testReversedStartRowStopRowInclusive(Table table, int start, boolean startInclusive,
-      int stop, boolean stopInclusive) throws IOException {
-    int actualStart = startInclusive ? start : start - 1;
-    int actualStop = stopInclusive ? stop - 1 : stop;
-    int expectedCount = actualStart - actualStop;
-    Result[] results;
-    try (ResultScanner scanner = table.getScanner(
-      new Scan().withStartRow(Bytes.toBytes(String.format("%02d", start)), startInclusive)
-          .withStopRow(Bytes.toBytes(String.format("%02d", stop)), stopInclusive)
-          .setReversed(true))) {
-      results = scanner.next(expectedCount);
-    }
-    assertEquals(expectedCount, results.length);
-    for (int i = 0; i < expectedCount; i++) {
-      assertResultEquals(results[i], actualStart - i);
-    }
-  }
-
-  @Test
-  public void testStartRowStopRowInclusive() throws IOException, InterruptedException {
-    TableName tableName = TableName.valueOf("testStartRowStopRowInclusive");
-    byte[][] splitKeys = new byte[8][];
-    for (int i = 11; i < 99; i += 11) {
-      splitKeys[i / 11 - 1] = Bytes.toBytes(String.format("%02d", i));
-    }
-    Table table = TEST_UTIL.createTable(tableName, FAMILY, splitKeys);
-    TEST_UTIL.waitTableAvailable(tableName);
-    try (BufferedMutator mutator = TEST_UTIL.getConnection().getBufferedMutator(tableName)) {
-      for (int i = 0; i < 100; i++) {
-        mutator.mutate(new Put(Bytes.toBytes(String.format("%02d", i))).addColumn(FAMILY, QUALIFIER,
-          Bytes.toBytes(i)));
-      }
-    }
-    // from first region to last region
-    testStartRowStopRowInclusive(table, 1, true, 98, false);
-    testStartRowStopRowInclusive(table, 12, true, 34, true);
-    testStartRowStopRowInclusive(table, 23, true, 45, false);
-    testStartRowStopRowInclusive(table, 34, false, 56, true);
-    testStartRowStopRowInclusive(table, 45, false, 67, false);
-
-    // from last region to first region
-    testReversedStartRowStopRowInclusive(table, 98, true, 1, false);
-    testReversedStartRowStopRowInclusive(table, 54, true, 32, true);
-    testReversedStartRowStopRowInclusive(table, 65, true, 43, false);
-    testReversedStartRowStopRowInclusive(table, 76, false, 54, true);
-    testReversedStartRowStopRowInclusive(table, 87, false, 65, false);
   }
 }

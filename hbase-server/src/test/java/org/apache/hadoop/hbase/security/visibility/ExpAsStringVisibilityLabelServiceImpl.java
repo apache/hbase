@@ -152,7 +152,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   @Override
   public List<String> getUserAuths(byte[] user, boolean systemCall) throws IOException {
     assert (labelsRegion != null || systemCall);
-    List<String> auths = new ArrayList<String>();
+    List<String> auths = new ArrayList<>();
     Get get = new Get(user);
     List<Cell> cells = null;
     if (labelsRegion == null) {
@@ -187,7 +187,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   @Override
   public List<String> getGroupAuths(String[] groups, boolean systemCall) throws IOException {
     assert (labelsRegion != null || systemCall);
-    List<String> auths = new ArrayList<String>();
+    List<String> auths = new ArrayList<>();
     if (groups != null && groups.length > 0) {
       for (String group : groups) {
         Get get = new Get(Bytes.toBytes(AuthUtil.toGroupEntry(group)));
@@ -224,7 +224,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   @Override
   public List<String> listLabels(String regex) throws IOException {
     // return an empty list for this implementation.
-    return new ArrayList<String>();
+    return new ArrayList<>();
   }
 
   @Override
@@ -237,7 +237,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
       throw new IOException(e);
     }
     node = this.expressionExpander.expand(node);
-    List<Tag> tags = new ArrayList<Tag>();
+    List<Tag> tags = new ArrayList<>();
     if (withSerializationFormat) {
       tags.add(STRING_SERIALIZATION_FORMAT_TAG);
     }
@@ -270,7 +270,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
       try {
         // null authorizations to be handled inside SLG impl.
         authLabels = scanLabelGenerator.getLabels(VisibilityUtils.getActiveUser(), authorizations);
-        authLabels = (authLabels == null) ? new ArrayList<String>() : authLabels;
+        authLabels = (authLabels == null) ? new ArrayList<>() : authLabels;
         authorizations = new Authorizations(authLabels);
       } catch (Throwable t) {
         LOG.error(t);
@@ -334,8 +334,8 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   private Tag createTag(ExpressionNode node) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
-    List<String> labels = new ArrayList<String>();
-    List<String> notLabels = new ArrayList<String>();
+    List<String> labels = new ArrayList<>();
+    List<String> notLabels = new ArrayList<>();
     extractLabels(node, labels, notLabels);
     Collections.sort(labels);
     Collections.sort(notLabels);
@@ -402,7 +402,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     if (Superusers.isSuperUser(user)) {
       return true;
     }
-    Set<String> auths = new HashSet<String>();
+    Set<String> auths = new HashSet<>();
     auths.addAll(this.getUserAuths(Bytes.toBytes(user.getShortName()), true));
     auths.addAll(this.getGroupAuths(user.getGroupNames(), true));
     return auths.contains(SYSTEM_LABEL);

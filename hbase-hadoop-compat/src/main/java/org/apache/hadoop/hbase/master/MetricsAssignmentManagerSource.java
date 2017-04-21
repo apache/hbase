@@ -40,7 +40,7 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   /**
    * Description
    */
-  String METRICS_DESCRIPTION = "Metrics about HBase master assingment manager.";
+  String METRICS_DESCRIPTION = "Metrics about HBase master assignment manager.";
 
   String RIT_COUNT_NAME = "ritCount";
   String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
@@ -48,6 +48,13 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_DURATION_NAME = "ritDuration";
   String ASSIGN_TIME_NAME = "assign";
   String BULK_ASSIGN_TIME_NAME = "bulkAssign";
+
+  String RIT_COUNT_DESC = "Current number of Regions In Transition (Gauge).";
+  String RIT_COUNT_OVER_THRESHOLD_DESC =
+      "Current number of Regions In Transition over threshold time (Gauge).";
+  String RIT_OLDEST_AGE_DESC = "Timestamp in milliseconds of the oldest Region In Transition (Gauge).";
+  String RIT_DURATION_DESC =
+      "Total durations in milliseconds for all Regions in Transition (Histogram).";
 
   void updateAssignmentTime(long time);
 

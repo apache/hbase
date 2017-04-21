@@ -77,7 +77,7 @@ public class TestCompactedHFilesDischarger {
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
     region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
     rss = mock(RegionServerServices.class);
-    List<Region> regions = new ArrayList<Region>(1);
+    List<Region> regions = new ArrayList<>(1);
     regions.add(region);
     when(rss.getOnlineRegions()).thenReturn(regions);
   }
@@ -379,7 +379,7 @@ public class TestCompactedHFilesDischarger {
       RegionScanner resScanner = null;
       try {
         resScanner = region.getScanner(scan);
-        List<Cell> results = new ArrayList<Cell>();
+        List<Cell> results = new ArrayList<>();
         boolean next = resScanner.next(results);
         try {
           counter.incrementAndGet();

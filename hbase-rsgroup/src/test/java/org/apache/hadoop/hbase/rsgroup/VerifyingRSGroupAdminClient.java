@@ -89,8 +89,8 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
   }
 
   @Override
-  public boolean balanceRSGroup(String name) throws IOException {
-    return wrapped.balanceRSGroup(name);
+  public boolean balanceRSGroup(String groupName) throws IOException {
+    return wrapped.balanceRSGroup(groupName);
   }
 
   @Override
@@ -103,6 +103,12 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     return wrapped.getRSGroupOfServer(hostPort);
   }
 
+  @Override
+  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    wrapped.moveServersAndTables(servers, tables, targetGroup);
+    verify();
+  }
+
   public void verify() throws IOException {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();
@@ -113,7 +119,7 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
               result.getValue(
                   RSGroupInfoManager.META_FAMILY_BYTES,
                   RSGroupInfoManager.META_QUALIFIER_BYTES));
-      groupMap.put(proto.getName(), RSGroupSerDe.toGroupInfo(proto));
+      groupMap.put(proto.getName(), RSGroupProtobufUtil.toGroupInfo(proto));
     }
     Assert.assertEquals(Sets.newHashSet(groupMap.values()),
         Sets.newHashSet(wrapped.listRSGroups()));
@@ -125,7 +131,7 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
           ProtobufUtil.expectPBMagicPrefix(data);
           ByteArrayInputStream bis = new ByteArrayInputStream(
               data, ProtobufUtil.lengthOfPBMagic(), data.length);
-          zList.add(RSGroupSerDe.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
+          zList.add(RSGroupProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
         }
       }
       Assert.assertEquals(zList.size(), groupMap.size());

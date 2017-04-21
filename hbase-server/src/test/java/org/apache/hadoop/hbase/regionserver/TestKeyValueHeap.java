@@ -67,7 +67,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
   TestScanner s2 = new TestScanner(Arrays.asList(kv111, kv112));
   TestScanner s3 = new TestScanner(Arrays.asList(kv113, kv114, kv121, kv122, kv213));
 
-  List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(Arrays.asList(s1, s2, s3));
+  List<KeyValueScanner> scanners = new ArrayList<>(Arrays.asList(s1, s2, s3));
 
   /*
    * Uses {@code scanners} to build a KeyValueHeap, iterates over it and asserts that returned
@@ -136,7 +136,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
   public void testScannerLeak() throws IOException {
     // Test for unclosed scanners (HBASE-1927)
 
-    TestScanner s4 = new TestScanner(new ArrayList<Cell>());
+    TestScanner s4 = new TestScanner(new ArrayList<>());
     scanners.add(s4);
 
     //Creating KeyValueHeap
@@ -163,9 +163,9 @@ public class TestKeyValueHeap extends HBaseTestCase {
     TestScanner s1 = new SeekTestScanner(Arrays.asList(kv115, kv211, kv212));
     TestScanner s2 = new SeekTestScanner(Arrays.asList(kv111, kv112));
     TestScanner s3 = new SeekTestScanner(Arrays.asList(kv113, kv114, kv121, kv122, kv213));
-    TestScanner s4 = new SeekTestScanner(new ArrayList<Cell>());
+    TestScanner s4 = new SeekTestScanner(new ArrayList<>());
 
-    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(Arrays.asList(s1, s2, s3, s4));
+    List<KeyValueScanner> scanners = new ArrayList<>(Arrays.asList(s1, s2, s3, s4));
 
     // Creating KeyValueHeap
     KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
@@ -197,13 +197,13 @@ public class TestKeyValueHeap extends HBaseTestCase {
       TestScanner scan1 = new TestScanner(Arrays.asList(kv111, kv112, kv113A), 1);
       TestScanner scan2 = new TestScanner(Arrays.asList(kv113B), 2);
       List<Cell> expected = Arrays.asList(kv111, kv112, kv113B, kv113A);
-      assertCells(expected, new ArrayList<KeyValueScanner>(Arrays.asList(scan1, scan2)));
+      assertCells(expected, new ArrayList<>(Arrays.asList(scan1, scan2)));
     }
     {
       TestScanner scan1 = new TestScanner(Arrays.asList(kv111, kv112, kv113A), 2);
       TestScanner scan2 = new TestScanner(Arrays.asList(kv113B), 1);
       List<Cell> expected = Arrays.asList(kv111, kv112, kv113A, kv113B);
-      assertCells(expected, new ArrayList<KeyValueScanner>(Arrays.asList(scan1, scan2)));
+      assertCells(expected, new ArrayList<>(Arrays.asList(scan1, scan2)));
     }
   }
 

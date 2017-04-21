@@ -19,24 +19,25 @@
 package org.apache.hadoop.hbase.procedure2;
 
 /**
- * Locking for mutual exclusion between procedures. Only by procedure framework internally.
+ * Locking for mutual exclusion between procedures. Used only by procedure framework internally.
  * {@link LockAndQueue} has two purposes:
  * <ol>
- *   <li>Acquire/release exclusive/shared locks</li>
- *   <li>Maintain a list of procedures waiting for this lock<br>
- *      To do so, {@link LockAndQueue} extends {@link ProcedureDeque} class. Using inheritance over
- *      composition for this need is unusual, but the choice is motivated by million regions
- *      assignment case as it will reduce memory footprint and number of objects to be GCed.
+ *   <li>Acquire/release exclusive/shared locks.</li>
+ *   <li>Maintains a list of procedures waiting on this lock.
+ *      {@link LockAndQueue} extends {@link ProcedureDeque} class. Blocked Procedures are added
+ *      to our super Deque. Using inheritance over composition to keep the Deque of waiting
+ *      Procedures is unusual, but we do it this way because in certain cases, there will be
+ *      millions of regions. This layout uses less memory.
  * </ol>
  *
- * NOT thread-safe. Needs external concurrency control. For eg. Uses in MasterProcedureScheduler are
+ * <p>NOT thread-safe. Needs external concurrency control: e.g. uses in MasterProcedureScheduler are
  * guarded by schedLock().
  * <br>
  * There is no need of 'volatile' keyword for member variables because of memory synchronization
  * guarantees of locks (see 'Memory Synchronization',
  * http://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/Lock.html)
  * <br>
- * We do not implement Lock interface because we need exclusive + shared locking, and also
+ * We do not implement Lock interface because we need exclusive and shared locking, and also
  * because try-lock functions require procedure id.
  * <br>
  * We do not use ReentrantReadWriteLock directly because of its high memory overhead.
@@ -104,11 +105,21 @@ public class LockAndQueue extends ProcedureDeque implements LockStatus {
     return true;
   }
 
+  /**
+   * @return True if we released a lock.
+   */
   public boolean releaseExclusiveLock(final Procedure proc) {
     if (isLockOwner(proc.getProcId())) {
       exclusiveLockProcIdOwner = Long.MIN_VALUE;
       return true;
     }
     return false;
+  }
+
+  @Override
+  public String toString() {
+    return "exclusiveLockOwner=" + (hasExclusiveLock()? getExclusiveLockProcIdOwner(): "NONE") +
+      ", sharedLockCount=" + getSharedLockCount() +
+      ", waitingProcCount=" + size();
   }
 }

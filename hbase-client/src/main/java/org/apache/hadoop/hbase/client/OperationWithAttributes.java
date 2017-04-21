@@ -24,12 +24,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public abstract class OperationWithAttributes extends Operation implements Attributes {
   // An opaque blob of attributes
   private Map<String, byte[]> attributes;
@@ -44,7 +42,7 @@ public abstract class OperationWithAttributes extends Operation implements Attri
     }
 
     if (attributes == null) {
-      attributes = new HashMap<String, byte[]>();
+      attributes = new HashMap<>();
     }
 
     if (value == null) {

@@ -21,7 +21,6 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 
 /**
@@ -47,7 +46,6 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * </p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class StructIterator implements Iterator<Object> {
 
   protected final PositionedByteRange src;

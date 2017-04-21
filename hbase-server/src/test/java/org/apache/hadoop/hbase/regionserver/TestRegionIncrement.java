@@ -83,6 +83,7 @@ public class TestRegionIncrement {
   private HRegion getRegion(final Configuration conf, final String tableName) throws IOException {
     WAL wal = new FSHLog(FileSystem.get(conf), TEST_UTIL.getDataTestDir(),
       TEST_UTIL.getDataTestDir().toString(), conf);
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     return (HRegion)TEST_UTIL.createLocalHRegion(Bytes.toBytes(tableName),
       HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, tableName, conf,
       false, Durability.SKIP_WAL, wal, INCREMENT_BYTES);
@@ -193,7 +194,7 @@ public class TestRegionIncrement {
         threads[i].join();
       }
       RegionScanner regionScanner = region.getScanner(new Scan());
-      List<Cell> cells = new ArrayList<Cell>(THREAD_COUNT);
+      List<Cell> cells = new ArrayList<>(THREAD_COUNT);
       while(regionScanner.next(cells)) continue;
       assertEquals(THREAD_COUNT, cells.size());
       long total = 0;
@@ -230,7 +231,7 @@ public class TestRegionIncrement {
         threads[i].join();
       }
       RegionScanner regionScanner = region.getScanner(new Scan());
-      List<Cell> cells = new ArrayList<Cell>(100);
+      List<Cell> cells = new ArrayList<>(100);
       while(regionScanner.next(cells)) continue;
       assertEquals(THREAD_COUNT, cells.size());
       long total = 0;

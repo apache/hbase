@@ -91,7 +91,7 @@ public class TestAsyncTableGetMultiThreaded {
     }
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
+    CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     TABLE = CONN.getRawTableBuilder(TABLE_NAME).setReadRpcTimeout(1, TimeUnit.SECONDS)
         .setMaxRetries(1000).build();
     TABLE.putAll(
@@ -119,8 +119,8 @@ public class TestAsyncTableGetMultiThreaded {
   public void test() throws IOException, InterruptedException, ExecutionException {
     int numThreads = 20;
     AtomicBoolean stop = new AtomicBoolean(false);
-    ExecutorService executor =
-        Executors.newFixedThreadPool(numThreads, Threads.newDaemonThreadFactory("TestAsyncGet-"));
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads,
+      Threads.newDaemonThreadFactory("TestAsyncGet-"));
     List<Future<?>> futures = new ArrayList<>();
     IntStream.range(0, numThreads).forEach(i -> futures.add(executor.submit(() -> {
       run(stop);

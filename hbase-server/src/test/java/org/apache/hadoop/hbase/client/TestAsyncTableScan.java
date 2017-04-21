@@ -17,13 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.base.Throwables;
-
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -37,71 +34,16 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
 
-  private static final class SimpleScanResultConsumer implements ScanResultConsumer {
+  @Parameter(0)
+  public String scanType;
 
-    private final List<Result> results = new ArrayList<>();
-
-    private Throwable error;
-
-    private boolean finished = false;
-
-    @Override
-    public synchronized boolean onNext(Result result) {
-      results.add(result);
-      return true;
-    }
-
-    @Override
-    public synchronized void onError(Throwable error) {
-      this.error = error;
-      finished = true;
-      notifyAll();
-    }
-
-    @Override
-    public synchronized void onComplete() {
-      finished = true;
-      notifyAll();
-    }
-
-    public synchronized List<Result> getAll() throws Exception {
-      while (!finished) {
-        wait();
-      }
-      if (error != null) {
-        Throwables.propagateIfPossible(error, Exception.class);
-        throw new Exception(error);
-      }
-      return results;
-    }
-  }
-
-  @Parameter
+  @Parameter(1)
   public Supplier<Scan> scanCreater;
 
-  @Parameters
+  @Parameters(name = "{index}: scan={0}")
   public static List<Object[]> params() {
-    return Arrays.asList(new Supplier<?>[] { TestAsyncTableScan::createNormalScan },
-      new Supplier<?>[] { TestAsyncTableScan::createBatchScan },
-      new Supplier<?>[] { TestAsyncTableScan::createSmallResultSizeScan },
-      new Supplier<?>[] { TestAsyncTableScan::createBatchSmallResultSizeScan });
-  }
-
-  private static Scan createNormalScan() {
-    return new Scan();
-  }
-
-  private static Scan createBatchScan() {
-    return new Scan().setBatch(1);
-  }
-
-  // set a small result size for testing flow control
-  private static Scan createSmallResultSizeScan() {
-    return new Scan().setMaxResultSize(1);
-  }
-
-  private static Scan createBatchSmallResultSizeScan() {
-    return new Scan().setBatch(1).setMaxResultSize(1);
+    return getScanCreater().stream().map(p -> new Object[] { p.getFirst(), p.getSecond() })
+        .collect(Collectors.toList());
   }
 
   @Override

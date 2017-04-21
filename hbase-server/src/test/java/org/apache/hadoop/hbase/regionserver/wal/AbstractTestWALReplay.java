@@ -127,8 +127,6 @@ public abstract class AbstractTestWALReplay {
     Configuration conf = TEST_UTIL.getConfiguration();
     // The below config supported by 0.20-append and CDH3b2
     conf.setInt("dfs.client.block.recovery.retries", 2);
-    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(MemoryCompactionPolicy.NONE));
     TEST_UTIL.startMiniCluster(3);
     Path hbaseRootDir =
       TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
@@ -209,10 +207,9 @@ public abstract class AbstractTestWALReplay {
 
     // move region to another regionserver
     Region destRegion = regions.get(0);
-    int originServerNum = hbaseCluster
-        .getServerWith(destRegion.getRegionInfo().getRegionName());
-    assertTrue("Please start more than 1 regionserver", hbaseCluster
-        .getRegionServerThreads().size() > 1);
+    int originServerNum = hbaseCluster.getServerWith(destRegion.getRegionInfo().getRegionName());
+    assertTrue("Please start more than 1 regionserver",
+        hbaseCluster.getRegionServerThreads().size() > 1);
     int destServerNum = 0;
     while (destServerNum == originServerNum) {
       destServerNum++;
@@ -220,7 +217,7 @@ public abstract class AbstractTestWALReplay {
     HRegionServer originServer = hbaseCluster.getRegionServer(originServerNum);
     HRegionServer destServer = hbaseCluster.getRegionServer(destServerNum);
     // move region to destination regionserver
-    moveRegionAndWait(destRegion, destServer);
+    TEST_UTIL.moveRegionAndWait(destRegion.getRegionInfo(), destServer.getServerName());
 
     // delete the row
     Delete del = new Delete(Bytes.toBytes("r1"));
@@ -243,7 +240,7 @@ public abstract class AbstractTestWALReplay {
     region.compact(true);
 
     // move region to origin regionserver
-    moveRegionAndWait(destRegion, originServer);
+    TEST_UTIL.moveRegionAndWait(destRegion.getRegionInfo(), originServer.getServerName());
     // abort the origin regionserver
     originServer.abort("testing");
 
@@ -254,25 +251,6 @@ public abstract class AbstractTestWALReplay {
           (result == null) || result.isEmpty());
     }
     resultScanner.close();
-  }
-
-  private void moveRegionAndWait(Region destRegion, HRegionServer destServer)
-      throws InterruptedException, MasterNotRunningException,
-      ZooKeeperConnectionException, IOException {
-    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    TEST_UTIL.getAdmin().move(
-        destRegion.getRegionInfo().getEncodedNameAsBytes(),
-        Bytes.toBytes(destServer.getServerName().getServerName()));
-    while (true) {
-      ServerName serverName = master.getAssignmentManager()
-        .getRegionStates().getRegionServerOfRegion(destRegion.getRegionInfo());
-      if (serverName != null && serverName.equals(destServer.getServerName())) {
-        TEST_UTIL.assertRegionOnServer(
-          destRegion.getRegionInfo(), serverName, 200);
-        break;
-      }
-      Thread.sleep(10);
-    }
   }
 
   /**
@@ -301,8 +279,7 @@ public abstract class AbstractTestWALReplay {
     // Add 1k to each family.
     final int countPerFamily = 1000;
 
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
@@ -368,7 +345,7 @@ public abstract class AbstractTestWALReplay {
     Path f =  new Path(basedir, "hfile");
     HFileTestUtil.createHFile(this.conf, fs, f, family, family, Bytes.toBytes(""),
         Bytes.toBytes("z"), 10);
-    List<Pair<byte[], String>> hfs = new ArrayList<Pair<byte[], String>>(1);
+    List<Pair<byte[], String>> hfs = new ArrayList<>(1);
     hfs.add(Pair.newPair(family, f.toString()));
     region.bulkLoadHFiles(hfs, true, null);
 
@@ -436,7 +413,7 @@ public abstract class AbstractTestWALReplay {
     region.put((new Put(row)).addColumn(family, family, family));
     wal.sync();
 
-    List <Pair<byte[],String>>  hfs= new ArrayList<Pair<byte[],String>>(1);
+    List <Pair<byte[],String>>  hfs= new ArrayList<>(1);
     for (int i = 0; i < 3; i++) {
       Path f = new Path(basedir, "hfile"+i);
       HFileTestUtil.createHFile(this.conf, fs, f, family, family, Bytes.toBytes(i + "00"),
@@ -702,8 +679,7 @@ public abstract class AbstractTestWALReplay {
     HRegion region =
       HRegion.openHRegion(this.hbaseRootDir, hri, htd, wal, customConf, rsServices, null);
     int writtenRowCount = 10;
-    List<HColumnDescriptor> families = new ArrayList<HColumnDescriptor>(
-        htd.getFamilies());
+    List<HColumnDescriptor> families = new ArrayList<>(htd.getFamilies());
     for (int i = 0; i < writtenRowCount; i++) {
       Put put = new Put(Bytes.toBytes(tableName + Integer.toString(i)));
       put.addColumn(families.get(i % families.size()).getName(), Bytes.toBytes("q"),
@@ -761,7 +737,7 @@ public abstract class AbstractTestWALReplay {
 
   private int getScannedCount(RegionScanner scanner) throws IOException {
     int scannedCount = 0;
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     while (true) {
       boolean existMore = scanner.next(results);
       if (!results.isEmpty())
@@ -796,9 +772,8 @@ public abstract class AbstractTestWALReplay {
 
     // Add 1k to each family.
     final int countPerFamily = 1000;
-    Set<byte[]> familyNames = new HashSet<byte[]>();
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    Set<byte[]> familyNames = new HashSet<>();
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
@@ -1050,7 +1025,7 @@ public abstract class AbstractTestWALReplay {
     deleteDir(basedir);
 
     final HTableDescriptor htd = createBasic1FamilyHTD(tableName);
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
@@ -1198,7 +1173,7 @@ public abstract class AbstractTestWALReplay {
 
   static List<Put> addRegionEdits(final byte[] rowName, final byte[] family, final int count,
       EnvironmentEdge ee, final Region r, final String qualifierPrefix) throws IOException {
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     for (int j = 0; j < count; j++) {
       byte[] qualifier = Bytes.toBytes(qualifierPrefix + Integer.toString(j));
       Put p = new Put(rowName);

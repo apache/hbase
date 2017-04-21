@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
@@ -240,5 +241,16 @@ public class TestGet {
     assertEquals("test.MockFilter", filters.get(0).getClass().getName());
     assertEquals("my.MockFilter", filters.get(1).getClass().getName());
     assertTrue(filters.get(2) instanceof KeyOnlyFilter);
+  }
+
+  @Test
+  public void testGetRowConstructor() {
+    byte[] row1 = Bytes.toBytes("testRow");
+    byte[] row2 = Bytes.toBytes("testtestRow");
+    ByteBuffer rowBuffer = ByteBuffer.allocate(16);
+    rowBuffer = ByteBuffer.wrap(row1);
+    Get get1 = new Get(rowBuffer);
+    Get get2 = new Get(row2, 4, 7);
+    Assert.assertArrayEquals(get1.getRow(), get2.getRow());
   }
 }

@@ -100,7 +100,7 @@ public class MemcachedBlockCache implements BlockCache {
     // case.
     String serverListString = c.get(MEMCACHED_CONFIG_KEY,"localhost:11211");
     String[] servers = serverListString.split(",");
-    List<InetSocketAddress> serverAddresses = new ArrayList<InetSocketAddress>(servers.length);
+    List<InetSocketAddress> serverAddresses = new ArrayList<>(servers.length);
     for (String s:servers) {
       serverAddresses.add(Addressing.createInetSocketAddressFromHostAndPortStr(s));
     }

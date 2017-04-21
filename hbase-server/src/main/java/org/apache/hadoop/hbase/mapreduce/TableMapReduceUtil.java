@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -69,7 +68,6 @@ import com.codahale.metrics.MetricRegistry;
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TableMapReduceUtil {
   private static final Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
 
@@ -451,7 +449,7 @@ public class TableMapReduceUtil {
     job.setMapperClass(mapper);
     Configuration conf = job.getConfiguration();
     HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
-    List<String> scanStrings = new ArrayList<String>();
+    List<String> scanStrings = new ArrayList<>();
 
     for (Scan scan : scans) {
       scanStrings.add(convertScanToString(scan));
@@ -807,7 +805,7 @@ public class TableMapReduceUtil {
     if (conf == null) {
       throw new IllegalArgumentException("Must provide a configuration object.");
     }
-    Set<String> paths = new HashSet<String>(conf.getStringCollection("tmpjars"));
+    Set<String> paths = new HashSet<>(conf.getStringCollection("tmpjars"));
     if (paths.isEmpty()) {
       throw new IllegalArgumentException("Configuration contains no tmpjars.");
     }
@@ -879,13 +877,13 @@ public class TableMapReduceUtil {
       Class<?>... classes) throws IOException {
 
     FileSystem localFs = FileSystem.getLocal(conf);
-    Set<String> jars = new HashSet<String>();
+    Set<String> jars = new HashSet<>();
     // Add jars that are already in the tmpjars variable
     jars.addAll(conf.getStringCollection("tmpjars"));
 
     // add jars as we find them to a map of contents jar name so that we can avoid
     // creating new jars for classes that have already been packaged.
-    Map<String, String> packagedClasses = new HashMap<String, String>();
+    Map<String, String> packagedClasses = new HashMap<>();
 
     // Add jars containing the specified classes
     for (Class<?> clazz : classes) {

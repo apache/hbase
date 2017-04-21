@@ -31,12 +31,12 @@ import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestWeakObjectPool {
-  WeakObjectPool<String, Object> pool;
+  ObjectPool<String, Object> pool;
 
   @Before
   public void setUp() {
-    pool = new WeakObjectPool<String, Object>(
-        new WeakObjectPool.ObjectFactory<String, Object>() {
+    pool = new WeakObjectPool<>(
+        new ObjectPool.ObjectFactory<String, Object>() {
           @Override
           public Object createObject(String key) {
             return new Object();
@@ -94,7 +94,7 @@ public class TestWeakObjectPool {
     final int THREAD_COUNT = 100;
 
     final AtomicBoolean assertionFailed = new AtomicBoolean();
-    final AtomicReference<Object> expectedObjRef = new AtomicReference<Object>();
+    final AtomicReference<Object> expectedObjRef = new AtomicReference<>();
     final CountDownLatch prepareLatch = new CountDownLatch(THREAD_COUNT);
     final CountDownLatch startLatch = new CountDownLatch(1);
     final CountDownLatch endLatch = new CountDownLatch(THREAD_COUNT);

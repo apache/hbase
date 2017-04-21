@@ -319,7 +319,7 @@ public class TestRowCounter {
     final byte[] col1 = Bytes.toBytes(COL1);
     final byte[] col2 = Bytes.toBytes(COL2);
     final byte[] col3 = Bytes.toBytes(COMPOSITE_COLUMN);
-    ArrayList<Put> rowsUpdate = new ArrayList<Put>();
+    ArrayList<Put> rowsUpdate = new ArrayList<>();
     // write few rows with two columns
     int i = 0;
     for (; i < totalRows - rowsWithOneCol; i++) {

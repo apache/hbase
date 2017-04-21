@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -48,7 +47,6 @@ import org.apache.hadoop.util.ToolRunner;
  * of the region server implementation if different from the local cluster.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class CopyTable extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(CopyTable.class);
 
@@ -120,7 +118,7 @@ public class CopyTable extends Configured implements Tool {
 
     if(families != null) {
       String[] fams = families.split(",");
-      Map<String,String> cfRenameMap = new HashMap<String,String>();
+      Map<String,String> cfRenameMap = new HashMap<>();
       for(String fam : fams) {
         String sourceCf;
         if(fam.contains(":")) {

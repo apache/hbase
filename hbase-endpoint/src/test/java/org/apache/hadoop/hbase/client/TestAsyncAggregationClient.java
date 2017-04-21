@@ -68,7 +68,7 @@ public class TestAsyncAggregationClient {
       splitKeys[i / 111 - 1] = Bytes.toBytes(String.format("%03d", i));
     }
     UTIL.createTable(TABLE_NAME, CF, splitKeys);
-    CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration());
+    CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
     TABLE = CONN.getRawTable(TABLE_NAME);
     TABLE.putAll(LongStream.range(0, COUNT)
         .mapToObj(l -> new Put(Bytes.toBytes(String.format("%03d", l)))

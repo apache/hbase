@@ -79,7 +79,7 @@ public class StorefileRefresherChore extends ScheduledChore {
       throw new RuntimeException(REGIONSERVER_STOREFILE_REFRESH_PERIOD +
         " should be set smaller than half of " + TimeToLiveHFileCleaner.TTL_CONF_KEY);
     }
-    lastRefreshTimes = new HashMap<String, Long>();
+    lastRefreshTimes = new HashMap<>();
   }
 
   @Override

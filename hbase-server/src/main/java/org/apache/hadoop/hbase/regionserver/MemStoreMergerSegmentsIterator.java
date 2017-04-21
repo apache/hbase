@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -33,32 +34,63 @@ import java.util.List;
 @InterfaceAudience.Private
 public class MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator {
 
+  // heap of scanners, lazily initialized
+  private KeyValueHeap heap = null;
+  // remember the initial version of the scanners list
+  List<KeyValueScanner> scanners  = new ArrayList<KeyValueScanner>();
+
+  private boolean closed = false;
+
   // C-tor
   public MemStoreMergerSegmentsIterator(List<ImmutableSegment> segments, CellComparator comparator,
-      int compactionKVMax, Store store
-  ) throws IOException {
-    super(segments,comparator,compactionKVMax,store);
+      int compactionKVMax) throws IOException {
+    super(compactionKVMax);
+    // create the list of scanners to traverse over all the data
+    // no dirty reads here as these are immutable segments
+    int order = segments.size();
+    AbstractMemStore.addToScanners(segments, Integer.MAX_VALUE, order, scanners);
+    heap = new KeyValueHeap(scanners, comparator);
   }
 
   @Override
   public boolean hasNext() {
-    return (scanner.peek()!=null);
+    if (closed) {
+      return false;
+    }
+    if (this.heap != null) {
+      return (this.heap.peek() != null);
+    }
+    // Doing this way in case some test cases tries to peek directly
+    return false;
   }
 
   @Override
   public Cell next()  {
-    Cell result = null;
     try {                 // try to get next
-      result = scanner.next();
+      if (!closed && heap != null) {
+        return heap.next();
+      }
     } catch (IOException ie) {
       throw new IllegalStateException(ie);
     }
-    return result;
+    return null;
   }
 
   public void close() {
-    scanner.close();
-    scanner = null;
+    if (closed) {
+      return;
+    }
+    // Ensuring that all the segment scanners are closed
+    if (heap != null) {
+      heap.close();
+      // It is safe to do close as no new calls will be made to this scanner.
+      heap = null;
+    } else {
+      for (KeyValueScanner scanner : scanners) {
+        scanner.close();
+      }
+    }
+    closed = true;
   }
 
   @Override

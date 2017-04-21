@@ -24,12 +24,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,7 +61,7 @@ public abstract class AbstractTestAsyncTableScan {
     }
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, splitKeys);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
+    ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     ASYNC_CONN.getRawTable(TABLE_NAME).putAll(IntStream.range(0, COUNT)
         .mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
             .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))
@@ -72,20 +74,41 @@ public abstract class AbstractTestAsyncTableScan {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  protected static Scan createNormalScan() {
+    return new Scan();
+  }
+
+  protected static Scan createBatchScan() {
+    return new Scan().setBatch(1);
+  }
+
+  // set a small result size for testing flow control
+  protected static Scan createSmallResultSizeScan() {
+    return new Scan().setMaxResultSize(1);
+  }
+
+  protected static Scan createBatchSmallResultSizeScan() {
+    return new Scan().setBatch(1).setMaxResultSize(1);
+  }
+
+  protected static List<Pair<String, Supplier<Scan>>> getScanCreater() {
+    return Arrays.asList(Pair.newPair("normal", AbstractTestAsyncTableScan::createNormalScan),
+      Pair.newPair("batch", AbstractTestAsyncTableScan::createBatchScan),
+      Pair.newPair("smallResultSize", AbstractTestAsyncTableScan::createSmallResultSizeScan),
+      Pair.newPair("batchSmallResultSize",
+        AbstractTestAsyncTableScan::createBatchSmallResultSizeScan));
+  }
+
   protected abstract Scan createScan();
 
   protected abstract List<Result> doScan(Scan scan) throws Exception;
-
-  private Result convertToPartial(Result result) {
-    return Result.create(result.rawCells(), result.getExists(), result.isStale(), true);
-  }
 
   protected final List<Result> convertFromBatchResult(List<Result> results) {
     assertTrue(results.size() % 2 == 0);
     return IntStream.range(0, results.size() / 2).mapToObj(i -> {
       try {
-        return Result.createCompleteResult(Arrays.asList(convertToPartial(results.get(2 * i)),
-          convertToPartial(results.get(2 * i + 1))));
+        return Result
+            .createCompleteResult(Arrays.asList(results.get(2 * i), results.get(2 * i + 1)));
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -98,8 +121,8 @@ public abstract class AbstractTestAsyncTableScan {
     // make sure all scanners are closed at RS side
     TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
         .forEach(rs -> assertEquals(
-          "The scanner count of " + rs.getServerName() + " is "
-              + rs.getRSRpcServices().getScannersCount(),
+          "The scanner count of " + rs.getServerName() + " is " +
+              rs.getRSRpcServices().getScannersCount(),
           0, rs.getRSRpcServices().getScannersCount()));
     assertEquals(COUNT, results.size());
     IntStream.range(0, COUNT).forEach(i -> {
@@ -140,61 +163,111 @@ public abstract class AbstractTestAsyncTableScan {
     IntStream.range(0, start + 1).forEach(i -> assertResultEquals(results.get(i), start - i));
   }
 
-  private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive)
-      throws Exception {
-    List<Result> results = doScan(
-      createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
-          .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive));
+  private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
+      int limit) throws Exception {
+    Scan scan =
+        createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
+            .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive);
+    if (limit > 0) {
+      scan.setLimit(limit);
+    }
+    List<Result> results = doScan(scan);
     int actualStart = startInclusive ? start : start + 1;
     int actualStop = stopInclusive ? stop + 1 : stop;
-    assertEquals(actualStop - actualStart, results.size());
-    IntStream.range(0, actualStop - actualStart)
-        .forEach(i -> assertResultEquals(results.get(i), actualStart + i));
+    int count = actualStop - actualStart;
+    if (limit > 0) {
+      count = Math.min(count, limit);
+    }
+    assertEquals(count, results.size());
+    IntStream.range(0, count).forEach(i -> assertResultEquals(results.get(i), actualStart + i));
   }
 
-  private void testReversedScan(int start, boolean startInclusive, int stop, boolean stopInclusive)
-      throws Exception {
-    List<Result> results = doScan(createScan()
+  private void testReversedScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
+      int limit) throws Exception {
+    Scan scan = createScan()
         .withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
-        .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive).setReversed(true));
+        .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive).setReversed(true);
+    if (limit > 0) {
+      scan.setLimit(limit);
+    }
+    List<Result> results = doScan(scan);
     int actualStart = startInclusive ? start : start - 1;
     int actualStop = stopInclusive ? stop - 1 : stop;
-    assertEquals(actualStart - actualStop, results.size());
-    IntStream.range(0, actualStart - actualStop)
-        .forEach(i -> assertResultEquals(results.get(i), actualStart - i));
+    int count = actualStart - actualStop;
+    if (limit > 0) {
+      count = Math.min(count, limit);
+    }
+    assertEquals(count, results.size());
+    IntStream.range(0, count).forEach(i -> assertResultEquals(results.get(i), actualStart - i));
   }
 
   @Test
   public void testScanWithStartKeyAndStopKey() throws Exception {
-    testScan(1, true, 998, false); // from first region to last region
-    testScan(123, true, 345, true);
-    testScan(234, true, 456, false);
-    testScan(345, false, 567, true);
-    testScan(456, false, 678, false);
+    testScan(1, true, 998, false, -1); // from first region to last region
+    testScan(123, true, 345, true, -1);
+    testScan(234, true, 456, false, -1);
+    testScan(345, false, 567, true, -1);
+    testScan(456, false, 678, false, -1);
   }
 
   @Test
   public void testReversedScanWithStartKeyAndStopKey() throws Exception {
-    testReversedScan(998, true, 1, false); // from last region to first region
-    testReversedScan(543, true, 321, true);
-    testReversedScan(654, true, 432, false);
-    testReversedScan(765, false, 543, true);
-    testReversedScan(876, false, 654, false);
+    testReversedScan(998, true, 1, false, -1); // from last region to first region
+    testReversedScan(543, true, 321, true, -1);
+    testReversedScan(654, true, 432, false, -1);
+    testReversedScan(765, false, 543, true, -1);
+    testReversedScan(876, false, 654, false, -1);
   }
 
   @Test
   public void testScanAtRegionBoundary() throws Exception {
-    testScan(222, true, 333, true);
-    testScan(333, true, 444, false);
-    testScan(444, false, 555, true);
-    testScan(555, false, 666, false);
+    testScan(222, true, 333, true, -1);
+    testScan(333, true, 444, false, -1);
+    testScan(444, false, 555, true, -1);
+    testScan(555, false, 666, false, -1);
   }
 
   @Test
   public void testReversedScanAtRegionBoundary() throws Exception {
-    testReversedScan(333, true, 222, true);
-    testReversedScan(444, true, 333, false);
-    testReversedScan(555, false, 444, true);
-    testReversedScan(666, false, 555, false);
+    testReversedScan(333, true, 222, true, -1);
+    testReversedScan(444, true, 333, false, -1);
+    testReversedScan(555, false, 444, true, -1);
+    testReversedScan(666, false, 555, false, -1);
+  }
+
+  @Test
+  public void testScanWithLimit() throws Exception {
+    testScan(1, true, 998, false, 900); // from first region to last region
+    testScan(123, true, 234, true, 100);
+    testScan(234, true, 456, false, 100);
+    testScan(345, false, 567, true, 100);
+    testScan(456, false, 678, false, 100);
+  }
+
+  @Test
+  public void testScanWithLimitGreaterThanActualCount() throws Exception {
+    testScan(1, true, 998, false, 1000); // from first region to last region
+    testScan(123, true, 345, true, 200);
+    testScan(234, true, 456, false, 200);
+    testScan(345, false, 567, true, 200);
+    testScan(456, false, 678, false, 200);
+  }
+
+  @Test
+  public void testReversedScanWithLimit() throws Exception {
+    testReversedScan(998, true, 1, false, 900); // from last region to first region
+    testReversedScan(543, true, 321, true, 100);
+    testReversedScan(654, true, 432, false, 100);
+    testReversedScan(765, false, 543, true, 100);
+    testReversedScan(876, false, 654, false, 100);
+  }
+
+  @Test
+  public void testReversedScanWithLimitGreaterThanActualCount() throws Exception {
+    testReversedScan(998, true, 1, false, 1000); // from last region to first region
+    testReversedScan(543, true, 321, true, 200);
+    testReversedScan(654, true, 432, false, 200);
+    testReversedScan(765, false, 543, true, 200);
+    testReversedScan(876, false, 654, false, 200);
   }
 }

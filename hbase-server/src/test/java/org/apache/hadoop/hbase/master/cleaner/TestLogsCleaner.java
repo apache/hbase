@@ -176,7 +176,7 @@ public class TestLogsCleaner {
     rqc.set(cleaner, rqcMock);
 
     // This should return eventually when cversion stabilizes
-    cleaner.getDeletableFiles(new LinkedList<FileStatus>());
+    cleaner.getDeletableFiles(new LinkedList<>());
   }
 
   /**

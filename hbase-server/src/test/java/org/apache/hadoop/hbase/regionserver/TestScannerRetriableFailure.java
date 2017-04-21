@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,7 +64,7 @@ public class TestScannerRetriableFailure {
 
   @Rule public TestTableName TEST_TABLE = new TestTableName();
 
-  public static class FaultyScannerObserver extends BaseRegionObserver {
+  public static class FaultyScannerObserver implements RegionObserver {
     private int faults = 0;
 
     @Override
@@ -128,7 +128,7 @@ public class TestScannerRetriableFailure {
   }
 
   public void loadTable(final Table table, int numRows) throws IOException {
-    List<Put> puts = new ArrayList<Put>(numRows);
+    List<Put> puts = new ArrayList<>(numRows);
     for (int i = 0; i < numRows; ++i) {
       byte[] row = Bytes.toBytes(String.format("%09d", i));
       Put put = new Put(row);

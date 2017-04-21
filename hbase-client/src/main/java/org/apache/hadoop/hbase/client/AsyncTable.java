@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * The asynchronous table for normal users.
@@ -30,7 +29,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * to provide a {@code ExecutorService}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface AsyncTable extends AsyncTableBase {
 
   /**

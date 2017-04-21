@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
+import java.util.List;
 /**
  * Holds details of the snapshot taken on a MemStore. Details include the snapshot's identifier,
  * count of cells in it and total memory size occupied by all the cells, timestamp information of
@@ -29,18 +30,18 @@ public class MemStoreSnapshot {
   private final long id;
   private final int cellsCount;
   private final long dataSize;
-  private final long heapOverhead;
+  private final long heapSize;
   private final TimeRangeTracker timeRangeTracker;
-  private final KeyValueScanner scanner;
+  private final List<KeyValueScanner> scanners;
   private final boolean tagsPresent;
 
   public MemStoreSnapshot(long id, ImmutableSegment snapshot) {
     this.id = id;
     this.cellsCount = snapshot.getCellsCount();
     this.dataSize = snapshot.keySize();
-    this.heapOverhead = snapshot.heapOverhead();
+    this.heapSize = snapshot.heapSize();
     this.timeRangeTracker = snapshot.getTimeRangeTracker();
-    this.scanner = snapshot.getSnapshotScanner();
+    this.scanners = snapshot.getScanners(Long.MAX_VALUE, Long.MAX_VALUE);
     this.tagsPresent = snapshot.isTagsPresent();
   }
 
@@ -65,22 +66,22 @@ public class MemStoreSnapshot {
     return dataSize;
   }
 
-  public long getHeapOverhead() {
-    return this.heapOverhead;
+  public long getHeapSize() {
+    return heapSize;
   }
 
   /**
    * @return {@link TimeRangeTracker} for all the Cells in the snapshot.
    */
   public TimeRangeTracker getTimeRangeTracker() {
-    return this.timeRangeTracker;
+    return timeRangeTracker;
   }
 
   /**
    * @return {@link KeyValueScanner} for iterating over the snapshot
    */
-  public KeyValueScanner getScanner() {
-    return this.scanner;
+  public List<KeyValueScanner> getScanners() {
+    return scanners;
   }
 
   /**

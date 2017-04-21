@@ -106,6 +106,15 @@ message GetRSGroupInfoOfServerResponse {
   optional RSGroupInfo r_s_group_info = 1;
 }
 
+message MoveServersAndTablesRequest {
+  required string target_group = 1;
+  repeated ServerName servers = 2;
+  repeated TableName table_name = 3;
+}
+
+message MoveServersAndTablesResponse {
+}
+
 service RSGroupAdminService {
   rpc GetRSGroupInfo(GetRSGroupInfoRequest)
     returns (GetRSGroupInfoResponse);
@@ -133,4 +142,7 @@ service RSGroupAdminService {
 
   rpc ListRSGroupInfos(ListRSGroupInfosRequest)
     returns (ListRSGroupInfosResponse);
+
+  rpc MoveServersAndTables(MoveServersAndTablesRequest)
+    returns (MoveServersAndTablesResponse);
 }

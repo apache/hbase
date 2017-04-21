@@ -42,7 +42,7 @@ public class ReplicationQueueInfo {
   private final String peerClusterZnode;
   private boolean queueRecovered;
   // List of all the dead region servers that had this queue (if recovered)
-  private List<String> deadRegionServers = new ArrayList<String>();
+  private List<String> deadRegionServers = new ArrayList<>();
 
   /**
    * The passed znode will be either the id of the peer cluster or

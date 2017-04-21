@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 
 /**
@@ -26,7 +25,6 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class SnapshotExistsException extends HBaseSnapshotException {
   public SnapshotExistsException(String msg) {
     super(msg);

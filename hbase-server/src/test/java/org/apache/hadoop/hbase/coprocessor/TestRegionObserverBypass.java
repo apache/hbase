@@ -112,7 +112,7 @@ public class TestRegionObserverBypass {
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
 
     Table t = util.getConnection().getTable(tableName);
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     Put p = new Put(row1);
     p.addColumn(dummy, dummy, dummy);
     puts.add(p);
@@ -204,7 +204,7 @@ public class TestRegionObserverBypass {
     t.delete(d);
   }
 
-  public static class TestCoprocessor extends BaseRegionObserver {
+  public static class TestCoprocessor implements RegionObserver {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Put put, final WALEdit edit, final Durability durability)

@@ -74,7 +74,7 @@ public class ReplicationMetaCleaner extends ScheduledChore {
           }
         }
         if (hasSerialScope) {
-          serialTables.put(entry.getValue().getTableName().getNameAsString(), new HashSet<String>());
+          serialTables.put(entry.getValue().getTableName().getNameAsString(), new HashSet<>());
         }
       }
       if (serialTables.isEmpty()){

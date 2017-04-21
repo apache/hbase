@@ -45,14 +45,14 @@ public final class Interns {
       CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS)
           .build(new CacheLoader<String, ConcurrentHashMap<String, MetricsInfo>>() {
             public ConcurrentHashMap<String, MetricsInfo> load(String key) {
-              return new ConcurrentHashMap<String, MetricsInfo>();
+              return new ConcurrentHashMap<>();
             }
           });
   private static LoadingCache<MetricsInfo, ConcurrentHashMap<String, MetricsTag>> tagCache =
       CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS)
           .build(new CacheLoader<MetricsInfo, ConcurrentHashMap<String, MetricsTag>>() {
             public ConcurrentHashMap<String, MetricsTag> load(MetricsInfo key) {
-              return new ConcurrentHashMap<String, MetricsTag>();
+              return new ConcurrentHashMap<>();
             }
           });
 

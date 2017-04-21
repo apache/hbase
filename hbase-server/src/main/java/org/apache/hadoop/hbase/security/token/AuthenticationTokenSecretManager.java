@@ -70,8 +70,7 @@ public class AuthenticationTokenSecretManager
   private LeaderElector leaderElector;
   private ZKClusterId clusterId;
 
-  private Map<Integer,AuthenticationKey> allKeys =
-      new ConcurrentHashMap<Integer, AuthenticationKey>();
+  private Map<Integer,AuthenticationKey> allKeys = new ConcurrentHashMap<>();
   private AuthenticationKey currentKey;
 
   private int idSeq;
@@ -181,8 +180,7 @@ public class AuthenticationTokenSecretManager
   public Token<AuthenticationTokenIdentifier> generateToken(String username) {
     AuthenticationTokenIdentifier ident =
         new AuthenticationTokenIdentifier(username);
-    Token<AuthenticationTokenIdentifier> token =
-        new Token<AuthenticationTokenIdentifier>(ident, this);
+    Token<AuthenticationTokenIdentifier> token = new Token<>(ident, this);
     if (clusterId.hasId()) {
       token.setService(new Text(clusterId.getId()));
     }

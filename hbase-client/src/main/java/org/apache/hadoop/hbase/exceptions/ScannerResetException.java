@@ -20,14 +20,12 @@ package org.apache.hadoop.hbase.exceptions;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when the server side has received an Exception, and asks the Client to reset the scanner
  * state by closing the current region scanner, and reopening from the start of last seen row.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class ScannerResetException extends DoNotRetryIOException {
   private static final long serialVersionUID = -5649728171144849619L;
 

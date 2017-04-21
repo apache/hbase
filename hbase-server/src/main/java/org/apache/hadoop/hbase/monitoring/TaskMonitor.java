@@ -53,6 +53,7 @@ public class TaskMonitor {
   
   private static TaskMonitor instance;
   private CircularFifoBuffer tasks = new CircularFifoBuffer(MAX_TASKS);
+  private List<TaskAndWeakRefPair> rpcTasks = Lists.newArrayList();
 
   /**
    * Get singleton instance.
@@ -71,7 +72,7 @@ public class TaskMonitor {
     MonitoredTask proxy = (MonitoredTask) Proxy.newProxyInstance(
         stat.getClass().getClassLoader(),
         new Class<?>[] { MonitoredTask.class },
-        new PassthroughInvocationHandler<MonitoredTask>(stat));
+        new PassthroughInvocationHandler<>(stat));
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
     if (tasks.isFull()) {
       purgeExpiredTasks();
@@ -86,9 +87,9 @@ public class TaskMonitor {
     MonitoredRPCHandler proxy = (MonitoredRPCHandler) Proxy.newProxyInstance(
         stat.getClass().getClassLoader(),
         new Class<?>[] { MonitoredRPCHandler.class },
-        new PassthroughInvocationHandler<MonitoredRPCHandler>(stat));
+        new PassthroughInvocationHandler<>(stat));
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
-    tasks.add(pair);
+    rpcTasks.add(pair);
     return proxy;
   }
 
@@ -120,8 +121,14 @@ public class TaskMonitor {
    */
   public synchronized List<MonitoredTask> getTasks() {
     purgeExpiredTasks();
-    ArrayList<MonitoredTask> ret = Lists.newArrayListWithCapacity(tasks.size());
+    ArrayList<MonitoredTask> ret = Lists.newArrayListWithCapacity(tasks.size() + rpcTasks.size());
     for (Iterator<TaskAndWeakRefPair> it = tasks.iterator();
+         it.hasNext();) {
+      TaskAndWeakRefPair pair = it.next();
+      MonitoredTask t = pair.get();
+      ret.add(t.clone());
+    }
+    for (Iterator<TaskAndWeakRefPair> it = rpcTasks.iterator();
          it.hasNext();) {
       TaskAndWeakRefPair pair = it.next();
       MonitoredTask t = pair.get();
@@ -182,7 +189,7 @@ public class TaskMonitor {
     public TaskAndWeakRefPair(MonitoredTask stat,
         MonitoredTask proxy) {
       this.impl = stat;
-      this.weakProxy = new WeakReference<MonitoredTask>(proxy);
+      this.weakProxy = new WeakReference<>(proxy);
     }
     
     public MonitoredTask get() {

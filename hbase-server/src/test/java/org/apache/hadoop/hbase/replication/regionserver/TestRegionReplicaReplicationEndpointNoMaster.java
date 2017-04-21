@@ -42,10 +42,10 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseWALObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.WALCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.WALObserver;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -146,9 +146,9 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   public void after() throws Exception {
   }
 
-  static ConcurrentLinkedQueue<Entry> entries = new ConcurrentLinkedQueue<Entry>();
+  static ConcurrentLinkedQueue<Entry> entries = new ConcurrentLinkedQueue<>();
 
-  public static class WALEditCopro extends BaseWALObserver {
+  public static class WALEditCopro implements WALObserver {
     public WALEditCopro() {
       entries.clear();
     }

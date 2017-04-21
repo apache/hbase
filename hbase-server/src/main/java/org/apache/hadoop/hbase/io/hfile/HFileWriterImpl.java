@@ -91,10 +91,10 @@ public class HFileWriterImpl implements HFile.Writer {
   protected final CellComparator comparator;
 
   /** Meta block names. */
-  protected List<byte[]> metaNames = new ArrayList<byte[]>();
+  protected List<byte[]> metaNames = new ArrayList<>();
 
   /** {@link Writable}s representing meta block data. */
-  protected List<Writable> metaData = new ArrayList<Writable>();
+  protected List<Writable> metaData = new ArrayList<>();
 
   /**
    * First cell in a block.
@@ -132,7 +132,7 @@ public class HFileWriterImpl implements HFile.Writer {
   public static final int KEY_VALUE_VER_WITH_MEMSTORE = 1;
 
   /** Inline block writers for multi-level block index and compound Blooms. */
-  private List<InlineBlockWriter> inlineBlockWriters = new ArrayList<InlineBlockWriter>();
+  private List<InlineBlockWriter> inlineBlockWriters = new ArrayList<>();
 
   /** block writer */
   protected HFileBlock.Writer blockWriter;
@@ -153,7 +153,7 @@ public class HFileWriterImpl implements HFile.Writer {
   private Cell lastCellOfPreviousBlock = null;
 
   /** Additional data items to be written to the "load-on-open" section. */
-  private List<BlockWritable> additionalLoadOnOpenData = new ArrayList<BlockWritable>();
+  private List<BlockWritable> additionalLoadOnOpenData = new ArrayList<>();
 
   protected long maxMemstoreTS = 0;
 

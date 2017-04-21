@@ -389,7 +389,7 @@ public class TestBlocksRead  {
       Scan scan = new Scan();
       scan.setCacheBlocks(false);
       RegionScanner rs = region.getScanner(scan);
-      List<Cell> result = new ArrayList<Cell>(2);
+      List<Cell> result = new ArrayList<>(2);
       rs.next(result);
       assertEquals(2 * BLOOM_TYPE.length, result.size());
       rs.close();
@@ -402,7 +402,7 @@ public class TestBlocksRead  {
       blocksStart = blocksEnd;
       scan.setCacheBlocks(true);
       rs = region.getScanner(scan);
-      result = new ArrayList<Cell>(2);
+      result = new ArrayList<>(2);
       rs.next(result);
       assertEquals(2 * BLOOM_TYPE.length, result.size());
       rs.close();

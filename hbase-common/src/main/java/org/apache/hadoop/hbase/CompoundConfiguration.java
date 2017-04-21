@@ -72,8 +72,7 @@ public class CompoundConfiguration extends Configuration {
     int size();
   }
 
-  private final List<ImmutableConfigMap> configs
-    = new ArrayList<ImmutableConfigMap>();
+  private final List<ImmutableConfigMap> configs = new ArrayList<>();
 
   static class ImmutableConfWrapper implements  ImmutableConfigMap {
    private final Configuration c;
@@ -167,7 +166,7 @@ public class CompoundConfiguration extends Configuration {
 
       @Override
       public Iterator<Map.Entry<String,String>> iterator() {
-        Map<String, String> ret = new HashMap<String, String>();
+        Map<String, String> ret = new HashMap<>();
         for (Map.Entry<Bytes, Bytes> entry : map.entrySet()) {
           String key = Bytes.toString(entry.getKey().get());
           String val = entry.getValue() == null ? null : Bytes.toString(entry.getValue().get());
@@ -265,7 +264,7 @@ public class CompoundConfiguration extends Configuration {
     StringBuffer sb = new StringBuffer();
     sb.append("CompoundConfiguration: " + this.configs.size() + " configs");
     for (ImmutableConfigMap m : this.configs) {
-      sb.append(this.configs);
+      sb.append(m);
     }
     return sb.toString();
   }
@@ -366,7 +365,7 @@ public class CompoundConfiguration extends Configuration {
 
   @Override
   public Iterator<Map.Entry<String, String>> iterator() {
-    Map<String, String> ret = new HashMap<String, String>();
+    Map<String, String> ret = new HashMap<>();
 
     // add in reverse order so that oldest get overridden.
     if (!configs.isEmpty()) {

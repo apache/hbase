@@ -219,7 +219,7 @@ public class TestMasterOperationsForRegionReplicas {
       //just check that the number of default replica regions in the meta table are the same
       //as the number of regions the table was created with, and the count of the
       //replicas is numReplica for each region
-      Map<HRegionInfo, Integer> defaultReplicas = new HashMap<HRegionInfo, Integer>();
+      Map<HRegionInfo, Integer> defaultReplicas = new HashMap<>();
       for (HRegionInfo hri : hris) {
         Integer i;
         HRegionInfo regionReplica0 = RegionReplicaUtil.getRegionInfoForDefaultReplica(hri);
@@ -227,7 +227,7 @@ public class TestMasterOperationsForRegionReplicas {
             (i = defaultReplicas.get(regionReplica0)) == null ? 1 : i + 1);
       }
       assert(defaultReplicas.size() == numRegions);
-      Collection<Integer> counts = new HashSet<Integer>(defaultReplicas.values());
+      Collection<Integer> counts = new HashSet<>(defaultReplicas.values());
       assert(counts.size() == 1 && counts.contains(new Integer(numReplica)));
     } finally {
       ADMIN.disableTable(tableName);
@@ -248,7 +248,7 @@ public class TestMasterOperationsForRegionReplicas {
       desc.addFamily(new HColumnDescriptor("family"));
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitTableEnabled(tableName);
-      Set<byte[]> tableRows = new HashSet<byte[]>();
+      Set<byte[]> tableRows = new HashSet<>();
       List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName);
       for (HRegionInfo hri : hris) {
         tableRows.add(hri.getRegionName());
@@ -317,7 +317,7 @@ public class TestMasterOperationsForRegionReplicas {
         continue;
       }
       List<HRegionInfo> regions = entry.getValue();
-      Set<byte[]> setOfStartKeys = new HashSet<byte[]>();
+      Set<byte[]> setOfStartKeys = new HashSet<>();
       for (HRegionInfo region : regions) {
         byte[] startKey = region.getStartKey();
         if (region.getTable().equals(table)) {

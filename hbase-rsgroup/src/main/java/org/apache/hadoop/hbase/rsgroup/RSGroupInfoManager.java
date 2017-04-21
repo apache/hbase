@@ -37,28 +37,21 @@ import org.apache.hadoop.hbase.net.Address;
 @InterfaceAudience.Private
 public interface RSGroupInfoManager {
   //Assigned before user tables
-  public static final TableName RSGROUP_TABLE_NAME =
+  TableName RSGROUP_TABLE_NAME =
       TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "rsgroup");
-  public static final byte[] RSGROUP_TABLE_NAME_BYTES = RSGROUP_TABLE_NAME.toBytes();
-  public static final String rsGroupZNode = "rsgroup";
-  public static final byte[] META_FAMILY_BYTES = Bytes.toBytes("m");
-  public static final byte[] META_QUALIFIER_BYTES = Bytes.toBytes("i");
-  public static final byte[] ROW_KEY = {0};
-
+  byte[] RSGROUP_TABLE_NAME_BYTES = RSGROUP_TABLE_NAME.toBytes();
+  String rsGroupZNode = "rsgroup";
+  byte[] META_FAMILY_BYTES = Bytes.toBytes("m");
+  byte[] META_QUALIFIER_BYTES = Bytes.toBytes("i");
+  byte[] ROW_KEY = {0};
 
   /**
-   * Adds the group.
-   *
-   * @param rsGroupInfo the group name
-   * @throws java.io.IOException Signals that an I/O exception has occurred.
+   * Add given RSGroupInfo to existing list of group infos.
    */
   void addRSGroup(RSGroupInfo rsGroupInfo) throws IOException;
 
   /**
    * Remove a region server group.
-   *
-   * @param groupName the group name
-   * @throws java.io.IOException Signals that an I/O exception has occurred.
    */
   void removeRSGroup(String groupName) throws IOException;
 
@@ -68,32 +61,22 @@ public interface RSGroupInfoManager {
    * @param srcGroup groupName being moved from
    * @param dstGroup groupName being moved to
    * @return Set of servers moved (May be a subset of {@code servers}).
-   * @throws java.io.IOException on move failure
    */
-  Set<Address> moveServers(Set<Address> servers,
-                      String srcGroup, String dstGroup) throws IOException;
+  Set<Address> moveServers(Set<Address> servers, String srcGroup, String dstGroup)
+      throws IOException;
 
   /**
    * Gets the group info of server.
-   *
-   * @param hostPort the server
-   * @return An instance of RSGroupInfo
    */
-  RSGroupInfo getRSGroupOfServer(Address hostPort) throws IOException;
+  RSGroupInfo getRSGroupOfServer(Address serverHostPort) throws IOException;
 
   /**
-   * Gets the group information.
-   *
-   * @param groupName the group name
-   * @return An instance of RSGroupInfo
+   * Gets {@code RSGroupInfo} for the given group name.
    */
   RSGroupInfo getRSGroup(String groupName) throws IOException;
 
   /**
    * Get the group membership of a table
-   * @param tableName name of table to get group membership
-   * @return Group name of table
-   * @throws java.io.IOException on failure to retrive information
    */
   String getRSGroupOfTable(TableName tableName) throws IOException;
 
@@ -102,31 +85,33 @@ public interface RSGroupInfoManager {
    *
    * @param tableNames set of tables to move
    * @param groupName name of group of tables to move to
-   * @throws java.io.IOException on failure to move
    */
   void moveTables(Set<TableName> tableNames, String groupName) throws IOException;
 
   /**
-   * List the groups
-   *
-   * @return list of RSGroupInfo
-   * @throws java.io.IOException on failure
+   * List the existing {@code RSGroupInfo}s.
    */
   List<RSGroupInfo> listRSGroups() throws IOException;
 
   /**
-   * Refresh/reload the group information from
-   * the persistent store
-   *
-   * @throws java.io.IOException on failure to refresh
+   * Refresh/reload the group information from the persistent store
    */
   void refresh() throws IOException;
 
   /**
-   * Whether the manager is able to fully
-   * return group metadata
+   * Whether the manager is able to fully return group metadata
    *
    * @return whether the manager is in online mode
    */
   boolean isOnline();
+
+  /**
+   * Move servers and tables to a new group.
+   * @param servers list of servers, must be part of the same group
+   * @param tables set of tables to move
+   * @param srcGroup groupName being moved from
+   * @param dstGroup groupName being moved to
+   */
+  void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
+      String srcGroup, String dstGroup) throws IOException;
 }

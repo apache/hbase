@@ -25,13 +25,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   private static final Log LOG = LogFactory.getLog(AbstractProcedureScheduler.class);
-
   private final ReentrantLock schedLock = new ReentrantLock();
   private final Condition schedWaitCond = schedLock.newCondition();
   private boolean running = false;
@@ -162,12 +159,6 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   //  Utils
   // ==========================================================================
   /**
-   * Removes all of the elements from the queue
-   * NOTE: this method is called with the sched lock held.
-   */
-  protected abstract void clearQueue();
-
-  /**
    * Returns the number of elements in this queue.
    * NOTE: this method is called with the sched lock held.
    * @return the number of elements in this queue.
@@ -180,17 +171,6 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
    * @return true if there are procedures available to process, otherwise false.
    */
   protected abstract boolean queueHasRunnables();
-
-  @Override
-  public void clear() {
-    // NOTE: USED ONLY FOR TESTING
-    schedLock();
-    try {
-      clearQueue();
-    } finally {
-      schedUnlock();
-    }
-  }
 
   @Override
   public int size() {

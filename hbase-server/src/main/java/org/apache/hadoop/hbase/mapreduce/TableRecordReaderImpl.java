@@ -24,7 +24,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -47,7 +46,6 @@ import com.google.common.annotations.VisibleForTesting;
  * pairs.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TableRecordReaderImpl {
   public static final String LOG_PER_ROW_COUNT
     = "hbase.mapreduce.log.scanner.rowcount";
@@ -81,7 +79,7 @@ public class TableRecordReaderImpl {
    */
   public void restart(byte[] firstRow) throws IOException {
     currentScan = new Scan(scan);
-    currentScan.setStartRow(firstRow);
+    currentScan.withStartRow(firstRow);
     currentScan.setScanMetricsEnabled(true);
     if (this.scanner != null) {
       if (logScannerActivity) {
@@ -273,7 +271,7 @@ public class TableRecordReaderImpl {
    * @throws IOException
    */
   private void updateCounters() throws IOException {
-    ScanMetrics scanMetrics = currentScan.getScanMetrics();
+    ScanMetrics scanMetrics = scanner.getScanMetrics();
     if (scanMetrics == null) {
       return;
     }

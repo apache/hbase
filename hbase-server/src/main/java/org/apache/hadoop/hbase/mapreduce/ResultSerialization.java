@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -42,7 +41,6 @@ import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.Serializer;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ResultSerialization extends Configured implements Serialization<Result> {
   private static final Log LOG = LogFactory.getLog(ResultSerialization.class);
   // The following configuration property indicates import file format version.
@@ -92,7 +90,7 @@ public class ResultSerialization extends Configured implements Serialization<Res
       }
       byte[] buf = new byte[totalBuffer];
       readChunked(in, buf, 0, totalBuffer);
-      List<Cell> kvs = new ArrayList<Cell>();
+      List<Cell> kvs = new ArrayList<>();
       int offset = 0;
       while (offset < totalBuffer) {
         int keyLength = Bytes.toInt(buf, offset);

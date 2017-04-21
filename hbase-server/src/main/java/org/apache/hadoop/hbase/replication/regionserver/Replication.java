@@ -363,7 +363,7 @@ public class Replication extends WALActionsListener.Base implements
   }
 
   private void buildReplicationLoad() {
-    List<MetricsSource> sourceMetricsList = new ArrayList<MetricsSource>();
+    List<MetricsSource> sourceMetricsList = new ArrayList<>();
 
     // get source
     List<ReplicationSourceInterface> sources = this.replicationManager.getSources();

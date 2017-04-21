@@ -61,7 +61,7 @@ public class TestScannerSelectionUsingKeyRange {
   private static final int NUM_ROWS = 8;
   private static final int NUM_COLS_PER_ROW = 5;
   private static final int NUM_FILES = 2;
-  private static final Map<Object, Integer> TYPE_COUNT = new HashMap<Object, Integer>(3);
+  private static final Map<Object, Integer> TYPE_COUNT = new HashMap<>(3);
   static {
     TYPE_COUNT.put(BloomType.ROWCOL, 0);
     TYPE_COUNT.put(BloomType.ROW, 0);
@@ -73,7 +73,7 @@ public class TestScannerSelectionUsingKeyRange {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<Object[]>();
+    List<Object[]> params = new ArrayList<>();
     for (Object type : TYPE_COUNT.keySet()) {
       params.add(new Object[] { type, TYPE_COUNT.get(type) });
     }
@@ -120,7 +120,7 @@ public class TestScannerSelectionUsingKeyRange {
     LruBlockCache cache = (LruBlockCache) cacheConf.getBlockCache();
     cache.clearCache();
     InternalScanner scanner = region.getScanner(scan);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     while (scanner.next(results)) {
     }
     scanner.close();

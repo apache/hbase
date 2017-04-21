@@ -150,7 +150,7 @@ public  final class Mixin extends
    * The fully qualified name of the API which is included.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public java.lang.String getName() {
     java.lang.Object ref = name_;
@@ -169,7 +169,7 @@ public  final class Mixin extends
    * The fully qualified name of the API which is included.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes() {
@@ -193,7 +193,7 @@ public  final class Mixin extends
    * are rooted.
    * </pre>
    *
-   * <code>optional string root = 2;</code>
+   * <code>string root = 2;</code>
    */
   public java.lang.String getRoot() {
     java.lang.Object ref = root_;
@@ -213,7 +213,7 @@ public  final class Mixin extends
    * are rooted.
    * </pre>
    *
-   * <code>optional string root = 2;</code>
+   * <code>string root = 2;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getRootBytes() {
@@ -289,7 +289,7 @@ public  final class Mixin extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAME_FIELD_NUMBER;
     hash = (53 * hash) + getName().hashCode();
     hash = (37 * hash) + ROOT_FIELD_NUMBER;
@@ -585,7 +585,7 @@ public  final class Mixin extends
      * The fully qualified name of the API which is included.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -604,7 +604,7 @@ public  final class Mixin extends
      * The fully qualified name of the API which is included.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getNameBytes() {
@@ -624,7 +624,7 @@ public  final class Mixin extends
      * The fully qualified name of the API which is included.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setName(
         java.lang.String value) {
@@ -641,7 +641,7 @@ public  final class Mixin extends
      * The fully qualified name of the API which is included.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder clearName() {
       
@@ -654,7 +654,7 @@ public  final class Mixin extends
      * The fully qualified name of the API which is included.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setNameBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -675,7 +675,7 @@ public  final class Mixin extends
      * are rooted.
      * </pre>
      *
-     * <code>optional string root = 2;</code>
+     * <code>string root = 2;</code>
      */
     public java.lang.String getRoot() {
       java.lang.Object ref = root_;
@@ -695,7 +695,7 @@ public  final class Mixin extends
      * are rooted.
      * </pre>
      *
-     * <code>optional string root = 2;</code>
+     * <code>string root = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getRootBytes() {
@@ -716,7 +716,7 @@ public  final class Mixin extends
      * are rooted.
      * </pre>
      *
-     * <code>optional string root = 2;</code>
+     * <code>string root = 2;</code>
      */
     public Builder setRoot(
         java.lang.String value) {
@@ -734,7 +734,7 @@ public  final class Mixin extends
      * are rooted.
      * </pre>
      *
-     * <code>optional string root = 2;</code>
+     * <code>string root = 2;</code>
      */
     public Builder clearRoot() {
       
@@ -748,7 +748,7 @@ public  final class Mixin extends
      * are rooted.
      * </pre>
      *
-     * <code>optional string root = 2;</code>
+     * <code>string root = 2;</code>
      */
     public Builder setRootBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {

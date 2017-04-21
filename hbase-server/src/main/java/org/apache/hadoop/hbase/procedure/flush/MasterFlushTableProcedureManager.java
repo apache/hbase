@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
-import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
+import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -68,7 +68,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
 
   private MasterServices master;
   private ProcedureCoordinator coordinator;
-  private Map<TableName, Procedure> procMap = new HashMap<TableName, Procedure>();
+  private Map<TableName, Procedure> procMap = new HashMap<>();
   private boolean stopped;
 
   public MasterFlushTableProcedureManager() {};
@@ -98,7 +98,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // setup the procedure coordinator
     String name = master.getServerName().toString();
     ThreadPoolExecutor tpool = ProcedureCoordinator.defaultPool(name, threads);
-    ProcedureCoordinatorRpcs comms = new ZKProcedureCoordinatorRpcs(
+    ProcedureCoordinatorRpcs comms = new ZKProcedureCoordinator(
         master.getZooKeeper(), getProcedureSignature(), name);
 
     this.coordinator = new ProcedureCoordinator(comms, tpool, timeoutMillis, wakeFrequency);
@@ -135,7 +135,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
         master.getConnection(), tableName, false);
     }
 
-    Set<String> regionServers = new HashSet<String>(regionsAndLocations.size());
+    Set<String> regionServers = new HashSet<>(regionsAndLocations.size());
     for (Pair<HRegionInfo, ServerName> region : regionsAndLocations) {
       if (region != null && region.getFirst() != null && region.getSecond() != null) {
         HRegionInfo hri = region.getFirst();

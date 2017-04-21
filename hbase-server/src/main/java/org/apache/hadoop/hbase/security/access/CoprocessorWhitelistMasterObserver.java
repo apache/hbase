@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Master observer for restricting coprocessor assignments.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class CoprocessorWhitelistMasterObserver extends BaseMasterObserver {
+public class CoprocessorWhitelistMasterObserver implements MasterObserver {
 
   public static final String CP_COPROCESSOR_WHITELIST_PATHS_KEY =
       "hbase.coprocessor.region.whitelist.paths";
@@ -75,7 +75,7 @@ public class CoprocessorWhitelistMasterObserver extends BaseMasterObserver {
    *                      1) a "*" to wildcard all coprocessor paths
    *                      2) a specific filesystem (e.g. hdfs://my-cluster/)
    *                      3) a wildcard path to be evaluated by
-   *                         {@link FilenameUtils.wildcardMatch}
+   *                         {@link FilenameUtils#wildcardMatch(String, String)}
    *                         path can specify scheme or not (e.g.
    *                         "file:///usr/hbase/coprocessors" or for all
    *                         filesystems "/usr/hbase/coprocessors")

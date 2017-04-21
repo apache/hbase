@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.collect.Lists;
 
@@ -32,7 +31,6 @@ import com.google.common.collect.Lists;
  * Utility methods for working with {@link ByteRange}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ByteRangeUtils {
 
   public static int numEqualPrefixBytes(ByteRange left, ByteRange right, int rightInnerOffset) {
@@ -49,7 +47,7 @@ public class ByteRangeUtils {
 
   public static ArrayList<byte[]> copyToNewArrays(Collection<ByteRange> ranges) {
     if (ranges == null) {
-      return new ArrayList<byte[]>(0);
+      return new ArrayList<>(0);
     }
     ArrayList<byte[]> arrays = Lists.newArrayListWithCapacity(ranges.size());
     for (ByteRange range : ranges) {
@@ -60,7 +58,7 @@ public class ByteRangeUtils {
 
   public static ArrayList<ByteRange> fromArrays(Collection<byte[]> arrays) {
     if (arrays == null) {
-      return new ArrayList<ByteRange>(0);
+      return new ArrayList<>(0);
     }
     ArrayList<ByteRange> ranges = Lists.newArrayListWithCapacity(arrays.size());
     for (byte[] array : arrays) {

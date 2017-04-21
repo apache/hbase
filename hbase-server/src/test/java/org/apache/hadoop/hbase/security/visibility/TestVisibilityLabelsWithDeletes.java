@@ -1146,7 +1146,7 @@ public class TestVisibilityLabelsWithDeletes {
     desc.addFamily(colDesc);
     hBaseAdmin.createTable(desc);
 
-    List<Put> puts = new ArrayList<Put>(5);
+    List<Put> puts = new ArrayList<>(5);
     Put put = new Put(Bytes.toBytes("row1"));
     put.addColumn(fam, qual, 123l, value);
     put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
@@ -3225,7 +3225,7 @@ public class TestVisibilityLabelsWithDeletes {
     Table table = null;
     table = TEST_UTIL.createTable(tableName, fam);
     int i = 1;
-    List<Put> puts = new ArrayList<Put>(labelExps.length);
+    List<Put> puts = new ArrayList<>(labelExps.length);
     for (String labelExp : labelExps) {
       Put put = new Put(Bytes.toBytes("row" + i));
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
@@ -3243,7 +3243,7 @@ public class TestVisibilityLabelsWithDeletes {
     Table table = null;
     table = TEST_UTIL.createTable(tableName, fam);
     int i = 1;
-    List<Put> puts = new ArrayList<Put>(labelExps.length);
+    List<Put> puts = new ArrayList<>(labelExps.length);
     for (String labelExp : labelExps) {
       Put put = new Put(Bytes.toBytes("row" + i));
       put.addColumn(fam, qual, timestamp[i - 1], value);

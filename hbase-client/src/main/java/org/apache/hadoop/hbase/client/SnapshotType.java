@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * POJO representing the snapshot type
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum SnapshotType {
   DISABLED, FLUSH, SKIPFLUSH;
 }

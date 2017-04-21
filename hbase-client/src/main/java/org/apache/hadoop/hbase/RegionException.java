@@ -19,14 +19,12 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when something happens related to region handling.
  * Subclasses have to be more specific.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class RegionException extends HBaseIOException {
   private static final long serialVersionUID = 1473510258071111371L;
 

@@ -41,19 +41,19 @@ public class TestReplicationProtobuf {
    */
   @Test
   public void testGetCellScanner() throws IOException {
-    List<Cell> a = new ArrayList<Cell>();
+    List<Cell> a = new ArrayList<>();
     KeyValue akv = new KeyValue(Bytes.toBytes("a"), -1L);
     a.add(akv);
     // Add a few just to make it less regular.
     a.add(new KeyValue(Bytes.toBytes("aa"), -1L));
     a.add(new KeyValue(Bytes.toBytes("aaa"), -1L));
-    List<Cell> b = new ArrayList<Cell>();
+    List<Cell> b = new ArrayList<>();
     KeyValue bkv = new KeyValue(Bytes.toBytes("b"), -1L);
     a.add(bkv);
-    List<Cell> c = new ArrayList<Cell>();
+    List<Cell> c = new ArrayList<>();
     KeyValue ckv = new KeyValue(Bytes.toBytes("c"), -1L);
     c.add(ckv);
-    List<List<? extends Cell>> all = new ArrayList<List<? extends Cell>>();
+    List<List<? extends Cell>> all = new ArrayList<>();
     all.add(a);
     all.add(b);
     all.add(c);

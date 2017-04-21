@@ -83,7 +83,7 @@ public  final class BytesValue extends
    * The bytes value.
    * </pre>
    *
-   * <code>optional bytes value = 1;</code>
+   * <code>bytes value = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getValue() {
     return value_;
@@ -142,7 +142,7 @@ public  final class BytesValue extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + VALUE_FIELD_NUMBER;
     hash = (53 * hash) + getValue().hashCode();
     hash = (29 * hash) + unknownFields.hashCode();
@@ -369,7 +369,7 @@ public  final class BytesValue extends
      * The bytes value.
      * </pre>
      *
-     * <code>optional bytes value = 1;</code>
+     * <code>bytes value = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getValue() {
       return value_;
@@ -379,7 +379,7 @@ public  final class BytesValue extends
      * The bytes value.
      * </pre>
      *
-     * <code>optional bytes value = 1;</code>
+     * <code>bytes value = 1;</code>
      */
     public Builder setValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
       if (value == null) {
@@ -395,7 +395,7 @@ public  final class BytesValue extends
      * The bytes value.
      * </pre>
      *
-     * <code>optional bytes value = 1;</code>
+     * <code>bytes value = 1;</code>
      */
     public Builder clearValue() {
       

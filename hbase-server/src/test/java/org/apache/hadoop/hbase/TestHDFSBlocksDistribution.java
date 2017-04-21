@@ -50,7 +50,7 @@ public class TestHDFSBlocksDistribution {
 
   public class MockHDFSBlocksDistribution extends HDFSBlocksDistribution {
     public Map<String,HostAndWeight> getHostAndWeights() {
-      HashMap<String, HostAndWeight> map = new HashMap<String, HostAndWeight>();
+      HashMap<String, HostAndWeight> map = new HashMap<>();
       map.put("test", new HostAndWeight(null, 100));
       return map;
     }

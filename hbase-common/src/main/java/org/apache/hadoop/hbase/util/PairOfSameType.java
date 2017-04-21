@@ -23,7 +23,6 @@ import java.util.Iterator;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A generic, immutable class for pairs of objects both of type <code>T</code>.
@@ -31,7 +30,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * @see Pair if Types differ.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class PairOfSameType<T> implements Iterable<T> {
   private final T first;
   private final T second;

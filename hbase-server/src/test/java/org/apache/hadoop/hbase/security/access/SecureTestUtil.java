@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -371,7 +371,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            AccessControlUtil.grant(null, protocol, user, actions);
+            AccessControlUtil.grant(null, protocol, user, false, actions);
           }
         }
         return null;
@@ -417,7 +417,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            AccessControlUtil.grant(null, protocol, user, namespace, actions);
+            AccessControlUtil.grant(null, protocol, user, namespace, false, actions);
           }
         }
         return null;
@@ -439,7 +439,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.grant(connection, namespace, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("grant failed: ", t);
         }
         return null;
       }
@@ -460,7 +460,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.revoke(connection, namespace, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("revoke failed: ", t);
         }
         return null;
       }
@@ -506,7 +506,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            AccessControlUtil.grant(null, protocol, user, table, family, qualifier, actions);
+            AccessControlUtil.grant(null, protocol, user, table, family, qualifier, false, actions);
           }
         }
         return null;
@@ -528,7 +528,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.grant(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("grant failed: ", t);
         }
         return null;
       }
@@ -549,7 +549,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.grant(connection, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("grant failed: ", t);
         }
         return null;
       }
@@ -594,7 +594,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.revoke(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("revoke failed: ", t);
         }
         return null;
       }
@@ -615,14 +615,14 @@ public class SecureTestUtil {
         try {
           AccessControlClient.revoke(connection, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("revoke failed: ", t);
         }
         return null;
       }
     });
   }
 
-  public static class MasterSyncObserver extends BaseMasterObserver {
+  public static class MasterSyncObserver implements MasterObserver {
     volatile CountDownLatch tableCreationLatch = null;
     volatile CountDownLatch tableDeletionLatch = null;
 

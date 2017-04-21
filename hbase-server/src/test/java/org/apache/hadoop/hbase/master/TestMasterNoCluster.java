@@ -286,7 +286,7 @@ public class TestMasterNoCluster {
         // Record a newer server in server manager at first
         getServerManager().recordNewServerWithLock(newServer, ServerLoad.EMPTY_SERVERLOAD);
 
-        List<ServerName> onlineServers = new ArrayList<ServerName>();
+        List<ServerName> onlineServers = new ArrayList<>();
         onlineServers.add(deadServer);
         onlineServers.add(newServer);
         // Mock the region server tracker to pull the dead server from zk

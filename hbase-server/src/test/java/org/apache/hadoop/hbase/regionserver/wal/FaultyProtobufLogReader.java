@@ -31,7 +31,7 @@ public class FaultyProtobufLogReader extends ProtobufLogReader {
     BEGINNING, MIDDLE, END, NONE
   }
 
-  Queue<Entry> nextQueue = new LinkedList<Entry>();
+  Queue<Entry> nextQueue = new LinkedList<>();
   int numberOfFileEntries = 0;
 
   FailureType getFailureType() {

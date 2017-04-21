@@ -128,7 +128,7 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     authsResponse = NORMAL_USER1.runAs(action1);
     assertTrue(authsResponse.getAuthList().isEmpty());
     authsResponse = SUPERUSER.runAs(action1);
-    List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
+    List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
     for (ByteString authBS : authsResponse.getAuthList()) {
       authsList.add(Bytes.toString(authBS.toByteArray()));
     }

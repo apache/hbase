@@ -58,8 +58,8 @@ public class BoundedCompletionService<V> {
 
   public BoundedCompletionService(Executor executor, int maxTasks) {
     this.executor = executor;
-    this.tasks = new ArrayList<Future<V>>(maxTasks);
-    this.completed = new ArrayBlockingQueue<Future<V>>(maxTasks);
+    this.tasks = new ArrayList<>(maxTasks);
+    this.completed = new ArrayBlockingQueue<>(maxTasks);
   }
 
 

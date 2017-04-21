@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client.metrics;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 
 /**
@@ -37,57 +36,66 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * for now.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ScanMetrics extends ServerSideScanMetrics {
 
   // AtomicLongs to hold the metrics values. These are all updated through ClientScanner and
   // ScannerCallable. They are atomic longs so that atomic getAndSet can be used to reset the
   // values after progress is passed to hadoop's counters.
 
+  public static final String RPC_CALLS_METRIC_NAME = "RPC_CALLS";
+  public static final String REMOTE_RPC_CALLS_METRIC_NAME = "REMOTE_RPC_CALLS";
+  public static final String MILLIS_BETWEEN_NEXTS_METRIC_NAME = "MILLIS_BETWEEN_NEXTS";
+  public static final String NOT_SERVING_REGION_EXCEPTION_METRIC_NAME = "NOT_SERVING_REGION_EXCEPTION";
+  public static final String BYTES_IN_RESULTS_METRIC_NAME = "BYTES_IN_RESULTS";
+  public static final String BYTES_IN_REMOTE_RESULTS_METRIC_NAME = "BYTES_IN_REMOTE_RESULTS";
+  public static final String REGIONS_SCANNED_METRIC_NAME = "REGIONS_SCANNED";
+  public static final String RPC_RETRIES_METRIC_NAME = "RPC_RETRIES";
+  public static final String REMOTE_RPC_RETRIES_METRIC_NAME = "REMOTE_RPC_RETRIES";
+ 
   /**
    * number of RPC calls
    */
-  public final AtomicLong countOfRPCcalls = createCounter("RPC_CALLS");
+  public final AtomicLong countOfRPCcalls = createCounter(RPC_CALLS_METRIC_NAME);
 
   /**
    * number of remote RPC calls
    */
-  public final AtomicLong countOfRemoteRPCcalls = createCounter("REMOTE_RPC_CALLS");
+  public final AtomicLong countOfRemoteRPCcalls = createCounter(REMOTE_RPC_CALLS_METRIC_NAME);
 
   /**
    * sum of milliseconds between sequential next calls
    */
-  public final AtomicLong sumOfMillisSecBetweenNexts = createCounter("MILLIS_BETWEEN_NEXTS");
+  public final AtomicLong sumOfMillisSecBetweenNexts = createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
 
   /**
    * number of NotServingRegionException caught
    */
-  public final AtomicLong countOfNSRE = createCounter("NOT_SERVING_REGION_EXCEPTION");
+  public final AtomicLong countOfNSRE = createCounter(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME);
 
   /**
    * number of bytes in Result objects from region servers
    */
-  public final AtomicLong countOfBytesInResults = createCounter("BYTES_IN_RESULTS");
+  public final AtomicLong countOfBytesInResults = createCounter(BYTES_IN_RESULTS_METRIC_NAME);
 
   /**
    * number of bytes in Result objects from remote region servers
    */
-  public final AtomicLong countOfBytesInRemoteResults = createCounter("BYTES_IN_REMOTE_RESULTS");
+  public final AtomicLong countOfBytesInRemoteResults = createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
 
   /**
    * number of regions
    */
-  public final AtomicLong countOfRegions = createCounter("REGIONS_SCANNED");
+  public final AtomicLong countOfRegions = createCounter(REGIONS_SCANNED_METRIC_NAME);
 
   /**
    * number of RPC retries
    */
-  public final AtomicLong countOfRPCRetries = createCounter("RPC_RETRIES");
+  public final AtomicLong countOfRPCRetries = createCounter(RPC_RETRIES_METRIC_NAME);
 
   /**
    * number of remote RPC retries
    */
-  public final AtomicLong countOfRemoteRPCRetries = createCounter("REMOTE_RPC_RETRIES");
+  public final AtomicLong countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
 
   /**
    * constructor

@@ -12,7 +12,7 @@ public interface UInt32ValueOrBuilder extends
    * The uint32 value.
    * </pre>
    *
-   * <code>optional uint32 value = 1;</code>
+   * <code>uint32 value = 1;</code>
    */
   int getValue();
 }

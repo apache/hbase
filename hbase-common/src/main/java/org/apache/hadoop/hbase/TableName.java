@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
@@ -53,11 +52,10 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
  * </p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class TableName implements Comparable<TableName> {
 
   /** See {@link #createTableNameIfNecessary(ByteBuffer, ByteBuffer)} */
-  private static final Set<TableName> tableCache = new CopyOnWriteArraySet<TableName>();
+  private static final Set<TableName> tableCache = new CopyOnWriteArraySet<>();
 
   /** Namespace delimiter */
   //this should always be only 1 byte long
@@ -89,7 +87,12 @@ public final class TableName implements Comparable<TableName> {
   public static final String OLD_META_STR = ".META.";
   public static final String OLD_ROOT_STR = "-ROOT-";
 
-
+  /**
+   * @return True if <code>tn</code> is the hbase:meta table name.
+   */
+  public static boolean isMetaTableName(final TableName tn) {
+    return tn.equals(TableName.META_TABLE_NAME);
+  }
 
   /**
    * TableName for old -ROOT- table. It is used to read/process old WALs which have

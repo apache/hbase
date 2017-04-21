@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Implementers are Stoppable.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public interface Stoppable {
   /**
    * Stop this service.

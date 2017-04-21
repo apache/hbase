@@ -54,8 +54,8 @@ import org.apache.hadoop.util.StringUtils;
 public class ServerRpcController implements RpcController {
   /**
    * The exception thrown within
-   * {@link com.google.protobuf.Service#callMethod(
-   *   Descriptors.MethodDescriptor, RpcController, Message, RpcCallback)}
+   * {@link com.google.protobuf.Service#callMethod(com.google.protobuf.Descriptors.MethodDescriptor, RpcController,
+   * com.google.protobuf.Message, RpcCallback)}
    * if any.
    */
   // TODO: it would be good widen this to just Throwable, but IOException is what we allow now

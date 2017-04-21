@@ -59,8 +59,7 @@ public class ExecutorService {
   private static final Log LOG = LogFactory.getLog(ExecutorService.class);
 
   // hold the all the executors created in a map addressable by their names
-  private final ConcurrentHashMap<String, Executor> executorMap =
-    new ConcurrentHashMap<String, Executor>();
+  private final ConcurrentHashMap<String, Executor> executorMap = new ConcurrentHashMap<>();
 
   // Name of the server hosting this executor service.
   private final String servername;
@@ -164,7 +163,7 @@ public class ExecutorService {
     // the thread pool executor that services the requests
     final TrackingThreadPoolExecutor threadPoolExecutor;
     // work queue to use - unbounded queue
-    final BlockingQueue<Runnable> q = new LinkedBlockingQueue<Runnable>();
+    final BlockingQueue<Runnable> q = new LinkedBlockingQueue<>();
     private final String name;
     private static final AtomicLong seqids = new AtomicLong(0);
     private final long id;

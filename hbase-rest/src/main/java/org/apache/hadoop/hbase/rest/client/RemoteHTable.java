@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -78,7 +78,6 @@ import com.google.protobuf.ServiceException;
  * HTable interface to remote tables accessed via REST gateway
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class RemoteHTable implements Table {
 
   private static final Log LOG = LogFactory.getLog(RemoteHTable.class);
@@ -173,9 +172,9 @@ public class RemoteHTable implements Table {
   }
 
   protected Result[] buildResultFromModel(final CellSetModel model) {
-    List<Result> results = new ArrayList<Result>();
+    List<Result> results = new ArrayList<>();
     for (RowModel row: model.getRows()) {
-      List<Cell> kvs = new ArrayList<Cell>(row.getCells().size());
+      List<Cell> kvs = new ArrayList<>(row.getCells().size());
       for (CellModel cell: row.getCells()) {
         byte[][] split = KeyValue.parseColumn(cell.getColumn());
         byte[] column = split[0];
@@ -425,13 +424,12 @@ public class RemoteHTable implements Table {
     // ignores the row specification in the URI
 
     // separate puts by row
-    TreeMap<byte[],List<Cell>> map =
-      new TreeMap<byte[],List<Cell>>(Bytes.BYTES_COMPARATOR);
+    TreeMap<byte[],List<Cell>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (Put put: puts) {
       byte[] row = put.getRow();
       List<Cell> cells = map.get(row);
       if (cells == null) {
-        cells = new ArrayList<Cell>();
+        cells = new ArrayList<>();
         map.put(row, cells);
       }
       for (List<Cell> l: put.getFamilyCellMap().values()) {
@@ -641,6 +639,11 @@ public class RemoteHTable implements Table {
     @Override
     public boolean renewLease() {
       throw new RuntimeException("renewLease() not supported");
+    }
+
+    @Override
+    public ScanMetrics getScanMetrics() {
+      throw new RuntimeException("getScanMetrics() not supported");
     }
   }
 

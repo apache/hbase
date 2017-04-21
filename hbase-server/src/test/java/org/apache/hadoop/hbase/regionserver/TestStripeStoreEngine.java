@@ -78,7 +78,7 @@ public class TestStripeStoreEngine {
       mockCompactor.compact(any(CompactionRequest.class), anyInt(), anyLong(), any(byte[].class),
         any(byte[].class), any(byte[].class), any(byte[].class),
         any(ThroughputController.class), any(User.class)))
-        .thenReturn(new ArrayList<Path>());
+        .thenReturn(new ArrayList<>());
 
     // Produce 3 L0 files.
     StoreFile sf = createFile();
@@ -118,6 +118,6 @@ public class TestStripeStoreEngine {
   }
 
   private static ArrayList<StoreFile> al(StoreFile... sfs) {
-    return new ArrayList<StoreFile>(Arrays.asList(sfs));
+    return new ArrayList<>(Arrays.asList(sfs));
   }
 }

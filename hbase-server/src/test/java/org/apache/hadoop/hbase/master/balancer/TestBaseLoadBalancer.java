@@ -185,7 +185,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // Test simple case where all same servers are there
     List<ServerAndLoad> servers = randomServers(10, 10);
     List<HRegionInfo> regions = randomRegions(100);
-    Map<HRegionInfo, ServerName> existing = new TreeMap<HRegionInfo, ServerName>();
+    Map<HRegionInfo, ServerName> existing = new TreeMap<>();
     for (int i = 0; i < regions.size(); i++) {
       ServerName sn = servers.get(i % servers.size()).getServerName();
       // The old server would have had same host and port, but different
@@ -200,7 +200,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertRetainedAssignment(existing, listOfServerNames, assignment);
 
     // Include two new servers that were not there before
-    List<ServerAndLoad> servers2 = new ArrayList<ServerAndLoad>(servers);
+    List<ServerAndLoad> servers2 = new ArrayList<>(servers);
     servers2.add(randomServer(10));
     servers2.add(randomServer(10));
     listOfServerNames = getListOfServerNames(servers2);
@@ -208,7 +208,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertRetainedAssignment(existing, listOfServerNames, assignment);
 
     // Remove two of the servers that were previously there
-    List<ServerAndLoad> servers3 = new ArrayList<ServerAndLoad>(servers);
+    List<ServerAndLoad> servers3 = new ArrayList<>(servers);
     servers3.remove(0);
     servers3.remove(0);
     listOfServerNames = getListOfServerNames(servers3);
@@ -266,9 +266,9 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // replica from one node to a specific other node or rack lowers the
     // availability of the region or not
 
-    List<HRegionInfo> list0 = new ArrayList<HRegionInfo>();
-    List<HRegionInfo> list1 = new ArrayList<HRegionInfo>();
-    List<HRegionInfo> list2 = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> list0 = new ArrayList<>();
+    List<HRegionInfo> list1 = new ArrayList<>();
+    List<HRegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
     HRegionInfo hri1 = new HRegionInfo(
         TableName.valueOf(name.getMethodName()), "key1".getBytes(), "key2".getBytes(),
@@ -282,8 +282,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     list0.add(hri1); //only region1
     list1.add(hri2); //only replica_of_region1
     list2.add(hri3); //only region2
-    Map<ServerName, List<HRegionInfo>> clusterState =
-        new LinkedHashMap<ServerName, List<HRegionInfo>>();
+    Map<ServerName, List<HRegionInfo>> clusterState = new LinkedHashMap<>();
     clusterState.put(servers[0], list0); //servers[0] hosts region1
     clusterState.put(servers[1], list1); //servers[1] hosts replica_of_region1
     clusterState.put(servers[2], list2); //servers[2] hosts region2
@@ -318,7 +317,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     clusterState.put(servers[0], list0); //servers[0], rack1 hosts region1
     clusterState.put(servers[5], list1); //servers[5], rack2 hosts replica_of_region1 and replica_of_region2
     clusterState.put(servers[6], list2); //servers[6], rack2 hosts region2
-    clusterState.put(servers[10], new ArrayList<HRegionInfo>()); //servers[10], rack3 hosts no region
+    clusterState.put(servers[10], new ArrayList<>()); //servers[10], rack3 hosts no region
     // create a cluster with the above clusterState
     cluster = new Cluster(clusterState, null, null, rackManager);
     // check whether a move of region1 from servers[0],rack1 to servers[6],rack2 would
@@ -335,9 +334,9 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
   @Test (timeout=180000)
   public void testRegionAvailabilityWithRegionMoves() throws Exception {
-    List<HRegionInfo> list0 = new ArrayList<HRegionInfo>();
-    List<HRegionInfo> list1 = new ArrayList<HRegionInfo>();
-    List<HRegionInfo> list2 = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> list0 = new ArrayList<>();
+    List<HRegionInfo> list1 = new ArrayList<>();
+    List<HRegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
     HRegionInfo hri1 = new HRegionInfo(
         TableName.valueOf(name.getMethodName()), "key1".getBytes(), "key2".getBytes(),
@@ -351,8 +350,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     list0.add(hri1); //only region1
     list1.add(hri2); //only replica_of_region1
     list2.add(hri3); //only region2
-    Map<ServerName, List<HRegionInfo>> clusterState =
-        new LinkedHashMap<ServerName, List<HRegionInfo>>();
+    Map<ServerName, List<HRegionInfo>> clusterState = new LinkedHashMap<>();
     clusterState.put(servers[0], list0); //servers[0] hosts region1
     clusterState.put(servers[1], list1); //servers[1] hosts replica_of_region1
     clusterState.put(servers[2], list2); //servers[2] hosts region2
@@ -374,7 +372,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
     // start over again
     clusterState.clear();
-    List<HRegionInfo> list3 = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> list3 = new ArrayList<>();
     HRegionInfo hri4 = RegionReplicaUtil.getRegionInfoForReplica(hri3, 1);
     list3.add(hri4);
     clusterState.put(servers[0], list0); //servers[0], rack1 hosts region1
@@ -394,7 +392,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   private List<ServerName> getListOfServerNames(final List<ServerAndLoad> sals) {
-    List<ServerName> list = new ArrayList<ServerName>();
+    List<ServerName> list = new ArrayList<>();
     for (ServerAndLoad e : sals) {
       list.add(e.getServerName());
     }
@@ -417,8 +415,8 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   private void assertRetainedAssignment(Map<HRegionInfo, ServerName> existing,
       List<ServerName> servers, Map<ServerName, List<HRegionInfo>> assignment) {
     // Verify condition 1, every region assigned, and to online server
-    Set<ServerName> onlineServerSet = new TreeSet<ServerName>(servers);
-    Set<HRegionInfo> assignedRegions = new TreeSet<HRegionInfo>();
+    Set<ServerName> onlineServerSet = new TreeSet<>(servers);
+    Set<HRegionInfo> assignedRegions = new TreeSet<>();
     for (Map.Entry<ServerName, List<HRegionInfo>> a : assignment.entrySet()) {
       assertTrue("Region assigned to server that was not listed as online",
         onlineServerSet.contains(a.getKey()));
@@ -428,7 +426,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertEquals(existing.size(), assignedRegions.size());
 
     // Verify condition 2, if server had existing assignment, must have same
-    Set<String> onlineHostNames = new TreeSet<String>();
+    Set<String> onlineHostNames = new TreeSet<>();
     for (ServerName s : servers) {
       onlineHostNames.add(s.getHostname());
     }
@@ -453,12 +451,12 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // sharing same host and port
     List<ServerName> servers = getListOfServerNames(randomServers(10, 10));
     List<HRegionInfo> regions = randomRegions(101);
-    Map<ServerName, List<HRegionInfo>> clusterState = new HashMap<ServerName, List<HRegionInfo>>();
+    Map<ServerName, List<HRegionInfo>> clusterState = new HashMap<>();
 
     assignRegions(regions, servers, clusterState);
 
     // construct another list of servers, but sharing same hosts and ports
-    List<ServerName> oldServers = new ArrayList<ServerName>(servers.size());
+    List<ServerName> oldServers = new ArrayList<>(servers.size());
     for (ServerName sn : servers) {
       // The old server would have had same host and port, but different start code!
       oldServers.add(ServerName.valueOf(sn.getHostname(), sn.getPort(), sn.getStartcode() - 10));
@@ -479,7 +477,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       ServerName sn = servers.get(i % servers.size());
       List<HRegionInfo> regionsOfServer = clusterState.get(sn);
       if (regionsOfServer == null) {
-        regionsOfServer = new ArrayList<HRegionInfo>(10);
+        regionsOfServer = new ArrayList<>(10);
         clusterState.put(sn, regionsOfServer);
       }
 
@@ -492,7 +490,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // tests whether region locations are handled correctly in Cluster
     List<ServerName> servers = getListOfServerNames(randomServers(10, 10));
     List<HRegionInfo> regions = randomRegions(101);
-    Map<ServerName, List<HRegionInfo>> clusterState = new HashMap<ServerName, List<HRegionInfo>>();
+    Map<ServerName, List<HRegionInfo>> clusterState = new HashMap<>();
 
     assignRegions(regions, servers, clusterState);
 

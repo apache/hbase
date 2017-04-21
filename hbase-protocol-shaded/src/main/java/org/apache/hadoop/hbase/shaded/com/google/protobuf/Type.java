@@ -143,7 +143,7 @@ public  final class Type extends
    * The fully qualified message name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public java.lang.String getName() {
     java.lang.Object ref = name_;
@@ -162,7 +162,7 @@ public  final class Type extends
    * The fully qualified message name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes() {
@@ -340,7 +340,7 @@ public  final class Type extends
    * The source context.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+   * <code>.google.protobuf.SourceContext source_context = 5;</code>
    */
   public boolean hasSourceContext() {
     return sourceContext_ != null;
@@ -350,7 +350,7 @@ public  final class Type extends
    * The source context.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+   * <code>.google.protobuf.SourceContext source_context = 5;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext getSourceContext() {
     return sourceContext_ == null ? org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext.getDefaultInstance() : sourceContext_;
@@ -360,7 +360,7 @@ public  final class Type extends
    * The source context.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+   * <code>.google.protobuf.SourceContext source_context = 5;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContextOrBuilder getSourceContextOrBuilder() {
     return getSourceContext();
@@ -373,7 +373,7 @@ public  final class Type extends
    * The source syntax.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 6;</code>
+   * <code>.google.protobuf.Syntax syntax = 6;</code>
    */
   public int getSyntaxValue() {
     return syntax_;
@@ -383,7 +383,7 @@ public  final class Type extends
    * The source syntax.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 6;</code>
+   * <code>.google.protobuf.Syntax syntax = 6;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax getSyntax() {
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax result = org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax.valueOf(syntax_);
@@ -493,7 +493,7 @@ public  final class Type extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAME_FIELD_NUMBER;
     hash = (53 * hash) + getName().hashCode();
     if (getFieldsCount() > 0) {
@@ -863,7 +863,7 @@ public  final class Type extends
      * The fully qualified message name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -882,7 +882,7 @@ public  final class Type extends
      * The fully qualified message name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getNameBytes() {
@@ -902,7 +902,7 @@ public  final class Type extends
      * The fully qualified message name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setName(
         java.lang.String value) {
@@ -919,7 +919,7 @@ public  final class Type extends
      * The fully qualified message name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder clearName() {
       
@@ -932,7 +932,7 @@ public  final class Type extends
      * The fully qualified message name.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setNameBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -1708,7 +1708,7 @@ public  final class Type extends
      * The source context.
      * </pre>
      *
-     * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+     * <code>.google.protobuf.SourceContext source_context = 5;</code>
      */
     public boolean hasSourceContext() {
       return sourceContextBuilder_ != null || sourceContext_ != null;
@@ -1718,7 +1718,7 @@ public  final class Type extends
      * The source context.
      * </pre>
      *
-     * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+     * <code>.google.protobuf.SourceContext source_context = 5;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext getSourceContext() {
       if (sourceContextBuilder_ == null) {
@@ -1732,7 +1732,7 @@ public  final class Type extends
      * The source context.
      * </pre>
      *
-     * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+     * <code>.google.protobuf.SourceContext source_context = 5;</code>
      */
     public Builder setSourceContext(org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext value) {
       if (sourceContextBuilder_ == null) {
@@ -1752,7 +1752,7 @@ public  final class Type extends
      * The source context.
      * </pre>
      *
-     * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+     * <code>.google.protobuf.SourceContext source_context = 5;</code>
      */
     public Builder setSourceContext(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext.Builder builderForValue) {
@@ -1770,7 +1770,7 @@ public  final class Type extends
      * The source context.
      * </pre>
      *
-     * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+     * <code>.google.protobuf.SourceContext source_context = 5;</code>
      */
     public Builder mergeSourceContext(org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext value) {
       if (sourceContextBuilder_ == null) {
@@ -1792,7 +1792,7 @@ public  final class Type extends
      * The source context.
      * </pre>
      *
-     * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+     * <code>.google.protobuf.SourceContext source_context = 5;</code>
      */
     public Builder clearSourceContext() {
       if (sourceContextBuilder_ == null) {
@@ -1810,7 +1810,7 @@ public  final class Type extends
      * The source context.
      * </pre>
      *
-     * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+     * <code>.google.protobuf.SourceContext source_context = 5;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext.Builder getSourceContextBuilder() {
       
@@ -1822,7 +1822,7 @@ public  final class Type extends
      * The source context.
      * </pre>
      *
-     * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+     * <code>.google.protobuf.SourceContext source_context = 5;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContextOrBuilder getSourceContextOrBuilder() {
       if (sourceContextBuilder_ != null) {
@@ -1837,7 +1837,7 @@ public  final class Type extends
      * The source context.
      * </pre>
      *
-     * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+     * <code>.google.protobuf.SourceContext source_context = 5;</code>
      */
     private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
         org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext, org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContextOrBuilder> 
@@ -1859,7 +1859,7 @@ public  final class Type extends
      * The source syntax.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 6;</code>
+     * <code>.google.protobuf.Syntax syntax = 6;</code>
      */
     public int getSyntaxValue() {
       return syntax_;
@@ -1869,7 +1869,7 @@ public  final class Type extends
      * The source syntax.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 6;</code>
+     * <code>.google.protobuf.Syntax syntax = 6;</code>
      */
     public Builder setSyntaxValue(int value) {
       syntax_ = value;
@@ -1881,7 +1881,7 @@ public  final class Type extends
      * The source syntax.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 6;</code>
+     * <code>.google.protobuf.Syntax syntax = 6;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax getSyntax() {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax result = org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax.valueOf(syntax_);
@@ -1892,7 +1892,7 @@ public  final class Type extends
      * The source syntax.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 6;</code>
+     * <code>.google.protobuf.Syntax syntax = 6;</code>
      */
     public Builder setSyntax(org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax value) {
       if (value == null) {
@@ -1908,7 +1908,7 @@ public  final class Type extends
      * The source syntax.
      * </pre>
      *
-     * <code>optional .google.protobuf.Syntax syntax = 6;</code>
+     * <code>.google.protobuf.Syntax syntax = 6;</code>
      */
     public Builder clearSyntax() {
       

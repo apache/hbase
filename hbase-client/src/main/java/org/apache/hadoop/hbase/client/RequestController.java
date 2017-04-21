@@ -25,17 +25,14 @@ import java.util.function.Consumer;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * An interface for client request scheduling algorithm.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface RequestController {
 
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public enum ReturnCode {
     /**
      * Accept current row.
@@ -55,7 +52,6 @@ public interface RequestController {
    * Picks up the valid data.
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public interface Checker {
     /**
      * Checks the data whether it is valid to submit.

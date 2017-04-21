@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hbase.util.Threads;
  * each and will close down their instance on the way out.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class MiniHBaseCluster extends HBaseCluster {
   private static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
   public LocalHBaseCluster hbaseCluster;
@@ -672,7 +670,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   public List<HRegion> getRegions(TableName tableName) {
-    List<HRegion> ret = new ArrayList<HRegion>();
+    List<HRegion> ret = new ArrayList<>();
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       for (Region region : hrs.getOnlineRegionsLocalContext()) {
@@ -770,7 +768,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   public List<HRegion> findRegionsForTable(TableName tableName) {
-    ArrayList<HRegion> ret = new ArrayList<HRegion>();
+    ArrayList<HRegion> ret = new ArrayList<>();
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       for (Region region : hrs.getOnlineRegions(tableName)) {

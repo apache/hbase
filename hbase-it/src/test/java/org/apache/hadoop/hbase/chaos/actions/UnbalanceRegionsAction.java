@@ -48,9 +48,9 @@ public class UnbalanceRegionsAction extends Action {
   public void perform() throws Exception {
     LOG.info("Unbalancing regions");
     ClusterStatus status = this.cluster.getClusterStatus();
-    List<ServerName> victimServers = new LinkedList<ServerName>(status.getServers());
+    List<ServerName> victimServers = new LinkedList<>(status.getServers());
     int targetServerCount = (int)Math.ceil(fractionOfServers * victimServers.size());
-    List<ServerName> targetServers = new ArrayList<ServerName>(targetServerCount);
+    List<ServerName> targetServers = new ArrayList<>(targetServerCount);
     for (int i = 0; i < targetServerCount; ++i) {
       int victimIx = RandomUtils.nextInt(victimServers.size());
       targetServers.add(victimServers.remove(victimIx));

@@ -628,7 +628,7 @@ public class TestImportExport {
   public void testAddFilterAndArguments() throws IOException {
     Configuration configuration = new Configuration();
 
-    List<String> args = new ArrayList<String>();
+    List<String> args = new ArrayList<>();
     args.add("param1");
     args.add("param2");
 
@@ -700,7 +700,7 @@ public class TestImportExport {
   }
 
   /**
-   * This listens to the {@link #visitLogEntryBeforeWrite(HTableDescriptor, WALKey, WALEdit)} to
+   * This listens to the {@link #visitLogEntryBeforeWrite(HRegionInfo, WALKey, WALEdit)} to
    * identify that an entry is written to the Write Ahead Log for the given table.
    */
   private static class TableWALActionListener extends WALActionsListener.Base {

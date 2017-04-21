@@ -41,10 +41,10 @@ import org.junit.runner.notification.RunListener;
  * When surefire forkMode=once/always/perthread, this code is executed on the forked process.
  */
 public class ResourceCheckerJUnitListener extends RunListener {
-  private Map<String, ResourceChecker> rcs = new ConcurrentHashMap<String, ResourceChecker>();
+  private Map<String, ResourceChecker> rcs = new ConcurrentHashMap<>();
 
   static class ThreadResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
-    private static Set<String> initialThreadNames = new HashSet<String>();
+    private static Set<String> initialThreadNames = new HashSet<>();
     private static List<String> stringsToLog = null;
 
     @Override
@@ -57,7 +57,7 @@ public class ResourceCheckerJUnitListener extends RunListener {
         }
       } else if (phase == Phase.END) {
         if (stackTraces.size() > initialThreadNames.size()) {
-          stringsToLog = new ArrayList<String>();
+          stringsToLog = new ArrayList<>();
           for (Thread t : stackTraces.keySet()) {
             if (!initialThreadNames.contains(t.getName())) {
               stringsToLog.add("\nPotentially hanging thread: " + t.getName() + "\n");

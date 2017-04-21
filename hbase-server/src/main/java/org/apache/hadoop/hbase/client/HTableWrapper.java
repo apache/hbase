@@ -84,7 +84,7 @@ public final class HTableWrapper implements Table {
   }
 
   public void internalClose() throws IOException {
-    List<IOException> exceptions = new ArrayList<IOException>(2);
+    List<IOException> exceptions = new ArrayList<>(2);
     try {
       table.close();
     } catch (IOException e) {

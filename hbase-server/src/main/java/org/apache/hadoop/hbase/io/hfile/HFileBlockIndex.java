@@ -61,7 +61,7 @@ import org.apache.hadoop.util.StringUtils;
  * {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter} and
  *  {@link HFileWriterImpl}. Examples of how to use the reader can be
  *  found in {@link HFileReaderImpl} and
- *  {@link org.apache.hadoop.hbase.io.hfile.TestHFileBlockIndex}.
+ *  org.apache.hadoop.hbase.io.hfile.TestHFileBlockIndex.
  */
 @InterfaceAudience.Private
 public class HFileBlockIndex {
@@ -239,7 +239,7 @@ public class HFileBlockIndex {
 
     private Cell[] blockKeys;
     /** Pre-computed mid-key */
-    private AtomicReference<Cell> midKey = new AtomicReference<Cell>();
+    private AtomicReference<Cell> midKey = new AtomicReference<>();
     /** Needed doing lookup on blocks. */
     private CellComparator comparator;
 
@@ -741,7 +741,7 @@ public class HFileBlockIndex {
       // keys[numEntries] = Infinity, then we are maintaining an invariant that
       // keys[low - 1] < key < keys[high + 1] while narrowing down the range.
       ByteBufferKeyOnlyKeyValue nonRootIndexkeyOnlyKV = new ByteBufferKeyOnlyKeyValue();
-      ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
+      ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<>();
       while (low <= high) {
         mid = (low + high) >>> 1;
 
@@ -1402,20 +1402,20 @@ public class HFileBlockIndex {
   static class BlockIndexChunk {
 
     /** First keys of the key range corresponding to each index entry. */
-    private final List<byte[]> blockKeys = new ArrayList<byte[]>();
+    private final List<byte[]> blockKeys = new ArrayList<>();
 
     /** Block offset in backing stream. */
-    private final List<Long> blockOffsets = new ArrayList<Long>();
+    private final List<Long> blockOffsets = new ArrayList<>();
 
     /** On-disk data sizes of lower-level data or index blocks. */
-    private final List<Integer> onDiskDataSizes = new ArrayList<Integer>();
+    private final List<Integer> onDiskDataSizes = new ArrayList<>();
 
     /**
      * The cumulative number of sub-entries, i.e. entries on deeper-level block
      * index entries. numSubEntriesAt[i] is the number of sub-entries in the
      * blocks corresponding to this chunk's entries #0 through #i inclusively.
      */
-    private final List<Long> numSubEntriesAt = new ArrayList<Long>();
+    private final List<Long> numSubEntriesAt = new ArrayList<>();
 
     /**
      * The offset of the next entry to be added, relative to the end of the
@@ -1434,8 +1434,7 @@ public class HFileBlockIndex {
      * records in a "non-root" format block. These offsets are relative to the
      * end of this secondary index.
      */
-    private final List<Integer> secondaryIndexOffsetMarks =
-        new ArrayList<Integer>();
+    private final List<Integer> secondaryIndexOffsetMarks = new ArrayList<>();
 
     /**
      * Adds a new entry to this block index chunk.

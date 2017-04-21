@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -155,7 +156,7 @@ public class MasterWalManager {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 
-    Set<ServerName> serverNames = new HashSet<ServerName>();
+    Set<ServerName> serverNames = new HashSet<>();
     Path logsDirPath = new Path(this.rootDir, HConstants.HREGION_LOGDIR_NAME);
 
     do {
@@ -218,9 +219,7 @@ public class MasterWalManager {
   }
 
   public void splitLog(final ServerName serverName) throws IOException {
-    Set<ServerName> serverNames = new HashSet<ServerName>();
-    serverNames.add(serverName);
-    splitLog(serverNames);
+    splitLog(Collections.<ServerName>singleton(serverName));
   }
 
   /**
@@ -228,9 +227,7 @@ public class MasterWalManager {
    * @param serverName logs belonging to this server will be split
    */
   public void splitMetaLog(final ServerName serverName) throws IOException {
-    Set<ServerName> serverNames = new HashSet<ServerName>();
-    serverNames.add(serverName);
-    splitMetaLog(serverNames);
+    splitMetaLog(Collections.<ServerName>singleton(serverName));
   }
 
   /**
@@ -245,7 +242,7 @@ public class MasterWalManager {
       "We only release this lock when we set it. Updates to code that uses it should verify use " +
       "of the guard boolean.")
   private List<Path> getLogDirs(final Set<ServerName> serverNames) throws IOException {
-    List<Path> logDirs = new ArrayList<Path>();
+    List<Path> logDirs = new ArrayList<>();
     boolean needReleaseLock = false;
     if (!this.services.isInitialized()) {
       // during master initialization, we could have multiple places splitting a same wal
@@ -269,6 +266,11 @@ public class MasterWalManager {
           continue;
         }
         logDirs.add(splitDir);
+      }
+    } catch (IOException ioe) {
+      if (!checkFileSystem()) {
+        this.services.abort("Aborting due to filesystem unavailable", ioe);
+        throw ioe;
       }
     } finally {
       if (needReleaseLock) {

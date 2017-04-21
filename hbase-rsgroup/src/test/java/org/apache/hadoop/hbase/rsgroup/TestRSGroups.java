@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -77,6 +78,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     TEST_UTIL.getConfiguration().set(
         ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
         ""+NUM_SLAVES_BASE);
+    TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
 
     admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
@@ -160,9 +162,9 @@ public class TestRSGroups extends TestRSGroupsBase {
     LOG.info("testNamespaceCreateAndAssign");
     String nsName = tablePrefix+"_foo";
     final TableName tableName = TableName.valueOf(nsName, tablePrefix + "_testCreateAndAssign");
-    RSGroupInfo appInfo = addGroup(rsGroupAdmin, "appInfo", 1);
+    RSGroupInfo appInfo = addGroup("appInfo", 1);
     admin.createNamespace(NamespaceDescriptor.create(nsName)
-        .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, "appInfo").build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "appInfo").build());
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor("f"));
     admin.createTable(desc);
@@ -186,7 +188,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     LOG.info("testDefaultNamespaceCreateAndAssign");
     final byte[] tableName = Bytes.toBytes(tablePrefix + "_testCreateAndAssign");
     admin.modifyNamespace(NamespaceDescriptor.create("default")
-        .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, "default").build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "default").build());
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor("f"));
     admin.createTable(desc);
@@ -206,7 +208,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     LOG.info("testNamespaceConstraint");
     rsGroupAdmin.addRSGroup(groupName);
     admin.createNamespace(NamespaceDescriptor.create(nsName)
-        .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, groupName)
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName)
         .build());
     //test removing a referenced group
     try {
@@ -218,7 +220,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     //changing with the same name is fine
     admin.modifyNamespace(
         NamespaceDescriptor.create(nsName)
-          .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, groupName)
+          .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName)
           .build());
     String anotherGroup = tablePrefix+"_anotherGroup";
     rsGroupAdmin.addRSGroup(anotherGroup);
@@ -227,7 +229,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     rsGroupAdmin.removeRSGroup(groupName);
     try {
       admin.createNamespace(NamespaceDescriptor.create(nsName)
-          .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, "foo")
+          .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "foo")
           .build());
       fail("Expected a constraint exception");
     } catch (IOException ex) {
@@ -250,7 +252,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     final TableName tableName = TableName.valueOf(tablePrefix+"_testMisplacedRegions");
     LOG.info("testMisplacedRegions");
 
-    final RSGroupInfo RSGroupInfo = addGroup(rsGroupAdmin, "testMisplacedRegions", 1);
+    final RSGroupInfo RSGroupInfo = addGroup("testMisplacedRegions", 1);
 
     TEST_UTIL.createMultiRegionTable(tableName, new byte[]{'f'}, 15);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
@@ -270,4 +272,21 @@ public class TestRSGroups extends TestRSGroupsBase {
       }
     });
   }
+
+  @Test
+  public void testCloneSnapshot() throws Exception {
+    byte[] FAMILY = Bytes.toBytes("test");
+    String snapshotName = tableName.getNameAsString() + "_snap";
+    TableName clonedTableName = TableName.valueOf(tableName.getNameAsString() + "_clone");
+
+    // create base table
+    TEST_UTIL.createTable(tableName, FAMILY);
+
+    // create snapshot
+    admin.snapshot(snapshotName, tableName);
+
+    // clone
+    admin.cloneSnapshot(snapshotName, clonedTableName);
+  }
+
 }

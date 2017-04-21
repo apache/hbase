@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.filter;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
@@ -36,7 +35,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * byte array using {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayComparable {
   /**
    * Constructor

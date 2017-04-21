@@ -19,14 +19,12 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown if a request is table schema modification is requested but
  * made for an invalid family name.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class InvalidFamilyOperationException extends DoNotRetryIOException {
   private static final long serialVersionUID = 1L << 22 - 1L;
   /** default constructor */

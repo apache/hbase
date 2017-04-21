@@ -23,13 +23,11 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Parameters for instantiating a {@link BufferedMutator}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class BufferedMutatorParams implements Cloneable {
 
   static final int UNSET = -1;

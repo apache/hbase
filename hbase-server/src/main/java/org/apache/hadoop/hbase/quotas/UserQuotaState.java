@@ -123,7 +123,7 @@ public class UserQuotaState extends QuotaState {
   private <K> Map<K, QuotaLimiter> setLimiter(Map<K, QuotaLimiter> limiters,
       final K key, final Quotas quotas) {
     if (limiters == null) {
-      limiters = new HashMap<K, QuotaLimiter>();
+      limiters = new HashMap<>();
     }
 
     QuotaLimiter limiter = quotas.hasThrottle() ?
@@ -164,7 +164,7 @@ public class UserQuotaState extends QuotaState {
 
     if (otherMap != null) {
       // To Remove
-      Set<K> toRemove = new HashSet<K>(map.keySet());
+      Set<K> toRemove = new HashSet<>(map.keySet());
       toRemove.removeAll(otherMap.keySet());
       map.keySet().removeAll(toRemove);
 

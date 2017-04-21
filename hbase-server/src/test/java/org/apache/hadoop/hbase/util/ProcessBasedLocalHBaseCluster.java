@@ -140,7 +140,7 @@ public class ProcessBasedLocalHBaseCluster {
    * in the returned array, e.g. server #0, #1, etc.
    */
   private static List<Integer> sortedPorts(int n) {
-    List<Integer> ports = new ArrayList<Integer>(n);
+    List<Integer> ports = new ArrayList<>(n);
     for (int i = 0; i < n; ++i) {
       ports.add(HBaseTestingUtility.randomFreePort());
     }
@@ -216,8 +216,7 @@ public class ProcessBasedLocalHBaseCluster {
     try {
       String [] envp = null;
       if (envOverrides != null) {
-        Map<String, String> map = new HashMap<String, String>(
-            System.getenv());
+        Map<String, String> map = new HashMap<>(System.getenv());
         map.putAll(envOverrides);
         envp = new String[map.size()];
         int idx = 0;
@@ -250,7 +249,7 @@ public class ProcessBasedLocalHBaseCluster {
 
   private void shutdownAllProcesses() {
     LOG.info("Killing daemons using pid files");
-    final List<String> pidFiles = new ArrayList<String>(daemonPidFiles);
+    final List<String> pidFiles = new ArrayList<>(daemonPidFiles);
     for (String pidFile : pidFiles) {
       int pid = 0;
       try {
@@ -359,7 +358,7 @@ public class ProcessBasedLocalHBaseCluster {
         "HBASE_ZOOKEEPER_JMX_OPTS=' '\n",
         dir + "/hbase-env.sh");
 
-    Map<String, String> envOverrides = new HashMap<String, String>();
+    Map<String, String> envOverrides = new HashMap<>();
     envOverrides.put("HBASE_LOG_DIR", dir);
     envOverrides.put("HBASE_PID_DIR", dir);
     try {
@@ -379,7 +378,7 @@ public class ProcessBasedLocalHBaseCluster {
   private final String generateConfig(ServerType serverType, int rpcPort,
       String daemonDir) {
     StringBuilder sb = new StringBuilder();
-    Map<String, Object> confMap = new TreeMap<String, Object>();
+    Map<String, Object> confMap = new TreeMap<>();
     confMap.put(HConstants.CLUSTER_DISTRIBUTED, true);
 
     if (serverType == ServerType.MASTER) {
@@ -446,8 +445,8 @@ public class ProcessBasedLocalHBaseCluster {
   }
 
   private final class LocalDaemonLogTailer implements Runnable {
-    private final Set<String> tailedFiles = new HashSet<String>();
-    private final List<String> dirList = new ArrayList<String>();
+    private final Set<String> tailedFiles = new HashSet<>();
+    private final List<String> dirList = new ArrayList<>();
     private final Object printLock = new Object();
 
     private final FilenameFilter LOG_FILES = new FilenameFilter() {

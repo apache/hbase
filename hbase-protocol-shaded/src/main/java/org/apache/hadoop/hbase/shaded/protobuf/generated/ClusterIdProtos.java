@@ -240,7 +240,7 @@ public final class ClusterIdProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasClusterId()) {
         hash = (37 * hash) + CLUSTER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getClusterId().hashCode();

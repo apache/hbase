@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase.spark
 
 import java.io.Serializable
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes
 
 /**
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.util.Bytes
  *
  * @param value The Byte Array value
  */
+@InterfaceAudience.Public
 class ByteArrayWrapper (var value:Array[Byte])
   extends Comparable[ByteArrayWrapper] with Serializable {
   override def compareTo(valueOther: ByteArrayWrapper): Int = {

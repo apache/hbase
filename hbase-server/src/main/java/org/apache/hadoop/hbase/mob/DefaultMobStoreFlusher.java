@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.mob;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.regionserver.MemStoreSnapshot;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
@@ -95,13 +98,13 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
   @Override
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
       MonitoredTask status, ThroughputController throughputController) throws IOException {
-    ArrayList<Path> result = new ArrayList<Path>();
+    ArrayList<Path> result = new ArrayList<>();
     long cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
     // Use a store scanner to find which rows to flush.
     long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanner(), smallestReadPoint);
+    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint);
     if (scanner == null) {
       return result; // NULL scanner returned from coprocessor hooks means skip normal processing
     }
@@ -112,14 +115,23 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       synchronized (flushLock) {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
-        writer = store.createWriterInTmp(cellsCount, store.getFamily().getCompression(),
-            false, true, true, false/*default for dropbehind*/, snapshot.getTimeRangeTracker());
+        writer = store.createWriterInTmp(cellsCount, store.getFamily().getCompressionType(),
+            false, true, true, false, snapshot.getTimeRangeTracker());
+        IOException e = null;
         try {
           // It's a mob store, flush the cells in a mob way. This is the difference of flushing
           // between a normal and a mob store.
-          performMobFlush(snapshot, cacheFlushId, scanner, writer, status);
+          performMobFlush(snapshot, cacheFlushId, scanner, writer, status, throughputController);
+        } catch (IOException ioe) {
+          e = ioe;
+          // throw the exception out
+          throw ioe;
         } finally {
-          finalizeWriter(writer, cacheFlushId, status);
+          if (e != null) {
+            writer.close();
+          } else {
+            finalizeWriter(writer, cacheFlushId, status);
+          }
         }
       }
     } finally {
@@ -148,10 +160,12 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
    * @param scanner The scanner of memstore snapshot.
    * @param writer The store file writer.
    * @param status Task that represents the flush operation and may be updated with status.
+   * @param throughputController A controller to avoid flush too fast.
    * @throws IOException
    */
   protected void performMobFlush(MemStoreSnapshot snapshot, long cacheFlushId,
-      InternalScanner scanner, StoreFileWriter writer, MonitoredTask status) throws IOException {
+      InternalScanner scanner, StoreFileWriter writer, MonitoredTask status,
+      ThroughputController throughputController) throws IOException {
     StoreFileWriter mobFileWriter = null;
     int compactionKVMax = conf.getInt(HConstants.COMPACTION_KV_MAX,
         HConstants.COMPACTION_KV_MAX_DEFAULT);
@@ -159,16 +173,21 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     long mobSize = 0;
     long time = snapshot.getTimeRangeTracker().getMax();
     mobFileWriter = mobStore.createWriterInTmp(new Date(time), snapshot.getCellsCount(),
-        store.getFamily().getCompression(), store.getRegionInfo().getStartKey());
+        store.getFamily().getCompressionType(), store.getRegionInfo().getStartKey(), false);
     // the target path is {tableName}/.mob/{cfName}/mobFiles
     // the relative path is mobFiles
     byte[] fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
+    ScannerContext scannerContext =
+        ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
+    List<Cell> cells = new ArrayList<>();
+    boolean hasMore;
+    String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
+    boolean control = throughputController != null && !store.getRegionInfo().isSystemTable();
+    if (control) {
+      throughputController.start(flushName);
+    }
+    IOException ioe = null;
     try {
-      List<Cell> cells = new ArrayList<Cell>();
-      boolean hasMore;
-      ScannerContext scannerContext =
-              ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
-
       do {
         hasMore = scanner.next(cells, scannerContext);
         if (!cells.isEmpty()) {
@@ -191,15 +210,28 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
                   this.mobStore.getRefCellTags());
               writer.append(reference);
             }
+            int len = KeyValueUtil.length(c);
+            if (control) {
+              throughputController.control(flushName, len);
+            }
           }
           cells.clear();
         }
       } while (hasMore);
+    } catch (InterruptedException e) {
+      ioe = new InterruptedIOException(
+          "Interrupted while control throughput of flushing " + flushName);
+      throw ioe;
+    } catch (IOException e) {
+      ioe = e;
+      throw e;
     } finally {
-      status.setStatus("Flushing mob file " + store + ": appending metadata");
-      mobFileWriter.appendMetadata(cacheFlushId, false, mobCount);
-      status.setStatus("Flushing mob file " + store + ": closing flushed file");
-      mobFileWriter.close();
+      if (control) {
+        throughputController.finish(flushName);
+      }
+      if (ioe != null) {
+        mobFileWriter.close();
+      }
     }
 
     if (mobCount > 0) {
@@ -207,12 +239,18 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       // If the mob file is committed successfully but the store file is not,
       // the committed mob file will be handled by the sweep tool as an unused
       // file.
+      status.setStatus("Flushing mob file " + store + ": appending metadata");
+      mobFileWriter.appendMetadata(cacheFlushId, false, mobCount);
+      status.setStatus("Flushing mob file " + store + ": closing flushed file");
+      mobFileWriter.close();
       mobStore.commitFile(mobFileWriter.getPath(), targetPath);
       mobStore.updateMobFlushCount();
       mobStore.updateMobFlushedCellsCount(mobCount);
       mobStore.updateMobFlushedCellsSize(mobSize);
     } else {
       try {
+        status.setStatus("Flushing mob file " + store + ": no mob cells, closing flushed file");
+        mobFileWriter.close();
         // If the mob file is empty, delete it instead of committing.
         store.getFileSystem().delete(mobFileWriter.getPath(), true);
       } catch (IOException e) {

@@ -108,7 +108,7 @@ public final class SegmentFactory {
   }
 
   private MemStoreLAB getMergedMemStoreLAB(Configuration conf, List<ImmutableSegment> segments) {
-    List<MemStoreLAB> mslabs = new ArrayList<MemStoreLAB>();
+    List<MemStoreLAB> mslabs = new ArrayList<>();
     if (!conf.getBoolean(MemStoreLAB.USEMSLAB_KEY, MemStoreLAB.USEMSLAB_DEFAULT)) {
       return null;
     }

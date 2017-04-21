@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableWrapper;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
@@ -82,8 +81,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   protected Abortable abortable;
   /** Ordered set of loaded coprocessors with lock */
-  protected SortedList<E> coprocessors =
-      new SortedList<E>(new EnvironmentPriorityComparator());
+  protected SortedList<E> coprocessors = new SortedList<>(new EnvironmentPriorityComparator());
   protected Configuration conf;
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
@@ -119,7 +117,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * to master).
    */
   public Set<String> getCoprocessors() {
-    Set<String> returnValue = new TreeSet<String>();
+    Set<String> returnValue = new TreeSet<>();
     for (CoprocessorEnvironment e: coprocessors) {
       returnValue.add(e.getInstance().getClass().getSimpleName());
     }
@@ -319,7 +317,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @return the list of coprocessors, or null if not found
    */
   public <T extends Coprocessor> List<T> findCoprocessors(Class<T> cls) {
-    ArrayList<T> ret = new ArrayList<T>();
+    ArrayList<T> ret = new ArrayList<>();
 
     for (E env: coprocessors) {
       Coprocessor cp = env.getInstance();
@@ -339,7 +337,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @return the list of CoprocessorEnvironment, or null if not found
    */
   public List<CoprocessorEnvironment> findCoprocessorEnvironment(Class<?> cls) {
-    ArrayList<CoprocessorEnvironment> ret = new ArrayList<CoprocessorEnvironment>();
+    ArrayList<CoprocessorEnvironment> ret = new ArrayList<>();
 
     for (E env: coprocessors) {
       Coprocessor cp = env.getInstance();
@@ -374,7 +372,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @return A set of ClassLoader instances
    */
   Set<ClassLoader> getExternalClassLoaders() {
-    Set<ClassLoader> externalClassLoaders = new HashSet<ClassLoader>();
+    Set<ClassLoader> externalClassLoaders = new HashSet<>();
     final ClassLoader systemClassLoader = this.getClass().getClassLoader();
     for (E env : coprocessors) {
       ClassLoader cl = env.getInstance().getClass().getClassLoader();
@@ -584,6 +582,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param e Throwable object thrown by coprocessor.
    * @exception IOException Exception
    */
+  // Note to devs: Class comments of all observers ({@link MasterObserver}, {@link WALObserver},
+  // etc) mention this nuance of our exception handling so that coprocessor can throw appropriate
+  // exceptions depending on situation. If any changes are made to this logic, make sure to
+  // update all classes' comments.
   protected void handleCoprocessorThrowable(final CoprocessorEnvironment env, final Throwable e)
       throws IOException {
     if (e instanceof IOException) {
@@ -661,7 +663,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * Used to limit legacy handling to once per Coprocessor class per classloader.
    */
   private static final Set<Class<? extends Coprocessor>> legacyWarning =
-      new ConcurrentSkipListSet<Class<? extends Coprocessor>>(
+      new ConcurrentSkipListSet<>(
           new Comparator<Class<? extends Coprocessor>>() {
             @Override
             public int compare(Class<? extends Coprocessor> c1, Class<? extends Coprocessor> c2) {

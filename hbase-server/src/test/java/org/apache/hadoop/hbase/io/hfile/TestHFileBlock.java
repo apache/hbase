@@ -123,7 +123,7 @@ public class TestHFileBlock {
 
   static int writeTestKeyValues(HFileBlock.Writer hbw, int seed, boolean includesMemstoreTS,
       boolean useTag) throws IOException {
-    List<KeyValue> keyValues = new ArrayList<KeyValue>();
+    List<KeyValue> keyValues = new ArrayList<>();
     Random randomizer = new Random(42l + seed); // just any fixed number
 
     // generate keyValues
@@ -383,14 +383,14 @@ public class TestHFileBlock {
                               .build();
           HFileBlock.Writer hbw = new HFileBlock.Writer(dataBlockEncoder, meta);
           long totalSize = 0;
-          final List<Integer> encodedSizes = new ArrayList<Integer>();
-          final List<ByteBuffer> encodedBlocks = new ArrayList<ByteBuffer>();
+          final List<Integer> encodedSizes = new ArrayList<>();
+          final List<ByteBuffer> encodedBlocks = new ArrayList<>();
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
             hbw.startWriting(BlockType.DATA);
             writeTestKeyValues(hbw, blockId, includesMemstoreTS, includesTag);
             hbw.writeHeaderAndData(os);
             int headerLen = HConstants.HFILEBLOCK_HEADER_SIZE;
-            byte[] encodedResultWithHeader = hbw.getUncompressedBufferWithHeader().array();
+            byte[] encodedResultWithHeader = hbw.cloneUncompressedBufferWithHeader().array();
             final int encodedSize = encodedResultWithHeader.length - headerLen;
             if (encoding != DataBlockEncoding.NONE) {
               // We need to account for the two-byte encoding algorithm ID that
@@ -532,11 +532,10 @@ public class TestHFileBlock {
                    ", pread=" + pread +
                    ", cacheOnWrite=" + cacheOnWrite);
           Path path = new Path(TEST_UTIL.getDataTestDir(), "prev_offset");
-          List<Long> expectedOffsets = new ArrayList<Long>();
-          List<Long> expectedPrevOffsets = new ArrayList<Long>();
-          List<BlockType> expectedTypes = new ArrayList<BlockType>();
-          List<ByteBuffer> expectedContents = cacheOnWrite
-              ? new ArrayList<ByteBuffer>() : null;
+          List<Long> expectedOffsets = new ArrayList<>();
+          List<Long> expectedPrevOffsets = new ArrayList<>();
+          List<BlockType> expectedTypes = new ArrayList<>();
+          List<ByteBuffer> expectedContents = cacheOnWrite ? new ArrayList<>() : null;
           long totalSize = writeBlocks(rand, algo, path, expectedOffsets,
               expectedPrevOffsets, expectedTypes, expectedContents);
 
@@ -718,8 +717,8 @@ public class TestHFileBlock {
     for (Compression.Algorithm compressAlgo : COMPRESSION_ALGORITHMS) {
       Path path = new Path(TEST_UTIL.getDataTestDir(), "concurrent_reading");
       Random rand = defaultRandom();
-      List<Long> offsets = new ArrayList<Long>();
-      List<BlockType> types = new ArrayList<BlockType>();
+      List<Long> offsets = new ArrayList<>();
+      List<BlockType> types = new ArrayList<>();
       writeBlocks(rand, compressAlgo, path, offsets, null, types, null);
       FSDataInputStream is = fs.open(path);
       long fileSize = fs.getFileStatus(path).getLen();
@@ -732,8 +731,7 @@ public class TestHFileBlock {
       HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, fileSize, meta);
 
       Executor exec = Executors.newFixedThreadPool(NUM_READER_THREADS);
-      ExecutorCompletionService<Boolean> ecs =
-          new ExecutorCompletionService<Boolean>(exec);
+      ExecutorCompletionService<Boolean> ecs = new ExecutorCompletionService<>(exec);
 
       for (int i = 0; i < NUM_READER_THREADS; ++i) {
         ecs.submit(new BlockReaderThread("reader_" + (char) ('A' + i), hbr,
@@ -768,7 +766,7 @@ public class TestHFileBlock {
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .build();
     HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
-    Map<BlockType, Long> prevOffsetByType = new HashMap<BlockType, Long>();
+    Map<BlockType, Long> prevOffsetByType = new HashMap<>();
     long totalSize = 0;
     for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
       long pos = os.getPos();
@@ -800,7 +798,7 @@ public class TestHFileBlock {
       totalSize += hbw.getOnDiskSizeWithHeader();
 
       if (cacheOnWrite)
-        expectedContents.add(hbw.getUncompressedBufferWithHeader());
+        expectedContents.add(hbw.cloneUncompressedBufferWithHeader());
 
       if (detailedLogging) {
         LOG.info("Written block #" + i + " of type " + bt

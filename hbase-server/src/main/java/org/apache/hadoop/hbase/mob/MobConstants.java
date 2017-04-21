@@ -23,14 +23,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * The constants used in mob.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class MobConstants {
 
   public static final String MOB_SCAN_RAW = "hbase.mob.scan.raw";

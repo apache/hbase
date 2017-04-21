@@ -180,7 +180,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private final Deque<FSWALEntry> unackedAppends = new ArrayDeque<>();
 
-  private final SortedSet<SyncFuture> syncFutures = new TreeSet<SyncFuture>(SEQ_COMPARATOR);
+  private final SortedSet<SyncFuture> syncFutures = new TreeSet<>(SEQ_COMPARATOR);
 
   // the highest txid of WAL entries being processed
   private long highestProcessedAppendTxid;
@@ -615,7 +615,15 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
             break;
           }
         } else {
-          throw e.unwrapRemoteException();
+          IOException ioe = e.unwrapRemoteException();
+          // this usually means master already think we are dead so let's fail all the pending
+          // syncs. The shutdown process of RS will wait for all regions to be closed before calling
+          // WAL.close so if we do not wake up the thread blocked by sync here it will cause dead
+          // lock.
+          if (e.getMessage().contains("Parent directory doesn't exist:")) {
+            syncFutures.forEach(f -> f.done(f.getTxid(), ioe));
+          }
+          throw ioe;
         }
       } catch (NameNodeException e) {
         throw e;
@@ -696,6 +704,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     this.writer.close();
     this.writer = null;
     closeExecutor.shutdown();
+    IOException error = new IOException("WAL has been closed");
+    syncFutures.forEach(f -> f.done(f.getTxid(), error));
   }
 
   @Override

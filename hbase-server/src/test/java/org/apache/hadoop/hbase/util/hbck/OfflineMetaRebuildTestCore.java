@@ -228,7 +228,7 @@ public class OfflineMetaRebuildTestCore {
     Scan s = new Scan();
     Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = meta.getScanner(s);
-    List<Delete> dels = new ArrayList<Delete>();
+    List<Delete> dels = new ArrayList<>();
     for (Result r : scanner) {
       HRegionInfo info =
           MetaTableAccessor.getHRegionInfo(r);

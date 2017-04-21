@@ -140,7 +140,6 @@ public class TestNamespaceReplication extends TestReplicationBase {
     Table htab1B = connection1.getTable(tabBName);
     Table htab2B = connection2.getTable(tabBName);
 
-    admin.peerAdded("2");
     // add ns1 to peer config which replicate to cluster2
     ReplicationPeerConfig rpc = admin.getPeerConfig("2");
     Set<String> namespaces = new HashSet<>();
@@ -165,7 +164,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
     namespaces.add(ns2);
     rpc.setNamespaces(namespaces);
     Map<TableName, List<String>> tableCfs = new HashMap<>();
-    tableCfs.put(tabAName, new ArrayList<String>());
+    tableCfs.put(tabAName, new ArrayList<>());
     tableCfs.get(tabAName).add("f1");
     rpc.setTableCFsMap(tableCfs);
     admin.updatePeerConfig("2", rpc);

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -72,10 +73,10 @@ public class HalfStoreFileReader extends StoreFileReader {
    * @param conf Configuration
    * @throws IOException
    */
-  public HalfStoreFileReader(final FileSystem fs, final Path p,
-      final CacheConfig cacheConf, final Reference r, final Configuration conf)
+  public HalfStoreFileReader(FileSystem fs, Path p, CacheConfig cacheConf, Reference r,
+      boolean isPrimaryReplicaStoreFile, AtomicInteger refCount, boolean shared, Configuration conf)
       throws IOException {
-    super(fs, p, cacheConf, conf);
+    super(fs, p, cacheConf, isPrimaryReplicaStoreFile, refCount, shared, conf);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't
@@ -99,9 +100,9 @@ public class HalfStoreFileReader extends StoreFileReader {
    * @throws IOException
    */
   public HalfStoreFileReader(final FileSystem fs, final Path p, final FSDataInputStreamWrapper in,
-      long size, final CacheConfig cacheConf,  final Reference r, final Configuration conf)
-      throws IOException {
-    super(fs, p, in, size, cacheConf, conf);
+      long size, final CacheConfig cacheConf, final Reference r, boolean isPrimaryReplicaStoreFile,
+      AtomicInteger refCount, boolean shared, final Configuration conf) throws IOException {
+    super(fs, p, in, size, cacheConf, isPrimaryReplicaStoreFile, refCount, shared, conf);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't

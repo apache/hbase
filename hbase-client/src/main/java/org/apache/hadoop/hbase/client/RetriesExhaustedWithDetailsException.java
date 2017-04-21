@@ -30,7 +30,6 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -44,7 +43,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class RetriesExhaustedWithDetailsException
 extends RetriesExhaustedException {
   List<Throwable> exceptions;
@@ -110,7 +108,7 @@ extends RetriesExhaustedException {
     String s = getDesc(classifyExs(exceptions));
     StringBuilder addrs = new StringBuilder(s);
     addrs.append("servers with issues: ");
-    Set<String> uniqAddr = new HashSet<String>();
+    Set<String> uniqAddr = new HashSet<>();
     uniqAddr.addAll(hostnamePort);
 
     for(String addr : uniqAddr) {
@@ -143,7 +141,7 @@ extends RetriesExhaustedException {
 
 
   public static Map<String, Integer> classifyExs(List<Throwable> ths) {
-    Map<String, Integer> cls = new HashMap<String, Integer>();
+    Map<String, Integer> cls = new HashMap<>();
     for (Throwable t : ths) {
       if (t == null) continue;
       String name = "";

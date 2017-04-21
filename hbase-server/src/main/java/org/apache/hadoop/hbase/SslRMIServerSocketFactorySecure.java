@@ -42,7 +42,7 @@ public class SslRMIServerSocketFactorySecure extends SslRMIServerSocketFactory {
         sslSocket.setUseClientMode(false);
         sslSocket.setNeedClientAuth(false);
 
-        ArrayList<String> secureProtocols = new ArrayList<String>();
+        ArrayList<String> secureProtocols = new ArrayList<>();
         for (String p : sslSocket.getEnabledProtocols()) {
           if (!p.contains("SSLv3")) {
             secureProtocols.add(p);

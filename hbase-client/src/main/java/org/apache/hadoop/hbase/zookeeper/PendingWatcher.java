@@ -33,7 +33,7 @@ import org.apache.zookeeper.Watcher;
  * and then call the method {@code PendingWatcher.prepare}.
  */
 class PendingWatcher implements Watcher {
-  private final InstancePending<Watcher> pending = new InstancePending<Watcher>();
+  private final InstancePending<Watcher> pending = new InstancePending<>();
 
   @Override
   public void process(WatchedEvent event) {

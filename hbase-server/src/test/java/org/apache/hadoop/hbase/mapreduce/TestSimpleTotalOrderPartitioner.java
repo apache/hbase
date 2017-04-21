@@ -42,8 +42,7 @@ public class TestSimpleTotalOrderPartitioner {
   public void testSplit() throws Exception {
     String start = "a";
     String end = "{";
-    SimpleTotalOrderPartitioner<byte []> p =
-      new SimpleTotalOrderPartitioner<byte []>();
+    SimpleTotalOrderPartitioner<byte []> p = new SimpleTotalOrderPartitioner<>();
     
     this.conf.set(SimpleTotalOrderPartitioner.START, start);
     this.conf.set(SimpleTotalOrderPartitioner.END, end);

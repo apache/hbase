@@ -19,12 +19,10 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** Thrown when a table can not be located */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class TableNotFoundException extends DoNotRetryIOException {
   private static final long serialVersionUID = 993179627856392526L;
 

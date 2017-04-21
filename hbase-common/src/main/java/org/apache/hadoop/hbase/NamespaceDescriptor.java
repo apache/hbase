@@ -27,7 +27,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * as opposed to a more tangible container.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class NamespaceDescriptor {
 
   /** System namespace name. */
@@ -57,14 +55,14 @@ public class NamespaceDescriptor {
 
   public final static Set<String> RESERVED_NAMESPACES;
   static {
-    Set<String> set = new HashSet<String>();
+    Set<String> set = new HashSet<>();
     set.add(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
     set.add(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
     RESERVED_NAMESPACES = Collections.unmodifiableSet(set);
   }
   public final static Set<byte[]> RESERVED_NAMESPACES_BYTES;
   static {
-    Set<byte[]> set = new TreeSet<byte[]>(Bytes.BYTES_RAWCOMPARATOR);
+    Set<byte[]> set = new TreeSet<>(Bytes.BYTES_RAWCOMPARATOR);
     for(String name: RESERVED_NAMESPACES) {
       set.add(Bytes.toBytes(name));
     }
@@ -162,10 +160,9 @@ public class NamespaceDescriptor {
   }
 
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public static class Builder {
     private String bName;
-    private Map<String, String> bConfiguration = new TreeMap<String, String>();
+    private Map<String, String> bConfiguration = new TreeMap<>();
 
     private Builder(NamespaceDescriptor ns) {
       this.bName = ns.name;

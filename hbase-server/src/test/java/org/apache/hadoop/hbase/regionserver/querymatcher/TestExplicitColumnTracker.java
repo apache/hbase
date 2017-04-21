@@ -49,7 +49,7 @@ public class TestExplicitColumnTracker {
     ColumnTracker exp = new ExplicitColumnTracker(trackColumns, 0, maxVersions, Long.MIN_VALUE);
 
     // Initialize result
-    List<ScanQueryMatcher.MatchCode> result = new ArrayList<ScanQueryMatcher.MatchCode>(scannerColumns.size());
+    List<ScanQueryMatcher.MatchCode> result = new ArrayList<>(scannerColumns.size());
 
     long timestamp = 0;
     // "Match"
@@ -67,11 +67,11 @@ public class TestExplicitColumnTracker {
   @Test
   public void testGetSingleVersion() throws IOException {
     // Create tracker
-    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     // Looking for every other
     columns.add(col2);
     columns.add(col4);
-    List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>(5);
+    List<MatchCode> expected = new ArrayList<>(5);
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL); // col1
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL); // col2
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL); // col3
@@ -80,7 +80,7 @@ public class TestExplicitColumnTracker {
     int maxVersions = 1;
 
     // Create "Scanner"
-    List<byte[]> scanner = new ArrayList<byte[]>(5);
+    List<byte[]> scanner = new ArrayList<>(5);
     scanner.add(col1);
     scanner.add(col2);
     scanner.add(col3);
@@ -93,12 +93,12 @@ public class TestExplicitColumnTracker {
   @Test
   public void testGetMultiVersion() throws IOException {
     // Create tracker
-    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     // Looking for every other
     columns.add(col2);
     columns.add(col4);
 
-    List<ScanQueryMatcher.MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>(15);
+    List<ScanQueryMatcher.MatchCode> expected = new ArrayList<>(15);
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
@@ -121,7 +121,7 @@ public class TestExplicitColumnTracker {
     int maxVersions = 2;
 
     // Create "Scanner"
-    List<byte[]> scanner = new ArrayList<byte[]>(15);
+    List<byte[]> scanner = new ArrayList<>(15);
     scanner.add(col1);
     scanner.add(col1);
     scanner.add(col1);
@@ -148,7 +148,7 @@ public class TestExplicitColumnTracker {
   @Test
   public void testStackOverflow() throws IOException {
     int maxVersions = 1;
-    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < 100000; i++) {
       columns.add(Bytes.toBytes("col" + i));
     }
@@ -173,7 +173,7 @@ public class TestExplicitColumnTracker {
    */
   @Test
   public void testInfiniteLoop() throws IOException {
-    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     columns.addAll(Arrays.asList(new byte[][] { col2, col3, col5 }));
     List<byte[]> scanner = Arrays.<byte[]> asList(new byte[][] { col1, col4 });
     List<ScanQueryMatcher.MatchCode> expected = Arrays.<ScanQueryMatcher.MatchCode> asList(

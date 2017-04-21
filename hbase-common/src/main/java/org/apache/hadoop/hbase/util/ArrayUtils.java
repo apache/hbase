@@ -102,7 +102,7 @@ public class ArrayUtils {
 
   public static ArrayList<Long> toList(long[] array){
     int length = length(array);
-    ArrayList<Long> list = new ArrayList<Long>(length);
+    ArrayList<Long> list = new ArrayList<>(length);
     for(int i=0; i < length; ++i){
       list.add(array[i]);
     }

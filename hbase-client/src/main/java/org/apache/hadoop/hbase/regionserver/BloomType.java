@@ -20,10 +20,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum BloomType {
   /**
    * Bloomfilters disabled

@@ -630,14 +630,14 @@ public class RecoverableZooKeeper {
     }
   }
   /**
-   * Convert Iterable of {@link ZKOp} we got into the ZooKeeper.Op
+   * Convert Iterable of {@link org.apache.zookeeper.Op} we got into the ZooKeeper.Op
    * instances to actually pass to multi (need to do this in order to appendMetaData).
    */
   private Iterable<Op> prepareZKMulti(Iterable<Op> ops)
   throws UnsupportedOperationException {
     if(ops == null) return null;
 
-    List<Op> preparedOps = new LinkedList<Op>();
+    List<Op> preparedOps = new LinkedList<>();
     for (Op op : ops) {
       if (op.getType() == ZooDefs.OpCode.create) {
         CreateRequest create = (CreateRequest)op.toRequestRecord();
@@ -777,7 +777,7 @@ public class RecoverableZooKeeper {
    */
   private static List<String> filterByPrefix(List<String> nodes,
       String... prefixes) {
-    List<String> lockChildren = new ArrayList<String>();
+    List<String> lockChildren = new ArrayList<>();
     for (String child : nodes){
       for (String prefix : prefixes){
         if (child.startsWith(prefix)){

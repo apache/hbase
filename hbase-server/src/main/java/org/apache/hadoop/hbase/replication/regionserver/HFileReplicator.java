@@ -109,7 +109,7 @@ public class HFileReplicator {
     builder.setNameFormat("HFileReplicationCallable-%1$d");
     this.exec =
         new ThreadPoolExecutor(maxCopyThreads, maxCopyThreads, 60, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<Runnable>(), builder.build());
+            new LinkedBlockingQueue<>(), builder.build());
     this.exec.allowCoreThreadTimeOut(true);
     this.copiesPerThread =
         conf.getInt(REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_KEY,
@@ -144,7 +144,7 @@ public class HFileReplicator {
       Table table = this.connection.getTable(tableName);
 
       // Prepare collection of queue of hfiles to be loaded(replicated)
-      Deque<LoadQueueItem> queue = new LinkedList<LoadQueueItem>();
+      Deque<LoadQueueItem> queue = new LinkedList<>();
       loadHFiles.prepareHFileQueue(stagingDir, table, queue, false);
 
       if (queue.isEmpty()) {
@@ -221,7 +221,7 @@ public class HFileReplicator {
   }
 
   private Map<String, Path> copyHFilesToStagingDir() throws IOException {
-    Map<String, Path> mapOfCopiedHFiles = new HashMap<String, Path>();
+    Map<String, Path> mapOfCopiedHFiles = new HashMap<>();
     Pair<byte[], List<String>> familyHFilePathsPair;
     List<String> hfilePaths;
     byte[] family;
@@ -270,7 +270,7 @@ public class HFileReplicator {
           totalNoOfHFiles = hfilePaths.size();
 
           // For each list of hfile paths for the family
-          List<Future<Void>> futures = new ArrayList<Future<Void>>();
+          List<Future<Void>> futures = new ArrayList<>();
           Callable<Void> c;
           Future<Void> future;
           int currentCopied = 0;

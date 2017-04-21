@@ -125,17 +125,13 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   protected int numThreads, numRegions;
 
-  ConcurrentHashMap<String, NamespaceDescriptor> namespaceMap =
-      new ConcurrentHashMap<String, NamespaceDescriptor>();
+  ConcurrentHashMap<String, NamespaceDescriptor> namespaceMap = new ConcurrentHashMap<>();
 
-  ConcurrentHashMap<TableName, HTableDescriptor> enabledTables =
-      new ConcurrentHashMap<TableName, HTableDescriptor>();
+  ConcurrentHashMap<TableName, HTableDescriptor> enabledTables = new ConcurrentHashMap<>();
 
-  ConcurrentHashMap<TableName, HTableDescriptor> disabledTables =
-      new ConcurrentHashMap<TableName, HTableDescriptor>();
+  ConcurrentHashMap<TableName, HTableDescriptor> disabledTables = new ConcurrentHashMap<>();
 
-  ConcurrentHashMap<TableName, HTableDescriptor> deletedTables =
-      new ConcurrentHashMap<TableName, HTableDescriptor>();
+  ConcurrentHashMap<TableName, HTableDescriptor> deletedTables = new ConcurrentHashMap<>();
 
   @Override
   public void setUpCluster() throws Exception {
@@ -256,7 +252,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         if (namespaceMap.isEmpty()) {
           return null;
         }
-        ArrayList<String> namespaceList = new ArrayList<String>(namespaceMap.keySet());
+        ArrayList<String> namespaceList = new ArrayList<>(namespaceMap.keySet());
         String randomKey = namespaceList.get(RandomUtils.nextInt(namespaceList.size()));
         NamespaceDescriptor randomNsd = namespaceMap.get(randomKey);
         // remove from namespaceMap
@@ -396,7 +392,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         if (tableMap.isEmpty()) {
           return null;
         }
-        ArrayList<TableName> tableList = new ArrayList<TableName>(tableMap.keySet());
+        ArrayList<TableName> tableList = new ArrayList<>(tableMap.keySet());
         TableName randomKey = tableList.get(RandomUtils.nextInt(tableList.size()));
         HTableDescriptor randomHtd = tableMap.get(randomKey);
         // remove from tableMap
@@ -770,7 +766,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       Admin admin = connection.getAdmin();
       TableName tableName = selected.getTableName();
       try (Table table = connection.getTable(tableName)){
-        ArrayList<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>(admin.getTableRegions(
+        ArrayList<HRegionInfo> regionInfos = new ArrayList<>(admin.getTableRegions(
             selected.getTableName()));
         int numRegions = regionInfos.size();
         // average number of rows to be added per action to each region

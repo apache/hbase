@@ -33,7 +33,6 @@ import java.util.Stack;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -47,7 +46,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Filter Language can be found at: https://issues.apache.org/jira/browse/HBASE-4176
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class ParseFilter {
   private static final Log LOG = LogFactory.getLog(ParseFilter.class);
 
@@ -56,7 +54,7 @@ public class ParseFilter {
 
   static {
     // Registers all the filter supported by the Filter Language
-    filterHashMap = new HashMap<String, String>();
+    filterHashMap = new HashMap<>();
     filterHashMap.put("KeyOnlyFilter", ParseConstants.FILTER_PACKAGE + "." +
                       "KeyOnlyFilter");
     filterHashMap.put("FirstKeyOnlyFilter", ParseConstants.FILTER_PACKAGE + "." +
@@ -95,7 +93,7 @@ public class ParseFilter {
                       "DependentColumnFilter");
 
     // Creates the operatorPrecedenceHashMap
-    operatorPrecedenceHashMap = new HashMap<ByteBuffer, Integer>();
+    operatorPrecedenceHashMap = new HashMap<>();
     operatorPrecedenceHashMap.put(ParseConstants.SKIP_BUFFER, 1);
     operatorPrecedenceHashMap.put(ParseConstants.WHILE_BUFFER, 1);
     operatorPrecedenceHashMap.put(ParseConstants.AND_BUFFER, 2);
@@ -122,9 +120,9 @@ public class ParseFilter {
   public Filter parseFilterString (byte [] filterStringAsByteArray)
     throws CharacterCodingException {
     // stack for the operators and parenthesis
-    Stack <ByteBuffer> operatorStack = new Stack<ByteBuffer>();
+    Stack <ByteBuffer> operatorStack = new Stack<>();
     // stack for the filter objects
-    Stack <Filter> filterStack = new Stack<Filter>();
+    Stack <Filter> filterStack = new Stack<>();
 
     Filter filter = null;
     for (int i=0; i<filterStringAsByteArray.length; i++) {
@@ -309,7 +307,7 @@ public class ParseFilter {
 
     int argumentStartIndex = 0;
     int argumentEndIndex = 0;
-    ArrayList<byte []> filterArguments = new ArrayList<byte []>();
+    ArrayList<byte []> filterArguments = new ArrayList<>();
 
     for (int i = argumentListStartIndex + 1; i<filterStringAsByteArray.length; i++) {
 
@@ -393,7 +391,7 @@ public class ParseFilter {
     if (argumentOnTopOfStack.equals(ParseConstants.OR_BUFFER)) {
       // The top of the stack is an OR
       try {
-        ArrayList<Filter> listOfFilters = new ArrayList<Filter>();
+        ArrayList<Filter> listOfFilters = new ArrayList<>();
         while (!operatorStack.empty() && operatorStack.peek().equals(ParseConstants.OR_BUFFER)) {
           Filter filter = filterStack.pop();
           listOfFilters.add(0, filter);
@@ -410,7 +408,7 @@ public class ParseFilter {
     } else if (argumentOnTopOfStack.equals(ParseConstants.AND_BUFFER)) {
       // The top of the stack is an AND
       try {
-        ArrayList<Filter> listOfFilters = new ArrayList<Filter>();
+        ArrayList<Filter> listOfFilters = new ArrayList<>();
         while (!operatorStack.empty() && operatorStack.peek().equals(ParseConstants.AND_BUFFER)) {
           Filter filter = filterStack.pop();
           listOfFilters.add(0, filter);

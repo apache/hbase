@@ -12,7 +12,7 @@ public interface StringValueOrBuilder extends
    * The string value.
    * </pre>
    *
-   * <code>optional string value = 1;</code>
+   * <code>string value = 1;</code>
    */
   java.lang.String getValue();
   /**
@@ -20,7 +20,7 @@ public interface StringValueOrBuilder extends
    * The string value.
    * </pre>
    *
-   * <code>optional string value = 1;</code>
+   * <code>string value = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getValueBytes();

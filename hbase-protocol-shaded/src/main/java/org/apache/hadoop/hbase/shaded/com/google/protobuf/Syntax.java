@@ -95,8 +95,7 @@ public enum Syntax
   }
   public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return org.apache.hadoop.hbase.shaded.com.google.protobuf.TypeProto.getDescriptor()
-        .getEnumTypes().get(0);
+    return org.apache.hadoop.hbase.shaded.com.google.protobuf.TypeProto.getDescriptor().getEnumTypes().get(0);
   }
 
   private static final Syntax[] VALUES = values();

@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.client.security;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Available security capabilities
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum SecurityCapability {
   // Note to implementors: These must match the numbering of Capability values in MasterProtos
   SIMPLE_AUTHENTICATION(0),

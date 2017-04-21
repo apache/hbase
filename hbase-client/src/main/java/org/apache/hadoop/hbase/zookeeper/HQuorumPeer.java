@@ -106,7 +106,7 @@ public class HQuorumPeer {
         conf.get("hbase.zookeeper.dns.interface","default"),
         conf.get("hbase.zookeeper.dns.nameserver","default")));
 
-    List<String> ips = new ArrayList<String>();
+    List<String> ips = new ArrayList<>();
 
     // Add what could be the best (configured) match
     ips.add(myAddress.contains(".") ?

@@ -53,13 +53,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import org.junit.rules.TestName;
 
 public abstract class TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroupsBase.class);
+  @Rule
+  public TestName name = new TestName();
 
   //shared
   protected final static String groupPrefix = "Group";
@@ -75,34 +80,39 @@ public abstract class TestRSGroupsBase {
   public final static long WAIT_TIMEOUT = 60000*5;
   public final static int NUM_SLAVES_BASE = 4; //number of slaves for the smallest cluster
 
+  // Per test variables
+  TableName tableName;
+  @Before
+  public void setup() {
+    LOG.info(name.getMethodName());
+    tableName = TableName.valueOf(tablePrefix + "_" + name.getMethodName());
+  }
 
-
-  protected RSGroupInfo addGroup(RSGroupAdmin gAdmin, String groupName,
-                                 int serverCount) throws IOException, InterruptedException {
-    RSGroupInfo defaultInfo = gAdmin
-        .getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
+  protected RSGroupInfo addGroup(String groupName, int serverCount)
+      throws IOException, InterruptedException {
+    RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
     assertTrue(defaultInfo != null);
     assertTrue(defaultInfo.getServers().size() >= serverCount);
-    gAdmin.addRSGroup(groupName);
+    rsGroupAdmin.addRSGroup(groupName);
 
-    Set<Address> set = new HashSet<Address>();
+    Set<Address> set = new HashSet<>();
     for(Address server: defaultInfo.getServers()) {
       if(set.size() == serverCount) {
         break;
       }
       set.add(server);
     }
-    gAdmin.moveServers(set, groupName);
-    RSGroupInfo result = gAdmin.getRSGroupInfo(groupName);
+    rsGroupAdmin.moveServers(set, groupName);
+    RSGroupInfo result = rsGroupAdmin.getRSGroupInfo(groupName);
     assertTrue(result.getServers().size() >= serverCount);
     return result;
   }
 
-  static void removeGroup(RSGroupAdminClient groupAdmin, String groupName) throws IOException {
-    RSGroupInfo RSGroupInfo = groupAdmin.getRSGroupInfo(groupName);
-    groupAdmin.moveTables(RSGroupInfo.getTables(), RSGroupInfo.DEFAULT_GROUP);
-    groupAdmin.moveServers(RSGroupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
-    groupAdmin.removeRSGroup(groupName);
+  void removeGroup(String groupName) throws IOException {
+    RSGroupInfo RSGroupInfo = rsGroupAdmin.getRSGroupInfo(groupName);
+    rsGroupAdmin.moveTables(RSGroupInfo.getTables(), RSGroupInfo.DEFAULT_GROUP);
+    rsGroupAdmin.moveServers(RSGroupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
+    rsGroupAdmin.removeRSGroup(groupName);
   }
 
   protected void deleteTableIfNecessary() throws IOException {
@@ -137,7 +147,7 @@ public abstract class TestRSGroupsBase {
         = getTableServerRegionMap();
     for(TableName tableName : tableServerRegionMap.keySet()) {
       if(!map.containsKey(tableName)) {
-        map.put(tableName, new LinkedList<String>());
+        map.put(tableName, new LinkedList<>());
       }
       for(List<String> subset: tableServerRegionMap.get(tableName).values()) {
         map.get(tableName).addAll(subset);
@@ -152,12 +162,19 @@ public abstract class TestRSGroupsBase {
     ClusterStatus status = TEST_UTIL.getHBaseClusterInterface().getClusterStatus();
     for(ServerName serverName : status.getServers()) {
       for(RegionLoad rl : status.getLoad(serverName).getRegionsLoad().values()) {
-        TableName tableName = HRegionInfo.getTable(rl.getName());
+        TableName tableName = null;
+        try {
+          tableName = HRegionInfo.getTable(rl.getName());
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Failed parse a table name from regionname=" +
+              Bytes.toStringBinary(rl.getName()));
+          continue;
+        }
         if(!map.containsKey(tableName)) {
-          map.put(tableName, new TreeMap<ServerName, List<String>>());
+          map.put(tableName, new TreeMap<>());
         }
         if(!map.get(tableName).containsKey(serverName)) {
-          map.get(tableName).put(serverName, new LinkedList<String>());
+          map.get(tableName).put(serverName, new LinkedList<>());
         }
         map.get(tableName).get(serverName).add(rl.getNameAsString());
       }
@@ -202,8 +219,6 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testCreateMultiRegion() throws IOException {
-    LOG.info("testCreateMultiRegion");
-    TableName tableName = TableName.valueOf(tablePrefix + "_testCreateMultiRegion");
     byte[] end = {1,3,5,7,9};
     byte[] start = {0,2,4,6,8};
     byte[][] f = {Bytes.toBytes("f")};
@@ -212,9 +227,6 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testCreateAndDrop() throws Exception {
-    LOG.info("testCreateAndDrop");
-
-    final TableName tableName = TableName.valueOf(tablePrefix + "_testCreateAndDrop");
     TEST_UTIL.createTable(tableName, Bytes.toBytes("cf"));
     //wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -230,11 +242,9 @@ public abstract class TestRSGroupsBase {
   @Test
   public void testSimpleRegionServerMove() throws IOException,
       InterruptedException {
-    LOG.info("testSimpleRegionServerMove");
-
     int initNumGroups = rsGroupAdmin.listRSGroups().size();
-    RSGroupInfo appInfo = addGroup(rsGroupAdmin, getGroupName("testSimpleRegionServerMove"), 1);
-    RSGroupInfo adminInfo = addGroup(rsGroupAdmin, getGroupName("testSimpleRegionServerMove"), 1);
+    RSGroupInfo appInfo = addGroup(getGroupName(name.getMethodName()), 1);
+    RSGroupInfo adminInfo = addGroup(getGroupName(name.getMethodName()), 1);
     RSGroupInfo dInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
     Assert.assertEquals(initNumGroups + 2, rsGroupAdmin.listRSGroups().size());
     assertEquals(1, adminInfo.getServers().size());
@@ -264,10 +274,8 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testMoveServers() throws Exception {
-    LOG.info("testMoveServers");
-
     //create groups and assign servers
-    addGroup(rsGroupAdmin, "bar", 3);
+    addGroup("bar", 3);
     rsGroupAdmin.addRSGroup("foo");
 
     RSGroupInfo barGroup = rsGroupAdmin.getRSGroupInfo("bar");
@@ -319,12 +327,9 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testTableMoveTruncateAndDrop() throws Exception {
-    LOG.info("testTableMove");
-
-    final TableName tableName = TableName.valueOf(tablePrefix + "_testTableMoveAndDrop");
     final byte[] familyNameBytes = Bytes.toBytes("f");
-    String newGroupName = getGroupName("testTableMove");
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, newGroupName, 2);
+    String newGroupName = getGroupName(name.getMethodName());
+    final RSGroupInfo newGroup = addGroup(newGroupName, 2);
 
     TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, 5);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -378,14 +383,14 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testGroupBalance() throws Exception {
-    LOG.info("testGroupBalance");
-    String newGroupName = getGroupName("testGroupBalance");
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, newGroupName, 3);
+    LOG.info(name.getMethodName());
+    String newGroupName = getGroupName(name.getMethodName());
+    final RSGroupInfo newGroup = addGroup(newGroupName, 3);
 
-    final TableName tableName = TableName.valueOf(tablePrefix+"_ns", "testGroupBalance");
+    final TableName tableName = TableName.valueOf(tablePrefix+"_ns", name.getMethodName());
     admin.createNamespace(
         NamespaceDescriptor.create(tableName.getNamespaceAsString())
-            .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, newGroupName).build());
+            .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
     final byte[] familyNameBytes = Bytes.toBytes("f");
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor("f"));
@@ -447,10 +452,7 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testRegionMove() throws Exception {
-    LOG.info("testRegionMove");
-
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, getGroupName("testRegionMove"), 1);
-    final TableName tableName = TableName.valueOf(tablePrefix + rand.nextInt());
+    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
     final byte[] familyNameBytes = Bytes.toBytes("f");
     // All the regions created below will be assigned to the default group.
     TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, 6);
@@ -515,11 +517,8 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testFailRemoveGroup() throws IOException, InterruptedException {
-    LOG.info("testFailRemoveGroup");
-
     int initNumGroups = rsGroupAdmin.listRSGroups().size();
-    addGroup(rsGroupAdmin, "bar", 3);
-    TableName tableName = TableName.valueOf(tablePrefix+"_my_table");
+    addGroup("bar", 3);
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"));
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName), "bar");
     RSGroupInfo barGroup = rsGroupAdmin.getRSGroupInfo("bar");
@@ -551,14 +550,12 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testKillRS() throws Exception {
-    LOG.info("testKillRS");
-    RSGroupInfo appInfo = addGroup(rsGroupAdmin, "appInfo", 1);
+    RSGroupInfo appInfo = addGroup("appInfo", 1);
 
-
-    final TableName tableName = TableName.valueOf(tablePrefix+"_ns", "_testKillRS");
+    final TableName tableName = TableName.valueOf(tablePrefix+"_ns", name.getMethodName());
     admin.createNamespace(
         NamespaceDescriptor.create(tableName.getNamespaceAsString())
-            .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, appInfo.getName()).build());
+            .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor("f"));
     admin.createTable(desc);
@@ -645,13 +642,11 @@ public abstract class TestRSGroupsBase {
 
   @Test
   public void testMultiTableMove() throws Exception {
-    LOG.info("testMultiTableMove");
-
-    final TableName tableNameA = TableName.valueOf(tablePrefix + "_testMultiTableMoveA");
-    final TableName tableNameB = TableName.valueOf(tablePrefix + "_testMultiTableMoveB");
+    final TableName tableNameA = TableName.valueOf(tablePrefix + name.getMethodName() + "A");
+    final TableName tableNameB = TableName.valueOf(tablePrefix + name.getMethodName() + "B");
     final byte[] familyNameBytes = Bytes.toBytes("f");
-    String newGroupName = getGroupName("testMultiTableMove");
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, newGroupName, 1);
+    String newGroupName = getGroupName(name.getMethodName());
+    final RSGroupInfo newGroup = addGroup(newGroupName, 1);
 
     TEST_UTIL.createTable(tableNameA, familyNameBytes);
     TEST_UTIL.createTable(tableNameB, familyNameBytes);
@@ -695,5 +690,123 @@ public abstract class TestRSGroupsBase {
     Set<TableName> newGroupTables = rsGroupAdmin.getRSGroupInfo(newGroupName).getTables();
     assertTrue(newGroupTables.contains(tableNameA));
     assertTrue(newGroupTables.contains(tableNameB));
+  }
+
+  @Test
+  public void testMoveServersAndTables() throws Exception {
+    LOG.info("testMoveServersAndTables");
+    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
+    //create table
+    final byte[] familyNameBytes = Bytes.toBytes("f");
+    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, 5);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        List<String> regions = getTableRegionMap().get(tableName);
+        if (regions == null)
+          return false;
+        return getTableRegionMap().get(tableName).size() >= 5;
+      }
+    });
+
+    //get server which is not a member of new group
+    ServerName targetServer = null;
+    for(ServerName server : admin.getClusterStatus().getServers()) {
+      if(!newGroup.containsServer(server.getAddress()) && 
+           !rsGroupAdmin.getRSGroupInfo("master").containsServer(server.getAddress())) {
+        targetServer = server;
+        break;
+      }
+    }
+
+    LOG.debug("Print group info : " + rsGroupAdmin.listRSGroups());
+    int oldDefaultGroupServerSize =
+            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size();
+    int oldDefaultGroupTableSize =
+            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size();
+
+    //test fail bogus server move
+    try {
+      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(Address.fromString("foo:9999")),
+              Sets.newHashSet(tableName), newGroup.getName());
+      fail("Bogus servers shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      String exp = "Source RSGroup for server foo:9999 does not exist.";
+      String msg = "Expected '" + exp + "' in exception message: ";
+      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+    }
+
+    //test fail server move
+    try {
+      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
+              Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
+      fail("servers shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      String exp = "Target RSGroup " + RSGroupInfo.DEFAULT_GROUP +
+              " is same as source " + RSGroupInfo.DEFAULT_GROUP + " RSGroup.";
+      String msg = "Expected '" + exp + "' in exception message: ";
+      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+    }
+
+    //verify default group info
+    Assert.assertEquals(oldDefaultGroupServerSize,
+            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size());
+    Assert.assertEquals(oldDefaultGroupTableSize,
+            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size());
+
+    //verify new group info
+    Assert.assertEquals(1,
+            rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers().size());
+    Assert.assertEquals(0,
+            rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
+
+    //get all region to move targetServer
+    List<String> regionList = getTableRegionMap().get(tableName);
+    for(String region : regionList) {
+      // Lets move this region to the targetServer
+      TEST_UTIL.getAdmin().move(Bytes.toBytes(HRegionInfo.encodeRegionName(Bytes.toBytes(region))),
+              Bytes.toBytes(targetServer.getServerName()));
+    }
+
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return getTableRegionMap().get(tableName) != null &&
+                getTableRegionMap().get(tableName).size() == 5 &&
+                getTableServerRegionMap().get(tableName).size() == 1 &&
+                admin.getClusterStatus().getRegionsInTransition().size() < 1;
+      }
+    });
+
+    //verify that all region move to targetServer
+    Assert.assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
+
+    //move targetServer and table to newGroup
+    LOG.info("moving server and table to newGroup");
+    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
+            Sets.newHashSet(tableName), newGroup.getName());
+
+    //verify group change
+    Assert.assertEquals(newGroup.getName(),
+            rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
+
+    //verify servers' not exist in old group
+    Set<Address> defaultServers = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers();
+    assertFalse(defaultServers.contains(targetServer.getAddress()));
+
+    //verify servers' exist in new group
+    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
+    assertTrue(newGroupServers.contains(targetServer.getAddress()));
+
+    //verify tables' not exist in old group
+    Set<TableName> defaultTables = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+    assertFalse(defaultTables.contains(tableName));
+
+    //verify tables' exist in new group
+    Set<TableName> newGroupTables = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables();
+    assertTrue(newGroupTables.contains(tableName));
+
+    //verify that all region still assgin on targetServer
+    Assert.assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
   }
 }

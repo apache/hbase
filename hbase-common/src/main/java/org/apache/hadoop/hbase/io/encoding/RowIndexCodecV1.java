@@ -110,7 +110,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
       RowIndexSeekerV1 seeker = new RowIndexSeekerV1(CellComparator.COMPARATOR,
           decodingCtx);
       seeker.setCurrentBuffer(new SingleByteBuff(sourceAsBuffer));
-      List<Cell> kvs = new ArrayList<Cell>();
+      List<Cell> kvs = new ArrayList<>();
       kvs.add(seeker.getCell());
       while (seeker.next()) {
         kvs.add(seeker.getCell());

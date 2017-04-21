@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * specified list and perform fast-forwarding during scan. Thus, the scan will be quite efficient.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class MultiRowRangeFilter extends FilterBase {
 
   private List<RowRange> rangeList;
@@ -116,7 +114,9 @@ public class MultiRowRangeFilter extends FilterBase {
       } else {
         if (range.contains(rowArr, offset, length)) {
           currentReturnCode = ReturnCode.INCLUDE;
-        } else currentReturnCode = ReturnCode.SEEK_NEXT_USING_HINT;
+        } else {
+          currentReturnCode = ReturnCode.SEEK_NEXT_USING_HINT;
+        }
       }
     } else {
       currentReturnCode = ReturnCode.INCLUDE;
@@ -151,7 +151,6 @@ public class MultiRowRangeFilter extends FilterBase {
         if (range.stopRow != null)
           rangebuilder.setStopRow(UnsafeByteOperations.unsafeWrap(range.stopRow));
         rangebuilder.setStopRowInclusive(range.stopRowInclusive);
-        range.isScan = Bytes.equals(range.startRow, range.stopRow) ? 1 : 0;
         builder.addRowRangeList(rangebuilder.build());
       }
     }
@@ -173,7 +172,7 @@ public class MultiRowRangeFilter extends FilterBase {
     }
     int length = proto.getRowRangeListCount();
     List<FilterProtos.RowRange> rangeProtos = proto.getRowRangeListList();
-    List<RowRange> rangeList = new ArrayList<RowRange>(length);
+    List<RowRange> rangeList = new ArrayList<>(length);
     for (FilterProtos.RowRange rangeProto : rangeProtos) {
       RowRange range = new RowRange(rangeProto.hasStartRow() ? rangeProto.getStartRow()
           .toByteArray() : null, rangeProto.getStartRowInclusive(), rangeProto.hasStopRow() ?
@@ -251,8 +250,8 @@ public class MultiRowRangeFilter extends FilterBase {
     if (ranges.isEmpty()) {
       throw new IllegalArgumentException("No ranges found.");
     }
-    List<RowRange> invalidRanges = new ArrayList<RowRange>();
-    List<RowRange> newRanges = new ArrayList<RowRange>(ranges.size());
+    List<RowRange> invalidRanges = new ArrayList<>();
+    List<RowRange> newRanges = new ArrayList<>(ranges.size());
     Collections.sort(ranges);
     if(ranges.get(0).isValid()) {
       if (ranges.size() == 1) {
@@ -412,13 +411,11 @@ public class MultiRowRangeFilter extends FilterBase {
   }
 
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public static class RowRange implements Comparable<RowRange> {
     private byte[] startRow;
     private boolean startRowInclusive = true;
     private byte[] stopRow;
     private boolean stopRowInclusive = false;
-    private int isScan = 0;
 
     public RowRange() {
     }
@@ -441,7 +438,6 @@ public class MultiRowRangeFilter extends FilterBase {
       this.startRowInclusive = startRowInclusive;
       this.stopRow = (stopRow == null) ? HConstants.EMPTY_BYTE_ARRAY :stopRow;
       this.stopRowInclusive = stopRowInclusive;
-      isScan = Bytes.equals(startRow, stopRow) ? 1 : 0;
     }
 
     public byte[] getStartRow() {
@@ -475,21 +471,21 @@ public class MultiRowRangeFilter extends FilterBase {
         if(stopRowInclusive) {
           return Bytes.compareTo(buffer, offset, length, startRow, 0, startRow.length) >= 0
               && (Bytes.equals(stopRow, HConstants.EMPTY_BYTE_ARRAY) ||
-                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) <= isScan);
+                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) <= 0);
         } else {
           return Bytes.compareTo(buffer, offset, length, startRow, 0, startRow.length) >= 0
               && (Bytes.equals(stopRow, HConstants.EMPTY_BYTE_ARRAY) ||
-                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) < isScan);
+                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) < 0);
         }
       } else {
         if(stopRowInclusive) {
           return Bytes.compareTo(buffer, offset, length, startRow, 0, startRow.length) > 0
               && (Bytes.equals(stopRow, HConstants.EMPTY_BYTE_ARRAY) ||
-                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) <= isScan);
+                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) <= 0);
         } else {
           return Bytes.compareTo(buffer, offset, length, startRow, 0, startRow.length) > 0
               && (Bytes.equals(stopRow, HConstants.EMPTY_BYTE_ARRAY) ||
-                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) < isScan);
+                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) < 0);
         }
       }
     }

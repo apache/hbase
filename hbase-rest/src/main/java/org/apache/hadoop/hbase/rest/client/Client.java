@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -53,7 +52,6 @@ import org.apache.http.util.EntityUtils;
  * semantics for interacting with the REST gateway.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Client {
   public static final Header[] EMPTY_HEADER_ARRAY = new Header[0];
 
@@ -77,7 +75,7 @@ public class Client {
   private void initialize(Cluster cluster, boolean sslEnabled) {
     this.cluster = cluster;
     this.sslEnabled = sslEnabled;
-    extraHeaders = new ConcurrentHashMap<String, String>();
+    extraHeaders = new ConcurrentHashMap<>();
     String clspath = System.getProperty("java.class.path");
     LOG.debug("classpath " + clspath);
     this.httpClient = new DefaultHttpClient();

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -42,7 +41,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
  * columns like 'and', 'anti' but not keys with columns like 'ball', 'act'.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class ColumnPrefixFilter extends FilterBase {
   protected byte [] prefix = null;
 

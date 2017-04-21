@@ -21,10 +21,8 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 class UnmodifyableHRegionInfo extends HRegionInfo {
   /*
    * Creates an unmodifyable copy of an HRegionInfo

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -38,7 +39,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -70,10 +70,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  *
  */
 @InterfaceAudience.Private
-public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalancer {
-  /** Config for pluggable load balancers */
-  public static final String HBASE_GROUP_LOADBALANCER_CLASS = "hbase.group.grouploadbalancer.class";
-
+public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   private static final Log LOG = LogFactory.getLog(RSGroupBasedLoadBalancer.class);
 
   private Configuration config;
@@ -82,15 +79,11 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private LoadBalancer internalBalancer;
 
-  //used during reflection by LoadBalancerFactory
+  /**
+   * Used by reflection in {@link org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory}.
+   */
   @InterfaceAudience.Private
   public RSGroupBasedLoadBalancer() {}
-
-  //This constructor should only be used for unit testing
-  @InterfaceAudience.Private
-  public RSGroupBasedLoadBalancer(RSGroupInfoManager rsGroupInfoManager) {
-    this.rsGroupInfoManager = rsGroupInfoManager;
-  }
 
   @Override
   public Configuration getConf() {
@@ -113,11 +106,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   }
 
   @Override
-  public void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad){
-
-  }
-
-  @Override
   public List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName, List<HRegionInfo>>
       clusterState) throws HBaseIOException {
     return balanceCluster(clusterState);
@@ -132,7 +120,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
     }
 
     Map<ServerName,List<HRegionInfo>> correctedState = correctAssignments(clusterState);
-    List<RegionPlan> regionPlans = new ArrayList<RegionPlan>();
+    List<RegionPlan> regionPlans = new ArrayList<>();
 
     List<HRegionInfo> misplacedRegions = correctedState.get(LoadBalancer.BOGUS_SERVER_NAME);
     for (HRegionInfo regionInfo : misplacedRegions) {
@@ -141,10 +129,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
     try {
       List<RSGroupInfo> rsgi = rsGroupInfoManager.listRSGroups();
       for (RSGroupInfo info: rsgi) {
-        Map<ServerName, List<HRegionInfo>> groupClusterState =
-            new HashMap<ServerName, List<HRegionInfo>>();
-        Map<TableName, Map<ServerName, List<HRegionInfo>>> groupClusterLoad =
-            new HashMap<TableName, Map<ServerName, List<HRegionInfo>>>();
+        Map<ServerName, List<HRegionInfo>> groupClusterState = new HashMap<>();
+        Map<TableName, Map<ServerName, List<HRegionInfo>>> groupClusterLoad = new HashMap<>();
         for (Address sName : info.getServers()) {
           for(ServerName curr: clusterState.keySet()) {
             if(curr.getAddress().equals(sName)) {
@@ -152,7 +138,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
             }
           }
         }
-        groupClusterLoad.put(TableName.valueOf(HConstants.ENSEMBLE_TABLE_NAME), groupClusterState);
+        groupClusterLoad.put(HConstants.ENSEMBLE_TABLE_NAME, groupClusterState);
         this.internalBalancer.setClusterLoad(groupClusterLoad);
         List<RegionPlan> groupPlans = this.internalBalancer
             .balanceCluster(groupClusterState);
@@ -192,7 +178,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   public Map<ServerName, List<HRegionInfo>> retainAssignment(
       Map<HRegionInfo, ServerName> regions, List<ServerName> servers) throws HBaseIOException {
     try {
-      Map<ServerName, List<HRegionInfo>> assignments = new TreeMap<ServerName, List<HRegionInfo>>();
+      Map<ServerName, List<HRegionInfo>> assignments = new TreeMap<>();
       ListMultimap<String, HRegionInfo> groupToRegion = ArrayListMultimap.create();
       Set<HRegionInfo> misplacedRegions = getMisplacedRegions(regions);
       for (HRegionInfo region : regions.keySet()) {
@@ -225,13 +211,13 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
             candidateList);
         if (server != null) {
           if (!assignments.containsKey(server)) {
-            assignments.put(server, new ArrayList<HRegionInfo>());
+            assignments.put(server, new ArrayList<>());
           }
           assignments.get(server).add(region);
         } else {
           //if not server is available assign to bogus so it ends up in RIT
           if(!assignments.containsKey(LoadBalancer.BOGUS_SERVER_NAME)) {
-            assignments.put(LoadBalancer.BOGUS_SERVER_NAME, new ArrayList<HRegionInfo>());
+            assignments.put(LoadBalancer.BOGUS_SERVER_NAME, new ArrayList<>());
           }
           assignments.get(LoadBalancer.BOGUS_SERVER_NAME).add(region);
         }
@@ -311,7 +297,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
 
   private Set<HRegionInfo> getMisplacedRegions(
       Map<HRegionInfo, ServerName> regions) throws IOException {
-    Set<HRegionInfo> misplacedRegions = new HashSet<HRegionInfo>();
+    Set<HRegionInfo> misplacedRegions = new HashSet<>();
     for(Map.Entry<HRegionInfo, ServerName> region : regions.entrySet()) {
       HRegionInfo regionInfo = region.getKey();
       ServerName assignedServer = region.getValue();
@@ -333,13 +319,12 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
 
   private Map<ServerName, List<HRegionInfo>> correctAssignments(
        Map<ServerName, List<HRegionInfo>> existingAssignments){
-    Map<ServerName, List<HRegionInfo>> correctAssignments =
-        new TreeMap<ServerName, List<HRegionInfo>>();
-    List<HRegionInfo> misplacedRegions = new LinkedList<HRegionInfo>();
-    correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<HRegionInfo>());
+    Map<ServerName, List<HRegionInfo>> correctAssignments = new TreeMap<>();
+    List<HRegionInfo> misplacedRegions = new LinkedList<>();
+    correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<>());
     for (Map.Entry<ServerName, List<HRegionInfo>> assignments : existingAssignments.entrySet()){
       ServerName sName = assignments.getKey();
-      correctAssignments.put(sName, new LinkedList<HRegionInfo>());
+      correctAssignments.put(sName, new LinkedList<>());
       List<HRegionInfo> regions = assignments.getValue();
       for (HRegionInfo region : regions) {
         RSGroupInfo info = null;
@@ -384,8 +369,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
     }
 
     // Create the balancer
-    Class<? extends LoadBalancer> balancerKlass = config.getClass(
-        HBASE_GROUP_LOADBALANCER_CLASS,
+    Class<? extends LoadBalancer> balancerKlass = config.getClass(HBASE_RSGROUP_LOADBALANCER_CLASS,
         StochasticLoadBalancer.class, LoadBalancer.class);
     internalBalancer = ReflectionUtils.newInstance(balancerKlass, config);
     internalBalancer.setMasterServices(masterServices);
@@ -397,6 +381,10 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   public boolean isOnline() {
     if (this.rsGroupInfoManager == null) return false;
     return this.rsGroupInfoManager.isOnline();
+  }
+
+  @Override
+  public void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad) {
   }
 
   @Override
@@ -419,5 +407,10 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   @Override
   public boolean isStopped() {
     return false;
+  }
+
+  @VisibleForTesting
+  public void setRsGroupInfoManager(RSGroupInfoManager rsGroupInfoManager) {
+    this.rsGroupInfoManager = rsGroupInfoManager;
   }
 }

@@ -333,14 +333,14 @@ public class TestAssignmentListener {
 
     // We'll start with 2 servers in draining that existed before the
     // HMaster started.
-    ArrayList<ServerName> drainingServers = new ArrayList<ServerName>();
+    ArrayList<ServerName> drainingServers = new ArrayList<>();
     drainingServers.add(SERVERNAME_A);
     drainingServers.add(SERVERNAME_B);
 
     // We'll have 2 servers that come online AFTER the DrainingServerTracker
     // is started (just as we see when we failover to the Backup HMaster).
     // One of these will already be a draining server.
-    HashMap<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
+    HashMap<ServerName, ServerLoad> onlineServers = new HashMap<>();
     onlineServers.put(SERVERNAME_A, ServerLoad.EMPTY_SERVERLOAD);
     onlineServers.put(SERVERNAME_C, ServerLoad.EMPTY_SERVERLOAD);
 
@@ -370,7 +370,7 @@ public class TestAssignmentListener {
         new ArrayList<ServerName>());
 
     // checkAndRecordNewServer() is how servers are added to the ServerManager.
-    ArrayList<ServerName> onlineDrainingServers = new ArrayList<ServerName>();
+    ArrayList<ServerName> onlineDrainingServers = new ArrayList<>();
     for (ServerName sn : onlineServers.keySet()){
       // Here's the actual test.
       serverManager.checkAndRecordNewServer(sn, onlineServers.get(sn));

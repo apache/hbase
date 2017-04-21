@@ -22,14 +22,12 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A collection of interfaces and utilities used for interacting with custom RPC
  * interfaces exposed by Coprocessors.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public abstract class Batch {
   /**
    * Defines a unit of work to be executed.
@@ -50,7 +48,6 @@ public abstract class Batch {
    * @param <R> the return type from {@link Batch.Call#call(Object)}
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public interface Call<T,R> {
     R call(T instance) throws IOException;
   }
@@ -72,7 +69,6 @@ public abstract class Batch {
    * org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public interface Callback<R> {
     void update(byte[] region, byte[] row, R result);
   }

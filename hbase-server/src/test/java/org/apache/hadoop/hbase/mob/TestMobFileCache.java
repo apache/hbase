@@ -134,7 +134,7 @@ public class TestMobFileCache extends TestCase {
     int maxKeyCount = keys.length;
     HRegionInfo regionInfo = new HRegionInfo(tn);
     StoreFileWriter mobWriter = mobStore.createWriterInTmp(currentDate,
-        maxKeyCount, hcd.getCompactionCompression(), regionInfo.getStartKey());
+        maxKeyCount, hcd.getCompactionCompression(), regionInfo.getStartKey(), false);
     Path mobFilePath = mobWriter.getPath();
     String fileName = mobFilePath.getName();
     mobWriter.append(key1);

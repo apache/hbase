@@ -113,7 +113,7 @@ public class ProcedureCoordinator {
   public static ThreadPoolExecutor defaultPool(String coordName, int opThreads,
       long keepAliveMillis) {
     return new ThreadPoolExecutor(1, opThreads, keepAliveMillis, TimeUnit.MILLISECONDS,
-        new SynchronousQueue<Runnable>(),
+        new SynchronousQueue<>(),
         new DaemonThreadFactory("(" + coordName + ")-proc-coordinator-pool"));
   }
 
@@ -325,6 +325,6 @@ public class ProcedureCoordinator {
    * @return Return set of all procedure names.
    */
   public Set<String> getProcedureNames() {
-    return new HashSet<String>(procedures.keySet());
+    return new HashSet<>(procedures.keySet());
   }
 }

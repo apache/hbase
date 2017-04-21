@@ -223,7 +223,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getFileCount() > 0) {
         hash = (37 * hash) + FILE_FIELD_NUMBER;
         hash = (53 * hash) + getFileList().hashCode();
@@ -2062,7 +2062,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -5283,7 +5283,7 @@ public final class DescriptorProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasStart()) {
           hash = (37 * hash) + START_FIELD_NUMBER;
           hash = (53 * hash) + getStart();
@@ -5874,7 +5874,7 @@ public final class DescriptorProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasStart()) {
           hash = (37 * hash) + START_FIELD_NUMBER;
           hash = (53 * hash) + getStart();
@@ -6803,7 +6803,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -9930,6 +9930,9 @@ public final class DescriptorProtos {
       /**
        * <pre>
        * Tag-delimited aggregate.
+       * Group type is deprecated and not supported in proto3. However, Proto3
+       * implementations should still be able to parse the group wire format and
+       * treat group fields as unknown fields.
        * </pre>
        *
        * <code>TYPE_GROUP = 10;</code>
@@ -10039,6 +10042,9 @@ public final class DescriptorProtos {
       /**
        * <pre>
        * Tag-delimited aggregate.
+       * Group type is deprecated and not supported in proto3. However, Proto3
+       * implementations should still be able to parse the group wire format and
+       * treat group fields as unknown fields.
        * </pre>
        *
        * <code>TYPE_GROUP = 10;</code>
@@ -10193,10 +10199,6 @@ public final class DescriptorProtos {
        */
       LABEL_REQUIRED(2),
       /**
-       * <pre>
-       * TODO(sanjay): Should we add LABEL_MAP?
-       * </pre>
-       *
        * <code>LABEL_REPEATED = 3;</code>
        */
       LABEL_REPEATED(3),
@@ -10215,10 +10217,6 @@ public final class DescriptorProtos {
        */
       public static final int LABEL_REQUIRED_VALUE = 2;
       /**
-       * <pre>
-       * TODO(sanjay): Should we add LABEL_MAP?
-       * </pre>
-       *
        * <code>LABEL_REPEATED = 3;</code>
        */
       public static final int LABEL_REPEATED_VALUE = 3;
@@ -10854,7 +10852,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -12376,7 +12374,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -13225,7 +13223,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -14320,7 +14318,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -15214,7 +15212,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -16561,7 +16559,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -17744,6 +17742,41 @@ public final class DescriptorProtos {
 
     /**
      * <pre>
+     * By default Swift generators will take the proto package and CamelCase it
+     * replacing '.' with underscore and use that to prefix the types/symbols
+     * defined. When this options is provided, they will use this value instead
+     * to prefix the types/symbols defined.
+     * </pre>
+     *
+     * <code>optional string swift_prefix = 39;</code>
+     */
+    boolean hasSwiftPrefix();
+    /**
+     * <pre>
+     * By default Swift generators will take the proto package and CamelCase it
+     * replacing '.' with underscore and use that to prefix the types/symbols
+     * defined. When this options is provided, they will use this value instead
+     * to prefix the types/symbols defined.
+     * </pre>
+     *
+     * <code>optional string swift_prefix = 39;</code>
+     */
+    java.lang.String getSwiftPrefix();
+    /**
+     * <pre>
+     * By default Swift generators will take the proto package and CamelCase it
+     * replacing '.' with underscore and use that to prefix the types/symbols
+     * defined. When this options is provided, they will use this value instead
+     * to prefix the types/symbols defined.
+     * </pre>
+     *
+     * <code>optional string swift_prefix = 39;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getSwiftPrefixBytes();
+
+    /**
+     * <pre>
      * The parser stores options it doesn't recognize here. See above.
      * </pre>
      *
@@ -17813,6 +17846,7 @@ public final class DescriptorProtos {
       ccEnableArenas_ = false;
       objcClassPrefix_ = "";
       csharpNamespace_ = "";
+      swiftPrefix_ = "";
       uninterpretedOption_ = java.util.Collections.emptyList();
     }
 
@@ -17925,10 +17959,16 @@ public final class DescriptorProtos {
               csharpNamespace_ = bs;
               break;
             }
+            case 314: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00004000;
+              swiftPrefix_ = bs;
+              break;
+            }
             case 7994: {
-              if (!((mutable_bitField0_ & 0x00004000) == 0x00004000)) {
+              if (!((mutable_bitField0_ & 0x00008000) == 0x00008000)) {
                 uninterpretedOption_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption>();
-                mutable_bitField0_ |= 0x00004000;
+                mutable_bitField0_ |= 0x00008000;
               }
               uninterpretedOption_.add(
                   input.readMessage(org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption.PARSER, extensionRegistry));
@@ -17942,7 +17982,7 @@ public final class DescriptorProtos {
         throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00004000) == 0x00004000)) {
+        if (((mutable_bitField0_ & 0x00008000) == 0x00008000)) {
           uninterpretedOption_ = java.util.Collections.unmodifiableList(uninterpretedOption_);
         }
         this.unknownFields = unknownFields.build();
@@ -18623,6 +18663,69 @@ public final class DescriptorProtos {
       }
     }
 
+    public static final int SWIFT_PREFIX_FIELD_NUMBER = 39;
+    private volatile java.lang.Object swiftPrefix_;
+    /**
+     * <pre>
+     * By default Swift generators will take the proto package and CamelCase it
+     * replacing '.' with underscore and use that to prefix the types/symbols
+     * defined. When this options is provided, they will use this value instead
+     * to prefix the types/symbols defined.
+     * </pre>
+     *
+     * <code>optional string swift_prefix = 39;</code>
+     */
+    public boolean hasSwiftPrefix() {
+      return ((bitField0_ & 0x00004000) == 0x00004000);
+    }
+    /**
+     * <pre>
+     * By default Swift generators will take the proto package and CamelCase it
+     * replacing '.' with underscore and use that to prefix the types/symbols
+     * defined. When this options is provided, they will use this value instead
+     * to prefix the types/symbols defined.
+     * </pre>
+     *
+     * <code>optional string swift_prefix = 39;</code>
+     */
+    public java.lang.String getSwiftPrefix() {
+      java.lang.Object ref = swiftPrefix_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          swiftPrefix_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * By default Swift generators will take the proto package and CamelCase it
+     * replacing '.' with underscore and use that to prefix the types/symbols
+     * defined. When this options is provided, they will use this value instead
+     * to prefix the types/symbols defined.
+     * </pre>
+     *
+     * <code>optional string swift_prefix = 39;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getSwiftPrefixBytes() {
+      java.lang.Object ref = swiftPrefix_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        swiftPrefix_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
     public static final int UNINTERPRETED_OPTION_FIELD_NUMBER = 999;
     private java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption> uninterpretedOption_;
     /**
@@ -18745,6 +18848,9 @@ public final class DescriptorProtos {
       if (((bitField0_ & 0x00002000) == 0x00002000)) {
         org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 37, csharpNamespace_);
       }
+      if (((bitField0_ & 0x00004000) == 0x00004000)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 39, swiftPrefix_);
+      }
       for (int i = 0; i < uninterpretedOption_.size(); i++) {
         output.writeMessage(999, uninterpretedOption_.get(i));
       }
@@ -18807,6 +18913,9 @@ public final class DescriptorProtos {
       }
       if (((bitField0_ & 0x00002000) == 0x00002000)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(37, csharpNamespace_);
+      }
+      if (((bitField0_ & 0x00004000) == 0x00004000)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(39, swiftPrefix_);
       }
       for (int i = 0; i < uninterpretedOption_.size(); i++) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
@@ -18899,6 +19008,11 @@ public final class DescriptorProtos {
         result = result && getCsharpNamespace()
             .equals(other.getCsharpNamespace());
       }
+      result = result && (hasSwiftPrefix() == other.hasSwiftPrefix());
+      if (hasSwiftPrefix()) {
+        result = result && getSwiftPrefix()
+            .equals(other.getSwiftPrefix());
+      }
       result = result && getUninterpretedOptionList()
           .equals(other.getUninterpretedOptionList());
       result = result && unknownFields.equals(other.unknownFields);
@@ -18913,7 +19027,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasJavaPackage()) {
         hash = (37 * hash) + JAVA_PACKAGE_FIELD_NUMBER;
         hash = (53 * hash) + getJavaPackage().hashCode();
@@ -18977,6 +19091,10 @@ public final class DescriptorProtos {
       if (hasCsharpNamespace()) {
         hash = (37 * hash) + CSHARP_NAMESPACE_FIELD_NUMBER;
         hash = (53 * hash) + getCsharpNamespace().hashCode();
+      }
+      if (hasSwiftPrefix()) {
+        hash = (37 * hash) + SWIFT_PREFIX_FIELD_NUMBER;
+        hash = (53 * hash) + getSwiftPrefix().hashCode();
       }
       if (getUninterpretedOptionCount() > 0) {
         hash = (37 * hash) + UNINTERPRETED_OPTION_FIELD_NUMBER;
@@ -19131,9 +19249,11 @@ public final class DescriptorProtos {
         bitField0_ = (bitField0_ & ~0x00001000);
         csharpNamespace_ = "";
         bitField0_ = (bitField0_ & ~0x00002000);
+        swiftPrefix_ = "";
+        bitField0_ = (bitField0_ & ~0x00004000);
         if (uninterpretedOptionBuilder_ == null) {
           uninterpretedOption_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00004000);
+          bitField0_ = (bitField0_ & ~0x00008000);
         } else {
           uninterpretedOptionBuilder_.clear();
         }
@@ -19217,10 +19337,14 @@ public final class DescriptorProtos {
           to_bitField0_ |= 0x00002000;
         }
         result.csharpNamespace_ = csharpNamespace_;
+        if (((from_bitField0_ & 0x00004000) == 0x00004000)) {
+          to_bitField0_ |= 0x00004000;
+        }
+        result.swiftPrefix_ = swiftPrefix_;
         if (uninterpretedOptionBuilder_ == null) {
-          if (((bitField0_ & 0x00004000) == 0x00004000)) {
+          if (((bitField0_ & 0x00008000) == 0x00008000)) {
             uninterpretedOption_ = java.util.Collections.unmodifiableList(uninterpretedOption_);
-            bitField0_ = (bitField0_ & ~0x00004000);
+            bitField0_ = (bitField0_ & ~0x00008000);
           }
           result.uninterpretedOption_ = uninterpretedOption_;
         } else {
@@ -19343,11 +19467,16 @@ public final class DescriptorProtos {
           csharpNamespace_ = other.csharpNamespace_;
           onChanged();
         }
+        if (other.hasSwiftPrefix()) {
+          bitField0_ |= 0x00004000;
+          swiftPrefix_ = other.swiftPrefix_;
+          onChanged();
+        }
         if (uninterpretedOptionBuilder_ == null) {
           if (!other.uninterpretedOption_.isEmpty()) {
             if (uninterpretedOption_.isEmpty()) {
               uninterpretedOption_ = other.uninterpretedOption_;
-              bitField0_ = (bitField0_ & ~0x00004000);
+              bitField0_ = (bitField0_ & ~0x00008000);
             } else {
               ensureUninterpretedOptionIsMutable();
               uninterpretedOption_.addAll(other.uninterpretedOption_);
@@ -19360,7 +19489,7 @@ public final class DescriptorProtos {
               uninterpretedOptionBuilder_.dispose();
               uninterpretedOptionBuilder_ = null;
               uninterpretedOption_ = other.uninterpretedOption_;
-              bitField0_ = (bitField0_ & ~0x00004000);
+              bitField0_ = (bitField0_ & ~0x00008000);
               uninterpretedOptionBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getUninterpretedOptionFieldBuilder() : null;
@@ -20454,12 +20583,130 @@ public final class DescriptorProtos {
         return this;
       }
 
+      private java.lang.Object swiftPrefix_ = "";
+      /**
+       * <pre>
+       * By default Swift generators will take the proto package and CamelCase it
+       * replacing '.' with underscore and use that to prefix the types/symbols
+       * defined. When this options is provided, they will use this value instead
+       * to prefix the types/symbols defined.
+       * </pre>
+       *
+       * <code>optional string swift_prefix = 39;</code>
+       */
+      public boolean hasSwiftPrefix() {
+        return ((bitField0_ & 0x00004000) == 0x00004000);
+      }
+      /**
+       * <pre>
+       * By default Swift generators will take the proto package and CamelCase it
+       * replacing '.' with underscore and use that to prefix the types/symbols
+       * defined. When this options is provided, they will use this value instead
+       * to prefix the types/symbols defined.
+       * </pre>
+       *
+       * <code>optional string swift_prefix = 39;</code>
+       */
+      public java.lang.String getSwiftPrefix() {
+        java.lang.Object ref = swiftPrefix_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            swiftPrefix_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * By default Swift generators will take the proto package and CamelCase it
+       * replacing '.' with underscore and use that to prefix the types/symbols
+       * defined. When this options is provided, they will use this value instead
+       * to prefix the types/symbols defined.
+       * </pre>
+       *
+       * <code>optional string swift_prefix = 39;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getSwiftPrefixBytes() {
+        java.lang.Object ref = swiftPrefix_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          swiftPrefix_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * By default Swift generators will take the proto package and CamelCase it
+       * replacing '.' with underscore and use that to prefix the types/symbols
+       * defined. When this options is provided, they will use this value instead
+       * to prefix the types/symbols defined.
+       * </pre>
+       *
+       * <code>optional string swift_prefix = 39;</code>
+       */
+      public Builder setSwiftPrefix(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00004000;
+        swiftPrefix_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * By default Swift generators will take the proto package and CamelCase it
+       * replacing '.' with underscore and use that to prefix the types/symbols
+       * defined. When this options is provided, they will use this value instead
+       * to prefix the types/symbols defined.
+       * </pre>
+       *
+       * <code>optional string swift_prefix = 39;</code>
+       */
+      public Builder clearSwiftPrefix() {
+        bitField0_ = (bitField0_ & ~0x00004000);
+        swiftPrefix_ = getDefaultInstance().getSwiftPrefix();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * By default Swift generators will take the proto package and CamelCase it
+       * replacing '.' with underscore and use that to prefix the types/symbols
+       * defined. When this options is provided, they will use this value instead
+       * to prefix the types/symbols defined.
+       * </pre>
+       *
+       * <code>optional string swift_prefix = 39;</code>
+       */
+      public Builder setSwiftPrefixBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00004000;
+        swiftPrefix_ = value;
+        onChanged();
+        return this;
+      }
+
       private java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption> uninterpretedOption_ =
         java.util.Collections.emptyList();
       private void ensureUninterpretedOptionIsMutable() {
-        if (!((bitField0_ & 0x00004000) == 0x00004000)) {
+        if (!((bitField0_ & 0x00008000) == 0x00008000)) {
           uninterpretedOption_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption>(uninterpretedOption_);
-          bitField0_ |= 0x00004000;
+          bitField0_ |= 0x00008000;
          }
       }
 
@@ -20653,7 +20900,7 @@ public final class DescriptorProtos {
       public Builder clearUninterpretedOption() {
         if (uninterpretedOptionBuilder_ == null) {
           uninterpretedOption_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00004000);
+          bitField0_ = (bitField0_ & ~0x00008000);
           onChanged();
         } else {
           uninterpretedOptionBuilder_.clear();
@@ -20758,7 +21005,7 @@ public final class DescriptorProtos {
           uninterpretedOptionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
               org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption, org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOptionOrBuilder>(
                   uninterpretedOption_,
-                  ((bitField0_ & 0x00004000) == 0x00004000),
+                  ((bitField0_ & 0x00008000) == 0x00008000),
                   getParentForChildren(),
                   isClean());
           uninterpretedOption_ = null;
@@ -21448,7 +21695,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasMessageSetWireFormat()) {
         hash = (37 * hash) + MESSAGE_SET_WIRE_FORMAT_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
@@ -23505,7 +23752,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasCtype()) {
         hash = (37 * hash) + CTYPE_FIELD_NUMBER;
         hash = (53 * hash) + ctype_;
@@ -24957,7 +25204,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getUninterpretedOptionCount() > 0) {
         hash = (37 * hash) + UNINTERPRETED_OPTION_FIELD_NUMBER;
         hash = (53 * hash) + getUninterpretedOptionList().hashCode();
@@ -25998,7 +26245,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasAllowAlias()) {
         hash = (37 * hash) + ALLOW_ALIAS_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
@@ -27119,7 +27366,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasDeprecated()) {
         hash = (37 * hash) + DEPRECATED_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
@@ -28174,7 +28421,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasDeprecated()) {
         hash = (37 * hash) + DEPRECATED_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
@@ -28930,6 +29177,15 @@ public final class DescriptorProtos {
     boolean getDeprecated();
 
     /**
+     * <code>optional .google.protobuf.MethodOptions.IdempotencyLevel idempotency_level = 34 [default = IDEMPOTENCY_UNKNOWN];</code>
+     */
+    boolean hasIdempotencyLevel();
+    /**
+     * <code>optional .google.protobuf.MethodOptions.IdempotencyLevel idempotency_level = 34 [default = IDEMPOTENCY_UNKNOWN];</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel getIdempotencyLevel();
+
+    /**
      * <pre>
      * The parser stores options it doesn't recognize here. See above.
      * </pre>
@@ -28987,6 +29243,7 @@ public final class DescriptorProtos {
     }
     private MethodOptions() {
       deprecated_ = false;
+      idempotencyLevel_ = 0;
       uninterpretedOption_ = java.util.Collections.emptyList();
     }
 
@@ -29023,10 +29280,21 @@ public final class DescriptorProtos {
               deprecated_ = input.readBool();
               break;
             }
+            case 272: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel value = org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(34, rawValue);
+              } else {
+                bitField0_ |= 0x00000002;
+                idempotencyLevel_ = rawValue;
+              }
+              break;
+            }
             case 7994: {
-              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
                 uninterpretedOption_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption>();
-                mutable_bitField0_ |= 0x00000002;
+                mutable_bitField0_ |= 0x00000004;
               }
               uninterpretedOption_.add(
                   input.readMessage(org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption.PARSER, extensionRegistry));
@@ -29040,7 +29308,7 @@ public final class DescriptorProtos {
         throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
           uninterpretedOption_ = java.util.Collections.unmodifiableList(uninterpretedOption_);
         }
         this.unknownFields = unknownFields.build();
@@ -29057,6 +29325,127 @@ public final class DescriptorProtos {
       return org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.internal_static_google_protobuf_MethodOptions_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.class, org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.Builder.class);
+    }
+
+    /**
+     * <pre>
+     * Is this method side-effect-free (or safe in HTTP parlance), or idempotent,
+     * or neither? HTTP based RPC implementation may choose GET verb for safe
+     * methods, and PUT verb for idempotent methods instead of the default POST.
+     * </pre>
+     *
+     * Protobuf enum {@code google.protobuf.MethodOptions.IdempotencyLevel}
+     */
+    public enum IdempotencyLevel
+        implements org.apache.hadoop.hbase.shaded.com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>IDEMPOTENCY_UNKNOWN = 0;</code>
+       */
+      IDEMPOTENCY_UNKNOWN(0),
+      /**
+       * <pre>
+       * implies idempotent
+       * </pre>
+       *
+       * <code>NO_SIDE_EFFECTS = 1;</code>
+       */
+      NO_SIDE_EFFECTS(1),
+      /**
+       * <pre>
+       * idempotent, but may have side effects
+       * </pre>
+       *
+       * <code>IDEMPOTENT = 2;</code>
+       */
+      IDEMPOTENT(2),
+      ;
+
+      /**
+       * <code>IDEMPOTENCY_UNKNOWN = 0;</code>
+       */
+      public static final int IDEMPOTENCY_UNKNOWN_VALUE = 0;
+      /**
+       * <pre>
+       * implies idempotent
+       * </pre>
+       *
+       * <code>NO_SIDE_EFFECTS = 1;</code>
+       */
+      public static final int NO_SIDE_EFFECTS_VALUE = 1;
+      /**
+       * <pre>
+       * idempotent, but may have side effects
+       * </pre>
+       *
+       * <code>IDEMPOTENT = 2;</code>
+       */
+      public static final int IDEMPOTENT_VALUE = 2;
+
+
+      public final int getNumber() {
+        return value;
+      }
+
+      /**
+       * @deprecated Use {@link #forNumber(int)} instead.
+       */
+      @java.lang.Deprecated
+      public static IdempotencyLevel valueOf(int value) {
+        return forNumber(value);
+      }
+
+      public static IdempotencyLevel forNumber(int value) {
+        switch (value) {
+          case 0: return IDEMPOTENCY_UNKNOWN;
+          case 1: return NO_SIDE_EFFECTS;
+          case 2: return IDEMPOTENT;
+          default: return null;
+        }
+      }
+
+      public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<IdempotencyLevel>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<
+          IdempotencyLevel> internalValueMap =
+            new org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<IdempotencyLevel>() {
+              public IdempotencyLevel findValueByNumber(int number) {
+                return IdempotencyLevel.forNumber(number);
+              }
+            };
+
+      public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(ordinal());
+      }
+      public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final IdempotencyLevel[] VALUES = values();
+
+      public static IdempotencyLevel valueOf(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int value;
+
+      private IdempotencyLevel(int value) {
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:google.protobuf.MethodOptions.IdempotencyLevel)
     }
 
     private int bitField0_;
@@ -29087,6 +29476,22 @@ public final class DescriptorProtos {
      */
     public boolean getDeprecated() {
       return deprecated_;
+    }
+
+    public static final int IDEMPOTENCY_LEVEL_FIELD_NUMBER = 34;
+    private int idempotencyLevel_;
+    /**
+     * <code>optional .google.protobuf.MethodOptions.IdempotencyLevel idempotency_level = 34 [default = IDEMPOTENCY_UNKNOWN];</code>
+     */
+    public boolean hasIdempotencyLevel() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional .google.protobuf.MethodOptions.IdempotencyLevel idempotency_level = 34 [default = IDEMPOTENCY_UNKNOWN];</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel getIdempotencyLevel() {
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel result = org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel.valueOf(idempotencyLevel_);
+      return result == null ? org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel.IDEMPOTENCY_UNKNOWN : result;
     }
 
     public static final int UNINTERPRETED_OPTION_FIELD_NUMBER = 999;
@@ -29172,6 +29577,9 @@ public final class DescriptorProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeBool(33, deprecated_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeEnum(34, idempotencyLevel_);
+      }
       for (int i = 0; i < uninterpretedOption_.size(); i++) {
         output.writeMessage(999, uninterpretedOption_.get(i));
       }
@@ -29187,6 +29595,10 @@ public final class DescriptorProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeBoolSize(33, deprecated_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeEnumSize(34, idempotencyLevel_);
       }
       for (int i = 0; i < uninterpretedOption_.size(); i++) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
@@ -29215,6 +29627,10 @@ public final class DescriptorProtos {
         result = result && (getDeprecated()
             == other.getDeprecated());
       }
+      result = result && (hasIdempotencyLevel() == other.hasIdempotencyLevel());
+      if (hasIdempotencyLevel()) {
+        result = result && idempotencyLevel_ == other.idempotencyLevel_;
+      }
       result = result && getUninterpretedOptionList()
           .equals(other.getUninterpretedOptionList());
       result = result && unknownFields.equals(other.unknownFields);
@@ -29229,11 +29645,15 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasDeprecated()) {
         hash = (37 * hash) + DEPRECATED_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
             getDeprecated());
+      }
+      if (hasIdempotencyLevel()) {
+        hash = (37 * hash) + IDEMPOTENCY_LEVEL_FIELD_NUMBER;
+        hash = (53 * hash) + idempotencyLevel_;
       }
       if (getUninterpretedOptionCount() > 0) {
         hash = (37 * hash) + UNINTERPRETED_OPTION_FIELD_NUMBER;
@@ -29362,9 +29782,11 @@ public final class DescriptorProtos {
         super.clear();
         deprecated_ = false;
         bitField0_ = (bitField0_ & ~0x00000001);
+        idempotencyLevel_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
         if (uninterpretedOptionBuilder_ == null) {
           uninterpretedOption_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000004);
         } else {
           uninterpretedOptionBuilder_.clear();
         }
@@ -29396,10 +29818,14 @@ public final class DescriptorProtos {
           to_bitField0_ |= 0x00000001;
         }
         result.deprecated_ = deprecated_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.idempotencyLevel_ = idempotencyLevel_;
         if (uninterpretedOptionBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          if (((bitField0_ & 0x00000004) == 0x00000004)) {
             uninterpretedOption_ = java.util.Collections.unmodifiableList(uninterpretedOption_);
-            bitField0_ = (bitField0_ & ~0x00000002);
+            bitField0_ = (bitField0_ & ~0x00000004);
           }
           result.uninterpretedOption_ = uninterpretedOption_;
         } else {
@@ -29473,11 +29899,14 @@ public final class DescriptorProtos {
         if (other.hasDeprecated()) {
           setDeprecated(other.getDeprecated());
         }
+        if (other.hasIdempotencyLevel()) {
+          setIdempotencyLevel(other.getIdempotencyLevel());
+        }
         if (uninterpretedOptionBuilder_ == null) {
           if (!other.uninterpretedOption_.isEmpty()) {
             if (uninterpretedOption_.isEmpty()) {
               uninterpretedOption_ = other.uninterpretedOption_;
-              bitField0_ = (bitField0_ & ~0x00000002);
+              bitField0_ = (bitField0_ & ~0x00000004);
             } else {
               ensureUninterpretedOptionIsMutable();
               uninterpretedOption_.addAll(other.uninterpretedOption_);
@@ -29490,7 +29919,7 @@ public final class DescriptorProtos {
               uninterpretedOptionBuilder_.dispose();
               uninterpretedOptionBuilder_ = null;
               uninterpretedOption_ = other.uninterpretedOption_;
-              bitField0_ = (bitField0_ & ~0x00000002);
+              bitField0_ = (bitField0_ & ~0x00000004);
               uninterpretedOptionBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getUninterpretedOptionFieldBuilder() : null;
@@ -29596,12 +30025,48 @@ public final class DescriptorProtos {
         return this;
       }
 
+      private int idempotencyLevel_ = 0;
+      /**
+       * <code>optional .google.protobuf.MethodOptions.IdempotencyLevel idempotency_level = 34 [default = IDEMPOTENCY_UNKNOWN];</code>
+       */
+      public boolean hasIdempotencyLevel() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .google.protobuf.MethodOptions.IdempotencyLevel idempotency_level = 34 [default = IDEMPOTENCY_UNKNOWN];</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel getIdempotencyLevel() {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel result = org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel.valueOf(idempotencyLevel_);
+        return result == null ? org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel.IDEMPOTENCY_UNKNOWN : result;
+      }
+      /**
+       * <code>optional .google.protobuf.MethodOptions.IdempotencyLevel idempotency_level = 34 [default = IDEMPOTENCY_UNKNOWN];</code>
+       */
+      public Builder setIdempotencyLevel(org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.MethodOptions.IdempotencyLevel value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
+        idempotencyLevel_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .google.protobuf.MethodOptions.IdempotencyLevel idempotency_level = 34 [default = IDEMPOTENCY_UNKNOWN];</code>
+       */
+      public Builder clearIdempotencyLevel() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        idempotencyLevel_ = 0;
+        onChanged();
+        return this;
+      }
+
       private java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption> uninterpretedOption_ =
         java.util.Collections.emptyList();
       private void ensureUninterpretedOptionIsMutable() {
-        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
           uninterpretedOption_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption>(uninterpretedOption_);
-          bitField0_ |= 0x00000002;
+          bitField0_ |= 0x00000004;
          }
       }
 
@@ -29795,7 +30260,7 @@ public final class DescriptorProtos {
       public Builder clearUninterpretedOption() {
         if (uninterpretedOptionBuilder_ == null) {
           uninterpretedOption_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000004);
           onChanged();
         } else {
           uninterpretedOptionBuilder_.clear();
@@ -29900,7 +30365,7 @@ public final class DescriptorProtos {
           uninterpretedOptionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
               org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption, org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOption.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.DescriptorProtos.UninterpretedOptionOrBuilder>(
                   uninterpretedOption_,
-                  ((bitField0_ & 0x00000002) == 0x00000002),
+                  ((bitField0_ & 0x00000004) == 0x00000004),
                   getParentForChildren(),
                   isClean());
           uninterpretedOption_ = null;
@@ -30439,7 +30904,7 @@ public final class DescriptorProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (hasNamePart()) {
           hash = (37 * hash) + NAME_PART_FIELD_NUMBER;
           hash = (53 * hash) + getNamePart().hashCode();
@@ -31180,7 +31645,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getNameCount() > 0) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getNameList().hashCode();
@@ -33406,7 +33871,7 @@ public final class DescriptorProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (getPathCount() > 0) {
           hash = (37 * hash) + PATH_FIELD_NUMBER;
           hash = (53 * hash) + getPathList().hashCode();
@@ -34906,7 +35371,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getLocationCount() > 0) {
         hash = (37 * hash) + LOCATION_FIELD_NUMBER;
         hash = (53 * hash) + getLocationList().hashCode();
@@ -36845,7 +37310,7 @@ public final class DescriptorProtos {
           return memoizedHashCode;
         }
         int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
+        hash = (19 * hash) + getDescriptor().hashCode();
         if (getPathCount() > 0) {
           hash = (37 * hash) + PATH_FIELD_NUMBER;
           hash = (53 * hash) + getPathList().hashCode();
@@ -37593,7 +38058,7 @@ public final class DescriptorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getAnnotationCount() > 0) {
         hash = (37 * hash) + ANNOTATION_FIELD_NUMBER;
         hash = (53 * hash) + getAnnotationList().hashCode();
@@ -38433,7 +38898,7 @@ public final class DescriptorProtos {
       "\n\013output_type\030\003 \001(\t\022/\n\007options\030\004 \001(\0132\036.g" +
       "oogle.protobuf.MethodOptions\022\037\n\020client_s" +
       "treaming\030\005 \001(\010:\005false\022\037\n\020server_streamin" +
-      "g\030\006 \001(\010:\005false\"\204\005\n\013FileOptions\022\024\n\014java_p" +
+      "g\030\006 \001(\010:\005false\"\232\005\n\013FileOptions\022\024\n\014java_p" +
       "ackage\030\001 \001(\t\022\034\n\024java_outer_classname\030\010 \001" +
       "(\t\022\"\n\023java_multiple_files\030\n \001(\010:\005false\022)" +
       "\n\035java_generate_equals_and_hash\030\024 \001(\010B\002\030" +
@@ -38445,62 +38910,68 @@ public final class DescriptorProtos {
       "\005false\022\"\n\023py_generic_services\030\022 \001(\010:\005fal" +
       "se\022\031\n\ndeprecated\030\027 \001(\010:\005false\022\037\n\020cc_enab" +
       "le_arenas\030\037 \001(\010:\005false\022\031\n\021objc_class_pre" +
-      "fix\030$ \001(\t\022\030\n\020csharp_namespace\030% \001(\t\022C\n\024u" +
-      "ninterpreted_option\030\347\007 \003(\0132$.google.prot" +
-      "obuf.UninterpretedOption\":\n\014OptimizeMode",
-      "\022\t\n\005SPEED\020\001\022\r\n\tCODE_SIZE\020\002\022\020\n\014LITE_RUNTI" +
-      "ME\020\003*\t\010\350\007\020\200\200\200\200\002J\004\010&\020\'\"\354\001\n\016MessageOptions" +
-      "\022&\n\027message_set_wire_format\030\001 \001(\010:\005false" +
-      "\022.\n\037no_standard_descriptor_accessor\030\002 \001(" +
-      "\010:\005false\022\031\n\ndeprecated\030\003 \001(\010:\005false\022\021\n\tm" +
-      "ap_entry\030\007 \001(\010\022C\n\024uninterpreted_option\030\347" +
-      "\007 \003(\0132$.google.protobuf.UninterpretedOpt" +
-      "ion*\t\010\350\007\020\200\200\200\200\002J\004\010\010\020\t\"\236\003\n\014FieldOptions\022:\n" +
-      "\005ctype\030\001 \001(\0162#.google.protobuf.FieldOpti" +
-      "ons.CType:\006STRING\022\016\n\006packed\030\002 \001(\010\022?\n\006jst",
-      "ype\030\006 \001(\0162$.google.protobuf.FieldOptions" +
-      ".JSType:\tJS_NORMAL\022\023\n\004lazy\030\005 \001(\010:\005false\022" +
-      "\031\n\ndeprecated\030\003 \001(\010:\005false\022\023\n\004weak\030\n \001(\010" +
-      ":\005false\022C\n\024uninterpreted_option\030\347\007 \003(\0132$" +
-      ".google.protobuf.UninterpretedOption\"/\n\005" +
-      "CType\022\n\n\006STRING\020\000\022\010\n\004CORD\020\001\022\020\n\014STRING_PI" +
-      "ECE\020\002\"5\n\006JSType\022\r\n\tJS_NORMAL\020\000\022\r\n\tJS_STR" +
-      "ING\020\001\022\r\n\tJS_NUMBER\020\002*\t\010\350\007\020\200\200\200\200\002J\004\010\004\020\005\"^\n" +
-      "\014OneofOptions\022C\n\024uninterpreted_option\030\347\007" +
-      " \003(\0132$.google.protobuf.UninterpretedOpti",
-      "on*\t\010\350\007\020\200\200\200\200\002\"\215\001\n\013EnumOptions\022\023\n\013allow_a" +
-      "lias\030\002 \001(\010\022\031\n\ndeprecated\030\003 \001(\010:\005false\022C\n" +
-      "\024uninterpreted_option\030\347\007 \003(\0132$.google.pr" +
-      "otobuf.UninterpretedOption*\t\010\350\007\020\200\200\200\200\002\"}\n" +
-      "\020EnumValueOptions\022\031\n\ndeprecated\030\001 \001(\010:\005f" +
-      "alse\022C\n\024uninterpreted_option\030\347\007 \003(\0132$.go" +
-      "ogle.protobuf.UninterpretedOption*\t\010\350\007\020\200" +
-      "\200\200\200\002\"{\n\016ServiceOptions\022\031\n\ndeprecated\030! \001" +
-      "(\010:\005false\022C\n\024uninterpreted_option\030\347\007 \003(\013" +
-      "2$.google.protobuf.UninterpretedOption*\t",
-      "\010\350\007\020\200\200\200\200\002\"z\n\rMethodOptions\022\031\n\ndeprecated" +
-      "\030! \001(\010:\005false\022C\n\024uninterpreted_option\030\347\007" +
+      "fix\030$ \001(\t\022\030\n\020csharp_namespace\030% \001(\t\022\024\n\014s" +
+      "wift_prefix\030\' \001(\t\022C\n\024uninterpreted_optio" +
+      "n\030\347\007 \003(\0132$.google.protobuf.Uninterpreted",
+      "Option\":\n\014OptimizeMode\022\t\n\005SPEED\020\001\022\r\n\tCOD" +
+      "E_SIZE\020\002\022\020\n\014LITE_RUNTIME\020\003*\t\010\350\007\020\200\200\200\200\002J\004\010" +
+      "&\020\'\"\354\001\n\016MessageOptions\022&\n\027message_set_wi" +
+      "re_format\030\001 \001(\010:\005false\022.\n\037no_standard_de" +
+      "scriptor_accessor\030\002 \001(\010:\005false\022\031\n\ndeprec" +
+      "ated\030\003 \001(\010:\005false\022\021\n\tmap_entry\030\007 \001(\010\022C\n\024" +
+      "uninterpreted_option\030\347\007 \003(\0132$.google.pro" +
+      "tobuf.UninterpretedOption*\t\010\350\007\020\200\200\200\200\002J\004\010\010" +
+      "\020\t\"\236\003\n\014FieldOptions\022:\n\005ctype\030\001 \001(\0162#.goo" +
+      "gle.protobuf.FieldOptions.CType:\006STRING\022",
+      "\016\n\006packed\030\002 \001(\010\022?\n\006jstype\030\006 \001(\0162$.google" +
+      ".protobuf.FieldOptions.JSType:\tJS_NORMAL" +
+      "\022\023\n\004lazy\030\005 \001(\010:\005false\022\031\n\ndeprecated\030\003 \001(" +
+      "\010:\005false\022\023\n\004weak\030\n \001(\010:\005false\022C\n\024uninter" +
+      "preted_option\030\347\007 \003(\0132$.google.protobuf.U" +
+      "ninterpretedOption\"/\n\005CType\022\n\n\006STRING\020\000\022" +
+      "\010\n\004CORD\020\001\022\020\n\014STRING_PIECE\020\002\"5\n\006JSType\022\r\n" +
+      "\tJS_NORMAL\020\000\022\r\n\tJS_STRING\020\001\022\r\n\tJS_NUMBER" +
+      "\020\002*\t\010\350\007\020\200\200\200\200\002J\004\010\004\020\005\"^\n\014OneofOptions\022C\n\024u" +
+      "ninterpreted_option\030\347\007 \003(\0132$.google.prot",
+      "obuf.UninterpretedOption*\t\010\350\007\020\200\200\200\200\002\"\215\001\n\013" +
+      "EnumOptions\022\023\n\013allow_alias\030\002 \001(\010\022\031\n\ndepr" +
+      "ecated\030\003 \001(\010:\005false\022C\n\024uninterpreted_opt" +
+      "ion\030\347\007 \003(\0132$.google.protobuf.Uninterpret" +
+      "edOption*\t\010\350\007\020\200\200\200\200\002\"}\n\020EnumValueOptions\022" +
+      "\031\n\ndeprecated\030\001 \001(\010:\005false\022C\n\024uninterpre" +
+      "ted_option\030\347\007 \003(\0132$.google.protobuf.Unin" +
+      "terpretedOption*\t\010\350\007\020\200\200\200\200\002\"{\n\016ServiceOpt" +
+      "ions\022\031\n\ndeprecated\030! \001(\010:\005false\022C\n\024unint" +
+      "erpreted_option\030\347\007 \003(\0132$.google.protobuf",
+      ".UninterpretedOption*\t\010\350\007\020\200\200\200\200\002\"\255\002\n\rMeth" +
+      "odOptions\022\031\n\ndeprecated\030! \001(\010:\005false\022_\n\021" +
+      "idempotency_level\030\" \001(\0162/.google.protobu" +
+      "f.MethodOptions.IdempotencyLevel:\023IDEMPO" +
+      "TENCY_UNKNOWN\022C\n\024uninterpreted_option\030\347\007" +
       " \003(\0132$.google.protobuf.UninterpretedOpti" +
-      "on*\t\010\350\007\020\200\200\200\200\002\"\236\002\n\023UninterpretedOption\022;\n" +
-      "\004name\030\002 \003(\0132-.google.protobuf.Uninterpre" +
-      "tedOption.NamePart\022\030\n\020identifier_value\030\003" +
-      " \001(\t\022\032\n\022positive_int_value\030\004 \001(\004\022\032\n\022nega" +
-      "tive_int_value\030\005 \001(\003\022\024\n\014double_value\030\006 \001" +
-      "(\001\022\024\n\014string_value\030\007 \001(\014\022\027\n\017aggregate_va" +
-      "lue\030\010 \001(\t\0323\n\010NamePart\022\021\n\tname_part\030\001 \002(\t",
-      "\022\024\n\014is_extension\030\002 \002(\010\"\325\001\n\016SourceCodeInf" +
-      "o\022:\n\010location\030\001 \003(\0132(.google.protobuf.So" +
-      "urceCodeInfo.Location\032\206\001\n\010Location\022\020\n\004pa" +
-      "th\030\001 \003(\005B\002\020\001\022\020\n\004span\030\002 \003(\005B\002\020\001\022\030\n\020leadin" +
-      "g_comments\030\003 \001(\t\022\031\n\021trailing_comments\030\004 " +
-      "\001(\t\022!\n\031leading_detached_comments\030\006 \003(\t\"\247" +
-      "\001\n\021GeneratedCodeInfo\022A\n\nannotation\030\001 \003(\013" +
-      "2-.google.protobuf.GeneratedCodeInfo.Ann" +
-      "otation\032O\n\nAnnotation\022\020\n\004path\030\001 \003(\005B\002\020\001\022" +
-      "\023\n\013source_file\030\002 \001(\t\022\r\n\005begin\030\003 \001(\005\022\013\n\003e",
-      "nd\030\004 \001(\005BX\n\023com.google.protobufB\020Descrip" +
-      "torProtosH\001Z\ndescriptor\242\002\003GPB\252\002\032Google.P" +
-      "rotobuf.Reflection"
+      "on\"P\n\020IdempotencyLevel\022\027\n\023IDEMPOTENCY_UN" +
+      "KNOWN\020\000\022\023\n\017NO_SIDE_EFFECTS\020\001\022\016\n\nIDEMPOTE" +
+      "NT\020\002*\t\010\350\007\020\200\200\200\200\002\"\236\002\n\023UninterpretedOption\022" +
+      ";\n\004name\030\002 \003(\0132-.google.protobuf.Uninterp",
+      "retedOption.NamePart\022\030\n\020identifier_value" +
+      "\030\003 \001(\t\022\032\n\022positive_int_value\030\004 \001(\004\022\032\n\022ne" +
+      "gative_int_value\030\005 \001(\003\022\024\n\014double_value\030\006" +
+      " \001(\001\022\024\n\014string_value\030\007 \001(\014\022\027\n\017aggregate_" +
+      "value\030\010 \001(\t\0323\n\010NamePart\022\021\n\tname_part\030\001 \002" +
+      "(\t\022\024\n\014is_extension\030\002 \002(\010\"\325\001\n\016SourceCodeI" +
+      "nfo\022:\n\010location\030\001 \003(\0132(.google.protobuf." +
+      "SourceCodeInfo.Location\032\206\001\n\010Location\022\020\n\004" +
+      "path\030\001 \003(\005B\002\020\001\022\020\n\004span\030\002 \003(\005B\002\020\001\022\030\n\020lead" +
+      "ing_comments\030\003 \001(\t\022\031\n\021trailing_comments\030",
+      "\004 \001(\t\022!\n\031leading_detached_comments\030\006 \003(\t" +
+      "\"\247\001\n\021GeneratedCodeInfo\022A\n\nannotation\030\001 \003" +
+      "(\0132-.google.protobuf.GeneratedCodeInfo.A" +
+      "nnotation\032O\n\nAnnotation\022\020\n\004path\030\001 \003(\005B\002\020" +
+      "\001\022\023\n\013source_file\030\002 \001(\t\022\r\n\005begin\030\003 \001(\005\022\013\n" +
+      "\003end\030\004 \001(\005B\214\001\n\023com.google.protobufB\020Desc" +
+      "riptorProtosH\001Z>github.com/golang/protob" +
+      "uf/protoc-gen-go/descriptor;descriptor\242\002" +
+      "\003GPB\252\002\032Google.Protobuf.Reflection"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -38585,7 +39056,7 @@ public final class DescriptorProtos {
     internal_static_google_protobuf_FileOptions_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_google_protobuf_FileOptions_descriptor,
-        new java.lang.String[] { "JavaPackage", "JavaOuterClassname", "JavaMultipleFiles", "JavaGenerateEqualsAndHash", "JavaStringCheckUtf8", "OptimizeFor", "GoPackage", "CcGenericServices", "JavaGenericServices", "PyGenericServices", "Deprecated", "CcEnableArenas", "ObjcClassPrefix", "CsharpNamespace", "UninterpretedOption", });
+        new java.lang.String[] { "JavaPackage", "JavaOuterClassname", "JavaMultipleFiles", "JavaGenerateEqualsAndHash", "JavaStringCheckUtf8", "OptimizeFor", "GoPackage", "CcGenericServices", "JavaGenericServices", "PyGenericServices", "Deprecated", "CcEnableArenas", "ObjcClassPrefix", "CsharpNamespace", "SwiftPrefix", "UninterpretedOption", });
     internal_static_google_protobuf_MessageOptions_descriptor =
       getDescriptor().getMessageTypes().get(10);
     internal_static_google_protobuf_MessageOptions_fieldAccessorTable = new
@@ -38627,7 +39098,7 @@ public final class DescriptorProtos {
     internal_static_google_protobuf_MethodOptions_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_google_protobuf_MethodOptions_descriptor,
-        new java.lang.String[] { "Deprecated", "UninterpretedOption", });
+        new java.lang.String[] { "Deprecated", "IdempotencyLevel", "UninterpretedOption", });
     internal_static_google_protobuf_UninterpretedOption_descriptor =
       getDescriptor().getMessageTypes().get(17);
     internal_static_google_protobuf_UninterpretedOption_fieldAccessorTable = new

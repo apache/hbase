@@ -200,7 +200,7 @@ public class TestIllegalTableDescriptor {
   }
 
   private static class ListAppender extends AppenderSkeleton {
-    private final List<String> messages = new ArrayList<String>();
+    private final List<String> messages = new ArrayList<>();
 
     @Override
     protected void append(LoggingEvent event) {

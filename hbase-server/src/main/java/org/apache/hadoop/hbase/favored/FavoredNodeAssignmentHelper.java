@@ -85,9 +85,9 @@ public class FavoredNodeAssignmentHelper {
       final RackManager rackManager) {
     this.servers = servers;
     this.rackManager = rackManager;
-    this.rackToRegionServerMap = new HashMap<String, List<ServerName>>();
-    this.regionServerToRackMap = new HashMap<String, String>();
-    this.uniqueRackList = new ArrayList<String>();
+    this.rackToRegionServerMap = new HashMap<>();
+    this.regionServerToRackMap = new HashMap<>();
+    this.uniqueRackList = new ArrayList<>();
     this.random = new Random();
   }
 
@@ -122,7 +122,7 @@ public class FavoredNodeAssignmentHelper {
   public static void updateMetaWithFavoredNodesInfo(
       Map<HRegionInfo, List<ServerName>> regionToFavoredNodes,
       Connection connection) throws IOException {
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     for (Map.Entry<HRegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
       Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
       if (put != null) {
@@ -142,7 +142,7 @@ public class FavoredNodeAssignmentHelper {
   public static void updateMetaWithFavoredNodesInfo(
       Map<HRegionInfo, List<ServerName>> regionToFavoredNodes,
       Configuration conf) throws IOException {
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     for (Map.Entry<HRegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
       Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
       if (put != null) {
@@ -226,7 +226,7 @@ public class FavoredNodeAssignmentHelper {
   // The regions should be distributed proportionately to the racksizes
   void placePrimaryRSAsRoundRobin(Map<ServerName, List<HRegionInfo>> assignmentMap,
       Map<HRegionInfo, ServerName> primaryRSMap, List<HRegionInfo> regions) {
-    List<String> rackList = new ArrayList<String>(rackToRegionServerMap.size());
+    List<String> rackList = new ArrayList<>(rackToRegionServerMap.size());
     rackList.addAll(rackToRegionServerMap.keySet());
     int rackIndex = random.nextInt(rackList.size());
     int maxRackSize = 0;
@@ -266,7 +266,7 @@ public class FavoredNodeAssignmentHelper {
       if (assignmentMap != null) {
         List<HRegionInfo> regionsForServer = assignmentMap.get(currentServer);
         if (regionsForServer == null) {
-          regionsForServer = new ArrayList<HRegionInfo>();
+          regionsForServer = new ArrayList<>();
           assignmentMap.put(currentServer, regionsForServer);
         }
         regionsForServer.add(regionInfo);
@@ -284,8 +284,7 @@ public class FavoredNodeAssignmentHelper {
 
   Map<HRegionInfo, ServerName[]> placeSecondaryAndTertiaryRS(
       Map<HRegionInfo, ServerName> primaryRSMap) {
-    Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap =
-        new HashMap<HRegionInfo, ServerName[]>();
+    Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap = new HashMap<>();
     for (Map.Entry<HRegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
       // Get the target region and its primary region server rack
       HRegionInfo regionInfo = entry.getKey();
@@ -317,12 +316,11 @@ public class FavoredNodeAssignmentHelper {
 
   private Map<ServerName, Set<HRegionInfo>> mapRSToPrimaries(
       Map<HRegionInfo, ServerName> primaryRSMap) {
-    Map<ServerName, Set<HRegionInfo>> primaryServerMap =
-        new HashMap<ServerName, Set<HRegionInfo>>();
+    Map<ServerName, Set<HRegionInfo>> primaryServerMap = new HashMap<>();
     for (Entry<HRegionInfo, ServerName> e : primaryRSMap.entrySet()) {
       Set<HRegionInfo> currentSet = primaryServerMap.get(e.getValue());
       if (currentSet == null) {
-        currentSet = new HashSet<HRegionInfo>();
+        currentSet = new HashSet<>();
       }
       currentSet.add(e.getKey());
       primaryServerMap.put(e.getValue(), currentSet);
@@ -341,8 +339,7 @@ public class FavoredNodeAssignmentHelper {
       Map<HRegionInfo, ServerName> primaryRSMap) {
     Map<ServerName, Set<HRegionInfo>> serverToPrimaries =
         mapRSToPrimaries(primaryRSMap);
-    Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap =
-        new HashMap<HRegionInfo, ServerName[]>();
+    Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap = new HashMap<>();
 
     for (Entry<HRegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
       // Get the target region and its primary region server rack
@@ -381,11 +378,11 @@ public class FavoredNodeAssignmentHelper {
     // Random to choose the secondary and tertiary region server
     // from another rack to place the secondary and tertiary
     // Random to choose one rack except for the current rack
-    Set<String> rackSkipSet = new HashSet<String>();
+    Set<String> rackSkipSet = new HashSet<>();
     rackSkipSet.add(primaryRack);
     String secondaryRack = getOneRandomRack(rackSkipSet);
     List<ServerName> serverList = getServersFromRack(secondaryRack);
-    Set<ServerName> serverSet = new HashSet<ServerName>();
+    Set<ServerName> serverSet = new HashSet<>();
     serverSet.addAll(serverList);
     ServerName[] favoredNodes;
     if (serverList.size() >= 2) {
@@ -393,7 +390,7 @@ public class FavoredNodeAssignmentHelper {
       // Skip the secondary for the tertiary placement
       // skip the servers which share the primary already
       Set<HRegionInfo> primaries = serverToPrimaries.get(primaryRS);
-      Set<ServerName> skipServerSet = new HashSet<ServerName>();
+      Set<ServerName> skipServerSet = new HashSet<>();
       while (true) {
         ServerName[] secondaryAndTertiary = null;
         if (primaries.size() > 1) {
@@ -423,7 +420,7 @@ public class FavoredNodeAssignmentHelper {
         }
         secondaryRack = getOneRandomRack(rackSkipSet);
         serverList = getServersFromRack(secondaryRack);
-        serverSet = new HashSet<ServerName>();
+        serverSet = new HashSet<>();
         serverSet.addAll(serverList);
       }
 
@@ -452,7 +449,7 @@ public class FavoredNodeAssignmentHelper {
       // Pick the tertiary
       if (getTotalNumberOfRacks() == 2) {
         // Pick the tertiary from the same rack of the primary RS
-        Set<ServerName> serverSkipSet = new HashSet<ServerName>();
+        Set<ServerName> serverSkipSet = new HashSet<>();
         serverSkipSet.add(primaryRS);
         favoredNodes[1] = getOneRandomServer(primaryRack, serverSkipSet);
       } else {
@@ -478,7 +475,7 @@ public class FavoredNodeAssignmentHelper {
     } else {
       // Randomly select two region servers from the server list and make sure
       // they are not overlap with the primary region server;
-     Set<ServerName> serverSkipSet = new HashSet<ServerName>();
+     Set<ServerName> serverSkipSet = new HashSet<>();
      serverSkipSet.add(primaryRS);
 
      // Place the secondary RS

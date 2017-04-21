@@ -18,13 +18,11 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * The POJO equivalent of ReplicationProtos.ReplicationPeerDescription
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ReplicationPeerDescription {
 
   private final String id;

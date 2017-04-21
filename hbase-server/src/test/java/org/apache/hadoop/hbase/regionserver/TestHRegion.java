@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.NullComparator;
@@ -608,7 +609,7 @@ public class TestHRegion {
     // open the second scanner
     RegionScanner scanner2 = region.getScanner(scan);
 
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
 
     System.out.println("Smallest read point:" + region.getSmallestReadPoint());
 
@@ -657,7 +658,7 @@ public class TestHRegion {
     region.compact(true);
 
     scanner1.reseek(Bytes.toBytes("r2"));
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scanner1.next(results);
     Cell keyValue = results.get(0);
     Assert.assertTrue(Bytes.compareTo(CellUtil.cloneRow(keyValue), Bytes.toBytes("r2")) == 0);
@@ -694,7 +695,7 @@ public class TestHRegion {
         writer.close();
       }
       MonitoredTask status = TaskMonitor.get().createStatus(method);
-      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (Store store : region.getStores()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId - 1);
       }
@@ -746,7 +747,7 @@ public class TestHRegion {
       }
       long recoverSeqId = 1030;
       MonitoredTask status = TaskMonitor.get().createStatus(method);
-      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (Store store : region.getStores()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
       }
@@ -791,7 +792,7 @@ public class TestHRegion {
       FSDataOutputStream dos = fs.create(recoveredEdits);
       dos.close();
 
-      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (Store store : region.getStores()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId);
       }
@@ -848,7 +849,7 @@ public class TestHRegion {
       }
 
       long recoverSeqId = 1030;
-      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       MonitoredTask status = TaskMonitor.get().createStatus(method);
       for (Store store : region.getStores()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
@@ -893,7 +894,7 @@ public class TestHRegion {
 
       // this will create a region with 3 files
       assertEquals(3, region.getStore(family).getStorefilesCount());
-      List<Path> storeFiles = new ArrayList<Path>(3);
+      List<Path> storeFiles = new ArrayList<>(3);
       for (StoreFile sf : region.getStore(family).getStorefiles()) {
         storeFiles.add(sf.getPath());
       }
@@ -1007,7 +1008,7 @@ public class TestHRegion {
 
       // this will create a region with 3 files from flush
       assertEquals(3, region.getStore(family).getStorefilesCount());
-      List<String> storeFiles = new ArrayList<String>(3);
+      List<String> storeFiles = new ArrayList<>(3);
       for (StoreFile sf : region.getStore(family).getStorefiles()) {
         storeFiles.add(sf.getPath().getName());
       }
@@ -1017,7 +1018,7 @@ public class TestHRegion {
       WAL.Reader reader = WALFactory.createReader(fs, AbstractFSWALProvider.getCurrentFileName(wal),
         TEST_UTIL.getConfiguration());
       try {
-        List<WAL.Entry> flushDescriptors = new ArrayList<WAL.Entry>();
+        List<WAL.Entry> flushDescriptors = new ArrayList<>();
         long lastFlushSeqId = -1;
         while (true) {
           WAL.Entry entry = reader.next();
@@ -1422,7 +1423,7 @@ public class TestHRegion {
     InternalScanner scanner = buildScanner(keyPrefix, value, r);
     int count = 0;
     boolean more = false;
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     do {
       more = scanner.next(results);
       if (results != null && !results.isEmpty())
@@ -1440,7 +1441,7 @@ public class TestHRegion {
   private int getNumberOfRows(String keyPrefix, String value, HRegion r) throws Exception {
     InternalScanner resultScanner = buildScanner(keyPrefix, value, r);
     int numberOfResults = 0;
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     boolean more = false;
     do {
       more = resultScanner.next(results);
@@ -1579,7 +1580,7 @@ public class TestHRegion {
 
 
       MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(CONF);
-      final AtomicReference<OperationStatus[]> retFromThread = new AtomicReference<OperationStatus[]>();
+      final AtomicReference<OperationStatus[]> retFromThread = new AtomicReference<>();
       final CountDownLatch startingPuts = new CountDownLatch(1);
       final CountDownLatch startingClose = new CountDownLatch(1);
       TestThread putter = new TestThread(ctx) {
@@ -2112,14 +2113,13 @@ public class TestHRegion {
     // Setting up region
     this.region = initHRegion(tableName, method, CONF, fam1, fam2, fam3);
     try {
-      List<Cell> kvs = new ArrayList<Cell>();
+      List<Cell> kvs = new ArrayList<>();
       kvs.add(new KeyValue(row1, fam4, null, null));
 
       // testing existing family
       byte[] family = fam2;
       try {
-        NavigableMap<byte[], List<Cell>> deleteMap = new TreeMap<byte[], List<Cell>>(
-            Bytes.BYTES_COMPARATOR);
+        NavigableMap<byte[], List<Cell>> deleteMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
         region.delete(deleteMap, Durability.SYNC_WAL);
       } catch (Exception e) {
@@ -2130,8 +2130,7 @@ public class TestHRegion {
       boolean ok = false;
       family = fam4;
       try {
-        NavigableMap<byte[], List<Cell>> deleteMap = new TreeMap<byte[], List<Cell>>(
-            Bytes.BYTES_COMPARATOR);
+        NavigableMap<byte[], List<Cell>> deleteMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
         region.delete(deleteMap, Durability.SYNC_WAL);
       } catch (Exception e) {
@@ -2361,7 +2360,7 @@ public class TestHRegion {
       Scan scan = new Scan();
       scan.addFamily(fam1).addFamily(fam2);
       InternalScanner s = region.getScanner(scan);
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       s.next(results);
       assertTrue(CellUtil.matchingRow(results.get(0), rowA));
 
@@ -2488,7 +2487,7 @@ public class TestHRegion {
       scan.addColumn(fam1, qual1);
       InternalScanner s = region.getScanner(scan);
 
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       assertEquals(false, s.next(results));
       assertEquals(1, results.size());
       Cell kv = results.get(0);
@@ -2514,13 +2513,12 @@ public class TestHRegion {
     this.region = initHRegion(tableName, method, CONF, fam1);
     try {
       // Building checkerList
-      List<Cell> kvs = new ArrayList<Cell>();
+      List<Cell> kvs = new ArrayList<>();
       kvs.add(new KeyValue(row1, fam1, col1, null));
       kvs.add(new KeyValue(row1, fam1, col2, null));
       kvs.add(new KeyValue(row1, fam1, col3, null));
 
-      NavigableMap<byte[], List<Cell>> deleteMap = new TreeMap<byte[], List<Cell>>(
-          Bytes.BYTES_COMPARATOR);
+      NavigableMap<byte[], List<Cell>> deleteMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       deleteMap.put(fam1, kvs);
       region.delete(deleteMap, Durability.SYNC_WAL);
 
@@ -2811,22 +2809,22 @@ public class TestHRegion {
       List<Cell> res = null;
 
       // Result 1
-      List<Cell> expected1 = new ArrayList<Cell>();
+      List<Cell> expected1 = new ArrayList<>();
       expected1.add(new KeyValue(row1, fam2, null, ts, KeyValue.Type.Put, null));
       expected1.add(new KeyValue(row1, fam4, null, ts, KeyValue.Type.Put, null));
 
-      res = new ArrayList<Cell>();
+      res = new ArrayList<>();
       is.next(res);
       for (int i = 0; i < res.size(); i++) {
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected1.get(i), res.get(i)));
       }
 
       // Result 2
-      List<Cell> expected2 = new ArrayList<Cell>();
+      List<Cell> expected2 = new ArrayList<>();
       expected2.add(new KeyValue(row2, fam2, null, ts, KeyValue.Type.Put, null));
       expected2.add(new KeyValue(row2, fam4, null, ts, KeyValue.Type.Put, null));
 
-      res = new ArrayList<Cell>();
+      res = new ArrayList<>();
       is.next(res);
       for (int i = 0; i < res.size(); i++) {
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
@@ -2872,14 +2870,14 @@ public class TestHRegion {
       region.put(put);
 
       // Expected
-      List<Cell> expected = new ArrayList<Cell>();
+      List<Cell> expected = new ArrayList<>();
       expected.add(kv13);
       expected.add(kv12);
 
       Scan scan = new Scan(row1);
       scan.addColumn(fam1, qf1);
       scan.setMaxVersions(MAX_VERSIONS);
-      List<Cell> actual = new ArrayList<Cell>();
+      List<Cell> actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -2931,7 +2929,7 @@ public class TestHRegion {
       region.flush(true);
 
       // Expected
-      List<Cell> expected = new ArrayList<Cell>();
+      List<Cell> expected = new ArrayList<>();
       expected.add(kv13);
       expected.add(kv12);
       expected.add(kv23);
@@ -2941,7 +2939,7 @@ public class TestHRegion {
       scan.addColumn(fam1, qf1);
       scan.addColumn(fam1, qf2);
       scan.setMaxVersions(MAX_VERSIONS);
-      List<Cell> actual = new ArrayList<Cell>();
+      List<Cell> actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -3010,7 +3008,7 @@ public class TestHRegion {
       region.put(put);
 
       // Expected
-      List<Cell> expected = new ArrayList<Cell>();
+      List<Cell> expected = new ArrayList<>();
       expected.add(kv14);
       expected.add(kv13);
       expected.add(kv12);
@@ -3023,7 +3021,7 @@ public class TestHRegion {
       scan.addColumn(fam1, qf2);
       int versions = 3;
       scan.setMaxVersions(versions);
-      List<Cell> actual = new ArrayList<Cell>();
+      List<Cell> actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -3074,7 +3072,7 @@ public class TestHRegion {
       region.put(put);
 
       // Expected
-      List<Cell> expected = new ArrayList<Cell>();
+      List<Cell> expected = new ArrayList<>();
       expected.add(kv13);
       expected.add(kv12);
       expected.add(kv23);
@@ -3083,7 +3081,7 @@ public class TestHRegion {
       Scan scan = new Scan(row1);
       scan.addFamily(fam1);
       scan.setMaxVersions(MAX_VERSIONS);
-      List<Cell> actual = new ArrayList<Cell>();
+      List<Cell> actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -3134,7 +3132,7 @@ public class TestHRegion {
       region.flush(true);
 
       // Expected
-      List<Cell> expected = new ArrayList<Cell>();
+      List<Cell> expected = new ArrayList<>();
       expected.add(kv13);
       expected.add(kv12);
       expected.add(kv23);
@@ -3143,7 +3141,7 @@ public class TestHRegion {
       Scan scan = new Scan(row1);
       scan.addFamily(fam1);
       scan.setMaxVersions(MAX_VERSIONS);
-      List<Cell> actual = new ArrayList<Cell>();
+      List<Cell> actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -3198,7 +3196,7 @@ public class TestHRegion {
       scan.addColumn(family, col1);
       InternalScanner s = region.getScanner(scan);
 
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       assertEquals(false, s.next(results));
       assertEquals(0, results.size());
     } finally {
@@ -3258,7 +3256,7 @@ public class TestHRegion {
       region.put(put);
 
       // Expected
-      List<KeyValue> expected = new ArrayList<KeyValue>();
+      List<KeyValue> expected = new ArrayList<>();
       expected.add(kv14);
       expected.add(kv13);
       expected.add(kv12);
@@ -3269,7 +3267,7 @@ public class TestHRegion {
       Scan scan = new Scan(row1);
       int versions = 3;
       scan.setMaxVersions(versions);
-      List<Cell> actual = new ArrayList<Cell>();
+      List<Cell> actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -3334,7 +3332,7 @@ public class TestHRegion {
       scan.setLoadColumnFamiliesOnDemand(true);
       InternalScanner s = region.getScanner(scan);
 
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       assertTrue(s.next(results));
       assertEquals(results.size(), 1);
       results.clear();
@@ -3427,7 +3425,7 @@ public class TestHRegion {
       // r8: first:a
       // r9: first:a
 
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       int index = 0;
       ScannerContext scannerContext = ScannerContext.newBuilder().setBatchLimit(3).build();
       while (true) {
@@ -3501,7 +3499,7 @@ public class TestHRegion {
           new BinaryComparator(Bytes.toBytes(5L))));
 
       int expectedCount = 0;
-      List<Cell> res = new ArrayList<Cell>();
+      List<Cell> res = new ArrayList<>();
 
       boolean toggle = true;
       for (long i = 0; i < numRows; i++) {
@@ -3643,7 +3641,7 @@ public class TestHRegion {
       Scan scan = new Scan(Bytes.toBytes("row0"), Bytes.toBytes("row1"));
 
       int expectedCount = numFamilies * numQualifiers;
-      List<Cell> res = new ArrayList<Cell>();
+      List<Cell> res = new ArrayList<>();
 
       long prevTimestamp = 0L;
       for (int i = 0; i < testCount; i++) {
@@ -3943,7 +3941,7 @@ public class TestHRegion {
               new BinaryComparator(Bytes.toBytes(0L))), new SingleColumnValueFilter(family, qual1,
               CompareOp.LESS_OR_EQUAL, new BinaryComparator(Bytes.toBytes(3L))))));
       InternalScanner scanner = region.getScanner(idxScan);
-      List<Cell> res = new ArrayList<Cell>();
+      List<Cell> res = new ArrayList<>();
 
       while (scanner.next(res))
         ;
@@ -4841,7 +4839,7 @@ public class TestHRegion {
       scan.addFamily(families[i]);
     InternalScanner s = r.getScanner(scan);
     try {
-      List<Cell> curVals = new ArrayList<Cell>();
+      List<Cell> curVals = new ArrayList<>();
       boolean first = true;
       OUTER_LOOP: while (s.next(curVals)) {
         for (Cell kv : curVals) {
@@ -4934,6 +4932,7 @@ public class TestHRegion {
       String callingMethod, Configuration conf, boolean isReadOnly, byte[]... families)
       throws IOException {
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegionInfo hri = new HRegionInfo(tableName, startKey, stopKey);
     final WAL wal = HBaseTestingUtility.createWal(conf, logDir, hri);
     return initHRegion(tableName, startKey, stopKey, isReadOnly,
@@ -5000,7 +4999,7 @@ public class TestHRegion {
       scan.setMaxVersions(5);
       scan.setReversed(true);
       InternalScanner scanner = region.getScanner(scan);
-      List<Cell> currRow = new ArrayList<Cell>();
+      List<Cell> currRow = new ArrayList<>();
       boolean hasNext = scanner.next(currRow);
       assertEquals(2, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
@@ -5056,7 +5055,7 @@ public class TestHRegion {
       region.put(put);
 
       Scan scan = new Scan(rowD);
-      List<Cell> currRow = new ArrayList<Cell>();
+      List<Cell> currRow = new ArrayList<>();
       scan.setReversed(true);
       scan.setMaxVersions(5);
       InternalScanner scanner = region.getScanner(scan);
@@ -5113,7 +5112,7 @@ public class TestHRegion {
       put.add(kv3);
       region.put(put);
       Scan scan = new Scan();
-      List<Cell> currRow = new ArrayList<Cell>();
+      List<Cell> currRow = new ArrayList<>();
       scan.setReversed(true);
       InternalScanner scanner = region.getScanner(scan);
       boolean hasNext = scanner.next(currRow);
@@ -5184,7 +5183,7 @@ public class TestHRegion {
       Scan scan = new Scan(rowD, rowA);
       scan.addColumn(families[0], col1);
       scan.setReversed(true);
-      List<Cell> currRow = new ArrayList<Cell>();
+      List<Cell> currRow = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
       boolean hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
@@ -5267,7 +5266,7 @@ public class TestHRegion {
       Scan scan = new Scan(rowD, rowA);
       scan.addColumn(families[0], col1);
       scan.setReversed(true);
-      List<Cell> currRow = new ArrayList<Cell>();
+      List<Cell> currRow = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
       boolean hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
@@ -5412,7 +5411,7 @@ public class TestHRegion {
       scan.setBatch(3);
       scan.setReversed(true);
       InternalScanner scanner = region.getScanner(scan);
-      List<Cell> currRow = new ArrayList<Cell>();
+      List<Cell> currRow = new ArrayList<>();
       boolean hasNext = false;
       // 1. scan out "row4" (5 kvs), "row5" can't be scanned out since not
       // included in scan range
@@ -5519,7 +5518,7 @@ public class TestHRegion {
       scan.setReversed(true);
       scan.setBatch(10);
       InternalScanner scanner = region.getScanner(scan);
-      List<Cell> currRow = new ArrayList<Cell>();
+      List<Cell> currRow = new ArrayList<>();
       boolean hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
@@ -6348,7 +6347,7 @@ public class TestHRegion {
     CONF.setInt("hbase.regionserver.wal.disruptor.event.count", 2);
     this.region = initHRegion(tableName, method, CONF, families);
     try {
-      List<Thread> threads = new ArrayList<Thread>();
+      List<Thread> threads = new ArrayList<>();
       for (int i = 0; i < numRows; i++) {
         final int count = i;
         Thread t = new Thread(new Runnable() {
@@ -6391,6 +6390,30 @@ public class TestHRegion {
         // dealt with so could still be memory hanging out when we get to here -- memory we can't
         // flush because the accounting is 'off' since original DSE.
       }
+      this.region = null;
+    }
+  }
+
+  @Test
+  public void testMutateRow_WriteRequestCount() throws Exception {
+    byte[] row1 = Bytes.toBytes("row1");
+    byte[] fam1 = Bytes.toBytes("fam1");
+    byte[] qf1 = Bytes.toBytes("qualifier");
+    byte[] val1 = Bytes.toBytes("value1");
+
+    RowMutations rm = new RowMutations(row1);
+    Put put = new Put(row1);
+    put.addColumn(fam1, qf1, val1);
+    rm.add(put);
+
+    this.region = initHRegion(tableName, method, CONF, fam1);
+    try {
+      long wrcBeforeMutate = this.region.writeRequestsCount.longValue();
+      this.region.mutateRow(rm);
+      long wrcAfterMutate = this.region.writeRequestsCount.longValue();
+      Assert.assertEquals(wrcBeforeMutate + rm.getMutations().size(), wrcAfterMutate);
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }

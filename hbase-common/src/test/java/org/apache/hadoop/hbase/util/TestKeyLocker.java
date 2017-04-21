@@ -30,7 +30,7 @@ import org.junit.experimental.categories.Category;
 public class TestKeyLocker {
   @Test
   public void testLocker(){
-    KeyLocker<String> locker = new KeyLocker<String>();
+    KeyLocker<String> locker = new KeyLocker<>();
     ReentrantLock lock1 = locker.acquireLock("l1");
     Assert.assertTrue(lock1.isHeldByCurrentThread());
 

@@ -85,7 +85,7 @@ import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
-import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -157,6 +157,7 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EncryptionTest;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -165,7 +166,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.ZKDataMigrator;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -177,9 +177,9 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -207,7 +207,6 @@ import com.google.protobuf.Service;
 @SuppressWarnings("deprecation")
 public class HMaster extends HRegionServer implements MasterServices {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
-
 
   /**
    * Protection against zombie master. Started once Master accepts active responsibility and
@@ -306,7 +305,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   MemoryBoundedLogMessageBuffer rsFatals;
 
   // flag set after we become the active master (used for testing)
-  private volatile boolean isActiveMaster = false;
+  private volatile boolean activeMaster = false;
 
   // flag set after we complete initialization once active,
   // it is not private since it's used in unit tests
@@ -391,14 +390,42 @@ public class HMaster extends HRegionServer implements MasterServices {
   private Server masterJettyServer;
 
   public static class RedirectServlet extends HttpServlet {
-    private static final long serialVersionUID = 2894774810058302472L;
-    private static int regionServerInfoPort;
+    private static final long serialVersionUID = 2894774810058302473L;
+    private final int regionServerInfoPort;
+    private final String regionServerHostname;
+
+    /**
+     * @param infoServer that we're trying to send all requests to
+     * @param hostname may be null. if given, will be used for redirects instead of host from client.
+     */
+    public RedirectServlet(InfoServer infoServer, String hostname) {
+       regionServerInfoPort = infoServer.getPort();
+       regionServerHostname = hostname;
+    }
 
     @Override
     public void doGet(HttpServletRequest request,
         HttpServletResponse response) throws ServletException, IOException {
+      String redirectHost = regionServerHostname;
+      if(redirectHost == null) {
+        redirectHost = request.getServerName();
+        if(!Addressing.isLocalAddress(InetAddress.getByName(redirectHost))) {
+          LOG.warn("Couldn't resolve '" + redirectHost + "' as an address local to this node and '" +
+              MASTER_HOSTNAME_KEY + "' is not set; client will get a HTTP 400 response. If " +
+              "your HBase deployment relies on client accessible names that the region server process " +
+              "can't resolve locally, then you should set the previously mentioned configuration variable " +
+              "to an appropriate hostname.");
+          // no sending client provided input back to the client, so the goal host is just in the logs.
+          response.sendError(400, "Request was to a host that I can't resolve for any of the network interfaces on " +
+              "this node. If this is due to an intermediary such as an HTTP load balancer or other proxy, your HBase " +
+              "administrator can set '" + MASTER_HOSTNAME_KEY + "' to point to the correct hostname.");
+          return;
+        }
+      }
+      // TODO this scheme should come from looking at the scheme registered in the infoserver's http server for the
+      // host and port we're using, but it's buried way too deep to do that ATM.
       String redirectUrl = request.getScheme() + "://"
-        + request.getServerName() + ":" + regionServerInfoPort
+        + redirectHost + ":" + regionServerInfoPort
         + request.getRequestURI();
       response.sendRedirect(redirectUrl);
     }
@@ -500,13 +527,16 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (!conf.getBoolean("hbase.master.infoserver.redirect", true)) {
       return -1;
     }
-    int infoPort = conf.getInt("hbase.master.info.port.orig",
+    final int infoPort = conf.getInt("hbase.master.info.port.orig",
       HConstants.DEFAULT_MASTER_INFOPORT);
     // -1 is for disabling info server, so no redirecting
     if (infoPort < 0 || infoServer == null) {
       return -1;
     }
-    String addr = conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+    if(infoPort == infoServer.getPort()) {
+      return infoPort;
+    }
+    final String addr = conf.get("hbase.master.info.bindAddress", "0.0.0.0");
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
       String msg =
           "Failed to start redirecting jetty server. Address " + addr
@@ -516,19 +546,21 @@ public class HMaster extends HRegionServer implements MasterServices {
       throw new IOException(msg);
     }
 
-    RedirectServlet.regionServerInfoPort = infoServer.getPort();
-    if(RedirectServlet.regionServerInfoPort == infoPort) {
-      return infoPort;
-    }
+    // TODO I'm pretty sure we could just add another binding to the InfoServer run by
+    // the RegionServer and have it run the RedirectServlet instead of standing up
+    // a second entire stack here.
     masterJettyServer = new Server();
-    ServerConnector connector = new ServerConnector(masterJettyServer);
+    final ServerConnector connector = new ServerConnector(masterJettyServer);
     connector.setHost(addr);
     connector.setPort(infoPort);
     masterJettyServer.addConnector(connector);
     masterJettyServer.setStopAtShutdown(true);
 
-    WebAppContext context = new WebAppContext(null, "/", null, null, null, null, WebAppContext.NO_SESSIONS);
-    context.addServlet(RedirectServlet.class, "/*");
+    final String redirectHostname = shouldUseThisHostnameInstead() ? useThisHostnameInstead : null;
+
+    final RedirectServlet redirect = new RedirectServlet(infoServer, redirectHostname);
+    final WebAppContext context = new WebAppContext(null, "/", null, null, null, null, WebAppContext.NO_SESSIONS);
+    context.addServlet(new ServletHolder(redirect), "/*");
     context.setServer(masterJettyServer);
 
     try {
@@ -565,7 +597,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   protected void waitForMasterActive(){
     boolean tablesOnMaster = BaseLoadBalancer.tablesOnMaster(conf);
-    while (!(tablesOnMaster && isActiveMaster)
+    while (!(tablesOnMaster && activeMaster)
         && !isStopped() && !isAborted()) {
       sleeper.sleep();
     }
@@ -701,7 +733,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void finishActiveMasterInitialization(MonitoredTask status)
       throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
 
-    isActiveMaster = true;
+    activeMaster = true;
     Thread zombieDetector = new Thread(new InitializationMonitor(this),
         "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
     zombieDetector.start();
@@ -716,6 +748,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
+    // Initialize the chunkCreator
+    initializeMemStoreChunkCreator();
     this.fileSystemManager = new MasterFileSystem(this);
     this.walManager = new MasterWalManager(this);
 
@@ -853,6 +887,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
     configurationManager.registerObserver(this.balancer);
+    configurationManager.registerObserver(this.hfileCleaner);
 
     // Set master as 'initialized'.
     setInitialized(true);
@@ -1031,7 +1066,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
-    Map<String, Object> params = new HashMap<String, Object>();
+    Map<String, Object> params = new HashMap<>();
     params.put(MASTER, this);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
         .getFileSystem(), archiveDir, params);
@@ -1295,7 +1330,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       Map<TableName, Map<ServerName, List<HRegionInfo>>> assignmentsByTable =
         this.assignmentManager.getRegionStates().getAssignmentsByTable();
 
-      List<RegionPlan> plans = new ArrayList<RegionPlan>();
+      List<RegionPlan> plans = new ArrayList<>();
 
       //Give the balancer the current cluster state.
       this.balancer.setClusterStatus(getClusterStatus());
@@ -1510,7 +1545,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     });
   }
 
-  void move(final byte[] encodedRegionName,
+  @VisibleForTesting // Public so can be accessed by tests.
+  public void move(final byte[] encodedRegionName,
       final byte[] destServerName) throws HBaseIOException {
     RegionState regionState = assignmentManager.getRegionStates().
       getRegionState(Bytes.toString(encodedRegionName));
@@ -2202,8 +2238,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   Pair<HRegionInfo, ServerName> getTableRegionForRow(
       final TableName tableName, final byte [] rowKey)
   throws IOException {
-    final AtomicReference<Pair<HRegionInfo, ServerName>> result =
-      new AtomicReference<Pair<HRegionInfo, ServerName>>(null);
+    final AtomicReference<Pair<HRegionInfo, ServerName>> result = new AtomicReference<>(null);
 
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
         @Override
@@ -2312,7 +2347,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     List<ServerName> backupMasters = null;
     if (backupMasterStrings != null && !backupMasterStrings.isEmpty()) {
-      backupMasters = new ArrayList<ServerName>(backupMasterStrings.size());
+      backupMasters = new ArrayList<>(backupMasterStrings.size());
       for (String s: backupMasterStrings) {
         try {
           byte [] bytes;
@@ -2523,7 +2558,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   @Override
   public boolean isActiveMaster() {
-    return isActiveMaster;
+    return activeMaster;
   }
 
   /**
@@ -2819,7 +2854,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   List<NamespaceDescriptor> getNamespaces() throws IOException {
     checkInitialized();
-    final List<NamespaceDescriptor> nsds = new ArrayList<NamespaceDescriptor>();
+    final List<NamespaceDescriptor> nsds = new ArrayList<>();
     boolean bypass = false;
     if (cpHost != null) {
       bypass = cpHost.preListNamespaceDescriptors(nsds);
@@ -2885,7 +2920,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   public List<HTableDescriptor> listTableDescriptors(final String namespace, final String regex,
       final List<TableName> tableNameList, final boolean includeSysTables)
   throws IOException {
-    List<HTableDescriptor> htds = new ArrayList<HTableDescriptor>();
+    List<HTableDescriptor> htds = new ArrayList<>();
     boolean bypass = cpHost != null?
         cpHost.preGetTableDescriptors(tableNameList, htds, regex): false;
     if (!bypass) {
@@ -2906,13 +2941,13 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public List<TableName> listTableNames(final String namespace, final String regex,
       final boolean includeSysTables) throws IOException {
-    List<HTableDescriptor> htds = new ArrayList<HTableDescriptor>();
+    List<HTableDescriptor> htds = new ArrayList<>();
     boolean bypass = cpHost != null? cpHost.preGetTableNames(htds, regex): false;
     if (!bypass) {
       htds = getTableDescriptors(htds, namespace, regex, null, includeSysTables);
       if (cpHost != null) cpHost.postGetTableNames(htds, regex);
     }
-    List<TableName> result = new ArrayList<TableName>(htds.size());
+    List<TableName> result = new ArrayList<>(htds.size());
     for (HTableDescriptor htd: htds) result.add(htd.getTableName());
     return result;
   }
@@ -3229,7 +3264,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public List<ServerName> listDrainingRegionServers() {
     String parentZnode = getZooKeeper().znodePaths.drainingZNode;
-    List<ServerName> serverNames = new ArrayList<ServerName>();
+    List<ServerName> serverNames = new ArrayList<>();
     List<String> serverStrs = null;
     try {
       serverStrs = ZKUtil.listChildrenNoWatch(getZooKeeper(), parentZnode);

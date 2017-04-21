@@ -142,7 +142,7 @@ public class TestCompoundBloomFilter {
   }
 
   private List<KeyValue> createSortedKeyValues(Random rand, int n) {
-    List<KeyValue> kvList = new ArrayList<KeyValue>(n);
+    List<KeyValue> kvList = new ArrayList<>(n);
     for (int i = 0; i < n; ++i)
       kvList.add(RandomKeyValueUtil.randomKeyValue(rand));
     Collections.sort(kvList, CellComparator.COMPARATOR);
@@ -200,8 +200,9 @@ public class TestCompoundBloomFilter {
 
   private void readStoreFile(int t, BloomType bt, List<KeyValue> kvs,
       Path sfPath) throws IOException {
-    StoreFile sf = new StoreFile(fs, sfPath, conf, cacheConf, bt);
-    StoreFileReader r = sf.createReader();
+    StoreFile sf = new StoreFile(fs, sfPath, conf, cacheConf, bt, true);
+    sf.initReader();
+    StoreFileReader r = sf.getReader();
     final boolean pread = true; // does not really matter
     StoreFileScanner scanner = r.getStoreFileScanner(true, pread, false, 0, 0, false);
 
@@ -285,7 +286,7 @@ public class TestCompoundBloomFilter {
 
   private boolean isInBloom(StoreFileScanner scanner, byte[] row,
       byte[] qualifier) {
-    Scan scan = new Scan(row, row);
+    Scan scan = new Scan().withStartRow(row).withStopRow(row, true);
     scan.addColumn(Bytes.toBytes(RandomKeyValueUtil.COLUMN_FAMILY_NAME), qualifier);
     Store store = mock(Store.class);
     HColumnDescriptor hcd = mock(HColumnDescriptor.class);

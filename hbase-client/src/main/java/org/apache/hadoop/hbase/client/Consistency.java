@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Consistency defines the expected consistency level for an operation.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum Consistency {
   // developer note: Do not reorder. Client.proto#Consistency depends on this order
   /**

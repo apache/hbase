@@ -60,7 +60,7 @@ public class LongEncoder {
   /****************** construct ****************************/
 
   public LongEncoder() {
-    this.uniqueValues = new HashSet<Long>();
+    this.uniqueValues = new HashSet<>();
   }
 
   public void reset() {

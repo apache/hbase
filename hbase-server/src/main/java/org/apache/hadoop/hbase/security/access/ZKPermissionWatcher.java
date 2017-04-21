@@ -58,8 +58,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
   TableAuthManager authManager;
   String aclZNode;
   CountDownLatch initialized = new CountDownLatch(1);
-  AtomicReference<List<ZKUtil.NodeAndData>> nodes =
-      new AtomicReference<List<ZKUtil.NodeAndData>>(null);
+  AtomicReference<List<ZKUtil.NodeAndData>> nodes = new AtomicReference<>(null);
   ExecutorService executor;
 
   public ZKPermissionWatcher(ZooKeeperWatcher watcher,

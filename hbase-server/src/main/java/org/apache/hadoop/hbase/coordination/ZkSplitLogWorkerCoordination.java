@@ -449,7 +449,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
             if (!recoveringRegions.isEmpty()) {
               // Make a local copy to prevent ConcurrentModificationException when other threads
               // modify recoveringRegions
-              List<String> tmpCopy = new ArrayList<String>(recoveringRegions.keySet());
+              List<String> tmpCopy = new ArrayList<>(recoveringRegions.keySet());
               int listSize = tmpCopy.size();
               for (int i = 0; i < listSize; i++) {
                 String region = tmpCopy.get(i);

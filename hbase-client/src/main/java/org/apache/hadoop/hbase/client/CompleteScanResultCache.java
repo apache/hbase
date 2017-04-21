@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 class CompleteScanResultCache implements ScanResultCache {
 
+  private int numberOfCompleteRows;
+
   private final List<Result> partialResults = new ArrayList<>();
 
   private Result combine() throws IOException {
@@ -59,6 +61,11 @@ class CompleteScanResultCache implements ScanResultCache {
     return prependResults;
   }
 
+  private Result[] updateNumberOfCompleteResultsAndReturn(Result... results) {
+    numberOfCompleteRows += results.length;
+    return results;
+  }
+
   @Override
   public Result[] addAndGet(Result[] results, boolean isHeartbeatMessage) throws IOException {
     // If no results were returned it indicates that either we have the all the partial results
@@ -69,17 +76,17 @@ class CompleteScanResultCache implements ScanResultCache {
       // and thus there may be more partials server side that still need to be added to the partial
       // list before we form the complete Result
       if (!partialResults.isEmpty() && !isHeartbeatMessage) {
-        return new Result[] { combine() };
+        return updateNumberOfCompleteResultsAndReturn(combine());
       }
       return EMPTY_RESULT_ARRAY;
     }
     // In every RPC response there should be at most a single partial result. Furthermore, if
     // there is a partial result, it is guaranteed to be in the last position of the array.
     Result last = results[results.length - 1];
-    if (last.isPartial()) {
+    if (last.mayHaveMoreCellsInRow()) {
       if (partialResults.isEmpty()) {
         partialResults.add(last);
-        return Arrays.copyOf(results, results.length - 1);
+        return updateNumberOfCompleteResultsAndReturn(Arrays.copyOf(results, results.length - 1));
       }
       // We have only one result and it is partial
       if (results.length == 1) {
@@ -90,21 +97,26 @@ class CompleteScanResultCache implements ScanResultCache {
         }
         Result completeResult = combine();
         partialResults.add(last);
-        return new Result[] { completeResult };
+        return updateNumberOfCompleteResultsAndReturn(completeResult);
       }
       // We have some complete results
       Result[] resultsToReturn = prependCombined(results, results.length - 1);
       partialResults.add(last);
-      return resultsToReturn;
+      return updateNumberOfCompleteResultsAndReturn(resultsToReturn);
     }
     if (!partialResults.isEmpty()) {
-      return prependCombined(results, results.length);
+      return updateNumberOfCompleteResultsAndReturn(prependCombined(results, results.length));
     }
-    return results;
+    return updateNumberOfCompleteResultsAndReturn(results);
   }
 
   @Override
   public void clear() {
     partialResults.clear();
+  }
+
+  @Override
+  public int numberOfCompleteRows() {
+    return numberOfCompleteRows;
   }
 }

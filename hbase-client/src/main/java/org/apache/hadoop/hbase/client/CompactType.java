@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Currently, there are only two compact types:
@@ -25,7 +24,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * {@code MOB} means do mob files compaction.
  * */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public enum CompactType {
 
   NORMAL    (0),

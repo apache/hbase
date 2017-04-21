@@ -213,7 +213,7 @@ public class HashTable extends Configured implements Tool {
      * into the desired number of partitions.
      */
     void selectPartitions(Pair<byte[][], byte[][]> regionStartEndKeys) {
-      List<byte[]> startKeys = new ArrayList<byte[]>();
+      List<byte[]> startKeys = new ArrayList<>();
       for (int i = 0; i < regionStartEndKeys.getFirst().length; i++) {
         byte[] regionStartKey = regionStartEndKeys.getFirst()[i];
         byte[] regionEndKey = regionStartEndKeys.getSecond()[i];
@@ -244,7 +244,7 @@ public class HashTable extends Configured implements Tool {
       }
       
       // choose a subset of start keys to group regions into ranges
-      partitions = new ArrayList<ImmutableBytesWritable>(numHashFiles - 1);
+      partitions = new ArrayList<>(numHashFiles - 1);
       // skip the first start key as it is not a partition between ranges.
       for (long i = 1; i < numHashFiles; i++) {
         int splitIndex = (int) (numRegions * i / numHashFiles);
@@ -269,7 +269,7 @@ public class HashTable extends Configured implements Tool {
       @SuppressWarnings("deprecation")
       SequenceFile.Reader reader = new SequenceFile.Reader(fs, path, conf);
       ImmutableBytesWritable key = new ImmutableBytesWritable();
-      partitions = new ArrayList<ImmutableBytesWritable>();
+      partitions = new ArrayList<>();
       while (reader.next(key)) {
         partitions.add(new ImmutableBytesWritable(key.copyBytes()));
       }

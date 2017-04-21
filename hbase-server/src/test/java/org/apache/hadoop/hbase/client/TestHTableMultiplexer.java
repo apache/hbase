@@ -131,7 +131,7 @@ public class TestHTableMultiplexer {
       }
 
       // MultiPut case
-      List<Put> multiput = new ArrayList<Put>();
+      List<Put> multiput = new ArrayList<>();
       for (int i = 0; i < NUM_REGIONS; i++) {
         byte [] row = endRows[i];
         if (row == null || row.length <= 0) continue;

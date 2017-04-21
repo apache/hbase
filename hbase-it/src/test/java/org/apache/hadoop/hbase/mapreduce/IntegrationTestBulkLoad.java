@@ -46,9 +46,9 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -152,7 +152,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   private boolean load = false;
   private boolean check = false;
 
-  public static class SlowMeCoproScanOperations extends BaseRegionObserver {
+  public static class SlowMeCoproScanOperations implements RegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(2000);
     Random r = new Random();
     AtomicLong countOfNext = new AtomicLong(0);
@@ -353,7 +353,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     @Override
     public List<InputSplit> getSplits(JobContext context) throws IOException, InterruptedException {
       int numSplits = context.getConfiguration().getInt(NUM_MAPS_KEY, NUM_MAPS);
-      ArrayList<InputSplit> ret = new ArrayList<InputSplit>(numSplits);
+      ArrayList<InputSplit> ret = new ArrayList<>(numSplits);
       for (int i = 0; i < numSplits; ++i) {
         ret.add(new EmptySplit());
       }
@@ -376,7 +376,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       chainId = chainId - (chainId % numMapTasks) + taskId; // ensure that chainId is unique per task and across iterations
       LongWritable[] keys = new LongWritable[] {new LongWritable(chainId)};
 
-      return new FixedRecordReader<LongWritable, LongWritable>(keys, keys);
+      return new FixedRecordReader<>(keys, keys);
     }
   }
 

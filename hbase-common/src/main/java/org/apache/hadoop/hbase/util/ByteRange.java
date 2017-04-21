@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Lightweight, reusable class for specifying ranges of byte[]'s.
@@ -60,7 +59,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * </p>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface ByteRange extends Comparable<ByteRange> {
 
   /**

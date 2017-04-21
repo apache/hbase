@@ -60,12 +60,13 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import com.google.common.collect.Lists;
-import org.junit.rules.TestName;
 
 /**
  * Test cases against ReversibleKeyValueScanner
@@ -91,6 +92,10 @@ public class TestReversibleScanners {
   @Rule
   public TestName name = new TestName();
 
+  @BeforeClass
+  public static void setUp() {
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+  }
   @Test
   public void testReversibleStoreFileScanner() throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -108,8 +113,8 @@ public class TestReversibleScanners {
           .withFileContext(hFileContext).build();
       writeStoreFile(writer);
 
-      StoreFile sf = new StoreFile(fs, writer.getPath(),
-          TEST_UTIL.getConfiguration(), cacheConf, BloomType.NONE);
+      StoreFile sf = new StoreFile(fs, writer.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+          BloomType.NONE, true);
 
       List<StoreFileScanner> scanners = StoreFileScanner
           .getScannersForStoreFiles(Collections.singletonList(sf),
@@ -120,7 +125,7 @@ public class TestReversibleScanners {
         LOG.info("Setting read point to " + readPoint);
         scanners = StoreFileScanner.getScannersForStoreFiles(
             Collections.singletonList(sf), false, true, false, false, readPoint);
-        seekTestOfReversibleKeyValueScannerWithMVCC(scanners.get(0), readPoint);
+        seekTestOfReversibleKeyValueScannerWithMVCC(scanners, readPoint);
       }
     }
 
@@ -135,7 +140,7 @@ public class TestReversibleScanners {
     for (int readPoint = 0; readPoint < MAXMVCC; readPoint++) {
       LOG.info("Setting read point to " + readPoint);
       scanners = memstore.getScanners(readPoint);
-      seekTestOfReversibleKeyValueScannerWithMVCC(scanners.get(0), readPoint);
+      seekTestOfReversibleKeyValueScannerWithMVCC(scanners, readPoint);
     }
 
   }
@@ -162,11 +167,11 @@ public class TestReversibleScanners {
     writeMemstoreAndStoreFiles(memstore, new StoreFileWriter[] { writer1,
         writer2 });
 
-    StoreFile sf1 = new StoreFile(fs, writer1.getPath(),
-        TEST_UTIL.getConfiguration(), cacheConf, BloomType.NONE);
+    StoreFile sf1 = new StoreFile(fs, writer1.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+        BloomType.NONE, true);
 
-    StoreFile sf2 = new StoreFile(fs, writer2.getPath(),
-        TEST_UTIL.getConfiguration(), cacheConf, BloomType.NONE);
+    StoreFile sf2 = new StoreFile(fs, writer2.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+        BloomType.NONE, true);
     /**
      * Test without MVCC
      */
@@ -252,11 +257,11 @@ public class TestReversibleScanners {
     writeMemstoreAndStoreFiles(memstore, new StoreFileWriter[] { writer1,
         writer2 });
 
-    StoreFile sf1 = new StoreFile(fs, writer1.getPath(),
-        TEST_UTIL.getConfiguration(), cacheConf, BloomType.NONE);
+    StoreFile sf1 = new StoreFile(fs, writer1.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+        BloomType.NONE, true);
 
-    StoreFile sf2 = new StoreFile(fs, writer2.getPath(),
-        TEST_UTIL.getConfiguration(), cacheConf, BloomType.NONE);
+    StoreFile sf2 = new StoreFile(fs, writer2.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+        BloomType.NONE, true);
 
     ScanType scanType = ScanType.USER_SCAN;
     ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), FAMILYNAME, 0, Integer.MAX_VALUE,
@@ -272,7 +277,7 @@ public class TestReversibleScanners {
     // Case 2.Test reversed scan with a specified start row
     int startRowNum = ROWSIZE / 2;
     byte[] startRow = ROWS[startRowNum];
-    scan.setStartRow(startRow);
+    scan.withStartRow(startRow);
     storeScanner = getReversibleStoreScanner(memstore, sf1, sf2, scan,
         scanType, scanInfo, MAXMVCC);
     verifyCountAndOrder(storeScanner, QUALSIZE * (startRowNum + 1),
@@ -354,21 +359,21 @@ public class TestReversibleScanners {
 
     // Case5: Case4 + specify start row
     int startRowNum = ROWSIZE * 3 / 4;
-    scan.setStartRow(ROWS[startRowNum]);
+    scan.withStartRow(ROWS[startRowNum]);
     scanner = region.getScanner(scan);
     verifyCountAndOrder(scanner, (startRowNum + 1) * 2 * 2, (startRowNum + 1),
         false);
 
     // Case6: Case4 + specify stop row
     int stopRowNum = ROWSIZE / 4;
-    scan.setStartRow(HConstants.EMPTY_BYTE_ARRAY);
-    scan.setStopRow(ROWS[stopRowNum]);
+    scan.withStartRow(HConstants.EMPTY_BYTE_ARRAY);
+    scan.withStopRow(ROWS[stopRowNum]);
     scanner = region.getScanner(scan);
     verifyCountAndOrder(scanner, (ROWSIZE - stopRowNum - 1) * 2 * 2, (ROWSIZE
         - stopRowNum - 1), false);
 
     // Case7: Case4 + specify start row + specify stop row
-    scan.setStartRow(ROWS[startRowNum]);
+    scan.withStartRow(ROWS[startRowNum]);
     scanner = region.getScanner(scan);
     verifyCountAndOrder(scanner, (startRowNum - stopRowNum) * 2 * 2,
         (startRowNum - stopRowNum), false);
@@ -435,7 +440,7 @@ public class TestReversibleScanners {
   private void verifyCountAndOrder(InternalScanner scanner,
       int expectedKVCount, int expectedRowCount, boolean forward)
       throws IOException {
-    List<Cell> kvList = new ArrayList<Cell>();
+    List<Cell> kvList = new ArrayList<>();
     Result lastResult = null;
     int rowCount = 0;
     int kvCount = 0;
@@ -502,8 +507,7 @@ public class TestReversibleScanners {
         .getScannersForStoreFiles(Lists.newArrayList(sf1, sf2), false, true,
             false, false, readPoint);
     List<KeyValueScanner> memScanners = memstore.getScanners(readPoint);
-    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(
-        fileScanners.size() + 1);
+    List<KeyValueScanner> scanners = new ArrayList<>(fileScanners.size() + 1);
     scanners.addAll(fileScanners);
     scanners.addAll(memScanners);
 
@@ -561,38 +565,65 @@ public class TestReversibleScanners {
   }
 
   private void seekTestOfReversibleKeyValueScannerWithMVCC(
-      KeyValueScanner scanner, int readPoint) throws IOException {
-    /**
-     * Test with MVCC
-     */
-      // Test seek to last row
-      KeyValue expectedKey = getNextReadableKeyValueWithBackwardScan(
-          ROWSIZE - 1, 0, readPoint);
-      assertEquals(expectedKey != null, scanner.seekToLastRow());
-      assertEquals(expectedKey, scanner.peek());
+      List<? extends KeyValueScanner> scanners, int readPoint) throws IOException {
+  /**
+   * Test with MVCC
+   */
+    // Test seek to last row
+    KeyValue expectedKey = getNextReadableKeyValueWithBackwardScan(
+        ROWSIZE - 1, 0, readPoint);
+    boolean res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= scanner.seekToLastRow();
+    }
+    assertEquals(expectedKey != null, res);
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= (expectedKey.equals(scanner.peek()));
+    }
+    assertTrue(res);
 
       // Test backward seek in two cases
       // Case1: seek in the same row in backwardSeek
       expectedKey = getNextReadableKeyValueWithBackwardScan(ROWSIZE - 2,
           QUALSIZE - 2, readPoint);
-      assertEquals(expectedKey != null, scanner.backwardSeek(expectedKey));
-      assertEquals(expectedKey, scanner.peek());
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= scanner.backwardSeek(expectedKey);
+    }
+    assertEquals(expectedKey != null, res);
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= (expectedKey.equals(scanner.peek()));
+    }
+    assertTrue(res);
 
       // Case2: seek to the previous row in backwardSeek
     int seekRowNum = ROWSIZE - 3;
-    KeyValue seekKey = KeyValueUtil.createLastOnRow(ROWS[seekRowNum]);
-      expectedKey = getNextReadableKeyValueWithBackwardScan(seekRowNum - 1, 0,
-          readPoint);
-      assertEquals(expectedKey != null, scanner.backwardSeek(seekKey));
-      assertEquals(expectedKey, scanner.peek());
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= scanner.backwardSeek(expectedKey);
+    }
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= (expectedKey.equals(scanner.peek()));
+    }
+    assertTrue(res);
 
       // Test seek to previous row
       seekRowNum = ROWSIZE - 4;
       expectedKey = getNextReadableKeyValueWithBackwardScan(seekRowNum - 1, 0,
           readPoint);
-      assertEquals(expectedKey != null, scanner.seekToPreviousRow(KeyValueUtil
-          .createFirstOnRow(ROWS[seekRowNum])));
-      assertEquals(expectedKey, scanner.peek());
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= scanner.seekToPreviousRow(KeyValueUtil.createFirstOnRow(ROWS[seekRowNum]));
+    }
+    assertEquals(expectedKey != null, res);
+    res = false;
+    for (KeyValueScanner scanner : scanners) {
+      res |= (expectedKey.equals(scanner.peek()));
+    }
+    assertTrue(res);
   }
 
   private KeyValue getNextReadableKeyValueWithBackwardScan(int startRowNum,
@@ -611,7 +642,7 @@ public class TestReversibleScanners {
     for (int i = startRowNum; i >= 0; i--) {
       for (int j = (i == startRowNum ? startQualNum : 0); j < QUALSIZE; j++) {
         if (makeMVCC(i, j) <= readPoint) {
-          nextReadableNum = new Pair<Integer, Integer>(i, j);
+          nextReadableNum = new Pair<>(i, j);
           findExpected = true;
           break;
         }

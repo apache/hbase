@@ -38,15 +38,35 @@ import org.apache.hadoop.hbase.wal.WALKey;
  * as empty via {@link WALEdit#isEmpty()}.
  *
  * {@link org.apache.hadoop.hbase.coprocessor.RegionObserver} provides
- * hooks for adding logic for WALEdits in the region context during reconstruction,
+ * hooks for adding logic for WALEdits in the region context during reconstruction.
  *
  * Defines coprocessor hooks for interacting with operations on the
  * {@link org.apache.hadoop.hbase.wal.WAL}.
+ *
+ * Since most implementations will be interested in only a subset of hooks, this class uses
+ * 'default' functions to avoid having to add unnecessary overrides. When the functions are
+ * non-empty, it's simply to satisfy the compiler by returning value of expected (non-void) type.
+ * It is done in a way that these default definitions act as no-op. So our suggestion to
+ * implementation would be to not call these 'default' methods from overrides.
+ * <br><br>
+ *
+ * <h3>Exception Handling</h3>
+ * For all functions, exception handling is done as follows:
+ * <ul>
+ *   <li>Exceptions of type {@link IOException} are reported back to client.</li>
+ *   <li>For any other kind of exception:
+ *     <ul>
+ *       <li>If the configuration {@link CoprocessorHost#ABORT_ON_ERROR_KEY} is set to true, then
+ *         the server aborts.</li>
+ *       <li>Otherwise, coprocessor is removed from the server and
+ *         {@link org.apache.hadoop.hbase.DoNotRetryIOException} is returned to the client.</li>
+ *     </ul>
+ *   </li>
+ * </ul>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface WALObserver extends Coprocessor {
-
   /**
    * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * is writen to WAL.
@@ -54,30 +74,32 @@ public interface WALObserver extends Coprocessor {
    * @return true if default behavior should be bypassed, false otherwise
    */
   // TODO: return value is not used
-  boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException;
+  default boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+    return false;
+  }
 
   /**
    * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * is writen to WAL.
    */
-  void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException;
+  default void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
    * Called before rolling the current WAL
    * @param oldPath the path of the current wal that we are replacing
    * @param newPath the path of the wal we are going to create
    */
-  void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      Path oldPath, Path newPath) throws IOException;
+  default void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      Path oldPath, Path newPath) throws IOException {}
 
   /**
    * Called after rolling the current WAL
    * @param oldPath the path of the wal that we replaced
    * @param newPath the path of the wal we have created and now is the current
    */
-  void postWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      Path oldPath, Path newPath) throws IOException;
+  default void postWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      Path oldPath, Path newPath) throws IOException {}
 }
 

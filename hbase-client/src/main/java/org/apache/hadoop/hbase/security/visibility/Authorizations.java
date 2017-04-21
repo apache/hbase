@@ -22,19 +22,17 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * This class contains visibility labels associated with a Scan/Get deciding which all labeled data
  * current scan/get can access.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class Authorizations {
 
   private List<String> labels;
   public Authorizations(String... labels) {
-    this.labels = new ArrayList<String>(labels.length);
+    this.labels = new ArrayList<>(labels.length);
     Collections.addAll(this.labels, labels);
   }
 

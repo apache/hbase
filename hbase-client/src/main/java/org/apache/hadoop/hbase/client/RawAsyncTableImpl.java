@@ -102,7 +102,8 @@ class RawAsyncTableImpl implements RawAsyncTable {
     this.pauseNs = builder.pauseNs;
     this.maxAttempts = builder.maxAttempts;
     this.startLogErrorsCnt = builder.startLogErrorsCnt;
-    this.defaultScannerCaching = conn.connConf.getScannerCaching();
+    this.defaultScannerCaching = tableName.isSystemTable() ? conn.connConf.getMetaScannerCaching()
+        : conn.connConf.getScannerCaching();
     this.defaultScannerMaxResultSize = conn.connConf.getScannerMaxResultSize();
   }
 
@@ -358,9 +359,8 @@ class RawAsyncTableImpl implements RawAsyncTable {
     scan(scan, new RawScanResultConsumer() {
 
       @Override
-      public boolean onNext(Result[] results) {
+      public void onNext(Result[] results, ScanController controller) {
         scanResults.addAll(Arrays.asList(results));
-        return true;
       }
 
       @Override
@@ -377,15 +377,8 @@ class RawAsyncTableImpl implements RawAsyncTable {
   }
 
   public void scan(Scan scan, RawScanResultConsumer consumer) {
-    if (scan.isSmall() || scan.getLimit() > 0) {
-      if (scan.getBatch() > 0 || scan.getAllowPartialResults()) {
-        consumer.onError(new IllegalArgumentException(
-            "Batch and allowPartial is not allowed for small scan or limited scan"));
-      }
-    }
-    scan = setDefaultScanConfig(scan);
-    new AsyncClientScanner(scan, consumer, tableName, conn, pauseNs, maxAttempts, scanTimeoutNs,
-        readRpcTimeoutNs, startLogErrorsCnt).start();
+    new AsyncClientScanner(setDefaultScanConfig(scan), consumer, tableName, conn, pauseNs,
+        maxAttempts, scanTimeoutNs, readRpcTimeoutNs, startLogErrorsCnt).start();
   }
 
   @Override

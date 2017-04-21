@@ -43,9 +43,14 @@
     </fluidoSkin>
   </custom>
   <bannerLeft>
+    <name>HBaseCon2017</name>
+    <src>images/hbasecon2017.png</src>
+    <href>https://easychair.org/cfp/hbasecon2017</href>
+    <!--
     <name/>
     <height>0</height>
     <width>0</width>
+-->
   </bannerLeft>
   <bannerRight>
     <name>Apache HBase</name>
@@ -115,11 +120,6 @@
         <item name="API" href="1.1/apidocs/index.html" target="_blank" />
         <item name="X-Ref" href="1.1/xref/index.html" target="_blank" />
         <item name="Ref Guide (single-page)" href="1.1/book.html" target="_blank" />
-      </item>
-      <item name="0.94 Documentation">
-        <item name="API" href="0.94/apidocs/index.html" target="_blank" />
-        <item name="X-Ref" href="0.94/xref/index.html" target="_blank" />
-        <item name="Ref Guide (single-page)" href="0.94/book.html" target="_blank" />
       </item>
     </menu>
     <menu name="ASF">

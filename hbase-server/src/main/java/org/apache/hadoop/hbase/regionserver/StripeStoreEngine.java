@@ -84,7 +84,7 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
       this.stripeRequest = compactionPolicy.selectCompaction(
           storeFileManager, filesCompacting, mayUseOffPeak);
       this.request = (this.stripeRequest == null)
-          ? new CompactionRequest(new ArrayList<StoreFile>()) : this.stripeRequest.getRequest();
+          ? new CompactionRequest(new ArrayList<>()) : this.stripeRequest.getRequest();
       return this.stripeRequest != null;
     }
 

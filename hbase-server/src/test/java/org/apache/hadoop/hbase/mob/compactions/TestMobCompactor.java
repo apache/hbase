@@ -68,9 +68,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
@@ -328,38 +328,6 @@ public class TestMobCompactor {
       countFiles(tableName, false, family1));
     assertEquals("After compaction: family2 del file count", regionNum,
       countFiles(tableName, false, family2));
-  }
-
-  private void waitUntilFilesShowup(final TableName table, final String famStr, final int num)
-      throws InterruptedException, IOException  {
-
-    HRegion r = TEST_UTIL.getMiniHBaseCluster().getRegions(table).get(0);
-
-    // Make sure that it is flushed.
-    FileSystem fs = r.getRegionFileSystem().getFileSystem();
-    Path path = r.getRegionFileSystem().getStoreDir(famStr);
-
-
-    FileStatus[] fileList = fs.listStatus(path);
-
-    while (fileList.length != num) {
-      Thread.sleep(50);
-      fileList = fs.listStatus(path);
-    }
-  }
-
-  private int numberOfMobFiles(final TableName table, final String famStr)
-      throws IOException  {
-
-    HRegion r = TEST_UTIL.getMiniHBaseCluster().getRegions(table).get(0);
-
-    // Make sure that it is flushed.
-    FileSystem fs = r.getRegionFileSystem().getFileSystem();
-    Path path = r.getRegionFileSystem().getStoreDir(famStr);
-
-    FileStatus[] fileList = fs.listStatus(path);
-
-    return fileList.length;
   }
 
   @Test
@@ -656,7 +624,7 @@ public class TestMobCompactor {
     // the ref name is the new file
     Path mobFamilyPath =
       MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, hcd1.getNameAsString());
-    List<Path> paths = new ArrayList<Path>();
+    List<Path> paths = new ArrayList<>();
     if (fs.exists(mobFamilyPath)) {
       FileStatus[] files = fs.listStatus(mobFamilyPath);
       for (FileStatus file : files) {
@@ -750,7 +718,7 @@ public class TestMobCompactor {
    * This copro overwrites the default compaction policy. It always chooses two latest
    * hfiles and compacts them into a new one.
    */
-  public static class CompactTwoLatestHfilesCopro extends BaseRegionObserver {
+  public static class CompactTwoLatestHfilesCopro implements RegionObserver {
     @Override
     public void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Store store, final List<StoreFile> candidates, final CompactionRequest request)
@@ -764,20 +732,6 @@ public class TestMobCompactor {
         c.bypass();
       }
     }
-  }
-
-  private void waitUntilCompactionFinished(TableName tableName) throws IOException,
-    InterruptedException {
-    long finished = EnvironmentEdgeManager.currentTime() + 60000;
-    CompactionState state = admin.getCompactionState(tableName);
-    while (EnvironmentEdgeManager.currentTime() < finished) {
-      if (state == CompactionState.NONE) {
-        break;
-      }
-      state = admin.getCompactionState(tableName);
-      Thread.sleep(10);
-    }
-    assertEquals(CompactionState.NONE, state);
   }
 
   private void waitUntilMobCompactionFinished(TableName tableName) throws IOException,
@@ -818,9 +772,7 @@ public class TestMobCompactor {
     ResultScanner results = table.getScanner(scan);
     int count = 0;
     for (Result res : results) {
-      for (Cell cell : res.listCells()) {
-        count++;
-      }
+      count += res.size();
     }
     results.close();
     return count;
@@ -863,8 +815,9 @@ public class TestMobCompactor {
       Path path = files[0].getPath();
       CacheConfig cacheConf = new CacheConfig(conf);
       StoreFile sf = new StoreFile(TEST_UTIL.getTestFileSystem(), path, conf, cacheConf,
-        BloomType.NONE);
-      HFile.Reader reader = sf.createReader().getHFileReader();
+        BloomType.NONE, true);
+      sf.initReader();
+      HFile.Reader reader = sf.getReader().getHFileReader();
       byte[] encryptionKey = reader.getTrailer().getEncryptionKey();
       Assert.assertTrue(null != encryptionKey);
       Assert.assertTrue(reader.getFileContext().getEncryptionContext().getCipher().getName()
@@ -1061,7 +1014,7 @@ public class TestMobCompactor {
   private static ExecutorService createThreadPool(Configuration conf) {
     int maxThreads = 10;
     long keepAliveTime = 60;
-    final SynchronousQueue<Runnable> queue = new SynchronousQueue<Runnable>();
+    final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads,
         keepAliveTime, TimeUnit.SECONDS, queue,
         Threads.newDaemonThreadFactory("MobFileCompactionChore"),

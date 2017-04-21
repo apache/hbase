@@ -20,13 +20,11 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when an operation requires the root and all meta regions to be online
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class NotAllMetaRegionsOnlineException extends DoNotRetryIOException {
   private static final long serialVersionUID = 6439786157874827523L;
   /**

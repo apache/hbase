@@ -311,7 +311,7 @@ public class TableSnapshotInputFormatImpl {
 
     Path tableDir = FSUtils.getTableDir(restoreDir, htd.getTableName());
 
-    List<InputSplit> splits = new ArrayList<InputSplit>();
+    List<InputSplit> splits = new ArrayList<>();
     for (HRegionInfo hri : regionManifests) {
       // load region descriptor
 
@@ -346,7 +346,7 @@ public class TableSnapshotInputFormatImpl {
    */
   public static List<String> getBestLocations(
       Configuration conf, HDFSBlocksDistribution blockDistribution) {
-    List<String> locations = new ArrayList<String>(3);
+    List<String> locations = new ArrayList<>(3);
 
     HostAndWeight[] hostAndWeights = blockDistribution.getTopHostsWithWeights();
 

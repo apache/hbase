@@ -74,7 +74,7 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
       // 1. get all the regions hosting this table.
 
       // extract each pair to separate lists
-      Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
+      Set<HRegionInfo> regions = new HashSet<>();
       for (Pair<HRegionInfo, ServerName> p : regionsAndLocations) {
         // Don't include non-default regions
         HRegionInfo hri = p.getFirst();

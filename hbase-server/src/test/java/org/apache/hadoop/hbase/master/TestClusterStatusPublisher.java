@@ -49,7 +49,7 @@ public class TestClusterStatusPublisher {
     ClusterStatusPublisher csp = new ClusterStatusPublisher() {
       @Override
       protected List<Pair<ServerName, Long>> getDeadServers(long since) {
-        return new ArrayList<Pair<ServerName, Long>>();
+        return new ArrayList<>();
       }
     };
 
@@ -61,10 +61,10 @@ public class TestClusterStatusPublisher {
     ClusterStatusPublisher csp = new ClusterStatusPublisher() {
       @Override
       protected List<Pair<ServerName, Long>> getDeadServers(long since) {
-        List<Pair<ServerName, Long>> res = new ArrayList<Pair<ServerName, Long>>();
+        List<Pair<ServerName, Long>> res = new ArrayList<>();
         switch ((int) EnvironmentEdgeManager.currentTime()) {
           case 2:
-            res.add(new Pair<ServerName, Long>(ServerName.valueOf("hn", 10, 10), 1L));
+            res.add(new Pair<>(ServerName.valueOf("hn", 10, 10), 1L));
             break;
           case 1000:
             break;
@@ -87,9 +87,9 @@ public class TestClusterStatusPublisher {
     ClusterStatusPublisher csp = new ClusterStatusPublisher() {
       @Override
       protected List<Pair<ServerName, Long>> getDeadServers(long since) {
-        List<Pair<ServerName, Long>> res = new ArrayList<Pair<ServerName, Long>>();
+        List<Pair<ServerName, Long>> res = new ArrayList<>();
         for (int i = 0; i < 25; i++) {
-          res.add(new Pair<ServerName, Long>(ServerName.valueOf("hn" + i, 10, 10), 20L));
+          res.add(new Pair<>(ServerName.valueOf("hn" + i, 10, 10), 20L));
         }
 
         return res;

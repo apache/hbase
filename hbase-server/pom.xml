@@ -28,7 +28,7 @@
   </parent>
   <artifactId>hbase-server</artifactId>
   <name>Apache HBase - Server</name>
-  <description>Main functionality for HBase</description>
+  <description>Server functionality for HBase</description>
   <properties>
     <test.build.webapps>target/test-classes/webapps</test.build.webapps>
     <license.bundles.logo>true</license.bundles.logo>
@@ -511,15 +511,6 @@
       <artifactId>zookeeper</artifactId>
     </dependency>
     <dependency>
-      <groupId>tomcat</groupId>
-      <artifactId>jasper-compiler</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>tomcat</groupId>
-      <artifactId>jasper-runtime</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.jamon</groupId>
       <artifactId>jamon-runtime</artifactId>
     </dependency>
@@ -674,6 +665,11 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-distcp</artifactId>
+          <version>${hadoop-two.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </dependency>
         <dependency>
@@ -757,6 +753,11 @@
         <hadoop.version>${hadoop-three.version}</hadoop.version>
       </properties>
       <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-distcp</artifactId>
+          <version>${hadoop-three.version}</version>
+        </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>

@@ -94,7 +94,7 @@ implements Coprocessor, CoprocessorService  {
         throw new DoNotRetryIOException("An expected exception");
       }
       scanner = region.getScanner(scan);
-      List<Cell> curVals = new ArrayList<Cell>();
+      List<Cell> curVals = new ArrayList<>();
       boolean hasMore = false;
       do {
         curVals.clear();

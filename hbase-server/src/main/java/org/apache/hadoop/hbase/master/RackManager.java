@@ -80,7 +80,7 @@ public class RackManager {
   public List<String> getRack(List<ServerName> servers) {
     // just a note - switchMapping caches results (at least the implementation should unless the
     // resolution is really a lightweight process)
-    List<String> serversAsString = new ArrayList<String>(servers.size());
+    List<String> serversAsString = new ArrayList<>(servers.size());
     for (ServerName server : servers) {
       serversAsString.add(server.getHostname());
     }

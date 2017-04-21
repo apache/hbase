@@ -86,7 +86,7 @@ public class TestProcedure {
   @Test(timeout = 60000)
   public void testSingleMember() throws Exception {
     // The member
-    List<String> members =  new ArrayList<String>();
+    List<String> members =  new ArrayList<>();
     members.add("member");
     LatchedProcedure proc = new LatchedProcedure(coord, new ForeignExceptionDispatcher(), 100,
         Integer.MAX_VALUE, "op", null, members);
@@ -130,7 +130,7 @@ public class TestProcedure {
   @Test(timeout = 60000)
   public void testMultipleMember() throws Exception {
     // 2 members
-    List<String> members =  new ArrayList<String>();
+    List<String> members =  new ArrayList<>();
     members.add("member1");
     members.add("member2");
 
@@ -181,7 +181,7 @@ public class TestProcedure {
 
   @Test(timeout = 60000)
   public void testErrorPropagation() throws Exception {
-    List<String> members =  new ArrayList<String>();
+    List<String> members =  new ArrayList<>();
     members.add("member");
     Procedure proc = new Procedure(coord, new ForeignExceptionDispatcher(), 100,
         Integer.MAX_VALUE, "op", null, members);
@@ -206,7 +206,7 @@ public class TestProcedure {
 
   @Test(timeout = 60000)
   public void testBarrieredErrorPropagation() throws Exception {
-    List<String> members =  new ArrayList<String>();
+    List<String> members =  new ArrayList<>();
     members.add("member");
     LatchedProcedure proc = new LatchedProcedure(coord, new ForeignExceptionDispatcher(), 100,
         Integer.MAX_VALUE, "op", null, members);

@@ -77,7 +77,7 @@ public class VerifyReplication extends Configured implements Tool {
   private final static String PEER_CONFIG_PREFIX = NAME + ".peer.";
   static long startTime = 0;
   static long endTime = Long.MAX_VALUE;
-  static int batch = Integer.MAX_VALUE;
+  static int batch = -1;
   static int versions = -1;
   static String tableName = null;
   static String families = null;
@@ -110,6 +110,7 @@ public class VerifyReplication extends Configured implements Tool {
     private int sleepMsBeforeReCompare;
     private String delimiter = "";
     private boolean verbose = false;
+    private int batch = -1;
 
     /**
      * Map method that compares every scanned row with the equivalent from
@@ -128,8 +129,11 @@ public class VerifyReplication extends Configured implements Tool {
         sleepMsBeforeReCompare = conf.getInt(NAME +".sleepMsBeforeReCompare", 0);
         delimiter = conf.get(NAME + ".delimiter", "");
         verbose = conf.getBoolean(NAME +".verbose", false);
+        batch = conf.getInt(NAME + ".batch", -1);
         final Scan scan = new Scan();
-        scan.setBatch(batch);
+        if (batch > 0) {
+          scan.setBatch(batch);
+        }
         scan.setCacheBlocks(false);
         scan.setCaching(conf.getInt(TableInputFormat.SCAN_CACHEDROWS, 1));
         long startTime = conf.getLong(NAME + ".startTime", 0);
@@ -181,7 +185,8 @@ public class VerifyReplication extends Configured implements Tool {
             Result.compareResults(value, currentCompareRowInPeerTable);
             context.getCounter(Counters.GOODROWS).increment(1);
             if (verbose) {
-              LOG.info("Good row key: " + delimiter + Bytes.toString(value.getRow()) + delimiter);
+              LOG.info("Good row key: " + delimiter
+                  + Bytes.toStringBinary(value.getRow()) + delimiter);
             }
           } catch (Exception e) {
             logFailRowAndIncreaseCounter(context, Counters.CONTENT_DIFFERENT_ROWS, value);
@@ -328,6 +333,7 @@ public class VerifyReplication extends Configured implements Tool {
     conf.setLong(NAME+".endTime", endTime);
     conf.setInt(NAME +".sleepMsBeforeReCompare", sleepMsBeforeReCompare);
     conf.set(NAME + ".delimiter", delimiter);
+    conf.setInt(NAME + ".batch", batch);
     conf.setBoolean(NAME +".verbose", verbose);
     conf.setBoolean(NAME +".includeDeletedCells", includeDeletedCells);
     if (families != null) {
@@ -355,6 +361,10 @@ public class VerifyReplication extends Configured implements Tool {
     Scan scan = new Scan();
     scan.setTimeRange(startTime, endTime);
     scan.setRaw(includeDeletedCells);
+    scan.setCacheBlocks(false);
+    if (batch > 0) {
+      scan.setBatch(batch);
+    }
     if (versions >= 0) {
       scan.setMaxVersions(versions);
       LOG.info("Number of versions set to " + versions);
@@ -462,10 +472,6 @@ public class VerifyReplication extends Configured implements Tool {
           continue;
         }
 
-        if (cmd.startsWith("--")) {
-          printUsage("Invalid argument '" + cmd + "'");
-        }
-
         final String delimiterArgKey = "--delimiter=";
         if (cmd.startsWith(delimiterArgKey)) {
           delimiter = cmd.substring(delimiterArgKey.length());
@@ -482,6 +488,11 @@ public class VerifyReplication extends Configured implements Tool {
           verbose = true;
           continue;
         }        
+
+        if (cmd.startsWith("--")) {
+          printUsage("Invalid argument '" + cmd + "'");
+        }
+
         if (i == args.length-2) {
           peerId = cmd;
         }
@@ -501,7 +512,7 @@ public class VerifyReplication extends Configured implements Tool {
   private static void restoreDefaults() {
     startTime = 0;
     endTime = Long.MAX_VALUE;
-    batch = Integer.MAX_VALUE;
+    batch = -1;
     versions = -1;
     tableName = null;
     families = null;
@@ -519,13 +530,15 @@ public class VerifyReplication extends Configured implements Tool {
     }
     System.err.println("Usage: verifyrep [--starttime=X]" +
         " [--endtime=Y] [--families=A] [--row-prefixes=B] [--delimiter=] [--recomparesleep=] " +
-        "[--verbose] <peerid> <tablename>");
+        "[--batch=] [--verbose] <peerid> <tablename>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" starttime    beginning of the time range");
     System.err.println("              without endtime means from starttime to forever");
     System.err.println(" endtime      end of the time range");
     System.err.println(" versions     number of cell versions to verify");
+    System.err.println(" batch        batch count for scan, " +
+        "note that result row counts will no longer be actual number of rows when you use this option");
     System.err.println(" raw          includes raw scan if given in options");
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println(" row-prefixes comma-separated list of row key prefixes to filter on ");

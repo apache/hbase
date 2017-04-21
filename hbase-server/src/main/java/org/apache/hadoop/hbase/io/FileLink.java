@@ -29,6 +29,8 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.fs.CanSetDropBehind;
+import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
@@ -99,7 +101,7 @@ public class FileLink {
    * and the alternative locations, when the file is moved.
    */
   private static class FileLinkInputStream extends InputStream
-      implements Seekable, PositionedReadable {
+      implements Seekable, PositionedReadable, CanSetDropBehind, CanSetReadahead {
     private FSDataInputStream in = null;
     private Path currentPath = null;
     private long pos = 0;
@@ -306,6 +308,16 @@ public class FileLink {
       }
       throw new FileNotFoundException("Unable to open link: " + fileLink);
     }
+
+    @Override
+    public void setReadahead(Long readahead) throws IOException, UnsupportedOperationException {
+      in.setReadahead(readahead);
+    }
+
+    @Override
+    public void setDropBehind(Boolean dropCache) throws IOException, UnsupportedOperationException {
+      in.setDropBehind(dropCache);
+    }
   }
 
   private Path[] locations = null;
@@ -426,7 +438,7 @@ public class FileLink {
   protected void setLocations(Path originPath, Path... alternativePaths) {
     assert this.locations == null : "Link locations already set";
 
-    List<Path> paths = new ArrayList<Path>(alternativePaths.length +1);
+    List<Path> paths = new ArrayList<>(alternativePaths.length +1);
     if (originPath != null) {
       paths.add(originPath);
     }

@@ -221,7 +221,7 @@ public class DeleteTableProcedure
     if (state.getRegionInfoCount() == 0) {
       regions = null;
     } else {
-      regions = new ArrayList<HRegionInfo>(state.getRegionInfoCount());
+      regions = new ArrayList<>(state.getRegionInfoCount());
       for (HBaseProtos.RegionInfo hri: state.getRegionInfoList()) {
         regions.add(HRegionInfo.convert(hri));
       }
@@ -343,7 +343,7 @@ public class DeleteTableProcedure
     Scan tableScan = MetaTableAccessor.getScanForTableName(connection, tableName);
     try (Table metaTable =
         connection.getTable(TableName.META_TABLE_NAME)) {
-      List<Delete> deletes = new ArrayList<Delete>();
+      List<Delete> deletes = new ArrayList<>();
       try (ResultScanner resScanner = metaTable.getScanner(tableScan)) {
         for (Result result : resScanner) {
           deletes.add(new Delete(result.getRow()));

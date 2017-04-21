@@ -709,7 +709,7 @@ public  final class Field extends
    * The field type.
    * </pre>
    *
-   * <code>optional .google.protobuf.Field.Kind kind = 1;</code>
+   * <code>.google.protobuf.Field.Kind kind = 1;</code>
    */
   public int getKindValue() {
     return kind_;
@@ -719,7 +719,7 @@ public  final class Field extends
    * The field type.
    * </pre>
    *
-   * <code>optional .google.protobuf.Field.Kind kind = 1;</code>
+   * <code>.google.protobuf.Field.Kind kind = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Kind getKind() {
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Kind result = org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Kind.valueOf(kind_);
@@ -733,7 +733,7 @@ public  final class Field extends
    * The field cardinality.
    * </pre>
    *
-   * <code>optional .google.protobuf.Field.Cardinality cardinality = 2;</code>
+   * <code>.google.protobuf.Field.Cardinality cardinality = 2;</code>
    */
   public int getCardinalityValue() {
     return cardinality_;
@@ -743,7 +743,7 @@ public  final class Field extends
    * The field cardinality.
    * </pre>
    *
-   * <code>optional .google.protobuf.Field.Cardinality cardinality = 2;</code>
+   * <code>.google.protobuf.Field.Cardinality cardinality = 2;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Cardinality getCardinality() {
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Cardinality result = org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Cardinality.valueOf(cardinality_);
@@ -757,7 +757,7 @@ public  final class Field extends
    * The field number.
    * </pre>
    *
-   * <code>optional int32 number = 3;</code>
+   * <code>int32 number = 3;</code>
    */
   public int getNumber() {
     return number_;
@@ -770,7 +770,7 @@ public  final class Field extends
    * The field name.
    * </pre>
    *
-   * <code>optional string name = 4;</code>
+   * <code>string name = 4;</code>
    */
   public java.lang.String getName() {
     java.lang.Object ref = name_;
@@ -789,7 +789,7 @@ public  final class Field extends
    * The field name.
    * </pre>
    *
-   * <code>optional string name = 4;</code>
+   * <code>string name = 4;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes() {
@@ -813,7 +813,7 @@ public  final class Field extends
    * types. Example: `"type.googleapis.org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp"`.
    * </pre>
    *
-   * <code>optional string type_url = 6;</code>
+   * <code>string type_url = 6;</code>
    */
   public java.lang.String getTypeUrl() {
     java.lang.Object ref = typeUrl_;
@@ -833,7 +833,7 @@ public  final class Field extends
    * types. Example: `"type.googleapis.org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp"`.
    * </pre>
    *
-   * <code>optional string type_url = 6;</code>
+   * <code>string type_url = 6;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getTypeUrlBytes() {
@@ -857,7 +857,7 @@ public  final class Field extends
    * types. The first type has index 1; zero means the type is not in the list.
    * </pre>
    *
-   * <code>optional int32 oneof_index = 7;</code>
+   * <code>int32 oneof_index = 7;</code>
    */
   public int getOneofIndex() {
     return oneofIndex_;
@@ -870,7 +870,7 @@ public  final class Field extends
    * Whether to use alternative packed wire representation.
    * </pre>
    *
-   * <code>optional bool packed = 8;</code>
+   * <code>bool packed = 8;</code>
    */
   public boolean getPacked() {
     return packed_;
@@ -938,7 +938,7 @@ public  final class Field extends
    * The field JSON name.
    * </pre>
    *
-   * <code>optional string json_name = 10;</code>
+   * <code>string json_name = 10;</code>
    */
   public java.lang.String getJsonName() {
     java.lang.Object ref = jsonName_;
@@ -957,7 +957,7 @@ public  final class Field extends
    * The field JSON name.
    * </pre>
    *
-   * <code>optional string json_name = 10;</code>
+   * <code>string json_name = 10;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getJsonNameBytes() {
@@ -980,7 +980,7 @@ public  final class Field extends
    * The string value of the default value of this field. Proto2 syntax only.
    * </pre>
    *
-   * <code>optional string default_value = 11;</code>
+   * <code>string default_value = 11;</code>
    */
   public java.lang.String getDefaultValue() {
     java.lang.Object ref = defaultValue_;
@@ -999,7 +999,7 @@ public  final class Field extends
    * The string value of the default value of this field. Proto2 syntax only.
    * </pre>
    *
-   * <code>optional string default_value = 11;</code>
+   * <code>string default_value = 11;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getDefaultValueBytes() {
@@ -1143,7 +1143,7 @@ public  final class Field extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + KIND_FIELD_NUMBER;
     hash = (53 * hash) + kind_;
     hash = (37 * hash) + CARDINALITY_FIELD_NUMBER;
@@ -1488,7 +1488,7 @@ public  final class Field extends
      * The field type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Kind kind = 1;</code>
+     * <code>.google.protobuf.Field.Kind kind = 1;</code>
      */
     public int getKindValue() {
       return kind_;
@@ -1498,7 +1498,7 @@ public  final class Field extends
      * The field type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Kind kind = 1;</code>
+     * <code>.google.protobuf.Field.Kind kind = 1;</code>
      */
     public Builder setKindValue(int value) {
       kind_ = value;
@@ -1510,7 +1510,7 @@ public  final class Field extends
      * The field type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Kind kind = 1;</code>
+     * <code>.google.protobuf.Field.Kind kind = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Kind getKind() {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Kind result = org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Kind.valueOf(kind_);
@@ -1521,7 +1521,7 @@ public  final class Field extends
      * The field type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Kind kind = 1;</code>
+     * <code>.google.protobuf.Field.Kind kind = 1;</code>
      */
     public Builder setKind(org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Kind value) {
       if (value == null) {
@@ -1537,7 +1537,7 @@ public  final class Field extends
      * The field type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Kind kind = 1;</code>
+     * <code>.google.protobuf.Field.Kind kind = 1;</code>
      */
     public Builder clearKind() {
       
@@ -1552,7 +1552,7 @@ public  final class Field extends
      * The field cardinality.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Cardinality cardinality = 2;</code>
+     * <code>.google.protobuf.Field.Cardinality cardinality = 2;</code>
      */
     public int getCardinalityValue() {
       return cardinality_;
@@ -1562,7 +1562,7 @@ public  final class Field extends
      * The field cardinality.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Cardinality cardinality = 2;</code>
+     * <code>.google.protobuf.Field.Cardinality cardinality = 2;</code>
      */
     public Builder setCardinalityValue(int value) {
       cardinality_ = value;
@@ -1574,7 +1574,7 @@ public  final class Field extends
      * The field cardinality.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Cardinality cardinality = 2;</code>
+     * <code>.google.protobuf.Field.Cardinality cardinality = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Cardinality getCardinality() {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Cardinality result = org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Cardinality.valueOf(cardinality_);
@@ -1585,7 +1585,7 @@ public  final class Field extends
      * The field cardinality.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Cardinality cardinality = 2;</code>
+     * <code>.google.protobuf.Field.Cardinality cardinality = 2;</code>
      */
     public Builder setCardinality(org.apache.hadoop.hbase.shaded.com.google.protobuf.Field.Cardinality value) {
       if (value == null) {
@@ -1601,7 +1601,7 @@ public  final class Field extends
      * The field cardinality.
      * </pre>
      *
-     * <code>optional .google.protobuf.Field.Cardinality cardinality = 2;</code>
+     * <code>.google.protobuf.Field.Cardinality cardinality = 2;</code>
      */
     public Builder clearCardinality() {
       
@@ -1616,7 +1616,7 @@ public  final class Field extends
      * The field number.
      * </pre>
      *
-     * <code>optional int32 number = 3;</code>
+     * <code>int32 number = 3;</code>
      */
     public int getNumber() {
       return number_;
@@ -1626,7 +1626,7 @@ public  final class Field extends
      * The field number.
      * </pre>
      *
-     * <code>optional int32 number = 3;</code>
+     * <code>int32 number = 3;</code>
      */
     public Builder setNumber(int value) {
       
@@ -1639,7 +1639,7 @@ public  final class Field extends
      * The field number.
      * </pre>
      *
-     * <code>optional int32 number = 3;</code>
+     * <code>int32 number = 3;</code>
      */
     public Builder clearNumber() {
       
@@ -1654,7 +1654,7 @@ public  final class Field extends
      * The field name.
      * </pre>
      *
-     * <code>optional string name = 4;</code>
+     * <code>string name = 4;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -1673,7 +1673,7 @@ public  final class Field extends
      * The field name.
      * </pre>
      *
-     * <code>optional string name = 4;</code>
+     * <code>string name = 4;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getNameBytes() {
@@ -1693,7 +1693,7 @@ public  final class Field extends
      * The field name.
      * </pre>
      *
-     * <code>optional string name = 4;</code>
+     * <code>string name = 4;</code>
      */
     public Builder setName(
         java.lang.String value) {
@@ -1710,7 +1710,7 @@ public  final class Field extends
      * The field name.
      * </pre>
      *
-     * <code>optional string name = 4;</code>
+     * <code>string name = 4;</code>
      */
     public Builder clearName() {
       
@@ -1723,7 +1723,7 @@ public  final class Field extends
      * The field name.
      * </pre>
      *
-     * <code>optional string name = 4;</code>
+     * <code>string name = 4;</code>
      */
     public Builder setNameBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -1744,7 +1744,7 @@ public  final class Field extends
      * types. Example: `"type.googleapis.org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp"`.
      * </pre>
      *
-     * <code>optional string type_url = 6;</code>
+     * <code>string type_url = 6;</code>
      */
     public java.lang.String getTypeUrl() {
       java.lang.Object ref = typeUrl_;
@@ -1764,7 +1764,7 @@ public  final class Field extends
      * types. Example: `"type.googleapis.org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp"`.
      * </pre>
      *
-     * <code>optional string type_url = 6;</code>
+     * <code>string type_url = 6;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getTypeUrlBytes() {
@@ -1785,7 +1785,7 @@ public  final class Field extends
      * types. Example: `"type.googleapis.org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp"`.
      * </pre>
      *
-     * <code>optional string type_url = 6;</code>
+     * <code>string type_url = 6;</code>
      */
     public Builder setTypeUrl(
         java.lang.String value) {
@@ -1803,7 +1803,7 @@ public  final class Field extends
      * types. Example: `"type.googleapis.org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp"`.
      * </pre>
      *
-     * <code>optional string type_url = 6;</code>
+     * <code>string type_url = 6;</code>
      */
     public Builder clearTypeUrl() {
       
@@ -1817,7 +1817,7 @@ public  final class Field extends
      * types. Example: `"type.googleapis.org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp"`.
      * </pre>
      *
-     * <code>optional string type_url = 6;</code>
+     * <code>string type_url = 6;</code>
      */
     public Builder setTypeUrlBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -1838,7 +1838,7 @@ public  final class Field extends
      * types. The first type has index 1; zero means the type is not in the list.
      * </pre>
      *
-     * <code>optional int32 oneof_index = 7;</code>
+     * <code>int32 oneof_index = 7;</code>
      */
     public int getOneofIndex() {
       return oneofIndex_;
@@ -1849,7 +1849,7 @@ public  final class Field extends
      * types. The first type has index 1; zero means the type is not in the list.
      * </pre>
      *
-     * <code>optional int32 oneof_index = 7;</code>
+     * <code>int32 oneof_index = 7;</code>
      */
     public Builder setOneofIndex(int value) {
       
@@ -1863,7 +1863,7 @@ public  final class Field extends
      * types. The first type has index 1; zero means the type is not in the list.
      * </pre>
      *
-     * <code>optional int32 oneof_index = 7;</code>
+     * <code>int32 oneof_index = 7;</code>
      */
     public Builder clearOneofIndex() {
       
@@ -1878,7 +1878,7 @@ public  final class Field extends
      * Whether to use alternative packed wire representation.
      * </pre>
      *
-     * <code>optional bool packed = 8;</code>
+     * <code>bool packed = 8;</code>
      */
     public boolean getPacked() {
       return packed_;
@@ -1888,7 +1888,7 @@ public  final class Field extends
      * Whether to use alternative packed wire representation.
      * </pre>
      *
-     * <code>optional bool packed = 8;</code>
+     * <code>bool packed = 8;</code>
      */
     public Builder setPacked(boolean value) {
       
@@ -1901,7 +1901,7 @@ public  final class Field extends
      * Whether to use alternative packed wire representation.
      * </pre>
      *
-     * <code>optional bool packed = 8;</code>
+     * <code>bool packed = 8;</code>
      */
     public Builder clearPacked() {
       
@@ -2228,7 +2228,7 @@ public  final class Field extends
      * The field JSON name.
      * </pre>
      *
-     * <code>optional string json_name = 10;</code>
+     * <code>string json_name = 10;</code>
      */
     public java.lang.String getJsonName() {
       java.lang.Object ref = jsonName_;
@@ -2247,7 +2247,7 @@ public  final class Field extends
      * The field JSON name.
      * </pre>
      *
-     * <code>optional string json_name = 10;</code>
+     * <code>string json_name = 10;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getJsonNameBytes() {
@@ -2267,7 +2267,7 @@ public  final class Field extends
      * The field JSON name.
      * </pre>
      *
-     * <code>optional string json_name = 10;</code>
+     * <code>string json_name = 10;</code>
      */
     public Builder setJsonName(
         java.lang.String value) {
@@ -2284,7 +2284,7 @@ public  final class Field extends
      * The field JSON name.
      * </pre>
      *
-     * <code>optional string json_name = 10;</code>
+     * <code>string json_name = 10;</code>
      */
     public Builder clearJsonName() {
       
@@ -2297,7 +2297,7 @@ public  final class Field extends
      * The field JSON name.
      * </pre>
      *
-     * <code>optional string json_name = 10;</code>
+     * <code>string json_name = 10;</code>
      */
     public Builder setJsonNameBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -2317,7 +2317,7 @@ public  final class Field extends
      * The string value of the default value of this field. Proto2 syntax only.
      * </pre>
      *
-     * <code>optional string default_value = 11;</code>
+     * <code>string default_value = 11;</code>
      */
     public java.lang.String getDefaultValue() {
       java.lang.Object ref = defaultValue_;
@@ -2336,7 +2336,7 @@ public  final class Field extends
      * The string value of the default value of this field. Proto2 syntax only.
      * </pre>
      *
-     * <code>optional string default_value = 11;</code>
+     * <code>string default_value = 11;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getDefaultValueBytes() {
@@ -2356,7 +2356,7 @@ public  final class Field extends
      * The string value of the default value of this field. Proto2 syntax only.
      * </pre>
      *
-     * <code>optional string default_value = 11;</code>
+     * <code>string default_value = 11;</code>
      */
     public Builder setDefaultValue(
         java.lang.String value) {
@@ -2373,7 +2373,7 @@ public  final class Field extends
      * The string value of the default value of this field. Proto2 syntax only.
      * </pre>
      *
-     * <code>optional string default_value = 11;</code>
+     * <code>string default_value = 11;</code>
      */
     public Builder clearDefaultValue() {
       
@@ -2386,7 +2386,7 @@ public  final class Field extends
      * The string value of the default value of this field. Proto2 syntax only.
      * </pre>
      *
-     * <code>optional string default_value = 11;</code>
+     * <code>string default_value = 11;</code>
      */
     public Builder setDefaultValueBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {

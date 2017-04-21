@@ -106,7 +106,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
       @Override
       public String explainFailure() throws Exception {
-        List<String> logRollInProgressRsList = new ArrayList<String>();
+        List<String> logRollInProgressRsList = new ArrayList<>();
         for (RegionServerThread rs : rsThreads) {
           if (!rs.getRegionServer().walRollRequestFinished()) {
             logRollInProgressRsList.add(rs.getRegionServer().toString());
@@ -462,7 +462,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
   public static class ReplicationEndpointReturningFalse extends ReplicationEndpointForTest {
     static int COUNT = 10;
-    static AtomicReference<Exception> ex = new AtomicReference<Exception>(null);
+    static AtomicReference<Exception> ex = new AtomicReference<>(null);
     static AtomicBoolean replicated = new AtomicBoolean(false);
     @Override
     public boolean replicate(ReplicateContext replicateContext) {
@@ -483,7 +483,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
   // return a WALEntry filter which only accepts "row", but not other rows
   public static class ReplicationEndpointWithWALEntryFilter extends ReplicationEndpointForTest {
-    static AtomicReference<Exception> ex = new AtomicReference<Exception>(null);
+    static AtomicReference<Exception> ex = new AtomicReference<>(null);
 
     @Override
     public boolean replicate(ReplicateContext replicateContext) {

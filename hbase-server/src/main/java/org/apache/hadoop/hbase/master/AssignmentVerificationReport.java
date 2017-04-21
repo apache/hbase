@@ -51,16 +51,13 @@ public class AssignmentVerificationReport {
   private int totalRegions = 0;
   private int totalRegionServers = 0;
   // for unassigned regions
-  private List<HRegionInfo> unAssignedRegionsList =
-    new ArrayList<HRegionInfo>();
+  private List<HRegionInfo> unAssignedRegionsList = new ArrayList<>();
 
   // For regions without valid favored nodes
-  private List<HRegionInfo> regionsWithoutValidFavoredNodes =
-    new ArrayList<HRegionInfo>();
+  private List<HRegionInfo> regionsWithoutValidFavoredNodes = new ArrayList<>();
 
   // For regions not running on the favored nodes
-  private List<HRegionInfo> nonFavoredAssignedRegionList =
-    new ArrayList<HRegionInfo>();
+  private List<HRegionInfo> nonFavoredAssignedRegionList = new ArrayList<>();
 
   // For regions running on the favored nodes
   private int totalFavoredAssignments = 0;
@@ -73,26 +70,20 @@ public class AssignmentVerificationReport {
   private float avgRegionsOnRS = 0;
   private int maxRegionsOnRS = 0;
   private int minRegionsOnRS = Integer.MAX_VALUE;
-  private Set<ServerName> mostLoadedRSSet =
-    new HashSet<ServerName>();
-  private Set<ServerName> leastLoadedRSSet =
-    new HashSet<ServerName>();
+  private Set<ServerName> mostLoadedRSSet = new HashSet<>();
+  private Set<ServerName> leastLoadedRSSet = new HashSet<>();
 
   private float avgDispersionScore = 0;
   private float maxDispersionScore = 0;
-  private Set<ServerName> maxDispersionScoreServerSet =
-    new HashSet<ServerName>();
+  private Set<ServerName> maxDispersionScoreServerSet = new HashSet<>();
   private float minDispersionScore = Float.MAX_VALUE;
-  private Set<ServerName> minDispersionScoreServerSet =
-    new HashSet<ServerName>();
+  private Set<ServerName> minDispersionScoreServerSet = new HashSet<>();
 
   private float avgDispersionNum = 0;
   private float maxDispersionNum = 0;
-  private Set<ServerName> maxDispersionNumServerSet =
-    new HashSet<ServerName>();
+  private Set<ServerName> maxDispersionNumServerSet = new HashSet<>();
   private float minDispersionNum = Float.MAX_VALUE;
-  private Set<ServerName> minDispersionNumServerSet =
-    new HashSet<ServerName>();
+  private Set<ServerName> minDispersionNumServerSet = new HashSet<>();
 
   public void fillUp(TableName tableName, SnapshotOfRegionAssignmentFromMeta snapshot,
       Map<String, Map<String, Float>> regionLocalityMap) {
@@ -111,13 +102,10 @@ public class AssignmentVerificationReport {
     Map<HRegionInfo, ServerName> currentAssignment =
       snapshot.getRegionToRegionServerMap();
     // Initialize the server to its hosing region counter map
-    Map<ServerName, Integer> serverToHostingRegionCounterMap =
-      new HashMap<ServerName, Integer>();
+    Map<ServerName, Integer> serverToHostingRegionCounterMap = new HashMap<>();
 
-    Map<ServerName, Integer> primaryRSToRegionCounterMap =
-      new HashMap<ServerName, Integer>();
-    Map<ServerName, Set<ServerName>> primaryToSecTerRSMap =
-      new HashMap<ServerName, Set<ServerName>>();
+    Map<ServerName, Integer> primaryRSToRegionCounterMap = new HashMap<>();
+    Map<ServerName, Set<ServerName>> primaryToSecTerRSMap = new HashMap<>();
 
     // Check the favored nodes and its locality information
     // Also keep tracker of the most loaded and least loaded region servers
@@ -164,7 +152,7 @@ public class AssignmentVerificationReport {
         // Update the primary rs to secondary and tertiary rs map
         Set<ServerName> secAndTerSet = primaryToSecTerRSMap.get(primaryRS);
         if (secAndTerSet == null) {
-          secAndTerSet = new HashSet<ServerName>();
+          secAndTerSet = new HashSet<>();
         }
         secAndTerSet.add(secondaryRS);
         secAndTerSet.add(tertiaryRS);
@@ -340,10 +328,8 @@ public class AssignmentVerificationReport {
       plan = newPlan;
     }
     // Get the region to region server mapping
-    Map<ServerName, Integer> primaryRSToRegionCounterMap =
-        new HashMap<ServerName, Integer>();
-    Map<ServerName, Set<ServerName>> primaryToSecTerRSMap =
-        new HashMap<ServerName, Set<ServerName>>();
+    Map<ServerName, Integer> primaryRSToRegionCounterMap = new HashMap<>();
+    Map<ServerName, Set<ServerName>> primaryToSecTerRSMap = new HashMap<>();
 
     // Check the favored nodes and its locality information
     // Also keep tracker of the most loaded and least loaded region servers
@@ -375,7 +361,7 @@ public class AssignmentVerificationReport {
         // Update the primary rs to secondary and tertiary rs map
         Set<ServerName> secAndTerSet = primaryToSecTerRSMap.get(primaryRS);
         if (secAndTerSet == null) {
-          secAndTerSet = new HashSet<ServerName>();
+          secAndTerSet = new HashSet<>();
         }
         secAndTerSet.add(secondaryRS);
         secAndTerSet.add(tertiaryRS);
@@ -451,7 +437,7 @@ public class AssignmentVerificationReport {
    *
    */
   public List<Float> getDispersionInformation() {
-    List<Float> dispersion = new ArrayList<Float>();
+    List<Float> dispersion = new ArrayList<>();
     dispersion.add(avgDispersionScore);
     dispersion.add(maxDispersionScore);
     dispersion.add(minDispersionScore);

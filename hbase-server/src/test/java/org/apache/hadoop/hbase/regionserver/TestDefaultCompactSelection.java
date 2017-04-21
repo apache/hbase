@@ -119,7 +119,7 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     compactEquals(sfCreate(true, 7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
 
     // empty case
-    compactEquals(new ArrayList<StoreFile>() /* empty */);
+    compactEquals(new ArrayList<>() /* empty */);
     // empty case (because all files are too big)
     compactEquals(sfCreate(tooBig, tooBig) /* empty */);
   }
@@ -175,7 +175,7 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     // Test Default compactions
     CompactionRequest result = ((RatioBasedCompactionPolicy) store.storeEngine
         .getCompactionPolicy()).selectCompaction(candidates,
-        new ArrayList<StoreFile>(), false, false, false);
+        new ArrayList<>(), false, false, false);
     Assert.assertTrue(result.getFiles().isEmpty());
     store.setScanInfo(oldScanInfo);
   }

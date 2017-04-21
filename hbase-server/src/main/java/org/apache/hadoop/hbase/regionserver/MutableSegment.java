@@ -85,10 +85,10 @@ public class MutableSegment extends Segment {
             // decreased there as 0 only. Just keeping it as existing code now. We need to know the
             // removed cell is from MSLAB or not. Will do once HBASE-16438 is in
             int cellLen = getCellLength(cur);
-            long heapOverheadDelta = heapOverheadChange(cur, true);
-            this.incSize(-cellLen, -heapOverheadDelta);
+            long heapSize = heapSizeChange(cur, true);
+            this.incSize(-cellLen, -heapSize);
             if (memstoreSize != null) {
-              memstoreSize.decMemstoreSize(cellLen, heapOverheadDelta);
+              memstoreSize.decMemstoreSize(cellLen, heapSize);
             }
             it.remove();
           } else {

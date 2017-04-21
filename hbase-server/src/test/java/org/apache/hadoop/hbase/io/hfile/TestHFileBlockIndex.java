@@ -95,7 +95,7 @@ public class TestHFileBlockIndex {
   private long rootIndexOffset;
   private int numRootEntries;
   private int numLevels;
-  private static final List<byte[]> keys = new ArrayList<byte[]>();
+  private static final List<byte[]> keys = new ArrayList<>();
   private final Compression.Algorithm compr;
   private byte[] firstKeyInFile;
   private Configuration conf;
@@ -565,7 +565,7 @@ public class TestHFileBlockIndex {
    conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, false);
 
    // Read the HFile
-   HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, conf);
+   HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, conf);
 
    boolean hasArrayIndexOutOfBoundsException = false;
    try {
@@ -604,7 +604,7 @@ public class TestHFileBlockIndex {
       blockCache.evictBlocksByHfileName(hfilePath.getName());
 
       conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, indexBlockSize);
-      Set<String> keyStrSet = new HashSet<String>();
+      Set<String> keyStrSet = new HashSet<>();
       byte[][] keys = new byte[NUM_KV][];
       byte[][] values = new byte[NUM_KV][];
 
@@ -644,7 +644,7 @@ public class TestHFileBlockIndex {
       }
 
       // Read the HFile
-      HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, conf);
+      HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, conf);
       assertEquals(expectedNumLevels,
           reader.getTrailer().getNumDataIndexLevels());
 
@@ -674,7 +674,7 @@ public class TestHFileBlockIndex {
       HFileBlock.BlockIterator iter = fsReader.blockRange(0,
           reader.getTrailer().getLoadOnOpenDataOffset());
       HFileBlock block;
-      List<byte[]> blockKeys = new ArrayList<byte[]>();
+      List<byte[]> blockKeys = new ArrayList<>();
       while ((block = iter.nextBlock()) != null) {
         if (block.getBlockType() != BlockType.LEAF_INDEX)
           return;
@@ -762,7 +762,7 @@ public class TestHFileBlockIndex {
     HFile.Writer hfw = new HFile.WriterFactory(conf, cacheConf)
             .withFileContext(context)
             .withPath(fs, hfPath).create();
-    List<byte[]> keys = new ArrayList<byte[]>();
+    List<byte[]> keys = new ArrayList<>();
 
     // This should result in leaf-level indices and a root level index
     for (int i=0; i < 100; i++) {
@@ -774,7 +774,7 @@ public class TestHFileBlockIndex {
     }
     hfw.close();
 
-    HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, conf);
+    HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, true, conf);
     // Scanner doesn't do Cells yet.  Fix.
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {

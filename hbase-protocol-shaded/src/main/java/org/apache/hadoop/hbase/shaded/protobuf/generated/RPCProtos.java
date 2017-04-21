@@ -288,7 +288,7 @@ public final class RPCProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasEffectiveUser()) {
         hash = (37 * hash) + EFFECTIVE_USER_FIELD_NUMBER;
         hash = (53 * hash) + getEffectiveUser().hashCode();
@@ -1370,7 +1370,7 @@ public final class RPCProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasUserInfo()) {
         hash = (37 * hash) + USER_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getUserInfo().hashCode();
@@ -2584,7 +2584,7 @@ public final class RPCProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasCryptoCipherMeta()) {
         hash = (37 * hash) + CRYPTO_CIPHER_META_FIELD_NUMBER;
         hash = (53 * hash) + getCryptoCipherMeta().hashCode();
@@ -3210,7 +3210,7 @@ public final class RPCProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasLength()) {
         hash = (37 * hash) + LENGTH_FIELD_NUMBER;
         hash = (53 * hash) + getLength();
@@ -4059,7 +4059,7 @@ public final class RPCProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasExceptionClassName()) {
         hash = (37 * hash) + EXCEPTION_CLASS_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getExceptionClassName().hashCode();
@@ -5152,7 +5152,7 @@ public final class RPCProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasTransformation()) {
         hash = (37 * hash) + TRANSFORMATION_FIELD_NUMBER;
         hash = (53 * hash) + getTransformation().hashCode();
@@ -6262,7 +6262,7 @@ public final class RPCProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasCallId()) {
         hash = (37 * hash) + CALL_ID_FIELD_NUMBER;
         hash = (53 * hash) + getCallId();
@@ -7493,7 +7493,7 @@ public final class RPCProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasCallId()) {
         hash = (37 * hash) + CALL_ID_FIELD_NUMBER;
         hash = (53 * hash) + getCallId();

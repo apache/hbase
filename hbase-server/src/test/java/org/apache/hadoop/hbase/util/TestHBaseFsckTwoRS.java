@@ -28,21 +28,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -50,6 +37,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -86,7 +74,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
     TEST_UTIL.startMiniCluster(2);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("testhbck"));
+        new SynchronousQueue<>(), Threads.newDaemonThreadFactory("testhbck"));
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 
@@ -593,6 +581,75 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
 
     } finally {
       cleanupTable(tableName);
+    }
+  }
+
+  /**
+   * Creates and fixes a bad table with a successful split that have a deployed
+   * start and end keys
+   */
+  @Test (timeout=180000)
+  public void testSplitAndDupeRegion() throws Exception {
+    TableName table =
+      TableName.valueOf("testSplitAndDupeRegion");
+    Table meta = null;
+
+    try {
+      setupTable(table);
+
+      assertNoErrors(doFsck(conf, false));
+      assertEquals(ROWKEYS.length, countRows());
+
+      // No Catalog Janitor running
+      admin.enableCatalogJanitor(false);
+      meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
+      HRegionLocation loc = this.connection.getRegionLocation(table, SPLITS[0], false);
+      HRegionInfo hriParent = loc.getRegionInfo();
+
+      // Split Region A just before B
+      this.connection.getAdmin().split(table, Bytes.toBytes("A@"));
+      Thread.sleep(1000);
+
+      // We need to make sure the parent region is not in a split state, so we put it in CLOSED state.
+      regionStates.updateRegionState(hriParent, RegionState.State.CLOSED);
+      TEST_UTIL.assignRegion(hriParent);
+      MetaTableAccessor.addRegionToMeta(meta, hriParent);
+      ServerName server = regionStates.getRegionServerOfRegion(hriParent);
+
+      if (server != null)
+        TEST_UTIL.assertRegionOnServer(hriParent, server, REGION_ONLINE_TIMEOUT);
+
+      while (findDeployedHSI(getDeployedHRIs((HBaseAdmin) admin), hriParent) == null) {
+        Thread.sleep(250);
+      }
+
+      LOG.debug("Finished assignment of parent region");
+
+      // TODO why is dupe region different from dupe start keys?
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS,
+        HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS, HBaseFsck.ErrorReporter.ERROR_CODE.OVERLAP_IN_REGION_CHAIN});
+      assertEquals(3, hbck.getOverlapGroups(table).size());
+
+      // fix the degenerate region.
+      hbck = new HBaseFsck(conf, hbfsckExecutorService);
+      hbck.setDisplayFullReport(); // i.e. -details
+      hbck.setTimeLag(0);
+      hbck.setFixHdfsOverlaps(true);
+      hbck.setRemoveParents(true);
+      hbck.setFixReferenceFiles(true);
+      hbck.setFixHFileLinks(true);
+      hbck.connect();
+      hbck.onlineHbck();
+      hbck.close();
+
+      hbck = doFsck(conf, false);
+
+      assertNoErrors(hbck);
+      assertEquals(0, hbck.getOverlapGroups(table).size());
+      assertEquals(ROWKEYS.length, countRows());
+    } finally {
+      cleanupTable(table);
     }
   }
 }

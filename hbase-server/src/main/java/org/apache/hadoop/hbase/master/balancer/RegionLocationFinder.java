@@ -179,7 +179,7 @@ class RegionLocationFinder {
    */
   protected List<ServerName> getTopBlockLocations(HRegionInfo region, String currentHost) {
     HDFSBlocksDistribution blocksDistribution = getBlockDistribution(region);
-    List<String> topHosts = new ArrayList<String>();
+    List<String> topHosts = new ArrayList<>();
     for (String host : blocksDistribution.getTopHosts()) {
       if (host.equals(currentHost)) {
         break;
@@ -250,15 +250,15 @@ class RegionLocationFinder {
       return Lists.newArrayList();
     }
 
-    List<ServerName> topServerNames = new ArrayList<ServerName>();
+    List<ServerName> topServerNames = new ArrayList<>();
     Collection<ServerName> regionServers = status.getServers();
 
     // create a mapping from hostname to ServerName for fast lookup
-    HashMap<String, List<ServerName>> hostToServerName = new HashMap<String, List<ServerName>>();
+    HashMap<String, List<ServerName>> hostToServerName = new HashMap<>();
     for (ServerName sn : regionServers) {
       String host = sn.getHostname();
       if (!hostToServerName.containsKey(host)) {
-        hostToServerName.put(host, new ArrayList<ServerName>());
+        hostToServerName.put(host, new ArrayList<>());
       }
       hostToServerName.get(host).add(sn);
     }
@@ -309,8 +309,7 @@ class RegionLocationFinder {
   }
 
   public void refreshAndWait(Collection<HRegionInfo> hris) {
-    ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures =
-        new ArrayList<ListenableFuture<HDFSBlocksDistribution>>(hris.size());
+    ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures = new ArrayList<>(hris.size());
     for (HRegionInfo hregionInfo : hris) {
       regionLocationFutures.add(asyncGetBlockDistribution(hregionInfo));
     }

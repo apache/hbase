@@ -83,7 +83,7 @@ public  final class FloatValue extends
    * The float value.
    * </pre>
    *
-   * <code>optional float value = 1;</code>
+   * <code>float value = 1;</code>
    */
   public float getValue() {
     return value_;
@@ -144,7 +144,7 @@ public  final class FloatValue extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + VALUE_FIELD_NUMBER;
     hash = (53 * hash) + java.lang.Float.floatToIntBits(
         getValue());
@@ -372,7 +372,7 @@ public  final class FloatValue extends
      * The float value.
      * </pre>
      *
-     * <code>optional float value = 1;</code>
+     * <code>float value = 1;</code>
      */
     public float getValue() {
       return value_;
@@ -382,7 +382,7 @@ public  final class FloatValue extends
      * The float value.
      * </pre>
      *
-     * <code>optional float value = 1;</code>
+     * <code>float value = 1;</code>
      */
     public Builder setValue(float value) {
       
@@ -395,7 +395,7 @@ public  final class FloatValue extends
      * The float value.
      * </pre>
      *
-     * <code>optional float value = 1;</code>
+     * <code>float value = 1;</code>
      */
     public Builder clearValue() {
       

@@ -107,7 +107,7 @@ public class ThriftUtilities {
    * @return Thrift TCell array
    */
   static public List<TCell> cellFromHBase(Cell in) {
-    List<TCell> list = new ArrayList<TCell>(1);
+    List<TCell> list = new ArrayList<>(1);
     if (in != null) {
       list.add(new TCell(ByteBuffer.wrap(CellUtil.cloneValue(in)), in.getTimestamp()));
     }
@@ -123,12 +123,12 @@ public class ThriftUtilities {
   static public List<TCell> cellFromHBase(Cell[] in) {
     List<TCell> list = null;
     if (in != null) {
-      list = new ArrayList<TCell>(in.length);
+      list = new ArrayList<>(in.length);
       for (int i = 0; i < in.length; i++) {
         list.add(new TCell(ByteBuffer.wrap(CellUtil.cloneValue(in[i])), in[i].getTimestamp()));
       }
     } else {
-      list = new ArrayList<TCell>(0);
+      list = new ArrayList<>(0);
     }
     return list;
   }
@@ -149,7 +149,7 @@ public class ThriftUtilities {
    * @return Thrift TRowResult array
    */
   static public List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
-    List<TRowResult> results = new ArrayList<TRowResult>(in.length);
+    List<TRowResult> results = new ArrayList<>(in.length);
     for ( Result result_ : in) {
         if(result_ == null || result_.isEmpty()) {
             continue;
@@ -157,7 +157,7 @@ public class ThriftUtilities {
         TRowResult result = new TRowResult();
         result.row = ByteBuffer.wrap(result_.getRow());
         if (sortColumns) {
-          result.sortedColumns = new ArrayList<TColumn>();
+          result.sortedColumns = new ArrayList<>();
           for (Cell kv : result_.rawCells()) {
             result.sortedColumns.add(new TColumn(
                 ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.cloneFamily(kv),
@@ -165,7 +165,7 @@ public class ThriftUtilities {
                 new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp())));
           }
         } else {
-          result.columns = new TreeMap<ByteBuffer, TCell>();
+          result.columns = new TreeMap<>();
           for (Cell kv : result_.rawCells()) {
             result.columns.put(
                 ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.cloneFamily(kv),

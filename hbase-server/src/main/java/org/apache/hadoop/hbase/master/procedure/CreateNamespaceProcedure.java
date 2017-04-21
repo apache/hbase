@@ -62,7 +62,6 @@ public class CreateNamespaceProcedure
     if (isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
-
     try {
       switch (state) {
       case CREATE_NAMESPACE_PREPARE:

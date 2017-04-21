@@ -38,13 +38,11 @@ public abstract class AbstractClientScanner implements ResultScanner {
   }
 
   /**
-   * Used internally accumulating metrics on scan. To
-   * enable collection of metrics on a Scanner, call {@link Scan#setScanMetricsEnabled(boolean)}.
-   * These metrics are cleared at key transition points. Metrics are accumulated in the
-   * {@link Scan} object itself.
-   * @see Scan#getScanMetrics()
+   * Used internally accumulating metrics on scan. To enable collection of metrics on a Scanner,
+   * call {@link Scan#setScanMetricsEnabled(boolean)}.
    * @return Returns the running {@link ScanMetrics} instance or null if scan metrics not enabled.
    */
+  @Override
   public ScanMetrics getScanMetrics() {
     return scanMetrics;
   }

@@ -33,8 +33,7 @@ import org.apache.zookeeper.KeeperException;
 public class MasterProcedureManagerHost extends
     ProcedureManagerHost<MasterProcedureManager> {
 
-  private Hashtable<String, MasterProcedureManager> procedureMgrMap
-      = new Hashtable<String, MasterProcedureManager>();
+  private Hashtable<String, MasterProcedureManager> procedureMgrMap = new Hashtable<>();
 
   @Override
   public void loadProcedures(Configuration conf) {

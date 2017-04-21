@@ -22,13 +22,11 @@ import java.io.OutputStream;
 import java.security.Key;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A common interface for a cryptographic algorithm.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public abstract class Cipher {
 
   public static final int KEY_LENGTH = 16;

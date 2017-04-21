@@ -28,7 +28,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
 class DynamicLogicExpressionSuite  extends FunSuite with
 BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
-  val encoder = JavaBytesEncoder.create(HBaseSparkConf.defaultEncoder)
+  val encoder = JavaBytesEncoder.create(HBaseSparkConf.DEFAULT_QUERY_ENCODER)
 
   test("Basic And Test") {
     val leftLogic = new LessThanLogicExpression("Col1", 0)

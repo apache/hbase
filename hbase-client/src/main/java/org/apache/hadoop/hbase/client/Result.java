@@ -24,7 +24,9 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -39,7 +41,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -77,15 +78,13 @@ import org.apache.hadoop.hbase.util.Bytes;
  * in then use {@link #copyFrom(Result)}
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Result implements CellScannable, CellScanner {
   private Cell[] cells;
   private Boolean exists; // if the query was just to check existence.
   private boolean stale = false;
 
   /**
-   * See {@link #mayHaveMoreCellsInRow()}. And please notice that, The client side implementation
-   * should also check for row key change to determine if a Result is the last one for a row.
+   * See {@link #mayHaveMoreCellsInRow()}.
    */
   private boolean mayHaveMoreCellsInRow = false;
   // We're not using java serialization.  Transient here is just a marker to say
@@ -95,7 +94,7 @@ public class Result implements CellScannable, CellScanner {
   private transient NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
       familyMap = null;
 
-  private static ThreadLocal<byte[]> localBuffer = new ThreadLocal<byte[]>();
+  private static ThreadLocal<byte[]> localBuffer = new ThreadLocal<>();
   private static final int PAD_WIDTH = 128;
   public static final Result EMPTY_RESULT = new Result(true);
 
@@ -145,11 +144,12 @@ public class Result implements CellScannable, CellScanner {
     return create(cells, exists, stale, false);
   }
 
-  public static Result create(List<Cell> cells, Boolean exists, boolean stale, boolean partial) {
+  public static Result create(List<Cell> cells, Boolean exists, boolean stale,
+      boolean mayHaveMoreCellsInRow) {
     if (exists != null){
-      return new Result(null, exists, stale, partial);
+      return new Result(null, exists, stale, mayHaveMoreCellsInRow);
     }
-    return new Result(cells.toArray(new Cell[cells.size()]), null, stale, partial);
+    return new Result(cells.toArray(new Cell[cells.size()]), null, stale, mayHaveMoreCellsInRow);
   }
 
   /**
@@ -247,7 +247,7 @@ public class Result implements CellScannable, CellScanner {
    * did not exist in the result set
    */
   public List<Cell> getColumnCells(byte [] family, byte [] qualifier) {
-    List<Cell> result = new ArrayList<Cell>();
+    List<Cell> result = new ArrayList<>();
 
     Cell [] kvs = rawCells();
 
@@ -662,12 +662,10 @@ public class Result implements CellScannable, CellScanner {
     if(isEmpty()) {
       return null;
     }
-    NavigableMap<byte[], NavigableMap<byte[], byte[]>> returnMap =
-      new TreeMap<byte[], NavigableMap<byte[], byte[]>>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], NavigableMap<byte[], byte[]>> returnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(Map.Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
       familyEntry : familyMap.entrySet()) {
-      NavigableMap<byte[], byte[]> qualifierMap =
-        new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+      NavigableMap<byte[], byte[]> qualifierMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for(Map.Entry<byte[], NavigableMap<Long, byte[]>> qualifierEntry :
         familyEntry.getValue().entrySet()) {
         byte [] value =
@@ -693,8 +691,7 @@ public class Result implements CellScannable, CellScanner {
     if(isEmpty()) {
       return null;
     }
-    NavigableMap<byte[], byte[]> returnMap =
-      new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], byte[]> returnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifierMap =
       familyMap.get(family);
     if(qualifierMap == null) {
@@ -795,44 +792,42 @@ public class Result implements CellScannable, CellScanner {
    * @throws IOException A complete result cannot be formed because the results in the partial list
    *           come from different rows
    */
-  public static Result createCompleteResult(List<Result> partialResults)
+  public static Result createCompleteResult(Iterable<Result> partialResults)
       throws IOException {
-    List<Cell> cells = new ArrayList<Cell>();
+    if (partialResults == null) {
+      return Result.create(Collections.emptyList(), null, false);
+    }
+    List<Cell> cells = new ArrayList<>();
     boolean stale = false;
     byte[] prevRow = null;
     byte[] currentRow = null;
-
-    if (partialResults != null && !partialResults.isEmpty()) {
-      for (int i = 0; i < partialResults.size(); i++) {
-        Result r = partialResults.get(i);
-        currentRow = r.getRow();
-        if (prevRow != null && !Bytes.equals(prevRow, currentRow)) {
-          throw new IOException(
-              "Cannot form complete result. Rows of partial results do not match." +
-                  " Partial Results: " + partialResults);
-        }
-
-        // Ensure that all Results except the last one are marked as partials. The last result
-        // may not be marked as a partial because Results are only marked as partials when
-        // the scan on the server side must be stopped due to reaching the maxResultSize.
-        // Visualizing it makes it easier to understand:
-        // maxResultSize: 2 cells
-        // (-x-) represents cell number x in a row
-        // Example: row1: -1- -2- -3- -4- -5- (5 cells total)
-        // How row1 will be returned by the server as partial Results:
-        // Result1: -1- -2- (2 cells, size limit reached, mark as partial)
-        // Result2: -3- -4- (2 cells, size limit reached, mark as partial)
-        // Result3: -5- (1 cell, size limit NOT reached, NOT marked as partial)
-        if (i != (partialResults.size() - 1) && !r.mayHaveMoreCellsInRow()) {
-          throw new IOException(
-              "Cannot form complete result. Result is missing partial flag. " +
-                  "Partial Results: " + partialResults);
-        }
-        prevRow = currentRow;
-        stale = stale || r.isStale();
-        for (Cell c : r.rawCells()) {
-          cells.add(c);
-        }
+    for (Iterator<Result> iter = partialResults.iterator(); iter.hasNext();) {
+      Result r = iter.next();
+      currentRow = r.getRow();
+      if (prevRow != null && !Bytes.equals(prevRow, currentRow)) {
+        throw new IOException(
+            "Cannot form complete result. Rows of partial results do not match." +
+                " Partial Results: " + partialResults);
+      }
+      // Ensure that all Results except the last one are marked as partials. The last result
+      // may not be marked as a partial because Results are only marked as partials when
+      // the scan on the server side must be stopped due to reaching the maxResultSize.
+      // Visualizing it makes it easier to understand:
+      // maxResultSize: 2 cells
+      // (-x-) represents cell number x in a row
+      // Example: row1: -1- -2- -3- -4- -5- (5 cells total)
+      // How row1 will be returned by the server as partial Results:
+      // Result1: -1- -2- (2 cells, size limit reached, mark as partial)
+      // Result2: -3- -4- (2 cells, size limit reached, mark as partial)
+      // Result3: -5- (1 cell, size limit NOT reached, NOT marked as partial)
+      if (iter.hasNext() && !r.mayHaveMoreCellsInRow()) {
+        throw new IOException("Cannot form complete result. Result is missing partial flag. " +
+            "Partial Results: " + partialResults);
+      }
+      prevRow = currentRow;
+      stale = stale || r.isStale();
+      for (Cell c : r.rawCells()) {
+        cells.add(c);
       }
     }
 
@@ -906,10 +901,6 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Whether or not the result is a partial result. Partial results contain a subset of the cells
-   * for a row and should be combined with a result representing the remaining cells in that row to
-   * form a complete (non-partial) result.
-   * @return Whether or not the result is a partial result
    * @deprecated the word 'partial' ambiguous, use {@link #mayHaveMoreCellsInRow()} instead.
    *             Deprecated since 1.4.0.
    * @see #mayHaveMoreCellsInRow()
@@ -920,15 +911,12 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * For scanning large rows, the RS may choose to return the cells chunk by chunk to prevent OOM.
-   * This flag is used to tell you if the current Result is the last one of the current row. False
-   * means this Result is the last one. True means there may still be more cells for the current
-   * row. Notice that, 'may' have, not must have. This is because we may reach the size or time
-   * limit just at the last cell of row at RS, so we do not know if it is the last one.
-   * <p>
-   * The Scan configuration used to control the result size on the server is
-   * {@link Scan#setMaxResultSize(long)} and the default value can be seen here:
-   * {@link HConstants#DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE}
+   * For scanning large rows, the RS may choose to return the cells chunk by chunk to prevent OOM
+   * or timeout. This flag is used to tell you if the current Result is the last one of the current
+   * row. False means this Result is the last one. True means there MAY be more cells belonging to
+   * the current row.
+   * If you don't use {@link Scan#setAllowPartialResults(boolean)} or {@link Scan#setBatch(int)},
+   * this method will always return false because the Result must contains all cells in one Row.
    */
   public boolean mayHaveMoreCellsInRow() {
     return mayHaveMoreCellsInRow;

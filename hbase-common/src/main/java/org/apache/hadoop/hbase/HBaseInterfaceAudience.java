@@ -18,13 +18,11 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * This class defines constants for different classes of hbase limited private apis
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class HBaseInterfaceAudience {
 
   /**
@@ -35,6 +33,8 @@ public final class HBaseInterfaceAudience {
   public static final String COPROC = "Coprocesssor";
   public static final String REPLICATION = "Replication";
   public static final String PHOENIX = "Phoenix";
+  public static final String SPARK = "Spark";
+
   /**
    * Denotes class names that appear in user facing configuration files.
    */

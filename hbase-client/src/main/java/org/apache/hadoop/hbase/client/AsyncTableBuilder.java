@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * For creating {@link AsyncTable} or {@link RawAsyncTable}.
@@ -32,7 +31,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * AsyncTable/RawAsyncTable instance.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface AsyncTableBuilder<T extends AsyncTableBase> {
 
   /**

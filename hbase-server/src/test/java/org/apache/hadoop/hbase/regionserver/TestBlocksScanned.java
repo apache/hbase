@@ -101,7 +101,7 @@ public class TestBlocksScanned extends HBaseTestCase {
     scan.setMaxVersions(1);
 
     InternalScanner s = r.getScanner(scan);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     while (s.next(results))
       ;
     s.close();

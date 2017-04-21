@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
@@ -61,6 +63,7 @@ import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
+import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
@@ -139,7 +142,7 @@ public class ThriftUtilities {
    * @see #getFromThrift(TGet)
    */
   public static List<Get> getsFromThrift(List<TGet> in) throws IOException {
-    List<Get> out = new ArrayList<Get>(in.size());
+    List<Get> out = new ArrayList<>(in.size());
     for (TGet get : in) {
       out.add(getFromThrift(get));
     }
@@ -160,7 +163,7 @@ public class ThriftUtilities {
     if (row != null) {
       out.setRow(in.getRow());
     }
-    List<TColumnValue> columnValues = new ArrayList<TColumnValue>(raw.length);
+    List<TColumnValue> columnValues = new ArrayList<>(raw.length);
     for (Cell kv : raw) {
       TColumnValue col = new TColumnValue();
       col.setFamily(CellUtil.cloneFamily(kv));
@@ -186,7 +189,7 @@ public class ThriftUtilities {
    * @see #resultFromHBase(Result)
    */
   public static List<TResult> resultsFromHBase(Result[] in) {
-    List<TResult> out = new ArrayList<TResult>(in.length);
+    List<TResult> out = new ArrayList<>(in.length);
     for (Result result : in) {
       out.add(resultFromHBase(result));
     }
@@ -245,7 +248,7 @@ public class ThriftUtilities {
    * @see #putFromThrift(TPut)
    */
   public static List<Put> putsFromThrift(List<TPut> in) {
-    List<Put> out = new ArrayList<Put>(in.size());
+    List<Put> out = new ArrayList<>(in.size());
     for (TPut put : in) {
       out.add(putFromThrift(put));
     }
@@ -318,7 +321,7 @@ public class ThriftUtilities {
    */
 
   public static List<Delete> deletesFromThrift(List<TDelete> in) {
-    List<Delete> out = new ArrayList<Delete>(in.size());
+    List<Delete> out = new ArrayList<>(in.size());
     for (TDelete delete : in) {
       out.add(deleteFromThrift(delete));
     }
@@ -328,7 +331,7 @@ public class ThriftUtilities {
   public static TDelete deleteFromHBase(Delete in) {
     TDelete out = new TDelete(ByteBuffer.wrap(in.getRow()));
 
-    List<TColumn> columns = new ArrayList<TColumn>(in.getFamilyCellMap().entrySet().size());
+    List<TColumn> columns = new ArrayList<>(in.getFamilyCellMap().entrySet().size());
     long rowTimestamp = in.getTimeStamp();
     if (rowTimestamp != HConstants.LATEST_TIMESTAMP) {
       out.setTimestamp(rowTimestamp);
@@ -434,6 +437,24 @@ public class ThriftUtilities {
       out.setCacheBlocks(in.isCacheBlocks());
     }
 
+    if (in.isSetColFamTimeRangeMap()) {
+      Map<ByteBuffer, TTimeRange> colFamTimeRangeMap = in.getColFamTimeRangeMap();
+      if (MapUtils.isNotEmpty(colFamTimeRangeMap)) {
+        for (Map.Entry<ByteBuffer, TTimeRange> entry : colFamTimeRangeMap.entrySet()) {
+          out.setColumnFamilyTimeRange(Bytes.toBytes(entry.getKey()),
+              entry.getValue().getMinStamp(), entry.getValue().getMaxStamp());
+        }
+      }
+    }
+
+    if (in.isSetReadType()) {
+      out.setReadType(readTypeFromThrift(in.getReadType()));
+    }
+
+    if (in.isSetLimit()) {
+      out.setLimit(in.getLimit());
+    }
+
     return out;
   }
 
@@ -505,7 +526,7 @@ public class ThriftUtilities {
   }
 
   public static List<THRegionLocation> regionLocationsFromHBase(List<HRegionLocation> locations) {
-    List<THRegionLocation> tlocations = new ArrayList<THRegionLocation>(locations.size());
+    List<THRegionLocation> tlocations = new ArrayList<>(locations.size());
     for (HRegionLocation hrl:locations) {
       tlocations.add(regionLocationFromHBase(hrl));
     }
@@ -546,6 +567,15 @@ public class ThriftUtilities {
       case 4: return CompareOp.GREATER_OR_EQUAL;
       case 5: return CompareOp.GREATER;
       case 6: return CompareOp.NO_OP;
+      default: return null;
+    }
+  }
+
+  private static ReadType readTypeFromThrift(TReadType tReadType) {
+    switch (tReadType.getValue()) {
+      case 1: return ReadType.DEFAULT;
+      case 2: return ReadType.STREAM;
+      case 3: return ReadType.PREAD;
       default: return null;
     }
   }

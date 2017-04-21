@@ -209,33 +209,28 @@ public class ProcedureExecutor<TEnvironment> {
    * Once a Root-Procedure completes (success or failure), the result will be added to this map.
    * The user of ProcedureExecutor should call getResult(procId) to get the result.
    */
-  private final ConcurrentHashMap<Long, ProcedureInfo> completed =
-    new ConcurrentHashMap<Long, ProcedureInfo>();
+  private final ConcurrentHashMap<Long, ProcedureInfo> completed = new ConcurrentHashMap<>();
 
   /**
    * Map the the procId returned by submitProcedure(), the Root-ProcID, to the RootProcedureState.
    * The RootProcedureState contains the execution stack of the Root-Procedure,
    * It is added to the map by submitProcedure() and removed on procedure completion.
    */
-  private final ConcurrentHashMap<Long, RootProcedureState> rollbackStack =
-    new ConcurrentHashMap<Long, RootProcedureState>();
+  private final ConcurrentHashMap<Long, RootProcedureState> rollbackStack = new ConcurrentHashMap<>();
 
   /**
    * Helper map to lookup the live procedures by ID.
    * This map contains every procedure. root-procedures and subprocedures.
    */
-  private final ConcurrentHashMap<Long, Procedure> procedures =
-    new ConcurrentHashMap<Long, Procedure>();
+  private final ConcurrentHashMap<Long, Procedure> procedures = new ConcurrentHashMap<>();
 
   /**
    * Helper map to lookup whether the procedure already issued from the same client.
    * This map contains every root procedure.
    */
-  private final ConcurrentHashMap<NonceKey, Long> nonceKeysToProcIdsMap =
-      new ConcurrentHashMap<NonceKey, Long>();
+  private final ConcurrentHashMap<NonceKey, Long> nonceKeysToProcIdsMap = new ConcurrentHashMap<>();
 
-  private final CopyOnWriteArrayList<ProcedureExecutorListener> listeners =
-    new CopyOnWriteArrayList<ProcedureExecutorListener>();
+  private final CopyOnWriteArrayList<ProcedureExecutorListener> listeners = new CopyOnWriteArrayList<>();
 
   private Configuration conf;
   private ThreadGroup threadGroup;
@@ -318,7 +313,7 @@ public class ProcedureExecutor<TEnvironment> {
       final NonceKey nonceKey;
       final long procId;
 
-      if (procIter.isNextCompleted()) {
+      if (procIter.isNextFinished()) {
         ProcedureInfo proc = procIter.nextAsProcedureInfo();
         nonceKey = proc.getNonceKey();
         procId = proc.getProcId();
@@ -356,7 +351,7 @@ public class ProcedureExecutor<TEnvironment> {
     HashSet<Procedure> waitingSet = null;
     procIter.reset();
     while (procIter.hasNext()) {
-      if (procIter.isNextCompleted()) {
+      if (procIter.isNextFinished()) {
         procIter.skipNext();
         continue;
       }
@@ -365,8 +360,7 @@ public class ProcedureExecutor<TEnvironment> {
       assert !(proc.isFinished() && !proc.hasParent()) : "unexpected completed proc=" + proc;
 
       if (debugEnabled) {
-        LOG.debug(String.format("Loading state=%s isFailed=%s: %s",
-                    proc.getState(), proc.hasException(), proc));
+        LOG.debug(String.format("Loading %s", proc));
       }
 
       Long rootProcId = getRootProcedureId(proc);
@@ -399,15 +393,13 @@ public class ProcedureExecutor<TEnvironment> {
           break;
         case WAITING_TIMEOUT:
           if (waitingSet == null) {
-            waitingSet = new HashSet<Procedure>();
+            waitingSet = new HashSet<>();
           }
           waitingSet.add(proc);
           break;
-        case FINISHED:
-          if (proc.hasException()) {
-            // add the proc to the scheduler to perform the rollback
-            scheduler.addBack(proc);
-          }
+        case FAILED:
+          // add the proc to the scheduler to perform the rollback
+          scheduler.addBack(proc);
           break;
         case ROLLEDBACK:
         case INITIALIZING:
@@ -488,7 +480,7 @@ public class ProcedureExecutor<TEnvironment> {
     // We have numThreads executor + one timer thread used for timing out
     // procedures and triggering periodic procedures.
     this.corePoolSize = numThreads;
-    LOG.info("Starting executor threads=" + corePoolSize);
+    LOG.info("Starting executor worker threads=" + corePoolSize);
 
     // Create the Thread Group for the executors
     threadGroup = new ThreadGroup("ProcedureExecutor");
@@ -498,7 +490,7 @@ public class ProcedureExecutor<TEnvironment> {
 
     // Create the workers
     workerId.set(0);
-    workerThreads = new CopyOnWriteArrayList<WorkerThread>();
+    workerThreads = new CopyOnWriteArrayList<>();
     for (int i = 0; i < corePoolSize; ++i) {
       workerThreads.add(new WorkerThread(threadGroup));
     }
@@ -527,7 +519,9 @@ public class ProcedureExecutor<TEnvironment> {
       store.getClass().getSimpleName(), StringUtils.humanTimeDiff(et - st)));
 
     // Start the executors. Here we must have the lastProcId set.
-    LOG.debug("Start workers " + workerThreads.size());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Start workers " + workerThreads.size());
+    }
     timeoutExecutor.start();
     for (WorkerThread worker: workerThreads) {
       worker.start();
@@ -550,6 +544,7 @@ public class ProcedureExecutor<TEnvironment> {
     timeoutExecutor.sendStopSignal();
   }
 
+  @VisibleForTesting
   public void join() {
     assert !isRunning() : "expected not running";
 
@@ -653,7 +648,7 @@ public class ProcedureExecutor<TEnvironment> {
    * @return whether the chore is removed, or it will be removed later
    */
   public boolean removeChore(final ProcedureInMemoryChore chore) {
-    chore.setState(ProcedureState.FINISHED);
+    chore.setState(ProcedureState.SUCCESS);
     return timeoutExecutor.remove(chore);
   }
 
@@ -836,6 +831,9 @@ public class ProcedureExecutor<TEnvironment> {
   private long pushProcedure(final Procedure proc) {
     final long currentProcId = proc.getProcId();
 
+    // Update metrics on start of a procedure
+    proc.updateMetricsOnSubmit(getEnvironment());
+
     // Create the rollback stack for the procedure
     RootProcedureState stack = new RootProcedureState();
     rollbackStack.put(currentProcId, stack);
@@ -978,8 +976,7 @@ public class ProcedureExecutor<TEnvironment> {
    * @return the procedures in a list
    */
   public List<ProcedureInfo> listProcedures() {
-    final List<ProcedureInfo> procedureLists =
-        new ArrayList<ProcedureInfo>(procedures.size() + completed.size());
+    final List<ProcedureInfo> procedureLists = new ArrayList<>(procedures.size() + completed.size());
     for (Map.Entry<Long, Procedure> p: procedures.entrySet()) {
       procedureLists.add(ProcedureUtil.convertToProcedureInfo(p.getValue()));
     }
@@ -1151,9 +1148,11 @@ public class ProcedureExecutor<TEnvironment> {
       }
 
       if (proc.isSuccess()) {
+        // update metrics on finishing the procedure
+        proc.updateMetricsOnFinish(getEnvironment(), proc.elapsedTime(), true);
+
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Completed in " +
-              StringUtils.humanTimeDiff(proc.elapsedTime()) + ": " + proc);
+          LOG.debug("Finished " + proc + " in " + StringUtils.humanTimeDiff(proc.elapsedTime()));
         }
         // Finalize the procedure state
         if (proc.getProcId() == rootProcId) {
@@ -1247,8 +1246,7 @@ public class ProcedureExecutor<TEnvironment> {
 
     // Finalize the procedure state
     LOG.info("Rolled back " + rootProc +
-             " exec-time=" + StringUtils.humanTimeDiff(rootProc.elapsedTime()) +
-             " exception=" + exception.getMessage());
+             " exec-time=" + StringUtils.humanTimeDiff(rootProc.elapsedTime()));
     procedureFinished(rootProc);
     return LockState.LOCK_ACQUIRED;
   }
@@ -1284,6 +1282,10 @@ public class ProcedureExecutor<TEnvironment> {
 
     if (proc.removeStackIndex()) {
       proc.setState(ProcedureState.ROLLEDBACK);
+
+      // update metrics on finishing the procedure (fail)
+      proc.updateMetricsOnFinish(getEnvironment(), proc.elapsedTime(), false);
+
       if (proc.hasParent()) {
         store.delete(proc.getProcId());
         procedures.remove(proc.getProcId());
@@ -1323,7 +1325,7 @@ public class ProcedureExecutor<TEnvironment> {
     Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE);
 
     // Execute the procedure
-    boolean isSuspended = false;
+    boolean suspended = false;
     boolean reExecute = false;
     Procedure[] subprocs = null;
     do {
@@ -1334,7 +1336,7 @@ public class ProcedureExecutor<TEnvironment> {
           subprocs = null;
         }
       } catch (ProcedureSuspendedException e) {
-        isSuspended = true;
+        suspended = true;
       } catch (ProcedureYieldException e) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Yield " + procedure + ": " + e.getMessage());
@@ -1347,7 +1349,7 @@ public class ProcedureExecutor<TEnvironment> {
         return;
       } catch (Throwable e) {
         // Catch NullPointerExceptions or similar errors...
-        String msg = "CODE-BUG: Uncatched runtime exception for procedure: " + procedure;
+        String msg = "CODE-BUG: Uncaught runtime exception: " + procedure;
         LOG.error(msg, e);
         procedure.setFailure(new RemoteProcedureException(msg, e));
       }
@@ -1364,9 +1366,9 @@ public class ProcedureExecutor<TEnvironment> {
           }
         } else if (procedure.getState() == ProcedureState.WAITING_TIMEOUT) {
           timeoutExecutor.add(procedure);
-        } else if (!isSuspended) {
+        } else if (!suspended) {
           // No subtask, so we are done
-          procedure.setState(ProcedureState.FINISHED);
+          procedure.setState(ProcedureState.SUCCESS);
         }
       }
 
@@ -1375,12 +1377,17 @@ public class ProcedureExecutor<TEnvironment> {
 
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
-      if (testing != null && testing.shouldKillBeforeStoreUpdate(isSuspended)) {
+      if (testing != null && testing.shouldKillBeforeStoreUpdate(suspended)) {
         LOG.debug("TESTING: Kill before store update: " + procedure);
         stop();
         return;
       }
 
+      // TODO: The code here doesn't check if store is running before persisting to the store as
+      // it relies on the method call below to throw RuntimeException to wind up the stack and
+      // executor thread to stop. The statement following the method call below seems to check if
+      // store is not running, to prevent scheduling children procedures, re-execution or yield
+      // of this procedure. This may need more scrutiny and subsequent cleanup in future
       // Commit the transaction
       updateStoreOnExec(procStack, procedure, subprocs);
 
@@ -1388,7 +1395,7 @@ public class ProcedureExecutor<TEnvironment> {
       if (!store.isRunning()) return;
 
       // if the procedure is kind enough to pass the slot to someone else, yield
-      if (procedure.isRunnable() && !isSuspended &&
+      if (procedure.isRunnable() && !suspended &&
           procedure.isYieldAfterExecutionStep(getEnvironment())) {
         scheduler.yield(procedure);
         return;
@@ -1447,6 +1454,7 @@ public class ProcedureExecutor<TEnvironment> {
   private void submitChildrenProcedures(final Procedure[] subprocs) {
     for (int i = 0; i < subprocs.length; ++i) {
       final Procedure subproc = subprocs[i];
+      subproc.updateMetricsOnSubmit(getEnvironment());
       assert !procedures.containsKey(subproc.getProcId());
       procedures.put(subproc.getProcId(), subproc);
       scheduler.addFront(subproc);
@@ -1563,7 +1571,7 @@ public class ProcedureExecutor<TEnvironment> {
     private final AtomicLong executionStartTime = new AtomicLong(Long.MAX_VALUE);
 
     public WorkerThread(final ThreadGroup group) {
-      super(group, "ProcedureExecutorWorker-" + workerId.incrementAndGet());
+      super(group, "ProcExecWorker-" + workerId.incrementAndGet());
     }
 
     @Override
@@ -1613,7 +1621,7 @@ public class ProcedureExecutor<TEnvironment> {
   //  Timeout Thread
   // ==========================================================================
   private final class TimeoutExecutorThread extends StoppableThread {
-    private final DelayQueue<DelayedWithTimeout> queue = new DelayQueue<DelayedWithTimeout>();
+    private final DelayQueue<DelayedWithTimeout> queue = new DelayQueue<>();
 
     public TimeoutExecutorThread(final ThreadGroup group) {
       super(group, "ProcedureTimeoutExecutor");
@@ -1679,7 +1687,7 @@ public class ProcedureExecutor<TEnvironment> {
         // if the procedure is in a waiting state again, put it back in the queue
         procedure.updateTimestamp();
         if (procedure.isWaiting()) {
-          delayed.setTimeoutTimestamp(procedure.getTimeoutTimestamp());
+          delayed.setTimeout(procedure.getTimeoutTimestamp());
           queue.add(delayed);
         }
       } else {
@@ -1757,7 +1765,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     @Override
-    public long getTimeoutTimestamp() {
+    public long getTimeout() {
       return timeout;
     }
   }

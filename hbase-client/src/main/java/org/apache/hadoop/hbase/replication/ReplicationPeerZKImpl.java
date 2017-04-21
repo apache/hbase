@@ -49,7 +49,7 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
   private ReplicationPeerConfig peerConfig;
   private final String id;
   private volatile PeerState peerState;
-  private volatile Map<TableName, List<String>> tableCFs = new HashMap<TableName, List<String>>();
+  private volatile Map<TableName, List<String>> tableCFs = new HashMap<>();
   private final Configuration conf;
   private PeerStateTracker peerStateTracker;
   private PeerConfigTracker peerConfigTracker;

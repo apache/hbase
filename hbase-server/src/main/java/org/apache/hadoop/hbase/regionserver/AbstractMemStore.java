@@ -54,10 +54,25 @@ public abstract class AbstractMemStore implements MemStore {
   // Used to track when to flush
   private volatile long timeOfOldestEdit;
 
-  public final static long FIXED_OVERHEAD = ClassSize
-      .align(ClassSize.OBJECT + (4 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG));
+  public final static long FIXED_OVERHEAD = ClassSize.OBJECT
+          + (4 * ClassSize.REFERENCE)
+          + (2 * Bytes.SIZEOF_LONG); // snapshotId, timeOfOldestEdit
 
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD;
+
+  public static long addToScanners(List<? extends Segment> segments, long readPt, long order,
+      List<KeyValueScanner> scanners) {
+    for (Segment item : segments) {
+      order = addToScanners(item, readPt, order, scanners);
+    }
+    return order;
+  }
+
+  protected static long addToScanners(Segment segment, long readPt, long order,
+      List<KeyValueScanner> scanners) {
+    scanners.add(segment.getScanner(readPt, order));
+    return order - 1;
+  }
 
   protected AbstractMemStore(final Configuration conf, final CellComparator c) {
     this.conf = conf;
@@ -152,7 +167,7 @@ public abstract class AbstractMemStore implements MemStore {
 
   @Override
   public MemstoreSize getSnapshotSize() {
-    return new MemstoreSize(this.snapshot.keySize(), this.snapshot.heapOverhead());
+    return new MemstoreSize(this.snapshot.keySize(), this.snapshot.heapSize());
   }
 
   @Override
@@ -280,10 +295,10 @@ public abstract class AbstractMemStore implements MemStore {
   protected abstract long keySize();
 
   /**
-   * @return The total heap overhead of cells in this memstore. We will not consider cells in the
+   * @return The total heap size of cells in this memstore. We will not consider cells in the
    *         snapshot
    */
-  protected abstract long heapOverhead();
+  protected abstract long heapSize();
 
   protected CellComparator getComparator() {
     return comparator;

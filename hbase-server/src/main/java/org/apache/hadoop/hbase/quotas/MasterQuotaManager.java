@@ -80,9 +80,9 @@ public class MasterQuotaManager implements RegionStateListener {
     }
 
     LOG.info("Initializing quota support");
-    namespaceLocks = new NamedLock<String>();
-    tableLocks = new NamedLock<TableName>();
-    userLocks = new NamedLock<String>();
+    namespaceLocks = new NamedLock<>();
+    tableLocks = new NamedLock<>();
+    userLocks = new NamedLock<>();
 
     namespaceQuotaManager = new NamespaceAuditor(masterServices);
     namespaceQuotaManager.start();
@@ -460,7 +460,7 @@ public class MasterQuotaManager implements RegionStateListener {
   }
 
   private static class NamedLock<T> {
-    private HashSet<T> locks = new HashSet<T>();
+    private HashSet<T> locks = new HashSet<>();
 
     public void lock(final T name) throws InterruptedException {
       synchronized (locks) {

@@ -150,7 +150,7 @@ public class TestTagCompressionContext {
   }
 
   private KeyValue createKVWithTags(int noOfTags) {
-    List<Tag> tags = new ArrayList<Tag>();
+    List<Tag> tags = new ArrayList<>();
     for (int i = 0; i < noOfTags; i++) {
       tags.add(new ArrayBackedTag((byte) i, "tagValue" + i));
     }
@@ -159,7 +159,7 @@ public class TestTagCompressionContext {
   }
 
   private Cell createOffheapKVWithTags(int noOfTags) {
-    List<Tag> tags = new ArrayList<Tag>();
+    List<Tag> tags = new ArrayList<>();
     for (int i = 0; i < noOfTags; i++) {
       tags.add(new ArrayBackedTag((byte) i, "tagValue" + i));
     }

@@ -28,7 +28,6 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
  * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 abstract class SyncCoprocessorRpcChannel implements CoprocessorRpcChannel {
   private static final Log LOG = LogFactory.getLog(SyncCoprocessorRpcChannel.class);
 

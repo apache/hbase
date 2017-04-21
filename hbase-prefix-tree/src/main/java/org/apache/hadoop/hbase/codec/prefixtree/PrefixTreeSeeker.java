@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
 @InterfaceAudience.Private
 public class PrefixTreeSeeker implements EncodedSeeker {
 
-  protected ByteBuffer block;
   protected boolean includeMvccVersion;
   protected PrefixTreeArraySearcher ptSearcher;
 
@@ -569,7 +568,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
     @Override
     public long heapSize() {
-      return FIXED_OVERHEAD + rowLength + famLength + qualLength + valLength + tagsLength;
+      return FIXED_OVERHEAD;
     }
 
     @Override

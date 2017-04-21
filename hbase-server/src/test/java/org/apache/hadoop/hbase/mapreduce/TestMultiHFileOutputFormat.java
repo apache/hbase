@@ -169,7 +169,7 @@ public class TestMultiHFileOutputFormat {
             byte keyBytes[] = new byte[keyLength];
             byte valBytes[] = new byte[valLength];
 
-            ArrayList<ImmutableBytesWritable> tables = new ArrayList<ImmutableBytesWritable>();
+            ArrayList<ImmutableBytesWritable> tables = new ArrayList<>();
             for (int i = 0; i < TABLES.length; i++) {
                 tables.add(new ImmutableBytesWritable(TABLES[i]));
             }
@@ -204,7 +204,7 @@ public class TestMultiHFileOutputFormat {
         protected void reduce(ImmutableBytesWritable table, java.lang.Iterable<KeyValue> kvs,
             org.apache.hadoop.mapreduce.Reducer<ImmutableBytesWritable, KeyValue, ImmutableBytesWritable, KeyValue>.Context context)
             throws java.io.IOException, InterruptedException {
-            TreeSet<KeyValue> map = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
+            TreeSet<KeyValue> map = new TreeSet<>(KeyValue.COMPARATOR);
             for (KeyValue kv : kvs) {
                 try {
                     map.add(kv.clone());

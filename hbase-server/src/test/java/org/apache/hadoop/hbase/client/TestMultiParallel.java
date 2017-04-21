@@ -110,7 +110,7 @@ public class TestMultiParallel {
     // not a multiple of the number of regions
     int numKeys = (int) ((float) starterKeys.length * 10.33F);
 
-    List<byte[]> keys = new ArrayList<byte[]>();
+    List<byte[]> keys = new ArrayList<>();
     for (int i = 0; i < numKeys; i++) {
       int kIdx = i % starterKeys.length;
       byte[] k = starterKeys[kIdx];
@@ -155,7 +155,7 @@ public class TestMultiParallel {
         try (Table t = connection.getTable(TEST_TABLE, executor)) {
           List<Put> puts = constructPutRequests(); // creates a Put for every region
           t.batch(puts, null);
-          HashSet<ServerName> regionservers = new HashSet<ServerName>();
+          HashSet<ServerName> regionservers = new HashSet<>();
           try (RegionLocator locator = connection.getRegionLocator(TEST_TABLE)) {
             for (Row r : puts) {
               HRegionLocation location = locator.getRegionLocation(r.getRow());
@@ -180,7 +180,7 @@ public class TestMultiParallel {
     table.batch(puts, null);
 
     // create a list of gets and run it
-    List<Row> gets = new ArrayList<Row>();
+    List<Row> gets = new ArrayList<>();
     for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
@@ -190,7 +190,7 @@ public class TestMultiParallel {
     table.batch(gets, multiRes);
 
     // Same gets using individual call API
-    List<Result> singleRes = new ArrayList<Result>();
+    List<Result> singleRes = new ArrayList<>();
     for (Row get : gets) {
       singleRes.add(table.get((Get) get));
     }
@@ -214,7 +214,7 @@ public class TestMultiParallel {
     LOG.info("test=testBadFam");
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
-    List<Row> actions = new ArrayList<Row>();
+    List<Row> actions = new ArrayList<>();
     Put p = new Put(Bytes.toBytes("row1"));
     p.addColumn(Bytes.toBytes("bad_family"), Bytes.toBytes("qual"), Bytes.toBytes("value"));
     actions.add(p);
@@ -368,7 +368,7 @@ public class TestMultiParallel {
     validateSizeAndEmpty(results, KEYS.length);
 
     // Deletes
-    List<Row> deletes = new ArrayList<Row>();
+    List<Row> deletes = new ArrayList<>();
     for (int i = 0; i < KEYS.length; i++) {
       Delete delete = new Delete(KEYS[i]);
       delete.addFamily(BYTES_FAMILY);
@@ -399,7 +399,7 @@ public class TestMultiParallel {
     validateSizeAndEmpty(results, KEYS.length);
 
     // Deletes
-    ArrayList<Delete> deletes = new ArrayList<Delete>();
+    ArrayList<Delete> deletes = new ArrayList<>();
     for (int i = 0; i < KEYS.length; i++) {
       Delete delete = new Delete(KEYS[i]);
       delete.addFamily(BYTES_FAMILY);
@@ -422,7 +422,7 @@ public class TestMultiParallel {
     LOG.info("test=testBatchWithManyColsInOneRowGetAndPut");
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
-    List<Row> puts = new ArrayList<Row>();
+    List<Row> puts = new ArrayList<>();
     for (int i = 0; i < 100; i++) {
       Put put = new Put(ONE_ROW);
       byte[] qual = Bytes.toBytes("column" + i);
@@ -436,7 +436,7 @@ public class TestMultiParallel {
     validateSizeAndEmpty(results, 100);
 
     // get the data back and validate that it is correct
-    List<Row> gets = new ArrayList<Row>();
+    List<Row> gets = new ArrayList<>();
     for (int i = 0; i < 100; i++) {
       Get get = new Get(ONE_ROW);
       byte[] qual = Bytes.toBytes("column" + i);
@@ -478,7 +478,7 @@ public class TestMultiParallel {
     Append a = new Append(ONE_ROW);
     a.add(BYTES_FAMILY, QUAL1, Bytes.toBytes("def"));
     a.add(BYTES_FAMILY, QUAL4, Bytes.toBytes("xyz"));
-    List<Row> actions = new ArrayList<Row>();
+    List<Row> actions = new ArrayList<>();
     actions.add(inc);
     actions.add(a);
 
@@ -604,7 +604,7 @@ public class TestMultiParallel {
 
     // Batch: get, get, put(new col), delete, get, get of put, get of deleted,
     // put
-    List<Row> actions = new ArrayList<Row>();
+    List<Row> actions = new ArrayList<>();
 
     byte[] qual2 = Bytes.toBytes("qual2");
     byte[] val2 = Bytes.toBytes("putvalue2");
@@ -693,7 +693,7 @@ public class TestMultiParallel {
   private void validateLoadedData(Table table) throws IOException {
     // get the data back and validate that it is correct
     LOG.info("Validating data on " + table);
-    List<Get> gets = new ArrayList<Get>();
+    List<Get> gets = new ArrayList<>();
     for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);

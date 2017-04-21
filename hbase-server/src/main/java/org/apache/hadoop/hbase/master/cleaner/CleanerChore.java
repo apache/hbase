@@ -46,7 +46,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
 
   private static final Log LOG = LogFactory.getLog(CleanerChore.class.getName());
 
-  private final FileSystem fs;
+  protected final FileSystem fs;
   private final Path oldFileDir;
   private final Configuration conf;
   protected List<T> cleanersChain;
@@ -92,7 +92,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * @param confKey key to get the file cleaner classes from the configuration
    */
   private void initCleanerChain(String confKey) {
-    this.cleanersChain = new LinkedList<T>();
+    this.cleanersChain = new LinkedList<>();
     String[] logCleaners = conf.getStrings(confKey);
     if (logCleaners != null) {
       for (String className : logCleaners) {
@@ -269,6 +269,15 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     }
     
     Iterable<FileStatus> filesToDelete = Iterables.concat(invalidFiles, deletableValidFiles);
+    return deleteFiles(filesToDelete) == files.size();
+  }
+
+  /**
+   * Delete the given files
+   * @param filesToDelete files to delete
+   * @return number of deleted files
+   */
+  protected int deleteFiles(Iterable<FileStatus> filesToDelete) {
     int deletedFileCount = 0;
     for (FileStatus file : filesToDelete) {
       Path filePath = file.getPath();
@@ -289,8 +298,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
         LOG.warn("Error while deleting: " + filePath, e);
       }
     }
-
-    return deletedFileCount == files.size();
+    return deletedFileCount;
   }
 
   @Override

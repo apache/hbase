@@ -46,7 +46,7 @@ import org.junit.After;
 import org.junit.Test;
 
 /**
- * Run tests that use the HBase clients; {@link HTable}.
+ * Run tests that use the HBase clients; {@link org.apache.hadoop.hbase.client.HTable}.
  * Sets up the HBase mini cluster once at start and runs through all client tests.
  * Each creates a table named for the method and does its stuff against that.
  */

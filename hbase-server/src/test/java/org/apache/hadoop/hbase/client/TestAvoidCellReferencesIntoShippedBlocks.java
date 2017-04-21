@@ -34,11 +34,11 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -231,7 +231,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
           } catch (InterruptedException e) {
           }
         }
-        List<BlockCacheKey> cacheList = new ArrayList<BlockCacheKey>();
+        List<BlockCacheKey> cacheList = new ArrayList<>();
         Iterator<CachedBlock> iterator = cache.iterator();
         // evict all the blocks
         while (iterator.hasNext()) {
@@ -251,7 +251,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     }
   }
 
-  public static class CompactorRegionObserver extends BaseRegionObserver {
+  public static class CompactorRegionObserver implements RegionObserver {
     @Override
     public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
@@ -379,7 +379,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       Thread evictorThread = new Thread() {
         @Override
         public void run() {
-          List<BlockCacheKey> cacheList = new ArrayList<BlockCacheKey>();
+          List<BlockCacheKey> cacheList = new ArrayList<>();
           Iterator<CachedBlock> iterator = cache.iterator();
           // evict all the blocks
           while (iterator.hasNext()) {
@@ -416,7 +416,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
             }
             assertEquals("Count the rows", count, 2);
             iterator = cache.iterator();
-            List<BlockCacheKey> newCacheList = new ArrayList<BlockCacheKey>();
+            List<BlockCacheKey> newCacheList = new ArrayList<>();
             while (iterator.hasNext()) {
               CachedBlock next = iterator.next();
               BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());

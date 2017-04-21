@@ -108,11 +108,9 @@ import org.apache.hadoop.io.IOUtils;
 public class RestoreSnapshotHelper {
   private static final Log LOG = LogFactory.getLog(RestoreSnapshotHelper.class);
 
-  private final Map<byte[], byte[]> regionsMap =
-        new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+  private final Map<byte[], byte[]> regionsMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
-  private final Map<String, Pair<String, String> > parentsMap =
-      new HashMap<String, Pair<String, String> >();
+  private final Map<String, Pair<String, String> > parentsMap = new HashMap<>();
 
   private final ForeignExceptionDispatcher monitor;
   private final MonitoredTask status;
@@ -187,7 +185,7 @@ public class RestoreSnapshotHelper {
 
     // Take a copy of the manifest.keySet() since we are going to modify
     // this instance, by removing the regions already present in the restore dir.
-    Set<String> regionNames = new HashSet<String>(regionManifests.keySet());
+    Set<String> regionNames = new HashSet<>(regionManifests.keySet());
 
     HRegionInfo mobRegion = MobUtils.getMobRegionInfo(snapshotManifest.getTableDescriptor()
         .getTableName());
@@ -213,7 +211,7 @@ public class RestoreSnapshotHelper {
       status.setStatus("Restoring table regions...");
       if (regionNames.contains(mobRegion.getEncodedName())) {
         // restore the mob region in case
-        List<HRegionInfo> mobRegions = new ArrayList<HRegionInfo>(1);
+        List<HRegionInfo> mobRegions = new ArrayList<>(1);
         mobRegions.add(mobRegion);
         restoreHdfsMobRegions(exec, regionManifests, mobRegions);
         regionNames.remove(mobRegion.getEncodedName());
@@ -230,7 +228,7 @@ public class RestoreSnapshotHelper {
 
     // Regions to Add: present in the snapshot but not in the current table
     if (regionNames.size() > 0) {
-      List<HRegionInfo> regionsToAdd = new ArrayList<HRegionInfo>(regionNames.size());
+      List<HRegionInfo> regionsToAdd = new ArrayList<>(regionNames.size());
 
       monitor.rethrowException();
       // add the mob region
@@ -344,14 +342,14 @@ public class RestoreSnapshotHelper {
 
     void addRegionToRemove(final HRegionInfo hri) {
       if (regionsToRemove == null) {
-        regionsToRemove = new LinkedList<HRegionInfo>();
+        regionsToRemove = new LinkedList<>();
       }
       regionsToRemove.add(hri);
     }
 
     void addRegionToRestore(final HRegionInfo hri) {
       if (regionsToRestore == null) {
-        regionsToRestore = new LinkedList<HRegionInfo>();
+        regionsToRestore = new LinkedList<>();
       }
       regionsToRestore.add(hri);
     }
@@ -361,7 +359,7 @@ public class RestoreSnapshotHelper {
       if (regionInfos == null || parentsMap.isEmpty()) return;
 
       // Extract region names and offlined regions
-      Map<String, HRegionInfo> regionsByName = new HashMap<String, HRegionInfo>(regionInfos.size());
+      Map<String, HRegionInfo> regionsByName = new HashMap<>(regionInfos.size());
       List<HRegionInfo> parentRegions = new LinkedList<>();
       for (HRegionInfo regionInfo: regionInfos) {
         if (regionInfo.isSplitParent()) {
@@ -441,10 +439,10 @@ public class RestoreSnapshotHelper {
   private Map<String, List<SnapshotRegionManifest.StoreFile>> getRegionHFileReferences(
       final SnapshotRegionManifest manifest) {
     Map<String, List<SnapshotRegionManifest.StoreFile>> familyMap =
-      new HashMap<String, List<SnapshotRegionManifest.StoreFile>>(manifest.getFamilyFilesCount());
+      new HashMap<>(manifest.getFamilyFilesCount());
     for (SnapshotRegionManifest.FamilyFiles familyFiles: manifest.getFamilyFilesList()) {
       familyMap.put(familyFiles.getFamilyName().toStringUtf8(),
-        new ArrayList<SnapshotRegionManifest.StoreFile>(familyFiles.getStoreFilesList()));
+        new ArrayList<>(familyFiles.getStoreFilesList()));
     }
     return familyMap;
   }
@@ -489,8 +487,7 @@ public class RestoreSnapshotHelper {
       List<SnapshotRegionManifest.StoreFile> snapshotFamilyFiles =
           snapshotFiles.remove(familyDir.getName());
       if (snapshotFamilyFiles != null) {
-        List<SnapshotRegionManifest.StoreFile> hfilesToAdd =
-            new ArrayList<SnapshotRegionManifest.StoreFile>();
+        List<SnapshotRegionManifest.StoreFile> hfilesToAdd = new ArrayList<>();
         for (SnapshotRegionManifest.StoreFile storeFile: snapshotFamilyFiles) {
           if (familyFiles.contains(storeFile.getName())) {
             // HFile already present
@@ -546,7 +543,7 @@ public class RestoreSnapshotHelper {
     FileStatus[] hfiles = FSUtils.listStatus(fs, familyDir);
     if (hfiles == null) return Collections.emptySet();
 
-    Set<String> familyFiles = new HashSet<String>(hfiles.length);
+    Set<String> familyFiles = new HashSet<>(hfiles.length);
     for (int i = 0; i < hfiles.length; ++i) {
       String hfileName = hfiles[i].getPath().getName();
       familyFiles.add(hfileName);
@@ -564,8 +561,7 @@ public class RestoreSnapshotHelper {
       final List<HRegionInfo> regions) throws IOException {
     if (regions == null || regions.isEmpty()) return null;
 
-    final Map<String, HRegionInfo> snapshotRegions =
-      new HashMap<String, HRegionInfo>(regions.size());
+    final Map<String, HRegionInfo> snapshotRegions = new HashMap<>(regions.size());
 
     // clone region info (change embedded tableName with the new one)
     HRegionInfo[] clonedRegionsInfo = new HRegionInfo[regions.size()];
@@ -742,7 +738,7 @@ public class RestoreSnapshotHelper {
     synchronized (parentsMap) {
       Pair<String, String> daughters = parentsMap.get(clonedRegionName);
       if (daughters == null) {
-        daughters = new Pair<String, String>(regionName, null);
+        daughters = new Pair<>(regionName, null);
         parentsMap.put(clonedRegionName, daughters);
       } else if (!regionName.equals(daughters.getFirst())) {
         daughters.setSecond(regionName);
@@ -778,7 +774,7 @@ public class RestoreSnapshotHelper {
     FileStatus[] regionDirs = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regionDirs == null) return null;
 
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionDirs.length);
+    List<HRegionInfo> regions = new ArrayList<>(regionDirs.length);
     for (int i = 0; i < regionDirs.length; ++i) {
       HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDirs[i].getPath());
       regions.add(hri);

@@ -381,7 +381,7 @@ public class TestClassFinder {
     // Directory entries for all packages have to be added explicitly for
     // resources to be findable via ClassLoader. Directory entries must end
     // with "/"; the initial one is expected to, also.
-    Set<String> pathsInJar = new HashSet<String>();
+    Set<String> pathsInJar = new HashSet<>();
     for (FileAndPath fileAndPath : filesInJar) {
       String pathToAdd = fileAndPath.path;
       while (pathsInJar.add(pathToAdd)) {

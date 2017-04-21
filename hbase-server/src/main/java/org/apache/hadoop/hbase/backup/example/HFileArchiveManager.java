@@ -67,7 +67,8 @@ class HFileArchiveManager {
 
   /**
    * Stop retaining HFiles for the given table in the archive. HFiles will be cleaned up on the next
-   * pass of the {@link HFileCleaner}, if the HFiles are retained by another cleaner.
+   * pass of the {@link org.apache.hadoop.hbase.master.cleaner.HFileCleaner}, if the HFiles are retained by another
+   * cleaner.
    * @param table name of the table for which to disable hfile retention.
    * @return <tt>this</tt> for chaining.
    * @throws KeeperException if if we can't reach zookeeper to update the hfile cleaner.

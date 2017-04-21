@@ -63,7 +63,7 @@ public class TestSeekToBlockWithEncoders {
    */
   @Test
   public void testSeekToBlockWithNonMatchingSeekKey() throws IOException {
-    List<KeyValue> sampleKv = new ArrayList<KeyValue>();
+    List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv1);
@@ -89,7 +89,7 @@ public class TestSeekToBlockWithEncoders {
    */
   @Test
   public void testSeekingToBlockWithBiggerNonLength1() throws IOException {
-    List<KeyValue> sampleKv = new ArrayList<KeyValue>();
+    List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv1);
@@ -115,7 +115,7 @@ public class TestSeekToBlockWithEncoders {
    */
   @Test
   public void testSeekingToBlockToANotAvailableKey() throws IOException {
-    List<KeyValue> sampleKv = new ArrayList<KeyValue>();
+    List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv1);
@@ -141,7 +141,7 @@ public class TestSeekToBlockWithEncoders {
    */
   @Test
   public void testSeekToBlockWithDecreasingCommonPrefix() throws IOException {
-    List<KeyValue> sampleKv = new ArrayList<KeyValue>();
+    List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("row10aaa"), Bytes.toBytes("f1"),
         Bytes.toBytes("q1"), Bytes.toBytes("val"));
     sampleKv.add(kv1);
@@ -160,7 +160,7 @@ public class TestSeekToBlockWithEncoders {
 
   @Test
   public void testSeekToBlockWithDiffQualifer() throws IOException {
-    List<KeyValue> sampleKv = new ArrayList<KeyValue>();
+    List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv1);
@@ -180,7 +180,7 @@ public class TestSeekToBlockWithEncoders {
 
   @Test
   public void testSeekToBlockWithDiffQualiferOnSameRow() throws IOException {
-    List<KeyValue> sampleKv = new ArrayList<KeyValue>();
+    List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv1);
@@ -203,7 +203,7 @@ public class TestSeekToBlockWithEncoders {
 
   @Test
   public void testSeekToBlockWithDiffQualiferOnSameRow1() throws IOException {
-    List<KeyValue> sampleKv = new ArrayList<KeyValue>();
+    List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv1);
@@ -226,7 +226,7 @@ public class TestSeekToBlockWithEncoders {
 
   @Test
   public void testSeekToBlockWithDiffQualiferOnSameRowButDescendingInSize() throws IOException {
-    List<KeyValue> sampleKv = new ArrayList<KeyValue>();
+    List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("qual1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv1);
@@ -249,7 +249,7 @@ public class TestSeekToBlockWithEncoders {
 
   @Test
   public void testSeekToBlockWithDiffFamilyAndQualifer() throws IOException {
-    List<KeyValue> sampleKv = new ArrayList<KeyValue>();
+    List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("fam1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv1);
@@ -270,7 +270,7 @@ public class TestSeekToBlockWithEncoders {
   private void seekToTheKey(KeyValue expected, List<KeyValue> kvs, Cell toSeek)
       throws IOException {
     // create all seekers
-    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<DataBlockEncoder.EncodedSeeker>();
+    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       if (encoding.getEncoder() == null || encoding == DataBlockEncoding.PREFIX_TREE) {
         continue;

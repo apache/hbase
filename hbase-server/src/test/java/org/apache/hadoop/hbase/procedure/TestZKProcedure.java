@@ -127,7 +127,7 @@ public class TestZKProcedure {
     String opDescription = "coordination test - " + members.length + " cohort members";
 
     // start running the controller
-    ZKProcedureCoordinatorRpcs coordinatorComms = new ZKProcedureCoordinatorRpcs(
+    ZKProcedureCoordinator coordinatorComms = new ZKProcedureCoordinator(
         coordZkw, opDescription, COORDINATOR_NODE_NAME);
     ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(COORDINATOR_NODE_NAME, POOL_SIZE, KEEP_ALIVE);
     ProcedureCoordinator coordinator = new ProcedureCoordinator(coordinatorComms, pool) {
@@ -141,20 +141,19 @@ public class TestZKProcedure {
     // build and start members
     // NOTE: There is a single subprocedure builder for all members here.
     SubprocedureFactory subprocFactory = Mockito.mock(SubprocedureFactory.class);
-    List<Pair<ProcedureMember, ZKProcedureMemberRpcs>> procMembers = new ArrayList<Pair<ProcedureMember, ZKProcedureMemberRpcs>>(
-        members.length);
+    List<Pair<ProcedureMember, ZKProcedureMemberRpcs>> procMembers = new ArrayList<>(members.length);
     // start each member
     for (String member : members) {
       ZooKeeperWatcher watcher = newZooKeeperWatcher();
       ZKProcedureMemberRpcs comms = new ZKProcedureMemberRpcs(watcher, opDescription);
       ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(member, 1, KEEP_ALIVE);
       ProcedureMember procMember = new ProcedureMember(comms, pool2, subprocFactory);
-      procMembers.add(new Pair<ProcedureMember, ZKProcedureMemberRpcs>(procMember, comms));
+      procMembers.add(new Pair<>(procMember, comms));
       comms.start(member, procMember);
     }
 
     // setup mock member subprocedures
-    final List<Subprocedure> subprocs = new ArrayList<Subprocedure>();
+    final List<Subprocedure> subprocs = new ArrayList<>();
     for (int i = 0; i < procMembers.size(); i++) {
       ForeignExceptionDispatcher cohortMonitor = new ForeignExceptionDispatcher();
       Subprocedure commit = Mockito
@@ -209,26 +208,25 @@ public class TestZKProcedure {
 
     // start running the coordinator and its controller
     ZooKeeperWatcher coordinatorWatcher = newZooKeeperWatcher();
-    ZKProcedureCoordinatorRpcs coordinatorController = new ZKProcedureCoordinatorRpcs(
+    ZKProcedureCoordinator coordinatorController = new ZKProcedureCoordinator(
         coordinatorWatcher, opDescription, COORDINATOR_NODE_NAME);
     ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(COORDINATOR_NODE_NAME, POOL_SIZE, KEEP_ALIVE);
     ProcedureCoordinator coordinator = spy(new ProcedureCoordinator(coordinatorController, pool));
 
     // start a member for each node
     SubprocedureFactory subprocFactory = Mockito.mock(SubprocedureFactory.class);
-    List<Pair<ProcedureMember, ZKProcedureMemberRpcs>> members = new ArrayList<Pair<ProcedureMember, ZKProcedureMemberRpcs>>(
-        expected.size());
+    List<Pair<ProcedureMember, ZKProcedureMemberRpcs>> members = new ArrayList<>(expected.size());
     for (String member : expected) {
       ZooKeeperWatcher watcher = newZooKeeperWatcher();
       ZKProcedureMemberRpcs controller = new ZKProcedureMemberRpcs(watcher, opDescription);
       ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(member, 1, KEEP_ALIVE);
       ProcedureMember mem = new ProcedureMember(controller, pool2, subprocFactory);
-      members.add(new Pair<ProcedureMember, ZKProcedureMemberRpcs>(mem, controller));
+      members.add(new Pair<>(mem, controller));
       controller.start(member, mem);
     }
 
     // setup mock subprocedures
-    final List<Subprocedure> cohortTasks = new ArrayList<Subprocedure>();
+    final List<Subprocedure> cohortTasks = new ArrayList<>();
     final int[] elem = new int[1];
     for (int i = 0; i < members.size(); i++) {
       ForeignExceptionDispatcher cohortMonitor = new ForeignExceptionDispatcher();
@@ -395,7 +393,7 @@ public class TestZKProcedure {
 
   private void closeAll(
       ProcedureCoordinator coordinator,
-      ZKProcedureCoordinatorRpcs coordinatorController,
+      ZKProcedureCoordinator coordinatorController,
       List<Pair<ProcedureMember, ZKProcedureMemberRpcs>> cohort)
       throws IOException {
     // make sure we close all the resources

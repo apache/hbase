@@ -34,7 +34,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -48,7 +50,7 @@ public class TestRegionObserverStacking extends TestCase {
     = new HBaseTestingUtility();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
-  public static class ObserverA extends BaseRegionObserver {
+  public static class ObserverA implements RegionObserver {
     long id;
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -63,7 +65,7 @@ public class TestRegionObserverStacking extends TestCase {
     }
   }
 
-  public static class ObserverB extends BaseRegionObserver {
+  public static class ObserverB implements RegionObserver {
     long id;
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -78,7 +80,7 @@ public class TestRegionObserverStacking extends TestCase {
     }
   }
 
-  public static class ObserverC extends BaseRegionObserver {
+  public static class ObserverC implements RegionObserver {
     long id;
 
     @Override
@@ -100,6 +102,7 @@ public class TestRegionObserverStacking extends TestCase {
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);

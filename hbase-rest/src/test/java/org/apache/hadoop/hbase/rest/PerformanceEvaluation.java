@@ -125,7 +125,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private TableName tableName = TABLE_NAME;
 
   protected HTableDescriptor TABLE_DESCRIPTOR;
-  protected Map<String, CmdDescriptor> commands = new TreeMap<String, CmdDescriptor>();
+  protected Map<String, CmdDescriptor> commands = new TreeMap<>();
   protected static Cluster cluster = new Cluster();
 
   volatile Configuration conf;
@@ -338,7 +338,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     public List<InputSplit> getSplits(JobContext job) throws IOException {
       // generate splits
-      List<InputSplit> splitList = new ArrayList<InputSplit>();
+      List<InputSplit> splitList = new ArrayList<>();
 
       for (FileStatus file: listStatus(job)) {
         if (file.isDirectory()) {
@@ -601,7 +601,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * @throws IOException
    */
   private void doMultipleClients(final Class<? extends Test> cmd) throws IOException {
-    final List<Thread> threads = new ArrayList<Thread>(this.N);
+    final List<Thread> threads = new ArrayList<>(this.N);
     final long[] timings = new long[this.N];
     final int perClientRows = R/N;
     final TableName tableName = this.tableName;
@@ -724,7 +724,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     Path inputFile = new Path(inputDir, "input.txt");
     PrintStream out = new PrintStream(fs.create(inputFile));
     // Make input random.
-    Map<Integer, String> m = new TreeMap<Integer, String>();
+    Map<Integer, String> m = new TreeMap<>();
     Hash h = MurmurHash.getInstance();
     int perClientRows = (this.R / this.N);
     try {
@@ -1039,7 +1039,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected Pair<byte[], byte[]> generateStartAndStopRows(int maxRange) {
       int start = this.rand.nextInt(Integer.MAX_VALUE) % totalRows;
       int stop = start + maxRange;
-      return new Pair<byte[],byte[]>(format(start), format(stop));
+      return new Pair<>(format(start), format(stop));
     }
 
     @Override

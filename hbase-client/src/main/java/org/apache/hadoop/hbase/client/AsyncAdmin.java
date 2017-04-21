@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.List;
+import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
@@ -24,16 +27,20 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.quotas.QuotaFilter;
+import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.client.replication.TableCFs;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
  *  The asynchronous administrative API for HBase.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface AsyncAdmin {
 
   /**
@@ -221,6 +228,30 @@ public interface AsyncAdmin {
   CompletableFuture<HTableDescriptor[]> disableTables(Pattern pattern);
 
   /**
+   * @param tableName name of table to check
+   * @return true if table is off-line. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isTableDisabled(TableName tableName);
+
+  /**
+   * @param tableName name of table to check
+   * @return true if all regions of the table are available. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isTableAvailable(TableName tableName);
+
+  /**
+   * Use this api to check if the table has been created with the specified number of splitkeys
+   * which was used while creating the given table. Note : If this api is used after a table's
+   * region gets splitted, the api may return false. The return value will be wrapped by a
+   * {@link CompletableFuture}.
+   * @param tableName name of table to check
+   * @param splitKeys keys to check if the table has been created with all split keys
+   */
+  CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys);
+
+  /**
    * Get the status of alter command - indicates how many regions have received the updated schema
    * Asynchronous operation.
    * @param tableName TableName instance
@@ -252,6 +283,44 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void> modifyColumnFamily(final TableName tableName,
       final HColumnDescriptor columnFamily);
+
+  /**
+   * Create a new namespace.
+   * @param descriptor descriptor which describes the new namespace
+   */
+  CompletableFuture<Void> createNamespace(final NamespaceDescriptor descriptor);
+
+  /**
+   * Modify an existing namespace.
+   * @param descriptor descriptor which describes the new namespace
+   */
+  CompletableFuture<Void> modifyNamespace(final NamespaceDescriptor descriptor);
+
+  /**
+   * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
+   * @param name namespace name
+   */
+  CompletableFuture<Void> deleteNamespace(final String name);
+
+  /**
+   * Get a namespace descriptor by name
+   * @param name name of namespace descriptor
+   * @return A descriptor wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<NamespaceDescriptor> getNamespaceDescriptor(final String name);
+
+  /**
+   * List available namespace descriptors
+   * @return List of descriptors wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<NamespaceDescriptor[]> listNamespaceDescriptors();
+
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isTableEnabled(TableName tableName);
 
   /**
    * Turn the load balancer on or off.
@@ -332,4 +401,176 @@ public interface AsyncAdmin {
    * @param hri
    */
   CompletableFuture<Void> closeRegion(ServerName sn, HRegionInfo hri);
+
+  /**
+   * Merge two regions.
+   * @param nameOfRegionA encoded or full name of region a
+   * @param nameOfRegionB encoded or full name of region b
+   * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
+   *          regions
+   */
+  CompletableFuture<Void> mergeRegions(final byte[] nameOfRegionA, final byte[] nameOfRegionB,
+      final boolean forcible);
+
+  /**
+   * Split a table. The method will execute split action for each region in table.
+   * @param tableName table to split
+   */
+  CompletableFuture<Void> split(final TableName tableName);
+
+  /**
+   * Split an individual region.
+   * @param regionName region to split
+   */
+  CompletableFuture<Void> splitRegion(final byte[] regionName);
+
+  /**
+   * Split a table.
+   * @param tableName table to split
+   * @param splitPoint the explicit position to split on
+   */
+  CompletableFuture<Void> split(final TableName tableName, final byte[] splitPoint);
+
+  /**
+   * Split an individual region.
+   * @param regionName region to split
+   * @param splitPoint the explicit position to split on
+   */
+  CompletableFuture<Void> splitRegion(final byte[] regionName, final byte[] splitPoint);
+
+  /**
+   * @param regionName Encoded or full name of region to assign.
+   */
+  CompletableFuture<Void> assign(final byte[] regionName);
+
+  /**
+   * Unassign a region from current hosting regionserver. Region will then be assigned to a
+   * regionserver chosen at random. Region could be reassigned back to the same server. Use
+   * {@link #move(byte[], byte[])} if you want to control the region movement.
+   * @param regionName Encoded or full name of region to unassign. Will clear any existing
+   *          RegionPlan if one found.
+   * @param force If true, force unassign (Will remove region from regions-in-transition too if
+   *          present. If results in double assignment use hbck -fix to resolve. To be used by
+   *          experts).
+   */
+  CompletableFuture<Void> unassign(final byte[] regionName, final boolean force);
+
+  /**
+   * Offline specified region from master's in-memory state. It will not attempt to reassign the
+   * region as in unassign. This API can be used when a region not served by any region server and
+   * still online as per Master's in memory state. If this API is incorrectly used on active region
+   * then master will loose track of that region. This is a special method that should be used by
+   * experts or hbck.
+   * @param regionName Encoded or full name of region to offline
+   */
+  CompletableFuture<Void> offline(final byte[] regionName);
+
+  /**
+   * Move the region <code>r</code> to <code>dest</code>.
+   * @param regionName Encoded or full name of region to move.
+   * @param destServerName The servername of the destination regionserver. If passed the empty byte
+   *          array we'll assign to a random server. A server name is made of host, port and
+   *          startcode. Here is an example: <code> host187.example.com,60020,1289493121758</code>
+   */
+  CompletableFuture<Void> move(final byte[] regionName, final byte[] destServerName);
+
+  /**
+   * Apply the new quota settings.
+   * @param quota the quota settings
+   */
+  CompletableFuture<Void> setQuota(final QuotaSettings quota);
+
+  /**
+   * List the quotas based on the filter.
+   * @param filter the quota settings filter
+   * @return the QuotaSetting list, which wrapped by a CompletableFuture.
+   */
+  CompletableFuture<List<QuotaSettings>> getQuota(QuotaFilter filter);
+
+  /**
+   * Add a new replication peer for replicating data to slave cluster
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig configuration for the replication slave cluster
+   */
+  CompletableFuture<Void> addReplicationPeer(final String peerId,
+      final ReplicationPeerConfig peerConfig);
+
+  /**
+   * Remove a peer and stop the replication
+   * @param peerId a short name that identifies the peer
+   */
+  CompletableFuture<Void> removeReplicationPeer(final String peerId);
+
+  /**
+   * Restart the replication stream to the specified peer
+   * @param peerId a short name that identifies the peer
+   */
+  CompletableFuture<Void> enableReplicationPeer(final String peerId);
+
+  /**
+   * Stop the replication stream to the specified peer
+   * @param peerId a short name that identifies the peer
+   */
+  CompletableFuture<Void> disableReplicationPeer(final String peerId);
+
+  /**
+   * Returns the configured ReplicationPeerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
+   * @return ReplicationPeerConfig for the peer wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<ReplicationPeerConfig> getReplicationPeerConfig(final String peerId);
+
+  /**
+   * Update the peerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig new config for the peer
+   */
+  CompletableFuture<Void> updateReplicationPeerConfig(final String peerId,
+      final ReplicationPeerConfig peerConfig);
+
+  /**
+   * Append the replicable table-cf config of the specified peer
+   * @param id a short that identifies the cluster
+   * @param tableCfs A map from tableName to column family names
+   */
+  CompletableFuture<Void> appendReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs);
+
+  /**
+   * Remove some table-cfs from config of the specified peer
+   * @param id a short name that identifies the cluster
+   * @param tableCfs A map from tableName to column family names
+   */
+  CompletableFuture<Void> removeReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs);
+
+  /**
+   * Return a list of replication peers.
+   * @return a list of replication peers description. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers();
+
+  /**
+   * Return a list of replication peers.
+   * @param regex The regular expression to match peer id
+   * @return a list of replication peers description. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(String regex);
+
+  /**
+   * Return a list of replication peers.
+   * @param pattern The compiled regular expression to match peer id
+   * @return a list of replication peers description. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(Pattern pattern);
+
+  /**
+   * Find all table and column families that are replicated from this cluster
+   * @return the replicated table-cfs list of this cluster. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableCFs>> listReplicatedTableCFs();
 }

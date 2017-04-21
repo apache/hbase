@@ -285,14 +285,14 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     // not a special compaction request, so make our own list
     List<CompactionRequest> ret = null;
     if (requests == null) {
-      ret = selectNow ? new ArrayList<CompactionRequest>(r.getStores().size()) : null;
+      ret = selectNow ? new ArrayList<>(r.getStores().size()) : null;
       for (Store s : r.getStores()) {
         CompactionRequest cr = requestCompactionInternal(r, s, why, p, null, selectNow, user);
         if (selectNow) ret.add(cr);
       }
     } else {
       Preconditions.checkArgument(selectNow); // only system requests have selectNow == false
-      ret = new ArrayList<CompactionRequest>(requests.size());
+      ret = new ArrayList<>(requests.size());
       for (Pair<CompactionRequest, Store> pair : requests) {
         ret.add(requestCompaction(r, pair.getSecond(), why, p, pair.getFirst(), user));
       }

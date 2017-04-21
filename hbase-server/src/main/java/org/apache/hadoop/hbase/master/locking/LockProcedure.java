@@ -43,11 +43,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Procedure to allow clients and external admin tools to take locks on table/namespace/regions.
- * This procedure when scheduled, acquires specified locks, suspends itself and waits for :
- * - call to unlock: if lock request came from the process itself, say master chore.
- * - Timeout : if lock request came from RPC. On timeout, evaluates if it should continue holding
- * the lock or not based on last heartbeat timestamp.
+ * Procedure to allow blessed clients and external admin tools to take our internal Schema locks
+ * used by the procedure framework isolating procedures doing creates/deletes etc. on
+ * table/namespace/regions.
+ * This procedure when scheduled, acquires specified locks, suspends itself and waits for:
+ * <ul>
+ * <li>Call to unlock: if lock request came from the process itself, say master chore.</li>
+ * <li>Timeout : if lock request came from RPC. On timeout, evaluates if it should continue holding
+ * the lock or not based on last heartbeat timestamp.</li>
+ * </ul>
  */
 @InterfaceAudience.Private
 public final class LockProcedure extends Procedure<MasterProcedureEnv>
@@ -191,7 +195,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   public void updateHeartBeat() {
     lastHeartBeat.set(System.currentTimeMillis());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Update heartbeat. Proc: " + toString());
+      LOG.debug("Heartbeat " + toString());
     }
   }
 
@@ -202,8 +206,10 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
    */
   protected boolean setTimeoutFailure(final MasterProcedureEnv env) {
     synchronized (event) {
-      if (!event.isReady()) {  // maybe unlock() awakened the event.
+      if (LOG.isDebugEnabled()) LOG.debug("Timeout failure " + this.event);
+      if (!event.isReady()) {  // Maybe unlock() awakened the event.
         setState(ProcedureProtos.ProcedureState.RUNNABLE);
+        if (LOG.isDebugEnabled()) LOG.debug("Calling wake on " + this.event);
         env.getProcedureScheduler().wakeEvent(event);
       }
     }
@@ -234,7 +240,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     }
     if (unlock.get() || hasHeartbeatExpired()) {
       locked.set(false);
-      LOG.debug((unlock.get() ? "UNLOCKED - " : "TIMED OUT - ") + toString());
+      LOG.debug((unlock.get()? "UNLOCKED " : "TIMED OUT ") + toString());
       return null;
     }
     synchronized (event) {
@@ -302,7 +308,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     hasLock = ret;
     if (ret) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("LOCKED - " + toString());
+        LOG.debug("LOCKED " + toString());
       }
       lastHeartBeat.set(System.currentTimeMillis());
       return LockState.LOCK_ACQUIRED;
@@ -352,7 +358,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     } else if (tableName != null) {
       return setupTableLock();
     } else {
-      LOG.error("Unknown level specified in proc - " + toString());
+      LOG.error("Unknown level specified in " + toString());
       throw new IllegalArgumentException("no namespace/table/region provided");
     }
   }
@@ -364,10 +370,10 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
         this.opType = TableOperationType.EDIT;
         return new NamespaceExclusiveLock();
       case SHARED:
-        LOG.error("Shared lock on namespace not supported. Proc - " + toString());
+        LOG.error("Shared lock on namespace not supported for " + toString());
         throw new IllegalArgumentException("Shared lock on namespace not supported");
       default:
-        LOG.error("Unexpected lock type in proc - " + toString());
+        LOG.error("Unexpected lock type " + toString());
         throw new IllegalArgumentException("Wrong lock type: " + type.toString());
     }
   }
@@ -381,7 +387,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
         this.opType = TableOperationType.READ;
         return new TableSharedLock();
       default:
-        LOG.error("Unexpected lock type in proc - " + toString());
+        LOG.error("Unexpected lock type " + toString());
         throw new IllegalArgumentException("Wrong lock type:" + type.toString());
     }
   }
@@ -393,7 +399,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
         this.opType = TableOperationType.REGION_EDIT;
         return new RegionExclusiveLock();
       default:
-        LOG.error("Only exclusive lock supported on regions. Proc - " + toString());
+        LOG.error("Only exclusive lock supported on regions for " + toString());
         throw new IllegalArgumentException("Only exclusive lock supported on regions.");
     }
   }

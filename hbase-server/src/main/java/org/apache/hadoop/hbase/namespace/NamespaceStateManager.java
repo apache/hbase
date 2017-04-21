@@ -47,7 +47,7 @@ class NamespaceStateManager {
   private volatile boolean initialized = false;
 
   public NamespaceStateManager(MasterServices masterServices) {
-    nsStateCache = new ConcurrentHashMap<String, NamespaceTableAndRegionInfo>();
+    nsStateCache = new ConcurrentHashMap<>();
     master = masterServices;
   }
 

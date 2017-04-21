@@ -42,8 +42,7 @@ public class ArraySearcherPool {
    */
   private static final Integer MAX_POOL_SIZE = 1000;
 
-  protected Queue<PrefixTreeArraySearcher> pool
-    = new LinkedBlockingQueue<PrefixTreeArraySearcher>(MAX_POOL_SIZE);
+  protected Queue<PrefixTreeArraySearcher> pool = new LinkedBlockingQueue<>(MAX_POOL_SIZE);
 
   public PrefixTreeArraySearcher checkOut(ByteBuff buffer, boolean includesMvccVersion) {
     PrefixTreeArraySearcher searcher = pool.poll();//will return null if pool is empty

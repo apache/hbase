@@ -76,7 +76,6 @@ public class TestLockProcedure {
   // crank this up if this test turns out to be flaky.
   private static final int HEARTBEAT_TIMEOUT = 1000;
   private static final int LOCAL_LOCKS_TIMEOUT = 2000;
-  private static final int ZK_EXPIRATION = 2 * HEARTBEAT_TIMEOUT;
 
   private static final Log LOG = LogFactory.getLog(TestLockProcedure.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

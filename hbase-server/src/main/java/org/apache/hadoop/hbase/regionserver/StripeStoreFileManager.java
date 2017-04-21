@@ -100,8 +100,7 @@ public class StripeStoreFileManager
      * same index, except the last one. Inside each list, the files are in reverse order by
      * seqNum. Note that the length of this is one higher than that of stripeEndKeys.
      */
-    public ArrayList<ImmutableList<StoreFile>> stripeFiles
-      = new ArrayList<ImmutableList<StoreFile>>();
+    public ArrayList<ImmutableList<StoreFile>> stripeFiles = new ArrayList<>();
     /** Level 0. The files are in reverse order by seqNum. */
     public ImmutableList<StoreFile> level0Files = ImmutableList.<StoreFile>of();
 
@@ -112,8 +111,8 @@ public class StripeStoreFileManager
   private State state = null;
 
   /** Cached file metadata (or overrides as the case may be) */
-  private HashMap<StoreFile, byte[]> fileStarts = new HashMap<StoreFile, byte[]>();
-  private HashMap<StoreFile, byte[]> fileEnds = new HashMap<StoreFile, byte[]>();
+  private HashMap<StoreFile, byte[]> fileStarts = new HashMap<>();
+  private HashMap<StoreFile, byte[]> fileEnds = new HashMap<>();
   /** Normally invalid key is null, but in the map null is the result for "no key"; so use
    * the following constant value in these maps instead. Note that this is a constant and
    * we use it to compare by reference when we read from the map. */
@@ -277,7 +276,7 @@ public class StripeStoreFileManager
   }
 
   private byte[] getSplitPointFromAllFiles() throws IOException {
-    ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<StoreFile>();
+    ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<>();
     sfs.addSublist(state.level0Files);
     sfs.addAllSublists(state.stripeFiles);
     if (sfs.isEmpty()) return null;
@@ -305,7 +304,7 @@ public class StripeStoreFileManager
       return state.allFilesCached; // We need to read all files.
     }
 
-    ConcatenatedLists<StoreFile> result = new ConcatenatedLists<StoreFile>();
+    ConcatenatedLists<StoreFile> result = new ConcatenatedLists<>();
     result.addAllSublists(state.stripeFiles.subList(firstStripe, lastStripe + 1));
     result.addSublist(state.level0Files);
     return result;
@@ -385,9 +384,8 @@ public class StripeStoreFileManager
    */
   private void loadUnclassifiedStoreFiles(List<StoreFile> storeFiles) {
     LOG.debug("Attempting to load " + storeFiles.size() + " store files.");
-    TreeMap<byte[], ArrayList<StoreFile>> candidateStripes =
-        new TreeMap<byte[], ArrayList<StoreFile>>(MAP_COMPARATOR);
-    ArrayList<StoreFile> level0Files = new ArrayList<StoreFile>();
+    TreeMap<byte[], ArrayList<StoreFile>> candidateStripes = new TreeMap<>(MAP_COMPARATOR);
+    ArrayList<StoreFile> level0Files = new ArrayList<>();
     // Separate the files into tentative stripes; then validate. Currently, we rely on metadata.
     // If needed, we could dynamically determine the stripes in future.
     for (StoreFile sf : storeFiles) {
@@ -405,7 +403,7 @@ public class StripeStoreFileManager
       } else {
         ArrayList<StoreFile> stripe = candidateStripes.get(endRow);
         if (stripe == null) {
-          stripe = new ArrayList<StoreFile>();
+          stripe = new ArrayList<>();
           candidateStripes.put(endRow, stripe);
         }
         insertFileIntoStripe(stripe, sf);
@@ -477,9 +475,9 @@ public class StripeStoreFileManager
     // Copy the results into the fields.
     State state = new State();
     state.level0Files = ImmutableList.copyOf(level0Files);
-    state.stripeFiles = new ArrayList<ImmutableList<StoreFile>>(candidateStripes.size());
+    state.stripeFiles = new ArrayList<>(candidateStripes.size());
     state.stripeEndRows = new byte[Math.max(0, candidateStripes.size() - 1)][];
-    ArrayList<StoreFile> newAllFiles = new ArrayList<StoreFile>(level0Files);
+    ArrayList<StoreFile> newAllFiles = new ArrayList<>(level0Files);
     int i = candidateStripes.size() - 1;
     for (Map.Entry<byte[], ArrayList<StoreFile>> entry : candidateStripes.entrySet()) {
       state.stripeFiles.add(ImmutableList.copyOf(entry.getValue()));
@@ -564,7 +562,7 @@ public class StripeStoreFileManager
    */
   private final int nonOpenRowCompare(byte[] k1, byte[] k2) {
     assert !isOpen(k1) && !isOpen(k2);
-    return cellComparator.compareRows(new KeyOnlyKeyValue(k1), k2, 0, k2.length);
+    return Bytes.compareTo(k1, k2);
   }
 
   private final int nonOpenRowCompare(Cell k1, byte[] k2) {
@@ -685,7 +683,7 @@ public class StripeStoreFileManager
         this.nextWasCalled = false;
         List<StoreFile> src = components.get(currentComponent);
         if (src instanceof ImmutableList<?>) {
-          src = new ArrayList<StoreFile>(src);
+          src = new ArrayList<>(src);
           components.set(currentComponent, src);
         }
         src.remove(indexWithinComponent);
@@ -711,13 +709,12 @@ public class StripeStoreFileManager
     private Collection<StoreFile> compactedFiles = null;
     private Collection<StoreFile> results = null;
 
-    private List<StoreFile> l0Results = new ArrayList<StoreFile>();
+    private List<StoreFile> l0Results = new ArrayList<>();
     private final boolean isFlush;
 
     public CompactionOrFlushMergeCopy(boolean isFlush) {
       // Create a lazy mutable copy (other fields are so lazy they start out as nulls).
-      this.stripeFiles = new ArrayList<List<StoreFile>>(
-          StripeStoreFileManager.this.state.stripeFiles);
+      this.stripeFiles = new ArrayList<>(StripeStoreFileManager.this.state.stripeFiles);
       this.isFlush = isFlush;
     }
 
@@ -755,15 +752,14 @@ public class StripeStoreFileManager
           : ImmutableList.copyOf(this.level0Files);
       newState.stripeEndRows = (this.stripeEndRows == null) ? oldState.stripeEndRows
           : this.stripeEndRows.toArray(new byte[this.stripeEndRows.size()][]);
-      newState.stripeFiles = new ArrayList<ImmutableList<StoreFile>>(this.stripeFiles.size());
+      newState.stripeFiles = new ArrayList<>(this.stripeFiles.size());
       for (List<StoreFile> newStripe : this.stripeFiles) {
         newState.stripeFiles.add(newStripe instanceof ImmutableList<?>
             ? (ImmutableList<StoreFile>)newStripe : ImmutableList.copyOf(newStripe));
       }
 
-      List<StoreFile> newAllFiles = new ArrayList<StoreFile>(oldState.allFilesCached);
-      List<StoreFile> newAllCompactedFiles =
-          new ArrayList<StoreFile>(oldState.allCompactedFilesCached);
+      List<StoreFile> newAllFiles = new ArrayList<>(oldState.allFilesCached);
+      List<StoreFile> newAllCompactedFiles = new ArrayList<>(oldState.allCompactedFilesCached);
       if (!isFlush) {
         newAllFiles.removeAll(compactedFiles);
         if (delCompactedFiles) {
@@ -803,7 +799,7 @@ public class StripeStoreFileManager
       List<StoreFile> stripeCopy = this.stripeFiles.get(index);
       ArrayList<StoreFile> result = null;
       if (stripeCopy instanceof ImmutableList<?>) {
-        result = new ArrayList<StoreFile>(stripeCopy);
+        result = new ArrayList<>(stripeCopy);
         this.stripeFiles.set(index, result);
       } else {
         result = (ArrayList<StoreFile>)stripeCopy;
@@ -816,7 +812,7 @@ public class StripeStoreFileManager
      */
     private final ArrayList<StoreFile> getLevel0Copy() {
       if (this.level0Files == null) {
-        this.level0Files = new ArrayList<StoreFile>(StripeStoreFileManager.this.state.level0Files);
+        this.level0Files = new ArrayList<>(StripeStoreFileManager.this.state.level0Files);
       }
       return this.level0Files;
     }
@@ -849,7 +845,7 @@ public class StripeStoreFileManager
 
         // Make a new candidate stripe.
         if (newStripes == null) {
-          newStripes = new TreeMap<byte[], StoreFile>(MAP_COMPARATOR);
+          newStripes = new TreeMap<>(MAP_COMPARATOR);
         }
         StoreFile oldSf = newStripes.put(endRow, sf);
         if (oldSf != null) {
@@ -893,8 +889,7 @@ public class StripeStoreFileManager
         TreeMap<byte[], StoreFile> newStripes) throws IOException {
       // Validate that the removed and added aggregate ranges still make for a full key space.
       boolean hasStripes = !this.stripeFiles.isEmpty();
-      this.stripeEndRows = new ArrayList<byte[]>(
-          Arrays.asList(StripeStoreFileManager.this.state.stripeEndRows));
+      this.stripeEndRows = new ArrayList<>(Arrays.asList(StripeStoreFileManager.this.state.stripeEndRows));
       int removeFrom = 0;
       byte[] firstStartRow = startOf(newStripes.firstEntry().getValue());
       byte[] lastEndRow = newStripes.lastKey();
@@ -917,7 +912,7 @@ public class StripeStoreFileManager
         int removeTo = findStripeIndexByEndRow(lastEndRow);
         if (removeTo < 0) throw new IOException("Compaction is trying to add a bad range.");
         // See if there are files in the stripes we are trying to replace.
-        ArrayList<StoreFile> conflictingFiles = new ArrayList<StoreFile>();
+        ArrayList<StoreFile> conflictingFiles = new ArrayList<>();
         for (int removeIndex = removeTo; removeIndex >= removeFrom; --removeIndex) {
           conflictingFiles.addAll(this.stripeFiles.get(removeIndex));
         }
@@ -973,7 +968,7 @@ public class StripeStoreFileManager
           }
         }
         // Add the new stripe.
-        ArrayList<StoreFile> tmp = new ArrayList<StoreFile>();
+        ArrayList<StoreFile> tmp = new ArrayList<>();
         tmp.add(newStripe.getValue());
         stripeFiles.add(insertAt, tmp);
         previousEndRow = newStripe.getKey();
@@ -992,8 +987,8 @@ public class StripeStoreFileManager
 
   @Override
   public List<byte[]> getStripeBoundaries() {
-    if (this.state.stripeFiles.isEmpty()) return new ArrayList<byte[]>();
-    ArrayList<byte[]> result = new ArrayList<byte[]>(this.state.stripeEndRows.length + 2);
+    if (this.state.stripeFiles.isEmpty()) return new ArrayList<>();
+    ArrayList<byte[]> result = new ArrayList<>(this.state.stripeEndRows.length + 2);
     result.add(OPEN_KEY);
     Collections.addAll(result, this.state.stripeEndRows);
     result.add(OPEN_KEY);
@@ -1033,7 +1028,7 @@ public class StripeStoreFileManager
           LOG.info("Found an expired store file: " + sf.getPath() + " whose maxTimeStamp is "
               + fileTs + ", which is below " + maxTs);
           if (expiredStoreFiles == null) {
-            expiredStoreFiles = new ArrayList<StoreFile>();
+            expiredStoreFiles = new ArrayList<>();
           }
           expiredStoreFiles.add(sf);
         }

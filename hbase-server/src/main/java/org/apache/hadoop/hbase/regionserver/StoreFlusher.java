@@ -74,22 +74,22 @@ abstract class StoreFlusher {
 
   /**
    * Creates the scanner for flushing snapshot. Also calls coprocessors.
-   * @param snapshotScanner
+   * @param snapshotScanners
    * @param smallestReadPoint
    * @return The scanner; null if coprocessor is canceling the flush.
    */
-  protected InternalScanner createScanner(KeyValueScanner snapshotScanner,
+  protected InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
       long smallestReadPoint) throws IOException {
     InternalScanner scanner = null;
     if (store.getCoprocessorHost() != null) {
-      scanner = store.getCoprocessorHost().preFlushScannerOpen(store, snapshotScanner,
+      scanner = store.getCoprocessorHost().preFlushScannerOpen(store, snapshotScanners,
           smallestReadPoint);
     }
     if (scanner == null) {
       Scan scan = new Scan();
       scan.setMaxVersions(store.getScanInfo().getMaxVersions());
       scanner = new StoreScanner(store, store.getScanInfo(), scan,
-          Collections.singletonList(snapshotScanner), ScanType.COMPACT_RETAIN_DELETES,
+          snapshotScanners, ScanType.COMPACT_RETAIN_DELETES,
           smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
     }
     assert scanner != null;
@@ -119,7 +119,7 @@ abstract class StoreFlusher {
     ScannerContext scannerContext =
         ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
 
-    List<Cell> kvs = new ArrayList<Cell>();
+    List<Cell> kvs = new ArrayList<>();
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
     // no control on system table (such as meta, namespace, etc) flush

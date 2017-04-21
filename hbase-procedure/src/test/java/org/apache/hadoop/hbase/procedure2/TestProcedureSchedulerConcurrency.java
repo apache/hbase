@@ -79,8 +79,7 @@ public class TestProcedureSchedulerConcurrency {
     final AtomicInteger waitCount = new AtomicInteger(0);
     final AtomicInteger wakeCount = new AtomicInteger(0);
 
-    final ConcurrentSkipListSet<TestProcedureWithEvent> waitQueue =
-      new ConcurrentSkipListSet<TestProcedureWithEvent>();
+    final ConcurrentSkipListSet<TestProcedureWithEvent> waitQueue = new ConcurrentSkipListSet<>();
     threads[0] = new Thread() {
       @Override
       public void run() {

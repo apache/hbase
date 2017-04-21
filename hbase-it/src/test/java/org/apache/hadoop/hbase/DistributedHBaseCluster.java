@@ -317,7 +317,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   protected boolean restoreMasters(ClusterStatus initial, ClusterStatus current) {
-    List<IOException> deferred = new ArrayList<IOException>();
+    List<IOException> deferred = new ArrayList<>();
     //check whether current master has changed
     final ServerName initMaster = initial.getMaster();
     if (!ServerName.isSameHostnameAndPort(initMaster, current.getMaster())) {
@@ -371,8 +371,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
       }
     } else {
       //current master has not changed, match up backup masters
-      Set<ServerName> toStart = new TreeSet<ServerName>(new ServerNameIgnoreStartCodeComparator());
-      Set<ServerName> toKill = new TreeSet<ServerName>(new ServerNameIgnoreStartCodeComparator());
+      Set<ServerName> toStart = new TreeSet<>(new ServerNameIgnoreStartCodeComparator());
+      Set<ServerName> toKill = new TreeSet<>(new ServerNameIgnoreStartCodeComparator());
       toStart.addAll(initial.getBackupMasters());
       toKill.addAll(current.getBackupMasters());
 
@@ -429,8 +429,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   protected boolean restoreRegionServers(ClusterStatus initial, ClusterStatus current) {
-    Set<ServerName> toStart = new TreeSet<ServerName>(new ServerNameIgnoreStartCodeComparator());
-    Set<ServerName> toKill = new TreeSet<ServerName>(new ServerNameIgnoreStartCodeComparator());
+    Set<ServerName> toStart = new TreeSet<>(new ServerNameIgnoreStartCodeComparator());
+    Set<ServerName> toKill = new TreeSet<>(new ServerNameIgnoreStartCodeComparator());
     toStart.addAll(initial.getServers());
     toKill.addAll(current.getServers());
 
@@ -443,7 +443,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       toKill.remove(server);
     }
 
-    List<IOException> deferred = new ArrayList<IOException>();
+    List<IOException> deferred = new ArrayList<>();
 
     for(ServerName sn:toStart) {
       try {

@@ -115,7 +115,7 @@ public class TestHFile  {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), "TestHFile");
     HFileContext meta = new HFileContextBuilder().withBlockSize(64 * 1024).build();
     StoreFileWriter sfw =
-        new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(storeFileParentDir)
+        new StoreFileWriter.Builder(conf, fs).withOutputDir(storeFileParentDir)
             .withComparator(CellComparator.COMPARATOR).withFileContext(meta).build();
 
     final int rowLen = 32;
@@ -161,7 +161,7 @@ public class TestHFile  {
     Writer w =
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
     w.close();
-    Reader r = HFile.createReader(fs, f, cacheConf, conf);
+    Reader r = HFile.createReader(fs, f, cacheConf, true, conf);
     r.loadFileInfo();
     assertNull(r.getFirstKey());
     assertNull(r.getLastKey());
@@ -178,7 +178,7 @@ public class TestHFile  {
     fsos.close();
 
     try {
-      Reader r = HFile.createReader(fs, f, cacheConf, conf);
+      Reader r = HFile.createReader(fs, f, cacheConf, true, conf);
     } catch (CorruptHFileException che) {
       // Expected failure
       return;
@@ -218,7 +218,7 @@ public class TestHFile  {
     truncateFile(fs, w.getPath(), trunc);
 
     try {
-      Reader r = HFile.createReader(fs, trunc, cacheConf, conf);
+      Reader r = HFile.createReader(fs, trunc, cacheConf, true, conf);
     } catch (CorruptHFileException che) {
       // Expected failure
       return;
@@ -453,7 +453,7 @@ public class TestHFile  {
       writer.append(kv);
       writer.close();
       fout.close();
-      Reader reader = HFile.createReader(fs, mFile, cacheConf, conf);
+      Reader reader = HFile.createReader(fs, mFile, cacheConf, true, conf);
       reader.loadFileInfo();
       assertNull(reader.getMetaBlock("non-existant", false));
     }

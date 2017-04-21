@@ -51,10 +51,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -197,13 +197,13 @@ public class TestReplicationWithTags {
     }
   }
 
-  public static class TestCoprocessorForTagsAtSource extends BaseRegionObserver {
+  public static class TestCoprocessorForTagsAtSource implements RegionObserver {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
       byte[] attribute = put.getAttribute("visibility");
       byte[] cf = null;
-      List<Cell> updatedCells = new ArrayList<Cell>();
+      List<Cell> updatedCells = new ArrayList<>();
       if (attribute != null) {
         for (List<? extends Cell> edits : put.getFamilyCellMap().values()) {
           for (Cell cell : edits) {
@@ -212,7 +212,7 @@ public class TestReplicationWithTags {
               cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new ArrayBackedTag(TAG_TYPE, attribute);
-            List<Tag> tagList = new ArrayList<Tag>(1);
+            List<Tag> tagList = new ArrayList<>(1);
             tagList.add(tag);
 
             KeyValue newKV = new KeyValue(CellUtil.cloneRow(kv), 0, kv.getRowLength(),
@@ -230,7 +230,7 @@ public class TestReplicationWithTags {
     }
   }
 
-  public static class TestCoprocessorForTagsAtSink extends BaseRegionObserver {
+  public static class TestCoprocessorForTagsAtSink implements RegionObserver {
     public static List<Tag> tags = null;
 
     @Override

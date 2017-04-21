@@ -41,7 +41,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Run tests related to {@link TimestampsFilter} using HBase client APIs.
+ * Run tests related to {@link org.apache.hadoop.hbase.filter.TimestampsFilter} using HBase client APIs.
  * Sets up the HBase mini cluster once at start. Each creates a table
  * named for the method and does its stuff against that.
  */

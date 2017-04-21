@@ -73,7 +73,7 @@ public class MetricSampleQuantiles {
 
   public MetricSampleQuantiles(MetricQuantile[] quantiles) {
     this.quantiles = Arrays.copyOf(quantiles, quantiles.length);
-    this.samples = new LinkedList<SampleItem>();
+    this.samples = new LinkedList<>();
   }
 
   /**
@@ -235,7 +235,7 @@ public class MetricSampleQuantiles {
   synchronized public Map<MetricQuantile, Long> snapshot() throws IOException {
     // flush the buffer first for best results
     insertBatch();
-    Map<MetricQuantile, Long> values = new HashMap<MetricQuantile, Long>(quantiles.length);
+    Map<MetricQuantile, Long> values = new HashMap<>(quantiles.length);
     for (int i = 0; i < quantiles.length; i++) {
       values.put(quantiles[i], query(quantiles[i].quantile));
     }

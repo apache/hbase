@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -74,7 +73,6 @@ import com.google.common.collect.Lists;
  * @see ImportTsv#usage(String)
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class ImportTsv extends Configured implements Tool {
 
   protected static final Log LOG = LogFactory.getLog(ImportTsv.class);
@@ -249,7 +247,7 @@ public class ImportTsv extends Configured implements Tool {
     public ParsedLine parse(byte[] lineBytes, int length)
     throws BadTsvLineException {
       // Enumerate separator offsets
-      ArrayList<Integer> tabOffsets = new ArrayList<Integer>(maxColumnCount);
+      ArrayList<Integer> tabOffsets = new ArrayList<>(maxColumnCount);
       for (int i = 0; i < length; i++) {
         if (lineBytes[i] == separatorByte) {
           tabOffsets.add(i);
@@ -448,7 +446,7 @@ public class ImportTsv extends Configured implements Tool {
                   + " are less than row key position.");
         }
       }
-      return new Pair<Integer, Integer>(startPos, endPos - startPos + 1);
+      return new Pair<>(startPos, endPos - startPos + 1);
     }
   }
 
@@ -521,7 +519,7 @@ public class ImportTsv extends Configured implements Tool {
             boolean noStrict = conf.getBoolean(NO_STRICT_COL_FAMILY, false);
             // if no.strict is false then check column family
             if(!noStrict) {
-              ArrayList<String> unmatchedFamilies = new ArrayList<String>();
+              ArrayList<String> unmatchedFamilies = new ArrayList<>();
               Set<String> cfSet = getColumnFamilies(columns);
               HTableDescriptor tDesc = table.getTableDescriptor();
               for (String cf : cfSet) {
@@ -530,7 +528,7 @@ public class ImportTsv extends Configured implements Tool {
                 }
               }
               if(unmatchedFamilies.size() > 0) {
-                ArrayList<String> familyNames = new ArrayList<String>();
+                ArrayList<String> familyNames = new ArrayList<>();
                 for (HColumnDescriptor family : table.getTableDescriptor().getFamilies()) {
                   familyNames.add(family.getNameAsString());
                 }
@@ -626,7 +624,7 @@ public class ImportTsv extends Configured implements Tool {
   }
 
   private static Set<String> getColumnFamilies(String[] columns) {
-    Set<String> cfSet = new HashSet<String>();
+    Set<String> cfSet = new HashSet<>();
     for (String aColumn : columns) {
       if (TsvParser.ROWKEY_COLUMN_SPEC.equals(aColumn)
           || TsvParser.TIMESTAMPKEY_COLUMN_SPEC.equals(aColumn)

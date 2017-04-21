@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -617,7 +618,7 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public HTableDescriptor[] deleteTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
+    List<HTableDescriptor> failed = new LinkedList<>();
     for (HTableDescriptor table : listTables(pattern)) {
       try {
         deleteTable(table.getTableName());
@@ -742,7 +743,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public HTableDescriptor[] enableTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
+    List<HTableDescriptor> failed = new LinkedList<>();
     for (HTableDescriptor table : listTables(pattern)) {
       if (isTableDisabled(table.getTableName())) {
         try {
@@ -806,7 +807,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public HTableDescriptor[] disableTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
+    List<HTableDescriptor> failed = new LinkedList<>();
     for (HTableDescriptor table : listTables(pattern)) {
       if (isTableEnabled(table.getTableName())) {
         try {
@@ -1097,8 +1098,7 @@ public class HBaseAdmin implements Admin {
       LOG.info("Table is disabled: " + tableName.getNameAsString());
       return;
     }
-    execProcedure("flush-table-proc", tableName.getNameAsString(),
-      new HashMap<String, String>());
+    execProcedure("flush-table-proc", tableName.getNameAsString(), new HashMap<>());
   }
 
   @Override
@@ -1205,8 +1205,8 @@ public class HBaseAdmin implements Admin {
    * @param tableName table or region to compact
    * @param columnFamily column family within a table or region
    * @param major True if we are to do a major compaction.
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
   private void compact(final TableName tableName, final byte[] columnFamily,final boolean major,
                        CompactType compactType) throws IOException {
@@ -1497,19 +1497,6 @@ public class HBaseAdmin implements Admin {
     });
   }
 
-  private boolean isEncodedRegionName(byte[] regionName) throws IOException {
-    try {
-      HRegionInfo.parseRegionName(regionName);
-      return false;
-    } catch (IOException e) {
-      if (StringUtils.stringifyException(e)
-        .contains(HRegionInfo.INVALID_REGION_NAME_FORMAT_MESSAGE)) {
-        return true;
-      }
-      throw e;
-    }
-  }
-
   /**
    * Merge two regions. Synchronous operation.
    * Note: It is not feasible to predict the length of merge.
@@ -1582,7 +1569,7 @@ public class HBaseAdmin implements Admin {
     assert(nameofRegionsToMerge.length >= 2);
     byte[][] encodedNameofRegionsToMerge = new byte[nameofRegionsToMerge.length][];
     for(int i = 0; i < nameofRegionsToMerge.length; i++) {
-      encodedNameofRegionsToMerge[i] = isEncodedRegionName(nameofRegionsToMerge[i]) ?
+      encodedNameofRegionsToMerge[i] = HRegionInfo.isEncodedRegionName(nameofRegionsToMerge[i]) ?
         nameofRegionsToMerge[i] : HRegionInfo.encodeRegionName(nameofRegionsToMerge[i]).getBytes();
     }
 
@@ -1795,8 +1782,7 @@ public class HBaseAdmin implements Admin {
     Pair<HRegionInfo, ServerName> pair =
       MetaTableAccessor.getRegion(connection, regionName);
     if (pair == null) {
-      final AtomicReference<Pair<HRegionInfo, ServerName>> result =
-        new AtomicReference<Pair<HRegionInfo, ServerName>>(null);
+      final AtomicReference<Pair<HRegionInfo, ServerName>> result = new AtomicReference<>(null);
       final String encodedName = Bytes.toString(regionName);
       MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
         @Override
@@ -1819,7 +1805,7 @@ public class HBaseAdmin implements Admin {
             }
           }
           if (!matched) return true;
-          result.set(new Pair<HRegionInfo, ServerName>(info, sn));
+          result.set(new Pair<>(info, sn));
           return false; // found the region, stop
         }
       };
@@ -1953,7 +1939,7 @@ public class HBaseAdmin implements Admin {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     HBaseRpcController controller = rpcControllerFactory.newController();
     List<RegionLoad> regionLoads = ProtobufUtil.getRegionLoad(controller, admin, tableName);
-    Map<byte[], RegionLoad> resultMap = new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], RegionLoad> resultMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (RegionLoad regionLoad : regionLoads) {
       resultMap.put(regionLoad.getName(), regionLoad);
     }
@@ -2128,7 +2114,7 @@ public class HBaseAdmin implements Admin {
         procedureState, procProto.hasParentId() ? procProto.getParentId() : -1, nonceKey,
             procProto.hasException()?
                 ForeignExceptionUtil.toIOException(procProto.getException()): null,
-            procProto.getLastUpdate(), procProto.getStartTime(),
+            procProto.getLastUpdate(), procProto.getSubmittedTime(),
             procProto.hasResult()? procProto.getResult().toByteArray() : null);
   }
 
@@ -2278,7 +2264,7 @@ public class HBaseAdmin implements Admin {
    */
   private HTableDescriptor getTableDescriptorByTableName(TableName tableName)
       throws IOException {
-    List<TableName> tableNames = new ArrayList<TableName>(1);
+    List<TableName> tableNames = new ArrayList<>(1);
     tableNames.add(tableName);
 
     HTableDescriptor[] htdl = getTableDescriptorsByTableName(tableNames);
@@ -2294,7 +2280,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public HTableDescriptor[] getTableDescriptors(List<String> names)
   throws IOException {
-    List<TableName> tableNames = new ArrayList<TableName>(names.size());
+    List<TableName> tableNames = new ArrayList<>(names.size());
     for(String name : names) {
       tableNames.add(TableName.valueOf(name));
     }
@@ -2828,7 +2814,7 @@ public class HBaseAdmin implements Admin {
             .getCompletedSnapshots(getRpcController(),
                 GetCompletedSnapshotsRequest.newBuilder().build())
             .getSnapshotsList();
-        List<SnapshotDescription> result = new ArrayList<SnapshotDescription>(snapshotsList.size());
+        List<SnapshotDescription> result = new ArrayList<>(snapshotsList.size());
         for (HBaseProtos.SnapshotDescription snapshot : snapshotsList) {
           result.add(ProtobufUtil.createSnapshotDesc(snapshot));
         }
@@ -2844,7 +2830,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public List<SnapshotDescription> listSnapshots(Pattern pattern) throws IOException {
-    List<SnapshotDescription> matched = new LinkedList<SnapshotDescription>();
+    List<SnapshotDescription> matched = new LinkedList<>();
     List<SnapshotDescription> snapshots = listSnapshots();
     for (SnapshotDescription snapshot : snapshots) {
       if (pattern.matcher(snapshot.getName()).matches()) {
@@ -2865,7 +2851,7 @@ public class HBaseAdmin implements Admin {
       Pattern snapshotNamePattern) throws IOException {
     TableName[] tableNames = listTableNames(tableNamePattern);
 
-    List<SnapshotDescription> tableSnapshots = new LinkedList<SnapshotDescription>();
+    List<SnapshotDescription> tableSnapshots = new LinkedList<>();
     List<SnapshotDescription> snapshots = listSnapshots(snapshotNamePattern);
 
     List<TableName> listOfTableNames = Arrays.asList(tableNames);
@@ -3883,31 +3869,7 @@ public class HBaseAdmin implements Admin {
       throw new ReplicationException("tableCfs is null");
     }
     ReplicationPeerConfig peerConfig = getReplicationPeerConfig(id);
-    Map<TableName, List<String>> preTableCfs = peerConfig.getTableCFsMap();
-    if (preTableCfs == null) {
-      peerConfig.setTableCFsMap(tableCfs);
-    } else {
-      for (Map.Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
-        TableName table = entry.getKey();
-        Collection<String> appendCfs = entry.getValue();
-        if (preTableCfs.containsKey(table)) {
-          List<String> cfs = preTableCfs.get(table);
-          if (cfs == null || appendCfs == null || appendCfs.isEmpty()) {
-            preTableCfs.put(table, null);
-          } else {
-            Set<String> cfSet = new HashSet<String>(cfs);
-            cfSet.addAll(appendCfs);
-            preTableCfs.put(table, Lists.newArrayList(cfSet));
-          }
-        } else {
-          if (appendCfs == null || appendCfs.isEmpty()) {
-            preTableCfs.put(table, null);
-          } else {
-            preTableCfs.put(table, Lists.newArrayList(appendCfs));
-          }
-        }
-      }
-    }
+    ReplicationSerDeHelper.appendTableCFsToReplicationPeerConfig(tableCfs, peerConfig);
     updateReplicationPeerConfig(id, peerConfig);
   }
 
@@ -3919,37 +3881,7 @@ public class HBaseAdmin implements Admin {
       throw new ReplicationException("tableCfs is null");
     }
     ReplicationPeerConfig peerConfig = getReplicationPeerConfig(id);
-    Map<TableName, List<String>> preTableCfs = peerConfig.getTableCFsMap();
-    if (preTableCfs == null) {
-      throw new ReplicationException("Table-Cfs for peer" + id + " is null");
-    }
-    for (Map.Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
-
-      TableName table = entry.getKey();
-      Collection<String> removeCfs = entry.getValue();
-      if (preTableCfs.containsKey(table)) {
-        List<String> cfs = preTableCfs.get(table);
-        if (cfs == null && (removeCfs == null || removeCfs.isEmpty())) {
-          preTableCfs.remove(table);
-        } else if (cfs != null && (removeCfs != null && !removeCfs.isEmpty())) {
-          Set<String> cfSet = new HashSet<String>(cfs);
-          cfSet.removeAll(removeCfs);
-          if (cfSet.isEmpty()) {
-            preTableCfs.remove(table);
-          } else {
-            preTableCfs.put(table, Lists.newArrayList(cfSet));
-          }
-        } else if (cfs == null && (removeCfs != null && !removeCfs.isEmpty())) {
-          throw new ReplicationException("Cannot remove cf of table: " + table
-              + " which doesn't specify cfs from table-cfs config in peer: " + id);
-        } else if (cfs != null && (removeCfs == null || removeCfs.isEmpty())) {
-          throw new ReplicationException("Cannot remove table: " + table
-              + " which has specified cfs from table-cfs config in peer: " + id);
-        }
-      } else {
-        throw new ReplicationException("No table: " + table + " in table-cfs config of peer: " + id);
-      }
-    }
+    ReplicationSerDeHelper.removeTableCFsFromReplicationPeerConfig(tableCfs, peerConfig, id);
     updateReplicationPeerConfig(id, peerConfig);
   }
 
@@ -3984,7 +3916,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void drainRegionServers(List<ServerName> servers) throws IOException {
-    final List<HBaseProtos.ServerName> pbServers = new ArrayList<HBaseProtos.ServerName>(servers.size());
+    final List<HBaseProtos.ServerName> pbServers = new ArrayList<>(servers.size());
     for (ServerName server : servers) {
       // Parse to ServerName to do simple validation.
       ServerName.parseServerName(server.toString());
@@ -4009,7 +3941,7 @@ public class HBaseAdmin implements Admin {
       @Override
       public List<ServerName> rpcCall() throws ServiceException {
         ListDrainingRegionServersRequest req = ListDrainingRegionServersRequest.newBuilder().build();
-        List<ServerName> servers = new ArrayList<ServerName>();
+        List<ServerName> servers = new ArrayList<>();
         for (HBaseProtos.ServerName server : master.listDrainingRegionServers(null, req)
             .getServerNameList()) {
           servers.add(ProtobufUtil.toServerName(server));
@@ -4021,7 +3953,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void removeDrainFromRegionServers(List<ServerName> servers) throws IOException {
-    final List<HBaseProtos.ServerName> pbServers = new ArrayList<HBaseProtos.ServerName>(servers.size());
+    final List<HBaseProtos.ServerName> pbServers = new ArrayList<>(servers.size());
     for (ServerName server : servers) {
       pbServers.add(ProtobufUtil.toServerName(server));
     }
@@ -4083,6 +4015,77 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
+   * Copies the REPLICATION_SCOPE of table descriptor passed as an argument. Before copy, the method
+   * ensures that the name of table and column-families should match.
+   * @param peerHtd descriptor on peer cluster
+   * @param localHtd - The HTableDescriptor of table from source cluster.
+   * @return true If the name of table and column families match and REPLICATION_SCOPE copied
+   *         successfully. false If there is any mismatch in the names.
+   */
+  private boolean copyReplicationScope(final HTableDescriptor peerHtd,
+      final HTableDescriptor localHtd) {
+    // Copy the REPLICATION_SCOPE only when table names and the names of
+    // Column-Families are same.
+    int result = peerHtd.getTableName().compareTo(localHtd.getTableName());
+
+    if (result == 0) {
+      Iterator<HColumnDescriptor> remoteHCDIter = peerHtd.getFamilies().iterator();
+      Iterator<HColumnDescriptor> localHCDIter = localHtd.getFamilies().iterator();
+
+      while (remoteHCDIter.hasNext() && localHCDIter.hasNext()) {
+        HColumnDescriptor remoteHCD = remoteHCDIter.next();
+        HColumnDescriptor localHCD = localHCDIter.next();
+
+        String remoteHCDName = remoteHCD.getNameAsString();
+        String localHCDName = localHCD.getNameAsString();
+
+        if (remoteHCDName.equals(localHCDName)) {
+          remoteHCD.setScope(localHCD.getScope());
+        } else {
+          result = -1;
+          break;
+        }
+      }
+      if (remoteHCDIter.hasNext() || localHCDIter.hasNext()) {
+        return false;
+      }
+    }
+
+    return result == 0;
+  }
+
+  /**
+   * Compare the contents of the descriptor with another one passed as a parameter for replication
+   * purpose. The REPLICATION_SCOPE field is ignored during comparison.
+   * @param peerHtd descriptor on peer cluster
+   * @param localHtd descriptor on source cluster which needs to be replicated.
+   * @return true if the contents of the two descriptors match (ignoring just REPLICATION_SCOPE).
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
+  private boolean compareForReplication(HTableDescriptor peerHtd, HTableDescriptor localHtd) {
+    if (peerHtd == localHtd) {
+      return true;
+    }
+    if (peerHtd == null) {
+      return false;
+    }
+    boolean result = false;
+
+    // Create a copy of peer HTD as we need to change its replication
+    // scope to match with the local HTD.
+    HTableDescriptor peerHtdCopy = new HTableDescriptor(peerHtd);
+
+    result = copyReplicationScope(peerHtdCopy, localHtd);
+
+    // If copy was successful, compare the two tables now.
+    if (result) {
+      result = (peerHtdCopy.compareTo(localHtd) == 0);
+    }
+
+    return result;
+  }
+
+  /**
    * Connect to peer and check the table descriptor on peer:
    * <ol>
    * <li>Create the same table on peer when not exist.</li>
@@ -4115,23 +4118,12 @@ public class HBaseAdmin implements Admin {
             if (peerHtd == null) {
               throw new IllegalArgumentException("Failed to get table descriptor for table "
                   + tableName.getNameAsString() + " from peer cluster " + peerDesc.getPeerId());
-            } else {
-              // To support cyclic replication (HBASE-17460), we need to match the
-              // REPLICATION_SCOPE of table on both the clusters. We should do this
-              // only when the replication is not already enabled on local HTD (local
-              // table on this cluster).
-              //
-              if (localHtd.isReplicationEnabled()) {
-                throw new IllegalArgumentException("Table " + tableName.getNameAsString()
-                    + " has replication already enabled for at least one Column Family.");
-              } else {
-                if (!peerHtd.compareForReplication(localHtd)) {
-                  throw new IllegalArgumentException("Table " + tableName.getNameAsString()
-                      + " exists in peer cluster " + peerDesc.getPeerId()
-                      + ", but the table descriptors are not same when compared with source cluster."
-                      + " Thus can not enable the table's replication switch.");
-                }
-              }
+            }
+            if (!compareForReplication(peerHtd, localHtd)) {
+              throw new IllegalArgumentException("Table " + tableName.getNameAsString()
+                  + " exists in peer cluster " + peerDesc.getPeerId()
+                  + ", but the table descriptors are not same when compared with source cluster."
+                  + " Thus can not enable the table's replication switch.");
             }
           }
         }
@@ -4169,14 +4161,16 @@ public class HBaseAdmin implements Admin {
   /**
    * Set the table's replication switch if the table's replication switch is already not set.
    * @param tableName name of the table
-   * @param isRepEnabled is replication switch enable or disable
+   * @param enableRep is replication switch enable or disable
    * @throws IOException if a remote or network exception occurs
    */
-  private void setTableRep(final TableName tableName, boolean isRepEnabled) throws IOException {
+  private void setTableRep(final TableName tableName, boolean enableRep) throws IOException {
     HTableDescriptor htd = getTableDescriptor(tableName);
-    if (isTableRepEnabled(htd) ^ isRepEnabled) {
+    ReplicationState currentReplicationState = getTableReplicationState(htd);
+    if (enableRep && currentReplicationState != ReplicationState.ENABLED
+        || !enableRep && currentReplicationState != ReplicationState.DISABLED) {
       for (HColumnDescriptor hcd : htd.getFamilies()) {
-        hcd.setScope(isRepEnabled ? HConstants.REPLICATION_SCOPE_GLOBAL
+        hcd.setScope(enableRep ? HConstants.REPLICATION_SCOPE_GLOBAL
             : HConstants.REPLICATION_SCOPE_LOCAL);
       }
       modifyTable(tableName, htd);
@@ -4184,17 +4178,34 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * @param htd table descriptor details for the table to check
-   * @return true if table's replication switch is enabled
+   * This enum indicates the current state of the replication for a given table.
    */
-  private boolean isTableRepEnabled(HTableDescriptor htd) {
+  private enum ReplicationState {
+    ENABLED, // all column families enabled
+    MIXED, // some column families enabled, some disabled
+    DISABLED // all column families disabled
+  }
+
+  /**
+   * @param htd table descriptor details for the table to check
+   * @return ReplicationState the current state of the table.
+   */
+  private ReplicationState getTableReplicationState(HTableDescriptor htd) {
+    boolean hasEnabled = false;
+    boolean hasDisabled = false;
+
     for (HColumnDescriptor hcd : htd.getFamilies()) {
       if (hcd.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL
           && hcd.getScope() != HConstants.REPLICATION_SCOPE_SERIAL) {
-        return false;
+        hasDisabled = true;
+      } else {
+        hasEnabled = true;
       }
     }
-    return true;
+
+    if (hasEnabled && hasDisabled) return ReplicationState.MIXED;
+    if (hasEnabled) return ReplicationState.ENABLED;
+    return ReplicationState.DISABLED;
   }
 
   /**

@@ -49,10 +49,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -421,7 +421,7 @@ public class TestTags {
       assertEquals(5L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
       assertEquals(2, tags.size());
       // We cannot assume the ordering of tags
-      List<String> tagValues = new ArrayList<String>();
+      List<String> tagValues = new ArrayList<>();
       for (Tag tag: tags) {
         tagValues.add(Bytes.toString(TagUtil.cloneValue(tag)));
       }
@@ -543,7 +543,7 @@ public class TestTags {
     }
   }
 
-  public static class TestCoprocessorForTags extends BaseRegionObserver {
+  public static class TestCoprocessorForTags implements RegionObserver {
 
     public static volatile boolean checkTagPresence = false;
     public static List<Tag> tags = null;
@@ -557,7 +557,7 @@ public class TestTags {
     private void updateMutationAddingTags(final Mutation m) {
       byte[] attribute = m.getAttribute("visibility");
       byte[] cf = null;
-      List<Cell> updatedCells = new ArrayList<Cell>();
+      List<Cell> updatedCells = new ArrayList<>();
       if (attribute != null) {
         for (List<? extends Cell> edits : m.getFamilyCellMap().values()) {
           for (Cell cell : edits) {
@@ -566,7 +566,7 @@ public class TestTags {
               cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new ArrayBackedTag((byte) 1, attribute);
-            List<Tag> tagList = new ArrayList<Tag>();
+            List<Tag> tagList = new ArrayList<>();
             tagList.add(tag);
 
             KeyValue newKV = new KeyValue(CellUtil.cloneRow(kv), 0, kv.getRowLength(),
@@ -587,14 +587,14 @@ public class TestTags {
     public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> e, Increment increment)
         throws IOException {
       updateMutationAddingTags(increment);
-      return super.preIncrement(e, increment);
+      return null;
     }
 
     @Override
     public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append)
         throws IOException {
       updateMutationAddingTags(append);
-      return super.preAppend(e, append);
+      return null;
     }
 
     @Override

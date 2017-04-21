@@ -40,7 +40,7 @@ public class ExpressionParser {
   private static final char DOUBLE_QUOTES = '"';
   public ExpressionNode parse(String expS) throws ParseException {
     expS = expS.trim();
-    Stack<ExpressionNode> expStack = new Stack<ExpressionNode>();
+    Stack<ExpressionNode> expStack = new Stack<>();
     int index = 0;
     byte[] exp = Bytes.toBytes(expS);
     int endPos = exp.length;
@@ -68,7 +68,7 @@ public class ExpressionParser {
           // We have to rewrite the expression within double quotes as incase of expressions 
           // with escape characters we may have to avoid them as the original expression did
           // not have them
-          List<Byte> list = new ArrayList<Byte>();
+          List<Byte> list = new ArrayList<>();
           while (index < endPos && !endDoubleQuotesFound(exp[index])) {
             if (exp[index] == '\\') {
               index++;

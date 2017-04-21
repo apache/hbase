@@ -173,7 +173,7 @@ public class RpcRetryingCallerWithReadReplicas {
     RegionLocations rl = getRegionLocations(true, (isTargetReplicaSpecified ? get.getReplicaId()
         : RegionReplicaUtil.DEFAULT_REPLICA_ID), cConnection, tableName, get.getRow());
    final ResultBoundedCompletionService<Result> cs =
-        new ResultBoundedCompletionService<Result>(this.rpcRetryingCallerFactory, pool, rl.size());
+        new ResultBoundedCompletionService<>(this.rpcRetryingCallerFactory, pool, rl.size());
     int startIndex = 0;
     int endIndex = rl.size();
 

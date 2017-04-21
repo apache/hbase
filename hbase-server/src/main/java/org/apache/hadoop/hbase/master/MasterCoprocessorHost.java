@@ -1511,6 +1511,32 @@ public class MasterCoprocessorHost
     return bypass;
   }
 
+  public void preMoveServersAndTables(final Set<Address> servers, final Set<TableName> tables, final String targetGroup)
+          throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+                       ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.preMoveServersAndTables(ctx, servers, tables, targetGroup);
+        }
+      }
+    });
+  }
+
+  public void postMoveServersAndTables(final Set<Address> servers, final Set<TableName> tables, final String targetGroup)
+          throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+                       ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.postMoveServersAndTables(ctx, servers, tables, targetGroup);
+        }
+      }
+    });
+  }
+
   public void preMoveServers(final Set<Address> servers, final String targetGroup)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {

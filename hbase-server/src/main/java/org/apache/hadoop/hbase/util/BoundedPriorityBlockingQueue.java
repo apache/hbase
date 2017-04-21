@@ -152,7 +152,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
    */
   public BoundedPriorityBlockingQueue(int capacity,
       Comparator<? super E> comparator) {
-    this.queue = new PriorityQueue<E>(capacity, comparator);
+    this.queue = new PriorityQueue<>(capacity, comparator);
   }
 
   public boolean offer(E e) {

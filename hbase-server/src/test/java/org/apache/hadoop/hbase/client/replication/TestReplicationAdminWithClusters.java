@@ -76,6 +76,23 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   }
 
   @Test(timeout = 300000)
+  public void disableNotFullReplication() throws Exception {
+    HTableDescriptor table = admin2.getTableDescriptor(tableName);
+    HColumnDescriptor f = new HColumnDescriptor("notReplicatedFamily");
+    table.addFamily(f);
+    admin1.disableTable(tableName);
+    admin1.modifyTable(tableName, table);
+    admin1.enableTable(tableName);
+
+
+    admin1.disableTableReplication(tableName);
+    table = admin1.getTableDescriptor(tableName);
+    for (HColumnDescriptor fam : table.getColumnFamilies()) {
+      assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_LOCAL);
+    }
+  }
+
+  @Test(timeout = 300000)
   public void testEnableReplicationWhenSlaveClusterDoesntHaveTable() throws Exception {
     admin1.disableTableReplication(tableName);
     admin2.disableTable(tableName);
@@ -183,8 +200,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     }
     assertFalse("Table should not exists in the peer cluster", admin2.isTableAvailable(TestReplicationBase.tableName));
 
-    Map<TableName, ? extends Collection<String>> tableCfs =
-        new HashMap<TableName, Collection<String>>();
+    Map<TableName, ? extends Collection<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, null);
     try {
       adminExt.setPeerTableCFs(peerId, tableCfs);
@@ -213,8 +229,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     rpc.setReplicationEndpointImpl(TestUpdatableReplicationEndpoint.class.getName());
     rpc.getConfiguration().put("key1", "value1");
 
-    admin.addPeer(peerId, rpc);
-    admin.peerAdded(peerId);
+    admin1.addReplicationPeer(peerId, rpc);
 
     rpc.getConfiguration().put("key1", "value2");
     admin.updatePeerConfig(peerId, rpc);

@@ -82,7 +82,7 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
     int[] minFilesValues = new int[] {3};
     float[] ratioValues = new float[] {1.2f};
 
-    List<Object[]> params = new ArrayList<Object[]>(
+    List<Object[]> params = new ArrayList<>(
         maxFileValues.length
         * minFilesValues.length
         * fileListGenClasses.length
@@ -152,7 +152,7 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
   public final void testSelection() throws Exception {
     long fileDiff = 0;
     for (List<StoreFile> storeFileList : generator) {
-      List<StoreFile> currentFiles = new ArrayList<StoreFile>(18);
+      List<StoreFile> currentFiles = new ArrayList<>(18);
       for (StoreFile file : storeFileList) {
         currentFiles.add(file);
         currentFiles = runIteration(currentFiles);
@@ -175,16 +175,16 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
 
   private List<StoreFile> runIteration(List<StoreFile> startingStoreFiles) throws IOException {
 
-    List<StoreFile> storeFiles = new ArrayList<StoreFile>(startingStoreFiles);
+    List<StoreFile> storeFiles = new ArrayList<>(startingStoreFiles);
     CompactionRequest req = cp.selectCompaction(
-        storeFiles, new ArrayList<StoreFile>(), false, false, false);
+        storeFiles, new ArrayList<>(), false, false, false);
     long newFileSize = 0;
 
     Collection<StoreFile> filesToCompact = req.getFiles();
 
     if (!filesToCompact.isEmpty()) {
 
-      storeFiles = new ArrayList<StoreFile>(storeFiles);
+      storeFiles = new ArrayList<>(storeFiles);
       storeFiles.removeAll(filesToCompact);
 
       for (StoreFile storeFile : filesToCompact) {

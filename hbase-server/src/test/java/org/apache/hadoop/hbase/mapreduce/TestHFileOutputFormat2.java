@@ -113,7 +113,7 @@ import org.junit.rules.TestRule;
 import org.mockito.Mockito;
 
 /**
- * Simple test for {@link CellSortReducer} and {@link HFileOutputFormat2}.
+ * Simple test for {@link HFileOutputFormat2}.
  * Sets up and runs a mapreduce job that writes hfile output.
  * Creates a few inner classes to implement splits and an inputformat that
  * emits keys and values like those of {@link PerformanceEvaluation}.
@@ -365,8 +365,8 @@ public class TestHFileOutputFormat2  {
       FileStatus[] file = fs.listStatus(sub1[0].getPath());
 
       // open as HFile Reader and pull out TIMERANGE FileInfo.
-      HFile.Reader rd = HFile.createReader(fs, file[0].getPath(),
-          new CacheConfig(conf), conf);
+      HFile.Reader rd =
+          HFile.createReader(fs, file[0].getPath(), new CacheConfig(conf), true, conf);
       Map<byte[],byte[]> finfo = rd.loadFileInfo();
       byte[] range = finfo.get("TIMERANGE".getBytes());
       assertNotNull(range);
@@ -448,7 +448,7 @@ public class TestHFileOutputFormat2  {
       writer = hof.getRecordWriter(context);
       final byte [] b = Bytes.toBytes("b");
 
-      List< Tag > tags = new ArrayList<Tag>();
+      List< Tag > tags = new ArrayList<>();
       tags.add(new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(978670)));
       KeyValue kv = new KeyValue(b, b, b, HConstants.LATEST_TIMESTAMP, b, tags);
       writer.write(new ImmutableBytesWritable(), kv);
@@ -458,8 +458,8 @@ public class TestHFileOutputFormat2  {
       RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(dir, true);
       while(iterator.hasNext()) {
         LocatedFileStatus keyFileStatus = iterator.next();
-        HFile.Reader reader = HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf),
-            conf);
+        HFile.Reader reader =
+            HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
         HFileScanner scanner = reader.getScanner(false, false, false);
         scanner.seekTo();
         Cell cell = scanner.getCell();
@@ -684,9 +684,8 @@ public class TestHFileOutputFormat2  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat2#configureCompression(org.apache.hadoop.hbase.client.Table,
-   * Configuration)} and {@link HFileOutputFormat2#createFamilyCompressionMap
-   * (Configuration)}.
+   * Test for {@link HFileOutputFormat2#configureCompression(Configuration, HTableDescriptor)} and
+   * {@link HFileOutputFormat2#createFamilyCompressionMap(Configuration)}.
    * Tests that the compression map is correctly serialized into
    * and deserialized from configuration
    *
@@ -735,8 +734,7 @@ public class TestHFileOutputFormat2  {
    */
   private Map<String, Compression.Algorithm>
       getMockColumnFamiliesForCompression (int numCfs) {
-    Map<String, Compression.Algorithm> familyToCompression
-      = new HashMap<String, Compression.Algorithm>();
+    Map<String, Compression.Algorithm> familyToCompression = new HashMap<>();
     // use column family names having special characters
     if (numCfs-- > 0) {
       familyToCompression.put("Family1!@#!@#&", Compression.Algorithm.LZO);
@@ -755,9 +753,8 @@ public class TestHFileOutputFormat2  {
 
 
   /**
-   * Test for {@link HFileOutputFormat2#configureBloomType(org.apache.hadoop.hbase.client.Table,
-   * Configuration)} and {@link HFileOutputFormat2#createFamilyBloomTypeMap
-   * (Configuration)}.
+   * Test for {@link HFileOutputFormat2#configureBloomType(HTableDescriptor, Configuration)} and
+   * {@link HFileOutputFormat2#createFamilyBloomTypeMap(Configuration)}.
    * Tests that the compression map is correctly serialized into
    * and deserialized from configuration
    *
@@ -809,8 +806,7 @@ public class TestHFileOutputFormat2  {
    */
   private Map<String, BloomType>
   getMockColumnFamiliesForBloomType (int numCfs) {
-    Map<String, BloomType> familyToBloomType =
-        new HashMap<String, BloomType>();
+    Map<String, BloomType> familyToBloomType = new HashMap<>();
     // use column family names having special characters
     if (numCfs-- > 0) {
       familyToBloomType.put("Family1!@#!@#&", BloomType.ROW);
@@ -826,9 +822,8 @@ public class TestHFileOutputFormat2  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat2#configureBlockSize(org.apache.hadoop.hbase.client.Table,
-   * Configuration)} and {@link HFileOutputFormat2#createFamilyBlockSizeMap
-   * (Configuration)}.
+   * Test for {@link HFileOutputFormat2#configureBlockSize(HTableDescriptor, Configuration)} and
+   * {@link HFileOutputFormat2#createFamilyBlockSizeMap(Configuration)}.
    * Tests that the compression map is correctly serialized into
    * and deserialized from configuration
    *
@@ -881,8 +876,7 @@ public class TestHFileOutputFormat2  {
    */
   private Map<String, Integer>
   getMockColumnFamiliesForBlockSize (int numCfs) {
-    Map<String, Integer> familyToBlockSize =
-        new HashMap<String, Integer>();
+    Map<String, Integer> familyToBlockSize = new HashMap<>();
     // use column family names having special characters
     if (numCfs-- > 0) {
       familyToBlockSize.put("Family1!@#!@#&", 1234);
@@ -956,8 +950,7 @@ public class TestHFileOutputFormat2  {
    */
   private Map<String, DataBlockEncoding>
       getMockColumnFamiliesForDataBlockEncoding (int numCfs) {
-    Map<String, DataBlockEncoding> familyToDataBlockEncoding =
-        new HashMap<String, DataBlockEncoding>();
+    Map<String, DataBlockEncoding> familyToDataBlockEncoding = new HashMap<>();
     // use column family names having special characters
     if (numCfs-- > 0) {
       familyToDataBlockEncoding.put("Family1!@#!@#&", DataBlockEncoding.DIFF);
@@ -1050,7 +1043,7 @@ public class TestHFileOutputFormat2  {
         // verify that the compression on this file matches the configured
         // compression
         Path dataFilePath = fs.listStatus(f.getPath())[0].getPath();
-        Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), conf);
+        Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), true, conf);
         Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 
         byte[] bloomFilter = fileInfo.get(StoreFile.BLOOM_FILTER_TYPE_KEY);

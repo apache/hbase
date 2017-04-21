@@ -98,7 +98,7 @@ public class TestCompactionArchiveIOException {
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     final HRegion region = initHRegion(htd, info);
     RegionServerServices rss = mock(RegionServerServices.class);
-    List<Region> regions = new ArrayList<Region>();
+    List<Region> regions = new ArrayList<>();
     regions.add(region);
     when(rss.getOnlineRegions()).thenReturn(regions);
 
@@ -174,6 +174,7 @@ public class TestCompactionArchiveIOException {
   private HRegion initHRegion(HTableDescriptor htd, HRegionInfo info)
       throws IOException {
     Configuration conf = testUtil.getConfiguration();
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
     Path regionDir = new Path(tableDir, info.getEncodedName());
     Path storeDir = new Path(regionDir, htd.getColumnFamilies()[0].getNameAsString());

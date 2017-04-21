@@ -82,7 +82,7 @@ public class TestThriftServerCmdLine {
 
   @Parameters
   public static Collection<Object[]> getParameters() {
-    Collection<Object[]> parameters = new ArrayList<Object[]>();
+    Collection<Object[]> parameters = new ArrayList<>();
     for (ImplType implType : ImplType.values()) {
       for (boolean specifyFramed : new boolean[] {false, true}) {
         for (boolean specifyBindIP : new boolean[] {false, true}) {
@@ -151,7 +151,7 @@ public class TestThriftServerCmdLine {
 
   @Test(timeout=600000)
   public void testRunThriftServer() throws Exception {
-    List<String> args = new ArrayList<String>();
+    List<String> args = new ArrayList<>();
     if (implType != null) {
       String serverTypeOption = implType.toString();
       assertTrue(serverTypeOption.startsWith("-"));
@@ -160,6 +160,10 @@ public class TestThriftServerCmdLine {
     port = HBaseTestingUtility.randomFreePort();
     args.add("-" + ThriftServer.PORT_OPTION);
     args.add(String.valueOf(port));
+    args.add("-infoport");
+    int infoPort = HBaseTestingUtility.randomFreePort();
+    args.add(String.valueOf(infoPort));
+
     if (specifyFramed) {
       args.add("-" + ThriftServer.FRAMED_OPTION);
     }

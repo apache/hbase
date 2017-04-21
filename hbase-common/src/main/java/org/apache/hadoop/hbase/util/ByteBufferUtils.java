@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -28,7 +29,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.io.IOUtils;
@@ -42,15 +42,15 @@ import sun.nio.ch.DirectBuffer;
  */
 @SuppressWarnings("restriction")
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class ByteBufferUtils {
-
   // "Compressed integer" serialization helper constants.
   public final static int VALUE_MASK = 0x7f;
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
-  private static final boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
-  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  @VisibleForTesting
+  final static boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
+  @VisibleForTesting
+  final static boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   private ByteBufferUtils() {
   }
@@ -403,12 +403,11 @@ public final class ByteBufferUtils {
     } else if (UNSAFE_AVAIL) {
       UnsafeAccess.copy(in, sourceOffset, out, destinationOffset, length);
     } else {
-      int outOldPos = out.position();
-      out.position(destinationOffset);
+      ByteBuffer outDup = out.duplicate();
+      outDup.position(destinationOffset);
       ByteBuffer inDup = in.duplicate();
       inDup.position(sourceOffset).limit(sourceOffset + length);
-      out.put(inDup);
-      out.position(outOldPos);
+      outDup.put(inDup);
     }
     return destinationOffset + length;
   }
@@ -668,7 +667,7 @@ public final class ByteBufferUtils {
     int end2 = o2 + l2;
     for (int i = o1, j = o2; i < end1 && j < end2; i++, j++) {
       int a = buf1[i] & 0xFF;
-      int b = buf2.get(i) & 0xFF;
+      int b = buf2.get(j) & 0xFF;
       if (a != b) {
         return a - b;
       }
@@ -989,7 +988,7 @@ public final class ByteBufferUtils {
 
   /**
    * Copies bytes from given array's offset to length part into the given buffer. Puts the bytes
-   * to buffer's given position.
+   * to buffer's given position. This doesn't affact the position of buffer.
    * @param out
    * @param in
    * @param inOffset
@@ -1002,16 +1001,15 @@ public final class ByteBufferUtils {
     } else if (UNSAFE_AVAIL) {
       UnsafeAccess.copy(in, inOffset, out, outOffset, length);
     } else {
-      int oldPos = out.position();
-      out.position(outOffset);
-      out.put(in, inOffset, length);
-      out.position(oldPos);
+      ByteBuffer outDup = out.duplicate();
+      outDup.position(outOffset);
+      outDup.put(in, inOffset, length);
     }
   }
 
   /**
    * Copies specified number of bytes from given offset of 'in' ByteBuffer to
-   * the array.
+   * the array. This doesn't affact the position of buffer.
    * @param out
    * @param in
    * @param sourceOffset
@@ -1025,10 +1023,9 @@ public final class ByteBufferUtils {
     } else if (UNSAFE_AVAIL) {
       UnsafeAccess.copy(in, sourceOffset, out, destinationOffset, length);
     } else {
-      int oldPos = in.position();
-      in.position(sourceOffset);
-      in.get(out, destinationOffset, length);
-      in.position(oldPos);
+      ByteBuffer inDup = in.duplicate();
+      inDup.position(sourceOffset);
+      inDup.get(out, destinationOffset, length);
     }
   }
 

@@ -64,7 +64,7 @@ public class TestLoadTestKVGenerator {
 
   @Test
   public void testCorrectAndUniqueKeys() {
-    Set<String> keys = new HashSet<String>();
+    Set<String> keys = new HashSet<>();
     for (int i = 0; i < 1000; ++i) {
       String k = LoadTestKVGenerator.md5PrefixedKey(i);
       assertFalse(keys.contains(k));

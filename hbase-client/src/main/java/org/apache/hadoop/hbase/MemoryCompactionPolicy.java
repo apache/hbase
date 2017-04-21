@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Enum describing all possible memory compaction policies
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum MemoryCompactionPolicy {
   /**
    * No memory compaction, when size threshold is exceeded data is flushed to disk

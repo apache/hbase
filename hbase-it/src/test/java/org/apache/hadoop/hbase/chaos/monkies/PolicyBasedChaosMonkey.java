@@ -92,7 +92,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
   public static <T> List<T> selectRandomItems(T[] items, float ratio) {
     int remaining = (int)Math.ceil(items.length * ratio);
 
-    List<T> selectedItems = new ArrayList<T>(remaining);
+    List<T> selectedItems = new ArrayList<>(remaining);
 
     for (int i=0; i<items.length && remaining > 0; i++) {
       if (RandomUtils.nextFloat() < ((float)remaining/(items.length-i))) {

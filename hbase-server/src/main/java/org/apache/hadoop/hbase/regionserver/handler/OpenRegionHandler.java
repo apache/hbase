@@ -123,8 +123,7 @@ public class OpenRegionHandler extends EventHandler {
       openSuccessful = true;
 
       // Done!  Successful region open
-      LOG.debug("Opened " + regionName + " on " +
-        this.server.getServerName());
+      LOG.debug("Opened " + regionName + " on " + this.server.getServerName());
     } finally {
       // Do all clean up here
       if (!openSuccessful) {

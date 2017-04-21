@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -86,7 +85,6 @@ import com.google.common.collect.Lists;
  * @deprecated use {@link org.apache.hadoop.hbase.client.Admin} instead.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 @Deprecated
 public class ReplicationAdmin implements Closeable {
   private static final Log LOG = LogFactory.getLog(ReplicationAdmin.class);
@@ -273,7 +271,7 @@ public class ReplicationAdmin implements Closeable {
   @Deprecated
   public Map<String, ReplicationPeerConfig> listPeerConfigs() throws IOException {
     List<ReplicationPeerDescription> peers = this.admin.listReplicationPeers();
-    Map<String, ReplicationPeerConfig> result = new TreeMap<String, ReplicationPeerConfig>();
+    Map<String, ReplicationPeerConfig> result = new TreeMap<>();
     for (ReplicationPeerDescription peer : peers) {
       result.put(peer.getPeerId(), peer.getPeerConfig());
     }
@@ -343,7 +341,7 @@ public class ReplicationAdmin implements Closeable {
         if (cfs == null || appendCfs == null || appendCfs.isEmpty()) {
           preTableCfs.put(table, null);
         } else {
-          Set<String> cfSet = new HashSet<String>(cfs);
+          Set<String> cfSet = new HashSet<>(cfs);
           cfSet.addAll(appendCfs);
           preTableCfs.put(table, Lists.newArrayList(cfSet));
         }
@@ -400,7 +398,7 @@ public class ReplicationAdmin implements Closeable {
         if (cfs == null && (removeCfs == null || removeCfs.isEmpty())) {
           preTableCfs.remove(table);
         } else if (cfs != null && (removeCfs != null && !removeCfs.isEmpty())) {
-          Set<String> cfSet = new HashSet<String>(cfs);
+          Set<String> cfSet = new HashSet<>(cfs);
           cfSet.removeAll(removeCfs);
           if (cfSet.isEmpty()) {
             preTableCfs.remove(table);
@@ -484,7 +482,7 @@ public class ReplicationAdmin implements Closeable {
         tableCFs.getColumnFamilyMap()
             .forEach(
               (cf, scope) -> {
-                HashMap<String, String> replicationEntry = new HashMap<String, String>();
+                HashMap<String, String> replicationEntry = new HashMap<>();
                 replicationEntry.put(TNAME, table);
                 replicationEntry.put(CFNAME, cf);
                 replicationEntry.put(REPLICATIONTYPE,
@@ -521,17 +519,22 @@ public class ReplicationAdmin implements Closeable {
   }
 
   @VisibleForTesting
+  @Deprecated
   public void peerAdded(String id) throws ReplicationException {
     this.replicationPeers.peerConnected(id);
   }
 
+  /**
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#listReplicationPeers()} instead
+   */
   @VisibleForTesting
+  @Deprecated
   List<ReplicationPeer> listReplicationPeers() throws IOException {
     Map<String, ReplicationPeerConfig> peers = listPeerConfigs();
     if (peers == null || peers.size() <= 0) {
       return null;
     }
-    List<ReplicationPeer> listOfPeers = new ArrayList<ReplicationPeer>(peers.size());
+    List<ReplicationPeer> listOfPeers = new ArrayList<>(peers.size());
     for (Entry<String, ReplicationPeerConfig> peerEntry : peers.entrySet()) {
       String peerId = peerEntry.getKey();
       try {

@@ -58,7 +58,7 @@ public class ShutdownHook {
    * to be executed after the last regionserver referring to a given filesystem
    * stops. We keep track of the # of regionserver references in values of the map.
    */
-  private final static Map<Runnable, Integer> fsShutdownHooks = new HashMap<Runnable, Integer>();
+  private final static Map<Runnable, Integer> fsShutdownHooks = new HashMap<>();
 
   /**
    * Install a shutdown hook that calls stop on the passed Stoppable

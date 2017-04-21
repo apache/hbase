@@ -124,7 +124,7 @@ public class TestDataBlockEncoders {
    */
   @Test
   public void testEmptyKeyValues() throws IOException {
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    List<KeyValue> kvList = new ArrayList<>();
     byte[] row = new byte[0];
     byte[] family = new byte[0];
     byte[] qualifier = new byte[0];
@@ -151,7 +151,7 @@ public class TestDataBlockEncoders {
    */
   @Test
   public void testNegativeTimestamps() throws IOException {
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    List<KeyValue> kvList = new ArrayList<>();
     byte[] row = new byte[0];
     byte[] family = new byte[0];
     byte[] qualifier = new byte[0];
@@ -190,8 +190,7 @@ public class TestDataBlockEncoders {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
     // create all seekers
-    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = 
-        new ArrayList<DataBlockEncoder.EncodedSeeker>();
+    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       LOG.info("Encoding: " + encoding);
       // Off heap block data support not added for PREFIX_TREE DBE yet.
@@ -403,7 +402,7 @@ public class TestDataBlockEncoders {
   
   @Test
   public void testZeroByte() throws IOException {
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    List<KeyValue> kvList = new ArrayList<>();
     byte[] row = Bytes.toBytes("abcd");
     byte[] family = new byte[] { 'f' };
     byte[] qualifier0 = new byte[] { 'b' };

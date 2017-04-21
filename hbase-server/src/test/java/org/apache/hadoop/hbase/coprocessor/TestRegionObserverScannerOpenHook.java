@@ -42,17 +42,17 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -98,16 +98,15 @@ public class TestRegionObserverScannerOpenHook {
   }
 
   /**
-   * Do the same logic as the {@link BaseRegionObserver}. Needed since {@link BaseRegionObserver} is
-   * an abstract class.
+   * Do the default logic in {@link RegionObserver} interface.
    */
-  public static class EmptyRegionObsever extends BaseRegionObserver {
+  public static class EmptyRegionObsever implements RegionObserver {
   }
 
   /**
    * Don't return any data from a scan by creating a custom {@link StoreScanner}.
    */
-  public static class NoDataFromScan extends BaseRegionObserver {
+  public static class NoDataFromScan implements RegionObserver {
     @Override
     public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt)
@@ -120,14 +119,14 @@ public class TestRegionObserverScannerOpenHook {
   /**
    * Don't allow any data in a flush by creating a custom {@link StoreScanner}.
    */
-  public static class NoDataFromFlush extends BaseRegionObserver {
+  public static class NoDataFromFlush implements RegionObserver {
     @Override
     public InternalScanner preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+        Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
       Scan scan = new Scan();
       scan.setFilter(new NoDataFilter());
       return new StoreScanner(store, store.getScanInfo(), scan,
-          Collections.singletonList(memstoreScanner), ScanType.COMPACT_RETAIN_DELETES,
+          scanners, ScanType.COMPACT_RETAIN_DELETES,
           store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
     }
   }
@@ -136,7 +135,7 @@ public class TestRegionObserverScannerOpenHook {
    * Don't allow any data to be written out in the compaction by creating a custom
    * {@link StoreScanner}.
    */
-  public static class NoDataFromCompaction extends BaseRegionObserver {
+  public static class NoDataFromCompaction implements RegionObserver {
     @Override
     public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
@@ -155,6 +154,7 @@ public class TestRegionObserverScannerOpenHook {
     for (byte[] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     WAL wal = HBaseTestingUtility.createWal(conf, path, info);

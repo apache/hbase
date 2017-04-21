@@ -32,7 +32,6 @@ package org.apache.hadoop.hbase.shaded.com.google.protobuf;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;

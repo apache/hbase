@@ -51,7 +51,7 @@ public class TestFixedLengthWrapper {
       for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
         for (byte[] val : VALUES) {
           buff.setPosition(0);
-          DataType<byte[]> type = new FixedLengthWrapper<byte[]>(new RawBytes(ord), limit);
+          DataType<byte[]> type = new FixedLengthWrapper<>(new RawBytes(ord), limit);
           assertEquals(limit, type.encode(buff, val));
           buff.setPosition(0);
           byte[] actual = type.decode(buff);
@@ -67,21 +67,21 @@ public class TestFixedLengthWrapper {
   @Test(expected = IllegalArgumentException.class)
   public void testInsufficientRemainingRead() {
     PositionedByteRange buff = new SimplePositionedMutableByteRange(0);
-    DataType<byte[]> type = new FixedLengthWrapper<byte[]>(new RawBytes(), 3);
+    DataType<byte[]> type = new FixedLengthWrapper<>(new RawBytes(), 3);
     type.decode(buff);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testInsufficientRemainingWrite() {
     PositionedByteRange buff = new SimplePositionedMutableByteRange(0);
-    DataType<byte[]> type = new FixedLengthWrapper<byte[]>(new RawBytes(), 3);
+    DataType<byte[]> type = new FixedLengthWrapper<>(new RawBytes(), 3);
     type.encode(buff, Bytes.toBytes(""));
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testOverflowPassthrough() {
     PositionedByteRange buff = new SimplePositionedMutableByteRange(3);
-    DataType<byte[]> type = new FixedLengthWrapper<byte[]>(new RawBytes(), 0);
+    DataType<byte[]> type = new FixedLengthWrapper<>(new RawBytes(), 0);
     type.encode(buff, Bytes.toBytes("foo"));
   }
 }

@@ -49,7 +49,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
@@ -62,7 +61,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
@@ -72,7 +70,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -98,6 +95,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
+import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -108,7 +107,6 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -117,6 +115,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RegionSplitter;
+import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -137,6 +136,8 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
+
 /**
  * Facility for testing HBase. Replacement for
  * old HBaseTestCase and HBaseClusterTestCase functionality.
@@ -155,7 +156,6 @@ import org.apache.zookeeper.ZooKeeper.States;
  * setting it to true.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 @SuppressWarnings("deprecation")
 public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    private MiniZooKeeperCluster zkCluster = null;
@@ -2057,7 +2057,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /** A tracker for tracking and validating table rows
-   * generated with {@link HBaseTestingUtility#loadTable(HTable, byte[])}
+   * generated with {@link HBaseTestingUtility#loadTable(Table, byte[])}
    */
   public static class SeenRowTracker {
     int dim = 'z' - 'a' + 1;
@@ -2167,6 +2167,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       byte[] data = Bytes.toBytes(String.valueOf(i));
       Put put = new Put(data);
       put.addColumn(f, null, data);
+      t.put(put);
+    }
+  }
+
+  public void loadRandomRows(final Table t, final byte[] f, int rowSize, int totalRows)
+      throws IOException {
+    Random r = new Random();
+    byte[] row = new byte[rowSize];
+    for (int i = 0; i < totalRows; i++) {
+      r.nextBytes(row);
+      Put put = new Put(row);
+      put.addColumn(f, new byte[]{0}, new byte[]{0});
       t.put(put);
     }
   }
@@ -2286,9 +2298,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   public int countRows(final InternalScanner scanner) throws IOException {
-    // Do not retrieve the mob data when scanning
     int scannedCount = 0;
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     boolean hasMore = true;
     while (hasMore) {
       hasMore = scanner.next(results);
@@ -2313,7 +2324,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return digest.toString();
   }
 
-  /** All the row values for the data loaded by {@link #loadTable(HTable, byte[])} */
+  /** All the row values for the data loaded by {@link #loadTable(Table, byte[])} */
   public static final byte[][] ROWS = new byte[(int) Math.pow('z' - 'a' + 1, 3)][3]; // ~52KB
   static {
     int i = 0;
@@ -2368,7 +2379,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   throws IOException {
     Table meta = getConnection().getTable(TableName.META_TABLE_NAME);
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
-    List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
+    List<HRegionInfo> newRegions = new ArrayList<>(startKeys.length);
     MetaTableAccessor
         .updateTableState(getConnection(), htd.getTableName(), TableState.State.ENABLED);
     // add custom ones
@@ -2415,6 +2426,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
       final Configuration conf, final HTableDescriptor htd, boolean initialize)
       throws IOException {
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     WAL wal = createWal(conf, rootDir, info);
     return HRegion.createHRegion(info, rootDir, conf, htd, wal, initialize);
   }
@@ -2427,7 +2439,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public List<byte[]> getMetaTableRows() throws IOException {
     // TODO: Redo using MetaTableAccessor class
     Table t = getConnection().getTable(TableName.META_TABLE_NAME);
-    List<byte[]> rows = new ArrayList<byte[]>();
+    List<byte[]> rows = new ArrayList<>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
       LOG.info("getMetaTableRows: row -> " +
@@ -2447,7 +2459,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public List<byte[]> getMetaTableRows(TableName tableName) throws IOException {
     // TODO: Redo using MetaTableAccessor.
     Table t = getConnection().getTable(TableName.META_TABLE_NAME);
-    List<byte[]> rows = new ArrayList<byte[]>();
+    List<byte[]> rows = new ArrayList<>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
       HRegionInfo info = MetaTableAccessor.getHRegionInfo(result);
@@ -3097,7 +3109,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Waits for a table to be 'enabled'.  Enabled means that table is set as 'enabled' and the
    * regions have been all assigned.
-   * @see #waitTableEnabled(Admin, byte[], long)
+   * @see #waitTableEnabled(TableName, long)
    * @param table Table to wait on.
    * @param timeoutMillis Time to wait on it being marked enabled.
    * @throws InterruptedException
@@ -3220,7 +3232,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public static NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster)
       throws IOException {
-    NavigableSet<String> online = new TreeSet<String>();
+    NavigableSet<String> online = new TreeSet<>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       try {
         for (HRegionInfo region :
@@ -3299,6 +3311,30 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Move region to destination server and wait till region is completely moved and online
+   *
+   * @param destRegion region to move
+   * @param destServer destination server of the region
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  public void moveRegionAndWait(HRegionInfo destRegion, ServerName destServer)
+      throws InterruptedException, IOException {
+    HMaster master = getMiniHBaseCluster().getMaster();
+    getHBaseAdmin().move(destRegion.getEncodedNameAsBytes(),
+        Bytes.toBytes(destServer.getServerName()));
+    while (true) {
+      ServerName serverName = master.getAssignmentManager().getRegionStates()
+          .getRegionServerOfRegion(destRegion);
+      if (serverName != null && serverName.equals(destServer)) {
+        assertRegionOnServer(destRegion, serverName, 200);
+        break;
+      }
+      Thread.sleep(10);
+    }
+  }
+
+  /**
    * Wait until all regions for a table in hbase:meta have a non-empty
    * info:server, up to a configuable timeout value (default is 60 seconds)
    * This means all regions have been deployed,
@@ -3311,6 +3347,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     waitUntilAllRegionsAssigned(
       tableName,
       this.conf.getLong("hbase.client.sync.wait.timeout.msec", 60000));
+  }
+
+  /**
+   * Waith until all system table's regions get assigned
+   * @throws IOException
+   */
+  public void waitUntilAllSystemRegionsAssigned() throws IOException {
+    waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
+    waitUntilAllRegionsAssigned(TableName.NAMESPACE_TABLE_NAME);
   }
 
   /**
@@ -3392,7 +3437,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         // readpoint 0.
         0);
 
-    List<Cell> result = new ArrayList<Cell>();
+    List<Cell> result = new ArrayList<>();
     scanner.next(result);
     if (!result.isEmpty()) {
       // verify that we are on the row we want:
@@ -3602,7 +3647,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     private static final int MAX_RANDOM_PORT = 0xfffe;
 
     /** A set of ports that have been claimed using {@link #randomFreePort()}. */
-    private final Set<Integer> takenRandomPorts = new HashSet<Integer>();
+    private final Set<Integer> takenRandomPorts = new HashSet<>();
 
     private final Random random;
     private final AvailablePortChecker portChecker;
@@ -3778,12 +3823,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
       HTableDescriptor desc, HColumnDescriptor[] hcds, int numRegionsPerServer) throws IOException {
+
+    return createPreSplitLoadTestTable(conf, desc, hcds,
+      new RegionSplitter.HexStringSplit(), numRegionsPerServer);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      HTableDescriptor desc, HColumnDescriptor[] hcds,
+      SplitAlgorithm splitter, int numRegionsPerServer) throws IOException {
     for (HColumnDescriptor hcd : hcds) {
       if (!desc.hasFamily(hcd.getName())) {
         desc.addFamily(hcd);
       }
     }
-
     int totalNumberOfRegions = 0;
     Connection unmanagedConnection = ConnectionFactory.createConnection(conf);
     Admin admin = unmanagedConnection.getAdmin();
@@ -3802,7 +3859,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           "pre-splitting table into " + totalNumberOfRegions + " regions " +
           "(regions per server: " + numRegionsPerServer + ")");
 
-      byte[][] splits = new RegionSplitter.HexStringSplit().split(
+      byte[][] splits = splitter.split(
           totalNumberOfRegions);
 
       admin.createTable(desc, splits);
@@ -3989,10 +4046,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       public boolean evaluate() throws IOException {
         boolean tableAvailable = getAdmin().isTableAvailable(tableName);
         if (tableAvailable) {
-          try {
-            Canary.sniff(getAdmin(), tableName);
-          } catch (Exception e) {
-            throw new IOException("Canary sniff failed for table " + tableName, e);
+          try (Table table = getConnection().getTable(tableName)) {
+            HTableDescriptor htd = table.getTableDescriptor();
+            for (HRegionLocation loc : getConnection().getRegionLocator(tableName)
+                .getAllRegionLocations()) {
+              Scan scan = new Scan().withStartRow(loc.getRegionInfo().getStartKey())
+                  .withStopRow(loc.getRegionInfo().getEndKey()).setOneRowLimit()
+                  .setMaxResultsPerColumnFamily(1).setCacheBlocks(false);
+              for (byte[] family : htd.getFamiliesKeys()) {
+                scan.addFamily(family);
+              }
+              try (ResultScanner scanner = table.getScanner(scan)) {
+                scanner.next();
+              }
+            }
           }
         }
         return tableAvailable;

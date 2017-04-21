@@ -154,7 +154,7 @@ public class TestProcedureReplayOrder {
   }
 
   private static class TestProcedureEnv {
-    private ArrayList<TestProcedure> execList = new ArrayList<TestProcedure>();
+    private ArrayList<TestProcedure> execList = new ArrayList<>();
     private AtomicLong execTimestamp = new AtomicLong(0);
 
     public long getExecId() {

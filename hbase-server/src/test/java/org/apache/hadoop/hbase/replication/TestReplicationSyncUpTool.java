@@ -277,7 +277,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     LOG.debug("mimicSyncUpAfterDelete");
     utility2.shutdownMiniHBaseCluster();
 
-    List<Delete> list = new ArrayList<Delete>();
+    List<Delete> list = new ArrayList<>();
     // delete half of the rows
     for (int i = 0; i < NB_ROWS_IN_BATCH / 2; i++) {
       String rowKey = "row" + i;

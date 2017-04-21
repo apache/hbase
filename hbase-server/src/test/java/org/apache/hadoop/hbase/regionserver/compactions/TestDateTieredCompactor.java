@@ -156,7 +156,7 @@ public class TestDateTieredCompactor {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     CompactionRequest request = createDummyRequest();
     DateTieredCompactor dtc = createCompactor(writers, new KeyValue[0],
-      new ArrayList<StoreFile>(request.getFiles()));
+      new ArrayList<>(request.getFiles()));
     List<Path> paths = dtc.compact(request, Arrays.asList(Long.MIN_VALUE, Long.MAX_VALUE),
       NoLimitThroughputController.INSTANCE, null);
     assertEquals(1, paths.size());

@@ -27,7 +27,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.util.Strings;
  * This class is used for exporting current state of load on a RegionServer.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ServerLoad {
   private int stores = 0;
   private int storefiles = 0;
@@ -230,7 +228,7 @@ public class ServerLoad {
    */
   public Map<byte[], RegionLoad> getRegionsLoad() {
     Map<byte[], RegionLoad> regionLoads =
-      new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+      new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (ClusterStatusProtos.RegionLoad rl : serverLoad.getRegionLoadsList()) {
       RegionLoad regionLoad = new RegionLoad(rl);
       regionLoads.put(regionLoad.getName(), regionLoad);
@@ -261,7 +259,7 @@ public class ServerLoad {
   public String[] getRsCoprocessors() {
     // Need a set to remove duplicates, but since generated Coprocessor class
     // is not Comparable, make it a Set<String> instead of Set<Coprocessor>
-    TreeSet<String> coprocessSet = new TreeSet<String>();
+    TreeSet<String> coprocessSet = new TreeSet<>();
     for (Coprocessor coprocessor : obtainServerLoadPB().getCoprocessorsList()) {
       coprocessSet.add(coprocessor.getName());
     }

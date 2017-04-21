@@ -87,7 +87,7 @@ public class TestMetaTableAccessorNoCluster {
   public void testGetHRegionInfo() throws IOException {
     assertNull(MetaTableAccessor.getHRegionInfo(new Result()));
 
-    List<Cell> kvs = new ArrayList<Cell>();
+    List<Cell> kvs = new ArrayList<>();
     Result r = Result.create(kvs);
     assertNull(MetaTableAccessor.getHRegionInfo(r));
 
@@ -141,7 +141,7 @@ public class TestMetaTableAccessorNoCluster {
       // show.  We will know if they happened or not because we will ask
       // mockito at the end of this test to verify that scan was indeed
       // called the wanted number of times.
-      List<Cell> kvs = new ArrayList<Cell>();
+      List<Cell> kvs = new ArrayList<>();
       final byte [] rowToVerify = Bytes.toBytes("rowToVerify");
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
@@ -152,7 +152,7 @@ public class TestMetaTableAccessorNoCluster {
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
         Bytes.toBytes(sn.getStartcode())));
-      final List<CellScannable> cellScannables = new ArrayList<CellScannable>(1);
+      final List<CellScannable> cellScannables = new ArrayList<>(1);
       cellScannables.add(Result.create(kvs));
       final ScanResponse.Builder builder = ScanResponse.newBuilder();
       for (CellScannable result : cellScannables) {

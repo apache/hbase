@@ -114,7 +114,7 @@ public class DemoClient {
     private void run() throws Exception {
         TTransport transport = new TSocket(host, port);
         if (secure) {
-          Map<String, String> saslProperties = new HashMap<String, String>();
+          Map<String, String> saslProperties = new HashMap<>();
           saslProperties.put(Sasl.QOP, "auth-conf,auth-int,auth");
           /**
            * The Thrift server the DemoClient is trying to connect to
@@ -154,7 +154,7 @@ public class DemoClient {
         //
         // Create the demo table with two column families, entry: and unused:
         //
-        ArrayList<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>(2);
+        ArrayList<ColumnDescriptor> columns = new ArrayList<>(2);
         ColumnDescriptor col;
         col = new ColumnDescriptor();
         col.name = ByteBuffer.wrap(bytes("entry:"));
@@ -194,7 +194,7 @@ public class DemoClient {
 
         ArrayList<Mutation> mutations;
         // non-utf8 is fine for data
-        mutations = new ArrayList<Mutation>(1);
+        mutations = new ArrayList<>(1);
         mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
             ByteBuffer.wrap(invalid), writeToWal));
         client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("foo")),
@@ -202,19 +202,19 @@ public class DemoClient {
 
 
         // this row name is valid utf8
-        mutations = new ArrayList<Mutation>(1);
+        mutations = new ArrayList<>(1);
         mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(valid), writeToWal));
         client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(valid), mutations, dummyAttributes);
 
         // non-utf8 is now allowed in row names because HBase stores values as binary
 
-        mutations = new ArrayList<Mutation>(1);
+        mutations = new ArrayList<>(1);
         mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid), writeToWal));
         client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(invalid), mutations, dummyAttributes);
 
 
         // Run a scanner on the rows we just created
-        ArrayList<ByteBuffer> columnNames = new ArrayList<ByteBuffer>();
+        ArrayList<ByteBuffer> columnNames = new ArrayList<>();
         columnNames.add(ByteBuffer.wrap(bytes("entry:")));
 
         System.out.println("Starting scanner...");
@@ -238,7 +238,7 @@ public class DemoClient {
             nf.setGroupingUsed(false);
             byte[] row = bytes(nf.format(i));
 
-            mutations = new ArrayList<Mutation>(1);
+            mutations = new ArrayList<>(1);
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("unused:")), ByteBuffer.wrap(bytes("DELETE_ME")), writeToWal));
             client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
             printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
@@ -251,14 +251,14 @@ public class DemoClient {
                 // no-op
             }
 
-            mutations = new ArrayList<Mutation>(2);
+            mutations = new ArrayList<>(2);
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes("0")), writeToWal));
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(bytes("FOO")), writeToWal));
             client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
             printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
 
             Mutation m;
-            mutations = new ArrayList<Mutation>(2);
+            mutations = new ArrayList<>(2);
             m = new Mutation();
             m.column = ByteBuffer.wrap(bytes("entry:foo"));
             m.isDelete = true;
@@ -270,7 +270,7 @@ public class DemoClient {
             client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
             printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
 
-            mutations = new ArrayList<Mutation>();
+            mutations = new ArrayList<>();
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes(Integer.toString(i))), writeToWal));
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:sqr")), ByteBuffer.wrap(bytes(Integer.toString(i * i))), writeToWal));
             client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
@@ -347,7 +347,7 @@ public class DemoClient {
     private void printRow(TRowResult rowResult) {
         // copy values into a TreeMap to get them in sorted order
 
-        TreeMap<String, TCell> sorted = new TreeMap<String, TCell>();
+        TreeMap<String, TCell> sorted = new TreeMap<>();
         for (Map.Entry<ByteBuffer, TCell> column : rowResult.columns.entrySet()) {
             sorted.put(utf8(column.getKey().array()), column.getValue());
         }
@@ -379,7 +379,7 @@ public class DemoClient {
         new Configuration() {
           @Override
           public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-            Map<String, String> options = new HashMap<String, String>();
+            Map<String, String> options = new HashMap<>();
             options.put("useKeyTab", "false");
             options.put("storeKey", "false");
             options.put("doNotPrompt", "true");

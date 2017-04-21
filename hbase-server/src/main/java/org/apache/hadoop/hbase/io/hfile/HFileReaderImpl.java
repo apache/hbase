@@ -85,7 +85,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   /** Filled when we read in the trailer. */
   private final Compression.Algorithm compressAlgo;
 
-  private boolean isPrimaryReplicaReader;
+  private final boolean primaryReplicaReader;
 
   /**
    * What kind of data block encoding should be used while reading, writing,
@@ -138,7 +138,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * Blocks read from the load-on-open section, excluding data root index, meta
    * index, and file info.
    */
-  private List<HFileBlock> loadOnOpenBlocks = new ArrayList<HFileBlock>();
+  private List<HFileBlock> loadOnOpenBlocks = new ArrayList<>();
 
   /** Minimum minor version supported by this HFile format */
   static final int MIN_MINOR_VERSION = 0;
@@ -155,6 +155,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
   /** Minor versions starting with this number have faked index key */
   static final int MINOR_VERSION_WITH_FAKED_KEY = 3;
+
+  @VisibleForTesting
+  @Deprecated
+  public HFileReaderImpl(Path path, FixedFileTrailer trailer, FSDataInputStreamWrapper fsdis,
+      long fileSize, CacheConfig cacheConf, HFileSystem hfs, Configuration conf)
+      throws IOException {
+    this(path, trailer, fsdis, fileSize, cacheConf, hfs, true, conf);
+  }
 
   /**
    * Opens a HFile. You must load the index before you can use it by calling
@@ -175,11 +183,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    *          Configuration
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
-  public HFileReaderImpl(final Path path, FixedFileTrailer trailer,
-      final FSDataInputStreamWrapper fsdis,
-      final long fileSize, final CacheConfig cacheConf, final HFileSystem hfs,
-      final Configuration conf)
-  throws IOException {
+  public HFileReaderImpl(Path path, FixedFileTrailer trailer, FSDataInputStreamWrapper fsdis,
+      long fileSize, CacheConfig cacheConf, HFileSystem hfs, boolean primaryReplicaReader,
+      Configuration conf) throws IOException {
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
     this.cacheConf = cacheConf;
@@ -187,6 +193,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     this.path = path;
     this.name = path.getName();
     this.conf = conf;
+    this.primaryReplicaReader = primaryReplicaReader;
     checkFileVersion();
     this.hfileContext = createHFileContext(fsdis, fileSize, hfs, path, trailer);
     this.fsBlockReader = new HFileBlock.FSReaderImpl(fsdis, fileSize, hfs, path, hfileContext);
@@ -453,12 +460,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
   @Override
   public boolean isPrimaryReplicaReader() {
-    return isPrimaryReplicaReader;
-  }
-
-  @Override
-  public void setPrimaryReplicaReader(boolean isPrimaryReplicaReader) {
-    this.isPrimaryReplicaReader = isPrimaryReplicaReader;
+    return primaryReplicaReader;
   }
 
   @Override
@@ -493,7 +495,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // buffer backed keyonlyKV
     private ByteBufferKeyOnlyKeyValue bufBackedKeyOnlyKv = new ByteBufferKeyOnlyKeyValue();
     // A pair for reusing in blockSeek() so that we don't garbage lot of objects
-    final ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
+    final ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<>();
 
     /**
      * The next indexed key is to keep track of the indexed key of the next data block.
@@ -506,7 +508,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // Current block being used
     protected HFileBlock curBlock;
     // Previous blocks that were used in the course of the read
-    protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<HFileBlock>();
+    protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
 
     public HFileScannerImpl(final HFile.Reader reader, final boolean cacheBlocks,
         final boolean pread, final boolean isCompaction) {
@@ -975,7 +977,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     public Cell getKey() {
       assertSeeked();
       // Create a new object so that this getKey is cached as firstKey, lastKey
-      ObjectIntPair<ByteBuffer> keyPair = new ObjectIntPair<ByteBuffer>();
+      ObjectIntPair<ByteBuffer> keyPair = new ObjectIntPair<>();
       blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, keyPair);
       ByteBuffer keyBuf = keyPair.getFirst();
       if (keyBuf.hasArray()) {
@@ -996,7 +998,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     public ByteBuffer getValue() {
       assertSeeked();
       // Okie to create new Pair. Not used in hot path
-      ObjectIntPair<ByteBuffer> valuePair = new ObjectIntPair<ByteBuffer>();
+      ObjectIntPair<ByteBuffer> valuePair = new ObjectIntPair<>();
       this.blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen,
         currValueLen, valuePair);
       ByteBuffer valBuf = valuePair.getFirst().duplicate();

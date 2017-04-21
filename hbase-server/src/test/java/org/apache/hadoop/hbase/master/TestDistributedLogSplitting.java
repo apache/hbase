@@ -82,7 +82,6 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
-import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
@@ -329,7 +328,7 @@ public class TestDistributedLogSplitting {
 
     private final PerClientRandomNonceGenerator delegate = PerClientRandomNonceGenerator.get();
     private boolean isDups = false;
-    private LinkedList<Long> nonces = new LinkedList<Long>();
+    private LinkedList<Long> nonces = new LinkedList<>();
 
     public void startDups() {
       isDups = true;
@@ -370,7 +369,7 @@ public class TestDistributedLogSplitting {
             (ClusterConnection)TEST_UTIL.getConnection(), ng);
 
     try {
-      List<Increment> reqs = new ArrayList<Increment>();
+      List<Increment> reqs = new ArrayList<>();
       for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
         HRegionServer hrs = rst.getRegionServer();
         List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
@@ -396,7 +395,7 @@ public class TestDistributedLogSplitting {
         try {
           ht.increment(incr);
           fail("should have thrown");
-        } catch (OperationConflictException ope) {
+        } catch (IOException ope) {
           LOG.debug("Caught as expected: " + ope.getMessage());
         }
       }
@@ -693,7 +692,7 @@ public class TestDistributedLogSplitting {
     try {
       final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
 
-      Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
+      Set<HRegionInfo> regionSet = new HashSet<>();
       HRegionInfo region = null;
       HRegionServer hrs = null;
       ServerName firstFailedServer = null;
@@ -942,7 +941,7 @@ public class TestDistributedLogSplitting {
     try {
       final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
 
-      Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
+      Set<HRegionInfo> regionSet = new HashSet<>();
       HRegionInfo region = null;
       HRegionServer hrs = null;
       HRegionServer dstRS = null;
@@ -1214,10 +1213,10 @@ public class TestDistributedLogSplitting {
     List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
 
     LOG.info("#regions = " + regions.size());
-    Set<HRegionInfo> tmpRegions = new HashSet<HRegionInfo>();
+    Set<HRegionInfo> tmpRegions = new HashSet<>();
     tmpRegions.add(HRegionInfo.FIRST_META_REGIONINFO);
     master.getMasterWalManager().prepareLogReplay(hrs.getServerName(), tmpRegions);
-    Set<HRegionInfo> userRegionSet = new HashSet<HRegionInfo>();
+    Set<HRegionInfo> userRegionSet = new HashSet<>();
     userRegionSet.addAll(regions);
     master.getMasterWalManager().prepareLogReplay(hrs.getServerName(), userRegionSet);
     boolean isMetaRegionInRecovery = false;
@@ -1591,7 +1590,7 @@ public class TestDistributedLogSplitting {
     htd.addFamily(new HColumnDescriptor(family));
     byte[] value = new byte[edit_size];
 
-    List<HRegionInfo> hris = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> hris = new ArrayList<>();
     for (HRegionInfo region : regions) {
       if (!region.getTable().getNameAsString().equalsIgnoreCase(tname)) {
         continue;

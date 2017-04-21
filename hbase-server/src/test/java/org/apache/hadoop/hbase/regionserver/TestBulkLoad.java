@@ -106,7 +106,7 @@ public class TestBulkLoad {
     byte[] familyName = familyPaths.get(0).getFirst();
     String storeFileName = familyPaths.get(0).getSecond();
     storeFileName = (new Path(storeFileName)).getName();
-    List<String> storeFileNames = new ArrayList<String>();
+    List<String> storeFileNames = new ArrayList<>();
     storeFileNames.add(storeFileName);
     when(log.append(any(HRegionInfo.class), any(WALKey.class),
             argThat(bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(),
@@ -129,8 +129,7 @@ public class TestBulkLoad {
 
   @Test
   public void bulkHLogShouldThrowNoErrorAndWriteMarkerWithBlankInput() throws IOException {
-    testRegionWithFamilies(family1).bulkLoadHFiles(new ArrayList<Pair<byte[], String>>(),
-      false, null);
+    testRegionWithFamilies(family1).bulkLoadHFiles(new ArrayList<>(),false, null);
   }
 
   @Test
@@ -219,7 +218,7 @@ public class TestBulkLoad {
   }
 
   private Pair<byte[], String> withMissingHFileForFamily(byte[] family) {
-    return new Pair<byte[], String>(family, getNotExistFilePath());
+    return new Pair<>(family, getNotExistFilePath());
   }
 
   private String getNotExistFilePath() {
@@ -230,7 +229,7 @@ public class TestBulkLoad {
   private Pair<byte[], String> withInvalidColumnFamilyButProperHFileLocation(byte[] family)
       throws IOException {
     createHFileForFamilies(family);
-    return new Pair<byte[], String>(new byte[]{0x00, 0x01, 0x02}, getNotExistFilePath());
+    return new Pair<>(new byte[]{0x00, 0x01, 0x02}, getNotExistFilePath());
   }
 
 
@@ -242,7 +241,7 @@ public class TestBulkLoad {
     for (byte[] family : families) {
       hTableDescriptor.addFamily(new HColumnDescriptor(family));
     }
-
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     // TODO We need a way to do this without creating files
     return HRegion.createHRegion(hRegionInfo,
         new Path(testFolder.newFolder().toURI()),
@@ -258,13 +257,13 @@ public class TestBulkLoad {
   }
 
   private List<Pair<byte[], String>> getBlankFamilyPaths(){
-    return new ArrayList<Pair<byte[], String>>();
+    return new ArrayList<>();
   }
 
   private List<Pair<byte[], String>> withFamilyPathsFor(byte[]... families) throws IOException {
     List<Pair<byte[], String>> familyPaths = getBlankFamilyPaths();
     for (byte[] family : families) {
-      familyPaths.add(new Pair<byte[], String>(family, createHFileForFamilies(family)));
+      familyPaths.add(new Pair<>(family, createHFileForFamilies(family)));
     }
     return familyPaths;
   }

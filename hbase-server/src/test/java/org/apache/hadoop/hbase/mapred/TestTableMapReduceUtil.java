@@ -218,7 +218,7 @@ public class TestTableMapReduceUtil {
         OutputCollector<ImmutableBytesWritable, Put> output, Reporter reporter)
         throws IOException {
       String strKey = Bytes.toString(key.get());
-      List<Put> result = new ArrayList<Put>();
+      List<Put> result = new ArrayList<>();
       while (values.hasNext())
         result.add(values.next());
 

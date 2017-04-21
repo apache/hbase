@@ -101,7 +101,7 @@ public class TestRegionLocationFinder {
 
   @Test
   public void testMapHostNameToServerName() throws Exception {
-    List<String> topHosts = new ArrayList<String>();
+    List<String> topHosts = new ArrayList<>();
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
       String serverHost = server.getServerName().getHostname();
@@ -151,7 +151,7 @@ public class TestRegionLocationFinder {
       if (regions.size() <= 0) {
         continue;
       }
-      List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>(regions.size());
+      List<HRegionInfo> regionInfos = new ArrayList<>(regions.size());
       for (Region region : regions) {
         regionInfos.add(region.getRegionInfo());
       }

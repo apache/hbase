@@ -74,8 +74,8 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     new QName(HColumnDescriptor.COMPRESSION);
 
   private String name;
-  private Map<QName,Object> attrs = new LinkedHashMap<QName,Object>();
-  private List<ColumnSchemaModel> columns = new ArrayList<ColumnSchemaModel>();
+  private Map<QName,Object> attrs = new LinkedHashMap<>();
+  private List<ColumnSchemaModel> columns = new ArrayList<>();
 
   /**
    * Default constructor.

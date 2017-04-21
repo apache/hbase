@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.spark
 
 import java.util
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.spark.datasources.{BytesEncoder, JavaBytesEncoder}
 import org.apache.hadoop.hbase.spark.datasources.JavaBytesEncoder.JavaBytesEncoder
 import org.apache.hadoop.hbase.util.Bytes
@@ -33,6 +34,7 @@ import org.apache.spark.sql.types._
  * A logic tree can be written out as a string and reconstructed from that string
  *
  */
+@InterfaceAudience.Private
 trait DynamicLogicExpression {
   def execute(columnToCurrentRowValueMap: util.HashMap[String, ByteArrayComparable],
               valueFromQueryValueArray:Array[Array[Byte]]): Boolean
@@ -53,6 +55,7 @@ trait DynamicLogicExpression {
   }
 }
 
+@InterfaceAudience.Private
 trait CompareTrait {
   self: DynamicLogicExpression =>
   def columnName: String
@@ -68,6 +71,7 @@ trait CompareTrait {
   }
 }
 
+@InterfaceAudience.Private
 class AndLogicExpression (val leftExpression:DynamicLogicExpression,
                            val rightExpression:DynamicLogicExpression)
   extends DynamicLogicExpression{
@@ -87,6 +91,7 @@ class AndLogicExpression (val leftExpression:DynamicLogicExpression,
   }
 }
 
+@InterfaceAudience.Private
 class OrLogicExpression (val leftExpression:DynamicLogicExpression,
                           val rightExpression:DynamicLogicExpression)
   extends DynamicLogicExpression{
@@ -105,6 +110,7 @@ class OrLogicExpression (val leftExpression:DynamicLogicExpression,
   }
 }
 
+@InterfaceAudience.Private
 class EqualLogicExpression (val columnName:String,
                             val valueFromQueryIndex:Int,
                             val isNot:Boolean) extends DynamicLogicExpression{
@@ -125,6 +131,7 @@ class EqualLogicExpression (val columnName:String,
   }
 }
 
+@InterfaceAudience.Private
 class IsNullLogicExpression (val columnName:String,
                              val isNot:Boolean) extends DynamicLogicExpression{
   override def execute(columnToCurrentRowValueMap:
@@ -140,6 +147,7 @@ class IsNullLogicExpression (val columnName:String,
   }
 }
 
+@InterfaceAudience.Private
 class GreaterThanLogicExpression (override val columnName:String,
                                   override val valueFromQueryIndex:Int)
   extends DynamicLogicExpression with CompareTrait{
@@ -149,6 +157,7 @@ class GreaterThanLogicExpression (override val columnName:String,
   }
 }
 
+@InterfaceAudience.Private
 class GreaterThanOrEqualLogicExpression (override val columnName:String,
                                          override val valueFromQueryIndex:Int)
   extends DynamicLogicExpression with CompareTrait{
@@ -158,6 +167,7 @@ class GreaterThanOrEqualLogicExpression (override val columnName:String,
   }
 }
 
+@InterfaceAudience.Private
 class LessThanLogicExpression (override val columnName:String,
                                override val valueFromQueryIndex:Int)
   extends DynamicLogicExpression with CompareTrait {
@@ -167,6 +177,7 @@ class LessThanLogicExpression (override val columnName:String,
   }
 }
 
+@InterfaceAudience.Private
 class LessThanOrEqualLogicExpression (val columnName:String,
                                       val valueFromQueryIndex:Int)
   extends DynamicLogicExpression with CompareTrait{
@@ -176,6 +187,7 @@ class LessThanOrEqualLogicExpression (val columnName:String,
   }
 }
 
+@InterfaceAudience.Private
 class PassThroughLogicExpression() extends DynamicLogicExpression {
   override def execute(columnToCurrentRowValueMap:
                        util.HashMap[String, ByteArrayComparable],
@@ -190,6 +202,7 @@ class PassThroughLogicExpression() extends DynamicLogicExpression {
   }
 }
 
+@InterfaceAudience.Private
 object DynamicLogicExpressionBuilder {
   def build(expressionString: String, encoder: BytesEncoder): DynamicLogicExpression = {
 

@@ -95,7 +95,7 @@ public class TestWALActionsListener {
   @Test
   public void testActionListener() throws Exception {
     DummyWALActionsListener observer = new DummyWALActionsListener();
-    List<WALActionsListener> list = new ArrayList<WALActionsListener>(1);
+    List<WALActionsListener> list = new ArrayList<>(1);
     list.add(observer);
     final WALFactory wals = new WALFactory(conf, list, "testActionListener");
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
@@ -110,8 +110,7 @@ public class TestWALActionsListener {
       edit.add(kv);
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(SOME_BYTES));
       htd.addFamily(new HColumnDescriptor(b));
-      NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-          Bytes.BYTES_COMPARATOR);
+      NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for(byte[] fam : htd.getFamiliesKeys()) {
         scopes.put(fam, 0);
       }

@@ -12,7 +12,7 @@ public interface DoubleValueOrBuilder extends
    * The double value.
    * </pre>
    *
-   * <code>optional double value = 1;</code>
+   * <code>double value = 1;</code>
    */
   double getValue();
 }

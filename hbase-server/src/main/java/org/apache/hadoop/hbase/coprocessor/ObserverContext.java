@@ -124,7 +124,7 @@ public class ObserverContext<E extends CoprocessorEnvironment> {
   public static <T extends CoprocessorEnvironment> ObserverContext<T> createAndPrepare(
       T env, ObserverContext<T> context) {
     if (context == null) {
-      context = new ObserverContext<T>(RpcServer.getRequestUser());
+      context = new ObserverContext<>(RpcServer.getRequestUser());
     }
     context.prepare(env);
     return context;
@@ -146,7 +146,7 @@ public class ObserverContext<E extends CoprocessorEnvironment> {
   public static <T extends CoprocessorEnvironment> ObserverContext<T> createAndPrepare(
       T env, ObserverContext<T> context, User user) {
     if (context == null) {
-      context = new ObserverContext<T>(user);
+      context = new ObserverContext<>(user);
     }
     context.prepare(env);
     return context;

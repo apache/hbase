@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 /**
  * Represents the master switch type
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum MasterSwitchType {
   SPLIT,
   MERGE

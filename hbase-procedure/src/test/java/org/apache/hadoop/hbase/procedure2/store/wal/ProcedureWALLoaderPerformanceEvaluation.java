@@ -82,7 +82,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     @Override
     public void load(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
-        if (procIter.isNextCompleted()) {
+        if (procIter.isNextFinished()) {
           ProcedureInfo proc = procIter.nextAsProcedureInfo();
         } else {
           Procedure proc = procIter.nextAsProcedure();

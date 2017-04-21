@@ -90,7 +90,7 @@ public class UserProvider extends BaseConfigurable {
 
           private String[] getGroupStrings(String ugi) {
             try {
-              Set<String> result = new LinkedHashSet<String>(groups.getGroups(ugi));
+              Set<String> result = new LinkedHashSet<>(groups.getGroups(ugi));
               return result.toArray(new String[result.size()]);
             } catch (Exception e) {
               return new String[0];

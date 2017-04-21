@@ -58,7 +58,7 @@ public class TestHFileInlineToRootChunkConversion {
     HFile.Writer hfw = new HFile.WriterFactory(conf, cacheConf)
             .withFileContext(context)
             .withPath(fs, hfPath).create();
-    List<byte[]> keys = new ArrayList<byte[]>();
+    List<byte[]> keys = new ArrayList<>();
     StringBuilder sb = new StringBuilder();
 
     for (int i = 0; i < 4; ++i) {
@@ -77,7 +77,7 @@ public class TestHFileInlineToRootChunkConversion {
     }
     hfw.close();
 
-    HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, conf);
+    HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, true, conf);
     // Scanner doesn't do Cells yet.  Fix.
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {

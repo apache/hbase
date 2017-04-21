@@ -118,8 +118,7 @@ public final class ProtobufUtil {
   /**
    * Primitive type to class mapping.
    */
-  private final static Map<String, Class<?>>
-    PRIMITIVES = new HashMap<String, Class<?>>();
+  private final static Map<String, Class<?>> PRIMITIVES = new HashMap<>();
 
   /**
    * Many results are simple: no cell, exists true or false. To save on object creations,
@@ -1384,7 +1383,7 @@ public final class ProtobufUtil {
       return proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT;
     }
 
-    List<Cell> cells = new ArrayList<Cell>(values.size());
+    List<Cell> cells = new ArrayList<>(values.size());
     for (CellProtos.Cell c : values) {
       cells.add(toCell(c));
     }
@@ -1418,7 +1417,7 @@ public final class ProtobufUtil {
     List<Cell> cells = null;
     if (proto.hasAssociatedCellCount()) {
       int count = proto.getAssociatedCellCount();
-      cells = new ArrayList<Cell>(count + values.size());
+      cells = new ArrayList<>(count + values.size());
       for (int i = 0; i < count; i++) {
         if (!scanner.advance()) throw new IOException("Failed get " + i + " of " + count);
         cells.add(scanner.current());
@@ -1426,7 +1425,7 @@ public final class ProtobufUtil {
     }
 
     if (!values.isEmpty()){
-      if (cells == null) cells = new ArrayList<Cell>(values.size());
+      if (cells == null) cells = new ArrayList<>(values.size());
       for (CellProtos.Cell c: values) {
         cells.add(toCell(c));
       }
@@ -1804,7 +1803,7 @@ public final class ProtobufUtil {
    * has a serialized {@link ServerName} in it.
    * @return Returns null if <code>data</code> is null else converts passed data
    * to a ServerName instance.
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   public static ServerName toServerName(final byte [] data) throws DeserializationException {
     if (data == null || data.length <= 0) return null;

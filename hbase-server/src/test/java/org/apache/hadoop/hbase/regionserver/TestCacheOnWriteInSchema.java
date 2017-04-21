@@ -137,7 +137,7 @@ public class TestCacheOnWriteInSchema {
 
   @Parameters
   public static Collection<Object[]> getParameters() {
-    List<Object[]> cowTypes = new ArrayList<Object[]>();
+    List<Object[]> cowTypes = new ArrayList<>();
     for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
       cowTypes.add(new Object[] { cowType });
     }
@@ -218,9 +218,9 @@ public class TestCacheOnWriteInSchema {
   private void readStoreFile(Path path) throws IOException {
     CacheConfig cacheConf = store.getCacheConfig();
     BlockCache cache = cacheConf.getBlockCache();
-    StoreFile sf = new StoreFile(fs, path, conf, cacheConf,
-      BloomType.ROWCOL);
-    HFile.Reader reader = sf.createReader().getHFileReader();
+    StoreFile sf = new StoreFile(fs, path, conf, cacheConf, BloomType.ROWCOL, true);
+    sf.initReader();
+    HFile.Reader reader = sf.getReader().getHFileReader();
     try {
       // Open a scanner with (on read) caching disabled
       HFileScanner scanner = reader.getScanner(false, false);

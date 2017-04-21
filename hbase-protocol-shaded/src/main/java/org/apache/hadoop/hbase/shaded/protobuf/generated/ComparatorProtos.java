@@ -252,7 +252,7 @@ public final class ComparatorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -815,7 +815,7 @@ public final class ComparatorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasValue()) {
         hash = (37 * hash) + VALUE_FIELD_NUMBER;
         hash = (53 * hash) + getValue().hashCode();
@@ -1305,7 +1305,7 @@ public final class ComparatorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasComparable()) {
         hash = (37 * hash) + COMPARABLE_FIELD_NUMBER;
         hash = (53 * hash) + getComparable().hashCode();
@@ -1890,7 +1890,7 @@ public final class ComparatorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasComparable()) {
         hash = (37 * hash) + COMPARABLE_FIELD_NUMBER;
         hash = (53 * hash) + getComparable().hashCode();
@@ -2475,7 +2475,7 @@ public final class ComparatorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasComparable()) {
         hash = (37 * hash) + COMPARABLE_FIELD_NUMBER;
         hash = (53 * hash) + getComparable().hashCode();
@@ -3211,7 +3211,7 @@ public final class ComparatorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasComparable()) {
         hash = (37 * hash) + COMPARABLE_FIELD_NUMBER;
         hash = (53 * hash) + getComparable().hashCode();
@@ -3783,7 +3783,7 @@ public final class ComparatorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -4434,7 +4434,7 @@ public final class ComparatorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasPattern()) {
         hash = (37 * hash) + PATTERN_FIELD_NUMBER;
         hash = (53 * hash) + getPattern().hashCode();
@@ -5218,7 +5218,7 @@ public final class ComparatorProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasSubstr()) {
         hash = (37 * hash) + SUBSTR_FIELD_NUMBER;
         hash = (53 * hash) + getSubstr().hashCode();

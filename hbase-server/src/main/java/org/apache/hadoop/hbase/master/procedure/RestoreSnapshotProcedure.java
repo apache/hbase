@@ -66,8 +66,7 @@ public class RestoreSnapshotProcedure
   private List<HRegionInfo> regionsToRestore = null;
   private List<HRegionInfo> regionsToRemove = null;
   private List<HRegionInfo> regionsToAdd = null;
-  private Map<String, Pair<String, String>> parentsToChildrenPairMap =
-    new HashMap<String, Pair<String, String>>();
+  private Map<String, Pair<String, String>> parentsToChildrenPairMap = new HashMap<>();
 
   private SnapshotDescription snapshot;
 
@@ -275,8 +274,7 @@ public class RestoreSnapshotProcedure
     if (restoreSnapshotMsg.getRegionInfoForRestoreCount() == 0) {
       regionsToRestore = null;
     } else {
-      regionsToRestore =
-        new ArrayList<HRegionInfo>(restoreSnapshotMsg.getRegionInfoForRestoreCount());
+      regionsToRestore = new ArrayList<>(restoreSnapshotMsg.getRegionInfoForRestoreCount());
       for (HBaseProtos.RegionInfo hri: restoreSnapshotMsg.getRegionInfoForRestoreList()) {
         regionsToRestore.add(HRegionInfo.convert(hri));
       }
@@ -284,8 +282,7 @@ public class RestoreSnapshotProcedure
     if (restoreSnapshotMsg.getRegionInfoForRemoveCount() == 0) {
       regionsToRemove = null;
     } else {
-      regionsToRemove =
-        new ArrayList<HRegionInfo>(restoreSnapshotMsg.getRegionInfoForRemoveCount());
+      regionsToRemove = new ArrayList<>(restoreSnapshotMsg.getRegionInfoForRemoveCount());
       for (HBaseProtos.RegionInfo hri: restoreSnapshotMsg.getRegionInfoForRemoveList()) {
         regionsToRemove.add(HRegionInfo.convert(hri));
       }
@@ -293,7 +290,7 @@ public class RestoreSnapshotProcedure
     if (restoreSnapshotMsg.getRegionInfoForAddCount() == 0) {
       regionsToAdd = null;
     } else {
-      regionsToAdd = new ArrayList<HRegionInfo>(restoreSnapshotMsg.getRegionInfoForAddCount());
+      regionsToAdd = new ArrayList<>(restoreSnapshotMsg.getRegionInfoForAddCount());
       for (HBaseProtos.RegionInfo hri: restoreSnapshotMsg.getRegionInfoForAddList()) {
         regionsToAdd.add(HRegionInfo.convert(hri));
       }
@@ -303,7 +300,7 @@ public class RestoreSnapshotProcedure
         restoreSnapshotMsg.getParentToChildRegionsPairListList()) {
         parentsToChildrenPairMap.put(
           parentToChildrenPair.getParentRegionName(),
-          new Pair<String, String>(
+          new Pair<>(
             parentToChildrenPair.getChild1RegionName(),
             parentToChildrenPair.getChild2RegionName()));
       }

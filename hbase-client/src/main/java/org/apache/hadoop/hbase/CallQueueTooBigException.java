@@ -21,11 +21,9 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class CallQueueTooBigException extends IOException {
   public CallQueueTooBigException() {
     super();

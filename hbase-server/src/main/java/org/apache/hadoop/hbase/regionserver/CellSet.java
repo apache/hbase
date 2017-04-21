@@ -48,7 +48,7 @@ public class CellSet implements NavigableSet<Cell>  {
   private final NavigableMap<Cell, Cell> delegatee; ///
 
   CellSet(final CellComparator c) {
-    this.delegatee = new ConcurrentSkipListMap<Cell, Cell>(c);
+    this.delegatee = new ConcurrentSkipListMap<>(c);
   }
 
   CellSet(final NavigableMap<Cell, Cell> m) {

@@ -29,9 +29,9 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
@@ -42,13 +42,13 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  * implemented on any given system by a coprocessor.
  */
 @InterfaceAudience.Private
-public class ConstraintProcessor extends BaseRegionObserver {
+public class ConstraintProcessor implements RegionObserver {
 
   private static final Log LOG = LogFactory.getLog(ConstraintProcessor.class);
 
   private final ClassLoader classloader;
 
-  private List<? extends Constraint> constraints = new ArrayList<Constraint>();
+  private List<? extends Constraint> constraints = new ArrayList<>();
 
   /**
    * Create the constraint processor.
@@ -95,7 +95,7 @@ public class ConstraintProcessor extends BaseRegionObserver {
   @Override
   public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // Impl in BaseRegionObserver might do unnecessary copy for Off heap backed Cells.
+    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
     return hasMore;
   }
 }

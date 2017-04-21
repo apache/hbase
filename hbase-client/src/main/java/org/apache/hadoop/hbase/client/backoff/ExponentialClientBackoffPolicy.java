@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.base.Preconditions;
 
@@ -32,7 +31,6 @@ import com.google.common.base.Preconditions;
  * max backoff to generate the backoff time.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public class ExponentialClientBackoffPolicy implements ClientBackoffPolicy {
 
   private static final Log LOG = LogFactory.getLog(ExponentialClientBackoffPolicy.class);

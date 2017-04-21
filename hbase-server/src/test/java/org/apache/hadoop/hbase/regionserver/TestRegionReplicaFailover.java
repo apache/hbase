@@ -283,7 +283,7 @@ public class TestRegionReplicaFailover {
       admin.flush(table.getName());
       HTU.loadNumericRows(table, fam, 1000, 2000);
 
-      final AtomicReference<Throwable> ex = new AtomicReference<Throwable>(null);
+      final AtomicReference<Throwable> ex = new AtomicReference<>(null);
       final AtomicBoolean done = new AtomicBoolean(false);
       final AtomicInteger key = new AtomicInteger(2000);
 

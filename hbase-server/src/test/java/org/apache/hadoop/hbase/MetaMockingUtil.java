@@ -68,7 +68,7 @@ public class MetaMockingUtil {
    */
   public static Result getMetaTableRowResult(HRegionInfo region, final ServerName sn,
       HRegionInfo splita, HRegionInfo splitb) throws IOException {
-    List<Cell> kvs = new ArrayList<Cell>();
+    List<Cell> kvs = new ArrayList<>();
     if (region != null) {
       kvs.add(new KeyValue(
         region.getRegionName(),

@@ -118,7 +118,7 @@ public class SplitLogManager {
   protected final ReentrantLock recoveringRegionLock = new ReentrantLock();
 
   @VisibleForTesting
-  final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<String, Task>();
+  final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<>();
   private TimeoutMonitor timeoutMonitor;
 
   private volatile Set<ServerName> deadWorkers = null;
@@ -176,7 +176,7 @@ public class SplitLogManager {
   public static FileStatus[] getFileList(final Configuration conf, final List<Path> logDirs,
       final PathFilter filter)
       throws IOException {
-    List<FileStatus> fileStatus = new ArrayList<FileStatus>();
+    List<FileStatus> fileStatus = new ArrayList<>();
     for (Path logDir : logDirs) {
       final FileSystem fs = logDir.getFileSystem(conf);
       if (!fs.exists(logDir)) {
@@ -201,7 +201,7 @@ public class SplitLogManager {
    * @throws IOException
    */
   public long splitLogDistributed(final Path logDir) throws IOException {
-    List<Path> logDirs = new ArrayList<Path>();
+    List<Path> logDirs = new ArrayList<>();
     logDirs.add(logDir);
     return splitLogDistributed(logDirs);
   }
@@ -218,7 +218,7 @@ public class SplitLogManager {
     if (logDirs.isEmpty()) {
       return 0;
     }
-    Set<ServerName> serverNames = new HashSet<ServerName>();
+    Set<ServerName> serverNames = new HashSet<>();
     for (Path logDir : logDirs) {
       try {
         ServerName serverName = AbstractFSWALProvider.getServerNameFromWALDirectoryName(logDir);
@@ -398,7 +398,7 @@ public class SplitLogManager {
     }
     if (serverNames == null || serverNames.isEmpty()) return;
 
-    Set<String> recoveredServerNameSet = new HashSet<String>();
+    Set<String> recoveredServerNameSet = new HashSet<>();
     for (ServerName tmpServerName : serverNames) {
       recoveredServerNameSet.add(tmpServerName.getServerName());
     }
@@ -410,8 +410,7 @@ public class SplitLogManager {
     } catch (IOException e) {
       LOG.warn("removeRecoveringRegions got exception. Will retry", e);
       if (serverNames != null && !serverNames.isEmpty()) {
-        this.failedRecoveringRegionDeletions.add(new Pair<Set<ServerName>, Boolean>(serverNames,
-            isMetaRecovery));
+        this.failedRecoveringRegionDeletions.add(new Pair<>(serverNames, isMetaRecovery));
       }
     } finally {
       this.recoveringRegionLock.unlock();
@@ -426,7 +425,7 @@ public class SplitLogManager {
    */
   void removeStaleRecoveringRegions(final Set<ServerName> failedServers) throws IOException,
       InterruptedIOException {
-    Set<String> knownFailedServers = new HashSet<String>();
+    Set<String> knownFailedServers = new HashSet<>();
     if (failedServers != null) {
       for (ServerName tmpServerName : failedServers) {
         knownFailedServers.add(tmpServerName.getServerName());
@@ -519,7 +518,7 @@ public class SplitLogManager {
     // to reason about concurrency. Makes it easier to retry.
     synchronized (deadWorkersLock) {
       if (deadWorkers == null) {
-        deadWorkers = new HashSet<ServerName>(100);
+        deadWorkers = new HashSet<>(100);
       }
       deadWorkers.add(workerName);
     }
@@ -529,7 +528,7 @@ public class SplitLogManager {
   void handleDeadWorkers(Set<ServerName> serverNames) {
     synchronized (deadWorkersLock) {
       if (deadWorkers == null) {
-        deadWorkers = new HashSet<ServerName>(100);
+        deadWorkers = new HashSet<>(100);
       }
       deadWorkers.addAll(serverNames);
     }
@@ -749,7 +748,7 @@ public class SplitLogManager {
         getSplitLogManagerCoordination().getDetails().getFailedDeletions();
       // Retry previously failed deletes
       if (failedDeletions.size() > 0) {
-        List<String> tmpPaths = new ArrayList<String>(failedDeletions);
+        List<String> tmpPaths = new ArrayList<>(failedDeletions);
         for (String tmpPath : tmpPaths) {
           // deleteNode is an async call
           getSplitLogManagerCoordination().deleteTask(tmpPath);
@@ -766,7 +765,7 @@ public class SplitLogManager {
         // inside the function there have more checks before GC anything
         if (!failedRecoveringRegionDeletions.isEmpty()) {
           List<Pair<Set<ServerName>, Boolean>> previouslyFailedDeletions =
-              new ArrayList<Pair<Set<ServerName>, Boolean>>(failedRecoveringRegionDeletions);
+              new ArrayList<>(failedRecoveringRegionDeletions);
           failedRecoveringRegionDeletions.removeAll(previouslyFailedDeletions);
           for (Pair<Set<ServerName>, Boolean> failedDeletion : previouslyFailedDeletions) {
             removeRecoveringRegions(failedDeletion.getFirst(), failedDeletion.getSecond());

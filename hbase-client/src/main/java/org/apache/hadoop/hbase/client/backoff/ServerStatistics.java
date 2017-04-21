@@ -30,8 +30,7 @@ import java.util.TreeMap;
 @InterfaceAudience.Private
 public class ServerStatistics {
 
-  private Map<byte[], RegionStatistics>
-      stats = new TreeMap<byte[], RegionStatistics>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], RegionStatistics> stats = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
    * Good enough attempt. Last writer wins. It doesn't really matter which one gets to update,

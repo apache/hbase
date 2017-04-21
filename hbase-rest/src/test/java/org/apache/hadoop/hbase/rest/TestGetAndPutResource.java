@@ -143,7 +143,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(response.getCode(), 200);
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
-    HashMap<String,String> otherCells = new HashMap<String, String>();
+    HashMap<String,String> otherCells = new HashMap<>();
     otherCells.put(COLUMN_2,VALUE_3);
 
     // On Success update both the cells
@@ -176,7 +176,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(response.getCode(), 200);
     checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
-    HashMap<String,String> otherCells = new HashMap<String, String>();
+    HashMap<String,String> otherCells = new HashMap<>();
     otherCells.put(COLUMN_2,VALUE_3);
 
     // On Success update both the cells
@@ -214,7 +214,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     checkValuePB(TABLE, ROW_1, COLUMN_3, VALUE_3);
 
     // Deletes the following columns based on Column1 check
-    HashMap<String,String> cellsToDelete = new HashMap<String, String>();
+    HashMap<String,String> cellsToDelete = new HashMap<>();
     cellsToDelete.put(COLUMN_2,VALUE_2); // Value does not matter
     cellsToDelete.put(COLUMN_3,VALUE_3); // Value does not matter
 

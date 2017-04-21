@@ -126,8 +126,7 @@ public class TestRegionSplitCalculator {
     SimpleRange a = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B"));
     SimpleRange b = new SimpleRange(Bytes.toBytes("B"), Bytes.toBytes("C"));
     SimpleRange c = new SimpleRange(Bytes.toBytes("C"), Bytes.toBytes("D"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
     sc.add(b);
     sc.add(c);
@@ -142,8 +141,7 @@ public class TestRegionSplitCalculator {
 
   @Test
   public void testSplitCalculatorNoEdge() {
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
 
     Multimap<byte[], SimpleRange> regions = sc.calcCoverage();
     LOG.info("Empty");
@@ -155,8 +153,7 @@ public class TestRegionSplitCalculator {
   @Test
   public void testSplitCalculatorSingleEdge() {
     SimpleRange a = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
 
     Multimap<byte[], SimpleRange> regions = sc.calcCoverage();
@@ -169,8 +166,7 @@ public class TestRegionSplitCalculator {
   @Test
   public void testSplitCalculatorDegenerateEdge() {
     SimpleRange a = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("A"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
 
     Multimap<byte[], SimpleRange> regions = sc.calcCoverage();
@@ -185,8 +181,7 @@ public class TestRegionSplitCalculator {
     SimpleRange a = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B"));
     SimpleRange b = new SimpleRange(Bytes.toBytes("B"), Bytes.toBytes("C"));
     SimpleRange c = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
     sc.add(b);
     sc.add(c);
@@ -204,8 +199,7 @@ public class TestRegionSplitCalculator {
     SimpleRange a = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B"));
     SimpleRange b = new SimpleRange(Bytes.toBytes("B"), Bytes.toBytes("C"));
     SimpleRange c = new SimpleRange(Bytes.toBytes("B"), Bytes.toBytes("D"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
     sc.add(b);
     sc.add(c);
@@ -223,8 +217,7 @@ public class TestRegionSplitCalculator {
     SimpleRange a = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B"));
     SimpleRange b = new SimpleRange(Bytes.toBytes("B"), Bytes.toBytes("C"));
     SimpleRange c = new SimpleRange(Bytes.toBytes("E"), Bytes.toBytes("F"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
     sc.add(b);
     sc.add(c);
@@ -241,8 +234,7 @@ public class TestRegionSplitCalculator {
   public void testSplitCalculatorOverreach() {
     SimpleRange a = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C"));
     SimpleRange b = new SimpleRange(Bytes.toBytes("B"), Bytes.toBytes("D"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
     sc.add(b);
 
@@ -258,8 +250,7 @@ public class TestRegionSplitCalculator {
   public void testSplitCalculatorFloor() {
     SimpleRange a = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C"));
     SimpleRange b = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
     sc.add(b);
 
@@ -274,8 +265,7 @@ public class TestRegionSplitCalculator {
   public void testSplitCalculatorCeil() {
     SimpleRange a = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C"));
     SimpleRange b = new SimpleRange(Bytes.toBytes("B"), Bytes.toBytes("C"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
     sc.add(b);
 
@@ -292,8 +282,7 @@ public class TestRegionSplitCalculator {
     SimpleRange b = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C"));
 
     LOG.info(a.tiebreaker + " - " + b.tiebreaker);
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
     sc.add(b);
 
@@ -307,8 +296,7 @@ public class TestRegionSplitCalculator {
   @Test
   public void testSplitCalculatorBackwards() {
     SimpleRange a = new SimpleRange(Bytes.toBytes("C"), Bytes.toBytes("A"));
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(a);
 
     Multimap<byte[], SimpleRange> regions = sc.calcCoverage();
@@ -320,8 +308,7 @@ public class TestRegionSplitCalculator {
 
   @Test
   public void testComplex() {
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("Am")));
     sc.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C")));
     sc.add(new SimpleRange(Bytes.toBytes("Am"), Bytes.toBytes("C")));
@@ -344,8 +331,7 @@ public class TestRegionSplitCalculator {
 
   @Test
   public void testBeginEndMarker() {
-    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<SimpleRange>(
-        cmp);
+    RegionSplitCalculator<SimpleRange> sc = new RegionSplitCalculator<>(cmp);
     sc.add(new SimpleRange(Bytes.toBytes(""), Bytes.toBytes("A")));
     sc.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B")));
     sc.add(new SimpleRange(Bytes.toBytes("B"), Bytes.toBytes("")));
@@ -364,7 +350,7 @@ public class TestRegionSplitCalculator {
     SimpleRange ae = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("E"));
     SimpleRange ac = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C"));
 
-    Collection<SimpleRange> bigOverlap = new ArrayList<SimpleRange>(8);
+    Collection<SimpleRange> bigOverlap = new ArrayList<>(8);
     bigOverlap.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("E")));
     bigOverlap.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C")));
     bigOverlap.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B")));

@@ -170,8 +170,7 @@ public class MetaTableAccessor {
   @Deprecated
   public static NavigableMap<HRegionInfo, ServerName> allTableRegions(
       Connection connection, final TableName tableName) throws IOException {
-    final NavigableMap<HRegionInfo, ServerName> regions =
-      new TreeMap<HRegionInfo, ServerName>();
+    final NavigableMap<HRegionInfo, ServerName> regions = new TreeMap<>();
     Visitor visitor = new TableVisitorBase(tableName) {
       @Override
       public boolean visitInternal(Result result) throws IOException {
@@ -311,7 +310,7 @@ public class MetaTableAccessor {
     HRegionLocation location = getRegionLocation(connection, regionName);
     return location == null
       ? null
-      : new Pair<HRegionInfo, ServerName>(location.getRegionInfo(), location.getServerName());
+      : new Pair<>(location.getRegionInfo(), location.getServerName());
   }
 
   /**
@@ -402,7 +401,7 @@ public class MetaTableAccessor {
     if (mergeA == null && mergeB == null) {
       return null;
     }
-    return new Pair<HRegionInfo, HRegionInfo>(mergeA, mergeB);
+    return new Pair<>(mergeA, mergeB);
  }
 
   /**
@@ -477,7 +476,7 @@ public class MetaTableAccessor {
   @Nullable
   static List<HRegionInfo> getListOfHRegionInfos(final List<Pair<HRegionInfo, ServerName>> pairs) {
     if (pairs == null || pairs.isEmpty()) return null;
-    List<HRegionInfo> result = new ArrayList<HRegionInfo>(pairs.size());
+    List<HRegionInfo> result = new ArrayList<>(pairs.size());
     for (Pair<HRegionInfo, ServerName> pair: pairs) {
       result.add(pair.getFirst());
     }
@@ -635,8 +634,7 @@ public class MetaTableAccessor {
           }
           for (HRegionLocation loc : current.getRegionLocations()) {
             if (loc != null) {
-              this.results.add(new Pair<HRegionInfo, ServerName>(
-                loc.getRegionInfo(), loc.getServerName()));
+              this.results.add(new Pair<>(loc.getRegionInfo(), loc.getServerName()));
             }
           }
         }
@@ -658,7 +656,7 @@ public class MetaTableAccessor {
   public static NavigableMap<HRegionInfo, Result>
   getServerUserRegions(Connection connection, final ServerName serverName)
     throws IOException {
-    final NavigableMap<HRegionInfo, Result> hris = new TreeMap<HRegionInfo, Result>();
+    final NavigableMap<HRegionInfo, Result> hris = new TreeMap<>();
     // Fill the above hris map with entries from hbase:meta that have the passed
     // servername.
     CollectingVisitor<Result> v = new CollectingVisitor<Result>() {
@@ -981,7 +979,7 @@ public class MetaTableAccessor {
     HRegionInfo regionInfo = getHRegionInfo(r, getRegionInfoColumn());
     if (regionInfo == null) return null;
 
-    List<HRegionLocation> locations = new ArrayList<HRegionLocation>(1);
+    List<HRegionLocation> locations = new ArrayList<>(1);
     NavigableMap<byte[],NavigableMap<byte[],byte[]>> familyMap = r.getNoVersionMap();
 
     locations.add(getRegionLocation(r, regionInfo, 0));
@@ -1069,7 +1067,7 @@ public class MetaTableAccessor {
     HRegionInfo splitA = getHRegionInfo(data, HConstants.SPLITA_QUALIFIER);
     HRegionInfo splitB = getHRegionInfo(data, HConstants.SPLITB_QUALIFIER);
 
-    return new PairOfSameType<HRegionInfo>(splitA, splitB);
+    return new PairOfSameType<>(splitA, splitB);
   }
 
   /**
@@ -1083,7 +1081,7 @@ public class MetaTableAccessor {
     HRegionInfo mergeA = getHRegionInfo(data, HConstants.MERGEA_QUALIFIER);
     HRegionInfo mergeB = getHRegionInfo(data, HConstants.MERGEB_QUALIFIER);
 
-    return new PairOfSameType<HRegionInfo>(mergeA, mergeB);
+    return new PairOfSameType<>(mergeA, mergeB);
   }
 
   /**
@@ -1183,7 +1181,7 @@ public class MetaTableAccessor {
    * A {@link Visitor} that collects content out of passed {@link Result}.
    */
   static abstract class CollectingVisitor<T> implements Visitor {
-    final List<T> results = new ArrayList<T>();
+    final List<T> results = new ArrayList<>();
     @Override
     public boolean visit(Result r) throws IOException {
       if (r ==  null || r.isEmpty()) return true;
@@ -1426,7 +1424,7 @@ public class MetaTableAccessor {
    */
   static void deleteFromMetaTable(final Connection connection, final Delete d)
     throws IOException {
-    List<Delete> dels = new ArrayList<Delete>(1);
+    List<Delete> dels = new ArrayList<>(1);
     dels.add(d);
     deleteFromMetaTable(connection, dels);
   }
@@ -1594,7 +1592,7 @@ public class MetaTableAccessor {
   public static void addRegionsToMeta(Connection connection,
       List<HRegionInfo> regionInfos, int regionReplication, long ts)
           throws IOException {
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     for (HRegionInfo regionInfo : regionInfos) {
       if (RegionReplicaUtil.isDefaultReplica(regionInfo)) {
         Put put = makePutFromRegionInfo(regionInfo, ts);
@@ -1929,6 +1927,7 @@ public class MetaTableAccessor {
 
     // region replicas are kept in the primary region's row
     Put put = new Put(getMetaKeyForRegion(regionInfo), time);
+    addRegionInfo(put, regionInfo);
     addLocation(put, sn, openSeqNum, time, regionInfo.getReplicaId());
     putToMetaTable(connection, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
@@ -1969,7 +1968,7 @@ public class MetaTableAccessor {
    */
   public static void deleteRegions(Connection connection,
                                    List<HRegionInfo> regionsInfo, long ts) throws IOException {
-    List<Delete> deletes = new ArrayList<Delete>(regionsInfo.size());
+    List<Delete> deletes = new ArrayList<>(regionsInfo.size());
     for (HRegionInfo hri: regionsInfo) {
       Delete e = new Delete(hri.getRegionName());
       e.addFamily(getCatalogFamily(), ts);
@@ -1990,7 +1989,7 @@ public class MetaTableAccessor {
                                    final List<HRegionInfo> regionsToRemove,
                                    final List<HRegionInfo> regionsToAdd)
     throws IOException {
-    List<Mutation> mutation = new ArrayList<Mutation>();
+    List<Mutation> mutation = new ArrayList<>();
     if (regionsToRemove != null) {
       for (HRegionInfo hri: regionsToRemove) {
         mutation.add(makeDeleteFromRegionInfo(hri));
@@ -2050,7 +2049,7 @@ public class MetaTableAccessor {
       + Bytes.toStringBinary(HConstants.MERGEB_QUALIFIER));
   }
 
-  private static Put addRegionInfo(final Put p, final HRegionInfo hri)
+  public static Put addRegionInfo(final Put p, final HRegionInfo hri)
     throws IOException {
     p.addImmutable(getCatalogFamily(), HConstants.REGIONINFO_QUALIFIER,
       hri.toByteArray());

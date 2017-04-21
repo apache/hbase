@@ -36,7 +36,6 @@ import java.util.NavigableMap;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience.Private;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.Dictionary;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * method level.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class CellUtil {
 
   /**
@@ -622,15 +620,6 @@ public final class CellUtil {
     }
 
     @Override
-    public long heapOverhead() {
-      long overhead = ((ExtendedCell) this.cell).heapOverhead() + HEAP_SIZE_OVERHEAD;
-      if (this.tags != null) {
-        overhead += ClassSize.ARRAY;
-      }
-      return overhead;
-    }
-
-    @Override
     public Cell deepClone() {
       Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
       return new TagRewriteCell(clonedBaseCell, this.tags);
@@ -772,6 +761,7 @@ public final class CellUtil {
     @Override
     public long heapSize() {
       long sum = HEAP_SIZE_OVERHEAD + CellUtil.estimatedHeapSizeOf(cell);
+      // this.tags is on heap byte[]
       if (this.tags != null) {
         sum += ClassSize.sizeOf(this.tags, this.tags.length);
       }
@@ -808,15 +798,6 @@ public final class CellUtil {
         offset = ByteBufferUtils.putAsShort(buf, offset, tagsLen);
         ByteBufferUtils.copyFromArrayToBuffer(buf, offset, this.tags, 0, tagsLen);
       }
-    }
-
-    @Override
-    public long heapOverhead() {
-      long overhead = ((ExtendedCell) this.cell).heapOverhead() + HEAP_SIZE_OVERHEAD;
-      if (this.tags != null) {
-        overhead += ClassSize.ARRAY;
-      }
-      return overhead;
     }
 
     @Override
@@ -963,15 +944,6 @@ public final class CellUtil {
     }
 
     @Override
-    public long heapOverhead() {
-      long overhead = super.heapOverhead() + ClassSize.REFERENCE;
-      if (this.value != null) {
-        overhead += ClassSize.ARRAY;
-      }
-      return overhead;
-    }
-
-    @Override
     public Cell deepClone() {
       Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
       return new ValueAndTagRewriteCell(clonedBaseCell, this.value, this.tags);
@@ -1035,15 +1007,6 @@ public final class CellUtil {
     @Override
     public void write(ByteBuffer buf, int offset) {
       ValueAndTagRewriteCell.write(buf, offset, this.cell, this.value, this.tags);
-    }
-
-    @Override
-    public long heapOverhead() {
-      long overhead = super.heapOverhead() + ClassSize.REFERENCE;
-      if (this.value != null) {
-        overhead += ClassSize.ARRAY;
-      }
-      return overhead;
     }
 
     @Override
@@ -1422,12 +1385,10 @@ public final class CellUtil {
    * @return Estimate of the <code>cell</code> size in bytes.
    */
   public static int estimatedSerializedSizeOf(final Cell cell) {
-    // If a KeyValue, we can give a good estimate of size.
-    if (cell instanceof KeyValue) {
-      return ((KeyValue)cell).getLength() + Bytes.SIZEOF_INT;
+    if (cell instanceof ExtendedCell) {
+      return ((ExtendedCell) cell).getSerializedSize(true) + Bytes.SIZEOF_INT;
     }
-    // TODO: Should we add to Cell a sizeOf?  Would it help? Does it make sense if Cell is
-    // prefix encoded or compressed?
+
     return getSumOfCellElementLengths(cell) +
       // Use the KeyValue's infrastructure size presuming that another implementation would have
       // same basic cost.
@@ -1596,7 +1557,7 @@ public final class CellUtil {
    * @return Tags in the given Cell as a List
    */
   public static List<Tag> getTags(Cell cell) {
-    List<Tag> tags = new ArrayList<Tag>();
+    List<Tag> tags = new ArrayList<>();
     Iterator<Tag> tagsItr = tagsIterator(cell);
     while (tagsItr.hasNext()) {
       tags.add(tagsItr.next());
@@ -3172,30 +3133,6 @@ public final class CellUtil {
     @Override
     public byte getTypeByte() {
       return Type.DeleteFamily.getCode();
-    }
-  }
-
-  /**
-   * Clone the passed cell by copying its data into the passed buf.
-   */
-  public static Cell copyCellTo(Cell cell, ByteBuffer buf, int offset, int len) {
-    int tagsLen = cell.getTagsLength();
-    if (cell instanceof ExtendedCell) {
-      ((ExtendedCell) cell).write(buf, offset);
-    } else {
-      // Normally all Cell impls within Server will be of type ExtendedCell. Just considering the
-      // other case also. The data fragments within Cell is copied into buf as in KeyValue
-      // serialization format only.
-      KeyValueUtil.appendTo(cell, buf, offset, true);
-    }
-    if (tagsLen == 0) {
-      // When tagsLen is 0, make a NoTagsByteBufferKeyValue version. This is an optimized class
-      // which directly return tagsLen as 0. So we avoid parsing many length components in
-      // reading the tagLength stored in the backing buffer. The Memstore addition of every Cell
-      // call getTagsLength().
-      return new NoTagsByteBufferKeyValue(buf, offset, len, cell.getSequenceId());
-    } else {
-      return new ByteBufferKeyValue(buf, offset, len, cell.getSequenceId());
     }
   }
 }

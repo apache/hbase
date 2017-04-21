@@ -206,7 +206,7 @@ public class KeyStoreTestUtil {
     File sslClientConfFile = new File(sslConfDir + "/ssl-client.xml");
     File sslServerConfFile = new File(sslConfDir + "/ssl-server.xml");
 
-    Map<String, X509Certificate> certs = new HashMap<String, X509Certificate>();
+    Map<String, X509Certificate> certs = new HashMap<>();
 
     if (useClientCert) {
       KeyPair cKP = KeyStoreTestUtil.generateKeyPair("RSA");

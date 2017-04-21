@@ -24,7 +24,6 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -41,12 +40,11 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
  * Note : It may emit KVs which do not have the given columns in them, if
  * these KVs happen to occur before a KV which does have a match. Given this
  * caveat, this filter is only useful for special cases
- * like {@link org.apache.hadoop.hbase.mapreduce.RowCounter}.
+ * like org.apache.hadoop.hbase.mapreduce.RowCounter.
  * <p>
  * @deprecated Deprecated in 2.0. See HBASE-13347
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 @Deprecated
 public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
@@ -108,7 +106,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
       throw new DeserializationException(e);
     }
 
-    TreeSet<byte []> qualifiers = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+    TreeSet<byte []> qualifiers = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     for (ByteString qualifier : proto.getQualifiersList()) {
       qualifiers.add(qualifier.toByteArray());
     }

@@ -28,10 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourceFactory {
   private enum SourceStorage {
     INSTANCE;
-    HashMap<String, MetricsHBaseServerSource>
-        sources =
-        new HashMap<String, MetricsHBaseServerSource>();
-
+    HashMap<String, MetricsHBaseServerSource> sources = new HashMap<>();
   }
 
   @Override

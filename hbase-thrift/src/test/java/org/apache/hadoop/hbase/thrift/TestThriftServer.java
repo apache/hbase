@@ -280,13 +280,13 @@ public class TestThriftServer {
   }
 
   public static void doTestIncrements(HBaseHandler handler) throws Exception {
-    List<Mutation> mutations = new ArrayList<Mutation>(1);
+    List<Mutation> mutations = new ArrayList<>(1);
     mutations.add(new Mutation(false, columnAAname, valueEname, true));
     mutations.add(new Mutation(false, columnAname, valueEname, true));
     handler.mutateRow(tableAname, rowAname, mutations, null);
     handler.mutateRow(tableAname, rowBname, mutations, null);
 
-    List<TIncrement> increments = new ArrayList<TIncrement>(3);
+    List<TIncrement> increments = new ArrayList<>(3);
     increments.add(new TIncrement(tableAname, rowBname, columnAAname, 7));
     increments.add(new TIncrement(tableAname, rowBname, columnAAname, 7));
     increments.add(new TIncrement(tableAname, rowBname, columnAAname, 7));
@@ -377,7 +377,7 @@ public class TestThriftServer {
     assertEquals(0, size);
 
     // Try null mutation
-    List<Mutation> mutations = new ArrayList<Mutation>(1);
+    List<Mutation> mutations = new ArrayList<>(1);
     mutations.add(new Mutation(false, columnAname, null, true));
     handler.mutateRow(tableAname, rowAname, mutations, null);
     TRowResult rowResult3 = handler.getRow(tableAname, rowAname, null).get(0);
@@ -436,7 +436,7 @@ public class TestThriftServer {
     // ColumnAname has been deleted, and will never be visible even with a getRowTs()
     assertFalse(rowResult2.columns.containsKey(columnAname));
 
-    List<ByteBuffer> columns = new ArrayList<ByteBuffer>(1);
+    List<ByteBuffer> columns = new ArrayList<>(1);
     columns.add(columnBname);
 
     rowResult1 = handler.getRowWithColumns(tableAname, rowAname, columns, null).get(0);
@@ -555,7 +555,7 @@ public class TestThriftServer {
     assertEquals(rowResult6.sortedColumns.size(), 1);
     assertEquals(rowResult6.sortedColumns.get(0).getCell().value, valueCname);
 
-    List<Mutation> rowBmutations = new ArrayList<Mutation>(20);
+    List<Mutation> rowBmutations = new ArrayList<>(20);
     for (int i = 0; i < 20; i++) {
       rowBmutations.add(new Mutation(false, asByteBuffer("columnA:" + i), valueCname, true));
     }
@@ -668,13 +668,13 @@ public class TestThriftServer {
         UserProvider.instantiate(UTIL.getConfiguration()));
     handler.createTable(tableAname, getColumnDescriptors());
     try {
-      List<Mutation> mutations = new ArrayList<Mutation>(1);
+      List<Mutation> mutations = new ArrayList<>(1);
       mutations.add(new Mutation(false, columnAname, valueAname, true));
       handler.mutateRow(tableAname, rowAname, mutations, null);
 
-      List<ByteBuffer> columnList = new ArrayList<ByteBuffer>(1);
+      List<ByteBuffer> columnList = new ArrayList<>(1);
       columnList.add(columnAname);
-      List<ByteBuffer> valueList = new ArrayList<ByteBuffer>(1);
+      List<ByteBuffer> valueList = new ArrayList<>(1);
       valueList.add(valueBname);
 
       TAppend append = new TAppend(tableAname, rowAname, columnList, valueList);
@@ -702,7 +702,7 @@ public class TestThriftServer {
         UserProvider.instantiate(UTIL.getConfiguration()));
     handler.createTable(tableAname, getColumnDescriptors());
     try {
-      List<Mutation> mutations = new ArrayList<Mutation>(1);
+      List<Mutation> mutations = new ArrayList<>(1);
       mutations.add(new Mutation(false, columnAname, valueAname, true));
       Mutation putB = (new Mutation(false, columnBname, valueBname, true));
 
@@ -796,7 +796,7 @@ public class TestThriftServer {
    * default ColumnDescriptor and one ColumnDescriptor with fewer versions
    */
   private static List<ColumnDescriptor> getColumnDescriptors() {
-    ArrayList<ColumnDescriptor> cDescriptors = new ArrayList<ColumnDescriptor>(2);
+    ArrayList<ColumnDescriptor> cDescriptors = new ArrayList<>(2);
 
     // A default ColumnDescriptor
     ColumnDescriptor cDescA = new ColumnDescriptor();
@@ -818,7 +818,7 @@ public class TestThriftServer {
    * @return a List of column names for use in retrieving a scanner
    */
   private List<ByteBuffer> getColumnList(boolean includeA, boolean includeB) {
-    List<ByteBuffer> columnList = new ArrayList<ByteBuffer>();
+    List<ByteBuffer> columnList = new ArrayList<>();
     if (includeA) columnList.add(columnAname);
     if (includeB) columnList.add(columnBname);
     return columnList;
@@ -830,7 +830,7 @@ public class TestThriftServer {
    * and columnB having valueB
    */
   private static List<Mutation> getMutations() {
-    List<Mutation> mutations = new ArrayList<Mutation>(2);
+    List<Mutation> mutations = new ArrayList<>(2);
     mutations.add(new Mutation(false, columnAname, valueAname, true));
     mutations.add(new Mutation(false, columnBname, valueBname, true));
     return mutations;
@@ -845,19 +845,19 @@ public class TestThriftServer {
    * (rowB, columnB): place valueD
    */
   private static List<BatchMutation> getBatchMutations() {
-    List<BatchMutation> batchMutations = new ArrayList<BatchMutation>(3);
+    List<BatchMutation> batchMutations = new ArrayList<>(3);
 
     // Mutations to rowA.  You can't mix delete and put anymore.
-    List<Mutation> rowAmutations = new ArrayList<Mutation>(1);
+    List<Mutation> rowAmutations = new ArrayList<>(1);
     rowAmutations.add(new Mutation(true, columnAname, null, true));
     batchMutations.add(new BatchMutation(rowAname, rowAmutations));
 
-    rowAmutations = new ArrayList<Mutation>(1);
+    rowAmutations = new ArrayList<>(1);
     rowAmutations.add(new Mutation(false, columnBname, valueCname, true));
     batchMutations.add(new BatchMutation(rowAname, rowAmutations));
 
     // Mutations to rowB
-    List<Mutation> rowBmutations = new ArrayList<Mutation>(2);
+    List<Mutation> rowBmutations = new ArrayList<>(2);
     rowBmutations.add(new Mutation(false, columnAname, valueCname, true));
     rowBmutations.add(new Mutation(false, columnBname, valueDname, true));
     batchMutations.add(new BatchMutation(rowBname, rowBmutations));

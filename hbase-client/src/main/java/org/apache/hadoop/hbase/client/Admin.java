@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -71,7 +70,6 @@ import org.apache.hadoop.hbase.util.Pair;
  * @since 0.99.0
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface Admin extends Abortable, Closeable {
   int getOperationTimeout();
 

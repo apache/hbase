@@ -25,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
@@ -212,7 +211,7 @@ public class TestProcedureAdmin {
         assertTrue(procInfo.getProcState() == ProcedureState.RUNNABLE);
         found = true;
       } else {
-        assertTrue(procInfo.getProcState() == ProcedureState.FINISHED);
+        assertTrue(procInfo.getProcState() == ProcedureState.SUCCESS);
       }
     }
     assertTrue(found);
@@ -223,7 +222,7 @@ public class TestProcedureAdmin {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     listProcedures = procExec.listProcedures();
     for (ProcedureInfo procInfo: listProcedures) {
-      assertTrue(procInfo.getProcState() == ProcedureState.FINISHED);
+      assertTrue(procInfo.getProcState() == ProcedureState.SUCCESS);
     }
   }
 

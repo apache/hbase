@@ -18,14 +18,12 @@
 package org.apache.hadoop.hbase.quotas;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Describe the Scope of the quota rules.
  * The quota can be enforced at the cluster level or at machine level.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum QuotaScope {
   /**
    * The specified throttling rules will be applied at the cluster level.

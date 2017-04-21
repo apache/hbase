@@ -167,4 +167,20 @@ public class HFileArchiveUtil {
   private static Path getArchivePath(final Path rootdir) {
     return new Path(rootdir, HConstants.HFILE_ARCHIVE_DIRECTORY);
   }
+  
+  /*
+   * @return table name given archive file path
+   */
+  public static TableName getTableName(Path archivePath) {
+    Path p = archivePath;
+    String tbl = null;
+    // namespace is the 4th parent of file
+    for (int i = 0; i < 5; i++) {
+      if (p == null) return null;
+      if (i == 3) tbl = p.getName();
+      p = p.getParent();
+    }
+    if (p == null) return null;
+    return TableName.valueOf(p.getName(), tbl);
+  }
 }

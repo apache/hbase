@@ -77,7 +77,7 @@ public class TestFixedFileTrailer {
 
   @Parameters
   public static Collection<Object[]> getParameters() {
-    List<Object[]> versionsToTest = new ArrayList<Object[]>();
+    List<Object[]> versionsToTest = new ArrayList<>();
     for (int v = HFile.MIN_FORMAT_VERSION; v <= HFile.MAX_FORMAT_VERSION; ++v)
       versionsToTest.add(new Integer[] { v } );
     return versionsToTest;

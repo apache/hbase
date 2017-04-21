@@ -29,14 +29,12 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HConstants holds a bunch of HBase-related constants
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public final class HConstants {
   // NOTICE!!!! Please do not add a constants here, unless they are referenced by a lot of classes.
 
@@ -146,7 +144,7 @@ public final class HConstants {
   public static final int DEFAULT_HBASE_BALANCER_PERIOD = 300000;
 
   /** The name of the ensemble table */
-  public static final String ENSEMBLE_TABLE_NAME = "hbase:ensemble";
+  public static final TableName ENSEMBLE_TABLE_NAME = TableName.valueOf("hbase:ensemble");
 
   /** Config for pluggable region normalizer */
   public static final String HBASE_MASTER_NORMALIZER_CLASS =

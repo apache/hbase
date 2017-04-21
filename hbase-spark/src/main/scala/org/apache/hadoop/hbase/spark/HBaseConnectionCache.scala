@@ -37,7 +37,7 @@ private[spark] object HBaseConnectionCache extends Logging {
   val cacheStat = HBaseConnectionCacheStat(0, 0, 0)
 
   // in milliseconds
-  private final val DEFAULT_TIME_OUT: Long = HBaseSparkConf.connectionCloseDelay
+  private final val DEFAULT_TIME_OUT: Long = HBaseSparkConf.DEFAULT_CONNECTION_CLOSE_DELAY
   private var timeout = DEFAULT_TIME_OUT
   private var closed: Boolean = false
 

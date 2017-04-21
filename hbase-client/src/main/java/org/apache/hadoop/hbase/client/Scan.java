@@ -33,7 +33,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
@@ -87,7 +86,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * instance per usage.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class Scan extends Query {
   private static final Log LOG = LogFactory.getLog(Scan.class);
 
@@ -143,8 +141,7 @@ public class Scan extends Query {
   private long maxResultSize = -1;
   private boolean cacheBlocks = true;
   private boolean reversed = false;
-  private Map<byte[], NavigableSet<byte[]>> familyMap =
-      new TreeMap<byte[], NavigableSet<byte[]>>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], NavigableSet<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
   private Boolean asyncPrefetch = null;
 
   /**
@@ -339,7 +336,7 @@ public class Scan extends Query {
   public Scan addColumn(byte [] family, byte [] qualifier) {
     NavigableSet<byte []> set = familyMap.get(family);
     if(set == null) {
-      set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+      set = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     }
     if (qualifier == null) {
       qualifier = HConstants.EMPTY_BYTE_ARRAY;
@@ -610,14 +607,13 @@ public class Scan extends Query {
   }
 
   /**
-   * Set the maximum number of values to return for each call to next().
-   * Callers should be aware that invoking this method with any value
-   * is equivalent to calling {@link #setAllowPartialResults(boolean)}
-   * with a value of {@code true}; partial results may be returned if
-   * this method is called. Use {@link #setMaxResultSize(long)}} to
-   * limit the size of a Scan's Results instead.
-   *
+   * Set the maximum number of cells to return for each call to next(). Callers should be aware
+   * that this is not equivalent to calling {@link #setAllowPartialResults(boolean)}.
+   * If you don't allow partial results, the number of cells in each Result must equal to your
+   * batch setting unless it is the last Result for current row. So this method is helpful in paging
+   * queries. If you just want to prevent OOM at client, use setAllowPartialResults(true) is better.
    * @param batch the maximum number of values
+   * @see Result#mayHaveMoreCellsInRow()
    */
   public Scan setBatch(int batch) {
     if (this.hasFilter() && this.filter.hasFilterRow()) {
@@ -855,11 +851,14 @@ public class Scan extends Query {
   }
 
   /**
-   * Setting whether the caller wants to see the partial results that may be returned from the
-   * server. By default this value is false and the complete results will be assembled client side
+   * Setting whether the caller wants to see the partial results when server returns
+   * less-than-expected cells. It is helpful while scanning a huge row to prevent OOM at client.
+   * By default this value is false and the complete results will be assembled client side
    * before being delivered to the caller.
    * @param allowPartialResults
    * @return this
+   * @see Result#mayHaveMoreCellsInRow()
+   * @see #setBatch(int)
    */
   public Scan setAllowPartialResults(final boolean allowPartialResults) {
     this.allowPartialResults = allowPartialResults;
@@ -887,8 +886,8 @@ public class Scan extends Query {
    */
   @Override
   public Map<String, Object> getFingerprint() {
-    Map<String, Object> map = new HashMap<String, Object>();
-    List<String> families = new ArrayList<String>();
+    Map<String, Object> map = new HashMap<>();
+    List<String> families = new ArrayList<>();
     if(this.familyMap.isEmpty()) {
       map.put("families", "ALL");
       return map;
@@ -914,8 +913,7 @@ public class Scan extends Query {
     // start with the fingerpring map and build on top of it
     Map<String, Object> map = getFingerprint();
     // map from families to column list replaces fingerprint's list of families
-    Map<String, List<String>> familyColumns =
-      new HashMap<String, List<String>>();
+    Map<String, List<String>> familyColumns = new HashMap<>();
     map.put("families", familyColumns);
     // add scalar information first
     map.put("startRow", Bytes.toStringBinary(this.startRow));
@@ -926,7 +924,7 @@ public class Scan extends Query {
     map.put("maxResultSize", this.maxResultSize);
     map.put("cacheBlocks", this.cacheBlocks);
     map.put("loadColumnFamiliesOnDemand", this.loadColumnFamiliesOnDemand);
-    List<Long> timeRange = new ArrayList<Long>(2);
+    List<Long> timeRange = new ArrayList<>(2);
     timeRange.add(this.tr.getMin());
     timeRange.add(this.tr.getMax());
     map.put("timeRange", timeRange);
@@ -934,7 +932,7 @@ public class Scan extends Query {
     // iterate through affected families and list out up to maxCols columns
     for (Map.Entry<byte [], NavigableSet<byte[]>> entry :
       this.familyMap.entrySet()) {
-      List<String> columns = new ArrayList<String>();
+      List<String> columns = new ArrayList<>();
       familyColumns.put(Bytes.toStringBinary(entry.getKey()), columns);
       if(entry.getValue() == null) {
         colCount++;
@@ -1081,9 +1079,13 @@ public class Scan extends Query {
   /**
    * @return Metrics on this Scan, if metrics were enabled.
    * @see #setScanMetricsEnabled(boolean)
+   * @deprecated Use {@link ResultScanner#getScanMetrics()} instead. And notice that, please do not
+   *             use this method and {@link ResultScanner#getScanMetrics()} together, the metrics
+   *             will be messed up.
    */
+  @Deprecated
   public ScanMetrics getScanMetrics() {
-    byte [] bytes = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
+    byte[] bytes = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
     if (bytes == null) return null;
     return ProtobufUtil.toScanMetrics(bytes);
   }
@@ -1109,8 +1111,6 @@ public class Scan extends Query {
    * reaches this value.
    * <p>
    * This condition will be tested at last, after all other conditions such as stopRow, filter, etc.
-   * <p>
-   * Can not be used together with batch and allowPartial.
    * @param limit the limit of rows for this scan
    * @return this
    */
@@ -1129,7 +1129,6 @@ public class Scan extends Query {
   }
 
   @InterfaceAudience.Public
-  @InterfaceStability.Unstable
   public enum ReadType {
     DEFAULT, STREAM, PREAD
   }

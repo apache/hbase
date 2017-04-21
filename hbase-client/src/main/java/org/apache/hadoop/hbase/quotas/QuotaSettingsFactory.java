@@ -23,14 +23,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class QuotaSettingsFactory {
   static class QuotaGlobalsSettingsBypass extends QuotaSettings {
     private final boolean bypassGlobals;
@@ -84,7 +82,7 @@ public class QuotaSettingsFactory {
 
   private static List<QuotaSettings> fromQuotas(final String userName, final TableName tableName,
       final String namespace, final Quotas quotas) {
-    List<QuotaSettings> settings = new ArrayList<QuotaSettings>();
+    List<QuotaSettings> settings = new ArrayList<>();
     if (quotas.hasThrottle()) {
       settings.addAll(fromThrottle(userName, tableName, namespace, quotas.getThrottle()));
     }
@@ -96,7 +94,7 @@ public class QuotaSettingsFactory {
 
   private static List<QuotaSettings> fromThrottle(final String userName, final TableName tableName,
       final String namespace, final QuotaProtos.Throttle throttle) {
-    List<QuotaSettings> settings = new ArrayList<QuotaSettings>();
+    List<QuotaSettings> settings = new ArrayList<>();
     if (throttle.hasReqNum()) {
       settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
           ThrottleType.REQUEST_NUMBER, throttle.getReqNum()));

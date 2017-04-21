@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -50,7 +49,6 @@ import org.apache.zookeeper.KeeperException;
  * Utility methods for obtaining authentication tokens.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TokenUtil {
   // This class is referenced indirectly by User out in common; instances are created by reflection
   private static final Log LOG = LogFactory.getLog(TokenUtil.class);
@@ -314,7 +312,7 @@ public class TokenUtil {
    * @return the Token instance
    */
   public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
-    return new Token<AuthenticationTokenIdentifier>(
+    return new Token<>(
         proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
         proto.hasPassword() ? proto.getPassword().toByteArray() : null,
         AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE,

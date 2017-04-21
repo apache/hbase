@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
@@ -57,7 +56,7 @@ import com.google.common.base.Preconditions;
 public class MultiThreadedUpdater extends MultiThreadedWriterBase {
   private static final Log LOG = LogFactory.getLog(MultiThreadedUpdater.class);
 
-  protected Set<HBaseUpdaterThread> updaters = new HashSet<HBaseUpdaterThread>();
+  protected Set<HBaseUpdaterThread> updaters = new HashSet<>();
 
   private MultiThreadedWriterBase writer = null;
   private boolean isBatchUpdate = false;
@@ -180,7 +179,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                   LOG.info("Null result expected for the rowkey " + Bytes.toString(rowKey));
                 } else {
                   failedKeySet.add(rowKeyBase);
-                  LOG.error("Failed to update the row with key = [" + rowKey
+                  LOG.error("Failed to update the row with key = [" + Bytes.toString(rowKey)
                       + "], since we could not get the original row");
                 }
               }
@@ -297,7 +296,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         }
         totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
       } catch (IOException e) {
-        if (ignoreNonceConflicts && (e instanceof OperationConflictException)) {
+        if (ignoreNonceConflicts) {
           LOG.info("Detected nonce conflict, ignoring: " + e.getMessage());
           totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
           return;

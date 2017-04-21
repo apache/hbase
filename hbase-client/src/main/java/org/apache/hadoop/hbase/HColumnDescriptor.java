@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
@@ -49,7 +48,6 @@ import com.google.common.base.Preconditions;
  * It is used as input when creating a table or adding a column.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   // For future backward compatibility
 
@@ -103,7 +101,10 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * Size of storefile/hfile 'blocks'.  Default is {@link #DEFAULT_BLOCKSIZE}.
    * Use smaller block sizes for faster random-access at expense of larger
-   * indices (more memory consumption).
+   * indices (more memory consumption). Note that this is a soft limit and that
+   * blocks have overhead (metadata, CRCs) so blocks will tend to be the size
+   * specified here and then some; i.e. don't expect that setting BLOCKSIZE=4k
+   * means hbase data will align with an SSDs 4k page accesses (TODO).
    */
   public static final String BLOCKSIZE = "BLOCKSIZE";
 
@@ -251,10 +252,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public static final boolean DEFAULT_PREFETCH_BLOCKS_ON_OPEN = false;
 
-  private final static Map<String, String> DEFAULT_VALUES
-    = new HashMap<String, String>();
-  private final static Set<Bytes> RESERVED_KEYWORDS
-      = new HashSet<Bytes>();
+  private final static Map<String, String> DEFAULT_VALUES = new HashMap<>();
+  private final static Set<Bytes> RESERVED_KEYWORDS = new HashSet<>();
 
   static {
     DEFAULT_VALUES.put(BLOOMFILTER, DEFAULT_BLOOMFILTER);
@@ -290,15 +289,14 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   private byte [] name;
 
   // Column metadata
-  private final Map<Bytes, Bytes> values =
-      new HashMap<Bytes, Bytes>();
+  private final Map<Bytes, Bytes> values = new HashMap<>();
 
   /**
    * A map which holds the configuration specific to the column family.
    * The keys of the map have the same names as config keys and override the defaults with
    * cf-specific settings. Example usage may be for compactions, etc.
    */
-  private final Map<String, String> configuration = new HashMap<String, String>();
+  private final Map<String, String> configuration = new HashMap<>();
 
   /*
    * Cache the max versions rather than calculate it every time.

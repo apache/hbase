@@ -116,7 +116,7 @@ public class TestSnapshotHFileCleaner {
 
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
     public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
-      Collection<String> files =  new HashSet<String>();
+      Collection<String> files =  new HashSet<>();
       files.addAll(SnapshotReferenceUtil.getHFileNames(TEST_UTIL.getConfiguration(), fs, snapshotDir));
       return files;
     }

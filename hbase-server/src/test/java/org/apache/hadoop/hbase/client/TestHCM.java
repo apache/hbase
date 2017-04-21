@@ -49,9 +49,9 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
@@ -120,7 +120,7 @@ public class TestHCM {
 /**
 * This copro sleeps 20 second. The first call it fails. The second time, it works.
 */
-  public static class SleepAndFailFirstTime extends BaseRegionObserver {
+  public static class SleepAndFailFirstTime implements RegionObserver {
     static final AtomicLong ct = new AtomicLong(0);
     static final String SLEEP_TIME_CONF_KEY =
         "hbase.coprocessor.SleepAndFailFirstTime.sleepTime";
@@ -172,12 +172,12 @@ public class TestHCM {
       if (ct.incrementAndGet() == 1) {
         throw new IOException("first call I fail");
       }
-      return super.preIncrement(e, increment);
+      return null;
     }
 
   }
 
-  public static class SleepCoprocessor extends BaseRegionObserver {
+  public static class SleepCoprocessor implements RegionObserver {
     public static final int SLEEP_TIME = 5000;
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
@@ -195,7 +195,7 @@ public class TestHCM {
     public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
                                final Increment increment) throws IOException {
       Threads.sleep(SLEEP_TIME);
-      return super.preIncrement(e, increment);
+      return null;
     }
 
     @Override
@@ -206,7 +206,7 @@ public class TestHCM {
 
   }
 
-  public static class SleepLongerAtFirstCoprocessor extends BaseRegionObserver {
+  public static class SleepLongerAtFirstCoprocessor implements RegionObserver {
     public static final int SLEEP_TIME = 2000;
     static final AtomicLong ct = new AtomicLong(0);
     @Override
@@ -244,7 +244,7 @@ public class TestHCM {
   public void testClusterConnection() throws IOException {
     ThreadPoolExecutor otherPool = new ThreadPoolExecutor(1, 1,
         5, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(),
+        new SynchronousQueue<>(),
         Threads.newDaemonThreadFactory("test-hcm"));
 
     Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
@@ -748,7 +748,7 @@ public class TestHCM {
     // 4 steps: ready=0; doGets=1; mustStop=2; stopped=3
     final AtomicInteger step = new AtomicInteger(0);
 
-    final AtomicReference<Throwable> failed = new AtomicReference<Throwable>(null);
+    final AtomicReference<Throwable> failed = new AtomicReference<>(null);
     Thread t = new Thread("testConnectionCloseThread") {
       @Override
       public void run() {
@@ -1494,7 +1494,7 @@ public class TestHCM {
         p.addColumn(FAM_NAM, new byte[]{0}, new byte[]{0});
         table.put(p);
       } catch (RetriesExhaustedWithDetailsException e) {
-        if (e.exceptions.get(0).getCause() instanceof ServerTooBusyException) {
+        if (e.exceptions.get(0) instanceof ServerTooBusyException) {
           getServerBusyException = 1;
         }
       } catch (IOException ignore) {
@@ -1514,12 +1514,10 @@ public class TestHCM {
     public void run() {
       try {
         Get g = new Get(ROW);
-        g.addColumn(FAM_NAM, new byte[]{0});
+        g.addColumn(FAM_NAM, new byte[] { 0 });
         table.get(g);
-      } catch (RetriesExhaustedException e) {
-        if (e.getCause().getCause() instanceof ServerTooBusyException) {
-          getServerBusyException = 1;
-        }
+      } catch (ServerTooBusyException e) {
+        getServerBusyException = 1;
       } catch (IOException ignore) {
       }
     }

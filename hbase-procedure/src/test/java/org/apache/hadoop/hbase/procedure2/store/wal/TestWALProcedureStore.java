@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -785,7 +784,7 @@ public class TestWALProcedureStore {
 
     // back to A
     a.addStackId(5);
-    a.setFinishedState();
+    a.setSuccessState();
     procStore.delete(a, new long[] { b.getProcId(), c.getProcId() });
     restartAndAssert(3, 0, 1, 0);
   }

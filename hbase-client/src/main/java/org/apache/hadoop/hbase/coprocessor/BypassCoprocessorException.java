@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown if a coprocessor rules we should bypass an operation
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class BypassCoprocessorException extends CoprocessorException {
   private static final long serialVersionUID = 5943889011582357043L;
 

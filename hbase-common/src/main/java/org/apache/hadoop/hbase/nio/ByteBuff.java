@@ -492,7 +492,7 @@ public abstract class ByteBuff {
   }
 
   /**
-   * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a
+   * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
    * {@link ByteBuff}.
    */
   public static long readVLong(ByteBuff in) {

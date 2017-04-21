@@ -41,7 +41,7 @@ public class MultiResponse extends AbstractResponse {
    * It's a part of the protobuf definition.
    */
   private Map<byte[], Throwable> exceptions =
-      new TreeMap<byte[], Throwable>(Bytes.BYTES_COMPARATOR);
+      new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   public MultiResponse() {
     super();

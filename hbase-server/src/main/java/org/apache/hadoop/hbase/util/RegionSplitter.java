@@ -768,7 +768,7 @@ public class RegionSplitter {
     Path hbDir = FSUtils.getRootDir(conf);
     Path tableDir = FSUtils.getTableDir(hbDir, tableName);
     Path splitFile = new Path(tableDir, "_balancedSplit");
-    return new Pair<Path, Path>(tableDir, splitFile);
+    return new Pair<>(tableDir, splitFile);
   }
 
   static LinkedList<Pair<byte[], byte[]>> getSplits(final Connection connection,

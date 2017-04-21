@@ -29,9 +29,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class ReplicationObserver extends BaseRegionObserver {
+public class ReplicationObserver implements RegionObserver {
   private static final Log LOG = LogFactory.getLog(ReplicationObserver.class);
 
   @Override

@@ -42,31 +42,31 @@ public class IntegrationTestIngestWithVisibilityLabels extends IntegrationTestIn
   private static final String[] VISIBILITY_EXPS = { "secret & confidential & !private",
       "topsecret | confidential", "confidential & private", "public", "topsecret & private",
       "!public | private", "(secret | topsecret) & private" };
-  private static final List<List<String>> AUTHS = new ArrayList<List<String>>();
+  private static final List<List<String>> AUTHS = new ArrayList<>();
 
   static {
-    ArrayList<String> tmp = new ArrayList<String>(2);
+    ArrayList<String> tmp = new ArrayList<>(2);
     tmp.add("secret");
     tmp.add("confidential");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>(1);
+    tmp = new ArrayList<>(1);
     tmp.add("topsecret");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>(2);
+    tmp = new ArrayList<>(2);
     tmp.add("confidential");
     tmp.add("private");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>(1);
+    tmp = new ArrayList<>(1);
     tmp.add("public");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>(2);
+    tmp = new ArrayList<>(2);
     tmp.add("topsecret");
     tmp.add("private");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>(1);
+    tmp = new ArrayList<>(1);
     tmp.add("confidential");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>(2);
+    tmp = new ArrayList<>(2);
     tmp.add("topsecret");
     tmp.add("private");
     AUTHS.add(tmp);
@@ -88,7 +88,7 @@ public class IntegrationTestIngestWithVisibilityLabels extends IntegrationTestIn
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
       long numKeys) {
     String[] args = super.getArgsForLoadTestTool(mode, modeSpecificArg, startKey, numKeys);
-    List<String> tmp = new ArrayList<String>(Arrays.asList(args));
+    List<String> tmp = new ArrayList<>(Arrays.asList(args));
     tmp.add(HIPHEN + LoadTestTool.OPT_GENERATOR);
     StringBuilder sb = new StringBuilder(LoadTestDataGeneratorWithVisibilityLabels.class.getName());
     sb.append(COLON);

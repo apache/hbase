@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
  * passed-in WALEdit, i.e, ignore specified columns when writing, or add a KeyValue. On the other
  * side, it checks whether the ignored column is still in WAL when Restoreed at region reconstruct.
  */
-public class SampleRegionWALObserver extends BaseRegionObserver implements WALObserver {
+public class SampleRegionWALObserver implements WALObserver, RegionObserver {
 
   private static final Log LOG = LogFactory.getLog(SampleRegionWALObserver.class);
 

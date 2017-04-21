@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 
@@ -144,13 +145,13 @@ public class RegionAsTable implements Table {
 
     @Override
     public Result next() throws IOException {
-      List<Cell> cells = new ArrayList<Cell>();
+      List<Cell> cells = new ArrayList<>();
       return regionScanner.next(cells)? Result.create(cells): null;
     }
 
     @Override
     public Result[] next(int nbRows) throws IOException {
-      List<Result> results = new ArrayList<Result>(nbRows);
+      List<Result> results = new ArrayList<>(nbRows);
       for (int i = 0; i < nbRows; i++) {
         Result result = next();
         if (result == null) break;
@@ -170,6 +171,11 @@ public class RegionAsTable implements Table {
 
     @Override
     public boolean renewLease() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScanMetrics getScanMetrics() {
       throw new UnsupportedOperationException();
     }
   };

@@ -23,13 +23,11 @@ import com.google.common.annotations.VisibleForTesting;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Keep track of the runnable procedures
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public interface ProcedureScheduler {
   /**
    * Start the scheduler
@@ -93,7 +91,7 @@ public interface ProcedureScheduler {
   Procedure poll(long timeout, TimeUnit unit);
 
   /**
-   * Mark the event has not ready.
+   * Mark the event as not ready.
    * procedures calling waitEvent() will be suspended.
    * @param event the event to mark as suspended/not ready
    */
@@ -130,7 +128,9 @@ public interface ProcedureScheduler {
   int size();
 
   /**
-   * Removes all of the elements from the queue
+   * Clear current state of scheduler such that it is equivalent to newly created scheduler.
+   * Used for testing failure and recovery. To emulate server crash/restart,
+   * {@link ProcedureExecutor} resets its own state and calls clear() on scheduler.
    */
   @VisibleForTesting
   void clear();

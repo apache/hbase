@@ -80,8 +80,7 @@ public class TestRegionPlacement {
   private static Position[] positions = Position.values();
   private int lastRegionOnPrimaryRSCount = 0;
   private int REGION_NUM = 10;
-  private Map<HRegionInfo, ServerName[]> favoredNodesAssignmentPlan =
-      new HashMap<HRegionInfo, ServerName[]>();
+  private Map<HRegionInfo, ServerName[]> favoredNodesAssignmentPlan = new HashMap<>();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -204,14 +203,12 @@ public class TestRegionPlacement {
     } while (ServerName.isSameHostnameAndPort(metaServer, serverToKill) || isNamespaceServer ||
         TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getNumberOfOnlineRegions() == 0);
     LOG.debug("Stopping RS " + serverToKill);
-    Map<HRegionInfo, Pair<ServerName, ServerName>> regionsToVerify =
-        new HashMap<HRegionInfo, Pair<ServerName, ServerName>>();
+    Map<HRegionInfo, Pair<ServerName, ServerName>> regionsToVerify = new HashMap<>();
     // mark the regions to track
     for (Map.Entry<HRegionInfo, ServerName[]> entry : favoredNodesAssignmentPlan.entrySet()) {
       ServerName s = entry.getValue()[0];
       if (ServerName.isSameHostnameAndPort(s, serverToKill)) {
-        regionsToVerify.put(entry.getKey(), new Pair<ServerName, ServerName>(
-            entry.getValue()[1], entry.getValue()[2]));
+        regionsToVerify.put(entry.getKey(), new Pair<>(entry.getValue()[1], entry.getValue()[2]));
         LOG.debug("Adding " + entry.getKey() + " with sedcondary/tertiary " +
             entry.getValue()[1] + " " + entry.getValue()[2]);
       }
@@ -308,7 +305,7 @@ public class TestRegionPlacement {
       plan.getAssignmentMap().entrySet()) {
 
       // copy the server list from the original plan
-      List<ServerName> shuffledServerList = new ArrayList<ServerName>();
+      List<ServerName> shuffledServerList = new ArrayList<>();
       shuffledServerList.addAll(entry.getValue());
 
       // start to shuffle

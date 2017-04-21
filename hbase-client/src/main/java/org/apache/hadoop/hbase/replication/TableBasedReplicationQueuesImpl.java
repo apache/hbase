@@ -201,7 +201,7 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
   public List<String> getLogsInQueue(String queueId) {
     String errMsg = "Failed getting logs in queue queueId=" + queueId;
     byte[] rowKey = queueIdToRowKey(queueId);
-    List<String> logs = new ArrayList<String>();
+    List<String> logs = new ArrayList<>();
     try {
       Get getQueue = new Get(rowKey);
       Result queue = getResultIfOwner(getQueue);

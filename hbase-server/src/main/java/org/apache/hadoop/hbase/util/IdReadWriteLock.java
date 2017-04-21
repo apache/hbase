@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.lang.ref.Reference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -44,16 +45,48 @@ import com.google.common.annotations.VisibleForTesting;
 public class IdReadWriteLock {
   // The number of lock we want to easily support. It's not a maximum.
   private static final int NB_CONCURRENT_LOCKS = 1000;
-  // The pool to get entry from, entries are mapped by weak reference to make it able to be
-  // garbage-collected asap
-  private final WeakObjectPool<Long, ReentrantReadWriteLock> lockPool =
-      new WeakObjectPool<Long, ReentrantReadWriteLock>(
-          new WeakObjectPool.ObjectFactory<Long, ReentrantReadWriteLock>() {
-            @Override
-            public ReentrantReadWriteLock createObject(Long id) {
-              return new ReentrantReadWriteLock();
-            }
-          }, NB_CONCURRENT_LOCKS);
+  /**
+   * The pool to get entry from, entries are mapped by {@link Reference} and will be automatically
+   * garbage-collected by JVM
+   */
+  private final ObjectPool<Long, ReentrantReadWriteLock> lockPool;
+  private final ReferenceType refType;
+
+  public IdReadWriteLock() {
+    this(ReferenceType.WEAK);
+  }
+
+  /**
+   * Constructor of IdReadWriteLock
+   * @param referenceType type of the reference used in lock pool, {@link ReferenceType#WEAK} by
+   *          default. Use {@link ReferenceType#SOFT} if the key set is limited and the locks will
+   *          be reused with a high frequency
+   */
+  public IdReadWriteLock(ReferenceType referenceType) {
+    this.refType = referenceType;
+    switch (referenceType) {
+    case SOFT:
+      lockPool = new SoftObjectPool<>(new ObjectPool.ObjectFactory<Long, ReentrantReadWriteLock>() {
+        @Override
+        public ReentrantReadWriteLock createObject(Long id) {
+          return new ReentrantReadWriteLock();
+        }
+      }, NB_CONCURRENT_LOCKS);
+      break;
+    case WEAK:
+    default:
+      lockPool = new WeakObjectPool<>(new ObjectPool.ObjectFactory<Long, ReentrantReadWriteLock>() {
+        @Override
+        public ReentrantReadWriteLock createObject(Long id) {
+          return new ReentrantReadWriteLock();
+        }
+      }, NB_CONCURRENT_LOCKS);
+    }
+  }
+
+  public static enum ReferenceType {
+    WEAK, SOFT
+  }
 
   /**
    * Get the ReentrantReadWriteLock corresponding to the given id
@@ -92,5 +125,10 @@ public class IdReadWriteLock {
       }
       Thread.sleep(50);
     }
+  }
+
+  @VisibleForTesting
+  public ReferenceType getReferenceType() {
+    return this.refType;
   }
 }

@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A long comparator which numerical compares against the specified byte array
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class LongComparator extends ByteArrayComparable {
   private long longValue;
 

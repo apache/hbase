@@ -53,7 +53,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
   @Override
   protected final ArrayList<StoreFile> applyCompactionPolicy(final ArrayList<StoreFile> candidates,
     final boolean mayUseOffPeak, final boolean mightBeStuck) throws IOException {
-    return new ArrayList<StoreFile>(applyCompactionPolicy(candidates, mightBeStuck,
+    return new ArrayList<>(applyCompactionPolicy(candidates, mightBeStuck,
         mayUseOffPeak, comConf.getMinFilesToCompact(), comConf.getMaxFilesToCompact()));
   }
 
@@ -64,8 +64,8 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
         ? comConf.getCompactionRatioOffPeak() : comConf.getCompactionRatio();
 
     // Start off choosing nothing.
-    List<StoreFile> bestSelection = new ArrayList<StoreFile>(0);
-    List<StoreFile> smallest = mightBeStuck ? new ArrayList<StoreFile>(0) : null;
+    List<StoreFile> bestSelection = new ArrayList<>(0);
+    List<StoreFile> smallest = mightBeStuck ? new ArrayList<>(0) : null;
     long bestSize = 0;
     long smallestSize = Long.MAX_VALUE;
 
@@ -117,12 +117,12 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
     if (bestSelection.isEmpty() && mightBeStuck) {
       LOG.debug("Exploring compaction algorithm has selected " + smallest.size()
           + " files of size "+ smallestSize + " because the store might be stuck");
-      return new ArrayList<StoreFile>(smallest);
+      return new ArrayList<>(smallest);
     }
     LOG.debug("Exploring compaction algorithm has selected " + bestSelection.size()
         + " files of size " + bestSize + " starting at candidate #" + bestStart +
         " after considering " + opts + " permutations with " + optsInRatio + " in ratio");
-    return new ArrayList<StoreFile>(bestSelection);
+    return new ArrayList<>(bestSelection);
   }
 
   private boolean isBetterSelection(List<StoreFile> bestSelection,

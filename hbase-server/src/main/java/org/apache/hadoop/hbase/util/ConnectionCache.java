@@ -50,9 +50,8 @@ import org.apache.commons.logging.LogFactory;
 public class ConnectionCache {
   private static final Log LOG = LogFactory.getLog(ConnectionCache.class);
 
-  private final Map<String, ConnectionInfo>
-   connections = new ConcurrentHashMap<String, ConnectionInfo>();
-  private final KeyLocker<String> locker = new KeyLocker<String>();
+  private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
+  private final KeyLocker<String> locker = new KeyLocker<>();
   private final String realUserName;
   private final UserGroupInformation realUser;
   private final UserProvider userProvider;

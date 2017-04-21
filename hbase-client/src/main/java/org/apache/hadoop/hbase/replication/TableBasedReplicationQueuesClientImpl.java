@@ -72,7 +72,7 @@ public class TableBasedReplicationQueuesClientImpl extends ReplicationTableBase
 
   @Override
   public Set<String> getAllWALs() {
-    Set<String> allWals = new HashSet<String>();
+    Set<String> allWals = new HashSet<>();
     ResultScanner allQueues = null;
     try (Table replicationTable = getOrBlockOnReplicationTable()) {
       allQueues = replicationTable.getScanner(new Scan());

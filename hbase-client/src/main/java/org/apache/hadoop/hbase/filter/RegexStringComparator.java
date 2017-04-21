@@ -26,7 +26,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -71,7 +70,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * @see java.util.regex.Pattern
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class RegexStringComparator extends ByteArrayComparable {
 
   private static final Log LOG = LogFactory.getLog(RegexStringComparator.class);
@@ -80,7 +78,6 @@ public class RegexStringComparator extends ByteArrayComparable {
 
   /** Engine implementation type (default=JAVA) */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public enum EngineType {
     JAVA,
     JONI

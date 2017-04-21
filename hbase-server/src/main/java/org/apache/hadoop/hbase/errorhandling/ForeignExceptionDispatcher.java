@@ -42,8 +42,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class ForeignExceptionDispatcher implements ForeignExceptionListener, ForeignExceptionSnare {
   private static final Log LOG = LogFactory.getLog(ForeignExceptionDispatcher.class);
   protected final String name;
-  protected final List<ForeignExceptionListener> listeners =
-      new ArrayList<ForeignExceptionListener>();
+  protected final List<ForeignExceptionListener> listeners = new ArrayList<>();
   private ForeignException exception;
 
   public ForeignExceptionDispatcher(String name) {

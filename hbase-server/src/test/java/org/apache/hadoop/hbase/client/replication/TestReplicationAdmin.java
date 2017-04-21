@@ -33,11 +33,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -74,6 +76,7 @@ public class TestReplicationAdmin {
   private final String KEY_SECOND = "127.0.0.1:2181:/hbase2";
 
   private static ReplicationAdmin admin;
+  private static Admin hbaseAdmin;
 
   @Rule
   public TestName name = new TestName();
@@ -87,6 +90,7 @@ public class TestReplicationAdmin {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     admin = new ReplicationAdmin(conf);
+    hbaseAdmin = TEST_UTIL.getAdmin();
   }
 
   @AfterClass
@@ -149,16 +153,16 @@ public class TestReplicationAdmin {
     config.setClusterKey(KEY_ONE);
     config.getConfiguration().put("key1", "value1");
     config.getConfiguration().put("key2", "value2");
-    admin.addPeer(ID_ONE, config, null);
+    hbaseAdmin.addReplicationPeer(ID_ONE, config);
 
-    List<ReplicationPeer> peers = admin.listReplicationPeers();
+    List<ReplicationPeerDescription> peers = hbaseAdmin.listReplicationPeers();
     assertEquals(1, peers.size());
-    ReplicationPeer peerOne = peers.get(0);
+    ReplicationPeerDescription peerOne = peers.get(0);
     assertNotNull(peerOne);
-    assertEquals("value1", peerOne.getConfiguration().get("key1"));
-    assertEquals("value2", peerOne.getConfiguration().get("key2"));
+    assertEquals("value1", peerOne.getPeerConfig().getConfiguration().get("key1"));
+    assertEquals("value2", peerOne.getPeerConfig().getConfiguration().get("key2"));
 
-    admin.removePeer(ID_ONE);
+    hbaseAdmin.removeReplicationPeer(ID_ONE);
   }
 
   @Test
@@ -255,7 +259,7 @@ public class TestReplicationAdmin {
 
     // append table column family: f1 of t3 to replication
     tableCFs.clear();
-    tableCFs.put(tableName3, new ArrayList<String>());
+    tableCFs.put(tableName3, new ArrayList<>());
     tableCFs.get(tableName3).add("f1");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
@@ -269,7 +273,7 @@ public class TestReplicationAdmin {
     assertEquals("f1", result.get(tableName3).get(0));
 
     tableCFs.clear();
-    tableCFs.put(tableName4, new ArrayList<String>());
+    tableCFs.put(tableName4, new ArrayList<>());
     tableCFs.get(tableName4).add("f1");
     tableCFs.get(tableName4).add("f2");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
@@ -289,10 +293,10 @@ public class TestReplicationAdmin {
 
     // append "table5" => [], then append "table5" => ["f1"]
     tableCFs.clear();
-    tableCFs.put(tableName5, new ArrayList<String>());
+    tableCFs.put(tableName5, new ArrayList<>());
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     tableCFs.clear();
-    tableCFs.put(tableName5, new ArrayList<String>());
+    tableCFs.put(tableName5, new ArrayList<>());
     tableCFs.get(tableName5).add("f1");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
@@ -303,11 +307,11 @@ public class TestReplicationAdmin {
 
     // append "table6" => ["f1"], then append "table6" => []
     tableCFs.clear();
-    tableCFs.put(tableName6, new ArrayList<String>());
+    tableCFs.put(tableName6, new ArrayList<>());
     tableCFs.get(tableName6).add("f1");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     tableCFs.clear();
-    tableCFs.put(tableName6, new ArrayList<String>());
+    tableCFs.put(tableName6, new ArrayList<>());
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(6, result.size());
@@ -339,7 +343,7 @@ public class TestReplicationAdmin {
 
     tableCFs.clear();
     tableCFs.put(tableName1, null);
-    tableCFs.put(tableName2, new ArrayList<String>());
+    tableCFs.put(tableName2, new ArrayList<>());
     tableCFs.get(tableName2).add("cf1");
     admin.setPeerTableCFs(ID_ONE, tableCFs);
     try {
@@ -360,7 +364,7 @@ public class TestReplicationAdmin {
 
     try {
       tableCFs.clear();
-      tableCFs.put(tableName1, new ArrayList<String>());
+      tableCFs.put(tableName1, new ArrayList<>());
       tableCFs.get(tableName1).add("f1");
       admin.removePeerTableCFs(ID_ONE, tableCFs);
       assertTrue(false);
@@ -382,13 +386,13 @@ public class TestReplicationAdmin {
     } catch (ReplicationException e) {
     }
     tableCFs.clear();
-    tableCFs.put(tableName2, new ArrayList<String>());
+    tableCFs.put(tableName2, new ArrayList<>());
     tableCFs.get(tableName2).add("cf1");
     admin.removePeerTableCFs(ID_ONE, tableCFs);
     assertNull(admin.getPeerTableCFs(ID_ONE));
 
     tableCFs.clear();
-    tableCFs.put(tableName4, new ArrayList<String>());
+    tableCFs.put(tableName4, new ArrayList<>());
     admin.setPeerTableCFs(ID_ONE, tableCFs);
     admin.removePeerTableCFs(ID_ONE, tableCFs);
     assertNull(admin.getPeerTableCFs(ID_ONE));
@@ -403,11 +407,10 @@ public class TestReplicationAdmin {
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
-    admin.addPeer(ID_ONE, rpc);
-    admin.peerAdded(ID_ONE);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
 
     rpc = admin.getPeerConfig(ID_ONE);
-    Set<String> namespaces = new HashSet<String>();
+    Set<String> namespaces = new HashSet<>();
     namespaces.add(ns1);
     namespaces.add(ns2);
     rpc.setNamespaces(namespaces);
@@ -438,8 +441,7 @@ public class TestReplicationAdmin {
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
-    admin.addPeer(ID_ONE, rpc);
-    admin.peerAdded(ID_ONE);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
 
     rpc = admin.getPeerConfig(ID_ONE);
     Set<String> namespaces = new HashSet<String>();
@@ -448,7 +450,7 @@ public class TestReplicationAdmin {
     admin.updatePeerConfig(ID_ONE, rpc);
     rpc = admin.getPeerConfig(ID_ONE);
     Map<TableName, List<String>> tableCfs = new HashMap<>();
-    tableCfs.put(tableName1, new ArrayList<String>());
+    tableCfs.put(tableName1, new ArrayList<>());
     rpc.setTableCFsMap(tableCfs);
     try {
       admin.updatePeerConfig(ID_ONE, rpc);
@@ -460,7 +462,7 @@ public class TestReplicationAdmin {
 
     rpc = admin.getPeerConfig(ID_ONE);
     tableCfs.clear();
-    tableCfs.put(tableName2, new ArrayList<String>());
+    tableCfs.put(tableName2, new ArrayList<>());
     rpc.setTableCFsMap(tableCfs);
     admin.updatePeerConfig(ID_ONE, rpc);
     rpc = admin.getPeerConfig(ID_ONE);
@@ -482,8 +484,7 @@ public class TestReplicationAdmin {
   public void testPeerBandwidth() throws Exception {
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
-    admin.addPeer(ID_ONE, rpc);
-    admin.peerAdded(ID_ONE);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
 
     rpc = admin.getPeerConfig(ID_ONE);
     assertEquals(0, rpc.getBandwidth());

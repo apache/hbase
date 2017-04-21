@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryType;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
@@ -928,7 +927,7 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public long getGlobalMemstoreHeapOverhead() {
+    public long getGlobalMemstoreHeapSize() {
       return testMemstoreSize;
     }
 

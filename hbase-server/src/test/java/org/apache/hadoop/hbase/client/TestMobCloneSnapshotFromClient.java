@@ -27,9 +27,9 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
@@ -137,7 +137,7 @@ public class TestMobCloneSnapshotFromClient extends TestCloneSnapshotFromClient 
   /**
    * This coprocessor is used to delay the flush.
    */
-  public static class DelayFlushCoprocessor extends BaseRegionObserver {
+  public static class DelayFlushCoprocessor implements RegionObserver {
     @Override
     public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
       if (delayFlush) {
@@ -150,7 +150,6 @@ public class TestMobCloneSnapshotFromClient extends TestCloneSnapshotFromClient 
           throw new InterruptedIOException(e1.getMessage());
         }
       }
-      super.preFlush(e);
     }
   }
 

@@ -164,6 +164,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>anastasia</id>
+      <name>Anastasia Braginsky</name>
+      <email>anastasia@apache.org</email>
+      <timezone>+2</timezone>
+    </developer>
+    <developer>
       <id>apurtell</id>
       <name>Andrew Purtell</name>
       <email>apurtell@apache.org</email>
@@ -206,6 +212,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>chia7712</id>
+      <name>Chia-Ping Tsai</name>
+      <email>chia7712@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>ddas</id>
       <name>Devaraj Das</name>
       <email>ddas@apache.org</email>
@@ -240,6 +252,12 @@
       <name>Enis Soztutar</name>
       <email>enis@apache.org</email>
       <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>eshcar</id>
+      <name>Eshcar Hillel</name>
+      <email>eshcar@apache.org</email>
+      <timezone>+2</timezone>
     </developer>
     <developer>
       <id>fenghh</id>
@@ -1236,7 +1254,6 @@
     <metrics-core.version>3.1.2</metrics-core.version>
     <guava.version>12.0.1</guava.version>
     <jackson.version>2.23.2</jackson.version>
-    <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.2.2</jaxb-api.version>
     <jetty.version>9.3.8.v20160314</jetty.version>
     <jetty-jsp.version>9.2.19.v20160908</jetty-jsp.version>
@@ -1695,44 +1712,6 @@
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-xc</artifactId>
         <version>${jackson1.version}</version>
-      </dependency>
-      <dependency>
-        <!--If this is not in the runtime lib, we get odd
-      "2009-02-27 11:38:39.504::WARN:  failed jsp
-       java.lang.NoSuchFieldError: IS_SECURITY_ENABLED"
-       exceptions out of jetty deploying webapps.
-       St.Ack Thu May 20 01:04:41 PDT 2010
-      -->
-        <groupId>tomcat</groupId>
-        <artifactId>jasper-compiler</artifactId>
-        <version>${jasper.version}</version>
-        <scope>runtime</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.servlet</groupId>
-            <artifactId>jsp-api</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>ant</groupId>
-            <artifactId>ant</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>tomcat</groupId>
-        <artifactId>jasper-runtime</artifactId>
-        <version>${jasper.version}</version>
-        <scope>runtime</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.jamon</groupId>
@@ -2363,7 +2342,7 @@
         <hadoop.version>${hadoop-three.version}</hadoop.version>
         <!--Use this compat module for now. TODO: Make h3 one if we need one-->
         <compat.module>hbase-hadoop2-compat</compat.module>
-        <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
+        <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
       </properties>
      <dependencyManagement>
        <dependencies>

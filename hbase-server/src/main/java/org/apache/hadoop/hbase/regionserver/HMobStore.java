@@ -48,10 +48,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFile;
@@ -59,7 +56,6 @@ import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
 
@@ -95,7 +91,7 @@ public class HMobStore extends HStore {
   private volatile long mobScanCellsCount = 0;
   private volatile long mobScanCellsSize = 0;
   private HColumnDescriptor family;
-  private Map<String, List<Path>> map = new ConcurrentHashMap<String, List<Path>>();
+  private Map<String, List<Path>> map = new ConcurrentHashMap<>();
   private final IdLock keyLock = new IdLock();
   // When we add a MOB reference cell to the HFile, we will add 2 tags along with it
   // 1. A ref tag with type TagType.MOB_REFERENCE_TAG_TYPE. This just denote this this cell is not
@@ -113,7 +109,7 @@ public class HMobStore extends HStore {
     this.homePath = MobUtils.getMobHome(conf);
     this.mobFamilyPath = MobUtils.getMobFamilyPath(conf, this.getTableName(),
         family.getNameAsString());
-    List<Path> locations = new ArrayList<Path>(2);
+    List<Path> locations = new ArrayList<>(2);
     locations.add(mobFamilyPath);
     TableName tn = region.getTableDesc().getTableName();
     locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
@@ -190,16 +186,19 @@ public class HMobStore extends HStore {
    * @param maxKeyCount The key count.
    * @param compression The compression algorithm.
    * @param startKey The start key.
+   * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public StoreFileWriter createWriterInTmp(Date date, long maxKeyCount,
-      Compression.Algorithm compression, byte[] startKey) throws IOException {
+      Compression.Algorithm compression, byte[] startKey,
+      boolean isCompaction) throws IOException {
     if (startKey == null) {
       startKey = HConstants.EMPTY_START_ROW;
     }
     Path path = getTempDir();
-    return createWriterInTmp(MobUtils.formatDate(date), path, maxKeyCount, compression, startKey);
+    return createWriterInTmp(MobUtils.formatDate(date), path, maxKeyCount, compression, startKey,
+      isCompaction);
   }
 
   /**
@@ -222,7 +221,7 @@ public class HMobStore extends HStore {
     String suffix = UUID
         .randomUUID().toString().replaceAll("-", "") + "_del";
     MobFileName mobFileName = MobFileName.create(startKey, MobUtils.formatDate(date), suffix);
-    return createWriterInTmp(mobFileName, path, maxKeyCount, compression);
+    return createWriterInTmp(mobFileName, path, maxKeyCount, compression, true);
   }
 
   /**
@@ -232,14 +231,16 @@ public class HMobStore extends HStore {
    * @param maxKeyCount The key count.
    * @param compression The compression algorithm.
    * @param startKey The start key.
+   * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public StoreFileWriter createWriterInTmp(String date, Path basePath, long maxKeyCount,
-      Compression.Algorithm compression, byte[] startKey) throws IOException {
+      Compression.Algorithm compression, byte[] startKey,
+      boolean isCompaction) throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date, UUID.randomUUID()
         .toString().replaceAll("-", ""));
-    return createWriterInTmp(mobFileName, basePath, maxKeyCount, compression);
+    return createWriterInTmp(mobFileName, basePath, maxKeyCount, compression, isCompaction);
   }
 
   /**
@@ -248,27 +249,16 @@ public class HMobStore extends HStore {
    * @param basePath The basic path for a temp directory.
    * @param maxKeyCount The key count.
    * @param compression The compression algorithm.
+   * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath,
-      long maxKeyCount, Compression.Algorithm compression) throws IOException {
-    final CacheConfig writerCacheConf = mobCacheConfig;
-    HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-        .withIncludesMvcc(true).withIncludesTags(true)
-        .withCompressTags(family.isCompressTags())
-        .withChecksumType(checksumType)
-        .withBytesPerCheckSum(bytesPerChecksum)
-        .withBlockSize(blocksize)
-        .withHBaseCheckSum(true).withDataBlockEncoding(getFamily().getDataBlockEncoding())
-        .withEncryptionContext(cryptoContext)
-        .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
-
-    StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, region.getFilesystem())
-        .withFilePath(new Path(basePath, mobFileName.getFileName()))
-        .withComparator(CellComparator.COMPARATOR).withBloomType(BloomType.NONE)
-        .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
-    return w;
+      long maxKeyCount, Compression.Algorithm compression,
+      boolean isCompaction) throws IOException {
+    return MobUtils.createWriter(conf, region.getFilesystem(), family,
+      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, mobCacheConfig,
+      cryptoContext, checksumType, bytesPerChecksum, blocksize, BloomType.NONE, isCompaction);
   }
 
   /**
@@ -302,9 +292,9 @@ public class HMobStore extends HStore {
   private void validateMobFile(Path path) throws IOException {
     StoreFile storeFile = null;
     try {
-      storeFile =
-          new StoreFile(region.getFilesystem(), path, conf, this.mobCacheConfig, BloomType.NONE);
-      storeFile.createReader();
+      storeFile = new StoreFile(region.getFilesystem(), path, conf, this.mobCacheConfig,
+          BloomType.NONE, isPrimaryReplicaStore());
+      storeFile.initReader();
     } catch (IOException e) {
       LOG.error("Fail to open mob file[" + path + "], keep it in temp directory.", e);
       throw e;
@@ -351,7 +341,7 @@ public class HMobStore extends HStore {
           try {
             locations = map.get(tableNameString);
             if (locations == null) {
-              locations = new ArrayList<Path>(2);
+              locations = new ArrayList<>(2);
               TableName tn = TableName.valueOf(tableNameString);
               locations.add(MobUtils.getMobFamilyPath(conf, tn, family.getNameAsString()));
               locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils
@@ -412,7 +402,7 @@ public class HMobStore extends HStore {
         throwable = e;
         if ((e instanceof FileNotFoundException) ||
             (e.getCause() instanceof FileNotFoundException)) {
-          LOG.warn("Fail to read the cell, the mob file " + path + " doesn't exist", e);
+          LOG.debug("Fail to read the cell, the mob file " + path + " doesn't exist", e);
         } else if (e instanceof CorruptHFileException) {
           LOG.error("The mob file " + path + " is corrupt", e);
           break;
@@ -421,11 +411,11 @@ public class HMobStore extends HStore {
         }
       } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
         mobCacheConfig.getMobFileCache().evictFile(fileName);
-        LOG.warn("Fail to read the cell", e);
+        LOG.debug("Fail to read the cell", e);
         throwable = e;
       } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
         mobCacheConfig.getMobFileCache().evictFile(fileName);
-        LOG.warn("Fail to read the cell", e);
+        LOG.debug("Fail to read the cell", e);
         throwable = e;
       } finally {
         if (file != null) {

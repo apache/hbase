@@ -113,7 +113,7 @@ public class TestJoinedScanners {
 
       byte [] val_large = new byte[valueWidth];
 
-      List<Put> puts = new ArrayList<Put>();
+      List<Put> puts = new ArrayList<>();
 
       for (long i = 0; i < rows_to_insert; i++) {
         Put put = new Put(Bytes.toBytes(Long.toString (i)));

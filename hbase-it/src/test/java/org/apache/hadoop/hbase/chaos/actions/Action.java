@@ -123,7 +123,7 @@ public class Action {
     if (count == 1) {
       return new ServerName [] {};
     }
-    ArrayList<ServerName> tmp = new ArrayList<ServerName>(count);
+    ArrayList<ServerName> tmp = new ArrayList<>(count);
     tmp.addAll(regionServers);
     tmp.remove(master);
     return tmp.toArray(new ServerName[count-1]);
@@ -192,11 +192,11 @@ public class Action {
   protected void unbalanceRegions(ClusterStatus clusterStatus,
       List<ServerName> fromServers, List<ServerName> toServers,
       double fractionOfRegions) throws Exception {
-    List<byte[]> victimRegions = new LinkedList<byte[]>();
+    List<byte[]> victimRegions = new LinkedList<>();
     for (ServerName server : fromServers) {
       ServerLoad serverLoad = clusterStatus.getLoad(server);
       // Ugh.
-      List<byte[]> regions = new LinkedList<byte[]>(serverLoad.getRegionsLoad().keySet());
+      List<byte[]> regions = new LinkedList<>(serverLoad.getRegionsLoad().keySet());
       int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
       LOG.debug("Removing " + victimRegionCount + " regions from " + server.getServerName());
       for (int i = 0; i < victimRegionCount; ++i) {

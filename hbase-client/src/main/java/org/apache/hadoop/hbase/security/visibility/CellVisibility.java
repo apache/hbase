@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -28,7 +27,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * operators AND(&amp;), OR(|) and NOT(!)
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class CellVisibility {
 
   private String expression;

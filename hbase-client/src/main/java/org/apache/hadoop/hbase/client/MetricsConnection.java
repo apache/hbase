@@ -193,7 +193,7 @@ public class MetricsConnection implements StatisticTrackable {
 
   @VisibleForTesting
   protected ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> serverStats
-          = new ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>>();
+          = new ConcurrentHashMap<>();
 
   public void updateServerStats(ServerName serverName, byte[] regionName,
                                 Object r) {

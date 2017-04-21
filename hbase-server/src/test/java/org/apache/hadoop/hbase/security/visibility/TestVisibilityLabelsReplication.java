@@ -56,12 +56,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -379,7 +378,7 @@ public class TestVisibilityLabelsReplication {
   static Table writeData(TableName tableName, String... labelExps) throws Exception {
     Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
     int i = 1;
-    List<Put> puts = new ArrayList<Put>(labelExps.length);
+    List<Put> puts = new ArrayList<>(labelExps.length);
     for (String labelExp : labelExps) {
       Put put = new Put(Bytes.toBytes("row" + i));
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
@@ -394,13 +393,13 @@ public class TestVisibilityLabelsReplication {
   // A simple BaseRegionbserver impl that allows to add a non-visibility tag from the
   // attributes of the Put mutation.  The existing cells in the put mutation is overwritten
   // with a new cell that has the visibility tags and the non visibility tag
-  public static class SimpleCP extends BaseRegionObserver {
+  public static class SimpleCP implements RegionObserver {
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put m, WALEdit edit,
         Durability durability) throws IOException {
       byte[] attribute = m.getAttribute(NON_VISIBILITY);
       byte[] cf = null;
-      List<Cell> updatedCells = new ArrayList<Cell>();
+      List<Cell> updatedCells = new ArrayList<>();
       if (attribute != null) {
         for (List<? extends Cell> edits : m.getFamilyCellMap().values()) {
           for (Cell cell : edits) {
@@ -409,7 +408,7 @@ public class TestVisibilityLabelsReplication {
               cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new ArrayBackedTag((byte) NON_VIS_TAG_TYPE, attribute);
-            List<Tag> tagList = new ArrayList<Tag>(kv.getTags().size() + 1);
+            List<Tag> tagList = new ArrayList<>(kv.getTags().size() + 1);
             tagList.add(tag);
             tagList.addAll(kv.getTags());
             Cell newcell = CellUtil.createCell(kv, tagList);
@@ -423,7 +422,7 @@ public class TestVisibilityLabelsReplication {
     }
   }
 
-  public static class TestCoprocessorForTagsAtSink extends BaseRegionObserver {
+  public static class TestCoprocessorForTagsAtSink implements RegionObserver {
     public static List<Tag> tags = null;
 
     @Override

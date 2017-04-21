@@ -84,7 +84,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
                       ) throws ServletException, IOException {
       PrintWriter out = response.getWriter();
       Map<String, String[]> params = request.getParameterMap();
-      SortedSet<String> keys = new TreeSet<String>(params.keySet());
+      SortedSet<String> keys = new TreeSet<>(params.keySet());
       for(String key: keys) {
         out.print(key);
         out.print(':');
@@ -109,7 +109,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
                       HttpServletResponse response
                       ) throws ServletException, IOException {
       PrintWriter out = response.getWriter();
-      SortedSet<String> sortedKeys = new TreeSet<String>();
+      SortedSet<String> sortedKeys = new TreeSet<>();
       Enumeration<String> keys = request.getParameterNames();
       while(keys.hasMoreElements()) {
         sortedKeys.add(keys.nextElement());
@@ -335,7 +335,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * Custom user->group mapping service.
    */
   public static class MyGroupsProvider extends ShellBasedUnixGroupsMapping {
-    static Map<String, List<String>> mapping = new HashMap<String, List<String>>();
+    static Map<String, List<String>> mapping = new HashMap<>();
 
     static void clearMapping() {
       mapping.clear();

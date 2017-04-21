@@ -21,14 +21,12 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown if the region server log directory exists (which indicates another
  * region server is running at the same address)
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class RegionServerRunningException extends IOException {
   private static final long serialVersionUID = 1L << 31 - 1L;
 

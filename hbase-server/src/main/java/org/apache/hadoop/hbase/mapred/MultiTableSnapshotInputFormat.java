@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapred;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -83,7 +82,6 @@ import java.util.Map;
  * @see org.apache.hadoop.hbase.client.TableSnapshotScanner
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat
     implements InputFormat<ImmutableBytesWritable, Result> {
 

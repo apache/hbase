@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -71,16 +70,22 @@ public class CompactingMemStore extends AbstractMemStore {
 
   private long inmemoryFlushSize;       // the threshold on active size for in-memory flush
   private final AtomicBoolean inMemoryFlushInProgress = new AtomicBoolean(false);
+
+  // inWalReplay is true while we are synchronously replaying the edits from WAL
+  private boolean inWalReplay = false;
+
   @VisibleForTesting
   private final AtomicBoolean allowCompaction = new AtomicBoolean(true);
   private boolean compositeSnapshot = true;
 
-  public static final long DEEP_OVERHEAD = AbstractMemStore.DEEP_OVERHEAD
-      + 6 * ClassSize.REFERENCE // Store, RegionServicesForStores, CompactionPipeline,
-                                // MemStoreCompactor, inMemoryFlushInProgress, allowCompaction
-      + Bytes.SIZEOF_LONG // inmemoryFlushSize
+
+  public static final long DEEP_OVERHEAD = ClassSize.align( AbstractMemStore.DEEP_OVERHEAD
+      + 6 * ClassSize.REFERENCE     // Store, RegionServicesForStores, CompactionPipeline,
+                                    // MemStoreCompactor, inMemoryFlushInProgress, allowCompaction
+      + Bytes.SIZEOF_LONG           // inmemoryFlushSize
+      + 2 * Bytes.SIZEOF_BOOLEAN    // compositeSnapshot and inWalReplay
       + 2 * ClassSize.ATOMIC_BOOLEAN// inMemoryFlushInProgress and allowCompaction
-      + CompactionPipeline.DEEP_OVERHEAD + MemStoreCompactor.DEEP_OVERHEAD;
+      + CompactionPipeline.DEEP_OVERHEAD + MemStoreCompactor.DEEP_OVERHEAD);
 
   public CompactingMemStore(Configuration conf, CellComparator c,
       HStore store, RegionServicesForStores regionServices,
@@ -117,9 +122,9 @@ public class CompactingMemStore extends AbstractMemStore {
   @Override
   public MemstoreSize size() {
     MemstoreSize memstoreSize = new MemstoreSize();
-    memstoreSize.incMemstoreSize(this.active.keySize(), this.active.heapOverhead());
+    memstoreSize.incMemstoreSize(this.active.keySize(), this.active.heapSize());
     for (Segment item : pipeline.getSegments()) {
-      memstoreSize.incMemstoreSize(item.keySize(), item.heapOverhead());
+      memstoreSize.incMemstoreSize(item.keySize(), item.heapSize());
     }
     return memstoreSize;
   }
@@ -190,13 +195,13 @@ public class CompactingMemStore extends AbstractMemStore {
       // if snapshot is empty the tail of the pipeline (or everything in the memstore) is flushed
       if (compositeSnapshot) {
         snapshotSize = pipeline.getPipelineSize();
-        snapshotSize.incMemstoreSize(this.active.keySize(), this.active.heapOverhead());
+        snapshotSize.incMemstoreSize(this.active.keySize(), this.active.heapSize());
       } else {
         snapshotSize = pipeline.getTailSize();
       }
     }
     return snapshotSize.getDataSize() > 0 ? snapshotSize
-        : new MemstoreSize(this.active.keySize(), this.active.heapOverhead());
+        : new MemstoreSize(this.active.keySize(), this.active.heapSize());
   }
 
   @Override
@@ -210,11 +215,11 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   @Override
-  protected long heapOverhead() {
+  protected long heapSize() {
     // Need to consider heapOverhead of all segments in pipeline and active
-    long h = this.active.heapOverhead();
+    long h = this.active.heapSize();
     for (Segment segment : this.pipeline.getSegments()) {
-      h += segment.heapOverhead();
+      h += segment.heapSize();
     }
     return h;
   }
@@ -230,6 +235,24 @@ public class CompactingMemStore extends AbstractMemStore {
         WAL.updateStore(encodedRegionName, familyName, minSequenceId, onlyIfGreater);
       }
     }
+  }
+
+  /**
+   * This message intends to inform the MemStore that next coming updates
+   * are going to be part of the replaying edits from WAL
+   */
+  @Override
+  public void startReplayingFromWAL() {
+    inWalReplay = true;
+  }
+
+  /**
+   * This message intends to inform the MemStore that the replaying edits from WAL
+   * are done
+   */
+  @Override
+  public void stopReplayingFromWAL() {
+    inWalReplay = false;
   }
 
   // the getSegments() method is used for tests only
@@ -256,7 +279,8 @@ public class CompactingMemStore extends AbstractMemStore {
 
   public boolean swapCompactedSegments(VersionedSegmentsList versionedList, ImmutableSegment result,
       boolean merge) {
-    return pipeline.swap(versionedList, result, !merge);
+    // last true stands for updating the region size
+    return pipeline.swap(versionedList, result, !merge, true);
   }
 
   /**
@@ -294,21 +318,15 @@ public class CompactingMemStore extends AbstractMemStore {
    */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
     List<? extends Segment> pipelineList = pipeline.getSegments();
-    int order = pipelineList.size() + snapshot.getNumOfSegments();
+    List<? extends Segment> snapshotList = snapshot.getAllSegments();
+    long order = 1 + pipelineList.size() + snapshotList.size();
     // The list of elements in pipeline + the active element + the snapshot segment
-    // TODO : This will change when the snapshot is made of more than one element
     // The order is the Segment ordinal
-    List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(order+1);
-    list.add(this.active.getScanner(readPt, order + 1));
-    for (Segment item : pipelineList) {
-      list.add(item.getScanner(readPt, order));
-      order--;
-    }
-    for (Segment item : snapshot.getAllSegments()) {
-      list.add(item.getScanner(readPt, order));
-      order--;
-    }
-    return Collections.<KeyValueScanner> singletonList(new MemStoreScanner(getComparator(), list));
+    List<KeyValueScanner> list = new ArrayList<KeyValueScanner>((int) order);
+    order = addToScanners(active, readPt, order, list);
+    order = addToScanners(pipelineList, readPt, order, list);
+    addToScanners(snapshotList, readPt, order, list);
+    return list;
   }
 
   /**
@@ -388,9 +406,12 @@ public class CompactingMemStore extends AbstractMemStore {
 
   private boolean shouldFlushInMemory() {
     if (this.active.keySize() > inmemoryFlushSize) { // size above flush threshold
-        // the inMemoryFlushInProgress is CASed to be true here in order to mutual exclude
-        // the insert of the active into the compaction pipeline
-        return (inMemoryFlushInProgress.compareAndSet(false,true));
+      if (inWalReplay) {  // when replaying edits from WAL there is no need in in-memory flush
+        return false;     // regardless the size
+      }
+      // the inMemoryFlushInProgress is CASed to be true here in order to mutual exclude
+      // the insert of the active into the compaction pipeline
+      return (inMemoryFlushInProgress.compareAndSet(false,true));
     }
     return false;
   }
@@ -417,7 +438,8 @@ public class CompactingMemStore extends AbstractMemStore {
   private void pushTailToSnapshot() {
     VersionedSegmentsList segments = pipeline.getVersionedTail();
     pushToSnapshot(segments.getStoreSegments());
-    pipeline.swap(segments,null,false); // do not close segments as they are in snapshot now
+    // In Swap: don't close segments (they are in snapshot now) and don't update the region size
+    pipeline.swap(segments,null,false, false);
   }
 
   private void pushPipelineToSnapshot() {
@@ -429,7 +451,8 @@ public class CompactingMemStore extends AbstractMemStore {
       pushToSnapshot(segments.getStoreSegments());
       // swap can return false in case the pipeline was updated by ongoing compaction
       // and the version increase, the chance of it happenning is very low
-      done = pipeline.swap(segments, null, false); // don't close segments; they are in snapshot now
+      // In Swap: don't close segments (they are in snapshot now) and don't update the region size
+      done = pipeline.swap(segments, null, false, false);
       if (iterationsCnt>2) {
         // practically it is impossible that this loop iterates more than two times
         // (because the compaction is stopped and none restarts it while in snapshot request),

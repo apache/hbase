@@ -75,7 +75,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
     InternalScanner scanner = null;
     try {
       scanner = env.getRegion().getScanner(scan);
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       boolean hasMore = false;
       byte[] lastRow = null;
       long count = 0;
@@ -115,7 +115,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
     InternalScanner scanner = null;
     try {
       scanner = env.getRegion().getScanner(new Scan());
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       boolean hasMore = false;
       long count = 0;
       do {

@@ -126,7 +126,7 @@ public class HFileArchiver {
     // otherwise, we attempt to archive the store files
 
     // build collection of just the store directories to archive
-    Collection<File> toArchive = new ArrayList<File>();
+    Collection<File> toArchive = new ArrayList<>();
     final PathFilter dirFilter = new FSUtils.DirFilter(fs);
     PathFilter nonHidden = new PathFilter() {
       @Override
@@ -324,7 +324,7 @@ public class HFileArchiver {
       if (LOG.isTraceEnabled()) LOG.trace("Created archive directory:" + baseArchiveDir);
     }
 
-    List<File> failures = new ArrayList<File>();
+    List<File> failures = new ArrayList<>();
     String startTime = Long.toString(start);
     for (File file : toArchive) {
       // if its a file archive it
@@ -466,8 +466,6 @@ public class HFileArchiver {
    * <p>
    * A best effort is made to delete each of the files, rather than bailing on the first failure.
    * <p>
-   * This method is preferable to {@link #deleteFilesWithoutArchiving(Collection)} since it consumes
-   * less resources, but is limited in terms of usefulness
    * @param compactedFiles store files to delete from the file system.
    * @throws IOException if a file cannot be deleted. All files will be attempted to deleted before
    *           throwing the exception, rather than failing at the first file.
@@ -475,7 +473,7 @@ public class HFileArchiver {
   private static void deleteStoreFilesWithoutArchiving(Collection<StoreFile> compactedFiles)
       throws IOException {
     LOG.debug("Deleting store files without archiving.");
-    List<IOException> errors = new ArrayList<IOException>(0);
+    List<IOException> errors = new ArrayList<>(0);
     for (StoreFile hsf : compactedFiles) {
       try {
         hsf.deleteReader();

@@ -56,13 +56,13 @@ public class EncodedSeekPerformanceTest {
   }
 
   private List<Cell> prepareListOfTestSeeks(Path path) throws IOException {
-    List<Cell> allKeyValues = new ArrayList<Cell>();
+    List<Cell> allKeyValues = new ArrayList<>();
 
     // read all of the key values
     StoreFile storeFile = new StoreFile(testingUtility.getTestFileSystem(),
-        path, configuration, cacheConf, BloomType.NONE);
-
-    StoreFileReader reader = storeFile.createReader();
+        path, configuration, cacheConf, BloomType.NONE, true);
+    storeFile.initReader();
+    StoreFileReader reader = storeFile.getReader();
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
     Cell current;
 
@@ -74,7 +74,7 @@ public class EncodedSeekPerformanceTest {
     storeFile.closeReader(cacheConf.shouldEvictOnClose());
 
     // pick seeks by random
-    List<Cell> seeks = new ArrayList<Cell>();
+    List<Cell> seeks = new ArrayList<>();
     for (int i = 0; i < numberOfSeeks; ++i) {
       Cell keyValue = allKeyValues.get(
           randomizer.nextInt(allKeyValues.size()));
@@ -90,11 +90,11 @@ public class EncodedSeekPerformanceTest {
       List<Cell> seeks) throws IOException {
     // read all of the key values
     StoreFile storeFile = new StoreFile(testingUtility.getTestFileSystem(),
-      path, configuration, cacheConf, BloomType.NONE);
-
+      path, configuration, cacheConf, BloomType.NONE, true);
+    storeFile.initReader();
     long totalSize = 0;
 
-    StoreFileReader reader = storeFile.createReader();
+    StoreFileReader reader = storeFile.getReader();
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
 
     long startReadingTime = System.nanoTime();

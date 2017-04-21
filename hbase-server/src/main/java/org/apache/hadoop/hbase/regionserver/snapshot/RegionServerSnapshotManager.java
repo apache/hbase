@@ -271,7 +271,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
     private final ExecutorCompletionService<Void> taskPool;
     private final ThreadPoolExecutor executor;
     private volatile boolean stopped;
-    private final List<Future<Void>> futures = new ArrayList<Future<Void>>();
+    private final List<Future<Void>> futures = new ArrayList<>();
     private final String name;
 
     SnapshotSubprocedurePool(String name, Configuration conf, Abortable abortable) {
@@ -283,10 +283,10 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
       int threads = conf.getInt(CONCURENT_SNAPSHOT_TASKS_KEY, DEFAULT_CONCURRENT_SNAPSHOT_TASKS);
       this.name = name;
       executor = new ThreadPoolExecutor(threads, threads, keepAlive, TimeUnit.MILLISECONDS,
-          new LinkedBlockingQueue<Runnable>(), new DaemonThreadFactory("rs("
+          new LinkedBlockingQueue<>(), new DaemonThreadFactory("rs("
               + name + ")-snapshot-pool"));
       executor.allowCoreThreadTimeOut(true);
-      taskPool = new ExecutorCompletionService<Void>(executor);
+      taskPool = new ExecutorCompletionService<>(executor);
     }
 
     boolean hasTasks() {

@@ -69,7 +69,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   private final TableName tableName;
   private Configuration conf;
   private int scannerTimeout;
-  private Set<ScannerCallable> outstandingCallables = new HashSet<ScannerCallable>();
+  private Set<ScannerCallable> outstandingCallables = new HashSet<>();
   private boolean someRPCcancelled = false; //required for testing purposes only
 
   public ScannerCallableWithReplicas(TableName tableName, ClusterConnection cConnection,
@@ -149,7 +149,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     // allocate a boundedcompletion pool of some multiple of number of replicas.
     // We want to accomodate some RPCs for redundant replica scans (but are still in progress)
     ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs =
-        new ResultBoundedCompletionService<Pair<Result[], ScannerCallable>>(
+        new ResultBoundedCompletionService<>(
             RpcRetryingCallerFactory.instantiate(ScannerCallableWithReplicas.this.conf), pool,
             rl.size() * 5);
 
@@ -324,7 +324,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     // 2. The last result was not a partial result which means it contained all of the cells for
     // that row (we no longer need any information from it). Set the start row to the next
     // closest row that could be seen.
-    callable.getScan().withStartRow(this.lastResult.getRow(), this.lastResult.isPartial());
+    callable.getScan().withStartRow(this.lastResult.getRow(), this.lastResult.mayHaveMoreCellsInRow());
   }
 
   @VisibleForTesting
@@ -359,7 +359,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
         return null;
       }
       Result[] res = this.caller.callWithoutRetries(this.callable, callTimeout);
-      return new Pair<Result[], ScannerCallable>(res, this.callable);
+      return new Pair<>(res, this.callable);
     }
 
     @Override

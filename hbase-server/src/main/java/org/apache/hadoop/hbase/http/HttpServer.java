@@ -163,9 +163,8 @@ public class HttpServer implements FilterContainer {
 
   protected final WebAppContext webAppContext;
   protected final boolean findPort;
-  protected final Map<ServletContextHandler, Boolean> defaultContexts =
-      new HashMap<ServletContextHandler, Boolean>();
-  protected final List<String> filterNames = new ArrayList<String>();
+  protected final Map<ServletContextHandler, Boolean> defaultContexts = new HashMap<>();
+  protected final List<String> filterNames = new ArrayList<>();
   static final String STATE_DESCRIPTION_ALIVE = " - alive";
   static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
 
@@ -555,7 +554,7 @@ public class HttpServer implements FilterContainer {
     addDefaultApps(contexts, appDir, conf);
 
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
-    Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> params = new HashMap<>();
     params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode", "DENY"));
     addGlobalFilter("clickjackingprevention",
             ClickjackingPreventionFilter.class.getName(), params);
@@ -906,7 +905,7 @@ public class HttpServer implements FilterContainer {
   private void initSpnego(Configuration conf, String hostName,
       String usernameConfKey, String keytabConfKey, String kerberosNameRuleKey,
       String signatureSecretKeyFileKey) throws IOException {
-    Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> params = new HashMap<>();
     String principalInConf = getOrEmptyString(conf, usernameConfKey);
     if (!principalInConf.isEmpty()) {
       params.put(HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_SUFFIX, SecurityUtil.getServerPrincipal(
@@ -1302,7 +1301,7 @@ public class HttpServer implements FilterContainer {
 
       @Override
       public Map<String, String[]> getParameterMap() {
-        Map<String, String[]> result = new HashMap<String,String[]>();
+        Map<String, String[]> result = new HashMap<>();
         Map<String, String[]> raw = rawRequest.getParameterMap();
         for (Map.Entry<String,String[]> item: raw.entrySet()) {
           String[] rawValue = item.getValue();

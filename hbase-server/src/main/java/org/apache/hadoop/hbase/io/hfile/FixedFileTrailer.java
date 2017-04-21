@@ -388,7 +388,8 @@ public class FixedFileTrailer {
       bufferSize = (int) fileSize;
     }
 
-    istream.seek(seekPoint);
+    HFileUtil.seekOnMultipleSources(istream, seekPoint);
+
     ByteBuffer buf = ByteBuffer.allocate(bufferSize);
     istream.readFully(buf.array(), buf.arrayOffset(),
         buf.arrayOffset() + buf.limit());

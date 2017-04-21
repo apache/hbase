@@ -101,7 +101,7 @@ public class JMXListener implements Coprocessor {
               + ",passwordFile:" + passwordFile + ",accessFile:" + accessFile);
 
     // Environment map
-    HashMap<String, Object> jmxEnv = new HashMap<String, Object>();
+    HashMap<String, Object> jmxEnv = new HashMap<>();
 
     RMIClientSocketFactory csf = null;
     RMIServerSocketFactory ssf = null;

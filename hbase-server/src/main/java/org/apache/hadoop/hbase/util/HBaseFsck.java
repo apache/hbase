@@ -248,6 +248,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean fixTableOrphans = false; // fix fs holes (missing .tableinfo)
   private boolean fixVersionFile = false; // fix missing hbase.version file in hdfs
   private boolean fixSplitParents = false; // fix lingering split parents
+  private boolean removeParents = false; // remove split parents
   private boolean fixReferenceFiles = false; // fix lingering reference store file
   private boolean fixHFileLinks = false; // fix lingering HFileLinks
   private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
@@ -256,7 +257,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
   // hbase:meta are always checked
-  private Set<TableName> tablesIncluded = new HashSet<TableName>();
+  private Set<TableName> tablesIncluded = new HashSet<>();
   private int maxMerge = DEFAULT_MAX_MERGE; // maximum number of overlapping regions to merge
   // maximum number of overlapping regions to sideline
   private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE;
@@ -280,9 +281,9 @@ public class HBaseFsck extends Configured implements Closeable {
    * name to HbckInfo structure.  The information contained in HbckInfo is used
    * to detect and correct consistency (hdfs/meta/deployment) problems.
    */
-  private TreeMap<String, HbckInfo> regionInfoMap = new TreeMap<String, HbckInfo>();
+  private TreeMap<String, HbckInfo> regionInfoMap = new TreeMap<>();
   // Empty regioninfo qualifiers in hbase:meta
-  private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
+  private Set<Result> emptyRegionInfoQualifiers = new HashSet<>();
 
   /**
    * This map from Tablename -> TableInfo contains the structures necessary to
@@ -294,22 +295,19 @@ public class HBaseFsck extends Configured implements Closeable {
    * unless checkMetaOnly is specified, in which case, it contains only
    * the meta table
    */
-  private SortedMap<TableName, TableInfo> tablesInfo =
-      new ConcurrentSkipListMap<TableName, TableInfo>();
+  private SortedMap<TableName, TableInfo> tablesInfo = new ConcurrentSkipListMap<>();
 
   /**
    * When initially looking at HDFS, we attempt to find any orphaned data.
    */
   private List<HbckInfo> orphanHdfsDirs = Collections.synchronizedList(new ArrayList<HbckInfo>());
 
-  private Map<TableName, Set<String>> orphanTableDirs =
-      new HashMap<TableName, Set<String>>();
-  private Map<TableName, TableState> tableStates =
-      new HashMap<TableName, TableState>();
+  private Map<TableName, Set<String>> orphanTableDirs = new HashMap<>();
+  private Map<TableName, TableState> tableStates = new HashMap<>();
   private final RetryCounterFactory lockFileRetryCounterFactory;
   private final RetryCounterFactory createZNodeRetryCounterFactory;
 
-  private Map<TableName, Set<String>> skippedRegions = new HashMap<TableName, Set<String>>();
+  private Map<TableName, Set<String>> skippedRegions = new HashMap<>();
 
   private ZooKeeperWatcher zkw = null;
   private String hbckEphemeralNodePath = null;
@@ -431,7 +429,7 @@ public class HBaseFsck extends Configured implements Closeable {
     RetryCounter retryCounter = lockFileRetryCounterFactory.create();
     FileLockCallable callable = new FileLockCallable(retryCounter);
     ExecutorService executor = Executors.newFixedThreadPool(1);
-    FutureTask<FSDataOutputStream> futureTask = new FutureTask<FSDataOutputStream>(callable);
+    FutureTask<FSDataOutputStream> futureTask = new FutureTask<>(callable);
     executor.execute(futureTask);
     final int timeoutInSeconds = getConf().getInt(
       "hbase.hbck.lockfile.maxwaittime", DEFAULT_WAIT_FOR_LOCK_TIMEOUT);
@@ -851,8 +849,8 @@ public class HBaseFsck extends Configured implements Closeable {
             FileStatus[] storeFiles = fs.listStatus(file.getPath());
             // For all the stores in this column family.
             for (FileStatus storeFile : storeFiles) {
-              HFile.Reader reader = HFile.createReader(fs, storeFile.getPath(), new CacheConfig(
-                  getConf()), getConf());
+              HFile.Reader reader = HFile.createReader(fs, storeFile.getPath(),
+                new CacheConfig(getConf()), true, getConf());
               if ((reader.getFirstKey() != null)
                   && ((storeFirstKey == null) || (comparator.compare(storeFirstKey,
                       ((KeyValue.KeyOnlyKeyValue) reader.getFirstKey()).getKey()) > 0))) {
@@ -956,7 +954,7 @@ public class HBaseFsck extends Configured implements Closeable {
         HFile.Reader hf = null;
         try {
           CacheConfig cacheConf = new CacheConfig(getConf());
-          hf = HFile.createReader(fs, hfile.getPath(), cacheConf, getConf());
+          hf = HFile.createReader(fs, hfile.getPath(), cacheConf, true, getConf());
           hf.loadFileInfo();
           Cell startKv = hf.getFirstKey();
           start = CellUtil.cloneRow(startKv);
@@ -977,7 +975,7 @@ public class HBaseFsck extends Configured implements Closeable {
         // expand the range to include the range of all hfiles
         if (orphanRegionRange == null) {
           // first range
-          orphanRegionRange = new Pair<byte[], byte[]>(start, end);
+          orphanRegionRange = new Pair<>(start, end);
         } else {
           // TODO add test
 
@@ -1108,6 +1106,8 @@ public class HBaseFsck extends Configured implements Closeable {
         setShouldRerun();
 
         success = fs.rename(path, dst);
+        debugLsr(dst);
+
       }
       if (!success) {
         LOG.error("Failed to sideline reference file " + path);
@@ -1267,7 +1267,7 @@ public class HBaseFsck extends Configured implements Closeable {
     Collection<HbckInfo> hbckInfos = regionInfoMap.values();
 
     // Parallelized read of .regioninfo files.
-    List<WorkItemHdfsRegionInfo> hbis = new ArrayList<WorkItemHdfsRegionInfo>(hbckInfos.size());
+    List<WorkItemHdfsRegionInfo> hbis = new ArrayList<>(hbckInfos.size());
     List<Future<Void>> hbiFutures;
 
     for (HbckInfo hbi : hbckInfos) {
@@ -1323,7 +1323,7 @@ public class HBaseFsck extends Configured implements Closeable {
             //should only report once for each table
             errors.reportError(ERROR_CODE.NO_TABLEINFO_FILE,
                 "Unable to read .tableinfo from " + hbaseRoot + "/" + tableName);
-            Set<String> columns = new HashSet<String>();
+            Set<String> columns = new HashSet<>();
             orphanTableDirs.put(tableName, getColumnFamilyList(columns, hbi));
           }
         }
@@ -1402,7 +1402,7 @@ public class HBaseFsck extends Configured implements Closeable {
   public void fixOrphanTables() throws IOException {
     if (shouldFixTableOrphans() && !orphanTableDirs.isEmpty()) {
 
-      List<TableName> tmpList = new ArrayList<TableName>(orphanTableDirs.keySet().size());
+      List<TableName> tmpList = new ArrayList<>(orphanTableDirs.keySet().size());
       tmpList.addAll(orphanTableDirs.keySet());
       HTableDescriptor[] htds = getHTableDescriptors(tmpList);
       Iterator<Entry<TableName, Set<String>>> iter =
@@ -1485,7 +1485,7 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private ArrayList<Put> generatePuts(
       SortedMap<TableName, TableInfo> tablesInfo) throws IOException {
-    ArrayList<Put> puts = new ArrayList<Put>();
+    ArrayList<Put> puts = new ArrayList<>();
     boolean hasProblems = false;
     for (Entry<TableName, TableInfo> e : tablesInfo.entrySet()) {
       TableName name = e.getKey();
@@ -1936,7 +1936,7 @@ public class HBaseFsck extends Configured implements Closeable {
   void processRegionServers(Collection<ServerName> regionServerList)
     throws IOException, InterruptedException {
 
-    List<WorkItemRegion> workItems = new ArrayList<WorkItemRegion>(regionServerList.size());
+    List<WorkItemRegion> workItems = new ArrayList<>(regionServerList.size());
     List<Future<Void>> workFutures;
 
     // loop to contact each region server in parallel
@@ -1966,8 +1966,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // Divide the checks in two phases. One for default/primary replicas and another
     // for the non-primary ones. Keeps code cleaner this way.
 
-    List<CheckRegionConsistencyWorkItem> workItems =
-        new ArrayList<CheckRegionConsistencyWorkItem>(regionInfoMap.size());
+    List<CheckRegionConsistencyWorkItem> workItems = new ArrayList<>(regionInfoMap.size());
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
       if (e.getValue().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
         workItems.add(new CheckRegionConsistencyWorkItem(e.getKey(), e.getValue()));
@@ -1979,8 +1978,7 @@ public class HBaseFsck extends Configured implements Closeable {
     setCheckHdfs(false); //replicas don't have any hdfs data
     // Run a pass over the replicas and fix any assignment issues that exist on the currently
     // deployed/undeployed replicas.
-    List<CheckRegionConsistencyWorkItem> replicaWorkItems =
-        new ArrayList<CheckRegionConsistencyWorkItem>(regionInfoMap.size());
+    List<CheckRegionConsistencyWorkItem> replicaWorkItems = new ArrayList<>(regionInfoMap.size());
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
       if (e.getValue().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
         replicaWorkItems.add(new CheckRegionConsistencyWorkItem(e.getKey(), e.getValue()));
@@ -2065,7 +2063,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private void addSkippedRegion(final HbckInfo hbi) {
     Set<String> skippedRegionNames = skippedRegions.get(hbi.getTableName());
     if (skippedRegionNames == null) {
-      skippedRegionNames = new HashSet<String>();
+      skippedRegionNames = new HashSet<>();
     }
     skippedRegionNames.add(hbi.getRegionNameAsString());
     skippedRegions.put(hbi.getTableName(), skippedRegionNames);
@@ -2488,7 +2486,8 @@ public class HBaseFsck extends Configured implements Closeable {
       }
       errors.reportError(ERROR_CODE.LINGERING_SPLIT_PARENT, "Region "
           + descriptiveName + " is a split parent in META, in HDFS, "
-          + "and not deployed on any region server. This could be transient.");
+          + "and not deployed on any region server. This could be transient, "
+          + "consider to run the catalog janitor first!");
       if (shouldFixSplitParents()) {
         setShouldRerun();
         resetSplitParent(hbi);
@@ -2570,7 +2569,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * @throws IOException
    */
   SortedMap<TableName, TableInfo> checkIntegrity() throws IOException {
-    tablesInfo = new TreeMap<TableName,TableInfo> ();
+    tablesInfo = new TreeMap<>();
     LOG.debug("There are " + regionInfoMap.size() + " region info entries");
     for (HbckInfo hbi : regionInfoMap.values()) {
       // Check only valid, working regions
@@ -2753,16 +2752,16 @@ public class HBaseFsck extends Configured implements Closeable {
     TreeSet <ServerName> deployedOn;
 
     // backwards regions
-    final List<HbckInfo> backwards = new ArrayList<HbckInfo>();
+    final List<HbckInfo> backwards = new ArrayList<>();
 
     // sidelined big overlapped regions
-    final Map<Path, HbckInfo> sidelinedRegions = new HashMap<Path, HbckInfo>();
+    final Map<Path, HbckInfo> sidelinedRegions = new HashMap<>();
 
     // region split calculator
-    final RegionSplitCalculator<HbckInfo> sc = new RegionSplitCalculator<HbckInfo>(cmp);
+    final RegionSplitCalculator<HbckInfo> sc = new RegionSplitCalculator<>(cmp);
 
     // Histogram of different HTableDescriptors found.  Ideally there is only one!
-    final Set<HTableDescriptor> htds = new HashSet<HTableDescriptor>();
+    final Set<HTableDescriptor> htds = new HashSet<>();
 
     // key = start split, values = set of splits in problem group
     final Multimap<byte[], HbckInfo> overlapGroups =
@@ -2773,7 +2772,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     TableInfo(TableName name) {
       this.tableName = name;
-      deployedOn = new TreeSet <ServerName>();
+      deployedOn = new TreeSet <>();
     }
 
     /**
@@ -2829,7 +2828,7 @@ public class HBaseFsck extends Configured implements Closeable {
     public synchronized ImmutableList<HRegionInfo> getRegionsFromMeta() {
       // lazy loaded, synchronized to ensure a single load
       if (regionsFromMeta == null) {
-        List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+        List<HRegionInfo> regions = new ArrayList<>();
         for (HbckInfo h : HBaseFsck.this.regionInfoMap.values()) {
           if (tableName.equals(h.getTableName())) {
             if (h.metaEntry != null) {
@@ -2881,6 +2880,18 @@ public class HBaseFsck extends Configured implements Closeable {
             + Bytes.toStringBinary(key), getTableInfo(), r1);
         errors.reportError(ERROR_CODE.DUPE_STARTKEYS,
             "Multiple regions have the same startkey: "
+            + Bytes.toStringBinary(key), getTableInfo(), r2);
+      }
+
+      @Override
+      public void handleSplit(HbckInfo r1, HbckInfo r2) throws IOException{
+        byte[] key = r1.getStartKey();
+        // dup start key
+        errors.reportError(ERROR_CODE.DUPE_ENDKEYS,
+          "Multiple regions have the same regionID: "
+            + Bytes.toStringBinary(key), getTableInfo(), r1);
+        errors.reportError(ERROR_CODE.DUPE_ENDKEYS,
+          "Multiple regions have the same regionID: "
             + Bytes.toStringBinary(key), getTableInfo(), r2);
       }
 
@@ -3018,8 +3029,122 @@ public class HBaseFsck extends Configured implements Closeable {
           }
           return;
         }
-
+        if (shouldRemoveParents()) {
+          removeParentsAndFixSplits(overlap);
+        }
         mergeOverlaps(overlap);
+      }
+
+      void removeParentsAndFixSplits(Collection<HbckInfo> overlap) throws IOException {
+        Pair<byte[], byte[]> range = null;
+        HbckInfo parent = null;
+        HbckInfo daughterA = null;
+        HbckInfo daughterB = null;
+        Collection<HbckInfo> daughters = new ArrayList<HbckInfo>(overlap);
+
+        String thread = Thread.currentThread().getName();
+        LOG.info("== [" + thread + "] Attempting fix splits in overlap state.");
+
+        // we only can handle a single split per group at the time
+        if (overlap.size() > 3) {
+          LOG.info("Too many overlaps were found on this group, falling back to regular merge.");
+          return;
+        }
+
+        for (HbckInfo hi : overlap) {
+          if (range == null) {
+            range = new Pair<byte[], byte[]>(hi.getStartKey(), hi.getEndKey());
+          } else {
+            if (RegionSplitCalculator.BYTES_COMPARATOR
+              .compare(hi.getStartKey(), range.getFirst()) < 0) {
+              range.setFirst(hi.getStartKey());
+            }
+            if (RegionSplitCalculator.BYTES_COMPARATOR
+              .compare(hi.getEndKey(), range.getSecond()) > 0) {
+              range.setSecond(hi.getEndKey());
+            }
+          }
+        }
+
+        LOG.info("This group range is [" + Bytes.toStringBinary(range.getFirst()) + ", "
+          + Bytes.toStringBinary(range.getSecond()) + "]");
+
+        // attempt to find a possible parent for the edge case of a split
+        for (HbckInfo hi : overlap) {
+          if (Bytes.compareTo(hi.getHdfsHRI().getStartKey(), range.getFirst()) == 0
+            && Bytes.compareTo(hi.getHdfsHRI().getEndKey(), range.getSecond()) == 0) {
+            LOG.info("This is a parent for this group: " + hi.toString());
+            parent = hi;
+          }
+        }
+
+        // Remove parent regions from daughters collection
+        if (parent != null) {
+          daughters.remove(parent);
+        }
+
+        // Lets verify that daughters share the regionID at split time and they
+        // were created after the parent
+        for (HbckInfo hi : daughters) {
+          if (Bytes.compareTo(hi.getHdfsHRI().getStartKey(), range.getFirst()) == 0) {
+            if (parent.getHdfsHRI().getRegionId() < hi.getHdfsHRI().getRegionId()) {
+              daughterA = hi;
+            }
+          }
+          if (Bytes.compareTo(hi.getHdfsHRI().getEndKey(), range.getSecond()) == 0) {
+            if (parent.getHdfsHRI().getRegionId() < hi.getHdfsHRI().getRegionId()) {
+              daughterB = hi;
+            }
+          }
+        }
+
+        // daughters must share the same regionID and we should have a parent too
+        if (daughterA.getHdfsHRI().getRegionId() != daughterB.getHdfsHRI().getRegionId() || parent == null)
+          return;
+
+        FileSystem fs = FileSystem.get(conf);
+        LOG.info("Found parent: " + parent.getRegionNameAsString());
+        LOG.info("Found potential daughter a: " + daughterA.getRegionNameAsString());
+        LOG.info("Found potential daughter b: " + daughterB.getRegionNameAsString());
+        LOG.info("Trying to fix parent in overlap by removing the parent.");
+        try {
+          closeRegion(parent);
+        } catch (IOException ioe) {
+          LOG.warn("Parent region could not be closed, continuing with regular merge...", ioe);
+          return;
+        } catch (InterruptedException ie) {
+          LOG.warn("Parent region could not be closed, continuing with regular merge...", ie);
+          return;
+        }
+
+        try {
+          offline(parent.getRegionName());
+        } catch (IOException ioe) {
+          LOG.warn("Unable to offline parent region: " + parent.getRegionNameAsString()
+            + ".  Just continuing with regular merge... ", ioe);
+          return;
+        }
+
+        try {
+          HBaseFsckRepair.removeParentInMeta(conf, parent.getHdfsHRI());
+        } catch (IOException ioe) {
+          LOG.warn("Unable to remove parent region in META: " + parent.getRegionNameAsString()
+            + ".  Just continuing with regular merge... ", ioe);
+          return;
+        }
+
+        sidelineRegionDir(fs, parent);
+        LOG.info("[" + thread + "] Sidelined parent region dir "+ parent.getHdfsRegionDir() + " into " +
+          getSidelineDir());
+        debugLsr(parent.getHdfsRegionDir());
+
+        // Make sure we don't have the parents and daughters around
+        overlap.remove(parent);
+        overlap.remove(daughterA);
+        overlap.remove(daughterB);
+
+        LOG.info("Done fixing split.");
+
       }
 
       void mergeOverlaps(Collection<HbckInfo> overlap)
@@ -3031,7 +3156,7 @@ public class HBaseFsck extends Configured implements Closeable {
         Pair<byte[], byte[]> range = null;
         for (HbckInfo hi : overlap) {
           if (range == null) {
-            range = new Pair<byte[], byte[]>(hi.getStartKey(), hi.getEndKey());
+            range = new Pair<>(hi.getStartKey(), hi.getEndKey());
           } else {
             if (RegionSplitCalculator.BYTES_COMPARATOR
                 .compare(hi.getStartKey(), range.getFirst()) < 0) {
@@ -3200,15 +3325,20 @@ public class HBaseFsck extends Configured implements Closeable {
           overlapGroups.putAll(problemKey, ranges);
 
           // record errors
-          ArrayList<HbckInfo> subRange = new ArrayList<HbckInfo>(ranges);
+          ArrayList<HbckInfo> subRange = new ArrayList<>(ranges);
           //  this dumb and n^2 but this shouldn't happen often
           for (HbckInfo r1 : ranges) {
             if (r1.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) continue;
             subRange.remove(r1);
             for (HbckInfo r2 : subRange) {
               if (r2.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) continue;
+              // general case of same start key
               if (Bytes.compareTo(r1.getStartKey(), r2.getStartKey())==0) {
                 handler.handleDuplicateStartKeys(r1,r2);
+              } else if (Bytes.compareTo(r1.getEndKey(), r2.getStartKey())==0 &&
+                r1.getHdfsHRI().getRegionId() == r2.getHdfsHRI().getRegionId()) {
+                LOG.info("this is a split, log to splits");
+                handler.handleSplit(r1, r2);
               } else {
                 // overlap
                 handler.handleOverlapInRegionChain(r1, r2);
@@ -3275,7 +3405,7 @@ public class HBaseFsck extends Configured implements Closeable {
         throws IOException {
       // we parallelize overlap handler for the case we have lots of groups to fix.  We can
       // safely assume each group is independent.
-      List<WorkItemOverlapMerge> merges = new ArrayList<WorkItemOverlapMerge>(overlapGroups.size());
+      List<WorkItemOverlapMerge> merges = new ArrayList<>(overlapGroups.size());
       List<Future<Void>> rets;
       for (Collection<HbckInfo> overlap : overlapGroups.asMap().values()) {
         //
@@ -3364,7 +3494,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * @throws IOException if an error is encountered
    */
   HTableDescriptor[] getTables(AtomicInteger numSkipped) {
-    List<TableName> tableNames = new ArrayList<TableName>();
+    List<TableName> tableNames = new ArrayList<>();
     long now = EnvironmentEdgeManager.currentTime();
 
     for (HbckInfo hbi : regionInfoMap.values()) {
@@ -3429,7 +3559,7 @@ public class HBaseFsck extends Configured implements Closeable {
     * @throws InterruptedException
     */
   boolean checkMetaRegion() throws IOException, KeeperException, InterruptedException {
-    Map<Integer, HbckInfo> metaRegions = new HashMap<Integer, HbckInfo>();
+    Map<Integer, HbckInfo> metaRegions = new HashMap<>();
     for (HbckInfo value : regionInfoMap.values()) {
       if (value.metaEntry != null && value.metaEntry.isMetaRegion()) {
         metaRegions.put(value.getReplicaId(), value);
@@ -3442,7 +3572,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // Check the deployed servers. It should be exactly one server for each replica.
     for (int i = 0; i < metaReplication; i++) {
       HbckInfo metaHbckInfo = metaRegions.remove(i);
-      List<ServerName> servers = new ArrayList<ServerName>();
+      List<ServerName> servers = new ArrayList<>();
       if (metaHbckInfo != null) {
         servers = metaHbckInfo.deployedOn;
       }
@@ -3949,7 +4079,7 @@ public class HBaseFsck extends Configured implements Closeable {
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
       LINGERING_HFILELINK, WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, BOUNDARIES_ERROR,
-      ORPHAN_TABLE_STATE, NO_TABLE_STATE, UNDELETED_REPLICATION_QUEUE
+      ORPHAN_TABLE_STATE, NO_TABLE_STATE, UNDELETED_REPLICATION_QUEUE, DUPE_ENDKEYS
     }
     void clear();
     void report(String message);
@@ -3979,10 +4109,10 @@ public class HBaseFsck extends Configured implements Closeable {
     // How frequently calls to progress() will create output
     private static final int progressThreshold = 100;
 
-    Set<TableInfo> errorTables = new HashSet<TableInfo>();
+    Set<TableInfo> errorTables = new HashSet<>();
 
     // for use by unit tests to verify which errors were discovered
-    private ArrayList<ERROR_CODE> errorList = new ArrayList<ERROR_CODE>();
+    private ArrayList<ERROR_CODE> errorList = new ArrayList<>();
 
     @Override
     public void clear() {
@@ -4183,11 +4313,11 @@ public class HBaseFsck extends Configured implements Closeable {
 
     @Override
     public synchronized Void call() throws InterruptedException, ExecutionException {
-      final Vector<Exception> exceptions = new Vector<Exception>();
+      final Vector<Exception> exceptions = new Vector<>();
 
       try {
         final FileStatus[] regionDirs = fs.listStatus(tableDir.getPath());
-        final List<Future<?>> futures = new ArrayList<Future<?>>(regionDirs.length);
+        final List<Future<?>> futures = new ArrayList<>(regionDirs.length);
 
         for (final FileStatus regionDir : regionDirs) {
           errors.progress();
@@ -4492,8 +4622,17 @@ public class HBaseFsck extends Configured implements Closeable {
     fixAny |= shouldFix;
   }
 
+  public void setRemoveParents(boolean shouldFix) {
+    removeParents = shouldFix;
+    fixAny |= shouldFix;
+  }
+
   boolean shouldFixSplitParents() {
     return fixSplitParents;
+  }
+
+  boolean shouldRemoveParents() {
+    return removeParents;
   }
 
   public void setFixReferenceFiles(boolean shouldFix) {
@@ -4554,7 +4693,7 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   Set<TableName> getIncludedTables() {
-    return new HashSet<TableName>(tablesIncluded);
+    return new HashSet<>(tablesIncluded);
   }
 
   /**
@@ -4628,6 +4767,7 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("   -sidelineBigOverlaps  When fixing region overlaps, allow to sideline big overlaps");
     out.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
     out.println("   -fixSplitParents  Try to force offline split parents to be online.");
+    out.println("   -removeParents    Try to offline and sideline lingering parents and keep daughter regions.");
     out.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
     out.println("   -fixReferenceFiles  Try to offline lingering reference store files");
     out.println("   -fixHFileLinks  Try to offline lingering HFileLinks");
@@ -4761,6 +4901,8 @@ public class HBaseFsck extends Configured implements Closeable {
         setSidelineBigOverlaps(true);
       } else if (cmd.equals("-fixSplitParents")) {
         setFixSplitParents(true);
+      } else if (cmd.equals("-removeParents")) {
+        setRemoveParents(true);
       } else if (cmd.equals("-ignorePreCheckPermission")) {
         setIgnorePreCheckPermission(true);
       } else if (cmd.equals("-checkCorruptHFiles")) {
@@ -4865,7 +5007,7 @@ public class HBaseFsck extends Configured implements Closeable {
         HFileCorruptionChecker hfcc = createHFileCorruptionChecker(sidelineCorruptHFiles);
         setHFileCorruptionChecker(hfcc); // so we can get result
         Collection<TableName> tables = getIncludedTables();
-        Collection<Path> tableDirs = new ArrayList<Path>();
+        Collection<Path> tableDirs = new ArrayList<>();
         Path rootdir = FSUtils.getRootDir(getConf());
         if (tables.size() > 0) {
           for (TableName t : tables) {

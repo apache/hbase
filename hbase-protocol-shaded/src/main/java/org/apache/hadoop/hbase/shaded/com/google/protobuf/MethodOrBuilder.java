@@ -12,7 +12,7 @@ public interface MethodOrBuilder extends
    * The simple name of this method.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   java.lang.String getName();
   /**
@@ -20,7 +20,7 @@ public interface MethodOrBuilder extends
    * The simple name of this method.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes();
@@ -30,7 +30,7 @@ public interface MethodOrBuilder extends
    * A URL of the input message type.
    * </pre>
    *
-   * <code>optional string request_type_url = 2;</code>
+   * <code>string request_type_url = 2;</code>
    */
   java.lang.String getRequestTypeUrl();
   /**
@@ -38,7 +38,7 @@ public interface MethodOrBuilder extends
    * A URL of the input message type.
    * </pre>
    *
-   * <code>optional string request_type_url = 2;</code>
+   * <code>string request_type_url = 2;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getRequestTypeUrlBytes();
@@ -48,7 +48,7 @@ public interface MethodOrBuilder extends
    * If true, the request is streamed.
    * </pre>
    *
-   * <code>optional bool request_streaming = 3;</code>
+   * <code>bool request_streaming = 3;</code>
    */
   boolean getRequestStreaming();
 
@@ -57,7 +57,7 @@ public interface MethodOrBuilder extends
    * The URL of the output message type.
    * </pre>
    *
-   * <code>optional string response_type_url = 4;</code>
+   * <code>string response_type_url = 4;</code>
    */
   java.lang.String getResponseTypeUrl();
   /**
@@ -65,7 +65,7 @@ public interface MethodOrBuilder extends
    * The URL of the output message type.
    * </pre>
    *
-   * <code>optional string response_type_url = 4;</code>
+   * <code>string response_type_url = 4;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getResponseTypeUrlBytes();
@@ -75,7 +75,7 @@ public interface MethodOrBuilder extends
    * If true, the response is streamed.
    * </pre>
    *
-   * <code>optional bool response_streaming = 5;</code>
+   * <code>bool response_streaming = 5;</code>
    */
   boolean getResponseStreaming();
 
@@ -128,7 +128,7 @@ public interface MethodOrBuilder extends
    * The source syntax of this method.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+   * <code>.google.protobuf.Syntax syntax = 7;</code>
    */
   int getSyntaxValue();
   /**
@@ -136,7 +136,7 @@ public interface MethodOrBuilder extends
    * The source syntax of this method.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+   * <code>.google.protobuf.Syntax syntax = 7;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax getSyntax();
 }

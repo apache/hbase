@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,6 +37,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -115,7 +119,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     if (wal == null) {
       return Collections.emptyList();
     }
-    List<WAL> wals = new ArrayList<WAL>(1);
+    List<WAL> wals = new ArrayList<>(1);
     wals.add(wal);
     return wals;
   }
@@ -346,7 +350,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
     try {
       serverName = ServerName.parseServerName(logDirName);
-    } catch (IllegalArgumentException ex) {
+    } catch (IllegalArgumentException|IllegalStateException ex) {
       serverName = null;
       LOG.warn("Cannot parse a server name from path=" + logFile + "; " + ex.getMessage());
     }
@@ -367,6 +371,108 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
     return false;
   }
+
+  public static boolean isArchivedLogFile(Path p) {
+    String oldLog = Path.SEPARATOR + HConstants.HREGION_OLDLOGDIR_NAME + Path.SEPARATOR;
+    return p.toString().contains(oldLog);
+  }
+
+  /**
+   * Get the archived WAL file path
+   * @param path - active WAL file path
+   * @param conf - configuration
+   * @return archived path if exists, path - otherwise
+   * @throws IOException exception
+   */
+  public static Path getArchivedLogPath(Path path, Configuration conf) throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    Path archivedLogLocation = new Path(oldLogDir, path.getName());
+    final FileSystem fs = FSUtils.getCurrentFileSystem(conf);
+
+    if (fs.exists(archivedLogLocation)) {
+      LOG.info("Log " + path + " was moved to " + archivedLogLocation);
+      return archivedLogLocation;
+    } else {
+      LOG.error("Couldn't locate log: " + path);
+      return path;
+    }
+  }
+
+  /**
+   * Opens WAL reader with retries and
+   * additional exception handling
+   * @param path path to WAL file
+   * @param conf configuration
+   * @return WAL Reader instance
+   * @throws IOException
+   */
+  public static org.apache.hadoop.hbase.wal.WAL.Reader
+    openReader(Path path, Configuration conf)
+        throws IOException
+
+  {
+    long retryInterval = 2000; // 2 sec
+    int maxAttempts = 30;
+    int attempt = 0;
+    Exception ee = null;
+    org.apache.hadoop.hbase.wal.WAL.Reader reader = null;
+    while (reader == null && attempt++ < maxAttempts) {
+      try {
+        // Detect if this is a new file, if so get a new reader else
+        // reset the current reader so that we see the new data
+        reader = WALFactory.createReader(path.getFileSystem(conf), path, conf);
+        return reader;
+      } catch (FileNotFoundException fnfe) {
+        // If the log was archived, continue reading from there
+        Path archivedLog = AbstractFSWALProvider.getArchivedLogPath(path, conf);
+        if (path != archivedLog) {
+          return openReader(archivedLog, conf);
+        } else {
+          throw fnfe;
+        }
+      } catch (LeaseNotRecoveredException lnre) {
+        // HBASE-15019 the WAL was not closed due to some hiccup.
+        LOG.warn("Try to recover the WAL lease " + path, lnre);
+        recoverLease(conf, path);
+        reader = null;
+        ee = lnre;
+      } catch (NullPointerException npe) {
+        // Workaround for race condition in HDFS-4380
+        // which throws a NPE if we open a file before any data node has the most recent block
+        // Just sleep and retry. Will require re-reading compressed WALs for compressionContext.
+        LOG.warn("Got NPE opening reader, will retry.");
+        reader = null;
+        ee = npe;
+      }
+      if (reader == null) {
+        // sleep before next attempt
+        try {
+          Thread.sleep(retryInterval);
+        } catch (InterruptedException e) {
+        }
+      }
+    }
+    throw new IOException("Could not open reader", ee);
+  }
+
+  // For HBASE-15019
+  private static void recoverLease(final Configuration conf, final Path path) {
+    try {
+      final FileSystem dfs = FSUtils.getCurrentFileSystem(conf);
+      FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
+      fsUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
+        @Override
+        public boolean progress() {
+          LOG.debug("Still trying to recover WAL lease: " + path);
+          return true;
+        }
+      });
+    } catch (IOException e) {
+      LOG.warn("unable to recover lease for WAL: " + path, e);
+    }
+  }
+
 
   /**
    * Get prefix of the log from its name, assuming WAL name in format of

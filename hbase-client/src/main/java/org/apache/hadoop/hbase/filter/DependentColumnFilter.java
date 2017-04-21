@@ -28,7 +28,6 @@ import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
@@ -47,14 +46,13 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
  * full rows for correct filtering 
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class DependentColumnFilter extends CompareFilter {
 
   protected byte[] columnFamily;
   protected byte[] columnQualifier;
   protected boolean dropDependentColumn;
 
-  protected Set<Long> stampSet = new HashSet<Long>();
+  protected Set<Long> stampSet = new HashSet<>();
   
   /**
    * Build a dependent column filter with value checking

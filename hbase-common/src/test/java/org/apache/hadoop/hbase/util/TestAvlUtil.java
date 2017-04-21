@@ -48,7 +48,7 @@ public class TestAvlUtil {
     final int MAX_KEY = 99999999;
     final int NELEM = 10000;
 
-    final TreeMap<Integer, Object> treeMap = new TreeMap<Integer, Object>();
+    final TreeMap<Integer, Object> treeMap = new TreeMap<>();
     TestAvlNode root = null;
 
     final Random rand = new Random();
@@ -117,7 +117,7 @@ public class TestAvlUtil {
       root = AvlTree.insert(root, new TestAvlNode(i));
     }
 
-    AvlTreeIterator<TestAvlNode> iter = new AvlTreeIterator<TestAvlNode>(root);
+    AvlTreeIterator<TestAvlNode> iter = new AvlTreeIterator<>(root);
     assertTrue(iter.hasNext());
     long prevKey = 0;
     while (iter.hasNext()) {
@@ -139,7 +139,7 @@ public class TestAvlUtil {
     }
 
     for (int i = MIN_KEY - 1; i < MAX_KEY + 1; ++i) {
-      AvlTreeIterator<TestAvlNode> iter = new AvlTreeIterator<TestAvlNode>(root, i, KEY_COMPARATOR);
+      AvlTreeIterator<TestAvlNode> iter = new AvlTreeIterator<>(root, i, KEY_COMPARATOR);
       if (i < MAX_KEY) {
         assertTrue(iter.hasNext());
       } else {

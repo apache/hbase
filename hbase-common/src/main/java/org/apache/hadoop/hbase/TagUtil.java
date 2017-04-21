@@ -72,7 +72,7 @@ public final class TagUtil {
    * @return List of tags
    */
   public static List<Tag> asList(byte[] b, int offset, int length) {
-    List<Tag> tags = new ArrayList<Tag>();
+    List<Tag> tags = new ArrayList<>();
     int pos = offset;
     while (pos < offset + length) {
       int tagLen = Bytes.readAsInt(b, pos, TAG_LENGTH_SIZE);
@@ -91,7 +91,7 @@ public final class TagUtil {
    * @return List of tags
    */
   public static List<Tag> asList(ByteBuffer b, int offset, int length) {
-    List<Tag> tags = new ArrayList<Tag>();
+    List<Tag> tags = new ArrayList<>();
     int pos = offset;
     while (pos < offset + length) {
       int tagLen = ByteBufferUtils.readAsInt(b, pos, TAG_LENGTH_SIZE);
@@ -239,7 +239,7 @@ public final class TagUtil {
     }
     List<Tag> tags = tagsOrNull;
     if (tags == null) {
-      tags = new ArrayList<Tag>();
+      tags = new ArrayList<>();
     }
     while (itr.hasNext()) {
       tags.add(itr.next());
@@ -276,7 +276,7 @@ public final class TagUtil {
     // in the array so set its size to '1' (I saw this being done in earlier version of
     // tag-handling).
     if (tags == null) {
-      tags = new ArrayList<Tag>(1);
+      tags = new ArrayList<>(1);
     }
     tags.add(new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
     return tags;

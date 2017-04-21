@@ -31,6 +31,7 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
+import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -107,6 +109,9 @@ public class BucketCache implements BlockCache, HeapSize {
   private static final float DEFAULT_ACCEPT_FACTOR = 0.95f;
   private static final float DEFAULT_MIN_FACTOR = 0.85f;
 
+  // Number of blocks to clear for each of the bucket size that is full
+  private static final int DEFAULT_FREE_ENTIRE_BLOCK_FACTOR = 2;
+
   /** Statistics thread */
   private static final int statThreadPeriod = 5 * 60;
 
@@ -138,8 +143,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * to the BucketCache.  It then updates the ramCache and backingMap accordingly.
    */
   @VisibleForTesting
-  final ArrayList<BlockingQueue<RAMQueueEntry>> writerQueues =
-      new ArrayList<BlockingQueue<RAMQueueEntry>>();
+  final ArrayList<BlockingQueue<RAMQueueEntry>> writerQueues = new ArrayList<>();
   @VisibleForTesting
   final WriterThread[] writerThreads;
 
@@ -147,7 +151,7 @@ public class BucketCache implements BlockCache, HeapSize {
   private volatile boolean freeInProgress = false;
   private final Lock freeSpaceLock = new ReentrantLock();
 
-  private UniqueIndexMap<Integer> deserialiserMap = new UniqueIndexMap<Integer>();
+  private UniqueIndexMap<Integer> deserialiserMap = new UniqueIndexMap<>();
 
   private final AtomicLong realCacheSize = new AtomicLong(0);
   private final AtomicLong heapSize = new AtomicLong(0);
@@ -182,12 +186,14 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * A ReentrantReadWriteLock to lock on a particular block identified by offset.
    * The purpose of this is to avoid freeing the block which is being read.
+   * <p>
+   * Key set of offsets in BucketCache is limited so soft reference is the best choice here.
    */
   @VisibleForTesting
-  final IdReadWriteLock offsetLock = new IdReadWriteLock();
+  final IdReadWriteLock offsetLock = new IdReadWriteLock(ReferenceType.SOFT);
 
   private final NavigableSet<BlockCacheKey> blocksByHFile =
-      new ConcurrentSkipListSet<BlockCacheKey>(new Comparator<BlockCacheKey>() {
+      new ConcurrentSkipListSet<>(new Comparator<BlockCacheKey>() {
         @Override
         public int compare(BlockCacheKey a, BlockCacheKey b) {
           int nameComparison = a.getHfileName().compareTo(b.getHfileName());
@@ -236,13 +242,13 @@ public class BucketCache implements BlockCache, HeapSize {
 
     bucketAllocator = new BucketAllocator(capacity, bucketSizes);
     for (int i = 0; i < writerThreads.length; ++i) {
-      writerQueues.add(new ArrayBlockingQueue<RAMQueueEntry>(writerQLen));
+      writerQueues.add(new ArrayBlockingQueue<>(writerQLen));
     }
 
     assert writerQueues.size() == writerThreads.length;
-    this.ramCache = new ConcurrentHashMap<BlockCacheKey, RAMQueueEntry>();
+    this.ramCache = new ConcurrentHashMap<>();
 
-    this.backingMap = new ConcurrentHashMap<BlockCacheKey, BucketEntry>((int) blockNumCapacity);
+    this.backingMap = new ConcurrentHashMap<>((int) blockNumCapacity);
 
     if (ioEngine.isPersistent() && persistencePath != null) {
       try {
@@ -308,8 +314,13 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private IOEngine getIOEngineFromName(String ioEngineName, long capacity)
       throws IOException {
-    if (ioEngineName.startsWith("file:")) {
-      return new FileIOEngine(ioEngineName.substring(5), capacity);
+    if (ioEngineName.startsWith("file:") || ioEngineName.startsWith("files:")) {
+      // In order to make the usage simple, we only need the prefix 'files:' in
+      // document whether one or multiple file(s), but also support 'file:' for
+      // the compatibility
+      String[] filePaths = ioEngineName.substring(ioEngineName.indexOf(":") + 1)
+          .split(FileIOEngine.FILE_DELIMITER);
+      return new FileIOEngine(capacity, filePaths);
     } else if (ioEngineName.startsWith("offheap")) {
       return new ByteBufferIOEngine(capacity, true);
     } else if (ioEngineName.startsWith("heap")) {
@@ -630,6 +641,53 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
+   * Return the count of bucketSizeinfos still needf ree space
+   */
+  private int bucketSizesAboveThresholdCount(float minFactor) {
+    BucketAllocator.IndexStatistics[] stats = bucketAllocator.getIndexStatistics();
+    int fullCount = 0;
+    for (int i = 0; i < stats.length; i++) {
+      long freeGoal = (long) Math.floor(stats[i].totalCount() * (1 - minFactor));
+      freeGoal = Math.max(freeGoal, 1);
+      if (stats[i].freeCount() < freeGoal) {
+        fullCount++;
+      }
+    }
+    return fullCount;
+  }
+
+  /**
+   * This method will find the buckets that are minimally occupied
+   * and are not reference counted and will free them completely
+   * without any constraint on the access times of the elements,
+   * and as a process will completely free at most the number of buckets
+   * passed, sometimes it might not due to changing refCounts
+   *
+   * @param completelyFreeBucketsNeeded number of buckets to free
+   **/
+  private void freeEntireBuckets(int completelyFreeBucketsNeeded) {
+    if (completelyFreeBucketsNeeded != 0) {
+      // First we will build a set where the offsets are reference counted, usually
+      // this set is small around O(Handler Count) unless something else is wrong
+      Set<Integer> inUseBuckets = new HashSet<Integer>();
+      for (BucketEntry entry : backingMap.values()) {
+        if (entry.refCount.get() != 0) {
+          inUseBuckets.add(bucketAllocator.getBucketIndex(entry.offset()));
+        }
+      }
+
+      Set<Integer> candidateBuckets = bucketAllocator.getLeastFilledBuckets(
+          inUseBuckets, completelyFreeBucketsNeeded);
+      for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
+        if (candidateBuckets.contains(bucketAllocator
+            .getBucketIndex(entry.getValue().offset()))) {
+          evictBlock(entry.getKey(), false);
+        }
+      }
+    }
+  }
+
+  /**
    * Free the space if the used size reaches acceptableSize() or one size block
    * couldn't be allocated. When freeing the space, we use the LRU algorithm and
    * ensure there must be some blocks evicted
@@ -705,7 +763,7 @@ public class BucketCache implements BlockCache, HeapSize {
         }
       }
 
-      PriorityQueue<BucketEntryGroup> bucketQueue = new PriorityQueue<BucketEntryGroup>(3);
+      PriorityQueue<BucketEntryGroup> bucketQueue = new PriorityQueue<>(3);
 
       bucketQueue.add(bucketSingle);
       bucketQueue.add(bucketMulti);
@@ -725,27 +783,14 @@ public class BucketCache implements BlockCache, HeapSize {
         remainingBuckets--;
       }
 
-      /**
-       * Check whether need extra free because some bucketSizeinfo still needs
-       * free space
-       */
-      stats = bucketAllocator.getIndexStatistics();
-      boolean needFreeForExtra = false;
-      for (int i = 0; i < stats.length; i++) {
-        long freeGoal = (long) Math.floor(stats[i].totalCount() * (1 - DEFAULT_MIN_FACTOR));
-        freeGoal = Math.max(freeGoal, 1);
-        if (stats[i].freeCount() < freeGoal) {
-          needFreeForExtra = true;
-          break;
-        }
-      }
-
-      if (needFreeForExtra) {
+      // Check and free if there are buckets that still need freeing of space
+      if (bucketSizesAboveThresholdCount(DEFAULT_MIN_FACTOR) > 0) {
         bucketQueue.clear();
-        remainingBuckets = 2;
+        remainingBuckets = 3;
 
         bucketQueue.add(bucketSingle);
         bucketQueue.add(bucketMulti);
+        bucketQueue.add(bucketMemory);
 
         while ((bucketGroup = bucketQueue.poll()) != null) {
           long bucketBytesToFree = (bytesToFreeWithExtra - bytesFreed) / remainingBuckets;
@@ -753,6 +798,14 @@ public class BucketCache implements BlockCache, HeapSize {
           remainingBuckets--;
         }
       }
+
+      // Even after the above free we might still need freeing because of the
+      // De-fragmentation of the buckets (also called Slab Calcification problem), i.e
+      // there might be some buckets where the occupancy is very sparse and thus are not
+      // yielding the free for the other bucket sizes, the fix for this to evict some
+      // of the buckets, we do this by evicting the buckets that are least fulled
+      freeEntireBuckets(DEFAULT_FREE_ENTIRE_BLOCK_FACTOR *
+          bucketSizesAboveThresholdCount(1.0f));
 
       if (LOG.isDebugEnabled()) {
         long single = bucketSingle.totalSize();
@@ -795,7 +848,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     public void run() {
-      List<RAMQueueEntry> entries = new ArrayList<RAMQueueEntry>();
+      List<RAMQueueEntry> entries = new ArrayList<>();
       try {
         while (cacheEnabled && writerEnabled) {
           try {

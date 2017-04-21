@@ -30,7 +30,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
@@ -113,7 +114,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(StochasticLoadBalancer.class);
 
-  Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<String, Deque<BalancerRegionLoad>>();
+  Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
   // values are defaults
   private int maxSteps = 1000000;
@@ -156,23 +157,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @Override
   public synchronized void setConf(Configuration conf) {
     super.setConf(conf);
-    LOG.info("loading config");
-
     maxSteps = conf.getInt(MAX_STEPS_KEY, maxSteps);
-
     stepsPerRegion = conf.getInt(STEPS_PER_REGION_KEY, stepsPerRegion);
     maxRunningTime = conf.getLong(MAX_RUNNING_TIME_KEY, maxRunningTime);
-
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
     isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
-
     minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, minCostNeedBalance);
-
     if (localityCandidateGenerator == null) {
       localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
     }
     localityCost = new LocalityCostFunction(conf, services);
-
     if (candidateGenerators == null) {
       candidateGenerators = new CandidateGenerator[] {
           new RandomCandidateGenerator(),
@@ -181,17 +175,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           new RegionReplicaRackCandidateGenerator(),
       };
     }
-
     regionLoadFunctions = new CostFromRegionLoadFunction[] {
       new ReadRequestCostFunction(conf),
       new WriteRequestCostFunction(conf),
       new MemstoreSizeCostFunction(conf),
       new StoreFileCostFunction(conf)
     };
-
     regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
     regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
-
     costFunctions = new CostFunction[]{
       new RegionCountSkewCostFunction(conf),
       new PrimaryRegionCountSkewCostFunction(conf),
@@ -205,10 +196,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       regionLoadFunctions[2],
       regionLoadFunctions[3],
     };
-
     curFunctionCosts= new Double[costFunctions.length];
     tempFunctionCosts= new Double[costFunctions.length];
-
+    LOG.info("Loaded config; maxSteps=" + maxSteps + ", stepsPerRegion=" + stepsPerRegion +
+        ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable + ", etc.");
   }
 
   @Override
@@ -324,7 +315,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (clusterState.size() <= 2) {
         return null;
       }
-      clusterState = new HashMap<ServerName, List<HRegionInfo>>(clusterState);
+      clusterState = new HashMap<>(clusterState);
       clusterState.remove(masterServerName);
     }
 
@@ -474,7 +465,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @return List of RegionPlan's that represent the moves needed to get to desired final state.
    */
   private List<RegionPlan> createRegionPlans(Cluster cluster) {
-    List<RegionPlan> plans = new LinkedList<RegionPlan>();
+    List<RegionPlan> plans = new LinkedList<>();
     for (int regionIndex = 0;
          regionIndex < cluster.regionIndexToServerIndex.length; regionIndex++) {
       int initialServerIndex = cluster.initialRegionIndexToServerIndex[regionIndex];
@@ -503,7 +494,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // We create a new hashmap so that regions that are no longer there are removed.
     // However we temporarily need the old loads so we can use them to keep the rolling average.
     Map<String, Deque<BalancerRegionLoad>> oldLoads = loads;
-    loads = new HashMap<String, Deque<BalancerRegionLoad>>();
+    loads = new HashMap<>();
 
     for (ServerName sn : clusterStatus.getServers()) {
       ServerLoad sl = clusterStatus.getLoad(sn);
@@ -514,7 +505,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         Deque<BalancerRegionLoad> rLoads = oldLoads.get(Bytes.toString(entry.getKey()));
         if (rLoads == null) {
           // There was nothing there
-          rLoads = new ArrayDeque<BalancerRegionLoad>();
+          rLoads = new ArrayDeque<>();
         } else if (rLoads.size() >= numRegionLoadsToRemember) {
           rLoads.remove();
         }
@@ -980,8 +971,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     abstract double cost();
 
     /**
-     * Function to compute a scaled cost using {@link DescriptiveStatistics}. It
-     * assumes that this is a zero sum set of costs.  It assumes that the worst case
+     * Function to compute a scaled cost using {@link org.apache.commons.math3.stat.descriptive.DescriptiveStatistics}.
+     * It assumes that this is a zero sum set of costs.  It assumes that the worst case
      * possible is all of the elements in one region server and the rest having 0.
      *
      * @param stats the costs

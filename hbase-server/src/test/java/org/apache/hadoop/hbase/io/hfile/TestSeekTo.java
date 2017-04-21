@@ -55,7 +55,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 /**
- * Test {@link HFileScanner#seekTo(byte[])} and its variants.
+ * Test {@link HFileScanner#seekTo(Cell)} and its variants.
  */
 @Category({IOTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
@@ -65,7 +65,7 @@ public class TestSeekTo {
   private final DataBlockEncoding encoding;
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<Object[]>();
+    List<Object[]> paramList = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       paramList.add(new Object[] { encoding });
     }
@@ -147,7 +147,7 @@ public class TestSeekTo {
     Path p = makeNewFile(tagUsage);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
-    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertFalse(scanner.seekBefore(toKV("a", tagUsage)));
@@ -206,7 +206,7 @@ public class TestSeekTo {
     Path p = makeNewFile(tagUsage);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
-    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertFalse(scanner.seekBefore(toKV("a", tagUsage)));
@@ -300,7 +300,7 @@ public class TestSeekTo {
     Path p = makeNewFile(tagUsage);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
-    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
     reader.loadFileInfo();
     assertEquals(2, reader.getDataBlockIndexReader().getRootBlockCount());
     HFileScanner scanner = reader.getScanner(false, true);
@@ -338,7 +338,7 @@ public class TestSeekTo {
     Path p = makeNewFile(tagUsage);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
-    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
     reader.loadFileInfo();
     HFileBlockIndex.BlockIndexReader blockIndexReader =
       reader.getDataBlockIndexReader();

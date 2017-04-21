@@ -438,7 +438,7 @@ public abstract class TestVisibilityLabels {
       scan.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
       ResultScanner scanner = ht.getScanner(scan);
       Result result = null;
-      List<Result> results = new ArrayList<Result>();
+      List<Result> results = new ArrayList<>();
       while ((result = scanner.next()) != null) {
         results.add(result);
       }
@@ -456,7 +456,7 @@ public abstract class TestVisibilityLabels {
         } catch (Throwable e) {
           fail("Should not have failed");
         }
-        List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
+        List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
           authsList.add(Bytes.toString(authBS.toByteArray()));
         }
@@ -482,7 +482,7 @@ public abstract class TestVisibilityLabels {
           }
         } catch (Throwable e) {
         }
-        List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
+        List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
           authsList.add(Bytes.toString(authBS.toByteArray()));
         }
@@ -496,7 +496,7 @@ public abstract class TestVisibilityLabels {
   }
 
   protected List<String> extractAuths(String user, List<Result> results) {
-    List<String> auths = new ArrayList<String>();
+    List<String> auths = new ArrayList<>();
     for (Result result : results) {
       Cell labelCell = result.getColumnLatestCell(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
       Cell userAuthCell = result.getColumnLatestCell(LABELS_TABLE_FAMILY, user.getBytes());
@@ -542,7 +542,7 @@ public abstract class TestVisibilityLabels {
              Table ht = connection.getTable(LABELS_TABLE_NAME)) {
           ResultScanner scanner = ht.getScanner(new Scan());
           Result result = null;
-          List<Result> results = new ArrayList<Result>();
+          List<Result> results = new ArrayList<>();
           while ((result = scanner.next()) != null) {
             results.add(result);
           }
@@ -557,7 +557,7 @@ public abstract class TestVisibilityLabels {
         } catch (Throwable e) {
           fail("Should not have failed");
         }
-        List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
+        List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
           authsList.add(Bytes.toString(authBS.toByteArray()));
         }
@@ -853,7 +853,7 @@ public abstract class TestVisibilityLabels {
 
   static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
       throws Exception {
-    List<Put> puts = new ArrayList<Put>(labelExps.length);
+    List<Put> puts = new ArrayList<>(labelExps.length);
     for (int i = 0; i < labelExps.length; i++) {
       Put put = new Put(Bytes.toBytes("row" + (i+1)));
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);

@@ -167,7 +167,7 @@ public class QuotaUtil extends QuotaTableUtil {
     long nowTs = EnvironmentEdgeManager.currentTime();
     Result[] results = doGet(connection, gets);
 
-    Map<String, UserQuotaState> userQuotas = new HashMap<String, UserQuotaState>(results.length);
+    Map<String, UserQuotaState> userQuotas = new HashMap<>(results.length);
     for (int i = 0; i < results.length; ++i) {
       byte[] key = gets.get(i).getRow();
       assert isUserRowKey(key);
@@ -232,7 +232,7 @@ public class QuotaUtil extends QuotaTableUtil {
     long nowTs = EnvironmentEdgeManager.currentTime();
     Result[] results = doGet(connection, gets);
 
-    Map<K, QuotaState> globalQuotas = new HashMap<K, QuotaState>(results.length);
+    Map<K, QuotaState> globalQuotas = new HashMap<>(results.length);
     for (int i = 0; i < results.length; ++i) {
       byte[] row = gets.get(i).getRow();
       K key = kfr.getKeyFromRow(row);

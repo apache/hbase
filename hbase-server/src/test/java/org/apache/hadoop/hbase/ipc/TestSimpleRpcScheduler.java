@@ -216,7 +216,7 @@ public class TestSimpleRpcScheduler {/*
       when(priority.getDeadline(eq(largeHead), any(Message.class))).thenReturn(50L);
       when(priority.getDeadline(eq(hugeHead), any(Message.class))).thenReturn(100L);
 
-      final ArrayList<Integer> work = new ArrayList<Integer>();
+      final ArrayList<Integer> work = new ArrayList<>();
       doAnswerTaskExecution(smallCallTask, work, 10, 250);
       doAnswerTaskExecution(largeCallTask, work, 50, 250);
       doAnswerTaskExecution(hugeCallTask, work, 100, 250);
@@ -312,7 +312,7 @@ public class TestSimpleRpcScheduler {/*
       when(scanCall.getHeader()).thenReturn(scanHead);
       when(scanCall.getParam()).thenReturn(scanCall.param);
 
-      ArrayList<Integer> work = new ArrayList<Integer>();
+      ArrayList<Integer> work = new ArrayList<>();
       doAnswerTaskExecution(putCallTask, work, 1, 1000);
       doAnswerTaskExecution(getCallTask, work, 2, 1000);
       doAnswerTaskExecution(scanCallTask, work, 3, 1000);
@@ -434,8 +434,7 @@ public class TestSimpleRpcScheduler {/*
   @Test
   public void testCoDelScheduling() throws Exception {
     CoDelEnvironmentEdge envEdge = new CoDelEnvironmentEdge();
-    envEdge.threadNamePrefixs.add("RpcServer.CodelFPBQ.default.handler");
-    envEdge.threadNamePrefixs.add("RpcServer.CodelRWQ.default.handler");
+    envEdge.threadNamePrefixs.add("RpcServer.default.FPBQ.Codel.handler");
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 250);
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
@@ -457,7 +456,6 @@ public class TestSimpleRpcScheduler {/*
       for (int i = 0; i < 100; i++) {
         long time = System.currentTimeMillis();
         envEdge.timeQ.put(time);
-        long now = System.currentTimeMillis();
         CallRunner cr = getMockedCallRunner(time, 2);
         // LOG.info("" + i + " " + (System.currentTimeMillis() - now) + " cr=" + cr);
         scheduler.dispatch(cr);

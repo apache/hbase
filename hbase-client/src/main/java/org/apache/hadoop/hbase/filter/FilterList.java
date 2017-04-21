@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
@@ -52,11 +51,9 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * Defaults to {@link Operator#MUST_PASS_ALL}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 final public class FilterList extends FilterBase {
   /** set operator */
   @InterfaceAudience.Public
-  @InterfaceStability.Stable
   public static enum Operator {
     /** !AND */
     MUST_PASS_ALL,
@@ -453,7 +450,7 @@ final public class FilterList extends FilterBase {
       throw new DeserializationException(e);
     }
 
-    List<Filter> rowFilters = new ArrayList<Filter>(proto.getFiltersCount());
+    List<Filter> rowFilters = new ArrayList<>(proto.getFiltersCount());
     try {
       List<FilterProtos.Filter> filtersList = proto.getFiltersList();
       int listSize = filtersList.size();

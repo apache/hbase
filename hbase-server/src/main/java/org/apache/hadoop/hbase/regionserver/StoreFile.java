@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,7 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * and append data. Be sure to add any metadata before calling close on the
  * Writer (Use the appendMetadata convenience methods). On close, a StoreFile
  * is sitting in the Filesystem.  To refer to it, create a StoreFile instance
- * passing filesystem and path.  To read, call {@link #createReader()}.
+ * passing filesystem and path.  To read, call {@link #initReader()}
  * <p>StoreFiles may also reference store files in another Store.
  *
  * The reason for this weird pattern where you use a different instance for the
@@ -63,6 +64,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.LimitedPrivate("Coprocessor")
 public class StoreFile {
   private static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
+
+  public static final String STORE_FILE_READER_NO_READAHEAD = "hbase.store.reader.no-readahead";
+
+  private static final boolean DEFAULT_STORE_FILE_READER_NO_READAHEAD = false;
 
   // Keys for fileinfo values in HFile
 
@@ -103,6 +108,18 @@ public class StoreFile {
   // Block cache configuration and reference.
   private final CacheConfig cacheConf;
 
+  // Counter that is incremented every time a scanner is created on the
+  // store file. It is decremented when the scan on the store file is
+  // done.
+  private final AtomicInteger refCount = new AtomicInteger(0);
+
+  private final boolean noReadahead;
+
+  private final boolean primaryReplica;
+
+  // Indicates if the file got compacted
+  private volatile boolean compactedAway = false;
+
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
   private long sequenceid = -1;
@@ -116,7 +133,7 @@ public class StoreFile {
 
   private Cell lastKey;
 
-  private Comparator comparator;
+  private Comparator<Cell> comparator;
 
   CacheConfig getCacheConf() {
     return cacheConf;
@@ -130,7 +147,7 @@ public class StoreFile {
     return lastKey;
   }
 
-  public Comparator getComparator() {
+  public Comparator<Cell> getComparator() {
     return comparator;
   }
 
@@ -179,72 +196,96 @@ public class StoreFile {
   public static final byte[] SKIP_RESET_SEQ_ID = Bytes.toBytes("SKIP_RESET_SEQ_ID");
 
   /**
-   * Constructor, loads a reader and it's indices, etc. May allocate a
-   * substantial amount of ram depending on the underlying files (10-20MB?).
-   *
-   * @param fs  The current file system to use.
-   * @param p  The path of the file.
-   * @param conf  The current configuration.
-   * @param cacheConf  The cache configuration and block cache reference.
-   * @param cfBloomType The bloom type to use for this store file as specified
-   *          by column family configuration. This may or may not be the same
-   *          as the Bloom filter type actually present in the HFile, because
-   *          column family configuration might change. If this is
+   * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
+   * depending on the underlying files (10-20MB?).
+   * @param fs The current file system to use.
+   * @param p The path of the file.
+   * @param conf The current configuration.
+   * @param cacheConf The cache configuration and block cache reference.
+   * @param cfBloomType The bloom type to use for this store file as specified by column family
+   *          configuration. This may or may not be the same as the Bloom filter type actually
+   *          present in the HFile, because column family configuration might change. If this is
    *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
-   * @throws IOException When opening the reader fails.
+   * @deprecated Now we will specific whether the StoreFile is for primary replica when
+   *             constructing, so please use
+   *             {@link #StoreFile(FileSystem, Path, Configuration, CacheConfig, BloomType, boolean)}
+   *             directly.
    */
+  @Deprecated
   public StoreFile(final FileSystem fs, final Path p, final Configuration conf,
-        final CacheConfig cacheConf, final BloomType cfBloomType) throws IOException {
+      final CacheConfig cacheConf, final BloomType cfBloomType) throws IOException {
     this(fs, new StoreFileInfo(conf, fs, p), conf, cacheConf, cfBloomType);
   }
 
   /**
-   * Constructor, loads a reader and it's indices, etc. May allocate a
-   * substantial amount of ram depending on the underlying files (10-20MB?).
-   *
-   * @param fs  The current file system to use.
-   * @param fileInfo  The store file information.
-   * @param conf  The current configuration.
-   * @param cacheConf  The cache configuration and block cache reference.
-   * @param cfBloomType The bloom type to use for this store file as specified
-   *          by column family configuration. This may or may not be the same
-   *          as the Bloom filter type actually present in the HFile, because
-   *          column family configuration might change. If this is
+   * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
+   * depending on the underlying files (10-20MB?).
+   * @param fs The current file system to use.
+   * @param p The path of the file.
+   * @param conf The current configuration.
+   * @param cacheConf The cache configuration and block cache reference.
+   * @param cfBloomType The bloom type to use for this store file as specified by column family
+   *          configuration. This may or may not be the same as the Bloom filter type actually
+   *          present in the HFile, because column family configuration might change. If this is
    *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
-   * @throws IOException When opening the reader fails.
+   * @param primaryReplica true if this is a store file for primary replica, otherwise false.
+   * @throws IOException
    */
+  public StoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
+      BloomType cfBloomType, boolean primaryReplica) throws IOException {
+    this(fs, new StoreFileInfo(conf, fs, p), conf, cacheConf, cfBloomType, primaryReplica);
+  }
+
+  /**
+   * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
+   * depending on the underlying files (10-20MB?).
+   * @param fs The current file system to use.
+   * @param fileInfo The store file information.
+   * @param conf The current configuration.
+   * @param cacheConf The cache configuration and block cache reference.
+   * @param cfBloomType The bloom type to use for this store file as specified by column family
+   *          configuration. This may or may not be the same as the Bloom filter type actually
+   *          present in the HFile, because column family configuration might change. If this is
+   *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
+   * @deprecated Now we will specific whether the StoreFile is for primary replica when
+   *             constructing, so please use
+   *             {@link #StoreFile(FileSystem, StoreFileInfo, Configuration, CacheConfig, BloomType, boolean)}
+   *             directly.
+   */
+  @Deprecated
   public StoreFile(final FileSystem fs, final StoreFileInfo fileInfo, final Configuration conf,
-      final CacheConfig cacheConf,  final BloomType cfBloomType) throws IOException {
+      final CacheConfig cacheConf, final BloomType cfBloomType) throws IOException {
+    this(fs, fileInfo, conf, cacheConf, cfBloomType, true);
+  }
+
+  /**
+   * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
+   * depending on the underlying files (10-20MB?).
+   * @param fs fs The current file system to use.
+   * @param fileInfo The store file information.
+   * @param conf The current configuration.
+   * @param cacheConf The cache configuration and block cache reference.
+   * @param cfBloomType cfBloomType The bloom type to use for this store file as specified by column
+   *          family configuration. This may or may not be the same as the Bloom filter type
+   *          actually present in the HFile, because column family configuration might change. If
+   *          this is {@link BloomType#NONE}, the existing Bloom filter is ignored.
+   * @param primaryReplica true if this is a store file for primary replica, otherwise false.
+   */
+  public StoreFile(FileSystem fs, StoreFileInfo fileInfo, Configuration conf, CacheConfig cacheConf,
+      BloomType cfBloomType, boolean primaryReplica) {
     this.fs = fs;
     this.fileInfo = fileInfo;
     this.cacheConf = cacheConf;
-
+    this.noReadahead =
+        conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
     if (BloomFilterFactory.isGeneralBloomEnabled(conf)) {
       this.cfBloomType = cfBloomType;
     } else {
-      LOG.info("Ignoring bloom filter check for file " + this.getPath() + ": " +
-          "cfBloomType=" + cfBloomType + " (disabled in config)");
+      LOG.info("Ignoring bloom filter check for file " + this.getPath() + ": " + "cfBloomType=" +
+          cfBloomType + " (disabled in config)");
       this.cfBloomType = BloomType.NONE;
     }
-  }
-
-  /**
-   * Clone
-   * @param other The StoreFile to clone from
-   */
-  public StoreFile(final StoreFile other) {
-    this.fs = other.fs;
-    this.fileInfo = other.fileInfo;
-    this.cacheConf = other.cacheConf;
-    this.cfBloomType = other.cfBloomType;
-    this.metadataMap = other.metadataMap;
-  }
-
-  /**
-   * Clone a StoreFile for opening private reader.
-   */
-  public StoreFile cloneForReader() {
-    return new StoreFile(this);
+    this.primaryReplica = primaryReplica;
   }
 
   /**
@@ -266,12 +307,12 @@ public class StoreFile {
    * @return Returns the qualified path of this StoreFile
    */
   public Path getQualifiedPath() {
-    return this.fileInfo.getPath().makeQualified(fs);
+    return this.fileInfo.getPath().makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
   /**
    * @return True if this is a StoreFile Reference; call
-   * after {@link #open(boolean canUseDropBehind)} else may get wrong answer.
+   * after {@link #open()} else may get wrong answer.
    */
   public boolean isReference() {
     return this.fileInfo.isReference();
@@ -376,15 +417,21 @@ public class StoreFile {
 
   @VisibleForTesting
   public boolean isCompactedAway() {
-    if (this.reader != null) {
-      return this.reader.isCompactedAway();
-    }
-    return true;
+    return compactedAway;
   }
 
   @VisibleForTesting
   public int getRefCount() {
-    return this.reader.getRefCount().get();
+    return refCount.get();
+  }
+
+  /**
+   * @return true if the file is still used in reads
+   */
+  public boolean isReferencedInReads() {
+    int rc = refCount.get();
+    assert rc >= 0; // we should not go negative.
+    return rc > 0;
   }
 
   /**
@@ -404,18 +451,18 @@ public class StoreFile {
   }
 
   /**
-   * Opens reader on this store file.  Called by Constructor.
-   * @return Reader for the store file.
+   * Opens reader on this store file. Called by Constructor.
    * @throws IOException
    * @see #closeReader(boolean)
    */
-  private StoreFileReader open(boolean canUseDropBehind) throws IOException {
+  private void open() throws IOException {
     if (this.reader != null) {
       throw new IllegalAccessError("Already open");
     }
 
     // Open the StoreFile.Reader
-    this.reader = fileInfo.open(this.fs, this.cacheConf, canUseDropBehind);
+    this.reader = fileInfo.open(this.fs, this.cacheConf, false, noReadahead ? 0L : -1L,
+      primaryReplica, refCount, true);
 
     // Load up indices and fileinfo. This also loads Bloom filter type.
     metadataMap = Collections.unmodifiableMap(this.reader.loadFileInfo());
@@ -513,38 +560,45 @@ public class StoreFile {
     firstKey = reader.getFirstKey();
     lastKey = reader.getLastKey();
     comparator = reader.getComparator();
-    return this.reader;
-  }
-
-  public StoreFileReader createReader() throws IOException {
-    return createReader(false);
   }
 
   /**
-   * @return Reader for StoreFile. creates if necessary
-   * @throws IOException
+   * Initialize the reader used for pread.
    */
-  public StoreFileReader createReader(boolean canUseDropBehind) throws IOException {
-    if (this.reader == null) {
+  public void initReader() throws IOException {
+    if (reader == null) {
       try {
-        this.reader = open(canUseDropBehind);
-      } catch (IOException e) {
+        open();
+      } catch (Exception e) {
         try {
-          boolean evictOnClose =
-              cacheConf != null? cacheConf.shouldEvictOnClose(): true;
+          boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;
           this.closeReader(evictOnClose);
         } catch (IOException ee) {
+          LOG.warn("failed to close reader", ee);
         }
         throw e;
       }
-
     }
-    return this.reader;
+  }
+
+  private StoreFileReader createStreamReader(boolean canUseDropBehind) throws IOException {
+    initReader();
+    StoreFileReader reader = fileInfo.open(this.fs, this.cacheConf, canUseDropBehind, -1L,
+      primaryReplica, refCount, false);
+    reader.copyFields(this.reader);
+    return reader;
+  }
+
+  public StoreFileScanner getStreamScanner(boolean canUseDropBehind, boolean cacheBlocks,
+      boolean pread, boolean isCompaction, long readPt, long scannerOrder,
+      boolean canOptimizeForNonNullColumn) throws IOException {
+    return createStreamReader(canUseDropBehind).getStoreFileScanner(
+      cacheBlocks, pread, isCompaction, readPt, scannerOrder, canOptimizeForNonNullColumn);
   }
 
   /**
-   * @return Current reader.  Must call createReader first else returns null.
-   * @see #createReader()
+   * @return Current reader.  Must call initReader first else returns null.
+   * @see #initReader()
    */
   public StoreFileReader getReader() {
     return this.reader;
@@ -566,9 +620,7 @@ public class StoreFile {
    * Marks the status of the file as compactedAway.
    */
   public void markCompactedAway() {
-    if (this.reader != null) {
-      this.reader.markCompactedAway();
-    }
+    this.compactedAway = true;
   }
 
   /**

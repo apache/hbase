@@ -36,13 +36,13 @@ public class TestDelayedUtil {
     Object o1 = new Object();
     Object o2 = new Object();
     ZeroDelayContainer<Long> lnull = new ZeroDelayContainer(null);
-    ZeroDelayContainer<Long> l10a = new ZeroDelayContainer<Long>(10L);
+    ZeroDelayContainer<Long> l10a = new ZeroDelayContainer<>(10L);
     ZeroDelayContainer<Long> l10b = new ZeroDelayContainer(10L);
     ZeroDelayContainer<Long> l15 = new ZeroDelayContainer(15L);
-    ZeroDelayContainer<Object> onull = new ZeroDelayContainer<Object>(null);
-    ZeroDelayContainer<Object> o1ca = new ZeroDelayContainer<Object>(o1);
-    ZeroDelayContainer<Object> o1cb = new ZeroDelayContainer<Object>(o1);
-    ZeroDelayContainer<Object> o2c = new ZeroDelayContainer<Object>(o2);
+    ZeroDelayContainer<Object> onull = new ZeroDelayContainer<>(null);
+    ZeroDelayContainer<Object> o1ca = new ZeroDelayContainer<>(o1);
+    ZeroDelayContainer<Object> o1cb = new ZeroDelayContainer<>(o1);
+    ZeroDelayContainer<Object> o2c = new ZeroDelayContainer<>(o2);
 
     ZeroDelayContainer[] items = new ZeroDelayContainer[] {
       lnull, l10a, l10b, l15, onull, o1ca, o1cb, o2c,
@@ -80,7 +80,7 @@ public class TestDelayedUtil {
     }
 
     @Override
-    public long getTimeoutTimestamp() {
+    public long getTimeout() {
       return 0;
     }
   }

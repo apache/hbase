@@ -62,18 +62,18 @@ public class DefinedSetFilterScanLabelGenerator implements ScanLabelGenerator {
     if (authorizations != null) {
       List<String> labels = authorizations.getLabels();
       String userName = user.getShortName();
-      Set<String> auths = new HashSet<String>();
+      Set<String> auths = new HashSet<>();
       auths.addAll(this.labelsCache.getUserAuths(userName));
       auths.addAll(this.labelsCache.getGroupAuths(user.getGroupNames()));
-      return dropLabelsNotInUserAuths(labels, new ArrayList<String>(auths), userName);
+      return dropLabelsNotInUserAuths(labels, new ArrayList<>(auths), userName);
     }
     return null;
   }
 
   private List<String> dropLabelsNotInUserAuths(List<String> labels, List<String> auths,
       String userName) {
-    List<String> droppedLabels = new ArrayList<String>();
-    List<String> passedLabels = new ArrayList<String>(labels.size());
+    List<String> droppedLabels = new ArrayList<>();
+    List<String> passedLabels = new ArrayList<>(labels.size());
     for (String label : labels) {
       if (auths.contains(label)) {
         passedLabels.add(label);

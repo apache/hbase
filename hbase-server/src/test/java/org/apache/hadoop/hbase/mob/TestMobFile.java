@@ -60,8 +60,8 @@ public class TestMobFile extends TestCase {
     String caseName = getName();
     MobTestUtil.writeStoreFile(writer, caseName);
 
-    MobFile mobFile = new MobFile(new StoreFile(fs, writer.getPath(),
-        conf, cacheConf, BloomType.NONE));
+    MobFile mobFile =
+        new MobFile(new StoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true));
     byte[] family = Bytes.toBytes(caseName);
     byte[] qualify = Bytes.toBytes(caseName);
 
@@ -112,8 +112,8 @@ public class TestMobFile extends TestCase {
             .build();
     MobTestUtil.writeStoreFile(writer, getName());
 
-    MobFile mobFile = new MobFile(new StoreFile(fs, writer.getPath(),
-        conf, cacheConf, BloomType.NONE));
+    MobFile mobFile =
+        new MobFile(new StoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true));
     assertNotNull(mobFile.getScanner());
     assertTrue(mobFile.getScanner() instanceof StoreFileScanner);
   }

@@ -29,14 +29,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -87,7 +85,6 @@ import org.apache.hadoop.util.Tool;
  * When everything is done, the second cluster can restore the snapshot.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   public static final String NAME = "exportsnapshot";
   /** Configuration prefix for overrides for the source filesystem */
@@ -112,9 +109,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private static final String CONF_BANDWIDTH_MB = "snapshot.export.map.bandwidth.mb";
   protected static final String CONF_SKIP_TMP = "snapshot.export.skip.tmp";
 
-  static final String CONF_TEST_FAILURE = "test.snapshot.export.failure";
-  static final String CONF_TEST_RETRY = "test.snapshot.export.failure.retry";
-
+  static class Testing {
+    static final String CONF_TEST_FAILURE = "test.snapshot.export.failure";
+    static final String CONF_TEST_FAILURE_COUNT = "test.snapshot.export.failure.count";
+    int failuresCountToInject = 0;
+    int injectedFailureCount = 0;
+  }
 
   // Command line options and defaults.
   static final class Options {
@@ -151,11 +151,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
   private static class ExportMapper extends Mapper<BytesWritable, NullWritable,
                                                    NullWritable, NullWritable> {
+    private static final Log LOG = LogFactory.getLog(ExportMapper.class);
     final static int REPORT_SIZE = 1 * 1024 * 1024;
     final static int BUFFER_SIZE = 64 * 1024;
-
-    private boolean testFailures;
-    private Random random;
 
     private boolean verifyChecksum;
     private String filesGroup;
@@ -171,9 +169,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     private Path inputArchive;
     private Path inputRoot;
 
+    private static Testing testing = new Testing();
+
     @Override
     public void setup(Context context) throws IOException {
       Configuration conf = context.getConfiguration();
+
       Configuration srcConf = HBaseConfiguration.createClusterConf(conf, null, CONF_SOURCE_PREFIX);
       Configuration destConf = HBaseConfiguration.createClusterConf(conf, null, CONF_DEST_PREFIX);
 
@@ -187,8 +188,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
       inputArchive = new Path(inputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
       outputArchive = new Path(outputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
-
-      testFailures = conf.getBoolean(CONF_TEST_FAILURE, false);
 
       try {
         srcConf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
@@ -211,6 +210,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
       for (Counter c : Counter.values()) {
         context.getCounter(c).increment(0);
+      }
+      if (context.getConfiguration().getBoolean(Testing.CONF_TEST_FAILURE, false)) {
+        testing.failuresCountToInject = conf.getInt(Testing.CONF_TEST_FAILURE_COUNT, 0);
+        // Get number of times we have already injected failure based on attempt number of this
+        // task.
+        testing.injectedFailureCount = context.getTaskAttemptID().getId();
       }
     }
 
@@ -253,35 +258,23 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       return new Path(outputArchive, path);
     }
 
-    /*
-     * Used by TestExportSnapshot to simulate a failure
+    /**
+     * Used by TestExportSnapshot to test for retries when failures happen.
+     * Failure is injected in {@link #copyFile(Context, SnapshotFileInfo, Path)}.
      */
     private void injectTestFailure(final Context context, final SnapshotFileInfo inputInfo)
         throws IOException {
-      if (testFailures) {
-        if (context.getConfiguration().getBoolean(CONF_TEST_RETRY, false)) {
-          if (random == null) {
-            random = new Random();
-          }
-
-          // FLAKY-TEST-WARN: lower is better, we can get some runs without the
-          // retry, but at least we reduce the number of test failures due to
-          // this test exception from the same map task.
-          if (random.nextFloat() < 0.03) {
-            throw new IOException("TEST RETRY FAILURE: Unable to copy input=" + inputInfo
-                                  + " time=" + System.currentTimeMillis());
-          }
-        } else {
-          context.getCounter(Counter.COPY_FAILED).increment(1);
-          throw new IOException("TEST FAILURE: Unable to copy input=" + inputInfo);
-        }
-      }
+      if (!context.getConfiguration().getBoolean(Testing.CONF_TEST_FAILURE, false)) return;
+      if (testing.injectedFailureCount >= testing.failuresCountToInject) return;
+      testing.injectedFailureCount++;
+      context.getCounter(Counter.COPY_FAILED).increment(1);
+      LOG.debug("Injecting failure. Count: " + testing.injectedFailureCount);
+      throw new IOException(String.format("TEST FAILURE (%d of max %d): Unable to copy input=%s",
+          testing.injectedFailureCount, testing.failuresCountToInject, inputInfo));
     }
 
     private void copyFile(final Context context, final SnapshotFileInfo inputInfo,
         final Path outputPath) throws IOException {
-      injectTestFailure(context, inputInfo);
-
       // Get the file information
       FileStatus inputStat = getSourceFileStatus(context, inputInfo);
 
@@ -320,6 +313,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         }
       } finally {
         in.close();
+        injectTestFailure(context, inputInfo);
       }
     }
 
@@ -564,7 +558,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       final FileSystem fs, final Path snapshotDir) throws IOException {
     SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
-    final List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<Pair<SnapshotFileInfo, Long>>();
+    final List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>();
     final TableName table = TableName.valueOf(snapshotDesc.getTable());
 
     // Get snapshot files
@@ -591,7 +585,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             } else {
               size = HFileLink.buildFromHFileLinkPattern(conf, path).getFileStatus(fs).getLen();
             }
-            files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
+            files.add(new Pair<>(fileInfo, size));
           }
         }
     });
@@ -618,8 +612,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     });
 
     // create balanced groups
-    List<List<Pair<SnapshotFileInfo, Long>>> fileGroups =
-      new LinkedList<List<Pair<SnapshotFileInfo, Long>>>();
+    List<List<Pair<SnapshotFileInfo, Long>>> fileGroups = new LinkedList<>();
     long[] sizeGroups = new long[ngroups];
     int hi = files.size() - 1;
     int lo = 0;
@@ -630,7 +623,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
     while (hi >= lo) {
       if (g == fileGroups.size()) {
-        group = new LinkedList<Pair<SnapshotFileInfo, Long>>();
+        group = new LinkedList<>();
         fileGroups.add(group);
       } else {
         group = fileGroups.get(g);
@@ -703,7 +696,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       public ExportSnapshotInputSplit(final List<Pair<SnapshotFileInfo, Long>> snapshotFiles) {
         this.files = new ArrayList(snapshotFiles.size());
         for (Pair<SnapshotFileInfo, Long> fileInfo: snapshotFiles) {
-          this.files.add(new Pair<BytesWritable, Long>(
+          this.files.add(new Pair<>(
             new BytesWritable(fileInfo.getFirst().toByteArray()), fileInfo.getSecond()));
           this.length += fileInfo.getSecond();
         }
@@ -726,13 +719,13 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       @Override
       public void readFields(DataInput in) throws IOException {
         int count = in.readInt();
-        files = new ArrayList<Pair<BytesWritable, Long>>(count);
+        files = new ArrayList<>(count);
         length = 0;
         for (int i = 0; i < count; ++i) {
           BytesWritable fileInfo = new BytesWritable();
           fileInfo.readFields(in);
           long size = in.readLong();
-          files.add(new Pair<BytesWritable, Long>(fileInfo, size));
+          files.add(new Pair<>(fileInfo, size));
           length += size;
         }
       }

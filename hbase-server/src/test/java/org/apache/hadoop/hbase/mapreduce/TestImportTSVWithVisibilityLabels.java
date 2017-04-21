@@ -357,7 +357,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     }
 
     // run the import
-    List<String> argv = new ArrayList<String>(Arrays.asList(args));
+    List<String> argv = new ArrayList<>(Arrays.asList(args));
     argv.add(inputPath.toString());
     Tool tool = new ImportTsv();
     LOG.debug("Running ImportTsv with arguments: " + argv);
@@ -397,9 +397,9 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
     // validate number and content of output columns
     LOG.debug("Validating HFiles.");
-    Set<String> configFamilies = new HashSet<String>();
+    Set<String> configFamilies = new HashSet<>();
     configFamilies.add(family);
-    Set<String> foundFamilies = new HashSet<String>();
+    Set<String> foundFamilies = new HashSet<>();
     int actualKVCount = 0;
     for (FileStatus cfStatus : fs.listStatus(new Path(outputPath), new OutputFilesFilter())) {
       LOG.debug("The output path has files");
@@ -480,7 +480,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
    */
   private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
     Configuration conf = util.getConfiguration();
-    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, false);
     scanner.seekTo();

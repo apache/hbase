@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -52,7 +51,6 @@ import org.apache.hadoop.util.StringUtils;
  * @see KeyValueSortReducer
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class PutSortReducer extends
     Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue> {
   // the cell creator
@@ -79,10 +77,10 @@ public class PutSortReducer extends
         "putsortreducer.row.threshold", 1L * (1<<30));
     Iterator<Put> iter = puts.iterator();
     while (iter.hasNext()) {
-      TreeSet<KeyValue> map = new TreeSet<KeyValue>(CellComparator.COMPARATOR);
+      TreeSet<KeyValue> map = new TreeSet<>(CellComparator.COMPARATOR);
       long curSize = 0;
       // stop at the end or the RAM threshold
-      List<Tag> tags = new ArrayList<Tag>();
+      List<Tag> tags = new ArrayList<>();
       while (iter.hasNext() && curSize < threshold) {
         // clear the tags
         tags.clear();

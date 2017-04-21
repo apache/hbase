@@ -59,8 +59,8 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
         (int)(ratio * 100)));
     List<ServerName> selectedServers = selectServers();
 
-    Queue<ServerName> serversToBeKilled = new LinkedList<ServerName>(selectedServers);
-    Queue<ServerName> deadServers = new LinkedList<ServerName>();
+    Queue<ServerName> serversToBeKilled = new LinkedList<>(selectedServers);
+    Queue<ServerName> deadServers = new LinkedList<>();
 
     // loop while there are servers to be killed or dead servers to be restarted
     while ((!serversToBeKilled.isEmpty() || !deadServers.isEmpty())  && !context.isStopping()) {
@@ -123,7 +123,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
       @Override
       protected ServerName[] getCurrentServers() throws IOException {
         final int count = 4;
-        List<ServerName> serverNames = new ArrayList<ServerName>(count);
+        List<ServerName> serverNames = new ArrayList<>(count);
         for (int i = 0; i < 4; i++) {
           serverNames.add(ServerName.valueOf(i + ".example.org", i, i));
         }

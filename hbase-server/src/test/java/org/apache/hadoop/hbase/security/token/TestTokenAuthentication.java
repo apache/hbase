@@ -137,7 +137,7 @@ public class TestTokenAuthentication {
       if (initialIsa.getAddress() == null) {
         throw new IllegalArgumentException("Failed resolve of " + initialIsa);
       }
-      final List<BlockingServiceAndInterface> sai = new ArrayList<BlockingServiceAndInterface>(1);
+      final List<BlockingServiceAndInterface> sai = new ArrayList<>(1);
       // Make a proxy to go between the shaded Service that rpc expects and the
       // non-shaded Service this CPEP is providing. This is because this test does a neat
       // little trick of testing the CPEP Service by inserting it as RpcServer Service. This
@@ -351,8 +351,7 @@ public class TestTokenAuthentication {
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
       final NonShadedBlockingRpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse>
-        callback =
-          new NonShadedBlockingRpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse>();
+        callback = new NonShadedBlockingRpcCallback<>();
       getAuthenticationToken((RpcController)null, request, callback);
       try {
         serverController.checkFailed();
@@ -370,7 +369,7 @@ public class TestTokenAuthentication {
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
       NonShadedBlockingRpcCallback<AuthenticationProtos.WhoAmIResponse> callback =
-          new NonShadedBlockingRpcCallback<AuthenticationProtos.WhoAmIResponse>();
+          new NonShadedBlockingRpcCallback<>();
       whoAmI(null, request, callback);
       try {
         serverController.checkFailed();

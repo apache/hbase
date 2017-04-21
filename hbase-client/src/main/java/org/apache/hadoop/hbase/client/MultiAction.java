@@ -82,7 +82,7 @@ public final class MultiAction {
   public void add(byte[] regionName, List<Action> actionList){
     List<Action> rsActions = actions.get(regionName);
     if (rsActions == null) {
-      rsActions = new ArrayList<Action>(actionList.size());
+      rsActions = new ArrayList<>(actionList.size());
       actions.put(regionName, rsActions);
     }
     rsActions.addAll(actionList);

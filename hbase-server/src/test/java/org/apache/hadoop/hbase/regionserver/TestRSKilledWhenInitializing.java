@@ -19,116 +19,186 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 
 /**
- * Tests region server termination during startup.
+ * Tests that a regionserver that dies after reporting for duty gets removed
+ * from list of online regions. See HBASE-9593.
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestRSKilledWhenInitializing {
-  private static boolean masterActive = false;
-  private static AtomicBoolean firstRS = new AtomicBoolean(true);
+  private static final Log LOG = LogFactory.getLog(TestRSKilledWhenInitializing.class);
+  @Rule public TestName testName = new TestName();
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
+    withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  // This boolean needs to be globally available. It is used below in our
+  // mocked up regionserver so it knows when to die.
+  private static AtomicBoolean masterActive = new AtomicBoolean(false);
+  // Ditto for this variable. It also is used in the mocked regionserver class.
+  private static final AtomicReference<ServerName> killedRS = new AtomicReference<ServerName>();
+
+  private static final int NUM_MASTERS = 1;
+  private static final int NUM_RS = 2;
 
   /**
    * Test verifies whether a region server is removing from online servers list in master if it went
-   * down after registering with master.
+   * down after registering with master. Test will TIMEOUT if an error!!!!
    * @throws Exception
    */
-  @Test(timeout = 180000)
-  public void testRSTerminationAfterRegisteringToMasterBeforeCreatingEphemeralNod() throws Exception {
-
-    final int NUM_MASTERS = 1;
-    final int NUM_RS = 2;
-    firstRS.set(true);
+  @Test
+  public void testRSTerminationAfterRegisteringToMasterBeforeCreatingEphemeralNode()
+  throws Exception {
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
-
     // Start the cluster
     final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniDFSCluster(3);
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.createRootDir();
     final LocalHBaseCluster cluster =
-        new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class, MockedRegionServer.class);
-    final MasterThread master = cluster.getMasters().get(0);
-    master.start();
+        new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class,
+            RegisterAndDieRegionServer.class);
+    final MasterThread master = startMaster(cluster.getMasters().get(0));
     try {
-      long startTime = System.currentTimeMillis();
-      while (!master.getMaster().isInitialized()) {
-        try {
-          Thread.sleep(100);
-        } catch (InterruptedException ignored) {
-        }
-        if (System.currentTimeMillis() > startTime + 30000) {
-          throw new RuntimeException("Master not active after 30 seconds");
-        }
+      // Master is up waiting on RegionServers to check in. Now start RegionServers.
+      for (int i = 0; i < NUM_RS; i++) {
+        cluster.getRegionServers().get(i).start();
       }
-      masterActive = true;
-      cluster.getRegionServers().get(0).start();
-      cluster.getRegionServers().get(1).start();
-      Thread.sleep(10000);
-      List<ServerName> onlineServersList =
-          master.getMaster().getServerManager().getOnlineServersList();
-      while (onlineServersList.size() > 2) {
+      // Now wait on master to see NUM_RS + 1 servers as being online, thats NUM_RS plus
+      // the Master itself (because Master hosts hbase:meta and checks in as though it a RS).
+      List<ServerName> onlineServersList = null;
+      do {
+        onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
+      } while (onlineServersList.size() < (NUM_RS + 1));
+      // Wait until killedRS is set. Means RegionServer is starting to go down.
+      while (killedRS.get() == null) {
+        Threads.sleep(1);
+      }
+      // Wait on the RegionServer to fully die.
+      while (cluster.getLiveRegionServers().size() > NUM_RS) {
+        Threads.sleep(1);
+      }
+      // Make sure Master is fully up before progressing. Could take a while if regions
+      // being reassigned.
+      while (!master.getMaster().isInitialized()) {
+        Threads.sleep(1);
+      }
+
+      // Now in steady state. How many regions open? Master should have too many regionservers
+      // showing still. The downed RegionServer should still be showing as registered.
+      assertTrue(master.getMaster().getServerManager().isServerOnline(killedRS.get()));
+      // Find non-meta region (namespace?) and assign to the killed server. That'll trigger cleanup.
+      Map<HRegionInfo, ServerName> assignments = null;
+      do {
+        assignments = master.getMaster().getAssignmentManager().getRegionStates().getRegionAssignments();
+      } while (assignments == null || assignments.size() < 2);
+      HRegionInfo hri = null;
+      for (Map.Entry<HRegionInfo, ServerName> e: assignments.entrySet()) {
+        if (e.getKey().isMetaRegion()) continue;
+        hri = e.getKey();
+        break;
+      }
+      // Try moving region to the killed server. It will fail. As by-product, we will
+      // remove the RS from Master online list because no corresponding znode.
+      assertEquals(NUM_RS + 1, master.getMaster().getServerManager().getOnlineServersList().size());
+      LOG.info("Move " + hri.getEncodedName() + " to " + killedRS.get());
+      master.getMaster().move(hri.getEncodedNameAsBytes(),
+          Bytes.toBytes(killedRS.get().toString()));
+      // Wait until the RS no longer shows as registered in Master.
+      while (onlineServersList.size() > (NUM_RS + 1)) {
         Thread.sleep(100);
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
       }
-      assertEquals(onlineServersList.size(), 2);
-      cluster.shutdown();
     } finally {
-      masterActive = false;
-      firstRS.set(true);
-      TEST_UTIL.shutdownMiniCluster();
+      // Shutdown is messy with complaints about fs being closed. Why? TODO.
+      cluster.shutdown();
+      cluster.join();
+      TEST_UTIL.shutdownMiniDFSCluster();
+      TEST_UTIL.shutdownMiniZKCluster();
+      TEST_UTIL.cleanupTestDir();
     }
   }
 
-  public static class MockedRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
+  /**
+   * Start Master. Get as far as the state where Master is waiting on
+   * RegionServers to check in, then return.
+   */
+  private MasterThread startMaster(MasterThread master) {
+    master.start();
+    // It takes a while until ServerManager creation to happen inside Master startup.
+    while (master.getMaster().getServerManager() == null) {
+      continue;
+    }
+    // Set a listener for the waiting-on-RegionServers state. We want to wait
+    // until this condition before we leave this method and start regionservers.
+    final AtomicBoolean waiting = new AtomicBoolean(false);
+    if (master.getMaster().getServerManager() == null) throw new NullPointerException("SM");
+    master.getMaster().getServerManager().registerListener(new ServerListener() {
+      @Override
+      public void waiting() {
+        waiting.set(true);
+      }
+    });
+    // Wait until the Master gets to place where it is waiting on RegionServers to check in.
+    while (!waiting.get()) {
+      continue;
+    }
+    // Set the global master-is-active; gets picked up by regionservers later.
+    masterActive.set(true);
+    return master;
+  }
 
-    public MockedRegionServer(Configuration conf, CoordinatedStateManager cp)
-      throws IOException, InterruptedException {
+  /**
+   * A RegionServer that reports for duty and then immediately dies if it is the first to receive
+   * the response to a reportForDuty. When it dies, it clears its ephemeral znode which the master
+   * notices and so removes the region from its set of online regionservers.
+   */
+  static class RegisterAndDieRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
+    public RegisterAndDieRegionServer(Configuration conf, CoordinatedStateManager cp)
+    throws IOException, InterruptedException {
       super(conf, cp);
     }
 
     @Override
-    protected void handleReportForDutyResponse(RegionServerStartupResponse c) throws IOException {
-      if (firstRS.getAndSet(false)) {
-        InetSocketAddress address = super.getRpcServer().getListenerAddress();
-        if (address == null) {
-          throw new IOException("Listener channel is closed");
-        }
-        for (NameStringPair e : c.getMapEntriesList()) {
-          String key = e.getName();
-          // The hostname the master sees us as.
-          if (key.equals(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER)) {
-            String hostnameFromMasterPOV = e.getValue();
-            assertEquals(address.getHostName(), hostnameFromMasterPOV);
-          }
-        }
-        while (!masterActive) {
+    protected void handleReportForDutyResponse(RegionServerStartupResponse c)
+    throws IOException {
+      if (killedRS.compareAndSet(null, getServerName())) {
+        // Make sure Master is up so it will see the removal of the ephemeral znode for this RS.
+        while (!masterActive.get()) {
           Threads.sleep(100);
         }
         super.kill();

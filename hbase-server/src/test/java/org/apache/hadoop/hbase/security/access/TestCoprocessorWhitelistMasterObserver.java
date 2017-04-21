@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -289,6 +290,8 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
       admin.listTables("^" + TEST_TABLE.getNameAsString() + "$"));
   }
 
+  public static class TestRegionObserver implements RegionObserver {}
+
   /**
    * Test a table creation including a coprocessor path
    * which is on the classpath
@@ -308,7 +311,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
     htd.addFamily(hcd);
-    htd.addCoprocessor("org.apache.hadoop.hbase.coprocessor.BaseRegionObserver");
+    htd.addCoprocessor(TestRegionObserver.class.getName());
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
     LOG.info("Creating Table");

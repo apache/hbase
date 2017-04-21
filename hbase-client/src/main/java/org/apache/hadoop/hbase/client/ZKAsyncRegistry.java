@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
@@ -53,8 +54,7 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.data.Stat;
 
 /**
- * Cache the cluster registry data in memory and use zk watcher to update. The only exception is
- * {@link #getClusterId()}, it will fetch the data from zk directly.
+ * Fetch the registry data from zookeeper.
  */
 @InterfaceAudience.Private
 class ZKAsyncRegistry implements AsyncRegistry {
@@ -79,26 +79,6 @@ class ZKAsyncRegistry implements AsyncRegistry {
     this.zk.start();
   }
 
-  @Override
-  public String getClusterId() {
-    try {
-      byte[] data = zk.getData().forPath(znodePaths.clusterIdZNode);
-      if (data == null || data.length == 0) {
-        return null;
-      }
-      data = removeMetaData(data);
-      return ClusterId.parseFrom(data).toString();
-    } catch (Exception e) {
-      LOG.warn("failed to get cluster id", e);
-      return null;
-    }
-  }
-
-  @Override
-  public void close() {
-    zk.close();
-  }
-
   private interface CuratorEventProcessor<T> {
     T process(CuratorEvent event) throws Exception;
   }
@@ -118,6 +98,20 @@ class ZKAsyncRegistry implements AsyncRegistry {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private static String getClusterId(CuratorEvent event) throws DeserializationException {
+    byte[] data = event.getData();
+    if (data == null || data.length == 0) {
+      return null;
+    }
+    data = removeMetaData(data);
+    return ClusterId.parseFrom(data).toString();
+  }
+
+  @Override
+  public CompletableFuture<String> getClusterId() {
+    return exec(zk.getData(), znodePaths.clusterIdZNode, ZKAsyncRegistry::getClusterId);
   }
 
   private static ZooKeeperProtos.MetaRegionServer getMetaProto(CuratorEvent event)
@@ -248,5 +242,10 @@ class ZKAsyncRegistry implements AsyncRegistry {
   public CompletableFuture<Integer> getMasterInfoPort() {
     return exec(zk.getData(), znodePaths.masterAddressZNode, ZKAsyncRegistry::getMasterProto)
         .thenApply(proto -> proto != null ? proto.getInfoPort() : 0);
+  }
+
+  @Override
+  public void close() {
+    zk.close();
   }
 }

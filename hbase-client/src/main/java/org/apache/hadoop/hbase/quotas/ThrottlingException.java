@@ -22,7 +22,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Describe the throttling result.
@@ -32,12 +31,10 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * as result of this exception.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class ThrottlingException extends QuotaExceededException {
   private static final long serialVersionUID = 1406576492085155743L;
 
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public enum Type {
     NumRequestsExceeded,
     RequestSizeExceeded,

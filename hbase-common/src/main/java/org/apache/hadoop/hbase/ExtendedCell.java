@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 public interface ExtendedCell extends Cell, SettableSequenceId, SettableTimestamp, HeapSize,
     Cloneable {
 
+  public static int CELL_NOT_BASED_ON_CHUNK = -1;
   /**
    * Write this cell to an OutputStream in a {@link KeyValue} format.
    * <br> KeyValue format <br>
@@ -69,13 +70,17 @@ public interface ExtendedCell extends Cell, SettableSequenceId, SettableTimestam
   void write(ByteBuffer buf, int offset);
 
   /**
-   * @return The heap size overhead associated with this Cell.
-   */
-  long heapOverhead();
-
-  /**
    * Does a deep copy of the contents to a new memory area and returns it as a new cell.
    * @return The deep cloned cell
    */
   Cell deepClone();
+
+  /**
+   * Extracts the id of the backing bytebuffer of this cell if it was obtained from fixed sized
+   * chunks as in case of MemstoreLAB
+   * @return the chunk id if the cell is backed by fixed sized Chunks, else return -1
+   */
+  default int getChunkId() {
+    return CELL_NOT_BASED_ON_CHUNK;
+  }
 }

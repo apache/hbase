@@ -92,7 +92,7 @@ public class TestSeekBeforeWithReverseScan {
     scan.setFilter(new FirstKeyOnlyFilter());
     scan.addFamily(cfName);
     RegionScanner scanner = region.getScanner(scan);
-    List<Cell> res = new ArrayList<Cell>();
+    List<Cell> res = new ArrayList<>();
     int count = 1;
     while (scanner.next(res)) {
       count++;
@@ -130,7 +130,7 @@ public class TestSeekBeforeWithReverseScan {
     scan.setFilter(new FirstKeyOnlyFilter());
     scan.addFamily(cfName);
     RegionScanner scanner = region.getScanner(scan);
-    List<Cell> res = new ArrayList<Cell>();
+    List<Cell> res = new ArrayList<>();
     int count = 1;
     while (scanner.next(res)) {
       count++;

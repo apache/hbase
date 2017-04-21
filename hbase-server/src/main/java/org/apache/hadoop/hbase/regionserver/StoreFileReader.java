@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.Map;
@@ -34,7 +36,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -68,36 +69,47 @@ public class StoreFileReader {
   private KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV = null;
   private boolean skipResetSeqId = true;
 
-  public AtomicInteger getRefCount() {
-    return refCount;
-  }
-
   // Counter that is incremented every time a scanner is created on the
-  // store file.  It is decremented when the scan on the store file is
-  // done.
-  private AtomicInteger refCount = new AtomicInteger(0);
-  // Indicates if the file got compacted
-  private volatile boolean compactedAway = false;
+  // store file. It is decremented when the scan on the store file is
+  // done. All StoreFileReader for the same StoreFile will share this counter.
+  private final AtomicInteger refCount;
 
-  public StoreFileReader(FileSystem fs, Path path, CacheConfig cacheConf, Configuration conf)
-      throws IOException {
-    reader = HFile.createReader(fs, path, cacheConf, conf);
+  // indicate that whether this StoreFileReader is shared, i.e., used for pread. If not, we will
+  // close the internal reader when readCompleted is called.
+  private final boolean shared;
+
+  private StoreFileReader(HFile.Reader reader, AtomicInteger refCount, boolean shared) {
+    this.reader = reader;
     bloomFilterType = BloomType.NONE;
+    this.refCount = refCount;
+    this.shared = shared;
   }
 
-  void markCompactedAway() {
-    this.compactedAway = true;
+  public StoreFileReader(FileSystem fs, Path path, CacheConfig cacheConf,
+      boolean primaryReplicaStoreFile, AtomicInteger refCount, boolean shared, Configuration conf)
+      throws IOException {
+    this(HFile.createReader(fs, path, cacheConf, primaryReplicaStoreFile, conf), refCount, shared);
   }
 
   public StoreFileReader(FileSystem fs, Path path, FSDataInputStreamWrapper in, long size,
-      CacheConfig cacheConf, Configuration conf) throws IOException {
-    reader = HFile.createReader(fs, path, in, size, cacheConf, conf);
-    bloomFilterType = BloomType.NONE;
+      CacheConfig cacheConf, boolean primaryReplicaStoreFile, AtomicInteger refCount,
+      boolean shared, Configuration conf) throws IOException {
+    this(HFile.createReader(fs, path, in, size, cacheConf, primaryReplicaStoreFile, conf), refCount,
+        shared);
   }
 
-  public void setReplicaStoreFile(boolean isPrimaryReplicaStoreFile) {
-    reader.setPrimaryReplicaReader(isPrimaryReplicaStoreFile);
+  void copyFields(StoreFileReader reader) {
+    this.generalBloomFilter = reader.generalBloomFilter;
+    this.deleteFamilyBloomFilter = reader.deleteFamilyBloomFilter;
+    this.bloomFilterType = reader.bloomFilterType;
+    this.sequenceID = reader.sequenceID;
+    this.timeRange = reader.timeRange;
+    this.lastBloomKey = reader.lastBloomKey;
+    this.bulkLoadResult = reader.bulkLoadResult;
+    this.lastBloomKeyOnlyKV = reader.lastBloomKeyOnlyKV;
+    this.skipResetSeqId = reader.skipResetSeqId;
   }
+
   public boolean isPrimaryReplicaReader() {
     return reader.isPrimaryReplicaReader();
   }
@@ -105,8 +117,11 @@ public class StoreFileReader {
   /**
    * ONLY USE DEFAULT CONSTRUCTOR FOR UNIT TESTS
    */
+  @VisibleForTesting
   StoreFileReader() {
+    this.refCount = new AtomicInteger(0);
     this.reader = null;
+    this.shared = false;
   }
 
   public CellComparator getComparator() {
@@ -128,30 +143,23 @@ public class StoreFileReader {
       boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
     // Increment the ref count
     refCount.incrementAndGet();
-    return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction,
-        reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
+    return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction),
+        !isCompaction, reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
   }
 
   /**
-   * Decrement the ref count associated with the reader when ever a scanner associated
-   * with the reader is closed
+   * Indicate that the scanner has finished reading with this reader. We need to decrement the ref
+   * count, and also, if this is not the common pread reader, we should close it.
    */
-  void decrementRefCount() {
+  void readCompleted() {
     refCount.decrementAndGet();
-  }
-
-  /**
-   * @return true if the file is still used in reads
-   */
-  public boolean isReferencedInReads() {
-    return refCount.get() != 0;
-  }
-
-  /**
-   * @return true if the file is compacted
-   */
-  public boolean isCompactedAway() {
-    return this.compactedAway;
+    if (!shared) {
+      try {
+        reader.close(false);
+      } catch (IOException e) {
+        LOG.warn("failed to close stream reader", e);
+      }
+    }
   }
 
   /**
@@ -208,7 +216,7 @@ public class StoreFileReader {
    * Checks whether the given scan passes the Bloom filter (if present). Only
    * checks Bloom filters for single-row or single-row-column scans. Bloom
    * filter checking for multi-gets is implemented as part of the store
-   * scanner system (see {@link StoreFileScanner#seekExactly}) and uses
+   * scanner system (see {@link StoreFileScanner#seek(Cell)} and uses
    * the lower-level API {@link #passesGeneralRowBloomFilter(byte[], int, int)}
    * and {@link #passesGeneralRowColBloomFilter(Cell)}.
    *

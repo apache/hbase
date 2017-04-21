@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
@@ -66,7 +65,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * </ol>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class SnapshotInfo extends AbstractHBaseTool {
   private static final Log LOG = LogFactory.getLog(SnapshotInfo.class);
 
@@ -598,8 +596,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
     FileStatus[] snapshots = fs.listStatus(snapshotDir,
         new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
-    List<SnapshotDescription> snapshotLists =
-      new ArrayList<SnapshotDescription>(snapshots.length);
+    List<SnapshotDescription> snapshotLists = new ArrayList<>(snapshots.length);
     for (FileStatus snapshotDirStat: snapshots) {
       HBaseProtos.SnapshotDescription snapshotDesc =
           SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDirStat.getPath());

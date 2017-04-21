@@ -81,7 +81,7 @@ public class TestPrefetch {
 
   private void readStoreFile(Path storeFilePath) throws Exception {
     // Open the file
-    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, conf);
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
 
     while (!reader.prefetchComplete()) {
       // Sleep for a bit

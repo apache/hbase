@@ -218,7 +218,7 @@ public class TestWALLockup {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     final HRegion region = initHRegion(tableName, null, null, dodgyWAL);
     byte [] bytes = Bytes.toBytes(getName());
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(
         Bytes.BYTES_COMPARATOR);
     scopes.put(COLUMN_FAMILY_BYTES, 0);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
@@ -398,7 +398,7 @@ public class TestWALLockup {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     final HRegion region = initHRegion(tableName, null, null, dodgyWAL1);
     byte[] bytes = Bytes.toBytes(getName());
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(
         Bytes.BYTES_COMPARATOR);
     scopes.put(COLUMN_FAMILY_BYTES, 0);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
@@ -588,6 +588,7 @@ public class TestWALLockup {
    */
   public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
   throws IOException {
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, false, Durability.SYNC_WAL,
       wal, COLUMN_FAMILY_BYTES);
   }

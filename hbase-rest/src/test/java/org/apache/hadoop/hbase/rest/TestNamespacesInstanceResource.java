@@ -61,13 +61,13 @@ import org.junit.experimental.categories.Category;
 @Category({RestTests.class, MediumTests.class})
 public class TestNamespacesInstanceResource {
   private static String NAMESPACE1 = "TestNamespacesInstanceResource1";
-  private static Map<String,String> NAMESPACE1_PROPS = new HashMap<String,String>();
+  private static Map<String,String> NAMESPACE1_PROPS = new HashMap<>();
   private static String NAMESPACE2 = "TestNamespacesInstanceResource2";
-  private static Map<String,String> NAMESPACE2_PROPS = new HashMap<String,String>();
+  private static Map<String,String> NAMESPACE2_PROPS = new HashMap<>();
   private static String NAMESPACE3 = "TestNamespacesInstanceResource3";
-  private static Map<String,String> NAMESPACE3_PROPS = new HashMap<String,String>();
+  private static Map<String,String> NAMESPACE3_PROPS = new HashMap<>();
   private static String NAMESPACE4 = "TestNamespacesInstanceResource4";
-  private static Map<String,String> NAMESPACE4_PROPS = new HashMap<String,String>();
+  private static Map<String,String> NAMESPACE4_PROPS = new HashMap<>();
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL =
@@ -189,7 +189,7 @@ public class TestNamespacesInstanceResource {
     table.addFamily(colDesc);
     admin.createTable(table);
 
-    Map<String, String> nsProperties = new HashMap<String,String>();
+    Map<String, String> nsProperties = new HashMap<>();
     nsProperties.put("key1", "value1");
     List<String> nsTables = Arrays.asList("table1", "table2");
 
@@ -230,7 +230,7 @@ public class TestNamespacesInstanceResource {
 
     response = client.get(namespacePath, Constants.MIMETYPE_PROTOBUF);
     assertEquals(200, response.getCode());
-    tablemodel.setTables(new ArrayList<TableModel>());
+    tablemodel.setTables(new ArrayList<>());
     tablemodel.getObjectFromMessage(response.getBody());
     checkNamespaceTables(tablemodel.getTables(), nsTables);
 
@@ -406,7 +406,7 @@ public class TestNamespacesInstanceResource {
     nd4 = findNamespace(admin, NAMESPACE4);
     assertNotNull(nd3);
     assertNotNull(nd4);
-    checkNamespaceProperties(nd3, new HashMap<String,String>());
+    checkNamespaceProperties(nd3, new HashMap<>());
     checkNamespaceProperties(nd4, NAMESPACE4_PROPS);
 
     // Check cannot post tables that already exist.

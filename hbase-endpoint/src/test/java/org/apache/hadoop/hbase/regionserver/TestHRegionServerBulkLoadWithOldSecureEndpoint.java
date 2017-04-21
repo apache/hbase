@@ -92,8 +92,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
       // create HFiles for different column families
       FileSystem fs = UTIL.getTestFileSystem();
       byte[] val = Bytes.toBytes(String.format("%010d", iteration));
-      final List<Pair<byte[], String>> famPaths = new ArrayList<Pair<byte[], String>>(
-          NUM_CFS);
+      final List<Pair<byte[], String>> famPaths = new ArrayList<>(NUM_CFS);
       for (int i = 0; i < NUM_CFS; i++) {
         Path hfile = new Path(dir, family(i));
         byte[] fam = Bytes.toBytes(family(i));

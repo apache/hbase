@@ -119,15 +119,15 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     private final ExecutorCompletionService<Void> taskPool;
     private final ThreadPoolExecutor executor;
     private volatile boolean aborted;
-    private final List<Future<Void>> futures = new ArrayList<Future<Void>>();
+    private final List<Future<Void>> futures = new ArrayList<>();
     private final String name;
 
     public SimpleSubprocedurePool(String name, Configuration conf) {
       this.name = name;
       executor = new ThreadPoolExecutor(1, 1, 500, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<Runnable>(),
+          new LinkedBlockingQueue<>(),
           new DaemonThreadFactory("rs(" + name + ")-procedure-pool"));
-      taskPool = new ExecutorCompletionService<Void>(executor);
+      taskPool = new ExecutorCompletionService<>(executor);
     }
 
     /**

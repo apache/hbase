@@ -26,9 +26,9 @@ import java.util.NavigableSet;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TestFromClientSideWithCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 
 /**
  * RegionObserver that just reimplements the default behavior,
@@ -37,19 +37,19 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
  * {@link TestCompactionWithCoprocessor} to make sure that a wide range
  * of functionality still behaves as expected.
  */
-public class NoOpScanPolicyObserver extends BaseRegionObserver {
+public class NoOpScanPolicyObserver implements RegionObserver {
   /**
    * Reimplement the default behavior
    */
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+      Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
     ScanInfo oldSI = store.getScanInfo();
     ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getFamily(), oldSI.getTtl(),
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
     Scan scan = new Scan();
     scan.setMaxVersions(oldSI.getMaxVersions());
-    return new StoreScanner(store, scanInfo, scan, Collections.singletonList(memstoreScanner),
+    return new StoreScanner(store, scanInfo, scan, scanners,
         ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 

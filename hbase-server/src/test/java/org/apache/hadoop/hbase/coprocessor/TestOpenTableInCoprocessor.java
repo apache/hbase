@@ -63,7 +63,7 @@ public class TestOpenTableInCoprocessor {
   /**
    * Custom coprocessor that just copies the write to another table.
    */
-  public static class SendToOtherTableCoprocessor extends BaseRegionObserver {
+  public static class SendToOtherTableCoprocessor implements RegionObserver {
 
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
@@ -80,7 +80,7 @@ public class TestOpenTableInCoprocessor {
   /**
    * Coprocessor that creates an HTable with a pool to write to another table
    */
-  public static class CustomThreadPoolCoprocessor extends BaseRegionObserver {
+  public static class CustomThreadPoolCoprocessor implements RegionObserver {
 
     /**
      * Get a pool that has only ever one thread. A second action added to the pool (running
@@ -92,7 +92,7 @@ public class TestOpenTableInCoprocessor {
       long keepAliveTime = 60;
       ThreadPoolExecutor pool =
           new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-              new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("hbase-table"));
+              new SynchronousQueue<>(), Threads.newDaemonThreadFactory("hbase-table"));
       pool.allowCoreThreadTimeOut(true);
       return pool;
     }
@@ -145,8 +145,10 @@ public class TestOpenTableInCoprocessor {
     runCoprocessorConnectionToRemoteTable(CustomThreadPoolCoprocessor.class, completedWithPool);
   }
 
-  private void runCoprocessorConnectionToRemoteTable(Class<? extends BaseRegionObserver> clazz,
-      boolean[] completeCheck) throws Throwable {
+  private void runCoprocessorConnectionToRemoteTable(Class clazz, boolean[] completeCheck)
+      throws Throwable {
+    // Check if given class implements RegionObserver.
+    assert(RegionObserver.class.isAssignableFrom(clazz));
     HTableDescriptor primary = new HTableDescriptor(primaryTable);
     primary.addFamily(new HColumnDescriptor(family));
     // add our coprocessor

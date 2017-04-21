@@ -45,7 +45,7 @@ import org.junit.experimental.categories.Category;
 @Category({MiscTests.class, SmallTests.class})
 public class TestGlobalFilter extends HttpServerFunctionalTest {
   private static final Log LOG = LogFactory.getLog(HttpServer.class);
-  static final Set<String> RECORDS = new TreeSet<String>(); 
+  static final Set<String> RECORDS = new TreeSet<>();
 
   /** A very simple filter that records accessed uri's */
   static public class RecordingFilter implements Filter {

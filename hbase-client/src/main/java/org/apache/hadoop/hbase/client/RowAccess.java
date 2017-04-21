@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Provide a way to access the inner buffer.
@@ -29,7 +28,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * @param <T>
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public interface RowAccess<T> extends Iterable<T> {
   /**
    * @return true if there are no elements.

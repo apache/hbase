@@ -90,7 +90,7 @@ public class TestMasterStatusServlet {
     // Fake AssignmentManager and RIT
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
     RegionStates rs = Mockito.mock(RegionStates.class);
-    Set<RegionState> regionsInTransition = new HashSet<RegionState>();
+    Set<RegionState> regionsInTransition = new HashSet<>();
     regionsInTransition.add(new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     Mockito.doReturn(rs).when(am).getRegionStates();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
@@ -145,7 +145,7 @@ public class TestMasterStatusServlet {
     List<ServerName> servers = Lists.newArrayList(
         ServerName.valueOf("rootserver,123,12345"),
         ServerName.valueOf("metaserver,123,12345"));
-    Set<ServerName> deadServers = new HashSet<ServerName>(
+    Set<ServerName> deadServers = new HashSet<>(
         Lists.newArrayList(
             ServerName.valueOf("badserver,123,12345"),
             ServerName.valueOf("uglyserver,123,12345"))
@@ -164,8 +164,7 @@ public class TestMasterStatusServlet {
     RegionStates rs = Mockito.mock(RegionStates.class);
 
     // Add 100 regions as in-transition
-    TreeSet<RegionState> regionsInTransition = new TreeSet<RegionState>(
-      RegionStates.REGION_STATE_COMPARATOR);
+    TreeSet<RegionState> regionsInTransition = new TreeSet<>(RegionStates.REGION_STATE_COMPARATOR);
     for (byte i = 0; i < 100; i++) {
       HRegionInfo hri = new HRegionInfo(FAKE_TABLE.getTableName(),
           new byte[]{i}, new byte[]{(byte) (i+1)});

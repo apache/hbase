@@ -26,10 +26,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,7 +58,7 @@ public class TestClientOperationInterrupt {
   private static final byte[] test = Bytes.toBytes("test");
   private static Configuration conf;
 
-  public static class TestCoprocessor extends BaseRegionObserver {
+  public static class TestCoprocessor implements RegionObserver {
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
                          final Get get, final List<Cell> results) throws IOException {
@@ -96,7 +96,7 @@ public class TestClientOperationInterrupt {
     final AtomicInteger badEx = new AtomicInteger(0);
     final AtomicInteger noInt = new AtomicInteger(0);
     final AtomicInteger done = new AtomicInteger(0);
-    List<Thread> threads = new ArrayList<Thread>();
+    List<Thread> threads = new ArrayList<>();
 
     final int nbThread = 100;
 

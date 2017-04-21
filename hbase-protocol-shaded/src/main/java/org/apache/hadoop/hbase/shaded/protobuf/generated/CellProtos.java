@@ -576,7 +576,7 @@ public final class CellProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRow()) {
         hash = (37 * hash) + ROW_FIELD_NUMBER;
         hash = (53 * hash) + getRow().hashCode();
@@ -1613,7 +1613,7 @@ public final class CellProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRow()) {
         hash = (37 * hash) + ROW_FIELD_NUMBER;
         hash = (53 * hash) + getRow().hashCode();

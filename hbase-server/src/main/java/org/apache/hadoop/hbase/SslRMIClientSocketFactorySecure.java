@@ -25,7 +25,7 @@ public class SslRMIClientSocketFactorySecure extends SslRMIClientSocketFactory {
   @Override
   public Socket createSocket(String host, int port) throws IOException {
     SSLSocket socket = (SSLSocket) super.createSocket(host, port);
-    ArrayList<String> secureProtocols = new ArrayList<String>();
+    ArrayList<String> secureProtocols = new ArrayList<>();
     for (String p : socket.getEnabledProtocols()) {
       if (!p.contains("SSLv3")) {
         secureProtocols.add(p);

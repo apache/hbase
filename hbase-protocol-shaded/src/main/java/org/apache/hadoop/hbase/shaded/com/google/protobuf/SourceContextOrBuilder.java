@@ -13,7 +13,7 @@ public interface SourceContextOrBuilder extends
    * protobuf element.  For example: `"google/protobuf/source_context.proto"`.
    * </pre>
    *
-   * <code>optional string file_name = 1;</code>
+   * <code>string file_name = 1;</code>
    */
   java.lang.String getFileName();
   /**
@@ -22,7 +22,7 @@ public interface SourceContextOrBuilder extends
    * protobuf element.  For example: `"google/protobuf/source_context.proto"`.
    * </pre>
    *
-   * <code>optional string file_name = 1;</code>
+   * <code>string file_name = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getFileNameBytes();

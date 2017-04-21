@@ -1002,7 +1002,7 @@ public class TestAdmin1 {
       // insert rows into column families. The number of rows that have values
       // in a specific column family is decided by rowCounts[familyIndex]
       for (int index = 0; index < familyNames.length; index++) {
-        ArrayList<Put> puts = new ArrayList<Put>(rowCounts[index]);
+        ArrayList<Put> puts = new ArrayList<>(rowCounts[index]);
         for (int i = 0; i < rowCounts[index]; i++) {
           byte[] k = Bytes.toBytes(i);
           Put put = new Put(k);
@@ -1143,7 +1143,7 @@ public class TestAdmin1 {
     } while (oldRegions.size() != 9); //3 regions * 3 replicas
     // write some data to the table
     Table ht = TEST_UTIL.getConnection().getTable(tableName);
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     byte[] qualifier = "c".getBytes();
     Put put = new Put(new byte[]{(byte)'1'});
     put.addColumn(cf, qualifier, "100".getBytes());
@@ -1295,7 +1295,7 @@ public class TestAdmin1 {
     byte[] q1 = Bytes.toBytes("q1");
     byte[] v1 = Bytes.toBytes("v1");
     p.addColumn(Bytes.toBytes(fn), q1, v1);
-    List<Put> puts = new ArrayList<Put>(2);
+    List<Put> puts = new ArrayList<>(2);
     puts.add(p);
     p = new Put(Bytes.toBytes("rep1_rk"));
     p.addColumn(Bytes.toBytes(fn1), q1, v1);

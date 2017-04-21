@@ -30,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -44,7 +43,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * from the returned {@link CompletableFuture}.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
 public interface AsyncTableBase {
 
   /**
@@ -322,7 +320,14 @@ public interface AsyncTableBase {
    * If your result set is very large, you should use other scan method to get a scanner or use
    * callback to process the results. They will do chunking to prevent OOM. The scanAll method will
    * fetch all the results and store them in a List and then return the list to you.
-   * @param scan A configured {@link Scan} object. SO if you use this method to fetch a really large
+   * <p>
+   * The scan metrics will be collected background if you enable it but you have no way to get it.
+   * Usually you can get scan metrics from {@code ResultScanner}, or through
+   * {@code ScanResultConsumer.onScanMetricsCreated} but this method only returns a list of results.
+   * So if you really care about scan metrics then you'd better use other scan methods which return
+   * a {@code ResultScanner} or let you pass in a {@code ScanResultConsumer}. There is no
+   * performance difference between these scan methods so do not worry.
+   * @param scan A configured {@link Scan} object. So if you use this method to fetch a really large
    *          result set, it is likely to cause OOM.
    * @return The results of this small scan operation. The return value will be wrapped by a
    *         {@link CompletableFuture}.

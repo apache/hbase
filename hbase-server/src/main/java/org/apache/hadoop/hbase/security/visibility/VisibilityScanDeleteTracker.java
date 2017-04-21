@@ -53,17 +53,14 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   // type would solve this problem and also ensure that the combination of different type
   // of deletes with diff ts would also work fine
   // Track per TS
-  private List<Triple<List<Tag>, Byte, Long>> visibilityTagsDeleteFamily =
-      new ArrayList<Triple<List<Tag>, Byte, Long>>();
+  private List<Triple<List<Tag>, Byte, Long>> visibilityTagsDeleteFamily = new ArrayList<>();
   // Delete family version with different ts and different visibility expression could come.
   // Need to track it per ts.
-  private List<Triple<List<Tag>, Byte, Long>> visibilityTagsDeleteFamilyVersion =
-      new ArrayList<Triple<List<Tag>, Byte, Long>>();
+  private List<Triple<List<Tag>, Byte, Long>> visibilityTagsDeleteFamilyVersion = new ArrayList<>();
   private List<Pair<List<Tag>, Byte>> visibilityTagsDeleteColumns;
   // Tracking as List<List> is to handle same ts cell but different visibility tag. 
   // TODO : Need to handle puts with same ts but different vis tags.
-  private List<Pair<List<Tag>, Byte>> visiblityTagsDeleteColumnVersion =
-      new ArrayList<Pair<List<Tag>, Byte>>();
+  private List<Pair<List<Tag>, Byte>> visiblityTagsDeleteColumnVersion = new ArrayList<>();
 
   public VisibilityScanDeleteTracker() {
     super();
@@ -87,8 +84,8 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
       return;
     }
     // new column, or more general delete type
-    if (deleteBuffer != null) {
-      if (!(CellUtil.matchingQualifier(delCell, deleteBuffer, deleteOffset, deleteLength))) {
+    if (deleteCell != null) {
+      if (!(CellUtil.matchingQualifier(delCell, deleteCell))) {
         // A case where there are deletes for a column qualifier but there are
         // no corresponding puts for them. Rare case.
         visibilityTagsDeleteColumns = null;
@@ -104,9 +101,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         visiblityTagsDeleteColumnVersion = null;
       }
     }
-    deleteBuffer = delCell.getQualifierArray();
-    deleteOffset = delCell.getQualifierOffset();
-    deleteLength = delCell.getQualifierLength();
+    deleteCell = delCell;
     deleteType = type;
     deleteTimestamp = timestamp;
     extractDeleteCellVisTags(delCell, KeyValue.Type.codeToType(type));
@@ -119,50 +114,46 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
       Byte deleteCellVisTagsFormat = null;
       switch (type) {
       case DeleteFamily:
-        List<Tag> delTags = new ArrayList<Tag>();
+        List<Tag> delTags = new ArrayList<>();
         if (visibilityTagsDeleteFamily == null) {
-          visibilityTagsDeleteFamily = new ArrayList<Triple<List<Tag>, Byte, Long>>();
+          visibilityTagsDeleteFamily = new ArrayList<>();
         }
         deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
         if (!delTags.isEmpty()) {
-          visibilityTagsDeleteFamily.add(new Triple<List<Tag>, Byte, Long>(delTags,
-              deleteCellVisTagsFormat, delCell.getTimestamp()));
+          visibilityTagsDeleteFamily.add(new Triple<>(delTags, deleteCellVisTagsFormat, delCell.getTimestamp()));
           hasVisTag = true;
         }
         break;
       case DeleteFamilyVersion:
         if(visibilityTagsDeleteFamilyVersion == null) {
-          visibilityTagsDeleteFamilyVersion = new ArrayList<Triple<List<Tag>, Byte, Long>>();
+          visibilityTagsDeleteFamilyVersion = new ArrayList<>();
         }
-        delTags = new ArrayList<Tag>();
+        delTags = new ArrayList<>();
         deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
         if (!delTags.isEmpty()) {
-          visibilityTagsDeleteFamilyVersion.add(new Triple<List<Tag>, Byte, Long>(delTags,
-              deleteCellVisTagsFormat, delCell.getTimestamp()));
+          visibilityTagsDeleteFamilyVersion.add(new Triple<>(delTags, deleteCellVisTagsFormat, delCell.getTimestamp()));
           hasVisTag = true;
         }
         break;
       case DeleteColumn:
         if (visibilityTagsDeleteColumns == null) {
-          visibilityTagsDeleteColumns = new ArrayList<Pair<List<Tag>, Byte>>();
+          visibilityTagsDeleteColumns = new ArrayList<>();
         }
-        delTags = new ArrayList<Tag>();
+        delTags = new ArrayList<>();
         deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
         if (!delTags.isEmpty()) {
-          visibilityTagsDeleteColumns.add(new Pair<List<Tag>, Byte>(delTags,
-              deleteCellVisTagsFormat));
+          visibilityTagsDeleteColumns.add(new Pair<>(delTags, deleteCellVisTagsFormat));
           hasVisTag = true;
         }
         break;
       case Delete:
         if (visiblityTagsDeleteColumnVersion == null) {
-          visiblityTagsDeleteColumnVersion = new ArrayList<Pair<List<Tag>, Byte>>();
+          visiblityTagsDeleteColumnVersion = new ArrayList<>();
         }
-        delTags = new ArrayList<Tag>();
+        delTags = new ArrayList<>();
         deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
         if (!delTags.isEmpty()) {
-          visiblityTagsDeleteColumnVersion.add(new Pair<List<Tag>, Byte>(delTags,
-              deleteCellVisTagsFormat));
+          visiblityTagsDeleteColumnVersion.add(new Pair<>(delTags, deleteCellVisTagsFormat));
           hasVisTag = true;
         }
         break;
@@ -184,7 +175,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
               // visibilityTagsDeleteFamily is ArrayList
               Triple<List<Tag>, Byte, Long> triple = visibilityTagsDeleteFamily.get(i);
               if (timestamp <= triple.getThird()) {
-                List<Tag> putVisTags = new ArrayList<Tag>();
+                List<Tag> putVisTags = new ArrayList<>();
                 Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
                 boolean matchFound = VisibilityLabelServiceManager.getInstance()
                     .getVisibilityLabelService().matchVisibility(putVisTags, putCellVisTagsFormat,
@@ -220,7 +211,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
               // visibilityTagsDeleteFamilyVersion is ArrayList
               Triple<List<Tag>, Byte, Long> triple = visibilityTagsDeleteFamilyVersion.get(i);
               if (timestamp == triple.getThird()) {
-                List<Tag> putVisTags = new ArrayList<Tag>();
+                List<Tag> putVisTags = new ArrayList<>();
                 Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
                 boolean matchFound = VisibilityLabelServiceManager.getInstance()
                     .getVisibilityLabelService().matchVisibility(putVisTags, putCellVisTagsFormat,
@@ -243,14 +234,14 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
           }
         }
       }
-      if (deleteBuffer != null) {
-        int ret = CellComparator.compareQualifiers(cell, deleteBuffer, deleteOffset, deleteLength);
+      if (deleteCell != null) {
+        int ret = CellComparator.compareQualifiers(cell, deleteCell);
         if (ret == 0) {
           if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
             if (visibilityTagsDeleteColumns != null) {
               if (!visibilityTagsDeleteColumns.isEmpty()) {
                 for (Pair<List<Tag>, Byte> tags : visibilityTagsDeleteColumns) {
-                  List<Tag> putVisTags = new ArrayList<Tag>();
+                  List<Tag> putVisTags = new ArrayList<>();
                   Byte putCellVisTagsFormat =
                       VisibilityUtils.extractVisibilityTags(cell, putVisTags);
                   boolean matchFound = VisibilityLabelServiceManager.getInstance()
@@ -279,7 +270,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
             if (visiblityTagsDeleteColumnVersion != null) {
               if (!visiblityTagsDeleteColumnVersion.isEmpty()) {
                 for (Pair<List<Tag>, Byte> tags : visiblityTagsDeleteColumnVersion) {
-                  List<Tag> putVisTags = new ArrayList<Tag>();
+                  List<Tag> putVisTags = new ArrayList<>();
                   Byte putCellVisTagsFormat =
                       VisibilityUtils.extractVisibilityTags(cell, putVisTags);
                   boolean matchFound = VisibilityLabelServiceManager.getInstance()
@@ -304,13 +295,15 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
           }
         } else if (ret > 0) {
           // Next column case.
-          deleteBuffer = null;
+          deleteCell = null;
           // Can nullify this because we are moving to the next column
           visibilityTagsDeleteColumns = null;
           visiblityTagsDeleteColumnVersion = null;
         } else {
           throw new IllegalStateException("isDeleted failed: deleteBuffer="
-              + Bytes.toStringBinary(deleteBuffer, deleteOffset, deleteLength) + ", qualifier="
+              + Bytes.toStringBinary(deleteCell.getQualifierArray(),
+                    deleteCell.getQualifierOffset(), deleteCell.getQualifierLength())
+              + ", qualifier="
               + Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
                   cell.getQualifierLength())
               + ", timestamp=" + timestamp + ", comparison result: " + ret);

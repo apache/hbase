@@ -71,7 +71,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
      * Prepare 16 random hfile ranges required for creating hfiles
      */
     Iterator<String> randomHFileRangeListIterator = null;
-    Set<String> randomHFileRanges = new HashSet<String>(16);
+    Set<String> randomHFileRanges = new HashSet<>(16);
     for (int i = 0; i < 16; i++) {
       randomHFileRanges.add(UUID.randomUUID().toString());
     }

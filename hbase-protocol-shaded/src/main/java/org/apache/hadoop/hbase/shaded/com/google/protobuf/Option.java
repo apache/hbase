@@ -94,10 +94,13 @@ public  final class Option extends
   private volatile java.lang.Object name_;
   /**
    * <pre>
-   * The option's name. For example, `"java_package"`.
+   * The option's name. For protobuf built-in options (options defined in
+   * descriptor.proto), this is the short name. For example, `"map_entry"`.
+   * For custom options, it should be the fully-qualified name. For example,
+   * `"google.api.http"`.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public java.lang.String getName() {
     java.lang.Object ref = name_;
@@ -113,10 +116,13 @@ public  final class Option extends
   }
   /**
    * <pre>
-   * The option's name. For example, `"java_package"`.
+   * The option's name. For protobuf built-in options (options defined in
+   * descriptor.proto), this is the short name. For example, `"map_entry"`.
+   * For custom options, it should be the fully-qualified name. For example,
+   * `"google.api.http"`.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes() {
@@ -136,30 +142,39 @@ public  final class Option extends
   private org.apache.hadoop.hbase.shaded.com.google.protobuf.Any value_;
   /**
    * <pre>
-   * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+   * The option's value packed in an Any message. If the value is a primitive,
+   * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+   * should be used. If the value is an enum, it should be stored as an int32
+   * value using the google.protobuf.Int32Value type.
    * </pre>
    *
-   * <code>optional .google.protobuf.Any value = 2;</code>
+   * <code>.google.protobuf.Any value = 2;</code>
    */
   public boolean hasValue() {
     return value_ != null;
   }
   /**
    * <pre>
-   * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+   * The option's value packed in an Any message. If the value is a primitive,
+   * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+   * should be used. If the value is an enum, it should be stored as an int32
+   * value using the google.protobuf.Int32Value type.
    * </pre>
    *
-   * <code>optional .google.protobuf.Any value = 2;</code>
+   * <code>.google.protobuf.Any value = 2;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.Any getValue() {
     return value_ == null ? org.apache.hadoop.hbase.shaded.com.google.protobuf.Any.getDefaultInstance() : value_;
   }
   /**
    * <pre>
-   * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+   * The option's value packed in an Any message. If the value is a primitive,
+   * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+   * should be used. If the value is an enum, it should be stored as an int32
+   * value using the google.protobuf.Int32Value type.
    * </pre>
    *
-   * <code>optional .google.protobuf.Any value = 2;</code>
+   * <code>.google.protobuf.Any value = 2;</code>
    */
   public org.apache.hadoop.hbase.shaded.com.google.protobuf.AnyOrBuilder getValueOrBuilder() {
     return getValue();
@@ -229,7 +244,7 @@ public  final class Option extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAME_FIELD_NUMBER;
     hash = (53 * hash) + getName().hashCode();
     if (hasValue()) {
@@ -472,10 +487,13 @@ public  final class Option extends
     private java.lang.Object name_ = "";
     /**
      * <pre>
-     * The option's name. For example, `"java_package"`.
+     * The option's name. For protobuf built-in options (options defined in
+     * descriptor.proto), this is the short name. For example, `"map_entry"`.
+     * For custom options, it should be the fully-qualified name. For example,
+     * `"google.api.http"`.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -491,10 +509,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's name. For example, `"java_package"`.
+     * The option's name. For protobuf built-in options (options defined in
+     * descriptor.proto), this is the short name. For example, `"map_entry"`.
+     * For custom options, it should be the fully-qualified name. For example,
+     * `"google.api.http"`.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
         getNameBytes() {
@@ -511,10 +532,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's name. For example, `"java_package"`.
+     * The option's name. For protobuf built-in options (options defined in
+     * descriptor.proto), this is the short name. For example, `"map_entry"`.
+     * For custom options, it should be the fully-qualified name. For example,
+     * `"google.api.http"`.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setName(
         java.lang.String value) {
@@ -528,10 +552,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's name. For example, `"java_package"`.
+     * The option's name. For protobuf built-in options (options defined in
+     * descriptor.proto), this is the short name. For example, `"map_entry"`.
+     * For custom options, it should be the fully-qualified name. For example,
+     * `"google.api.http"`.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder clearName() {
       
@@ -541,10 +568,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's name. For example, `"java_package"`.
+     * The option's name. For protobuf built-in options (options defined in
+     * descriptor.proto), this is the short name. For example, `"map_entry"`.
+     * For custom options, it should be the fully-qualified name. For example,
+     * `"google.api.http"`.
      * </pre>
      *
-     * <code>optional string name = 1;</code>
+     * <code>string name = 1;</code>
      */
     public Builder setNameBytes(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
@@ -563,20 +593,26 @@ public  final class Option extends
         org.apache.hadoop.hbase.shaded.com.google.protobuf.Any, org.apache.hadoop.hbase.shaded.com.google.protobuf.Any.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.AnyOrBuilder> valueBuilder_;
     /**
      * <pre>
-     * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+     * The option's value packed in an Any message. If the value is a primitive,
+     * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+     * should be used. If the value is an enum, it should be stored as an int32
+     * value using the google.protobuf.Int32Value type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 2;</code>
+     * <code>.google.protobuf.Any value = 2;</code>
      */
     public boolean hasValue() {
       return valueBuilder_ != null || value_ != null;
     }
     /**
      * <pre>
-     * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+     * The option's value packed in an Any message. If the value is a primitive,
+     * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+     * should be used. If the value is an enum, it should be stored as an int32
+     * value using the google.protobuf.Int32Value type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 2;</code>
+     * <code>.google.protobuf.Any value = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.Any getValue() {
       if (valueBuilder_ == null) {
@@ -587,10 +623,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+     * The option's value packed in an Any message. If the value is a primitive,
+     * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+     * should be used. If the value is an enum, it should be stored as an int32
+     * value using the google.protobuf.Int32Value type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 2;</code>
+     * <code>.google.protobuf.Any value = 2;</code>
      */
     public Builder setValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.Any value) {
       if (valueBuilder_ == null) {
@@ -607,10 +646,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+     * The option's value packed in an Any message. If the value is a primitive,
+     * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+     * should be used. If the value is an enum, it should be stored as an int32
+     * value using the google.protobuf.Int32Value type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 2;</code>
+     * <code>.google.protobuf.Any value = 2;</code>
      */
     public Builder setValue(
         org.apache.hadoop.hbase.shaded.com.google.protobuf.Any.Builder builderForValue) {
@@ -625,10 +667,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+     * The option's value packed in an Any message. If the value is a primitive,
+     * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+     * should be used. If the value is an enum, it should be stored as an int32
+     * value using the google.protobuf.Int32Value type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 2;</code>
+     * <code>.google.protobuf.Any value = 2;</code>
      */
     public Builder mergeValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.Any value) {
       if (valueBuilder_ == null) {
@@ -647,10 +692,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+     * The option's value packed in an Any message. If the value is a primitive,
+     * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+     * should be used. If the value is an enum, it should be stored as an int32
+     * value using the google.protobuf.Int32Value type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 2;</code>
+     * <code>.google.protobuf.Any value = 2;</code>
      */
     public Builder clearValue() {
       if (valueBuilder_ == null) {
@@ -665,10 +713,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+     * The option's value packed in an Any message. If the value is a primitive,
+     * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+     * should be used. If the value is an enum, it should be stored as an int32
+     * value using the google.protobuf.Int32Value type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 2;</code>
+     * <code>.google.protobuf.Any value = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.Any.Builder getValueBuilder() {
       
@@ -677,10 +728,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+     * The option's value packed in an Any message. If the value is a primitive,
+     * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+     * should be used. If the value is an enum, it should be stored as an int32
+     * value using the google.protobuf.Int32Value type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 2;</code>
+     * <code>.google.protobuf.Any value = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.AnyOrBuilder getValueOrBuilder() {
       if (valueBuilder_ != null) {
@@ -692,10 +746,13 @@ public  final class Option extends
     }
     /**
      * <pre>
-     * The option's value. For example, `"org.apache.hadoop.hbase.shaded.com.google.protobuf"`.
+     * The option's value packed in an Any message. If the value is a primitive,
+     * the corresponding wrapper type defined in google/protobuf/wrappers.proto
+     * should be used. If the value is an enum, it should be stored as an int32
+     * value using the google.protobuf.Int32Value type.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 2;</code>
+     * <code>.google.protobuf.Any value = 2;</code>
      */
     private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
         org.apache.hadoop.hbase.shaded.com.google.protobuf.Any, org.apache.hadoop.hbase.shaded.com.google.protobuf.Any.Builder, org.apache.hadoop.hbase.shaded.com.google.protobuf.AnyOrBuilder> 

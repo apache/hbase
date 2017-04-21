@@ -158,7 +158,7 @@ public class TestGlobalMemStoreSize {
   }
 
   private List<HRegionServer> getOnlineRegionServers() {
-    List<HRegionServer> list = new ArrayList<HRegionServer>();
+    List<HRegionServer> list = new ArrayList<>();
     for (JVMClusterUtil.RegionServerThread rst :
           cluster.getRegionServerThreads()) {
       if (rst.getRegionServer().isOnline()) {

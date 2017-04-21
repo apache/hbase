@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.types;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * @see OrderedBlobVar
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class RawBytes implements DataType<byte[]> {
 
   public static final RawBytes ASCENDING = new RawBytes(Order.ASCENDING);

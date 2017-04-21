@@ -161,7 +161,7 @@ public class Tokenizer{
   }
 
   public List<byte[]> getArrays() {
-    List<TokenizerNode> nodes = new ArrayList<TokenizerNode>();
+    List<TokenizerNode> nodes = new ArrayList<>();
     root.appendNodesToExternalList(nodes, true, true);
     List<byte[]> byteArrays = Lists.newArrayListWithCapacity(CollectionUtils.nullSafeSize(nodes));
     for (int i = 0; i < nodes.size(); ++i) {

@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class WrongVersionException extends FatalConnectionException {
   public WrongVersionException() {
     super();

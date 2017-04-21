@@ -222,7 +222,7 @@ public class TestKeyValue extends TestCase {
   }
 
   public void testBinaryKeys() throws Exception {
-    Set<KeyValue> set = new TreeSet<KeyValue>(CellComparator.COMPARATOR);
+    Set<KeyValue> set = new TreeSet<>(CellComparator.COMPARATOR);
     final byte [] fam = Bytes.toBytes("col");
     final byte [] qf = Bytes.toBytes("umn");
     final byte [] nb = new byte[0];
@@ -248,7 +248,7 @@ public class TestKeyValue extends TestCase {
     }
     assertTrue(assertion);
     // Make set with good comparator
-    set = new TreeSet<KeyValue>(CellComparator.META_COMPARATOR);
+    set = new TreeSet<>(CellComparator.META_COMPARATOR);
     Collections.addAll(set, keys);
     count = 0;
     for (KeyValue k: set) {

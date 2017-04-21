@@ -40,10 +40,11 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Waiter;
+
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -78,7 +79,7 @@ public class TestReplicaWithCluster {
   /**
    * This copro is used to synchronize the tests.
    */
-  public static class SlowMeCopro extends BaseRegionObserver {
+  public static class SlowMeCopro implements RegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(0);
     static final AtomicReference<CountDownLatch> cdl = new AtomicReference<>(new CountDownLatch(0));
 
@@ -114,7 +115,7 @@ public class TestReplicaWithCluster {
   /**
    * This copro is used to simulate region server down exception for Get and Scan
    */
-  public static class RegionServerStoppedCopro extends BaseRegionObserver {
+  public static class RegionServerStoppedCopro implements RegionObserver {
 
     public RegionServerStoppedCopro() {
     }
@@ -377,12 +378,12 @@ public class TestReplicaWithCluster {
     final int numRows = 10;
     final byte[] qual = Bytes.toBytes("qual");
     final byte[] val  = Bytes.toBytes("val");
-    final List<Pair<byte[], String>> famPaths = new ArrayList<Pair<byte[], String>>();
+    final List<Pair<byte[], String>> famPaths = new ArrayList<>();
     for (HColumnDescriptor col : hdt.getColumnFamilies()) {
       Path hfile = new Path(dir, col.getNameAsString());
       TestHRegionServerBulkLoad.createHFile(HTU.getTestFileSystem(), hfile, col.getName(),
         qual, val, numRows);
-      famPaths.add(new Pair<byte[], String>(col.getName(), hfile.toString()));
+      famPaths.add(new Pair<>(col.getName(), hfile.toString()));
     }
 
     // bulk load HFiles
@@ -515,7 +516,56 @@ public class TestReplicaWithCluster {
 
       Assert.assertTrue(r.isStale());
     } finally {
+      HTU.getAdmin().disableTable(hdt.getTableName());
+      HTU.deleteTable(hdt.getTableName());
+    }
+  }
 
+  @Test
+  public void testReplicaGetWithRpcClientImpl() throws IOException {
+    HTU.getConfiguration().setBoolean("hbase.ipc.client.specificThreadForWriting", true);
+    HTU.getConfiguration().set("hbase.rpc.client.impl", "org.apache.hadoop.hbase.ipc.RpcClientImpl");
+    // Create table then get the single region for our new table.
+    HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaGetWithRpcClientImpl");
+    hdt.setRegionReplication(NB_SERVERS);
+    hdt.addCoprocessor(SlowMeCopro.class.getName());
+
+    try {
+      Table table = HTU.createTable(hdt, new byte[][] { f }, null);
+
+      Put p = new Put(row);
+      p.addColumn(f, row, row);
+      table.put(p);
+
+      // Flush so it can be picked by the replica refresher thread
+      HTU.flush(table.getName());
+
+      // Sleep for some time until data is picked up by replicas
+      try {
+        Thread.sleep(2 * REFRESH_PERIOD);
+      } catch (InterruptedException e1) {
+        LOG.error(e1);
+      }
+
+      try {
+        // Create the new connection so new config can kick in
+        Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+        Table t = connection.getTable(hdt.getTableName());
+
+        // But if we ask for stale we will get it
+        SlowMeCopro.cdl.set(new CountDownLatch(1));
+        Get g = new Get(row);
+        g.setConsistency(Consistency.TIMELINE);
+        Result r = t.get(g);
+        Assert.assertTrue(r.isStale());
+        SlowMeCopro.cdl.get().countDown();
+      } finally {
+        SlowMeCopro.cdl.get().countDown();
+        SlowMeCopro.sleepTime.set(0);
+      }
+    } finally {
+      HTU.getConfiguration().unset("hbase.ipc.client.specificThreadForWriting");
+      HTU.getConfiguration().unset("hbase.rpc.client.impl");
       HTU.getAdmin().disableTable(hdt.getTableName());
       HTU.deleteTable(hdt.getTableName());
     }

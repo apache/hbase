@@ -80,7 +80,7 @@ public class TestZooKeeperTableArchiveClient {
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
   private static ZKTableArchiveClient archivingClient;
-  private final List<Path> toCleanup = new ArrayList<Path>();
+  private final List<Path> toCleanup = new ArrayList<>();
   private static ClusterConnection CONNECTION;
   private static RegionServerServices rss;
 
@@ -178,7 +178,7 @@ public class TestZooKeeperTableArchiveClient {
     // create the region
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
-    List<Region> regions = new ArrayList<Region>();
+    List<Region> regions = new ArrayList<>();
     regions.add(region);
     when(rss.getOnlineRegions()).thenReturn(regions);
     final CompactedHFilesDischarger compactionCleaner =
@@ -231,7 +231,7 @@ public class TestZooKeeperTableArchiveClient {
     // create the region
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
-    List<Region> regions = new ArrayList<Region>();
+    List<Region> regions = new ArrayList<>();
     regions.add(region);
     when(rss.getOnlineRegions()).thenReturn(regions);
     final CompactedHFilesDischarger compactionCleaner =
@@ -241,7 +241,7 @@ public class TestZooKeeperTableArchiveClient {
     // create the another table that we don't archive
     hcd = new HColumnDescriptor(TEST_FAM);
     HRegion otherRegion = UTIL.createTestRegion(otherTable, hcd);
-    regions = new ArrayList<Region>();
+    regions = new ArrayList<>();
     regions.add(otherRegion);
     when(rss.getOnlineRegions()).thenReturn(regions);
     final CompactedHFilesDischarger compactionCleaner1 = new CompactedHFilesDischarger(100, stop,
@@ -388,7 +388,7 @@ public class TestZooKeeperTableArchiveClient {
       return null;
     }
 
-    List<Path> allFiles = new ArrayList<Path>();
+    List<Path> allFiles = new ArrayList<>();
     for (FileStatus file : files) {
       if (file.isDirectory()) {
         List<Path> subFiles = getAllFiles(fs, file.getPath());

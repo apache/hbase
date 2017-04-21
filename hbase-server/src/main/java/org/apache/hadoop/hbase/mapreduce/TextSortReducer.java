@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.security.visibility.InvalidLabelException;
 import org.apache.hadoop.hbase.util.Base64;
@@ -50,7 +49,6 @@ import org.apache.hadoop.util.StringUtils;
  * @see PutSortReducer
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TextSortReducer extends
     Reducer<ImmutableBytesWritable, Text, ImmutableBytesWritable, KeyValue> {
   
@@ -146,7 +144,7 @@ public class TextSortReducer extends
         "reducer.row.threshold", 1L * (1<<30));
     Iterator<Text> iter = lines.iterator();
     while (iter.hasNext()) {
-      Set<KeyValue> kvs = new TreeSet<KeyValue>(CellComparator.COMPARATOR);
+      Set<KeyValue> kvs = new TreeSet<>(CellComparator.COMPARATOR);
       long curSize = 0;
       // stop at the end or the RAM threshold
       while (iter.hasNext() && curSize < threshold) {
@@ -160,7 +158,7 @@ public class TextSortReducer extends
           ttl = parsed.getCellTTL();
           
           // create tags for the parsed line
-          List<Tag> tags = new ArrayList<Tag>();
+          List<Tag> tags = new ArrayList<>();
           if (cellVisibilityExpr != null) {
             tags.addAll(kvCreator.getVisibilityExpressionResolver().createVisibilityExpTags(
               cellVisibilityExpr));

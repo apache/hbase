@@ -56,6 +56,12 @@ public abstract class CompactionScanQueryMatcher extends ScanQueryMatcher {
   }
 
   @Override
+  public void beforeShipped() throws IOException {
+    super.beforeShipped();
+    deletes.beforeShipped();
+  }
+
+  @Override
   public boolean hasNullColumnInQuery() {
     return true;
   }

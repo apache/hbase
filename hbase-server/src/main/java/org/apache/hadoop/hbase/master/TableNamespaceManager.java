@@ -212,7 +212,7 @@ public class TableNamespaceManager {
 
   /**
    * Create Namespace in a blocking manner. Keeps trying until
-   * {@link ClusterSchema.HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT_KEY} expires.
+   * {@link ClusterSchema#HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT_KEY} expires.
    * Note, by-passes notifying coprocessors and name checks. Use for system namespaces only.
    */
   private void blockingCreateNamespace(final NamespaceDescriptor namespaceDescriptor)

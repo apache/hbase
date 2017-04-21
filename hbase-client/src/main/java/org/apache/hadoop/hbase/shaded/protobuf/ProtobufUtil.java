@@ -20,11 +20,9 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -74,7 +72,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -86,21 +83,17 @@ import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
 import org.apache.hadoop.hbase.quotas.QuotaType;
 import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
-import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcChannel;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Service;
@@ -156,10 +149,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -168,10 +161,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescript
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -198,8 +191,7 @@ public final class ProtobufUtil {
   /**
    * Primitive type to class mapping.
    */
-  private final static Map<String, Class<?>>
-    PRIMITIVES = new HashMap<String, Class<?>>();
+  private final static Map<String, Class<?>> PRIMITIVES = new HashMap<>();
 
   /**
    * Many results are simple: no cell, exists true or false. To save on object creations,
@@ -399,6 +391,21 @@ public final class ProtobufUtil {
       startCode = proto.getStartCode();
     }
     return ServerName.valueOf(hostName, port, startCode);
+  }
+
+  /**
+   * Get NamespaceDescriptor[] from ListNamespaceDescriptorsResponse protobuf
+   * @param proto the ListNamespaceDescriptorsResponse
+   * @return NamespaceDescriptor[]
+   */
+  public static NamespaceDescriptor[] getNamespaceDescriptorArray(
+      ListNamespaceDescriptorsResponse proto) {
+    List<HBaseProtos.NamespaceDescriptor> list = proto.getNamespaceDescriptorList();
+    NamespaceDescriptor[] res = new NamespaceDescriptor[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      res[i] = ProtobufUtil.toNamespaceDescriptor(list.get(i));
+    }
+    return res;
   }
 
   /**
@@ -1498,7 +1505,7 @@ public final class ProtobufUtil {
       return proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT;
     }
 
-    List<Cell> cells = new ArrayList<Cell>(values.size());
+    List<Cell> cells = new ArrayList<>(values.size());
     for (CellProtos.Cell c : values) {
       cells.add(toCell(c));
     }
@@ -1532,7 +1539,7 @@ public final class ProtobufUtil {
     List<Cell> cells = null;
     if (proto.hasAssociatedCellCount()) {
       int count = proto.getAssociatedCellCount();
-      cells = new ArrayList<Cell>(count + values.size());
+      cells = new ArrayList<>(count + values.size());
       for (int i = 0; i < count; i++) {
         if (!scanner.advance()) throw new IOException("Failed get " + i + " of " + count);
         cells.add(scanner.current());
@@ -1540,7 +1547,7 @@ public final class ProtobufUtil {
     }
 
     if (!values.isEmpty()){
-      if (cells == null) cells = new ArrayList<Cell>(values.size());
+      if (cells == null) cells = new ArrayList<>(values.size());
       for (CellProtos.Cell c: values) {
         cells.add(toCell(c));
       }
@@ -1910,7 +1917,7 @@ public final class ProtobufUtil {
    */
   static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
     if (proto == null) return null;
-    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>(proto.getRegionInfoList().size());
+    List<HRegionInfo> regionInfos = new ArrayList<>(proto.getRegionInfoList().size());
     for (RegionInfo regionInfo: proto.getRegionInfoList()) {
       regionInfos.add(HRegionInfo.convert(regionInfo));
     }
@@ -2034,12 +2041,11 @@ public final class ProtobufUtil {
   }
 
   public static ScanMetrics toScanMetrics(final byte[] bytes) {
-    Parser<MapReduceProtos.ScanMetrics> parser = MapReduceProtos.ScanMetrics.PARSER;
     MapReduceProtos.ScanMetrics pScanMetrics = null;
     try {
-      pScanMetrics = parser.parseFrom(bytes);
+      pScanMetrics = MapReduceProtos.ScanMetrics.parseFrom(bytes);
     } catch (InvalidProtocolBufferException e) {
-      //Ignored there are just no key values to add.
+      // Ignored there are just no key values to add.
     }
     ScanMetrics scanMetrics = new ScanMetrics();
     if (pScanMetrics != null) {
@@ -2052,15 +2058,12 @@ public final class ProtobufUtil {
     return scanMetrics;
   }
 
-  public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics) {
+  public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics, boolean reset) {
     MapReduceProtos.ScanMetrics.Builder builder = MapReduceProtos.ScanMetrics.newBuilder();
-    Map<String, Long> metrics = scanMetrics.getMetricsMap();
+    Map<String, Long> metrics = scanMetrics.getMetricsMap(reset);
     for (Entry<String, Long> e : metrics.entrySet()) {
       HBaseProtos.NameInt64Pair nameInt64Pair =
-          HBaseProtos.NameInt64Pair.newBuilder()
-              .setName(e.getKey())
-              .setValue(e.getValue())
-              .build();
+          HBaseProtos.NameInt64Pair.newBuilder().setName(e.getKey()).setValue(e.getValue()).build();
       builder.addMetrics(nameInt64Pair);
     }
     return builder.build();
@@ -2144,11 +2147,9 @@ public final class ProtobufUtil {
     return b.build();
   }
 
-  public static NamespaceDescriptor toNamespaceDescriptor(
-      HBaseProtos.NamespaceDescriptor desc) throws IOException {
-    NamespaceDescriptor.Builder b =
-      NamespaceDescriptor.create(desc.getName().toStringUtf8());
-    for(HBaseProtos.NameStringPair prop : desc.getConfigurationList()) {
+  public static NamespaceDescriptor toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor desc) {
+    NamespaceDescriptor.Builder b = NamespaceDescriptor.create(desc.getName().toStringUtf8());
+    for (HBaseProtos.NameStringPair prop : desc.getConfigurationList()) {
       b.addConfiguration(prop.getName(), prop.getValue());
     }
     return b.build();
@@ -2726,7 +2727,7 @@ public final class ProtobufUtil {
 
   public static List<ReplicationLoadSource> toReplicationLoadSourceList(
       List<ClusterStatusProtos.ReplicationLoadSource> clsList) {
-    ArrayList<ReplicationLoadSource> rlsList = new ArrayList<ReplicationLoadSource>(clsList.size());
+    ArrayList<ReplicationLoadSource> rlsList = new ArrayList<>(clsList.size());
     for (ClusterStatusProtos.ReplicationLoadSource cls : clsList) {
       rlsList.add(toReplicationLoadSource(cls));
     }
@@ -2983,26 +2984,26 @@ public final class ProtobufUtil {
   public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
 
     Map<ServerName, ServerLoad> servers = null;
-    servers = new HashMap<ServerName, ServerLoad>(proto.getLiveServersList().size());
+    servers = new HashMap<>(proto.getLiveServersList().size());
     for (LiveServerInfo lsi : proto.getLiveServersList()) {
       servers.put(ProtobufUtil.toServerName(
           lsi.getServer()), new ServerLoad(lsi.getServerLoad()));
     }
 
     Collection<ServerName> deadServers = null;
-    deadServers = new ArrayList<ServerName>(proto.getDeadServersList().size());
+    deadServers = new ArrayList<>(proto.getDeadServersList().size());
     for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
       deadServers.add(ProtobufUtil.toServerName(sn));
     }
 
     Collection<ServerName> backupMasters = null;
-    backupMasters = new ArrayList<ServerName>(proto.getBackupMastersList().size());
+    backupMasters = new ArrayList<>(proto.getBackupMastersList().size());
     for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
       backupMasters.add(ProtobufUtil.toServerName(sn));
     }
 
     Set<RegionState> rit = null;
-    rit = new HashSet<RegionState>(proto.getRegionsInTransitionList().size());
+    rit = new HashSet<>(proto.getRegionsInTransitionList().size());
     for (RegionInTransition region : proto.getRegionsInTransitionList()) {
       RegionState value = RegionState.convert(region.getRegionState());
       rit.add(value);

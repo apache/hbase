@@ -84,6 +84,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       sshOptions = StringUtils.join(new Object[] { sshOptions, extraSshOptions }, " ");
     }
     sshOptions = (sshOptions == null) ? "" : sshOptions;
+    sshUserName = (sshUserName == null) ? "" : sshUserName;
     tunnelCmd = conf.get("hbase.it.clustermanager.ssh.cmd", DEFAULT_TUNNEL_CMD);
     // Print out ssh special config if any.
     if ((sshUserName != null && sshUserName.length() > 0) ||
@@ -312,7 +313,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     LOG.info("Executed remote command, exit code:" + shell.getExitCode()
         + " , output:" + shell.getOutput());
 
-    return new Pair<Integer, String>(shell.getExitCode(), shell.getOutput());
+    return new Pair<>(shell.getExitCode(), shell.getOutput());
   }
 
   private Pair<Integer, String> execWithRetries(String hostname, ServiceType service, String... cmd)

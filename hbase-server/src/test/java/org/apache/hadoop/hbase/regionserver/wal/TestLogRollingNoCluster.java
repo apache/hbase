@@ -157,8 +157,7 @@ public class TestLogRollingNoCluster {
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
           final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
           final HTableDescriptor htd = TEST_UTIL.getMetaTableDescriptor();
-          NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-              Bytes.BYTES_COMPARATOR);
+          NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
           for(byte[] fam : htd.getFamiliesKeys()) {
             scopes.put(fam, 0);
           }

@@ -222,7 +222,7 @@ public final class HFileProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getMapEntryCount() > 0) {
         hash = (37 * hash) + MAP_ENTRY_FIELD_NUMBER;
         hash = (53 * hash) + getMapEntryList().hashCode();
@@ -1476,7 +1476,7 @@ public final class HFileProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasFileInfoOffset()) {
         hash = (37 * hash) + FILE_INFO_OFFSET_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(

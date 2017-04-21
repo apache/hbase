@@ -169,7 +169,7 @@ public class MemorySizeUtil {
       if (MemStoreLAB.isEnabled(conf)) {
         // We are in offheap Memstore use
         long globalMemStoreLimit = (long) (offheapMSGlobal * 1024 * 1024); // Size in bytes
-        return new Pair<Long, MemoryType>(globalMemStoreLimit, MemoryType.NON_HEAP);
+        return new Pair<>(globalMemStoreLimit, MemoryType.NON_HEAP);
       } else {
         // Off heap max memstore size is configured with turning off MSLAB. It makes no sense. Do a
         // warn log and go with on heap memstore percentage. By default it will be 40% of Xmx
@@ -178,7 +178,7 @@ public class MemorySizeUtil {
             + " Going with on heap global memstore size ('" + MEMSTORE_SIZE_KEY + "')");
       }
     }
-    return new Pair<Long, MemoryType>(getOnheapGlobalMemstoreSize(conf), MemoryType.HEAP);
+    return new Pair<>(getOnheapGlobalMemstoreSize(conf), MemoryType.HEAP);
   }
 
   /**

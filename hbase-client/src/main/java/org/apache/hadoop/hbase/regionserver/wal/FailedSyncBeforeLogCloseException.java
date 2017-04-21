@@ -19,14 +19,12 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when we fail close of the write-ahead-log file.
  * Package private.  Only used inside this package.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class FailedSyncBeforeLogCloseException extends FailedLogCloseException {
   private static final long serialVersionUID = 1759152841462990925L;
 

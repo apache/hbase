@@ -54,7 +54,7 @@ public class ByteBufferPool {
   public static final int DEFAULT_BUFFER_SIZE = 64 * 1024;// 64 KB. Making it same as the chunk size
                                                           // what we will write/read to/from the
                                                           // socket channel.
-  private final Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<ByteBuffer>();
+  private final Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
 
   private final int bufferSize;
   private final int maxPoolSize;

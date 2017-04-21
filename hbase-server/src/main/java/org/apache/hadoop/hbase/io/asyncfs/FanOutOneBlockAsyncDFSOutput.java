@@ -494,7 +494,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
    * @return A CompletableFuture that hold the acked length after flushing.
    */
   public CompletableFuture<Long> flush(boolean syncBlock) {
-    CompletableFuture<Long> future = new CompletableFuture<Long>();
+    CompletableFuture<Long> future = new CompletableFuture<>();
     if (eventLoop.inEventLoop()) {
       flush0(future, syncBlock);
     } else {

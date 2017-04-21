@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.Sta
  * ProxyThrowables are generated are by this class's {@link #deserialize(byte[])} method.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 @SuppressWarnings("serial")
 public class ForeignException extends IOException {
 
@@ -107,8 +105,7 @@ public class ForeignException extends IOException {
     // if there is no stack trace, ignore it and just return the message
     if (trace == null) return null;
     // build the stack trace for the message
-    List<StackTraceElementMessage> pbTrace =
-        new ArrayList<StackTraceElementMessage>(trace.length);
+    List<StackTraceElementMessage> pbTrace = new ArrayList<>(trace.length);
     for (StackTraceElement elem : trace) {
       StackTraceElementMessage.Builder stackBuilder = StackTraceElementMessage.newBuilder();
       stackBuilder.setDeclaringClass(elem.getClassName());

@@ -63,7 +63,7 @@ public class TestRegionSplitPolicy {
     mockRegion = Mockito.mock(HRegion.class);
     Mockito.doReturn(htd).when(mockRegion).getTableDesc();
     Mockito.doReturn(hri).when(mockRegion).getRegionInfo();
-    stores = new ArrayList<Store>();
+    stores = new ArrayList<>();
     Mockito.doReturn(stores).when(mockRegion).getStores();
   }
 
@@ -103,7 +103,7 @@ public class TestRegionSplitPolicy {
     // Now make it so the mock region has a RegionServerService that will
     // return 'online regions'.
     RegionServerServices rss = Mockito.mock(RegionServerServices.class);
-    final List<Region> regions = new ArrayList<Region>();
+    final List<Region> regions = new ArrayList<>();
     Mockito.when(rss.getOnlineRegions(TABLENAME)).thenReturn(regions);
     Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
     // Set max size for this 'table'.
@@ -162,7 +162,7 @@ public class TestRegionSplitPolicy {
     conf.setFloat("hbase.busy.policy.blockedRequests", 0.1f);
 
     RegionServerServices rss  = Mockito.mock(RegionServerServices.class);
-    final List<Region> regions = new ArrayList<Region>();
+    final List<Region> regions = new ArrayList<>();
     Mockito.when(rss.getOnlineRegions(TABLENAME)).thenReturn(regions);
     Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
     Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(0L);

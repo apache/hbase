@@ -34,7 +34,6 @@ import java.util.Locale;
 import java.util.Properties;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A basic KeyProvider that can resolve keys from a protected KeyStore file
@@ -71,7 +70,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * LoadStoreParameters.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class KeyStoreKeyProvider implements KeyProvider {
 
   protected KeyStore store;

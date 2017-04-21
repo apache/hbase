@@ -152,8 +152,7 @@ public class ReplicationSink {
       long totalReplicated = 0;
       // Map of table => list of Rows, grouped by cluster id, we only want to flushCommits once per
       // invocation of this method per table and cluster id.
-      Map<TableName, Map<List<UUID>, List<Row>>> rowMap =
-          new TreeMap<TableName, Map<List<UUID>, List<Row>>>();
+      Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
       // Map of table name Vs list of pair of family and list of hfile paths from its namespace
       Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = null;
@@ -173,7 +172,7 @@ public class ReplicationSink {
           // Handle bulk load hfiles replication
           if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
             if (bulkLoadHFileMap == null) {
-              bulkLoadHFileMap = new HashMap<String, List<Pair<byte[], List<String>>>>();
+              bulkLoadHFileMap = new HashMap<>();
             }
             buildBulkLoadHFileMap(bulkLoadHFileMap, table, cell);
           } else {
@@ -184,7 +183,7 @@ public class ReplicationSink {
                   CellUtil.isDelete(cell) ? new Delete(cell.getRowArray(), cell.getRowOffset(),
                       cell.getRowLength()) : new Put(cell.getRowArray(), cell.getRowOffset(),
                       cell.getRowLength());
-              List<UUID> clusterIds = new ArrayList<UUID>(entry.getKey().getClusterIdsList().size());
+              List<UUID> clusterIds = new ArrayList<>(entry.getKey().getClusterIdsList().size());
               for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
                 clusterIds.add(toUUID(clusterId));
               }
@@ -275,20 +274,18 @@ public class ReplicationSink {
 
   private void addFamilyAndItsHFilePathToTableInMap(byte[] family, String pathToHfileFromNS,
       List<Pair<byte[], List<String>>> familyHFilePathsList) {
-    List<String> hfilePaths = new ArrayList<String>(1);
+    List<String> hfilePaths = new ArrayList<>(1);
     hfilePaths.add(pathToHfileFromNS);
-    familyHFilePathsList.add(new Pair<byte[], List<String>>(family, hfilePaths));
+    familyHFilePathsList.add(new Pair<>(family, hfilePaths));
   }
 
   private void addNewTableEntryInMap(
       final Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, byte[] family,
       String pathToHfileFromNS, String tableName) {
-    List<String> hfilePaths = new ArrayList<String>(1);
+    List<String> hfilePaths = new ArrayList<>(1);
     hfilePaths.add(pathToHfileFromNS);
-    Pair<byte[], List<String>> newFamilyHFilePathsPair =
-        new Pair<byte[], List<String>>(family, hfilePaths);
-    List<Pair<byte[], List<String>>> newFamilyHFilePathsList =
-        new ArrayList<Pair<byte[], List<String>>>();
+    Pair<byte[], List<String>> newFamilyHFilePathsPair = new Pair<>(family, hfilePaths);
+    List<Pair<byte[], List<String>>> newFamilyHFilePathsList = new ArrayList<>();
     newFamilyHFilePathsList.add(newFamilyHFilePathsPair);
     bulkLoadHFileMap.put(tableName, newFamilyHFilePathsList);
   }
@@ -327,12 +324,12 @@ public class ReplicationSink {
   private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1, K2 key2, V value) {
     Map<K2,List<V>> innerMap = map.get(key1);
     if (innerMap == null) {
-      innerMap = new HashMap<K2, List<V>>();
+      innerMap = new HashMap<>();
       map.put(key1, innerMap);
     }
     List<V> values = innerMap.get(key2);
     if (values == null) {
-      values = new ArrayList<V>();
+      values = new ArrayList<>();
       innerMap.put(key2, values);
     }
     values.add(value);

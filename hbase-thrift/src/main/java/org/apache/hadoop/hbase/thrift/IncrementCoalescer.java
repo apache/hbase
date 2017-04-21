@@ -154,7 +154,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   private final AtomicLong successfulCoalescings = new AtomicLong();
   private final AtomicLong totalIncrements = new AtomicLong();
   private final ConcurrentMap<FullyQualifiedRow, Long> countersMap =
-      new ConcurrentHashMap<FullyQualifiedRow, Long>(100000, 0.75f, 1500);
+      new ConcurrentHashMap<>(100000, 0.75f, 1500);
   private final ThreadPoolExecutor pool;
   private final HBaseHandler handler;
 
@@ -166,7 +166,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   @SuppressWarnings("deprecation")
   public IncrementCoalescer(HBaseHandler hand) {
     this.handler = hand;
-    LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>();
+    LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
     pool =
         new ThreadPoolExecutor(CORE_POOL_SIZE, CORE_POOL_SIZE, 50, TimeUnit.MILLISECONDS, queue,
             Threads.newDaemonThreadFactory("IncrementCoalescer"));

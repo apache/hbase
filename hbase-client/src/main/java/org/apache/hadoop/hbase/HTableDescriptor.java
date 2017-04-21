@@ -36,7 +36,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * when the region split should occur, coprocessors associated with it etc...
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   private static final Log LOG = LogFactory.getLog(HTableDescriptor.class);
@@ -64,15 +62,14 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * includes values like IS_ROOT, IS_META, DEFERRED_LOG_FLUSH, SPLIT_POLICY,
    * MAX_FILE_SIZE, READONLY, MEMSTORE_FLUSHSIZE etc...
    */
-  private final Map<Bytes, Bytes> values =
-      new HashMap<Bytes, Bytes>();
+  private final Map<Bytes, Bytes> values = new HashMap<>();
 
   /**
    * A map which holds the configuration specific to the table.
    * The keys of the map have the same names as config keys and override the defaults with
    * table-specific settings. Example usage may be for compactions, etc.
    */
-  private final Map<String, String> configuration = new HashMap<String, String>();
+  private final Map<String, String> configuration = new HashMap<>();
 
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
 
@@ -236,10 +233,8 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION = true;
 
-  private final static Map<String, String> DEFAULT_VALUES
-    = new HashMap<String, String>();
-  private final static Set<Bytes> RESERVED_KEYWORDS
-      = new HashSet<Bytes>();
+  private final static Map<String, String> DEFAULT_VALUES = new HashMap<>();
+  private final static Set<Bytes> RESERVED_KEYWORDS = new HashSet<>();
 
   static {
     DEFAULT_VALUES.put(MAX_FILESIZE,
@@ -278,7 +273,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * Maps column family name to the respective HColumnDescriptors
    */
   private final Map<byte [], HColumnDescriptor> families =
-    new TreeMap<byte [], HColumnDescriptor>(Bytes.BYTES_RAWCOMPARATOR);
+    new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
   /**
    * <em> INTERNAL </em> Private constructor used internally creating table descriptors for
@@ -726,7 +721,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   /**
    * This sets the class associated with the region split policy which
    * determines when a region split should occur.  The class used by
-   * default is defined in {@link org.apache.hadoop.hbase.regionserver.RegionSplitPolicy}
+   * default is defined in org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
    * @param clazz the class name
    */
   public HTableDescriptor setRegionSplitPolicyClassName(String clazz) {
@@ -737,7 +732,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   /**
    * This gets the class associated with the region split policy which
    * determines when a region split should occur.  The class used by
-   * default is defined in {@link org.apache.hadoop.hbase.regionserver.RegionSplitPolicy}
+   * default is defined in org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
    *
    * @return the class name of the region split policy for this table.
    * If this returns null, the default split policy is used.
@@ -830,7 +825,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   /**
    * This sets the class associated with the flush policy which determines determines the stores
    * need to be flushed when flushing a region. The class used by default is defined in
-   * {@link org.apache.hadoop.hbase.regionserver.FlushPolicy}
+   * org.apache.hadoop.hbase.regionserver.FlushPolicy.
    * @param clazz the class name
    */
   public HTableDescriptor setFlushPolicyClassName(String clazz) {
@@ -841,7 +836,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   /**
    * This gets the class associated with the flush policy which determines the stores need to be
    * flushed when flushing a region. The class used by default is defined in
-   * {@link org.apache.hadoop.hbase.regionserver.FlushPolicy}
+   * org.apache.hadoop.hbase.regionserver.FlushPolicy.
    * @return the class name of the flush policy for this table. If this returns null, the default
    *         flush policy is used.
    */
@@ -933,8 +928,8 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     StringBuilder s = new StringBuilder();
 
     // step 1: set partitioning and pruning
-    Set<Bytes> reservedKeys = new TreeSet<Bytes>();
-    Set<Bytes> userKeys = new TreeSet<Bytes>();
+    Set<Bytes> reservedKeys = new TreeSet<>();
+    Set<Bytes> userKeys = new TreeSet<>();
     for (Map.Entry<Bytes, Bytes> entry : values.entrySet()) {
       if (entry.getKey() == null || entry.getKey().get() == null) continue;
       String key = Bytes.toString(entry.getKey().get());
@@ -1039,106 +1034,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
       return false;
     }
     return compareTo((HTableDescriptor)obj) == 0;
-  }
-
-  /**
-   * Detects whether replication has been already enabled on any of the column families of this
-   * table descriptor.
-   * @return true if any of the column families has replication enabled.
-   */
-  public boolean isReplicationEnabled() {
-    // Go through each Column-Family descriptor and check if the
-    // Replication has been enabled already.
-    // Return 'true' if replication has been enabled on any CF,
-    // otherwise return 'false'.
-    //
-    boolean result = false;
-    Iterator<HColumnDescriptor> it = this.families.values().iterator();
-
-    while (it.hasNext()) {
-      HColumnDescriptor tempHcd = it.next();
-      if (tempHcd.getScope() != HConstants.REPLICATION_SCOPE_LOCAL) {
-        result = true;
-        break;
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Compare the contents of the descriptor with another one passed as a parameter for replication
-   * purpose. The REPLICATION_SCOPE field is ignored during comparison.
-   * @param obj descriptor on source cluster which needs to be replicated.
-   * @return true if the contents of the two descriptors match (ignoring just REPLICATION_SCOPE).
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
-  public boolean compareForReplication(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (!(obj instanceof HTableDescriptor)) {
-      return false;
-    }
-
-    boolean result = false;
-
-    // Create a copy of peer HTD as we need to change its replication
-    // scope to match with the local HTD.
-    HTableDescriptor peerHtdCopy = new HTableDescriptor(this);
-
-    // Copy the replication scope of local Htd to remote Htd.
-    HTableDescriptor localHtd = (HTableDescriptor) obj;
-
-    result = (peerHtdCopy.copyReplicationScope(localHtd) == 0);
-
-    // If copy was successful, compare the two tables now.
-    if (result == true) {
-      result = (peerHtdCopy.compareTo(localHtd) == 0);
-    }
-
-    return result;
-  }
-
-  /**
-   * Copies the REPLICATION_SCOPE of table descriptor passed as an argument. Before copy, the method
-   * ensures that the name of table and column-families should match.
-   * @param localHtd - The HTableDescriptor of table from source cluster.
-   * @return 0 If the name of table and column families match and REPLICATION_SCOPE copied
-   *         successfully. 1 If there is any mismatch in the names.
-   */
-  public int copyReplicationScope(final HTableDescriptor localHtd)
-  {
-    // Copy the REPLICATION_SCOPE only when table names and the names of
-    // Column-Families are same.
-    int result = this.name.compareTo(localHtd.name);
-
-    if (result == 0) {
-      Iterator<HColumnDescriptor> remoteHCDIter = families.values().iterator();
-      Iterator<HColumnDescriptor> localHCDIter = localHtd.families.values().iterator();
-          
-      while (remoteHCDIter.hasNext() && localHCDIter.hasNext()) {
-        HColumnDescriptor remoteHCD = remoteHCDIter.next();
-        HColumnDescriptor localHCD = localHCDIter.next();
-        
-        String remoteHCDName = remoteHCD.getNameAsString();
-        String localHCDName = localHCD.getNameAsString();
-
-        if (remoteHCDName.equals(localHCDName))
-        {
-          remoteHCD.setScope(localHCD.getScope());
-        }
-        else {
-          result = -1;
-          break;
-        }
-      }
-    }
-
-    return result;
   }
 
   /**
@@ -1347,7 +1242,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
    * or Endpoint.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
@@ -1362,7 +1257,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
    * or Endpoint.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
@@ -1407,7 +1302,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
    * or Endpoint.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
@@ -1487,7 +1382,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @return The list of co-processors classNames
    */
   public List<String> getCoprocessors() {
-    List<String> result = new ArrayList<String>(this.values.entrySet().size());
+    List<String> result = new ArrayList<>(this.values.entrySet().size());
     Matcher keyMatcher;
     for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
       keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));

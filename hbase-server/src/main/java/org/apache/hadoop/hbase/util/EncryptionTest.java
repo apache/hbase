@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
@@ -36,14 +35,12 @@ import org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class EncryptionTest {
   private static final Log LOG = LogFactory.getLog(EncryptionTest.class);
 
-  static final Map<String, Boolean> keyProviderResults = new ConcurrentHashMap<String, Boolean>();
-  static final Map<String, Boolean> cipherProviderResults =
-    new ConcurrentHashMap<String, Boolean>();
-  static final Map<String, Boolean> cipherResults = new ConcurrentHashMap<String, Boolean>();
+  static final Map<String, Boolean> keyProviderResults = new ConcurrentHashMap<>();
+  static final Map<String, Boolean> cipherProviderResults = new ConcurrentHashMap<>();
+  static final Map<String, Boolean> cipherResults = new ConcurrentHashMap<>();
 
   private EncryptionTest() {
   }

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -32,7 +31,6 @@ import org.apache.hadoop.util.ReflectionUtils;
  * Facade to create Cells for HFileOutputFormat. The created Cells are of <code>Put</code> type.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class CellCreator {
 
   public static final String VISIBILITY_EXP_RESOLVER_CLASS =

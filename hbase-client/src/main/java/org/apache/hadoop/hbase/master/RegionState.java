@@ -166,7 +166,7 @@ public class RegionState {
         state = MERGING_NEW;
         break;
       default:
-        throw new IllegalStateException("");
+        throw new IllegalStateException("Unhandled state " + protoState);
       }
       return state;
     }

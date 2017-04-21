@@ -89,7 +89,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
     // For properly formed JSON, if no properties, field has to be null (not just no elements).
     if(nd.getConfiguration().isEmpty()){ return; }
 
-    properties = new HashMap<String,String>();
+    properties = new HashMap<>();
     properties.putAll(nd.getConfiguration());
   }
 
@@ -100,7 +100,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
    */
   public void addProperty(String key, String value) {
     if(properties == null){
-      properties = new HashMap<String,String>();
+      properties = new HashMap<>();
     }
     properties.put(key, value);
   }
@@ -110,7 +110,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
    */
   public Map<String,String> getProperties() {
     if(properties == null){
-      properties = new HashMap<String,String>();
+      properties = new HashMap<>();
     }
     return properties;
   }

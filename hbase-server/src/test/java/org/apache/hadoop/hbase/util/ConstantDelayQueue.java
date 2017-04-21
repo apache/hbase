@@ -57,7 +57,7 @@ public class ConstantDelayQueue<E> implements BlockingQueue<E> {
   private final long delayMs;
 
   // backing DelayQueue
-  private DelayQueue<DelayedElement<E>> queue = new DelayQueue<DelayedElement<E>>();
+  private DelayQueue<DelayedElement<E>> queue = new DelayQueue<>();
 
   public ConstantDelayQueue(TimeUnit timeUnit, long delay) {
     this.delayMs = TimeUnit.MILLISECONDS.convert(delay, timeUnit);
@@ -139,22 +139,22 @@ public class ConstantDelayQueue<E> implements BlockingQueue<E> {
 
   @Override
   public boolean add(E e) {
-    return queue.add(new DelayedElement<E>(e, delayMs));
+    return queue.add(new DelayedElement<>(e, delayMs));
   }
 
   @Override
   public boolean offer(E e) {
-    return queue.offer(new DelayedElement<E>(e, delayMs));
+    return queue.offer(new DelayedElement<>(e, delayMs));
   }
 
   @Override
   public void put(E e) throws InterruptedException {
-    queue.put(new DelayedElement<E>(e, delayMs));
+    queue.put(new DelayedElement<>(e, delayMs));
   }
 
   @Override
   public boolean offer(E e, long timeout, TimeUnit unit) throws InterruptedException {
-    return queue.offer(new DelayedElement<E>(e, delayMs), timeout, unit);
+    return queue.offer(new DelayedElement<>(e, delayMs), timeout, unit);
   }
 
   @Override

@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -45,7 +44,6 @@ import java.util.List;
  * @see org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWritable, Result> {
 
   public static class TableSnapshotRegionSplit implements InputSplit {

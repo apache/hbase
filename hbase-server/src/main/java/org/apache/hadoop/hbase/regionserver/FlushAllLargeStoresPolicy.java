@@ -55,7 +55,7 @@ public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy{
     }
     // start selection
     Collection<Store> stores = region.stores.values();
-    Set<Store> specificStoresToFlush = new HashSet<Store>();
+    Set<Store> specificStoresToFlush = new HashSet<>();
     for (Store store : stores) {
       if (shouldFlush(store)) {
         specificStoresToFlush.add(store);

@@ -13,7 +13,7 @@ public interface ApiOrBuilder extends
    * followed by the api's simple name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   java.lang.String getName();
   /**
@@ -22,7 +22,7 @@ public interface ApiOrBuilder extends
    * followed by the api's simple name.
    * </pre>
    *
-   * <code>optional string name = 1;</code>
+   * <code>string name = 1;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getNameBytes();
@@ -137,7 +137,7 @@ public interface ApiOrBuilder extends
    * experimental, none-GA apis.
    * </pre>
    *
-   * <code>optional string version = 4;</code>
+   * <code>string version = 4;</code>
    */
   java.lang.String getVersion();
   /**
@@ -162,7 +162,7 @@ public interface ApiOrBuilder extends
    * experimental, none-GA apis.
    * </pre>
    *
-   * <code>optional string version = 4;</code>
+   * <code>string version = 4;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
       getVersionBytes();
@@ -173,7 +173,7 @@ public interface ApiOrBuilder extends
    * message.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+   * <code>.google.protobuf.SourceContext source_context = 5;</code>
    */
   boolean hasSourceContext();
   /**
@@ -182,7 +182,7 @@ public interface ApiOrBuilder extends
    * message.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+   * <code>.google.protobuf.SourceContext source_context = 5;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContext getSourceContext();
   /**
@@ -191,7 +191,7 @@ public interface ApiOrBuilder extends
    * message.
    * </pre>
    *
-   * <code>optional .google.protobuf.SourceContext source_context = 5;</code>
+   * <code>.google.protobuf.SourceContext source_context = 5;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.SourceContextOrBuilder getSourceContextOrBuilder();
 
@@ -244,7 +244,7 @@ public interface ApiOrBuilder extends
    * The source syntax of the service.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+   * <code>.google.protobuf.Syntax syntax = 7;</code>
    */
   int getSyntaxValue();
   /**
@@ -252,7 +252,7 @@ public interface ApiOrBuilder extends
    * The source syntax of the service.
    * </pre>
    *
-   * <code>optional .google.protobuf.Syntax syntax = 7;</code>
+   * <code>.google.protobuf.Syntax syntax = 7;</code>
    */
   org.apache.hadoop.hbase.shaded.com.google.protobuf.Syntax getSyntax();
 }

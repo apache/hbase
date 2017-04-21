@@ -88,7 +88,7 @@ public class ProtobufLogReader extends ReaderBase {
   // maximum size of the wal Trailer in bytes. If a user writes/reads a trailer with size larger
   // than this size, it is written/read respectively, with a WARN message in the log.
   protected int trailerWarnSize;
-  private static List<String> writerClsNames = new ArrayList<String>();
+  private static List<String> writerClsNames = new ArrayList<>();
   static {
     writerClsNames.add(ProtobufLogWriter.class.getSimpleName());
     writerClsNames.add(AsyncProtobufLogWriter.class.getSimpleName());

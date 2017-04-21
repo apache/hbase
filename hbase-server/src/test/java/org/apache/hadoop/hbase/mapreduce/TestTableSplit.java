@@ -48,7 +48,7 @@ public class TestTableSplit {
         "row-end".getBytes(), "location");
     assertEquals (split1, split2);
     assertTrue   (split1.hashCode() == split2.hashCode());
-    HashSet<TableSplit> set = new HashSet<TableSplit>(2);
+    HashSet<TableSplit> set = new HashSet<>(2);
     set.add(split1);
     set.add(split2);
     assertTrue(set.size() == 1);
@@ -68,7 +68,7 @@ public class TestTableSplit {
 
     assertEquals (split1, split2);
     assertTrue   (split1.hashCode() == split2.hashCode());
-    HashSet<TableSplit> set = new HashSet<TableSplit>(2);
+    HashSet<TableSplit> set = new HashSet<>(2);
     set.add(split1);
     set.add(split2);
     assertTrue(set.size() == 1);

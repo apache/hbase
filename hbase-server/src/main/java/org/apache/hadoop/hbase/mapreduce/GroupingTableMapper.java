@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -38,7 +37,6 @@ import org.apache.hadoop.mapreduce.Job;
  * Extract grouping columns from input record.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
 public class GroupingTableMapper
 extends TableMapper<ImmutableBytesWritable,Result> implements Configurable {
 
@@ -106,7 +104,7 @@ extends TableMapper<ImmutableBytesWritable,Result> implements Configurable {
    */
   protected byte[][] extractKeyValues(Result r) {
     byte[][] keyVals = null;
-    ArrayList<byte[]> foundList = new ArrayList<byte[]>();
+    ArrayList<byte[]> foundList = new ArrayList<>();
     int numCols = columns.length;
     if (numCols > 0) {
       for (Cell value: r.listCells()) {

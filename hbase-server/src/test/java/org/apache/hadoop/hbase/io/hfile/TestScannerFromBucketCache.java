@@ -40,8 +40,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -208,7 +210,7 @@ public class TestScannerFromBucketCache {
       Scan scan = new Scan(row1);
       scan.addFamily(fam1);
       scan.setMaxVersions(10);
-      actual = new ArrayList<Cell>();
+      actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -314,7 +316,7 @@ public class TestScannerFromBucketCache {
     }
 
     // Expected
-    List<Cell> expected = new ArrayList<Cell>();
+    List<Cell> expected = new ArrayList<>();
     expected.add(kv13);
     expected.add(kv12);
     expected.add(kv23);
@@ -326,7 +328,7 @@ public class TestScannerFromBucketCache {
     Scan scan = new Scan(row1);
     scan.addFamily(fam1);
     scan.setMaxVersions(MAX_VERSIONS);
-    List<Cell> actual = new ArrayList<Cell>();
+    List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
     boolean hasNext = scanner.next(actual);
@@ -342,6 +344,7 @@ public class TestScannerFromBucketCache {
   private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, HBaseTestingUtility test_util, boolean isReadOnly,
       byte[]... families) throws IOException {
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     Path logDir = test_util.getDataTestDirOnTestFS(callingMethod + ".log");
     HRegionInfo hri = new HRegionInfo(tableName, startKey, stopKey);
     final WAL wal = HBaseTestingUtility.createWal(conf, logDir, hri);

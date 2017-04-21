@@ -63,6 +63,7 @@ public class TestReplicationBase {
   protected static ZooKeeperWatcher zkw2;
 
   protected static ReplicationAdmin admin;
+  private static Admin hbaseAdmin;
 
   protected static Table htable1;
   protected static Table htable2;
@@ -133,7 +134,8 @@ public class TestReplicationBase {
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
-    admin.addPeer("2", rpc, null);
+    hbaseAdmin = ConnectionFactory.createConnection(conf1).getAdmin();
+    hbaseAdmin.addReplicationPeer("2", rpc);
 
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
@@ -142,8 +144,7 @@ public class TestReplicationBase {
     table.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     table.addFamily(fam);
-    scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(HColumnDescriptor f : table.getColumnFamilies()) {
       scopes.put(f.getName(), f.getScope());
     }

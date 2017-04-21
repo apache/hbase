@@ -67,9 +67,6 @@ public class TestCompactor {
     when(r.getStoreFileScanner(anyBoolean(), anyBoolean(), anyBoolean(), anyLong(), anyLong(),
       anyBoolean())).thenReturn(mock(StoreFileScanner.class));
     when(sf.getReader()).thenReturn(r);
-    when(sf.createReader()).thenReturn(r);
-    when(sf.createReader(anyBoolean())).thenReturn(r);
-    when(sf.cloneForReader()).thenReturn(sf);
     when(sf.getMaxSequenceId()).thenReturn(maxSequenceId);
     return sf;
   }
@@ -82,12 +79,12 @@ public class TestCompactor {
   public static class StoreFileWritersCapture
       implements Answer<StoreFileWriter>, StripeMultiFileWriter.WriterFactory {
     public static class Writer {
-      public ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
-      public TreeMap<byte[], byte[]> data = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+      public ArrayList<KeyValue> kvs = new ArrayList<>();
+      public TreeMap<byte[], byte[]> data = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       public boolean hasMetadata;
     }
 
-    private List<Writer> writers = new ArrayList<Writer>();
+    private List<Writer> writers = new ArrayList<>();
 
     @Override
     public StoreFileWriter createWriter() throws IOException {
@@ -192,7 +189,7 @@ public class TestCompactor {
     private final ArrayList<KeyValue> kvs;
 
     public Scanner(KeyValue... kvs) {
-      this.kvs = new ArrayList<KeyValue>(Arrays.asList(kvs));
+      this.kvs = new ArrayList<>(Arrays.asList(kvs));
     }
 
     @Override

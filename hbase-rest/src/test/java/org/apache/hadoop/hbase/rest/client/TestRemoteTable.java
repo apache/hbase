@@ -262,7 +262,7 @@ public class TestRemoteTable {
 
   @Test
   public void testMultiGet() throws Exception {
-    ArrayList<Get> gets = new ArrayList<Get>(2);
+    ArrayList<Get> gets = new ArrayList<>(2);
     gets.add(new Get(ROW_1));
     gets.add(new Get(ROW_2));
     Result[] results = remoteTable.get(gets);
@@ -272,7 +272,7 @@ public class TestRemoteTable {
     assertEquals(2, results[1].size());
 
     //Test Versions
-    gets = new ArrayList<Get>(2);
+    gets = new ArrayList<>(2);
     Get g = new Get(ROW_1);
     g.setMaxVersions(3);
     gets.add(g);
@@ -284,13 +284,13 @@ public class TestRemoteTable {
     assertEquals(3, results[1].size());
 
     //404
-    gets = new ArrayList<Get>(1);
+    gets = new ArrayList<>(1);
     gets.add(new Get(Bytes.toBytes("RESALLYREALLYNOTTHERE")));
     results = remoteTable.get(gets);
     assertNotNull(results);
     assertEquals(0, results.length);
 
-    gets = new ArrayList<Get>(3);
+    gets = new ArrayList<>(3);
     gets.add(new Get(Bytes.toBytes("RESALLYREALLYNOTTHERE")));
     gets.add(new Get(ROW_1));
     gets.add(new Get(ROW_2));
@@ -314,7 +314,7 @@ public class TestRemoteTable {
 
     // multiput
 
-    List<Put> puts = new ArrayList<Put>(3);
+    List<Put> puts = new ArrayList<>(3);
     put = new Put(ROW_3);
     put.addColumn(COLUMN_2, QUALIFIER_2, VALUE_2);
     puts.add(put);
@@ -408,7 +408,7 @@ public class TestRemoteTable {
    */
   @Test
   public void testScanner() throws IOException {
-    List<Put> puts = new ArrayList<Put>(4);
+    List<Put> puts = new ArrayList<>(4);
     Put put = new Put(ROW_1);
     put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
@@ -499,7 +499,7 @@ public class TestRemoteTable {
    */
   @Test
   public void testIteratorScaner() throws IOException {
-    List<Put> puts = new ArrayList<Put>(4);
+    List<Put> puts = new ArrayList<>(4);
     Put put = new Put(ROW_1);
     put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);

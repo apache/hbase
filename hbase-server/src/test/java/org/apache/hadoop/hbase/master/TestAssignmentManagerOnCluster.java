@@ -27,7 +27,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +58,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -626,7 +624,7 @@ public class TestAssignmentManagerOnCluster {
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       AssignmentManager am = master.getAssignmentManager();
 
-      Map<HRegionInfo, ServerName> regions = new HashMap<HRegionInfo, ServerName>();
+      Map<HRegionInfo, ServerName> regions = new HashMap<>();
       ServerName dest = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
       regions.put(hri, dest);
       // retainAssignment but balancer cannot find a plan
@@ -840,7 +838,7 @@ public class TestAssignmentManagerOnCluster {
       assertNotNull(destServerName);
       assertFalse("Region should be assigned on a new region server",
         oldServerName.equals(destServerName));
-      List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+      List<HRegionInfo> regions = new ArrayList<>();
       regions.add(hri);
       am.assign(destServerName, regions);
 
@@ -1216,8 +1214,8 @@ public class TestAssignmentManagerOnCluster {
     rss.start();
     // Create 10 threads and make each do 10 puts related to region state update
     Thread[] th = new Thread[10];
-    List<String> nameList = new ArrayList<String>();
-    List<TableName> tableNameList = new ArrayList<TableName>();
+    List<String> nameList = new ArrayList<>();
+    List<TableName> tableNameList = new ArrayList<>();
     for (int i = 0; i < th.length; i++) {
       th[i] = new Thread() {
         @Override
@@ -1359,7 +1357,7 @@ public class TestAssignmentManagerOnCluster {
     }
   }
 
-  public static class MyRegionObserver extends BaseRegionObserver {
+  public static class MyRegionObserver implements RegionObserver {
     // If enabled, fail all preClose calls
     static AtomicBoolean preCloseEnabled = new AtomicBoolean(false);
 

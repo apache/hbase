@@ -158,11 +158,10 @@ public class WALSplitter {
   protected boolean distributedLogReplay;
 
   // Map encodedRegionName -> lastFlushedSequenceId
-  protected Map<String, Long> lastFlushedSequenceIds = new ConcurrentHashMap<String, Long>();
+  protected Map<String, Long> lastFlushedSequenceIds = new ConcurrentHashMap<>();
 
   // Map encodedRegionName -> maxSeqIdInStores
-  protected Map<String, Map<byte[], Long>> regionMaxSeqIdInStores =
-      new ConcurrentHashMap<String, Map<byte[], Long>>();
+  protected Map<String, Map<byte[], Long>> regionMaxSeqIdInStores = new ConcurrentHashMap<>();
 
   // Failed region server that the wal file being split belongs to
   protected String failedServerName = "";
@@ -245,7 +244,7 @@ public class WALSplitter {
       FileSystem fs, Configuration conf, final WALFactory factory) throws IOException {
     final FileStatus[] logfiles = SplitLogManager.getFileList(conf,
         Collections.singletonList(logDir), null);
-    List<Path> splits = new ArrayList<Path>();
+    List<Path> splits = new ArrayList<>();
     if (logfiles != null && logfiles.length > 0) {
       for (FileStatus logfile: logfiles) {
         WALSplitter s = new WALSplitter(factory, conf, rootDir, fs, null, null,
@@ -331,7 +330,7 @@ public class WALSplitter {
             }
           } else if (sequenceIdChecker != null) {
             RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
-            Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+            Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
             for (StoreSequenceId storeSeqId : ids.getStoreSequenceIdList()) {
               maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
                 storeSeqId.getSequenceId());
@@ -447,8 +446,8 @@ public class WALSplitter {
 
   private static void finishSplitLogFile(Path rootdir, Path oldLogDir,
       Path logPath, Configuration conf) throws IOException {
-    List<Path> processedLogs = new ArrayList<Path>();
-    List<Path> corruptedLogs = new ArrayList<Path>();
+    List<Path> processedLogs = new ArrayList<>();
+    List<Path> corruptedLogs = new ArrayList<>();
     FileSystem fs;
     fs = rootdir.getFileSystem(conf);
     if (ZKSplitLog.isCorrupted(rootdir, logPath.getName(), fs)) {
@@ -614,7 +613,7 @@ public class WALSplitter {
    */
   public static NavigableSet<Path> getSplitEditFilesSorted(final FileSystem fs,
       final Path regiondir) throws IOException {
-    NavigableSet<Path> filesSorted = new TreeSet<Path>();
+    NavigableSet<Path> filesSorted = new TreeSet<>();
     Path editsdir = getRegionDirRecoveredEditsDir(regiondir);
     if (!fs.exists(editsdir))
       return filesSorted;
@@ -696,7 +695,8 @@ public class WALSplitter {
    */
   public static long writeRegionSequenceIdFile(final FileSystem fs, final Path regiondir,
       long newSeqId, long saftyBumper) throws IOException {
-
+    // TODO: Why are we using a method in here as part of our normal region open where
+    // there is no splitting involved? Fix. St.Ack 01/20/2017.
     Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
     long maxSeqId = 0;
     FileStatus[] files = null;
@@ -733,7 +733,7 @@ public class WALSplitter {
           throw new IOException("Failed to create SeqId file:" + newSeqIdFile);
         }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Wrote region seqId=" + newSeqIdFile + " to file, newSeqId=" + newSeqId
+          LOG.debug("Wrote file=" + newSeqIdFile + ", newSeqId=" + newSeqId
               + ", maxSeqId=" + maxSeqId);
         }
       } catch (FileAlreadyExistsException ignored) {
@@ -872,7 +872,7 @@ public class WALSplitter {
   public static class PipelineController {
     // If an exception is thrown by one of the other threads, it will be
     // stored here.
-    AtomicReference<Throwable> thrown = new AtomicReference<Throwable>();
+    AtomicReference<Throwable> thrown = new AtomicReference<>();
 
     // Wait/notify for when data has been produced by the writer thread,
     // consumed by the reader thread, or an exception occurred
@@ -906,13 +906,12 @@ public class WALSplitter {
   public static class EntryBuffers {
     PipelineController controller;
 
-    Map<byte[], RegionEntryBuffer> buffers =
-      new TreeMap<byte[], RegionEntryBuffer>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], RegionEntryBuffer> buffers = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
     /* Track which regions are currently in the middle of writing. We don't allow
        an IO thread to pick up bytes from a region if we're already writing
        data for that region in a different IO thread. */
-    Set<byte[]> currentlyWriting = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    Set<byte[]> currentlyWriting = new TreeSet<>(Bytes.BYTES_COMPARATOR);
 
     long totalBuffered = 0;
     long maxHeapUsage;
@@ -1027,7 +1026,7 @@ public class WALSplitter {
     RegionEntryBuffer(TableName tableName, byte[] region) {
       this.tableName = tableName;
       this.encodedRegionName = region;
-      this.entryBuffer = new LinkedList<Entry>();
+      this.entryBuffer = new LinkedList<>();
     }
 
     long appendEntry(Entry entry) {
@@ -1148,7 +1147,7 @@ public class WALSplitter {
 
     /* Set of regions which we've decided should not output edits */
     protected final Set<byte[]> blacklistedRegions = Collections
-        .synchronizedSet(new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR));
+        .synchronizedSet(new TreeSet<>(Bytes.BYTES_COMPARATOR));
 
     protected boolean closeAndCleanCompleted = false;
 
@@ -1360,7 +1359,7 @@ public class WALSplitter {
     private List<Path> close() throws IOException {
       Preconditions.checkState(!closeAndCleanCompleted);
 
-      final List<Path> paths = new ArrayList<Path>();
+      final List<Path> paths = new ArrayList<>();
       final List<IOException> thrown = Lists.newArrayList();
       ThreadPoolExecutor closeThreadPool = Threads.getBoundedCachedThreadPool(numThreads, 30L,
         TimeUnit.SECONDS, new ThreadFactory() {
@@ -1372,8 +1371,7 @@ public class WALSplitter {
             return t;
           }
         });
-      CompletionService<Void> completionService =
-        new ExecutorCompletionService<Void>(closeThreadPool);
+      CompletionService<Void> completionService = new ExecutorCompletionService<>(closeThreadPool);
       for (final Map.Entry<byte[], SinkWriter> writersEntry : writers.entrySet()) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Submitting close of " + ((WriterAndPath)writersEntry.getValue()).p);
@@ -1558,7 +1556,7 @@ public class WALSplitter {
       }
       // Create the array list for the cells that aren't filtered.
       // We make the assumption that most cells will be kept.
-      ArrayList<Cell> keptCells = new ArrayList<Cell>(logEntry.getEdit().getCells().size());
+      ArrayList<Cell> keptCells = new ArrayList<>(logEntry.getEdit().getCells().size());
       for (Cell cell : logEntry.getEdit().getCells()) {
         if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
           keptCells.add(cell);
@@ -1639,7 +1637,7 @@ public class WALSplitter {
      */
     @Override
     public Map<byte[], Long> getOutputCounts() {
-      TreeMap<byte[], Long> ret = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte[], Long> ret = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       synchronized (writers) {
         for (Map.Entry<byte[], SinkWriter> entry : writers.entrySet()) {
           ret.put(entry.getKey(), entry.getValue().editsWritten);
@@ -1705,8 +1703,7 @@ public class WALSplitter {
     private final Set<String> recoveredRegions = Collections.synchronizedSet(new HashSet<String>());
     private final Map<String, RegionServerWriter> writers = new ConcurrentHashMap<>();
     // online encoded region name -> region location map
-    private final Map<String, HRegionLocation> onlineRegions =
-        new ConcurrentHashMap<String, HRegionLocation>();
+    private final Map<String, HRegionLocation> onlineRegions = new ConcurrentHashMap<>();
 
     private final Map<TableName, ClusterConnection> tableNameToHConnectionMap = Collections
         .synchronizedMap(new TreeMap<TableName, ClusterConnection>());
@@ -1859,7 +1856,7 @@ public class WALSplitter {
                 + encodeRegionNameStr);
             lastFlushedSequenceIds.put(encodeRegionNameStr, Long.MAX_VALUE);
             if (nonExistentTables == null) {
-              nonExistentTables = new TreeSet<TableName>();
+              nonExistentTables = new TreeSet<>();
             }
             nonExistentTables.add(table);
             this.skippedEdits.incrementAndGet();
@@ -1906,7 +1903,7 @@ public class WALSplitter {
                 Collections.synchronizedList(new ArrayList<Pair<HRegionLocation, Entry>>());
             serverToBufferQueueMap.put(locKey, queue);
           }
-          queue.add(new Pair<HRegionLocation, Entry>(loc, entry));
+          queue.add(new Pair<>(loc, entry));
         }
         // store regions we have recovered so far
         addToRecoveredRegions(loc.getRegionInfo().getEncodedName());
@@ -1957,7 +1954,7 @@ public class WALSplitter {
               loc.getRegionInfo().getEncodedName());
         if (ids != null) {
           lastFlushedSequenceId = ids.getLastFlushedSequenceId();
-          Map<byte[], Long> storeIds = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+          Map<byte[], Long> storeIds = new TreeMap<>(Bytes.BYTES_COMPARATOR);
           List<StoreSequenceId> maxSeqIdInStores = ids.getStoreSequenceIdList();
           for (StoreSequenceId id : maxSeqIdInStores) {
             storeIds.put(id.getFamilyName().toByteArray(), id.getSequenceId());
@@ -2102,7 +2099,7 @@ public class WALSplitter {
         if (hasEditsInDisablingOrDisabledTables) {
           splits = logRecoveredEditsOutputSink.finishWritingAndClose();
         } else {
-          splits = new ArrayList<Path>();
+          splits = new ArrayList<>();
         }
         // returns an empty array in order to keep interface same as old way
         return splits;
@@ -2316,13 +2313,13 @@ public class WALSplitter {
 
     if (entry == null) {
       // return an empty array
-      return new ArrayList<MutationReplay>();
+      return new ArrayList<>();
     }
 
     long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ?
       entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
     int count = entry.getAssociatedCellCount();
-    List<MutationReplay> mutations = new ArrayList<MutationReplay>();
+    List<MutationReplay> mutations = new ArrayList<>();
     Cell previousCell = null;
     Mutation m = null;
     WALKey key = null;
@@ -2369,7 +2366,7 @@ public class WALSplitter {
     if (logEntry != null) {
       org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey walKeyProto =
           entry.getKey();
-      List<UUID> clusterIds = new ArrayList<UUID>(walKeyProto.getClusterIdsCount());
+      List<UUID> clusterIds = new ArrayList<>(walKeyProto.getClusterIdsCount());
       for (HBaseProtos.UUID uuid : entry.getKey().getClusterIdsList()) {
         clusterIds.add(new UUID(uuid.getMostSigBits(), uuid.getLeastSigBits()));
       }

@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.util.HashKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Information about a region. A region is a range of keys in the whole keyspace of a table, an
@@ -75,7 +75,6 @@ import org.apache.hadoop.io.DataInputBuffer;
  * previous behavior of a range corresponding to 1 region.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class HRegionInfo implements Comparable<HRegionInfo> {
 
   private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
@@ -580,6 +579,19 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     }
 
     return elements;
+  }
+
+  public static boolean isEncodedRegionName(byte[] regionName) throws IOException {
+    try {
+      HRegionInfo.parseRegionName(regionName);
+      return false;
+    } catch (IOException e) {
+      if (StringUtils.stringifyException(e)
+          .contains(HRegionInfo.INVALID_REGION_NAME_FORMAT_MESSAGE)) {
+        return true;
+      }
+      throw e;
+    }
   }
 
   /** @return the regionId */
@@ -1167,7 +1179,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       throw new IllegalArgumentException("Can't build an object with empty bytes array");
     }
     DataInputBuffer in = new DataInputBuffer();
-    List<HRegionInfo> hris = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> hris = new ArrayList<>();
     try {
       in.reset(bytes, offset, length);
       while (in.available() > 0) {

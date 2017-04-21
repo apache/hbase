@@ -226,7 +226,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     String hostingThreadName = Thread.currentThread().getName();
     // Using BlockingWaitStrategy. Stuff that is going on here takes so long it makes no sense
     // spinning as other strategies do.
-    this.disruptor = new Disruptor<RingBufferTruck>(RingBufferTruck::new,
+    this.disruptor = new Disruptor<>(RingBufferTruck::new,
         getPreallocatedEventCount(), Threads.getNamedThreadFactory(hostingThreadName + ".append"),
         ProducerType.MULTI, new BlockingWaitStrategy());
     // Advance the ring buffer sequence so that it starts from 1 instead of 0,
@@ -244,8 +244,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   /**
    * Currently, we need to expose the writer's OutputStream to tests so that they can manipulate the
    * default behavior (such as setting the maxRecoveryErrorCount value for example (see
-   * {@link AbstractTestWALReplay#testReplayEditsWrittenIntoWAL()}). This is done using reflection
-   * on the underlying HDFS OutputStream. NOTE: This could be removed once Hadoop1 support is
+   * {@see org.apache.hadoop.hbase.regionserver.wal.AbstractTestWALReplay#testReplayEditsWrittenIntoWAL()}). This is
+   * done using reflection on the underlying HDFS OutputStream. NOTE: This could be removed once Hadoop1 support is
    * removed.
    * @return null if underlying stream is not ready.
    */
@@ -489,7 +489,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       // the meta table when succesful (i.e. sync), closing handlers -- etc. These are usually
       // much fewer in number than the user-space handlers so Q-size should be user handlers plus
       // some space for these other handlers. Lets multiply by 3 for good-measure.
-      this.syncFutures = new LinkedBlockingQueue<SyncFuture>(maxHandlersCount * 3);
+      this.syncFutures = new LinkedBlockingQueue<>(maxHandlersCount * 3);
     }
 
     void offer(final long sequence, final SyncFuture[] syncFutures, final int syncFutureCount) {
@@ -809,9 +809,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * To start up the drama, Thread A creates an instance of this class each time it would do this
    * zigzag dance and passes it to Thread B (these classes use Latches so it is one shot only).
    * Thread B notices the new instance (via reading a volatile reference or how ever) and it starts
-   * to work toward the 'safe point'. Thread A calls {@link #waitSafePoint()} when it cannot proceed
+   * to work toward the 'safe point'. Thread A calls {@link #waitSafePoint(SyncFuture)} when it cannot proceed
    * until the Thread B 'safe point' is attained. Thread A will be held inside in
-   * {@link #waitSafePoint()} until Thread B reaches the 'safe point'. Once there, Thread B frees
+   * {@link #waitSafePoint(SyncFuture)} until Thread B reaches the 'safe point'. Once there, Thread B frees
    * Thread A by calling {@link #safePointAttained()}. Thread A now knows Thread B is at the 'safe
    * point' and that it is holding there (When Thread B calls {@link #safePointAttained()} it blocks
    * here until Thread A calls {@link #releaseSafePoint()}). Thread A proceeds to do what it needs

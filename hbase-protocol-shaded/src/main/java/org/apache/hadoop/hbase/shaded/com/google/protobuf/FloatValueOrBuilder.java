@@ -12,7 +12,7 @@ public interface FloatValueOrBuilder extends
    * The float value.
    * </pre>
    *
-   * <code>optional float value = 1;</code>
+   * <code>float value = 1;</code>
    */
   float getValue();
 }

@@ -39,7 +39,7 @@ public class TestCheckTestClasses {
    */
   @Test
   public void checkClasses() throws Exception {
-    List<Class<?>> badClasses = new java.util.ArrayList<Class<?>>();
+    List<Class<?>> badClasses = new java.util.ArrayList<>();
     ClassTestFinder classFinder = new ClassTestFinder();
     for (Class<?> c : classFinder.findClasses(false)) {
       if (ClassTestFinder.getCategoryAnnotations(c).length == 0) {

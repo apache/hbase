@@ -92,7 +92,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   // Collects all the KVHeap that are eagerly getting closed during the
   // course of a scan
-  protected List<KeyValueHeap> heapsForDelayedClose = new ArrayList<KeyValueHeap>();
+  protected List<KeyValueHeap> heapsForDelayedClose = new ArrayList<>();
 
   /**
    * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not
@@ -131,9 +131,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // Indicates whether there was flush during the course of the scan
   protected volatile boolean flushed = false;
   // generally we get one file from a flush
-  protected List<StoreFile> flushedStoreFiles = new ArrayList<StoreFile>(1);
+  protected List<StoreFile> flushedStoreFiles = new ArrayList<>(1);
   // The current list of scanners
-  protected List<KeyValueScanner> currentScanners = new ArrayList<KeyValueScanner>();
+  protected List<KeyValueScanner> currentScanners = new ArrayList<>();
   // flush update lock
   private ReentrantLock flushLock = new ReentrantLock();
 
@@ -312,7 +312,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   @VisibleForTesting
   StoreScanner(final Scan scan, ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
-      final List<KeyValueScanner> scanners) throws IOException {
+      final List<? extends KeyValueScanner> scanners) throws IOException {
     this(scan, scanInfo, scanType, columns, scanners,
         HConstants.LATEST_TIMESTAMP,
         // 0 is passed as readpoint because the test bypasses Store
@@ -322,7 +322,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   @VisibleForTesting
   StoreScanner(final Scan scan, ScanInfo scanInfo,
     ScanType scanType, final NavigableSet<byte[]> columns,
-    final List<KeyValueScanner> scanners, long earliestPutTs)
+    final List<? extends KeyValueScanner> scanners, long earliestPutTs)
         throws IOException {
     this(scan, scanInfo, scanType, columns, scanners, earliestPutTs,
       // 0 is passed as readpoint because the test bypasses Store
@@ -330,7 +330,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   public StoreScanner(final Scan scan, ScanInfo scanInfo, ScanType scanType,
-      final NavigableSet<byte[]> columns, final List<KeyValueScanner> scanners, long earliestPutTs,
+      final NavigableSet<byte[]> columns, final List<? extends KeyValueScanner> scanners, long earliestPutTs,
       long readPt) throws IOException {
     this(null, scan, scanInfo, columns, readPt,
         scanType == ScanType.USER_SCAN ? scan.getCacheBlocks() : false);
@@ -428,8 +428,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       filesOnly = false;
     }
 
-    List<KeyValueScanner> scanners =
-        new ArrayList<KeyValueScanner>(allScanners.size());
+    List<KeyValueScanner> scanners = new ArrayList<>(allScanners.size());
 
     // We can only exclude store files based on TTL if minVersions is set to 0.
     // Otherwise, we might have to return KVs that have technically expired.
@@ -603,10 +602,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
             // Update local tracking information
             count++;
-            totalBytesRead += CellUtil.estimatedSerializedSizeOf(cell);
+            int cellSize = CellUtil.estimatedSerializedSizeOf(cell);
+            totalBytesRead += cellSize;
 
             // Update the progress of the scanner context
-            scannerContext.incrementSizeProgress(CellUtil.estimatedHeapSizeOf(cell));
+            scannerContext.incrementSizeProgress(cellSize, CellUtil.estimatedHeapSizeOf(cell));
             scannerContext.incrementBatchProgress(1);
 
             if (matcher.isUserScan() && totalBytesRead > maxRowSize) {
@@ -939,8 +939,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     if (scanners.isEmpty()) return;
     int storeFileScannerCount = scanners.size();
     CountDownLatch latch = new CountDownLatch(storeFileScannerCount);
-    List<ParallelSeekHandler> handlers =
-        new ArrayList<ParallelSeekHandler>(storeFileScannerCount);
+    List<ParallelSeekHandler> handlers = new ArrayList<>(storeFileScannerCount);
     for (KeyValueScanner scanner : scanners) {
       if (scanner instanceof StoreFileScanner) {
         ParallelSeekHandler seekHandler = new ParallelSeekHandler(scanner, kv,
@@ -971,7 +970,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @return all scanners in no particular order
    */
   List<KeyValueScanner> getAllScannersForTesting() {
-    List<KeyValueScanner> allScanners = new ArrayList<KeyValueScanner>();
+    List<KeyValueScanner> allScanners = new ArrayList<>();
     KeyValueScanner current = heap.getCurrentForTesting();
     if (current != null)
       allScanners.add(current);

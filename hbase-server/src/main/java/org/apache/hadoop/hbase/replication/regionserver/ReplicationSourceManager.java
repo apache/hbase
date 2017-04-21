@@ -147,14 +147,14 @@ public class ReplicationSourceManager implements ReplicationListener {
       final Path oldLogDir, final UUID clusterId) throws IOException {
     //CopyOnWriteArrayList is thread-safe.
     //Generally, reading is more than modifying.
-    this.sources = new CopyOnWriteArrayList<ReplicationSourceInterface>();
+    this.sources = new CopyOnWriteArrayList<>();
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
     this.replicationTracker = replicationTracker;
     this.server = server;
-    this.walsById = new HashMap<String, Map<String, SortedSet<String>>>();
-    this.walsByIdRecoveredQueues = new ConcurrentHashMap<String, Map<String, SortedSet<String>>>();
-    this.oldsources = new CopyOnWriteArrayList<ReplicationSourceInterface>();
+    this.walsById = new HashMap<>();
+    this.walsByIdRecoveredQueues = new ConcurrentHashMap<>();
+    this.oldsources = new CopyOnWriteArrayList<>();
     this.conf = conf;
     this.fs = fs;
     this.logDir = logDir;
@@ -170,8 +170,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     // use a short 100ms sleep since this could be done inline with a RS startup
     // even if we fail, other region servers can take care of it
     this.executor = new ThreadPoolExecutor(nbWorkers, nbWorkers,
-        100, TimeUnit.MILLISECONDS,
-        new LinkedBlockingQueue<Runnable>());
+        100, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setNameFormat("ReplicationExecutor-%d");
     tfb.setDaemon(true);
@@ -277,7 +276,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           this.replicationPeers, server, id, this.clusterId, peerConfig, peer);
     synchronized (this.walsById) {
       this.sources.add(src);
-      Map<String, SortedSet<String>> walsByGroup = new HashMap<String, SortedSet<String>>();
+      Map<String, SortedSet<String>> walsByGroup = new HashMap<>();
       this.walsById.put(id, walsByGroup);
       // Add the latest wal to that source's queue
       synchronized (latestPaths) {
@@ -285,7 +284,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           for (Path logPath : latestPaths) {
             String name = logPath.getName();
             String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(name);
-            SortedSet<String> logs = new TreeSet<String>();
+            SortedSet<String> logs = new TreeSet<>();
             logs.add(name);
             walsByGroup.put(walPrefix, logs);
             try {
@@ -423,7 +422,7 @@ public class ReplicationSourceManager implements ReplicationListener {
         if (!existingPrefix) {
           // The new log belongs to a new group, add it into this peer
           LOG.debug("Start tracking logs for wal group " + logPrefix + " for peer " + peerId);
-          SortedSet<String> wals = new TreeSet<String>();
+          SortedSet<String> wals = new TreeSet<>();
           wals.add(logName);
           walsByPrefix.put(logPrefix, wals);
         }
@@ -570,8 +569,7 @@ public class ReplicationSourceManager implements ReplicationListener {
         + sources.size() + " and another "
         + oldsources.size() + " that were recovered");
     String terminateMessage = "Replication stream was removed by a user";
-    List<ReplicationSourceInterface> oldSourcesToDelete =
-        new ArrayList<ReplicationSourceInterface>();
+    List<ReplicationSourceInterface> oldSourcesToDelete = new ArrayList<>();
     // synchronized on oldsources to avoid adding recovered source for the to-be-removed peer
     // see NodeFailoverWorker.run
     synchronized (oldsources) {
@@ -589,7 +587,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     LOG.info("Number of deleted recovered sources for " + id + ": "
         + oldSourcesToDelete.size());
     // Now look for the one on this cluster
-    List<ReplicationSourceInterface> srcToRemove = new ArrayList<ReplicationSourceInterface>();
+    List<ReplicationSourceInterface> srcToRemove = new ArrayList<>();
     // synchronize on replicationPeers to avoid adding source for the to-be-removed peer
     synchronized (this.replicationPeers) {
       for (ReplicationSourceInterface src : this.sources) {
@@ -735,13 +733,13 @@ public class ReplicationSourceManager implements ReplicationListener {
             continue;
           }
           // track sources in walsByIdRecoveredQueues
-          Map<String, SortedSet<String>> walsByGroup = new HashMap<String, SortedSet<String>>();
+          Map<String, SortedSet<String>> walsByGroup = new HashMap<>();
           walsByIdRecoveredQueues.put(peerId, walsByGroup);
           for (String wal : walsSet) {
             String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
             SortedSet<String> wals = walsByGroup.get(walPrefix);
             if (wals == null) {
-              wals = new TreeSet<String>();
+              wals = new TreeSet<>();
               walsByGroup.put(walPrefix, wals);
             }
             wals.add(wal);

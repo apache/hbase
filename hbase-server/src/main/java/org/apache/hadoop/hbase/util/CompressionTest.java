@@ -133,7 +133,7 @@ public class CompressionTest {
     writer.appendFileInfo(Bytes.toBytes("compressioninfokey"), Bytes.toBytes("compressioninfoval"));
     writer.close();
     Cell cc = null;
-    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), true, conf);
     try {
       reader.loadFileInfo();
       HFileScanner scanner = reader.getScanner(false, true);

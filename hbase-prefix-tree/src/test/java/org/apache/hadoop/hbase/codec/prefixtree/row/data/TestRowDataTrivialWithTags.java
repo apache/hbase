@@ -46,7 +46,7 @@ public class TestRowDataTrivialWithTags extends BaseTestRowData{
 
   static List<KeyValue> d = Lists.newArrayList();
   static {
-    List<Tag> tagList = new ArrayList<Tag>(2);
+    List<Tag> tagList = new ArrayList<>(2);
     Tag t = new ArrayBackedTag((byte) 1, "visisbility");
     tagList.add(t);
     t = new ArrayBackedTag((byte) 2, "ACL");

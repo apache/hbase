@@ -91,7 +91,7 @@ public class TestCompactionArchiveConcurrentClose {
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Region region = initHRegion(htd, info);
     RegionServerServices rss = mock(RegionServerServices.class);
-    List<Region> regions = new ArrayList<Region>();
+    List<Region> regions = new ArrayList<>();
     regions.add(region);
     when(rss.getOnlineRegions()).thenReturn(regions);
 
@@ -164,6 +164,7 @@ public class TestCompactionArchiveConcurrentClose {
 
     HRegionFileSystem fs = new WaitingHRegionFileSystem(conf, tableDir.getFileSystem(conf),
         tableDir, info);
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, null, "log_" + info.getEncodedName());

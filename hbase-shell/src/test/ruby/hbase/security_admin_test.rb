@@ -57,14 +57,26 @@ module Hbase
       drop_test_table(@test_name)
       create_test_table(@test_name)
       table = table(@test_name)
-      user = org.apache.hadoop.hbase.security.User.getCurrent().getName();
+      test_grant_revoke_user = org.apache.hadoop.hbase.security.User.createUserForTesting(
+          $TEST_CLUSTER.getConfiguration, "test_grant_revoke", []).getName()
+      security_admin.grant(test_grant_revoke_user,"W", @test_name)
       security_admin.user_permission(@test_name) do |user, permission|
          assert_match(eval("/WRITE/"), permission.to_s)
       end
-      security_admin.grant(user,"RXCA", @test_name)
+
+      security_admin.grant(test_grant_revoke_user,"RX", @test_name)
+      found_permission = false
       security_admin.user_permission(@test_name) do |user, permission|
-         assert_no_match(eval("/WRITE/"), permission.to_s)
+         if user == "test_grant_revoke"
+           assert_match(eval("/READ/"), permission.to_s)
+           assert_match(eval("/WRITE/"), permission.to_s)
+           assert_match(eval("/EXEC/"), permission.to_s)
+           assert_no_match(eval("/CREATE/"), permission.to_s)
+           assert_no_match(eval("/ADMIN/"), permission.to_s)
+           found_permission = true
+         end
       end
+      assert(found_permission, "Permission for user test_grant_revoke was not found.")
     end
   end
 end

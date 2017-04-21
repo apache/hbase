@@ -208,7 +208,7 @@ public class AggregationClient implements Closeable {
           public R call(AggregateService instance) throws IOException {
             RpcController controller = new AggregationClientRpcController();
             CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse>();
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
             instance.getMax(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
             if (controller.failed()) {
@@ -280,7 +280,7 @@ public class AggregationClient implements Closeable {
           public R call(AggregateService instance) throws IOException {
             RpcController controller = new AggregationClientRpcController();
             CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse>();
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
             instance.getMin(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
             if (controller.failed()) {
@@ -355,7 +355,7 @@ public class AggregationClient implements Closeable {
           public Long call(AggregateService instance) throws IOException {
             RpcController controller = new AggregationClientRpcController();
             CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse>();
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
             instance.getRowNum(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
             if (controller.failed()) {
@@ -421,7 +421,7 @@ public class AggregationClient implements Closeable {
             RpcController controller = new AggregationClientRpcController();
             // Not sure what is going on here why I have to do these casts. TODO.
             CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse>();
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
             instance.getSum(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
             if (controller.failed()) {
@@ -472,7 +472,7 @@ public class AggregationClient implements Closeable {
       Long rowCount = 0l;
 
       public synchronized Pair<S, Long> getAvgArgs() {
-        return new Pair<S, Long>(sum, rowCount);
+        return new Pair<>(sum, rowCount);
       }
 
       @Override
@@ -488,13 +488,13 @@ public class AggregationClient implements Closeable {
           public Pair<S, Long> call(AggregateService instance) throws IOException {
             RpcController controller = new AggregationClientRpcController();
             CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse>();
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
             instance.getAvg(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
             if (controller.failed()) {
               throw new IOException(controller.errorText());
             }
-            Pair<S, Long> pair = new Pair<S, Long>(null, 0L);
+            Pair<S, Long> pair = new Pair<>(null, 0L);
             if (response.getFirstPartCount() == 0) {
               return pair;
             }
@@ -569,10 +569,10 @@ public class AggregationClient implements Closeable {
       S sumVal = null, sumSqVal = null;
 
       public synchronized Pair<List<S>, Long> getStdParams() {
-        List<S> l = new ArrayList<S>(2);
+        List<S> l = new ArrayList<>(2);
         l.add(sumVal);
         l.add(sumSqVal);
-        Pair<List<S>, Long> p = new Pair<List<S>, Long>(l, rowCountVal);
+        Pair<List<S>, Long> p = new Pair<>(l, rowCountVal);
         return p;
       }
 
@@ -592,17 +592,17 @@ public class AggregationClient implements Closeable {
           public Pair<List<S>, Long> call(AggregateService instance) throws IOException {
             RpcController controller = new AggregationClientRpcController();
             CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse>();
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
             instance.getStd(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
             if (controller.failed()) {
               throw new IOException(controller.errorText());
             }
-            Pair<List<S>, Long> pair = new Pair<List<S>, Long>(new ArrayList<S>(), 0L);
+            Pair<List<S>, Long> pair = new Pair<>(new ArrayList<>(), 0L);
             if (response.getFirstPartCount() == 0) {
               return pair;
             }
-            List<S> list = new ArrayList<S>();
+            List<S> list = new ArrayList<>();
             for (int i = 0; i < response.getFirstPartCount(); i++) {
               ByteString b = response.getFirstPart(i);
               T t = getParsedGenericInstance(ci.getClass(), 4, b);
@@ -680,17 +680,15 @@ public class AggregationClient implements Closeable {
   getMedianArgs(final Table table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
-    final NavigableMap<byte[], List<S>> map =
-      new TreeMap<byte[], List<S>>(Bytes.BYTES_COMPARATOR);
+    final NavigableMap<byte[], List<S>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     class StdCallback implements Batch.Callback<List<S>> {
       S sumVal = null, sumWeights = null;
 
       public synchronized Pair<NavigableMap<byte[], List<S>>, List<S>> getMedianParams() {
-        List<S> l = new ArrayList<S>(2);
+        List<S> l = new ArrayList<>(2);
         l.add(sumVal);
         l.add(sumWeights);
-        Pair<NavigableMap<byte[], List<S>>, List<S>> p =
-          new Pair<NavigableMap<byte[], List<S>>, List<S>>(map, l);
+        Pair<NavigableMap<byte[], List<S>>, List<S>> p = new Pair<>(map, l);
         return p;
       }
 
@@ -708,14 +706,14 @@ public class AggregationClient implements Closeable {
           public List<S> call(AggregateService instance) throws IOException {
             RpcController controller = new AggregationClientRpcController();
             CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse>();
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
             instance.getMedian(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
             if (controller.failed()) {
               throw new IOException(controller.errorText());
             }
 
-            List<S> list = new ArrayList<S>();
+            List<S> list = new ArrayList<>();
             for (int i = 0; i < response.getFirstPartCount(); i++) {
               ByteString b = response.getFirstPart(i);
               T t = getParsedGenericInstance(ci.getClass(), 4, b);

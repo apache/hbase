@@ -99,7 +99,7 @@ public class TestReplicationTrackerZKImpl {
     rsRemovedCount = new AtomicInteger(0);
     rsRemovedData = "";
     plChangedCount = new AtomicInteger(0);
-    plChangedData = new ArrayList<String>();
+    plChangedData = new ArrayList<>();
     peerRemovedCount = new AtomicInteger(0);
     peerRemovedData = "";
   }

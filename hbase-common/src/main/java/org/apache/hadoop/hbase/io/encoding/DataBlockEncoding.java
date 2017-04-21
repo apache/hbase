@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -30,7 +29,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * in the HBase mailing list to prevent collisions.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum DataBlockEncoding {
 
   /** Disable data block encoding. */

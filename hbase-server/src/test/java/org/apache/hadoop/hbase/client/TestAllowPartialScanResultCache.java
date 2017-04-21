@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+import static org.apache.hadoop.hbase.client.TestBatchScanResultCache.createCells;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.stream.IntStream;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,10 +51,6 @@ public class TestAllowPartialScanResultCache {
     resultCache = null;
   }
 
-  private static Cell createCell(int key, int cq) {
-    return new KeyValue(Bytes.toBytes(key), CF, Bytes.toBytes("cq" + cq), Bytes.toBytes(key));
-  }
-
   @Test
   public void test() throws IOException {
     assertSame(ScanResultCache.EMPTY_RESULT_ARRAY,
@@ -62,31 +58,34 @@ public class TestAllowPartialScanResultCache {
     assertSame(ScanResultCache.EMPTY_RESULT_ARRAY,
       resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, true));
 
-    Cell[] cells1 = IntStream.range(0, 10).mapToObj(i -> createCell(1, i)).toArray(Cell[]::new);
-    Cell[] cells2 = IntStream.range(0, 10).mapToObj(i -> createCell(2, i)).toArray(Cell[]::new);
+    Cell[] cells1 = createCells(CF, 1, 10);
+    Cell[] cells2 = createCells(CF, 2, 10);
 
     Result[] results1 = resultCache.addAndGet(
       new Result[] { Result.create(Arrays.copyOf(cells1, 5), null, false, true) }, false);
     assertEquals(1, results1.length);
     assertEquals(1, Bytes.toInt(results1[0].getRow()));
     assertEquals(5, results1[0].rawCells().length);
-    IntStream.range(0, 5).forEach(
-      i -> assertEquals(1, Bytes.toInt(results1[0].getValue(CF, Bytes.toBytes("cq" + i)))));
+    for (int i = 0; i < 5; i++) {
+      assertEquals(1, Bytes.toInt(results1[0].getValue(CF, Bytes.toBytes("cq" + i))));
+    }
 
     Result[] results2 = resultCache.addAndGet(
       new Result[] { Result.create(Arrays.copyOfRange(cells1, 1, 10), null, false, true) }, false);
     assertEquals(1, results2.length);
     assertEquals(1, Bytes.toInt(results2[0].getRow()));
     assertEquals(5, results2[0].rawCells().length);
-    IntStream.range(5, 10).forEach(
-      i -> assertEquals(1, Bytes.toInt(results2[0].getValue(CF, Bytes.toBytes("cq" + i)))));
+    for (int i = 5; i < 10; i++) {
+      assertEquals(1, Bytes.toInt(results2[0].getValue(CF, Bytes.toBytes("cq" + i))));
+    }
 
-    Result[] results3 = resultCache
-        .addAndGet(new Result[] { Result.create(cells1), Result.create(cells2) }, false);
+    Result[] results3 =
+        resultCache.addAndGet(new Result[] { Result.create(cells1), Result.create(cells2) }, false);
     assertEquals(1, results3.length);
     assertEquals(2, Bytes.toInt(results3[0].getRow()));
     assertEquals(10, results3[0].rawCells().length);
-    IntStream.range(0, 10).forEach(
-      i -> assertEquals(2, Bytes.toInt(results3[0].getValue(CF, Bytes.toBytes("cq" + i)))));
+    for (int i = 0; i < 10; i++) {
+      assertEquals(2, Bytes.toInt(results3[0].getValue(CF, Bytes.toBytes("cq" + i))));
+    }
   }
 }

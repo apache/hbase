@@ -57,12 +57,12 @@ public class StripeStoreFlusher extends StoreFlusher {
   @Override
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
       MonitoredTask status, ThroughputController throughputController) throws IOException {
-    List<Path> result = new ArrayList<Path>();
+    List<Path> result = new ArrayList<>();
     int cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
     long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanner(), smallestReadPoint);
+    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint);
     if (scanner == null) {
       return result; // NULL scanner returned from coprocessor hooks means skip normal processing
     }

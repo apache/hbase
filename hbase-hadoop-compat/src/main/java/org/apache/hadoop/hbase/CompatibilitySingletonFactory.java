@@ -34,7 +34,7 @@ public class CompatibilitySingletonFactory extends CompatibilityFactory {
   public static enum SingletonStorage {
     INSTANCE;
     private final Object lock = new Object();
-    private final Map<Class, Object> instances = new HashMap<Class, Object>();
+    private final Map<Class, Object> instances = new HashMap<>();
   }
   private static final Log LOG = LogFactory.getLog(CompatibilitySingletonFactory.class);
 
