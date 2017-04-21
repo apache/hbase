@@ -108,6 +108,12 @@ public class TestWalAndCompactingMemStoreFlush {
     return new Get(row);
   }
 
+  private void verifyInMemoryFlushSize(Region region) {
+    assertEquals(
+      ((CompactingMemStore) ((HStore)region.getStore(FAMILY1)).memstore).getInmemoryFlushSize(),
+      ((CompactingMemStore) ((HStore)region.getStore(FAMILY3)).memstore).getInmemoryFlushSize());
+  }
+
   // A helper function to verify edits.
   void verifyEdit(int familyNum, int putNum, Table table) throws IOException {
     Result r = table.get(createGet(familyNum, putNum));
@@ -137,7 +143,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // Intialize the region
     Region region = initHRegion("testSelectiveFlushWithEager", conf);
-
+    verifyInMemoryFlushSize(region);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));        // compacted memstore, all the keys are unique
@@ -378,7 +384,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // Initialize the region
     Region region = initHRegion("testSelectiveFlushWithIndexCompaction", conf);
-
+    verifyInMemoryFlushSize(region);
     /*------------------------------------------------------------------------------*/
     /* PHASE I - insertions */
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
@@ -635,6 +641,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // Intialize the HRegion
     HRegion region = initHRegion("testSelectiveFlushAndWALinDataCompaction", conf);
+    verifyInMemoryFlushSize(region);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));
@@ -773,6 +780,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // Intialize the HRegion
     HRegion region = initHRegion("testSelectiveFlushWithBasicAndMerge", conf);
+    verifyInMemoryFlushSize(region);
     // Add 1200 entries for CF1 (CompactingMemStore), 100 for CF2 (DefaultMemStore) and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));
@@ -907,7 +915,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // Successfully initialize the HRegion
     HRegion region = initHRegion("testSelectiveFlushAndWALinDataCompaction", conf);
-
+    verifyInMemoryFlushSize(region);
     Thread[] threads = new Thread[25];
     for (int i = 0; i < threads.length; i++) {
       int id = i * 10000;

@@ -541,6 +541,11 @@ public class CompactingMemStore extends AbstractMemStore {
     return lowest;
   }
 
+  @VisibleForTesting
+  long getInmemoryFlushSize() {
+    return inmemoryFlushSize;
+  }
+
   // debug method
   public void debug() {
     String msg = "active size=" + this.active.keySize();
