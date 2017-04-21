@@ -45,7 +45,7 @@ import com.google.protobuf.Service;
  *
  * <p>
  * For the protocol buffer definition of the RowCountService, see the source file located under
- * hbase-server/src/main/protobuf/Examples.proto.
+ * hbase-examples/src/main/protobuf/Examples.proto.
  * </p>
  */
 public class RowCountEndpoint extends ExampleProtos.RowCountService
