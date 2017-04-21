@@ -37,6 +37,16 @@ public interface BackupRestoreConstants {
   public final static int BACKUP_SYSTEM_TTL_DEFAULT = HConstants.FOREVER;
   public final static String BACKUP_ENABLE_KEY = "hbase.backup.enable";
   public final static boolean BACKUP_ENABLE_DEFAULT = false;
+
+
+  public static final String BACKUP_MAX_ATTEMPTS_KEY = "hbase.backup.attempts.max";
+  public static final int DEFAULT_BACKUP_MAX_ATTEMPTS = 10;
+
+  public static final String BACKUP_ATTEMPTS_PAUSE_MS_KEY = "hbase.backup.attempts.pause.ms";
+  public static final int DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS = 10000;
+
+
+
   /*
    *  Drivers option list
    */

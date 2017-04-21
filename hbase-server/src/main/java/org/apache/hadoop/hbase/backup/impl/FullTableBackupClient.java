@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_ATTEMPTS_PAUSE_MS_KEY;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_MAX_ATTEMPTS_KEY;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_BACKUP_MAX_ATTEMPTS;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -148,8 +153,7 @@ public class FullTableBackupClient extends TableBackupClient {
             "snapshot_" + Long.toString(EnvironmentEdgeManager.currentTime()) + "_"
                 + tableName.getNamespaceAsString() + "_" + tableName.getQualifierAsString();
 
-        admin.snapshot(snapshotName, tableName);
-
+        snapshotTable(admin, tableName, snapshotName);
         backupInfo.setSnapshotName(tableName, snapshotName);
       }
 
@@ -186,4 +190,32 @@ public class FullTableBackupClient extends TableBackupClient {
 
   }
 
+  private void snapshotTable(Admin admin, TableName tableName, String snapshotName)
+      throws IOException {
+
+    int maxAttempts =
+        conf.getInt(BACKUP_MAX_ATTEMPTS_KEY, DEFAULT_BACKUP_MAX_ATTEMPTS);
+    int pause =
+        conf.getInt(BACKUP_ATTEMPTS_PAUSE_MS_KEY, DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS);
+    int attempts = 0;
+
+    while (attempts++ < maxAttempts) {
+      try {
+        admin.snapshot(snapshotName, tableName);
+        return;
+      } catch (IOException ee) {
+        LOG.warn("Snapshot attempt " + attempts + " failed for table " + tableName
+            + ", sleeping for " + pause + "ms", ee);
+        if (attempts < maxAttempts) {
+          try {
+            Thread.sleep(pause);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+        }
+      }
+    }
+    throw new IOException("Failed to snapshot table "+ tableName);
+  }
 }
