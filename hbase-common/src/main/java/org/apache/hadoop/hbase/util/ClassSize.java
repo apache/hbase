@@ -127,20 +127,6 @@ public class ClassSize {
 
   public static final int STORE_SERVICES;
 
-  /* Are we running on jdk7? */
-  private static final boolean JDK7;
-  static {
-    final String version = System.getProperty("java.version");
-    // Verify String looks like this: 1.6.0_29
-    if (version == null || !version.matches("\\d\\.\\d\\..*")) {
-      throw new RuntimeException("Unexpected version format: " + version);
-    }
-    // Convert char to int
-    int major = (int)(version.charAt(0) - '0');
-    int minor = (int)(version.charAt(2) - '0');
-    JDK7 = major == 1 && minor == 7;
-  }
-
   /**
    * MemoryLayout abstracts details about the JVM object layout. Default implementation is used in
    * case Unsafe is not available.
