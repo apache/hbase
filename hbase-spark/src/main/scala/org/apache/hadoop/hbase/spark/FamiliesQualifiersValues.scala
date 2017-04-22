@@ -55,4 +55,14 @@ class FamiliesQualifiersValues extends Serializable {
 
     qualifierValues.put(new ByteArrayWrapper(qualifier), value)
   }
+
+  /**
+    * A wrapper for "+=" method above, can be used by Java
+    * @param family    HBase column family
+    * @param qualifier HBase column qualifier
+    * @param value     HBase cell value
+    */
+  def add(family: Array[Byte], qualifier: Array[Byte], value: Array[Byte]): Unit = {
+    this += (family, qualifier, value)
+  }
 }

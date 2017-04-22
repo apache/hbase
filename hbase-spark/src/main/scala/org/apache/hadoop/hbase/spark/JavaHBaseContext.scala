@@ -17,9 +17,12 @@
 
 package org.apache.hadoop.hbase.spark
 
+import java.util.Map
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.TableName
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Pair
+import org.apache.hadoop.hbase.classification.InterfaceAudience
 import org.apache.hadoop.hbase.client.{Connection, Delete, Get, Put, Result, Scan}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.spark.api.java.{JavaRDD, JavaSparkContext}
@@ -268,7 +271,6 @@ class JavaHBaseContext(@transient jsc: JavaSparkContext,
    * generates a new DStream based on Gets and the results
    * they bring back from HBase
    *
-
    * @param tableName     The name of the table to get from
    * @param batchSize     The number of gets to be batched together
    * @param javaDStream   Original DStream with data to iterate over
@@ -289,6 +291,67 @@ class JavaHBaseContext(@transient jsc: JavaSparkContext,
       javaDStream.dstream,
       (t: T) => makeGet.call(t),
       (r: Result) => convertResult.call(r))(fakeClassTag[U]))(fakeClassTag[U])
+  }
+
+  /**
+    * A simple abstraction over the HBaseContext.bulkLoad method.
+    * It allow addition support for a user to take a JavaRDD and
+    * convert into new JavaRDD[Pair] based on MapFunction,
+    * and HFiles will be generated in stagingDir for bulk load
+    *
+    * @param javaRdd                        The javaRDD we are bulk loading from
+    * @param tableName                      The HBase table we are loading into
+    * @param mapFunc                        A Function that will convert a value in JavaRDD
+    *                                       to Pair(KeyFamilyQualifier, Array[Byte])
+    * @param stagingDir                     The location on the FileSystem to bulk load into
+    * @param familyHFileWriteOptionsMap     Options that will define how the HFile for a
+    *                                       column family is written
+    * @param compactionExclude              Compaction excluded for the HFiles
+    * @param maxSize                        Max size for the HFiles before they roll
+    */
+  def bulkLoad[T](javaRdd: JavaRDD[T],
+                  tableName: TableName,
+                  mapFunc : Function[T, Pair[KeyFamilyQualifier, Array[Byte]]],
+                  stagingDir: String,
+                  familyHFileWriteOptionsMap: Map[Array[Byte], FamilyHFileWriteOptions],
+                  compactionExclude: Boolean,
+                  maxSize: Long):
+  Unit = {
+    hbaseContext.bulkLoad[Pair[KeyFamilyQualifier, Array[Byte]]](javaRdd.map(mapFunc).rdd, tableName, t => {
+      val keyFamilyQualifier = t.getFirst
+      val value = t.getSecond
+      Seq((keyFamilyQualifier, value)).iterator
+    }, stagingDir, familyHFileWriteOptionsMap, compactionExclude, maxSize)
+  }
+
+  /**
+    * A simple abstraction over the HBaseContext.bulkLoadThinRows method.
+    * It allow addition support for a user to take a JavaRDD and
+    * convert into new JavaRDD[Pair] based on MapFunction,
+    * and HFiles will be generated in stagingDir for bulk load
+    *
+    * @param javaRdd                        The javaRDD we are bulk loading from
+    * @param tableName                      The HBase table we are loading into
+    * @param mapFunc                        A Function that will convert a value in JavaRDD
+    *                                       to Pair(ByteArrayWrapper, FamiliesQualifiersValues)
+    * @param stagingDir                     The location on the FileSystem to bulk load into
+    * @param familyHFileWriteOptionsMap     Options that will define how the HFile for a
+    *                                       column family is written
+    * @param compactionExclude              Compaction excluded for the HFiles
+    * @param maxSize                        Max size for the HFiles before they roll
+    */
+  def bulkLoadThinRows[T](javaRdd: JavaRDD[T],
+                       tableName: TableName,
+                       mapFunc : Function[T, Pair[ByteArrayWrapper, FamiliesQualifiersValues]],
+                       stagingDir: String,
+                       familyHFileWriteOptionsMap: Map[Array[Byte], FamilyHFileWriteOptions],
+                       compactionExclude: Boolean,
+                       maxSize: Long):
+  Unit = {
+    hbaseContext.bulkLoadThinRows[Pair[ByteArrayWrapper, FamiliesQualifiersValues]](javaRdd.map(mapFunc).rdd,
+      tableName, t => {
+      (t.getFirst, t.getSecond)
+    }, stagingDir, familyHFileWriteOptionsMap, compactionExclude, maxSize)
   }
 
   /**
@@ -341,4 +404,5 @@ class JavaHBaseContext(@transient jsc: JavaSparkContext,
    */
   private[spark]
   def fakeClassTag[T]: ClassTag[T] = ClassTag.AnyRef.asInstanceOf[ClassTag[T]]
+
 }
