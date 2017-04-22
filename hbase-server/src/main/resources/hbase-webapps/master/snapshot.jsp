@@ -36,14 +36,16 @@
   SnapshotInfo.SnapshotStats stats = null;
   TableName snapshotTable = null;
   boolean tableExists = false;
-  try (Admin admin = master.getConnection().getAdmin()) {
-    for (SnapshotDescription snapshotDesc: admin.listSnapshots()) {
-      if (snapshotName.equals(snapshotDesc.getName())) {
-        snapshot = snapshotDesc;
-        stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
-        snapshotTable = snapshot.getTableName();
-        tableExists = admin.tableExists(snapshotTable);
-        break;
+  if(snapshotName != null) {
+    try (Admin admin = master.getConnection().getAdmin()) {
+      for (SnapshotDescription snapshotDesc: admin.listSnapshots()) {
+        if (snapshotName.equals(snapshotDesc.getName())) {
+          snapshot = snapshotDesc;
+          stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
+          snapshotTable = snapshot.getTableName();
+          tableExists = admin.tableExists(snapshotTable);
+          break;
+        }
       }
     }
   }
@@ -110,7 +112,7 @@
   <div class="container-fluid content">
   <div class="row inner_header">
     <div class="page-header">
-      <h1>Snapshot "<%= snapshotName %>" does not exists</h1>
+      <h1>Snapshot "<%= snapshotName %>" does not exist</h1>
     </div>
   </div>
   <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
