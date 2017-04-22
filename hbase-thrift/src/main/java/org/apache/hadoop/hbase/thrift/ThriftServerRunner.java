@@ -313,6 +313,11 @@ public class ThriftServerRunner implements Runnable {
     this.realUser = userProvider.getCurrent().getUGI();
     qop = conf.get(THRIFT_QOP_KEY);
     doAsEnabled = conf.getBoolean(THRIFT_SUPPORT_PROXYUSER, false);
+    if (doAsEnabled) {
+      if (!conf.getBoolean(USE_HTTP_CONF_KEY, false)) {
+        LOG.warn("Fail to enable the doAs feature. hbase.regionserver.thrift.http is not configured ");
+      }
+    }
     if (qop != null) {
       if (!qop.equals("auth") && !qop.equals("auth-int")
           && !qop.equals("auth-conf")) {
