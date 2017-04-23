@@ -816,8 +816,8 @@ class MemStoreFlusher implements FlushRequester {
         return false;
       }
       FlushRegionEntry other = (FlushRegionEntry) obj;
-      if (!this.region.getRegionInfo().getRegionNameAsString().equals(
-              other.region.getRegionInfo().getRegionNameAsString())) {
+      if (!Bytes.equals(this.region.getRegionInfo().getRegionName(),
+          other.region.getRegionInfo().getRegionName())) {
         return false;
       }
       return compareTo(other) == 0;
