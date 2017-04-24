@@ -2666,7 +2666,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       return new ReversedRegionScannerImpl(scan, additionalScanners, this);
     }
-    return new RegionScannerImpl(scan, additionalScanners, this);
+    return new RegionScannerImpl(scan, additionalScanners, this, nonceGroup, nonce);
   }
 
   @Override
