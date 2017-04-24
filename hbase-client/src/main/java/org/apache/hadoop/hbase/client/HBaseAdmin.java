@@ -2576,7 +2576,7 @@ public class HBaseAdmin implements Admin {
         syncWaitTimeout,
         TimeUnit.MILLISECONDS);
     } catch (IOException e) {
-      // Somthing went wrong during the restore...
+      // Something went wrong during the restore...
       // if the pre-restore snapshot is available try to rollback
       if (takeFailSafeSnapshot) {
         try {

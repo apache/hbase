@@ -663,4 +663,82 @@ public interface AsyncAdmin {
    * @param tableName name of the table where the snapshot will be restored
    */
   CompletableFuture<Void> cloneSnapshot(final String snapshotName, final TableName tableName);
+
+  /**
+   * List completed snapshots.
+   * @return a list of snapshot descriptors for completed snapshots wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<List<SnapshotDescription>> listSnapshots();
+
+  /**
+   * List all the completed snapshots matching the given regular expression.
+   * @param regex The regular expression to match against
+   * @return - returns a List of SnapshotDescription wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<List<SnapshotDescription>> listSnapshots(String regex);
+
+  /**
+   * List all the completed snapshots matching the given pattern.
+   * @param pattern The compiled regular expression to match against
+   * @return - returns a List of SnapshotDescription wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<List<SnapshotDescription>> listSnapshots(Pattern pattern);
+
+  /**
+   * List all the completed snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNameRegex The table name regular expression to match against
+   * @param snapshotNameRegex The snapshot name regular expression to match against
+   * @return - returns a List of completed SnapshotDescription wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<List<SnapshotDescription>> listTableSnapshots(String tableNameRegex,
+      String snapshotNameRegex);
+
+  /**
+   * List all the completed snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNamePattern The compiled table name regular expression to match against
+   * @param snapshotNamePattern The compiled snapshot name regular expression to match against
+   * @return - returns a List of completed SnapshotDescription wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<List<SnapshotDescription>> listTableSnapshots(Pattern tableNamePattern,
+      Pattern snapshotNamePattern);
+
+  /**
+   * Delete an existing snapshot.
+   * @param snapshotName name of the snapshot
+   */
+  CompletableFuture<Void> deleteSnapshot(String snapshotName);
+
+  /**
+   * Delete existing snapshots whose names match the pattern passed.
+   * @param regex The regular expression to match against
+   */
+  CompletableFuture<Void> deleteSnapshots(String regex);
+
+  /**
+   * Delete existing snapshots whose names match the pattern passed.
+   * @param pattern pattern for names of the snapshot to match
+   */
+  CompletableFuture<Void> deleteSnapshots(Pattern pattern);
+
+  /**
+   * Delete all existing snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNameRegex The table name regular expression to match against
+   * @param snapshotNameRegex The snapshot name regular expression to match against
+   */
+  CompletableFuture<Void> deleteTableSnapshots(String tableNameRegex, String snapshotNameRegex);
+
+  /**
+   * Delete all existing snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNamePattern The compiled table name regular expression to match against
+   * @param snapshotNamePattern The compiled snapshot name regular expression to match against
+   */
+  CompletableFuture<Void> deleteTableSnapshots(Pattern tableNamePattern,
+      Pattern snapshotNamePattern);
 }

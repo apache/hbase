@@ -1355,6 +1355,11 @@ public final class HConstants {
       "hbase.snapshot.restore.take.failsafe.snapshot";
   public static final boolean DEFAULT_SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT = false;
 
+  public static final String SNAPSHOT_RESTORE_FAILSAFE_NAME =
+      "hbase.snapshot.restore.failsafe.name";
+  public static final String DEFAULT_SNAPSHOT_RESTORE_FAILSAFE_NAME =
+      "hbase-failsafe-{snapshot.name}-{restore.timestamp}";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
