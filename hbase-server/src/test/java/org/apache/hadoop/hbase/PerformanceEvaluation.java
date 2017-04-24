@@ -685,6 +685,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.columns = that.columns;
       this.caching = that.caching;
       this.inMemoryCompaction = that.inMemoryCompaction;
+      this.asyncPrefetch = that.asyncPrefetch;
+      this.cacheBlocks = that.cacheBlocks;
+      this.scanReadType = that.scanReadType;
     }
 
     public int getCaching() {
