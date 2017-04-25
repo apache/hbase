@@ -158,7 +158,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.scan = scan;
     this.columns = columns;
     this.now = EnvironmentEdgeManager.currentTime();
-    this.oldestUnexpiredTS = now - scanInfo.getTtl();
+    this.oldestUnexpiredTS = scan.isRaw() ? 0L : now - scanInfo.getTtl();
     this.minVersions = scanInfo.getMinVersions();
 
      // We look up row-column Bloom filters for multi-column queries as part of
