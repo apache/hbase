@@ -310,9 +310,11 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     MetricsSource source = new MetricsSource(id, singleSourceSource, globalSourceSource);
     String gaugeName = "gauge";
     String singleGaugeName = "source.id." + gaugeName;
+    String globalGaugeName = "source." + gaugeName;
     long delta = 1;
     String counterName = "counter";
     String singleCounterName = "source.id." + counterName;
+    String globalCounterName = "source." + counterName;
     long count = 2;
     source.decGauge(gaugeName, delta);
     source.getMetricsContext();
@@ -327,21 +329,21 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     source.updateHistogram(counterName, count);
 
     verify(singleRms).decGauge(singleGaugeName, delta);
-    verify(globalRms).decGauge(gaugeName, delta);
+    verify(globalRms).decGauge(globalGaugeName, delta);
     verify(globalRms).getMetricsContext();
     verify(globalRms).getMetricsJmxContext();
     verify(globalRms).getMetricsName();
     verify(singleRms).incCounters(singleCounterName, count);
-    verify(globalRms).incCounters(counterName, count);
+    verify(globalRms).incCounters(globalCounterName, count);
     verify(singleRms).incGauge(singleGaugeName, delta);
-    verify(globalRms).incGauge(gaugeName, delta);
+    verify(globalRms).incGauge(globalGaugeName, delta);
     verify(globalRms).init();
     verify(singleRms).removeMetric(singleGaugeName);
-    verify(globalRms).removeMetric(gaugeName);
+    verify(globalRms).removeMetric(globalGaugeName);
     verify(singleRms).setGauge(singleGaugeName, delta);
-    verify(globalRms).setGauge(gaugeName, delta);
+    verify(globalRms).setGauge(globalGaugeName, delta);
     verify(singleRms).updateHistogram(singleCounterName, count);
-    verify(globalRms).updateHistogram(counterName, count);
+    verify(globalRms).updateHistogram(globalCounterName, count);
   }
 
   private void doPut(byte[] row) throws IOException {

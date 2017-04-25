@@ -23,6 +23,8 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
 
 public class MetricsReplicationGlobalSourceSource implements MetricsReplicationSourceSource{
+  private static final String KEY_PREFIX = "source.";
+
   private final MetricsReplicationSourceImpl rms;
 
   private final MutableHistogram ageOfLastShippedOpHist;
@@ -196,32 +198,32 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
 
   @Override
   public void setGauge(String gaugeName, long value) {
-    rms.setGauge(gaugeName, value);
+    rms.setGauge(KEY_PREFIX + gaugeName, value);
   }
 
   @Override
   public void incGauge(String gaugeName, long delta) {
-    rms.incGauge(gaugeName, delta);
+    rms.incGauge(KEY_PREFIX + gaugeName, delta);
   }
 
   @Override
   public void decGauge(String gaugeName, long delta) {
-    rms.decGauge(gaugeName, delta);
+    rms.decGauge(KEY_PREFIX + gaugeName, delta);
   }
 
   @Override
   public void removeMetric(String key) {
-    rms.removeMetric(key);
+    rms.removeMetric(KEY_PREFIX + key);
   }
 
   @Override
   public void incCounters(String counterName, long delta) {
-    rms.incCounters(counterName, delta);
+    rms.incCounters(KEY_PREFIX + counterName, delta);
   }
 
   @Override
   public void updateHistogram(String name, long value) {
-    rms.updateHistogram(name, value);
+    rms.updateHistogram(KEY_PREFIX + name, value);
   }
 
   @Override
