@@ -92,7 +92,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       TEST_UTIL.createTable(tables[i], FAMILY);
     }
 
-    HTableDescriptor[] tableDescs = admin.listTables().get();
+    TableDescriptor[] tableDescs = admin.listTables().get();
     int size = tableDescs.length;
     assertTrue(size >= tables.length);
     for (int i = 0; i < tables.length && i < size; i++) {
@@ -140,13 +140,13 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     htd.addFamily(fam2);
     htd.addFamily(fam3);
     admin.createTable(htd).join();
-    HTableDescriptor confirmedHtd = admin.getTableDescriptor(htd.getTableName()).get();
-    assertEquals(htd.compareTo(confirmedHtd), 0);
+    TableDescriptor confirmedHtd = admin.getTableDescriptor(htd.getTableName()).get();
+    assertEquals(htd.compareTo(new HTableDescriptor(confirmedHtd)), 0);
   }
 
   @Test(timeout = 300000)
   public void testCreateTable() throws Exception {
-    HTableDescriptor[] tables = admin.listTables().get();
+    TableDescriptor[] tables = admin.listTables().get();
     int numTables = tables.length;
     final  TableName tableName = TableName.valueOf(name.getMethodName());
     admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(FAMILY)))
@@ -452,7 +452,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
           } catch (Exception e) {
           }
         });
-    HTableDescriptor[] failed = admin.deleteTables(Pattern.compile("testDeleteTables.*")).get();
+    TableDescriptor[] failed = admin.deleteTables(Pattern.compile("testDeleteTables.*")).get();
     assertEquals(0, failed.length);
     Arrays.stream(tables).forEach((table) -> {
       admin.tableExists(table).thenAccept((exist) -> assertFalse(exist)).join();
@@ -727,7 +727,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       // Modify colymn family
       admin.modifyColumnFamily(tableName, cfDescriptor).join();
 
-      HTableDescriptor htd = admin.getTableDescriptor(tableName).get();
+      TableDescriptor htd = admin.getTableDescriptor(tableName).get();
       HColumnDescriptor hcfd = htd.getFamily(FAMILY_0);
       assertTrue(hcfd.getBlocksize() == newBlockSize);
     } finally {

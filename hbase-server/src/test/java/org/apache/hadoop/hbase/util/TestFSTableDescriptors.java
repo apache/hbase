@@ -261,7 +261,7 @@ public class TestFSTableDescriptors {
     final int count = 10;
     // Write out table infos.
     for (int i = 0; i < count; i++) {
-      HTableDescriptor htd = new HTableDescriptor(name + i);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name + i));
       htds.createTableDescriptor(htd);
     }
 
@@ -294,7 +294,7 @@ public class TestFSTableDescriptors {
     final int count = 4;
     // Write out table infos.
     for (int i = 0; i < count; i++) {
-      HTableDescriptor htd = new HTableDescriptor(name + i);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name + i));
       htds.createTableDescriptor(htd);
     }
     // add hbase:meta
@@ -321,7 +321,7 @@ public class TestFSTableDescriptors {
     final int count = 10;
     // Write out table infos via non-cached FSTableDescriptors
     for (int i = 0; i < count; i++) {
-      HTableDescriptor htd = new HTableDescriptor(name + i);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name + i));
       nonchtds.createTableDescriptor(htd);
     }
 

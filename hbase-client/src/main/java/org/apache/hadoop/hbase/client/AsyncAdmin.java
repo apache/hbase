@@ -25,7 +25,6 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -57,27 +56,27 @@ public interface AsyncAdmin {
 
   /**
    * List all the userspace tables.
-   * @return - returns an array of HTableDescriptors wrapped by a {@link CompletableFuture}.
+   * @return - returns an array of TableDescriptors wrapped by a {@link CompletableFuture}.
    * @see #listTables(Pattern, boolean)
    */
-  CompletableFuture<HTableDescriptor[]> listTables();
+  CompletableFuture<TableDescriptor[]> listTables();
 
   /**
    * List all the tables matching the given pattern.
    * @param regex The regular expression to match against
    * @param includeSysTables False to match only against userspace tables
-   * @return - returns an array of HTableDescriptors wrapped by a {@link CompletableFuture}.
+   * @return - returns an array of TableDescriptors wrapped by a {@link CompletableFuture}.
    * @see #listTables(Pattern, boolean)
    */
-  CompletableFuture<HTableDescriptor[]> listTables(String regex, boolean includeSysTables);
+  CompletableFuture<TableDescriptor[]> listTables(String regex, boolean includeSysTables);
 
   /**
    * List all the tables matching the given pattern.
    * @param pattern The compiled regular expression to match against
    * @param includeSysTables False to match only against userspace tables
-   * @return - returns an array of HTableDescriptors wrapped by a {@link CompletableFuture}.
+   * @return - returns an array of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<HTableDescriptor[]> listTables(Pattern pattern, boolean includeSysTables);
+  CompletableFuture<TableDescriptor[]> listTables(Pattern pattern, boolean includeSysTables);
 
   /**
    * List all of the names of userspace tables.
@@ -107,15 +106,15 @@ public interface AsyncAdmin {
   /**
    * Method for getting the tableDescriptor
    * @param tableName as a {@link TableName}
-   * @return the tableDescriptor wrapped by a {@link CompletableFuture}.
+   * @return the read-only tableDescriptor wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<HTableDescriptor> getTableDescriptor(final TableName tableName);
+  CompletableFuture<TableDescriptor> getTableDescriptor(final TableName tableName);
 
   /**
    * Creates a new table.
    * @param desc table descriptor for table
    */
-  CompletableFuture<Void> createTable(HTableDescriptor desc);
+  CompletableFuture<Void> createTable(TableDescriptor desc);
 
   /**
    * Creates a new table with the specified number of regions. The start key specified will become
@@ -128,7 +127,7 @@ public interface AsyncAdmin {
    * @param endKey end of key range
    * @param numRegions the total number of regions to create
    */
-  CompletableFuture<Void> createTable(HTableDescriptor desc, byte[] startKey, byte[] endKey,
+  CompletableFuture<Void> createTable(TableDescriptor desc, byte[] startKey, byte[] endKey,
       int numRegions);
 
   /**
@@ -138,7 +137,7 @@ public interface AsyncAdmin {
    * @param desc table descriptor for table
    * @param splitKeys array of split keys for the initial regions of the table
    */
-  CompletableFuture<Void> createTable(final HTableDescriptor desc, byte[][] splitKeys);
+  CompletableFuture<Void> createTable(final TableDescriptor desc, byte[][] splitKeys);
 
   /**
    * Deletes a table.
@@ -153,9 +152,9 @@ public interface AsyncAdmin {
    * {@link #deleteTable(org.apache.hadoop.hbase.TableName)}
    * @param regex The regular expression to match table names against
    * @return Table descriptors for tables that couldn't be deleted. The return value will be wrapped
-   *         by a {@link CompletableFuture}.
+   *         by a {@link CompletableFuture}. The return HTDs are read-only.
    */
-  CompletableFuture<HTableDescriptor[]> deleteTables(String regex);
+  CompletableFuture<TableDescriptor[]> deleteTables(String regex);
 
   /**
    * Delete tables matching the passed in pattern and wait on completion. Warning: Use this method
@@ -164,9 +163,9 @@ public interface AsyncAdmin {
    * {@link #deleteTable(org.apache.hadoop.hbase.TableName)}
    * @param pattern The pattern to match table names against
    * @return Table descriptors for tables that couldn't be deleted. The return value will be wrapped
-   *         by a {@link CompletableFuture}.
+   *         by a {@link CompletableFuture}. The return HTDs are read-only.
    */
-  CompletableFuture<HTableDescriptor[]> deleteTables(Pattern pattern);
+  CompletableFuture<TableDescriptor[]> deleteTables(Pattern pattern);
 
   /**
    * Truncate a table.
@@ -187,9 +186,9 @@ public interface AsyncAdmin {
    * {@link #enableTable(TableName)}
    * @param regex The regular expression to match table names against
    * @return Table descriptors for tables that couldn't be enabled. The return value will be wrapped
-   *         by a {@link CompletableFuture}.
+   *         by a {@link CompletableFuture}. The return HTDs are read-only.
    */
-  CompletableFuture<HTableDescriptor[]> enableTables(String regex);
+  CompletableFuture<TableDescriptor[]> enableTables(String regex);
 
   /**
    * Enable tables matching the passed in pattern. Warning: Use this method carefully, there is no
@@ -197,9 +196,9 @@ public interface AsyncAdmin {
    * {@link #enableTable(TableName)}
    * @param pattern The pattern to match table names against
    * @return Table descriptors for tables that couldn't be enabled. The return value will be wrapped
-   *         by a {@link CompletableFuture}.
+   *         by a {@link CompletableFuture}. The return HTDs are read-only.
    */
-  CompletableFuture<HTableDescriptor[]> enableTables(Pattern pattern);
+  CompletableFuture<TableDescriptor[]> enableTables(Pattern pattern);
 
   /**
    * Disable a table. The table has to be in enabled state for it to be disabled.
@@ -213,9 +212,9 @@ public interface AsyncAdmin {
    * {@link #disableTable(TableName)}
    * @param regex The regular expression to match table names against
    * @return Table descriptors for tables that couldn't be disabled. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   *         {@link CompletableFuture}. The return HTDs are read-only.
    */
-  CompletableFuture<HTableDescriptor[]> disableTables(String regex);
+  CompletableFuture<TableDescriptor[]> disableTables(String regex);
 
   /**
    * Disable tables matching the passed in pattern. Warning: Use this method carefully, there is no
@@ -223,9 +222,9 @@ public interface AsyncAdmin {
    * {@link #disableTable(TableName)}
    * @param pattern The pattern to match table names against
    * @return Table descriptors for tables that couldn't be disabled. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   *         {@link CompletableFuture}. The return HTDs are read-only.
    */
-  CompletableFuture<HTableDescriptor[]> disableTables(Pattern pattern);
+  CompletableFuture<TableDescriptor[]> disableTables(Pattern pattern);
 
   /**
    * @param tableName name of table to check

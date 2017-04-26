@@ -5734,7 +5734,7 @@ public class TestHRegion {
       LOG.info("RegionEventDescriptor from WAL: " + desc);
 
       assertEquals(RegionEventDescriptor.EventType.REGION_OPEN, desc.getEventType());
-      assertTrue(Bytes.equals(desc.getTableName().toByteArray(), htd.getName()));
+      assertTrue(Bytes.equals(desc.getTableName().toByteArray(), htd.getTableName().toBytes()));
       assertTrue(Bytes.equals(desc.getEncodedRegionName().toByteArray(),
         hri.getEncodedNameAsBytes()));
       assertTrue(desc.getLogSequenceNumber() > 0);
@@ -5854,7 +5854,7 @@ public class TestHRegion {
       LOG.info("RegionEventDescriptor from WAL: " + desc);
 
       assertEquals(RegionEventDescriptor.EventType.REGION_OPEN, desc.getEventType());
-      assertTrue(Bytes.equals(desc.getTableName().toByteArray(), htd.getName()));
+      assertTrue(Bytes.equals(desc.getTableName().toByteArray(), htd.getTableName().toBytes()));
       assertTrue(Bytes.equals(desc.getEncodedRegionName().toByteArray(),
         hri.getEncodedNameAsBytes()));
       assertTrue(desc.getLogSequenceNumber() > 0);
@@ -5940,7 +5940,7 @@ public class TestHRegion {
     LOG.info("RegionEventDescriptor from WAL: " + desc);
 
     assertEquals(RegionEventDescriptor.EventType.REGION_CLOSE, desc.getEventType());
-    assertTrue(Bytes.equals(desc.getTableName().toByteArray(), htd.getName()));
+    assertTrue(Bytes.equals(desc.getTableName().toByteArray(), htd.getTableName().toBytes()));
     assertTrue(Bytes.equals(desc.getEncodedRegionName().toByteArray(),
       hri.getEncodedNameAsBytes()));
     assertTrue(desc.getLogSequenceNumber() > 0);

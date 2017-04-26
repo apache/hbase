@@ -266,7 +266,7 @@ public class HTable implements Table {
     HTableDescriptor htd = HBaseAdmin.getTableDescriptor(tableName, connection, rpcCallerFactory,
       rpcControllerFactory, operationTimeout, readRpcTimeout);
     if (htd != null) {
-      return new UnmodifyableHTableDescriptor(htd);
+      return new ImmutableHTableDescriptor(htd);
     }
     return null;
   }

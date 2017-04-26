@@ -441,7 +441,7 @@ public class HBaseAdmin implements Admin {
       }
     }, rpcCallerFactory, operationTimeout, rpcTimeout);
     if (htd != null) {
-      return htd;
+      return new ImmutableHTableDescriptor(htd);
     }
     throw new TableNotFoundException(tableName.getNameAsString());
   }
@@ -532,7 +532,7 @@ public class HBaseAdmin implements Admin {
       super(admin, desc.getTableName(),
               (response != null && response.hasProcId()) ? response.getProcId() : null);
       this.splitKeys = splitKeys;
-      this.desc = desc;
+      this.desc = new ImmutableHTableDescriptor(desc);
     }
 
     @Override
@@ -2138,8 +2138,7 @@ public class HBaseAdmin implements Admin {
                 .build()).getTableSchemaList();
         HTableDescriptor[] res = new HTableDescriptor[list.size()];
         for(int i=0; i < list.size(); i++) {
-
-          res[i] = ProtobufUtil.convertToHTableDesc(list.get(i));
+          res[i] = new ImmutableHTableDescriptor(ProtobufUtil.convertToHTableDesc(list.get(i)));
         }
         return res;
       }

@@ -147,7 +147,7 @@ public class MobSnapshotTestingUtils {
 
     @Override
     public HTableDescriptor createHtd(final String tableName) {
-      HTableDescriptor htd = new HTableDescriptor(tableName);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
       HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
       hcd.setMobEnabled(true);
       hcd.setMobThreshold(0L);

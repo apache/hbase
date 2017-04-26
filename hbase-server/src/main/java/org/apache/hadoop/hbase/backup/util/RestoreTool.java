@@ -176,7 +176,7 @@ public class RestoreTool {
         LOG.debug("Found descriptor " + tableDescriptor + " through " + incrBackupId);
 
         TableName newTableName = newTableNames[i];
-        HTableDescriptor newTableDescriptor = admin.getTableDescriptor(newTableName);
+        HTableDescriptor newTableDescriptor = new HTableDescriptor(admin.getTableDescriptor(newTableName));
         List<HColumnDescriptor> families = Arrays.asList(tableDescriptor.getColumnFamilies());
         List<HColumnDescriptor> existingFamilies =
             Arrays.asList(newTableDescriptor.getColumnFamilies());
@@ -325,7 +325,7 @@ public class RestoreTool {
           LOG.debug("find table descriptor but no archive dir for table " + tableName
               + ", will only create table");
         }
-        tableDescriptor.setName(newTableName);
+        tableDescriptor = new HTableDescriptor(newTableName, tableDescriptor);
         checkAndCreateTable(conn, tableBackupPath, tableName, newTableName, null, tableDescriptor,
           truncateIfExists);
         return;
@@ -338,7 +338,7 @@ public class RestoreTool {
     if (tableDescriptor == null) {
       tableDescriptor = new HTableDescriptor(newTableName);
     } else {
-      tableDescriptor.setName(newTableName);
+      tableDescriptor = new HTableDescriptor(newTableName, tableDescriptor);
     }
 
     // record all region dirs:

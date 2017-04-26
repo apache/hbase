@@ -95,7 +95,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * List all the userspace tables.
    *
-   * @return - returns an array of HTableDescriptors
+   * @return - returns an array of read-only HTableDescriptors
    * @throws IOException if a remote or network exception occurs
    */
   HTableDescriptor[] listTables() throws IOException;
@@ -104,7 +104,7 @@ public interface Admin extends Abortable, Closeable {
    * List all the userspace tables matching the given pattern.
    *
    * @param pattern The compiled regular expression to match against
-   * @return - returns an array of HTableDescriptors
+   * @return - returns an array of read-only HTableDescriptors
    * @throws IOException if a remote or network exception occurs
    * @see #listTables()
    */
@@ -125,7 +125,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param pattern The compiled regular expression to match against
    * @param includeSysTables False to match only against userspace tables
-   * @return - returns an array of HTableDescriptors
+   * @return - returns an array of read-only HTableDescriptors
    * @throws IOException if a remote or network exception occurs
    * @see #listTables()
    */
@@ -137,7 +137,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param regex The regular expression to match against
    * @param includeSysTables False to match only against userspace tables
-   * @return - returns an array of HTableDescriptors
+   * @return - returns an array of read-only HTableDescriptors
    * @throws IOException if a remote or network exception occurs
    * @see #listTables(java.util.regex.Pattern, boolean)
    */
@@ -192,7 +192,7 @@ public interface Admin extends Abortable, Closeable {
    * Method for getting the tableDescriptor
    *
    * @param tableName as a {@link TableName}
-   * @return the tableDescriptor
+   * @return the read-only tableDescriptor
    * @throws org.apache.hadoop.hbase.TableNotFoundException
    * @throws IOException if a remote or network exception occurs
    */
@@ -293,7 +293,8 @@ public interface Admin extends Abortable, Closeable {
    * #listTables(java.lang.String)} and {@link #deleteTable(org.apache.hadoop.hbase.TableName)}
    *
    * @param regex The regular expression to match table names against
-   * @return Table descriptors for tables that couldn't be deleted
+   * @return Table descriptors for tables that couldn't be deleted.
+   *         The return htds are read-only
    * @throws IOException
    * @see #deleteTables(java.util.regex.Pattern)
    * @see #deleteTable(org.apache.hadoop.hbase.TableName)
@@ -308,6 +309,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param pattern The pattern to match table names against
    * @return Table descriptors for tables that couldn't be deleted
+   *         The return htds are read-only
    * @throws IOException
    */
   HTableDescriptor[] deleteTables(Pattern pattern) throws IOException;
@@ -373,6 +375,8 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param regex The regular expression to match table names against
    * @throws IOException
+   * @return Table descriptors for tables that couldn't be enabled.
+   *         The return HTDs are read-only.
    * @see #enableTables(java.util.regex.Pattern)
    * @see #enableTable(org.apache.hadoop.hbase.TableName)
    */
@@ -386,6 +390,8 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param pattern The pattern to match table names against
    * @throws IOException
+   * @return Table descriptors for tables that couldn't be enabled.
+   *         The return HTDs are read-only.
    */
   HTableDescriptor[] enableTables(Pattern pattern) throws IOException;
 
@@ -422,6 +428,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param regex The regular expression to match table names against
    * @return Table descriptors for tables that couldn't be disabled
+   *         The return htds are read-only
    * @throws IOException
    * @see #disableTables(java.util.regex.Pattern)
    * @see #disableTable(org.apache.hadoop.hbase.TableName)
@@ -436,6 +443,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param pattern The pattern to match table names against
    * @return Table descriptors for tables that couldn't be disabled
+   *         The return htds are read-only
    * @throws IOException
    */
   HTableDescriptor[] disableTables(Pattern pattern) throws IOException;
@@ -1166,7 +1174,7 @@ public interface Admin extends Abortable, Closeable {
    * Get list of table descriptors by namespace
    *
    * @param name namespace name
-   * @return A descriptor
+   * @return HTD[] the read-only tableDescriptors
    * @throws IOException
    */
   HTableDescriptor[] listTableDescriptorsByNamespace(final String name)
@@ -1199,7 +1207,7 @@ public interface Admin extends Abortable, Closeable {
    * Get tableDescriptors
    *
    * @param tableNames List of table names
-   * @return HTD[] the tableDescriptor
+   * @return HTD[] the read-only tableDescriptors
    * @throws IOException if a remote or network exception occurs
    */
   HTableDescriptor[] getTableDescriptorsByTableName(List<TableName> tableNames)
@@ -1209,7 +1217,7 @@ public interface Admin extends Abortable, Closeable {
    * Get tableDescriptors
    *
    * @param names List of table names
-   * @return HTD[] the tableDescriptor
+   * @return HTD[] the read-only tableDescriptors
    * @throws IOException if a remote or network exception occurs
    */
   HTableDescriptor[] getTableDescriptors(List<String> names)

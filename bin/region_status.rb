@@ -133,7 +133,7 @@ end
 
 # query the master to see how many regions are on region servers
 if not $tablename.nil?
-  $TableName = HTableDescriptor.new($tablename.to_java_bytes).getTableName()
+  $TableName = TableName.valueOf($tablename.to_java_bytes)
 end
 while true
   if $tablename.nil?

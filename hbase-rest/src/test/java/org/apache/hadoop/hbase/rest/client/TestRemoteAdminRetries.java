@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -116,7 +117,7 @@ public class TestRemoteAdminRetries {
     testTimedOutCall(new CallExecutor() {
       @Override
       public void run() throws Exception {
-        remoteAdmin.createTable(new HTableDescriptor(Bytes.toBytes("TestTable")));
+        remoteAdmin.createTable(new HTableDescriptor(TableName.valueOf("TestTable")));
       }
     });
     verify(client, times(RETRIES)).put(anyString(), anyString(), any(byte[].class));

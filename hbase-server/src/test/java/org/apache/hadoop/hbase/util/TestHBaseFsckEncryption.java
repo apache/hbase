@@ -92,7 +92,7 @@ public class TestHBaseFsckEncryption {
       cfKey));
     htd.addFamily(hcd);
     TEST_UTIL.getAdmin().createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+    TEST_UTIL.waitTableAvailable(htd.getTableName(), 5000);
   }
 
   @After

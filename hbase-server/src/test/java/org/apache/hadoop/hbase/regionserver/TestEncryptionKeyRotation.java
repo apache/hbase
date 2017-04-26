@@ -195,7 +195,7 @@ public class TestEncryptionKeyRotation {
     // Start the cluster back up
     TEST_UTIL.startMiniHBaseCluster(1, 1);
     // Verify the table can still be loaded
-    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+    TEST_UTIL.waitTableAvailable(htd.getTableName(), 5000);
     // Double check that the store file keys can be unwrapped
     storeFilePaths = findStorefilePaths(htd.getTableName());
     assertTrue(storeFilePaths.size() > 0);
@@ -266,7 +266,7 @@ public class TestEncryptionKeyRotation {
     HColumnDescriptor hcd = htd.getFamilies().iterator().next();
     // Create the test table
     TEST_UTIL.getAdmin().createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+    TEST_UTIL.waitTableAvailable(htd.getTableName(), 5000);
     // Create a store file
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     try {

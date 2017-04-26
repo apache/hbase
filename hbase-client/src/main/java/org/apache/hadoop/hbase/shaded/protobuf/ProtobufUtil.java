@@ -35,6 +35,7 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -67,6 +68,7 @@ import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.ImmutableHTableDescriptor;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
@@ -76,6 +78,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -420,18 +424,33 @@ public final class ProtobufUtil {
    * Get HTableDescriptor[] from GetTableDescriptorsResponse protobuf
    *
    * @param proto the GetTableDescriptorsResponse
-   * @return HTableDescriptor[]
+   * @return a immutable HTableDescriptor array
+   * @deprecated Use {@link #getTableDescriptorArray} after removing the HTableDescriptor
    */
+  @Deprecated
   public static HTableDescriptor[] getHTableDescriptorArray(GetTableDescriptorsResponse proto) {
     if (proto == null) return null;
 
     HTableDescriptor[] ret = new HTableDescriptor[proto.getTableSchemaCount()];
     for (int i = 0; i < proto.getTableSchemaCount(); ++i) {
-      ret[i] = convertToHTableDesc(proto.getTableSchema(i));
+      ret[i] = new ImmutableHTableDescriptor(convertToHTableDesc(proto.getTableSchema(i)));
     }
     return ret;
   }
 
+  /**
+   * Get TableDescriptor[] from GetTableDescriptorsResponse protobuf
+   *
+   * @param proto the GetTableDescriptorsResponse
+   * @return TableDescriptor[]
+   */
+  public static TableDescriptor[] getTableDescriptorArray(GetTableDescriptorsResponse proto) {
+    if (proto == null) return new TableDescriptor[0];
+    return proto.getTableSchemaList()
+                .stream()
+                .map(ProtobufUtil::convertToTableDesc)
+                .toArray(size -> new TableDescriptor[size]);
+  }
   /**
    * get the split keys in form "byte [][]" from a CreateTableRequest proto
    *
@@ -2850,7 +2869,7 @@ public final class ProtobufUtil {
    * @param htd the HTableDescriptor
    * @return Convert the current {@link HTableDescriptor} into a pb TableSchema instance.
    */
-  public static TableSchema convertToTableSchema(HTableDescriptor htd) {
+  public static TableSchema convertToTableSchema(TableDescriptor htd) {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.setTableName(toProtoTableName(htd.getTableName()));
     for (Map.Entry<Bytes, Bytes> e : htd.getValues().entrySet()) {
@@ -2875,7 +2894,9 @@ public final class ProtobufUtil {
    * Converts a TableSchema to HTableDescriptor
    * @param ts A pb TableSchema instance.
    * @return An {@link HTableDescriptor} made from the passed in pb <code>ts</code>.
+   * @deprecated Use {@link #convertToTableDesc} after removing the HTableDescriptor
    */
+  @Deprecated
   public static HTableDescriptor convertToHTableDesc(final TableSchema ts) {
     List<ColumnFamilySchema> list = ts.getColumnFamiliesList();
     HColumnDescriptor [] hcds = new HColumnDescriptor[list.size()];
@@ -2894,6 +2915,25 @@ public final class ProtobufUtil {
       htd.setConfiguration(a.getName(), a.getValue());
     }
     return htd;
+  }
+
+  /**
+   * Converts a TableSchema to TableDescriptor
+   * @param ts A pb TableSchema instance.
+   * @return An {@link TableDescriptor} made from the passed in pb <code>ts</code>.
+   */
+  public static TableDescriptor convertToTableDesc(final TableSchema ts) {
+    TableDescriptorBuilder builder
+      = TableDescriptorBuilder.newBuilder(ProtobufUtil.toTableName(ts.getTableName()));
+    ts.getColumnFamiliesList()
+      .stream()
+      .map(ProtobufUtil::convertToHColumnDesc)
+      .forEach(builder::addFamily);
+    ts.getAttributesList()
+      .forEach(a -> builder.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray()));
+    ts.getConfigurationList()
+      .forEach(a -> builder.setConfiguration(a.getName(), a.getValue()));
+    return builder.build();
   }
 
   /**

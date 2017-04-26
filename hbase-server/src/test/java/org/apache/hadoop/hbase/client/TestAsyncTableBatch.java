@@ -216,7 +216,7 @@ public class TestAsyncTableBatch {
   @Test
   public void testPartialSuccess() throws IOException, InterruptedException, ExecutionException {
     Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor htd = admin.getTableDescriptor(TABLE_NAME);
+    HTableDescriptor htd = new HTableDescriptor(admin.getTableDescriptor(TABLE_NAME));
     htd.addCoprocessor(ErrorInjectObserver.class.getName());
     admin.modifyTable(TABLE_NAME, htd);
     AsyncTableBase table = tableGetter.apply(TABLE_NAME);

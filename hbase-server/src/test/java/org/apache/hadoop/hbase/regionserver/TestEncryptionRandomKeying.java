@@ -101,7 +101,7 @@ public class TestEncryptionRandomKeying {
 
     // Create the test table
     TEST_UTIL.getAdmin().createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+    TEST_UTIL.waitTableAvailable(htd.getTableName(), 5000);
 
     // Create a store file
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());

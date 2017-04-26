@@ -44,7 +44,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -293,10 +292,10 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Void> operate(TableName table);
   }
 
-  private CompletableFuture<HTableDescriptor[]> batchTableOperations(Pattern pattern,
+  private CompletableFuture<TableDescriptor[]> batchTableOperations(Pattern pattern,
       TableOperator operator, String operationType) {
-    CompletableFuture<HTableDescriptor[]> future = new CompletableFuture<>();
-    List<HTableDescriptor> failed = new LinkedList<>();
+    CompletableFuture<TableDescriptor[]> future = new CompletableFuture<>();
+    List<TableDescriptor> failed = new LinkedList<>();
     listTables(pattern, false).whenComplete(
       (tables, error) -> {
         if (error != null) {
@@ -311,7 +310,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
               }
             })).<CompletableFuture> toArray(size -> new CompletableFuture[size]);
         CompletableFuture.allOf(futures).thenAccept((v) -> {
-          future.complete(failed.toArray(new HTableDescriptor[failed.size()]));
+          future.complete(failed.toArray(new TableDescriptor[failed.size()]));
         });
       });
     return future;
@@ -328,25 +327,25 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor[]> listTables() {
+  public CompletableFuture<TableDescriptor[]> listTables() {
     return listTables((Pattern) null, false);
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor[]> listTables(String regex, boolean includeSysTables) {
+  public CompletableFuture<TableDescriptor[]> listTables(String regex, boolean includeSysTables) {
     return listTables(Pattern.compile(regex), false);
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor[]> listTables(Pattern pattern, boolean includeSysTables) {
+  public CompletableFuture<TableDescriptor[]> listTables(Pattern pattern, boolean includeSysTables) {
     return this
-        .<HTableDescriptor[]>newMasterCaller()
+        .<TableDescriptor[]>newMasterCaller()
         .action(
           (controller, stub) -> this
-              .<GetTableDescriptorsRequest, GetTableDescriptorsResponse, HTableDescriptor[]> call(
+              .<GetTableDescriptorsRequest, GetTableDescriptorsResponse, TableDescriptor[]> call(
                 controller, stub, RequestConverter.buildGetTableDescriptorsRequest(pattern,
                   includeSysTables), (s, c, req, done) -> s.getTableDescriptors(c, req, done), (
-                    resp) -> ProtobufUtil.getHTableDescriptorArray(resp))).call();
+                    resp) -> ProtobufUtil.getTableDescriptorArray(resp))).call();
   }
 
   @Override
@@ -372,8 +371,8 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor> getTableDescriptor(TableName tableName) {
-    CompletableFuture<HTableDescriptor> future = new CompletableFuture<>();
+  public CompletableFuture<TableDescriptor> getTableDescriptor(TableName tableName) {
+    CompletableFuture<TableDescriptor> future = new CompletableFuture<>();
     this.<List<TableSchema>> newMasterCaller()
         .action(
           (controller, stub) -> this
@@ -386,7 +385,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
             return;
           }
           if (!tableSchemas.isEmpty()) {
-            future.complete(ProtobufUtil.convertToHTableDesc(tableSchemas.get(0)));
+            future.complete(ProtobufUtil.convertToTableDesc(tableSchemas.get(0)));
           } else {
             future.completeExceptionally(new TableNotFoundException(tableName.getNameAsString()));
           }
@@ -395,12 +394,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> createTable(HTableDescriptor desc) {
+  public CompletableFuture<Void> createTable(TableDescriptor desc) {
     return createTable(desc, null);
   }
 
   @Override
-  public CompletableFuture<Void> createTable(HTableDescriptor desc, byte[] startKey, byte[] endKey,
+  public CompletableFuture<Void> createTable(TableDescriptor desc, byte[] startKey, byte[] endKey,
       int numRegions) {
     try {
       return createTable(desc, getSplitKeys(startKey, endKey, numRegions));
@@ -410,7 +409,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> createTable(HTableDescriptor desc, byte[][] splitKeys) {
+  public CompletableFuture<Void> createTable(TableDescriptor desc, byte[][] splitKeys) {
     if (desc.getTableName() == null) {
       return failedFuture(new IllegalArgumentException("TableName cannot be null"));
     }
@@ -447,12 +446,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor[]> deleteTables(String regex) {
+  public CompletableFuture<TableDescriptor[]> deleteTables(String regex) {
     return deleteTables(Pattern.compile(regex));
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor[]> deleteTables(Pattern pattern) {
+  public CompletableFuture<TableDescriptor[]> deleteTables(Pattern pattern) {
     return batchTableOperations(pattern, (table) -> deleteTable(table), "DELETE");
   }
 
@@ -473,12 +472,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor[]> enableTables(String regex) {
+  public CompletableFuture<TableDescriptor[]> enableTables(String regex) {
     return enableTables(Pattern.compile(regex));
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor[]> enableTables(Pattern pattern) {
+  public CompletableFuture<TableDescriptor[]> enableTables(Pattern pattern) {
     return batchTableOperations(pattern, (table) -> enableTable(table), "ENABLE");
   }
 
@@ -491,12 +490,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor[]> disableTables(String regex) {
+  public CompletableFuture<TableDescriptor[]> disableTables(String regex) {
     return disableTables(Pattern.compile(regex));
   }
 
   @Override
-  public CompletableFuture<HTableDescriptor[]> disableTables(Pattern pattern) {
+  public CompletableFuture<TableDescriptor[]> disableTables(Pattern pattern) {
     return batchTableOperations(pattern, (table) -> disableTable(table), "DISABLE");
   }
 

@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 
@@ -128,74 +129,69 @@ public class FSTableDescriptors implements TableDescriptors {
   @VisibleForTesting
   public static HTableDescriptor createMetaTableDescriptor(final Configuration conf)
       throws IOException {
-    HTableDescriptor metaDescriptor = new HTableDescriptor(
-        TableName.META_TABLE_NAME,
-        new HColumnDescriptor[] {
-            new HColumnDescriptor(HConstants.CATALOG_FAMILY)
-                .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+    return new HTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
+          .addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+            .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
                     HConstants.DEFAULT_HBASE_META_VERSIONS))
-                .setInMemory(true)
-                .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+            .setInMemory(true)
+            .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
                     HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
-                .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                    // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-                .setBloomFilterType(BloomType.NONE)
-                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                    // e.g. if using CombinedBlockCache (BucketCache).
-                .setCacheDataInL1(true),
-            new HColumnDescriptor(HConstants.REPLICATION_BARRIER_FAMILY)
-                .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+            // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+            .setBloomFilterType(BloomType.NONE)
+            // Enable cache of data blocks in L1 if more than one caching tier deployed:
+            // e.g. if using CombinedBlockCache (BucketCache).
+            .setCacheDataInL1(true))
+          .addFamily(new HColumnDescriptor(HConstants.REPLICATION_BARRIER_FAMILY)
+            .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
                     HConstants.DEFAULT_HBASE_META_VERSIONS))
-                .setInMemory(true)
-                .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+            .setInMemory(true)
+            .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
                     HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
-                .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-                .setBloomFilterType(BloomType.NONE)
-                // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                // e.g. if using CombinedBlockCache (BucketCache).
-                .setCacheDataInL1(true),
-            new HColumnDescriptor(HConstants.REPLICATION_POSITION_FAMILY)
-                .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+            // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+            .setBloomFilterType(BloomType.NONE)
+            // Enable cache of data blocks in L1 if more than one caching tier deployed:
+            // e.g. if using CombinedBlockCache (BucketCache).
+            .setCacheDataInL1(true))
+          .addFamily(new HColumnDescriptor(HConstants.REPLICATION_POSITION_FAMILY)
+            .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
                     HConstants.DEFAULT_HBASE_META_VERSIONS))
-                .setInMemory(true)
-                .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+            .setInMemory(true)
+            .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
                     HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
-                .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-                .setBloomFilterType(BloomType.NONE)
-                // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                // e.g. if using CombinedBlockCache (BucketCache).
-                .setCacheDataInL1(true),
-            new HColumnDescriptor(HConstants.REPLICATION_META_FAMILY)
-                .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+            // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+            .setBloomFilterType(BloomType.NONE)
+            // Enable cache of data blocks in L1 if more than one caching tier deployed:
+            // e.g. if using CombinedBlockCache (BucketCache).
+            .setCacheDataInL1(true))
+          .addFamily(new HColumnDescriptor(HConstants.REPLICATION_META_FAMILY)
+            .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
                     HConstants.DEFAULT_HBASE_META_VERSIONS))
-                .setInMemory(true)
-                .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+            .setInMemory(true)
+            .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
                     HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
-                .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-                .setBloomFilterType(BloomType.NONE)
-                // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                // e.g. if using CombinedBlockCache (BucketCache).
-                .setCacheDataInL1(true),
-            new HColumnDescriptor(HConstants.TABLE_FAMILY)
-                // Ten is arbitrary number.  Keep versions to help debugging.
-                .setMaxVersions(10)
-                .setInMemory(true)
-                .setBlocksize(8 * 1024)
-                .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                    // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-                .setBloomFilterType(BloomType.NONE)
-                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                    // e.g. if using CombinedBlockCache (BucketCache).
-                .setCacheDataInL1(true)
-        }) {
-    };
-    metaDescriptor.addCoprocessor(
-        "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
-        null, Coprocessor.PRIORITY_SYSTEM, null);
-    return metaDescriptor;
+            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+            // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+            .setBloomFilterType(BloomType.NONE)
+            // Enable cache of data blocks in L1 if more than one caching tier deployed:
+            // e.g. if using CombinedBlockCache (BucketCache).
+            .setCacheDataInL1(true))
+          .addFamily(new HColumnDescriptor(HConstants.TABLE_FAMILY)
+            // Ten is arbitrary number.  Keep versions to help debugging.
+            .setMaxVersions(10)
+            .setInMemory(true)
+            .setBlocksize(8 * 1024)
+            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+            // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+            .setBloomFilterType(BloomType.NONE)
+            // Enable cache of data blocks in L1 if more than one caching tier deployed:
+            // e.g. if using CombinedBlockCache (BucketCache).
+            .setCacheDataInL1(true))
+          .addCoprocessor("org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
+            null, Coprocessor.PRIORITY_SYSTEM, null)
+          .build());
   }
 
   @Override

@@ -248,7 +248,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       status = FSTableDescriptors.getTableInfoPath(fs, hbaseTableDir);
       assertNotNull(status);
 
-      HTableDescriptor htd = admin.getTableDescriptor(tableName);
+      HTableDescriptor htd = new HTableDescriptor(admin.getTableDescriptor(tableName));
       htd.setValue("NOT_DEFAULT", "true");
       admin.disableTable(tableName);
       admin.modifyTable(tableName, htd);

@@ -680,7 +680,7 @@ public final class SnapshotTestingUtils {
     }
 
     public HTableDescriptor createHtd(final String tableName) {
-      HTableDescriptor htd = new HTableDescriptor(tableName);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
       htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
       return htd;
     }
