@@ -158,7 +158,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
 
   @Override
   public Map<ServerName, List<HRegionInfo>> roundRobinAssignment(List<HRegionInfo> regions,
-      List<ServerName> servers) {
+      List<ServerName> servers) throws HBaseIOException {
     Map<ServerName, List<HRegionInfo>> assignmentMap;
     try {
       FavoredNodeAssignmentHelper assignmentHelper =
@@ -201,7 +201,8 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   @Override
-  public ServerName randomAssignment(HRegionInfo regionInfo, List<ServerName> servers) {
+  public ServerName randomAssignment(HRegionInfo regionInfo, List<ServerName> servers)
+      throws HBaseIOException {
     try {
       FavoredNodeAssignmentHelper assignmentHelper =
           new FavoredNodeAssignmentHelper(servers, rackManager);

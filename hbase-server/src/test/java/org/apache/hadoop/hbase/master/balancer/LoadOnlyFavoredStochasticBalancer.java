@@ -15,24 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.favored;
+package org.apache.hadoop.hbase.master.balancer;
 
-import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
+import com.google.common.collect.Lists;
 
-@InterfaceAudience.Private
-public interface FavoredNodesPromoter {
+/**
+ * Used for FavoredNode unit tests
+ */
+public class LoadOnlyFavoredStochasticBalancer extends FavoredStochasticBalancer {
 
-  /* Try and assign regions even if favored nodes are dead */
-  String FAVORED_ALWAYS_ASSIGN_REGIONS = "hbase.favored.assignment.always.assign";
-
-  void generateFavoredNodesForDaughter(List<ServerName> servers,
-      HRegionInfo parent, HRegionInfo hriA, HRegionInfo hriB) throws IOException;
-
-  void generateFavoredNodesForMergedRegion(HRegionInfo merged, HRegionInfo hriA,
-      HRegionInfo hriB) throws IOException;
+  @Override
+  protected void configureGenerators() {
+    List<CandidateGenerator> fnPickers = Lists.newArrayList();
+    fnPickers.add(new FavoredNodeLoadPicker());
+    setCandidateGenerators(fnPickers);
+  }
 }

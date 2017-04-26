@@ -577,7 +577,7 @@ public class TestZooKeeper {
 
     @Override
     public Map<ServerName, List<HRegionInfo>> retainAssignment(
-        Map<HRegionInfo, ServerName> regions, List<ServerName> servers) {
+        Map<HRegionInfo, ServerName> regions, List<ServerName> servers) throws HBaseIOException {
       retainAssignCalled = true;
       return super.retainAssignment(regions, servers);
     }

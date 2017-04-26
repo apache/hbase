@@ -355,6 +355,35 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
+   * Starts a region server thread and waits until its processed by master. Throws an exception
+   * when it can't start a region server or when the region server is not processed by master
+   * within the timeout.
+   *
+   * @return New RegionServerThread
+   * @throws IOException
+   */
+  public JVMClusterUtil.RegionServerThread startRegionServerAndWait(long timeout)
+      throws IOException {
+
+    JVMClusterUtil.RegionServerThread t =  startRegionServer();
+    ServerName rsServerName = t.getRegionServer().getServerName();
+
+    long start = System.currentTimeMillis();
+    ClusterStatus clusterStatus = getClusterStatus();
+    while ((System.currentTimeMillis() - start) < timeout) {
+      if (clusterStatus != null && clusterStatus.getServers().contains(rsServerName)) {
+        return t;
+      }
+      Threads.sleep(100);
+    }
+    if (t.getRegionServer().isOnline()) {
+      throw new IOException("RS: " + rsServerName + " online, but not processed by master");
+    } else {
+      throw new IOException("RS: " + rsServerName + " is offline");
+    }
+  }
+
+  /**
    * Cause a region server to exit doing basic clean up only on its way out.
    * @param serverNumber  Used as index into a list.
    */
