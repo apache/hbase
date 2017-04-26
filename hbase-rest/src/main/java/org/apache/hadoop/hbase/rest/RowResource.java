@@ -139,7 +139,13 @@ public class RowResource extends ResourceBase {
     if (!rowspec.hasColumns() || rowspec.getColumns().length > 1) {
       servlet.getMetrics().incrementFailedGetRequests(1);
       return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
-          .entity("Bad request: Either 0 or more than 1 columns specified." + CRLF).build();
+          .entity("Bad request: Default 'GET' method only works if there is exactly 1 column " +
+                  "in the row. Using the 'Accept' header with one of these formats lets you " +
+                  "retrieve the entire row if it has multiple columns: " +
+                  // Same as the @Produces list for the get method.
+                  MIMETYPE_XML + ", " + MIMETYPE_JSON + ", " +
+                  MIMETYPE_PROTOBUF + ", " + MIMETYPE_PROTOBUF_IETF +
+                  CRLF).build();
     }
     MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
     try {
