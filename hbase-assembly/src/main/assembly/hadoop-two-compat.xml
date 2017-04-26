@@ -55,7 +55,12 @@
         <outputDirectory>lib</outputDirectory>
         <unpack>false</unpack>
         <dependencySets>
-          <dependencySet/>
+          <!-- Exclude jruby-complete from hbase_home/lib -->
+          <dependencySet>
+            <excludes>
+              <exclude>org.jruby:jruby-complete</exclude>
+            </excludes>
+          </dependencySet>
         </dependencySets>
       </binaries>
     </moduleSet>
@@ -81,4 +86,16 @@
       <lineEnding>unix</lineEnding>
     </file>
   </files>
+
+  <!-- Add jruby-complete to hbase_home/lib/ruby.
+       Update JRUBY_PACKAGED_WITH_HBASE in bin/hbase and hbase.cmd if you would like to update outputDirectory below -->
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>lib/ruby</outputDirectory>
+      <includes>
+        <include>org.jruby:jruby-complete</include>
+      </includes>
+    </dependencySet>
+  </dependencySets>
+
 </assembly>

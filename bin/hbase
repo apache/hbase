@@ -48,7 +48,7 @@
 #   JRUBY_HOME       JRuby path: $JRUBY_HOME/lib/jruby.jar should exist.
 #                    Defaults to the jar packaged with HBase.
 #
-#   JRUBY_OPTS       Extra options (eg '--1.9') passed to the hbase shell.
+#   JRUBY_OPTS       Extra options (eg '--1.9') passed to hbase.
 #                    Empty by default.
 #
 #   HBASE_SHELL_OPTS Extra options passed to the hbase shell.
@@ -293,13 +293,41 @@ if [ "$AUTH_AS_SERVER" == "true" ] || [ "$COMMAND" = "hbck" ]; then
    fi
 fi
 
+# for jruby
+# (1) when JRUBY_HOME is specified explicitly, eg. export JRUBY_HOME=/usr/local/share/jruby
+#     for all commands, CLASSPATH and HBASE_OPTS are updated according to JRUBY_HOME specified
+# (2) when JRUBY_HOME is not specified explicitly
+#     A. for jruby_cmds defined below, add JRUBY_PACKAGED_WITH_HBASE into CLASSPATH
+#     B. for other commands, do nothing
+
+if [ "$JRUBY_HOME" != "" ]; then  # JRUBY_HOME is specified explicitly, eg. export JRUBY_HOME=/usr/local/share/jruby
+  # add jruby.jar into CLASSPATH
+  CLASSPATH="$JRUBY_HOME/lib/jruby.jar:$CLASSPATH"
+
+  # add jruby to HBASE_OPTS
+  HBASE_OPTS="$HBASE_OPTS -Djruby.home=$JRUBY_HOME -Djruby.lib=$JRUBY_HOME/lib"
+
+else  # JRUBY_HOME is not specified explicitly
+  # check if the commmand needs jruby
+  declare -a jruby_cmds=("shell" "org.jruby.Main")
+  for cmd in "${jruby_cmds[@]}"; do
+    if [[ $cmd == "$COMMAND" ]]; then
+      jruby_needed=true
+      break
+    fi
+  done
+
+  # add JRUBY_PACKAGED_WITH_HBASE to CLASSPATH when jruby is needed
+  JRUBY_PACKAGED_WITH_HBASE="$HBASE_HOME/lib/ruby/*.jar"
+  if [[ $jruby_needed ]]; then  # the command needs jruby
+    for jruby_jar in $JRUBY_PACKAGED_WITH_HBASE; do
+      CLASSPATH=$jruby_jar:$CLASSPATH;
+    done
+  fi
+fi
+
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
-  # eg export JRUBY_HOME=/usr/local/share/jruby
-  if [ "$JRUBY_HOME" != "" ] ; then
-    CLASSPATH="$JRUBY_HOME/lib/jruby.jar:$CLASSPATH"
-    HBASE_OPTS="$HBASE_OPTS -Djruby.home=$JRUBY_HOME -Djruby.lib=$JRUBY_HOME/lib"
-  fi
 	#find the hbase ruby sources
   if [ -d "$HBASE_HOME/lib/ruby" ]; then
     HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/lib/ruby"
