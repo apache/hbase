@@ -225,14 +225,17 @@ creation or mutation, and `DELETE` for deletion.
 |Description
 |Example
 
-|/_table_/_row_/_column:qualifier_/_timestamp_
+|/_table_/_row_
 |GET
-|Get the value of a single row. Values are Base-64 encoded.
+|Get all columns of a single row. Values are Base-64 encoded. This requires the "Accept" request header with a type that can hold multiple columns (like xml, json or protobuf).
 |curl -vi -X GET \
   -H "Accept: text/xml" \
   "http://example.com:8000/users/row1"
 
-curl -vi -X GET \
+|/_table_/_row_/_column:qualifier_/_timestamp_
+|GET
+|Get the value of a single column. Values are Base-64 encoded.
+|curl -vi -X GET \
   -H "Accept: text/xml" \
   "http://example.com:8000/users/row1/cf:a/1458586888395"
 
