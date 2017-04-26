@@ -16,9 +16,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -674,5 +678,25 @@ public class TestScannersFromClientSide {
     }
 
     assertEquals(expKvList.size(), result.size());
+  }
+
+  @Test
+  public void testReadExpiredDataForRawScan() throws IOException {
+    TableName tableName = TableName.valueOf("testReadExpiredDataForRawScan");
+    long ts = System.currentTimeMillis() - 10000;
+    byte[] value = Bytes.toBytes("expired");
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, ts, value));
+      assertArrayEquals(value, table.get(new Get(ROW)).getValue(FAMILY, QUALIFIER));
+      TEST_UTIL.getHBaseAdmin().modifyColumn(tableName,
+        new HColumnDescriptor(FAMILY).setTimeToLive(5));
+      try (ResultScanner scanner = table.getScanner(FAMILY)) {
+        assertNull(scanner.next());
+      }
+      try (ResultScanner scanner = table.getScanner(new Scan().setRaw(true))) {
+        assertArrayEquals(value, scanner.next().getValue(FAMILY, QUALIFIER));
+        assertNull(scanner.next());
+      }
+    }
   }
 }
