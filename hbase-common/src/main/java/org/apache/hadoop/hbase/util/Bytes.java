@@ -1562,47 +1562,42 @@ public class Bytes implements Comparable<Bytes> {
             length1 == length2) {
           return 0;
         }
+        final int stride = 8;
         final int minLength = Math.min(length1, length2);
-        final int minWords = minLength / SIZEOF_LONG;
+        int strideLimit = minLength & ~(stride - 1);
         final long offset1Adj = offset1 + BYTE_ARRAY_BASE_OFFSET;
         final long offset2Adj = offset2 + BYTE_ARRAY_BASE_OFFSET;
+        int i;
 
         /*
-         * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a
-         * time is no slower than comparing 4 bytes at a time even on 32-bit.
-         * On the other hand, it is substantially faster on 64-bit.
+         * Compare 8 bytes at a time. Benchmarking on x86 shows a stride of 8 bytes is no slower
+         * than 4 bytes even on 32-bit. On the other hand, it is substantially faster on 64-bit.
          */
-        // This is the end offset of long parts.
-        int j = minWords << 3; // Same as minWords * SIZEOF_LONG
-        for (int i = 0; i < j; i += SIZEOF_LONG) {
+        for (i = 0; i < strideLimit; i += stride) {
           long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
           long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
-          long diff = lw ^ rw;
-          if (diff != 0) {
-              return lessThanUnsignedLong(lw, rw) ? -1 : 1;
-          }
-        }
-        int offset = j;
+          if (lw != rw) {
+            if (!littleEndian) {
+              return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+            }
 
-        if (minLength - offset >= SIZEOF_INT) {
-          int il = theUnsafe.getInt(buffer1, offset1Adj + offset);
-          int ir = theUnsafe.getInt(buffer2, offset2Adj + offset);
-          if (il != ir) {
-            return lessThanUnsignedInt(il, ir) ? -1: 1;
+            /*
+             * We want to compare only the first index where left[index] != right[index]. This
+             * corresponds to the least significant nonzero byte in lw ^ rw, since lw and rw are
+             * little-endian. Long.numberOfTrailingZeros(diff) tells us the least significant
+             * nonzero bit, and zeroing out the first three bits of L.nTZ gives us the shift to get
+             * that least significant nonzero byte. This comparison logic is based on UnsignedBytes
+             * comparator from guava v21
+             */
+            int n = Long.numberOfTrailingZeros(lw ^ rw) & ~0x7;
+            return ((int) ((lw >>> n) & 0xFF)) - ((int) ((rw >>> n) & 0xFF));
           }
-          offset += SIZEOF_INT;
         }
-        if (minLength - offset >= SIZEOF_SHORT) {
-          short sl = theUnsafe.getShort(buffer1, offset1Adj + offset);
-          short sr = theUnsafe.getShort(buffer2, offset2Adj + offset);
-          if (sl != sr) {
-            return lessThanUnsignedShort(sl, sr) ? -1: 1;
-          }
-          offset += SIZEOF_SHORT;
-        }
-        if (minLength - offset == 1) {
-          int a = (buffer1[(int)(offset1 + offset)] & 0xff);
-          int b = (buffer2[(int)(offset2 + offset)] & 0xff);
+
+        // The epilogue to cover the last (minLength % stride) elements.
+        for (; i < minLength; i++) {
+          int a = (buffer1[offset1 + i] & 0xFF);
+          int b = (buffer2[offset2 + i] & 0xFF);
           if (a != b) {
             return a - b;
           }
