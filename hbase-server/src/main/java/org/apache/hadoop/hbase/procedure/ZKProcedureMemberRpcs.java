@@ -125,7 +125,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
    * @param path full znode path that cause the notification
    */
   private void receivedReachedGlobalBarrier(String path) {
-    LOG.debug("Recieved reached global barrier:" + path);
+    LOG.debug("Received reached global barrier:" + path);
     String procName = ZKUtil.getNodeName(path);
     this.member.receivedReachedGlobalBarrier(procName);
   }

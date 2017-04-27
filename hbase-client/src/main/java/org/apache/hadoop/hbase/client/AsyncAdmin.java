@@ -627,7 +627,7 @@ public interface AsyncAdmin {
    * <li>finished with error - throws the exception that caused the snapshot to fail</li>
    * </ol>
    * The cluster only knows about the most recent snapshot. Therefore, if another snapshot has been
-   * run/started since the snapshot your are checking, you will recieve an
+   * run/started since the snapshot you are checking, you will receive an
    * {@link org.apache.hadoop.hbase.snapshot.UnknownSnapshotException}.
    * @param snapshot description of the snapshot to check
    * @return <tt>true</tt> if the snapshot is completed, <tt>false</tt> if the snapshot is still

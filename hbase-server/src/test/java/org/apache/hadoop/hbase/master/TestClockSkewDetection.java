@@ -85,7 +85,7 @@ public class TestClockSkewDetection {
       fail("HMaster should have thrown a ClockOutOfSyncException but didn't.");
     } catch(ClockOutOfSyncException e) {
       //we want an exception
-      LOG.info("Recieved expected exception: "+e);
+      LOG.info("Received expected exception: "+e);
     }
 
     try {
@@ -101,7 +101,7 @@ public class TestClockSkewDetection {
       fail("HMaster should have thrown a ClockOutOfSyncException but didn't.");
     } catch (ClockOutOfSyncException e) {
       // we want an exception
-      LOG.info("Recieved expected exception: " + e);
+      LOG.info("Received expected exception: " + e);
     }
 
     // make sure values above warning threshold but below max threshold don't kill
