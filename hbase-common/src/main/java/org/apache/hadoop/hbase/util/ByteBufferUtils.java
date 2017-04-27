@@ -701,46 +701,43 @@ public final class ByteBufferUtils {
   }
 
   static int compareToUnsafe(Object obj1, long o1, int l1, Object obj2, long o2, int l2) {
+    final int stride = 8;
     final int minLength = Math.min(l1, l2);
-    final int minWords = minLength / Bytes.SIZEOF_LONG;
+    int strideLimit = minLength & ~(stride - 1);
+    int i;
 
     /*
      * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a time is no slower than
      * comparing 4 bytes at a time even on 32-bit. On the other hand, it is substantially faster on
      * 64-bit.
      */
-    int j = minWords << 3; // Same as minWords * SIZEOF_LONG
-    for (int i = 0; i < j; i += Bytes.SIZEOF_LONG) {
-      long lw = UnsafeAccess.theUnsafe.getLong(obj1, o1 + i);
-      long rw = UnsafeAccess.theUnsafe.getLong(obj2, o2 + i);
-      long diff = lw ^ rw;
-      if (diff != 0) {
-        return lessThanUnsignedLong(lw, rw) ? -1 : 1;
-      }
-    }
-    int offset = j;
+    for (i = 0; i < strideLimit; i += stride) {
+      long lw = UnsafeAccess.theUnsafe.getLong(obj1, o1 + (long) i);
+      long rw = UnsafeAccess.theUnsafe.getLong(obj2, o2 + (long) i);
+      if (lw != rw) {
+        if (!UnsafeAccess.littleEndian) {
+          return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+        }
 
-    if (minLength - offset >= Bytes.SIZEOF_INT) {
-      int il = UnsafeAccess.theUnsafe.getInt(obj1, o1 + offset);
-      int ir = UnsafeAccess.theUnsafe.getInt(obj2, o2 + offset);
+        /*
+         * We want to compare only the first index where left[index] != right[index]. This
+         * corresponds to the least significant nonzero byte in lw ^ rw, since lw and rw are
+         * little-endian. Long.numberOfTrailingZeros(diff) tells us the least significant
+         * nonzero bit, and zeroing out the first three bits of L.nTZ gives us the shift to get
+         * that least significant nonzero byte. This comparison logic is based on UnsignedBytes
+         * from guava v21
+         */
+        int n = Long.numberOfTrailingZeros(lw ^ rw) & ~0x7;
+        return ((int) ((lw >>> n) & 0xFF)) - ((int) ((rw >>> n) & 0xFF));
+      }
+    }
+
+    // The epilogue to cover the last (minLength % stride) elements.
+    for (; i < minLength; i++) {
+      int il = (UnsafeAccess.theUnsafe.getByte(obj1, o1 + i) & 0xFF);
+      int ir = (UnsafeAccess.theUnsafe.getByte(obj2, o2 + i) & 0xFF);
       if (il != ir) {
-        return lessThanUnsignedInt(il, ir) ? -1 : 1;
-      }
-      offset += Bytes.SIZEOF_INT;
-    }
-    if (minLength - offset >= Bytes.SIZEOF_SHORT) {
-      short sl = UnsafeAccess.theUnsafe.getShort(obj1, o1 + offset);
-      short sr = UnsafeAccess.theUnsafe.getShort(obj2, o2 + offset);
-      if (sl != sr) {
-        return lessThanUnsignedShort(sl, sr) ? -1 : 1;
-      }
-      offset += Bytes.SIZEOF_SHORT;
-    }
-    if (minLength - offset == 1) {
-      int a = (UnsafeAccess.theUnsafe.getByte(obj1, o1 + offset) & 0xff);
-      int b = (UnsafeAccess.theUnsafe.getByte(obj2, o2 + offset) & 0xff);
-      if (a != b) {
-        return a - b;
+        return il - ir;
       }
     }
     return l1 - l2;
