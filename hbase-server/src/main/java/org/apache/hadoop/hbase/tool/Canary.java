@@ -114,15 +114,15 @@ public final class Canary implements Tool {
   public interface Sink {
     public long getReadFailureCount();
     public long incReadFailureCount();
-    public void publishReadFailure(HRegionInfo region, Exception e);
-    public void publishReadFailure(HRegionInfo region, HColumnDescriptor column, Exception e);
+    public void publishReadFailure(ServerName serverName, HRegionInfo region, Exception e);
+    public void publishReadFailure(ServerName serverName, HRegionInfo region, HColumnDescriptor column, Exception e);
     public void updateReadFailedHostList(HRegionInfo region, String serverName);
     public Map<String,String> getReadFailures();
-    public void publishReadTiming(HRegionInfo region, HColumnDescriptor column, long msTime);
+    public void publishReadTiming(ServerName serverName, HRegionInfo region, HColumnDescriptor column, long msTime);
     public long getWriteFailureCount();
-    public void publishWriteFailure(HRegionInfo region, Exception e);
-    public void publishWriteFailure(HRegionInfo region, HColumnDescriptor column, Exception e);
-    public void publishWriteTiming(HRegionInfo region, HColumnDescriptor column, long msTime);
+    public void publishWriteFailure(ServerName serverName, HRegionInfo region, Exception e);
+    public void publishWriteFailure(ServerName serverName, HRegionInfo region, HColumnDescriptor column, Exception e);
+    public void publishWriteTiming(ServerName serverName, HRegionInfo region, HColumnDescriptor column, long msTime);
     public void updateWriteFailedHostList(HRegionInfo region, String serverName);
     public Map<String,String> getWriteFailures();
   }
@@ -153,16 +153,16 @@ public final class Canary implements Tool {
     }
 
     @Override
-    public void publishReadFailure(HRegionInfo region, Exception e) {
+    public void publishReadFailure(ServerName serverName, HRegionInfo region, Exception e) {
       readFailureCount.incrementAndGet();
-      LOG.error(String.format("read from region %s failed", region.getRegionNameAsString()), e);
+      LOG.error(String.format("read from region %s on regionserver %s failed", region.getRegionNameAsString(), serverName), e);
     }
 
     @Override
-    public void publishReadFailure(HRegionInfo region, HColumnDescriptor column, Exception e) {
+    public void publishReadFailure(ServerName serverName, HRegionInfo region, HColumnDescriptor column, Exception e) {
       readFailureCount.incrementAndGet();
-      LOG.error(String.format("read from region %s column family %s failed",
-                region.getRegionNameAsString(), column.getNameAsString()), e);
+      LOG.error(String.format("read from region %s on regionserver %s column family %s failed",
+                region.getRegionNameAsString(), serverName, column.getNameAsString()), e);
     }
 
     @Override
@@ -171,9 +171,9 @@ public final class Canary implements Tool {
     }
 
     @Override
-    public void publishReadTiming(HRegionInfo region, HColumnDescriptor column, long msTime) {
-      LOG.info(String.format("read from region %s column family %s in %dms",
-        region.getRegionNameAsString(), column.getNameAsString(), msTime));
+    public void publishReadTiming(ServerName serverName, HRegionInfo region, HColumnDescriptor column, long msTime) {
+      LOG.info(String.format("read from region %s on regionserver %s column family %s in %dms",
+        region.getRegionNameAsString(), serverName, column.getNameAsString(), msTime));
     }
 
     @Override
@@ -192,22 +192,22 @@ public final class Canary implements Tool {
     }
 
     @Override
-    public void publishWriteFailure(HRegionInfo region, Exception e) {
+    public void publishWriteFailure(ServerName serverName, HRegionInfo region, Exception e) {
       writeFailureCount.incrementAndGet();
-      LOG.error(String.format("write to region %s failed", region.getRegionNameAsString()), e);
+      LOG.error(String.format("write to region %s on regionserver %s failed", region.getRegionNameAsString(), serverName), e);
     }
 
     @Override
-    public void publishWriteFailure(HRegionInfo region, HColumnDescriptor column, Exception e) {
+    public void publishWriteFailure(ServerName serverName, HRegionInfo region, HColumnDescriptor column, Exception e) {
       writeFailureCount.incrementAndGet();
-      LOG.error(String.format("write to region %s column family %s failed",
-        region.getRegionNameAsString(), column.getNameAsString()), e);
+      LOG.error(String.format("write to region %s on regionserver %s column family %s failed",
+        region.getRegionNameAsString(), serverName, column.getNameAsString()), e);
     }
 
     @Override
-    public void publishWriteTiming(HRegionInfo region, HColumnDescriptor column, long msTime) {
-      LOG.info(String.format("write to region %s column family %s in %dms",
-        region.getRegionNameAsString(), column.getNameAsString(), msTime));
+    public void publishWriteTiming(ServerName serverName, HRegionInfo region, HColumnDescriptor column, long msTime) {
+      LOG.info(String.format("write to region %s on regionserver %s column family %s in %dms",
+        region.getRegionNameAsString(), serverName, column.getNameAsString(), msTime));
     }
 
     @Override
@@ -330,7 +330,7 @@ public final class Canary implements Tool {
         tableDesc = table.getTableDescriptor();
       } catch (IOException e) {
         LOG.debug("sniffRegion failed", e);
-        sink.publishReadFailure(region, e);
+        sink.publishReadFailure(serverName, region, e);
         if (table != null) {
           try {
             table.close();
@@ -384,9 +384,9 @@ public final class Canary implements Tool {
             rs.next();
           }
           stopWatch.stop();
-          sink.publishReadTiming(region, column, stopWatch.getTime());
+          sink.publishReadTiming(serverName, region, column, stopWatch.getTime());
         } catch (Exception e) {
-          sink.publishReadFailure(region, column, e);
+          sink.publishReadFailure(serverName, region, column, e);
           sink.updateReadFailedHostList(region, serverName.getHostname());
         } finally {
           if (rs != null) {
@@ -436,14 +436,14 @@ public final class Canary implements Tool {
             long startTime = System.currentTimeMillis();
             table.put(put);
             long time = System.currentTimeMillis() - startTime;
-            sink.publishWriteTiming(region, column, time);
+            sink.publishWriteTiming(serverName, region, column, time);
           } catch (Exception e) {
-            sink.publishWriteFailure(region, column, e);
+            sink.publishWriteFailure(serverName, region, column, e);
           }
         }
         table.close();
       } catch (IOException e) {
-        sink.publishWriteFailure(region, e);
+        sink.publishWriteFailure(serverName, region, e);
         sink.updateWriteFailedHostList(region, serverName.getHostname());
       }
       return null;
@@ -1166,65 +1166,6 @@ public final class Canary implements Tool {
       }
     }
     return executor.invokeAll(tasks);
-  }
-
-  /*
-   * For each column family of the region tries to get one row and outputs the latency, or the
-   * failure.
-   */
-  private static void sniffRegion(
-      final Admin admin,
-      final Sink sink,
-      HRegionInfo region,
-      Table table) throws Exception {
-    HTableDescriptor tableDesc = table.getTableDescriptor();
-    byte[] startKey = null;
-    Get get = null;
-    Scan scan = null;
-    ResultScanner rs = null;
-    StopWatch stopWatch = new StopWatch();
-    for (HColumnDescriptor column : tableDesc.getColumnFamilies()) {
-      stopWatch.reset();
-      startKey = region.getStartKey();
-      // Can't do a get on empty start row so do a Scan of first element if any instead.
-      if (startKey.length > 0) {
-        get = new Get(startKey);
-        get.setCacheBlocks(false);
-        get.setFilter(new FirstKeyOnlyFilter());
-        get.addFamily(column.getName());
-      } else {
-        scan = new Scan();
-        scan.setRaw(true);
-        scan.setCaching(1);
-        scan.setCacheBlocks(false);
-        scan.setFilter(new FirstKeyOnlyFilter());
-        scan.addFamily(column.getName());
-        scan.setMaxResultSize(1L);
-      }
-
-      try {
-        if (startKey.length > 0) {
-          stopWatch.start();
-          table.get(get);
-          stopWatch.stop();
-          sink.publishReadTiming(region, column, stopWatch.getTime());
-        } else {
-          stopWatch.start();
-          rs = table.getScanner(scan);
-          stopWatch.stop();
-          sink.publishReadTiming(region, column, stopWatch.getTime());
-        }
-      } catch (Exception e) {
-        sink.publishReadFailure(region, column, e);
-      } finally {
-        if (rs != null) {
-          rs.close();
-        }
-        scan = null;
-        get = null;
-        startKey = null;
-      }
-    }
   }
 
   //  monitor for zookeeper mode
