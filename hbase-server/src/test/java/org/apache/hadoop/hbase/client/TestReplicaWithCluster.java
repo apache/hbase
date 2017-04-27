@@ -521,4 +521,54 @@ public class TestReplicaWithCluster {
       HTU.deleteTable(hdt.getTableName());
     }
   }
+
+  @Test
+  public void testReplicaGetWithRpcClientImpl() throws IOException {
+    HTU.getConfiguration().setBoolean("hbase.ipc.client.specificThreadForWriting", true);
+    HTU.getConfiguration().set("hbase.rpc.client.impl", "org.apache.hadoop.hbase.ipc.RpcClientImpl");
+    // Create table then get the single region for our new table.
+    HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaGetWithRpcClientImpl");
+    hdt.setRegionReplication(NB_SERVERS);
+    hdt.addCoprocessor(SlowMeCopro.class.getName());
+
+    try {
+      Table table = HTU.createTable(hdt, new byte[][] { f }, null);
+
+      Put p = new Put(row);
+      p.addColumn(f, row, row);
+      table.put(p);
+
+      // Flush so it can be picked by the replica refresher thread
+      HTU.flush(table.getName());
+
+      // Sleep for some time until data is picked up by replicas
+      try {
+        Thread.sleep(2 * REFRESH_PERIOD);
+      } catch (InterruptedException e1) {
+        LOG.error(e1);
+      }
+
+      try {
+        // Create the new connection so new config can kick in
+        Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+        Table t = connection.getTable(hdt.getTableName());
+
+        // But if we ask for stale we will get it
+        SlowMeCopro.cdl.set(new CountDownLatch(1));
+        Get g = new Get(row);
+        g.setConsistency(Consistency.TIMELINE);
+        Result r = t.get(g);
+        Assert.assertTrue(r.isStale());
+        SlowMeCopro.cdl.get().countDown();
+      } finally {
+        SlowMeCopro.cdl.get().countDown();
+        SlowMeCopro.sleepTime.set(0);
+      }
+    } finally {
+      HTU.getConfiguration().unset("hbase.ipc.client.specificThreadForWriting");
+      HTU.getConfiguration().unset("hbase.rpc.client.impl");
+      HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+      HTU.deleteTable(hdt.getTableName());
+    }
+  }
 }

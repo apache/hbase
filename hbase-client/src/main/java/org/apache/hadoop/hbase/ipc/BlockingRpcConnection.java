@@ -152,7 +152,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     }
 
     public void remove(Call call) {
-      callsToWrite.remove();
+      callsToWrite.remove(call);
       // By removing the call from the expected call list, we make the list smaller, but
       // it means as well that we don't know how many calls we cancelled.
       calls.remove(call.id);
