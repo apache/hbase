@@ -148,7 +148,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           loopSampler = Sampler.ALWAYS;
           if (numIterations > 1000) {
             LOG.warn("Full tracing of all iterations will produce a lot of data. Be sure your"
-              + " SpanReciever can keep up.");
+              + " SpanReceiver can keep up.");
           }
         } else {
           getConf().setDouble("hbase.sampler.fraction", traceFreq);
