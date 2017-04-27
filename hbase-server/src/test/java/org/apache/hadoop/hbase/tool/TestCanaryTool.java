@@ -1,5 +1,5 @@
 /**
- *
+q *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -118,7 +119,7 @@ public class TestCanaryTool {
     ToolRunner.run(testingUtility.getConfiguration(), canary, args);
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
     assertEquals("verify no write error count", 0, canary.getWriteFailures().size());
-    verify(sink, atLeastOnce()).publishReadTiming(isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+    verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
   }
 
   //no table created, so there should be no regions
@@ -166,7 +167,7 @@ public class TestCanaryTool {
     conf.setBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, true);
     ToolRunner.run(conf, canary, args);
     verify(sink, atLeastOnce())
-        .publishReadTiming(isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+        .publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
   }
 
