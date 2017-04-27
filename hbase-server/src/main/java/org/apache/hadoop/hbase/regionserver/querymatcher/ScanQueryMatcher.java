@@ -125,8 +125,6 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   /** Row the query is on */
   protected Cell currentRow;
 
-  protected boolean stickyNextRow;
-
   protected ScanQueryMatcher(Cell startKey, ScanInfo scanInfo, ColumnTracker columns,
       long oldestUnexpiredTS, long now) {
     this.rowComparator = scanInfo.getComparator();
@@ -180,13 +178,8 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     if (rowComparator.compareRows(currentRow, cell) != 0) {
       return MatchCode.DONE;
     }
-    // optimize case.
-    if (this.stickyNextRow) {
-      return MatchCode.SEEK_NEXT_ROW;
-    }
 
     if (this.columns.done()) {
-      stickyNextRow = true;
       return MatchCode.SEEK_NEXT_ROW;
     }
 
@@ -275,7 +268,6 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     this.currentRow = currentRow;
     columns.reset();
     reset();
-    stickyNextRow = false;
   }
 
   public abstract boolean isUserScan();

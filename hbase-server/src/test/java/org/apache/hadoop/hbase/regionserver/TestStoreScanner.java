@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
+import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -127,13 +127,30 @@ public class TestStoreScanner {
     CellUtil.createCell(FIVE, CF, ZERO, 1L, KeyValue.Type.Put.getCode(), VALUE),
   };
 
+  private static class KeyValueHeapWithCount extends KeyValueHeap {
+
+    final AtomicInteger count;
+
+    public KeyValueHeapWithCount(List<? extends KeyValueScanner> scanners,
+        CellComparator comparator, AtomicInteger count) throws IOException {
+      super(scanners, comparator);
+      this.count = count;
+    }
+
+    @Override
+    public Cell peek() {
+      this.count.incrementAndGet();
+      return super.peek();
+    }
+  }
+
   /**
    * A StoreScanner for our CELL_GRID above. Fakes the block transitions. Does counts of
    * calls to optimize and counts of when optimize actually did an optimize.
    */
   private static class CellGridStoreScanner extends StoreScanner {
     // Count of how often optimize is called and of how often it does an optimize.
-    final AtomicInteger count = new AtomicInteger(0);
+    AtomicInteger count;
     final AtomicInteger optimization = new AtomicInteger(0);
 
     CellGridStoreScanner(final Scan scan, ScanInfo scanInfo, ScanType scanType)
@@ -143,16 +160,33 @@ public class TestStoreScanner {
           new KeyValueScanner[] {new KeyValueScanFixture(CellComparator.COMPARATOR, CELL_GRID)}));
     }
 
-    protected ScanQueryMatcher.MatchCode optimize(ScanQueryMatcher.MatchCode qcode, Cell cell) {
-      count.incrementAndGet();
-      ScanQueryMatcher.MatchCode after = super.optimize(qcode, cell);
-      LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false) +
-          ", before=" + qcode + ", after=" + after);
-      if (qcode != after) {
+    protected void resetKVHeap(List<? extends KeyValueScanner> scanners,
+        CellComparator comparator) throws IOException {
+      if (count == null) {
+        count = new AtomicInteger(0);
+      }
+      heap = new KeyValueHeapWithCount(scanners, comparator, count);
+    }
+
+    protected boolean trySkipToNextRow(Cell cell) throws IOException {
+      boolean optimized = super.trySkipToNextRow(cell);
+      LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
+          + ", optimized=" + optimized);
+      if (optimized) {
         optimization.incrementAndGet();
       }
-      return after;
-    };
+      return optimized;
+    }
+
+    protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+      boolean optimized = super.trySkipToNextColumn(cell);
+      LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
+          + ", optimized=" + optimized);
+      if (optimized) {
+        optimization.incrementAndGet();
+      }
+      return optimized;
+    }
 
     @Override
     public Cell getNextIndexedKey() {
@@ -166,6 +200,113 @@ public class TestStoreScanner {
                         CellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK2_BOUNDARY]);
     }
   };
+
+  private static final int CELL_WITH_VERSIONS_BLOCK2_BOUNDARY = 4;
+
+  private static final Cell [] CELL_WITH_VERSIONS = new Cell [] {
+    CellUtil.createCell(ONE, CF, ONE, 2L, KeyValue.Type.Put.getCode(), VALUE),
+    CellUtil.createCell(ONE, CF, ONE, 1L, KeyValue.Type.Put.getCode(), VALUE),
+    CellUtil.createCell(ONE, CF, TWO, 2L, KeyValue.Type.Put.getCode(), VALUE),
+    CellUtil.createCell(ONE, CF, TWO, 1L, KeyValue.Type.Put.getCode(), VALUE),
+    // Offset 4 CELL_WITH_VERSIONS_BLOCK2_BOUNDARY
+    CellUtil.createCell(TWO, CF, ONE, 1L, KeyValue.Type.Put.getCode(), VALUE),
+    CellUtil.createCell(TWO, CF, TWO, 1L, KeyValue.Type.Put.getCode(), VALUE),
+  };
+
+  private static class CellWithVersionsStoreScanner extends StoreScanner {
+    // Count of how often optimize is called and of how often it does an optimize.
+    final AtomicInteger optimization = new AtomicInteger(0);
+
+    CellWithVersionsStoreScanner(final Scan scan, ScanInfo scanInfo, ScanType scanType)
+        throws IOException {
+      super(scan, scanInfo, scanType, scan.getFamilyMap().get(CF), Arrays
+          .<KeyValueScanner> asList(new KeyValueScanner[] { new KeyValueScanFixture(
+              CellComparator.COMPARATOR, CELL_WITH_VERSIONS) }));
+    }
+
+    protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+      boolean optimized = super.trySkipToNextColumn(cell);
+      LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
+          + ", optimized=" + optimized);
+      if (optimized) {
+        optimization.incrementAndGet();
+      }
+      return optimized;
+    }
+
+    @Override
+    public Cell getNextIndexedKey() {
+      // Fake block boundaries by having index of next block change as we go through scan.
+      return CellUtil.createFirstOnRow(CELL_WITH_VERSIONS[CELL_WITH_VERSIONS_BLOCK2_BOUNDARY]);
+    }
+  };
+
+  private static class CellWithVersionsNoOptimizeStoreScanner extends StoreScanner {
+    // Count of how often optimize is called and of how often it does an optimize.
+    final AtomicInteger optimization = new AtomicInteger(0);
+
+    CellWithVersionsNoOptimizeStoreScanner(final Scan scan, ScanInfo scanInfo, ScanType scanType)
+        throws IOException {
+      super(scan, scanInfo, scanType, scan.getFamilyMap().get(CF), Arrays
+          .<KeyValueScanner> asList(new KeyValueScanner[] { new KeyValueScanFixture(
+              CellComparator.COMPARATOR, CELL_WITH_VERSIONS) }));
+    }
+
+    protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+      boolean optimized = super.trySkipToNextColumn(cell);
+      LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
+          + ", optimized=" + optimized);
+      if (optimized) {
+        optimization.incrementAndGet();
+      }
+      return optimized;
+    }
+
+    @Override
+    public Cell getNextIndexedKey() {
+      return null;
+    }
+  };
+
+  @Test
+  public void testWithColumnCountGetFilter() throws Exception {
+    Get get = new Get(ONE);
+    get.setMaxVersions();
+    get.addFamily(CF);
+    get.setFilter(new ColumnCountGetFilter(2));
+
+    CellWithVersionsNoOptimizeStoreScanner scannerNoOptimize = new CellWithVersionsNoOptimizeStoreScanner(
+        new Scan(get), this.scanInfo, this.scanType);
+    try {
+      List<Cell> results = new ArrayList<>();
+      while (scannerNoOptimize.next(results)) {
+        continue;
+      }
+      Assert.assertEquals(2, results.size());
+      Assert.assertTrue(CellUtil.matchingColumn(results.get(0), CELL_WITH_VERSIONS[0]));
+      Assert.assertTrue(CellUtil.matchingColumn(results.get(1), CELL_WITH_VERSIONS[2]));
+      Assert.assertTrue("Optimize should do some optimizations",
+        scannerNoOptimize.optimization.get() == 0);
+    } finally {
+      scannerNoOptimize.close();
+    }
+
+    get.setFilter(new ColumnCountGetFilter(2));
+    CellWithVersionsStoreScanner scanner = new CellWithVersionsStoreScanner(new Scan(get),
+        this.scanInfo, this.scanType);
+    try {
+      List<Cell> results = new ArrayList<>();
+      while (scanner.next(results)) {
+        continue;
+      }
+      Assert.assertEquals(2, results.size());
+      Assert.assertTrue(CellUtil.matchingColumn(results.get(0), CELL_WITH_VERSIONS[0]));
+      Assert.assertTrue(CellUtil.matchingColumn(results.get(1), CELL_WITH_VERSIONS[2]));
+      Assert.assertTrue("Optimize should do some optimizations", scanner.optimization.get() > 0);
+    } finally {
+      scanner.close();
+    }
+  }
 
   /*
    * Test utility for building a NavigableSet for scanners.

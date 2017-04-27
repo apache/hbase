@@ -254,7 +254,6 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
         case NEXT_COL:
           return columns.getNextRowOrNextColumn(cell);
         case NEXT_ROW:
-          stickyNextRow = true;
           return MatchCode.SEEK_NEXT_ROW;
         case SEEK_NEXT_USING_HINT:
           return MatchCode.SEEK_NEXT_USING_HINT;
@@ -284,12 +283,6 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
        */
       colChecker = columns.checkVersions(cell, timestamp, typeByte,
           mvccVersion > maxReadPointToTrackVersions);
-      //Optimize with stickyNextRow
-      boolean seekNextRowFromEssential = filterResponse == ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW &&
-          filter.isFamilyEssential(cell.getFamilyArray());
-      if (colChecker == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW || seekNextRowFromEssential) {
-        stickyNextRow = true;
-      }
       if (filterResponse == ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW) {
         if (colChecker != MatchCode.SKIP) {
           return MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
@@ -300,8 +293,6 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
           colChecker == MatchCode.INCLUDE) ? MatchCode.INCLUDE_AND_SEEK_NEXT_COL
           : colChecker;
     }
-    stickyNextRow = (colChecker == MatchCode.SEEK_NEXT_ROW) ? true
-        : stickyNextRow;
     return colChecker;
   }
 

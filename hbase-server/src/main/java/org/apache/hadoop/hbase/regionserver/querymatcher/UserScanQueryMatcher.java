@@ -109,9 +109,6 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     // STEP 1: Check if the column is part of the requested columns
     MatchCode colChecker = columns.checkColumn(cell, typeByte);
     if (colChecker != MatchCode.INCLUDE) {
-      if (colChecker == MatchCode.SEEK_NEXT_ROW) {
-        stickyNextRow = true;
-      }
       return colChecker;
     }
     ReturnCode filterResponse = ReturnCode.SKIP;
@@ -125,7 +122,6 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
         case NEXT_COL:
           return columns.getNextRowOrNextColumn(cell);
         case NEXT_ROW:
-          stickyNextRow = true;
           return MatchCode.SEEK_NEXT_ROW;
         case SEEK_NEXT_USING_HINT:
           return MatchCode.SEEK_NEXT_USING_HINT;
@@ -154,12 +150,6 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
      * FilterResponse (INCLUDE_AND_SEEK_NEXT_COL) and ColumnChecker(INCLUDE)
      */
     colChecker = columns.checkVersions(cell, timestamp, typeByte, false);
-    // Optimize with stickyNextRow
-    boolean seekNextRowFromEssential = filterResponse == ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW
-        && filter.isFamilyEssential(cell.getFamilyArray());
-    if (colChecker == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW || seekNextRowFromEssential) {
-      stickyNextRow = true;
-    }
     if (filterResponse == ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW) {
       if (colChecker != MatchCode.SKIP) {
         return MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
