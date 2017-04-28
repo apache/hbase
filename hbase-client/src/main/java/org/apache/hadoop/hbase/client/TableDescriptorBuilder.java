@@ -52,92 +52,96 @@ public class TableDescriptorBuilder {
 
   private static final Log LOG = LogFactory.getLog(TableDescriptorBuilder.class);
 
+  @InterfaceAudience.Private
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
 
   /**
-   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
+   * Used by HBase Shell interface to access this metadata
    * attribute which denotes the maximum size of the store file after which a
    * region split occurs.
    */
+  @InterfaceAudience.Private
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
   private static final Bytes MAX_FILESIZE_KEY
           = new Bytes(Bytes.toBytes(MAX_FILESIZE));
 
+  @InterfaceAudience.Private
   public static final String OWNER = "OWNER";
+  @InterfaceAudience.Private
   public static final Bytes OWNER_KEY
           = new Bytes(Bytes.toBytes(OWNER));
 
   /**
-   * <em>INTERNAL</em> Used by rest interface to access this metadata attribute
+   * Used by rest interface to access this metadata attribute
    * which denotes if the table is Read Only.
    */
+  @InterfaceAudience.Private
   public static final String READONLY = "READONLY";
   private static final Bytes READONLY_KEY
           = new Bytes(Bytes.toBytes(READONLY));
 
   /**
-   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
+   * Used by HBase Shell interface to access this metadata
    * attribute which denotes if the table is compaction enabled.
    */
+  @InterfaceAudience.Private
   public static final String COMPACTION_ENABLED = "COMPACTION_ENABLED";
   private static final Bytes COMPACTION_ENABLED_KEY
           = new Bytes(Bytes.toBytes(COMPACTION_ENABLED));
 
   /**
-   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
+   * Used by HBase Shell interface to access this metadata
    * attribute which represents the maximum size of the memstore after which its
    * contents are flushed onto the disk.
    */
+  @InterfaceAudience.Private
   public static final String MEMSTORE_FLUSHSIZE = "MEMSTORE_FLUSHSIZE";
   private static final Bytes MEMSTORE_FLUSHSIZE_KEY
           = new Bytes(Bytes.toBytes(MEMSTORE_FLUSHSIZE));
 
+  @InterfaceAudience.Private
   public static final String FLUSH_POLICY = "FLUSH_POLICY";
 
   /**
-   * <em>INTERNAL</em> Used by rest interface to access this metadata attribute
-   * which denotes if the table is a -ROOT- region or not.
+   * Used by rest interface to access this metadata attribute
+   * which denotes if it is a catalog table, either <code> hbase:meta </code>.
    */
-  public static final String IS_ROOT = "IS_ROOT";
-  private static final Bytes IS_ROOT_KEY
-          = new Bytes(Bytes.toBytes(IS_ROOT));
-
-  /**
-   * <em>INTERNAL</em> Used by rest interface to access this metadata attribute
-   * which denotes if it is a catalog table, either <code> hbase:meta </code> or <code> -ROOT-
-   * </code>.
-   */
+  @InterfaceAudience.Private
   public static final String IS_META = "IS_META";
   private static final Bytes IS_META_KEY
           = new Bytes(Bytes.toBytes(IS_META));
 
   /**
-   * <em>INTERNAL</em> {@link Durability} setting for the table.
+   * {@link Durability} setting for the table.
    */
+  @InterfaceAudience.Private
   public static final String DURABILITY = "DURABILITY";
   private static final Bytes DURABILITY_KEY
           = new Bytes(Bytes.toBytes("DURABILITY"));
 
   /**
-   * <em>INTERNAL</em> number of region replicas for the table.
+   * The number of region replicas for the table.
    */
+  @InterfaceAudience.Private
   public static final String REGION_REPLICATION = "REGION_REPLICATION";
   private static final Bytes REGION_REPLICATION_KEY
           = new Bytes(Bytes.toBytes(REGION_REPLICATION));
 
   /**
-   * <em>INTERNAL</em> flag to indicate whether or not the memstore should be
+   * The flag to indicate whether or not the memstore should be
    * replicated for read-replicas (CONSISTENCY =&gt; TIMELINE).
    */
+  @InterfaceAudience.Private
   public static final String REGION_MEMSTORE_REPLICATION = "REGION_MEMSTORE_REPLICATION";
   private static final Bytes REGION_MEMSTORE_REPLICATION_KEY
           = new Bytes(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
 
   /**
-   * <em>INTERNAL</em> Used by shell/rest interface to access this metadata
+   * Used by shell/rest interface to access this metadata
    * attribute which denotes if the table should be treated by region
    * normalizer.
    */
+  @InterfaceAudience.Private
   public static final String NORMALIZATION_ENABLED = "NORMALIZATION_ENABLED";
   private static final Bytes NORMALIZATION_ENABLED_KEY
           = new Bytes(Bytes.toBytes(NORMALIZATION_ENABLED));
@@ -148,6 +152,7 @@ public class TableDescriptorBuilder {
    */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
 
+  @InterfaceAudience.Private
   public static final String PRIORITY = "PRIORITY";
   private static final Bytes PRIORITY_KEY
           = new Bytes(Bytes.toBytes(PRIORITY));
@@ -208,12 +213,14 @@ public class TableDescriptorBuilder {
     DEFAULT_VALUES.put(PRIORITY, String.valueOf(DEFAULT_PRIORITY));
     DEFAULT_VALUES.keySet().stream()
             .map(s -> new Bytes(Bytes.toBytes(s))).forEach(RESERVED_KEYWORDS::add);
-    RESERVED_KEYWORDS.add(IS_ROOT_KEY);
     RESERVED_KEYWORDS.add(IS_META_KEY);
   }
 
+  @InterfaceAudience.Private
   public final static String NAMESPACE_FAMILY_INFO = "info";
+  @InterfaceAudience.Private
   public final static byte[] NAMESPACE_FAMILY_INFO_BYTES = Bytes.toBytes(NAMESPACE_FAMILY_INFO);
+  @InterfaceAudience.Private
   public final static byte[] NAMESPACE_COL_DESC_BYTES = Bytes.toBytes("d");
 
   /**
@@ -422,12 +429,7 @@ public class TableDescriptorBuilder {
   }
 
   /**
-   * ModifyableTableDescriptor contains the details about an HBase table such as the
-   * descriptors of all the column families, is the table a catalog table, <code> -ROOT-
-   * </code> or <code> hbase:meta </code>, if the table is read only, the
-   * maximum size of the memstore, when the region split should occur,
-   * coprocessors associated with it etc... TODO: make this private after
-   * removing the HTableDescriptor
+   * TODO: make this private after removing the HTableDescriptor
    */
   @InterfaceAudience.Private
   public static class ModifyableTableDescriptor
@@ -437,7 +439,7 @@ public class TableDescriptorBuilder {
 
     /**
      * A map which holds the metadata information of the table. This metadata
-     * includes values like IS_ROOT, IS_META, SPLIT_POLICY, MAX_FILE_SIZE,
+     * includes values like IS_META, SPLIT_POLICY, MAX_FILE_SIZE,
      * READONLY, MEMSTORE_FLUSHSIZE etc...
      */
     private final Map<Bytes, Bytes> values = new HashMap<>();
@@ -493,24 +495,12 @@ public class TableDescriptorBuilder {
 
     /*
      * Set meta flags on this table.
-     * IS_ROOT_KEY is set if its a -ROOT- table
-     * IS_META_KEY is set either if its a -ROOT- or a hbase:meta table
+     * IS_META_KEY is set if its a hbase:meta table
      * Called by constructors.
      * @param name
      */
     private void setMetaFlags(final TableName name) {
-      values.put(IS_META_KEY, isRootRegion()
-              || name.equals(TableName.META_TABLE_NAME) ? TRUE : FALSE);
-    }
-
-    /**
-     * Check if the descriptor represents a <code> -ROOT- </code> region.
-     *
-     * @return true if this is a <code> -ROOT- </code> region
-     */
-    @Override
-    public boolean isRootRegion() {
-      return isSomething(IS_ROOT_KEY, false);
+      values.put(IS_META_KEY, name.equals(TableName.META_TABLE_NAME) ? TRUE : FALSE);
     }
 
     /**
@@ -539,7 +529,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public boolean isMetaTable() {
-      return isMetaRegion() && !isRootRegion();
+      return isMetaRegion();
     }
 
     /**
@@ -1004,9 +994,9 @@ public class TableDescriptorBuilder {
           userKeys.add(entry.getKey());
           continue;
         }
-        // only print out IS_ROOT/IS_META if true
+        // only print out IS_META if true
         String value = Bytes.toString(entry.getValue().get());
-        if (key.equalsIgnoreCase(IS_ROOT) || key.equalsIgnoreCase(IS_META)) {
+        if (key.equalsIgnoreCase(IS_META)) {
           if (Boolean.valueOf(value) == false) {
             continue;
           }
@@ -1560,7 +1550,7 @@ public class TableDescriptorBuilder {
         return Bytes.toString(getValue(OWNER_KEY));
       }
       // Note that every table should have an owner (i.e. should have OWNER_KEY set).
-      // hbase:meta and -ROOT- should return system user as owner, not null (see
+      // hbase:meta should return system user as owner, not null (see
       // MasterFileSystem.java:bootstrap()).
       return null;
     }

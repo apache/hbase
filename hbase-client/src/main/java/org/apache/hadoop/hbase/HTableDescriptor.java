@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
- * all the column families, is the table a catalog table, <code> -ROOT- </code> or
- * <code> hbase:meta </code>, if the table is read only, the maximum size of the memstore,
+ * all the column families, is the table a catalog table, <code> hbase:meta </code>,
+ * if the table is read only, the maximum size of the memstore,
  * when the region split should occur, coprocessors associated with it etc...
  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
  *             use {@link TableDescriptorBuilder} to build {@link HTableDescriptor}.
@@ -54,7 +54,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final String COMPACTION_ENABLED = TableDescriptorBuilder.COMPACTION_ENABLED;
   public static final String MEMSTORE_FLUSHSIZE = TableDescriptorBuilder.MEMSTORE_FLUSHSIZE;
   public static final String FLUSH_POLICY = TableDescriptorBuilder.FLUSH_POLICY;
-  public static final String IS_ROOT = TableDescriptorBuilder.IS_ROOT;
+  public static final String IS_ROOT = "IS_ROOT";
   public static final String IS_META = TableDescriptorBuilder.IS_META;
   public static final String DURABILITY = TableDescriptorBuilder.DURABILITY;
   public static final String REGION_REPLICATION = TableDescriptorBuilder.REGION_REPLICATION;
@@ -116,13 +116,12 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Check if the descriptor represents a <code> -ROOT- </code> region.
+   * This is vestigial API. It will be removed in 3.0.
    *
-   * @return true if this is a <code> -ROOT- </code> region
+   * @return always return the false
    */
-  @Override
   public boolean isRootRegion() {
-    return delegatee.isRootRegion();
+    return false;
   }
 
   /**
