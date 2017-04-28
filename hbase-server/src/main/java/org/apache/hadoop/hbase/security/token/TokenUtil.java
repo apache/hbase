@@ -56,6 +56,7 @@ public class TokenUtil {
   /**
    * Obtain and return an authentication token for the current user.
    * @param conn The HBase cluster connection
+   * @throws IOException if a remote error or serialization problem occurs.
    * @return the authentication token instance
    */
   public static Token<AuthenticationTokenIdentifier> obtainToken(
@@ -71,14 +72,12 @@ public class TokenUtil {
 
       return toToken(response.getToken());
     } catch (ServiceException se) {
-      ProtobufUtil.handleRemoteException(se);
+      throw ProtobufUtil.handleRemoteException(se);
     } finally {
       if (meta != null) {
         meta.close();
       }
     }
-    // dummy return for ServiceException block
-    return null;
   }
 
 
