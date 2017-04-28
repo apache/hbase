@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.snapshot;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -35,7 +33,6 @@ import org.junit.experimental.categories.Category;
  */
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestMobExportSnapshot extends TestExportSnapshot {
-  private final Log LOG = LogFactory.getLog(getClass());
 
   public static void setUpBaseConf(Configuration conf) {
     TestExportSnapshot.setUpBaseConf(conf);
@@ -45,12 +42,8 @@ public class TestMobExportSnapshot extends TestExportSnapshot {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
-    // Setup separate test-data directory for MR cluster and set corresponding configurations.
-    // Otherwise, different test classes running MR cluster can step on each other.
-    TEST_UTIL.getDataTestDir();
-    TEST_UTIL.startMiniZKCluster();
+    TEST_UTIL.startMiniCluster(1, 3);
     TEST_UTIL.startMiniMapReduceCluster();
-    TEST_UTIL.startMiniHBaseCluster(1, 3);
   }
 
   @Override

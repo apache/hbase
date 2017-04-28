@@ -91,11 +91,11 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -723,6 +723,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     conf.set("mapreduce.jobtracker.staging.root.dir",
       new Path(root, "mapreduce-jobtracker-staging-root-dir").toString());
     conf.set("mapreduce.job.working.dir", new Path(root, "mapred-working-dir").toString());
+    conf.set("yarn.app.mapreduce.am.staging-dir",
+      new Path(root, "mapreduce-am-staging-root-dir").toString());
   }
 
 
