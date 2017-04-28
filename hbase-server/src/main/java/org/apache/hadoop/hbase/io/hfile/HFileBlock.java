@@ -871,6 +871,10 @@ public class HFileBlock implements Cacheable {
     // includes the header size also.
     private int unencodedDataSizeWritten;
 
+    // Size of actual data being written. considering the block encoding. This
+    // includes the header size also.
+    private int encodedDataSizeWritten;
+
     /**
      * Bytes to be written to the file system, including the header. Compressed
      * if compression is turned on. It also includes the checksum data that
@@ -958,6 +962,7 @@ public class HFileBlock implements Cacheable {
         this.dataBlockEncoder.startBlockEncoding(dataBlockEncodingCtx, userDataStream);
       }
       this.unencodedDataSizeWritten = 0;
+      this.encodedDataSizeWritten = 0;
       return userDataStream;
     }
 
@@ -968,8 +973,10 @@ public class HFileBlock implements Cacheable {
      */
     void write(Cell cell) throws IOException{
       expectState(State.WRITING);
+      int posBeforeEncode = this.userDataStream.size();
       this.unencodedDataSizeWritten +=
           this.dataBlockEncoder.encode(cell, dataBlockEncodingCtx, this.userDataStream);
+      this.encodedDataSizeWritten += this.userDataStream.size() - posBeforeEncode;
     }
 
     /**
@@ -1195,6 +1202,19 @@ public class HFileBlock implements Cacheable {
     /** @return true if a block is being written  */
     boolean isWriting() {
       return state == State.WRITING;
+    }
+
+    /**
+     * Returns the number of bytes written into the current block so far, or
+     * zero if not writing the block at the moment. Note that this will return
+     * zero in the "block ready" state as well.
+     *
+     * @return the number of bytes written
+     */
+    public int encodedBlockSizeWritten() {
+      if (state != State.WRITING)
+        return 0;
+      return this.encodedDataSizeWritten;
     }
 
     /**
