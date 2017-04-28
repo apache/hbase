@@ -140,8 +140,8 @@ public class TestDefaultMemStore {
       // make sure chunk size increased even when writing the same cell, if using MSLAB
       if (msLab instanceof MemStoreLABImpl) {
         // since we add the chunkID at the 0th offset of the chunk and the
-        // chunkid is a long we need to account for those 8 bytes
-        assertEquals(2 * Segment.getCellLength(kv) + Bytes.SIZEOF_LONG,
+        // chunkid is an int we need to account for those 4 bytes
+        assertEquals(2 * Segment.getCellLength(kv) + Bytes.SIZEOF_INT,
           ((MemStoreLABImpl) msLab).getCurrentChunk().getNextFreeOffset());
       }
     } else {

@@ -90,7 +90,7 @@ public class TestMemStoreChunkPool {
       int size = KeyValueUtil.length(kv);
       ByteBufferKeyValue newKv = (ByteBufferKeyValue) mslab.copyCellInto(kv);
       if (newKv.getBuffer() != lastBuffer) {
-        expectedOff = 8;
+        expectedOff = 4;
         lastBuffer = newKv.getBuffer();
       }
       assertEquals(expectedOff, newKv.getOffset());

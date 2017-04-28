@@ -100,8 +100,8 @@ public abstract class Chunk {
       throw e;
     }
     // Mark that it's ready for use
-    // Move 8 bytes since the first 8 bytes are having the chunkid in it
-    boolean initted = nextFreeOffset.compareAndSet(UNINITIALIZED, Bytes.SIZEOF_LONG);
+    // Move 4 bytes since the first 4 bytes are having the chunkid in it
+    boolean initted = nextFreeOffset.compareAndSet(UNINITIALIZED, Bytes.SIZEOF_INT);
     // We should always succeed the above CAS since only one thread
     // calls init()!
     Preconditions.checkState(initted, "Multiple threads tried to init same chunk");

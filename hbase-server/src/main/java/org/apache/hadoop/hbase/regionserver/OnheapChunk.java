@@ -39,7 +39,7 @@ public class OnheapChunk extends Chunk {
   void allocateDataBuffer() {
     if (data == null) {
       data = ByteBuffer.allocate(this.size);
-      data.putLong(0, this.getId());
+      data.putInt(0, this.getId());
     }
   }
 }

@@ -66,7 +66,7 @@ public class TestMemstoreLABWithoutPool {
     MemStoreLAB mslab = new MemStoreLABImpl();
     int expectedOff = 0;
     ByteBuffer lastBuffer = null;
-    long lastChunkId = -1;
+    int lastChunkId = -1;
     // 100K iterations by 0-1K alloc -> 50MB expected
     // should be reasonable for unit test and also cover wraparound
     // behavior
@@ -77,10 +77,10 @@ public class TestMemstoreLABWithoutPool {
       ByteBufferKeyValue newKv = (ByteBufferKeyValue) mslab.copyCellInto(kv);
       if (newKv.getBuffer() != lastBuffer) {
         // since we add the chunkID at the 0th offset of the chunk and the
-        // chunkid is a long we need to account for those 8 bytes
-        expectedOff = Bytes.SIZEOF_LONG;
+        // chunkid is an int we need to account for those 4 bytes
+        expectedOff = Bytes.SIZEOF_INT;
         lastBuffer = newKv.getBuffer();
-        long chunkId = newKv.getBuffer().getLong(0);
+        int chunkId = newKv.getBuffer().getInt(0);
         assertTrue("chunkid should be different", chunkId != lastChunkId);
         lastChunkId = chunkId;
       }
