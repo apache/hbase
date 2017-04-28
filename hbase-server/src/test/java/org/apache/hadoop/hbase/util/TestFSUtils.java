@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -57,14 +57,24 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestFSUtils {
+
+  private HBaseTestingUtility htu;
+  private FileSystem fs;
+  private Configuration conf;
+
+  @Before
+  public void setUp() throws IOException {
+    htu = new HBaseTestingUtility();
+    fs = htu.getTestFileSystem();
+    conf = htu.getConfiguration();
+  }
+
   /**
    * Test path compare and prefix checking.
    * @throws IOException
    */
   @Test
   public void testMatchingTail() throws IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    final FileSystem fs = htu.getTestFileSystem();
     Path rootdir = htu.getDataTestDir();
     assertTrue(rootdir.depth() > 1);
     Path partPath = new Path("a", "b");
@@ -86,8 +96,6 @@ public class TestFSUtils {
 
   @Test
   public void testVersion() throws DeserializationException, IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    final FileSystem fs = htu.getTestFileSystem();
     final Path rootdir = htu.getDataTestDir();
     assertNull(FSUtils.getVersion(fs, rootdir));
     // Write out old format version file.  See if we can read it in and convert.
@@ -109,12 +117,11 @@ public class TestFSUtils {
   }
 
   @Test public void testIsHDFS() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    assertFalse(FSUtils.isHDFS(htu.getConfiguration()));
+    assertFalse(FSUtils.isHDFS(conf));
     MiniDFSCluster cluster = null;
     try {
       cluster = htu.startMiniDFSCluster(1);
-      assertTrue(FSUtils.isHDFS(htu.getConfiguration()));
+      assertTrue(FSUtils.isHDFS(conf));
     } finally {
       if (cluster != null) cluster.shutdown();
     }
@@ -129,9 +136,8 @@ public class TestFSUtils {
   }
 
   @Test public void testcomputeHDFSBlocksDistribution() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
     final int DEFAULT_BLOCK_SIZE = 1024;
-    htu.getConfiguration().setLong("dfs.blocksize", DEFAULT_BLOCK_SIZE);
+    conf.setLong("dfs.blocksize", DEFAULT_BLOCK_SIZE);
     MiniDFSCluster cluster = null;
     Path testFile = null;
 
@@ -234,10 +240,6 @@ public class TestFSUtils {
 
   @Test
   public void testPermMask() throws Exception {
-
-    Configuration conf = HBaseConfiguration.create();
-    FileSystem fs = FileSystem.get(conf);
-
     // default fs permission
     FsPermission defaultFsPerm = FSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
@@ -275,10 +277,7 @@ public class TestFSUtils {
 
   @Test
   public void testDeleteAndExists() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
-    FileSystem fs = FileSystem.get(conf);
     FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // then that the correct file is created
     String file = UUID.randomUUID().toString();
@@ -305,9 +304,6 @@ public class TestFSUtils {
 
   @Test
   public void testRenameAndSetModifyTime() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
-
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
     assertTrue(FSUtils.isHDFS(conf));
 
@@ -343,8 +339,6 @@ public class TestFSUtils {
   }
 
   private void verifyFileInDirWithStoragePolicy(final String policy) throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
     conf.set(HConstants.WAL_STORAGE_POLICY, policy);
 
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
@@ -387,8 +381,6 @@ public class TestFSUtils {
 
   @Test
   public void testSetWALRootDir() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
     Path p = new Path("file:///hbase/root");
     FSUtils.setWALRootDir(conf, p);
     assertEquals(p.toString(), conf.get(HFileSystem.HBASE_WAL_DIR));
@@ -396,8 +388,6 @@ public class TestFSUtils {
 
   @Test
   public void testGetWALRootDir() throws IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
     Path root = new Path("file:///hbase/root");
     Path walRoot = new Path("file:///hbase/logroot");
     FSUtils.setRootDir(conf, root);
@@ -409,8 +399,6 @@ public class TestFSUtils {
 
   @Test(expected=IllegalStateException.class)
   public void testGetWALRootDirIllegalWALDir() throws IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
     Path root = new Path("file:///hbase/root");
     Path invalidWALDir = new Path("file:///hbase/root/logroot");
     FSUtils.setRootDir(conf, root);
@@ -420,8 +408,6 @@ public class TestFSUtils {
 
   @Test
   public void testRemoveWALRootPath() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
     FSUtils.setRootDir(conf, new Path("file:///user/hbase"));
     Path testFile = new Path(FSUtils.getRootDir(conf), "test/testfile");
     Path tmpFile = new Path("file:///test/testfile");
@@ -439,10 +425,8 @@ public class TestFSUtils {
    * @throws Exception
    */
   @Test public void testDFSHedgedReadMetrics() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
     // Enable hedged reads and set it so the threshold is really low.
     // Most of this test is taken from HDFS, from TestPread.
-    Configuration conf = htu.getConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE, 5);
     conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS, 0);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
