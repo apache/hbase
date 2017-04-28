@@ -272,6 +272,7 @@ Shell.load_command_group(
     alter_async
     get_table
     locate_region
+    list_regions
   ],
   :aliases => {
     'describe' => ['desc']
