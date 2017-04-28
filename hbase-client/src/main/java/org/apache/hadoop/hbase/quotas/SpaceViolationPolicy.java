@@ -17,7 +17,6 @@
 package org.apache.hadoop.hbase.quotas;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Enumeration that represents the action HBase will take when a space quota is violated.
@@ -26,7 +25,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * namespace, it is treated as a collection of tables (all tables are subject to the same policy).
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public enum SpaceViolationPolicy {
   /**
    * Disables the table(s).
