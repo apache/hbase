@@ -48,6 +48,7 @@ cxx_library(
         "//security:security",
         "//third-party:folly",
         "//third-party:wangle",
+        "//exceptions:exceptions",
     ],
     compiler_flags=['-Weffc++'],
     visibility=['//core/...',],)

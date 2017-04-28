@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/futures/Future.h>
 #include <memory>
 #include <string>
@@ -57,7 +58,8 @@ class AsyncRegionLocator {
   /**
    * Update cached region location, possibly using the information from exception.
    */
-  virtual void UpdateCachedLocation(const RegionLocation &loc, const std::exception &error) = 0;
+  virtual void UpdateCachedLocation(const RegionLocation &loc,
+                                    const folly::exception_wrapper &error) = 0;
 };
 
 }  // namespace hbase

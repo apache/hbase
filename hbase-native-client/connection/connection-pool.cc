@@ -19,10 +19,11 @@
 
 #include "connection/connection-pool.h"
 
+#include <folly/Conv.h>
+#include <folly/Logging.h>
 #include <folly/SocketAddress.h>
 #include <wangle/service/Service.h>
 
-#include <folly/Logging.h>
 #include <memory>
 #include <utility>
 
@@ -89,7 +90,6 @@ std::shared_ptr<RpcConnection> ConnectionPool::GetNewConnection(
     /* create new connection */
     auto clientBootstrap = cf_->MakeBootstrap();
     auto dispatcher = cf_->Connect(clientBootstrap, remote_id->host(), remote_id->port());
-
     auto connection = std::make_shared<RpcConnection>(remote_id, dispatcher);
 
     connections_.insert(std::make_pair(remote_id, connection));
@@ -101,6 +101,8 @@ std::shared_ptr<RpcConnection> ConnectionPool::GetNewConnection(
 
 void ConnectionPool::Close(std::shared_ptr<ConnectionId> remote_id) {
   SharedMutexWritePriority::WriteHolder holder{map_mutex_};
+  DLOG(INFO) << "Closing RPC Connection to host:" << remote_id->host()
+             << ", port:" << folly::to<std::string>(remote_id->port());
 
   auto found = connections_.find(remote_id);
   if (found == connections_.end() || found->second == nullptr) {
@@ -108,6 +110,7 @@ void ConnectionPool::Close(std::shared_ptr<ConnectionId> remote_id) {
   }
   found->second->Close();
   connections_.erase(found);
+  // TODO: erase the client as well?
 }
 
 void ConnectionPool::Close() {

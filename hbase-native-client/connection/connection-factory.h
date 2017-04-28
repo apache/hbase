@@ -61,7 +61,7 @@ class ConnectionFactory {
    */
   virtual std::shared_ptr<HBaseService> Connect(
       std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client,
-      const std::string &hostname, int port);
+      const std::string &hostname, uint16_t port);
 
  private:
   nanoseconds connect_timeout_;

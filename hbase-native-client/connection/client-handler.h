@@ -27,6 +27,7 @@
 #include <string>
 #include <utility>
 
+#include "exceptions/exception.h"
 #include "serde/codec.h"
 #include "serde/rpc.h"
 
@@ -59,7 +60,7 @@ class ClientHandler
    * Create the handler
    * @param user_name the user name of the user running this process.
    */
-  explicit ClientHandler(std::string user_name, std::shared_ptr<Codec> codec);
+  ClientHandler(std::string user_name, std::shared_ptr<Codec> codec, const std::string &server);
 
   /**
    * Get bytes from the wire.
@@ -77,6 +78,7 @@ class ClientHandler
   std::unique_ptr<std::once_flag> once_flag_;
   std::string user_name_;
   RpcSerde serde_;
+  std::string server_;  // for logging
 
   // in flight requests
   std::unique_ptr<folly::AtomicHashMap<uint32_t, std::shared_ptr<google::protobuf::Message>>>

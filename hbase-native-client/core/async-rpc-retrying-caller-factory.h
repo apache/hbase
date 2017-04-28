@@ -41,8 +41,10 @@ template <typename RESP>
 class SingleRequestCallerBuilder
     : public std::enable_shared_from_this<SingleRequestCallerBuilder<RESP>> {
  public:
-  explicit SingleRequestCallerBuilder(std::shared_ptr<AsyncConnection> conn)
+  explicit SingleRequestCallerBuilder(std::shared_ptr<AsyncConnection> conn,
+                                      std::shared_ptr<folly::HHWheelTimer> retry_timer)
       : conn_(conn),
+        retry_timer_(retry_timer),
         table_name_(nullptr),
         rpc_timeout_nanos_(conn->connection_conf()->rpc_timeout()),
         pause_(conn->connection_conf()->pause()),
@@ -105,7 +107,7 @@ class SingleRequestCallerBuilder
 
   std::shared_ptr<AsyncSingleRequestRpcRetryingCaller<RESP>> Build() {
     return std::make_shared<AsyncSingleRequestRpcRetryingCaller<RESP>>(
-        conn_, table_name_, row_, locate_type_, callable_, pause_, max_retries_,
+        conn_, retry_timer_, table_name_, row_, locate_type_, callable_, pause_, max_retries_,
         operation_timeout_nanos_, rpc_timeout_nanos_, start_log_errors_count_);
   }
 
@@ -116,6 +118,7 @@ class SingleRequestCallerBuilder
 
  private:
   std::shared_ptr<AsyncConnection> conn_;
+  std::shared_ptr<folly::HHWheelTimer> retry_timer_;
   std::shared_ptr<TableName> table_name_;
   nanoseconds rpc_timeout_nanos_;
   nanoseconds operation_timeout_nanos_;
@@ -130,15 +133,18 @@ class SingleRequestCallerBuilder
 class AsyncRpcRetryingCallerFactory {
  private:
   std::shared_ptr<AsyncConnection> conn_;
+  std::shared_ptr<folly::HHWheelTimer> retry_timer_;
 
  public:
-  explicit AsyncRpcRetryingCallerFactory(std::shared_ptr<AsyncConnection> conn) : conn_(conn) {}
+  explicit AsyncRpcRetryingCallerFactory(std::shared_ptr<AsyncConnection> conn,
+                                         std::shared_ptr<folly::HHWheelTimer> retry_timer)
+      : conn_(conn), retry_timer_(retry_timer) {}
 
   virtual ~AsyncRpcRetryingCallerFactory() = default;
 
   template <typename RESP>
   std::shared_ptr<SingleRequestCallerBuilder<RESP>> Single() {
-    return std::make_shared<SingleRequestCallerBuilder<RESP>>(conn_);
+    return std::make_shared<SingleRequestCallerBuilder<RESP>>(conn_, retry_timer_);
   }
 };
 

@@ -53,6 +53,9 @@ class AsyncConnection {
   virtual std::shared_ptr<RpcClient> rpc_client() = 0;
   virtual std::shared_ptr<AsyncRegionLocator> region_locator() = 0;
   virtual std::shared_ptr<HBaseRpcController> CreateRpcController() = 0;
+  virtual std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor() = 0;
+  virtual std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor() = 0;
+  virtual std::shared_ptr<wangle::IOThreadPoolExecutor> retry_executor() = 0;
   virtual void Close() = 0;
 };
 
@@ -81,6 +84,11 @@ class AsyncConnectionImpl : public AsyncConnection,
   std::shared_ptr<HBaseRpcController> CreateRpcController() override {
     return std::make_shared<HBaseRpcController>();
   }
+  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor() override { return cpu_executor_; }
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor() override { return io_executor_; }
+  std::shared_ptr<wangle::IOThreadPoolExecutor> retry_executor() override {
+    return retry_executor_;
+  }
 
   void Close() override;
 
@@ -98,8 +106,10 @@ class AsyncConnectionImpl : public AsyncConnection,
   std::shared_ptr<Configuration> conf_;
   std::shared_ptr<ConnectionConfiguration> connection_conf_;
   std::shared_ptr<AsyncRpcRetryingCallerFactory> caller_factory_;
+  std::shared_ptr<folly::HHWheelTimer> retry_timer_;
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
+  std::shared_ptr<wangle::IOThreadPoolExecutor> retry_executor_;
   std::shared_ptr<LocationCache> location_cache_;
   std::shared_ptr<RpcClient> rpc_client_;
   bool is_closed_ = false;

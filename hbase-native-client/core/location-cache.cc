@@ -284,7 +284,8 @@ void LocationCache::ClearCachedLocation(const hbase::pb::TableName &tn, const st
   table_locs->erase(row);
 }
 
-void LocationCache::UpdateCachedLocation(const RegionLocation &loc, const std::exception &error) {
+void LocationCache::UpdateCachedLocation(const RegionLocation &loc,
+                                         const folly::exception_wrapper &error) {
   // TODO: just clears the location for now. We can inspect RegionMovedExceptions, etc later.
   ClearCachedLocation(loc.region_info().table_name(), loc.region_info().start_key());
 }

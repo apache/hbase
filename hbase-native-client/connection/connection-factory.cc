@@ -46,9 +46,10 @@ std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> ConnectionFactory::M
 
   return client;
 }
+
 std::shared_ptr<HBaseService> ConnectionFactory::Connect(
     std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client, const std::string &hostname,
-    int port) {
+    uint16_t port) {
   // Yes this will block however it makes dealing with connection pool soooooo
   // much nicer.
   // TODO see about using shared promise for this.

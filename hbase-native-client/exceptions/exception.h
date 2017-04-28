@@ -22,52 +22,55 @@
 #include <string>
 #include <vector>
 #include <folly/io/IOBuf.h>
+#include <folly/ExceptionWrapper.h>
 
 namespace hbase {
 
 class ThrowableWithExtraContext {
 public:
-  ThrowableWithExtraContext(std::shared_ptr<std::exception> cause,
+  ThrowableWithExtraContext(folly::exception_wrapper cause,
       const long& when) :
       cause_(cause), when_(when), extras_("") {
   }
 
-  ThrowableWithExtraContext(std::shared_ptr<std::exception> cause,
+  ThrowableWithExtraContext(folly::exception_wrapper cause,
       const long& when, const std::string& extras) :
       cause_(cause), when_(when), extras_(extras) {
   }
 
-  std::string ToString() {
+  virtual std::string ToString() {
     // TODO:
     // return new Date(this.when).toString() + ", " + extras + ", " + t.toString();
-    return extras_ + ", " + cause_->what();
+    return extras_ + ", " + cause_.what().toStdString();
   }
 
-  std::shared_ptr<std::exception> cause() {
+  virtual folly::exception_wrapper cause() {
     return cause_;
   }
 private:
-  std::shared_ptr<std::exception> cause_;
+  folly::exception_wrapper cause_;
   long when_;
   std::string extras_;
 };
 
 class IOException: public std::logic_error {
 public:
+  IOException() : logic_error("") {}
+
   IOException(
         const std::string& what) :
-        logic_error(what), cause_(nullptr) {}
+        logic_error(what) {}
   IOException(
       const std::string& what,
-      std::shared_ptr<std::exception> cause) :
+	  folly::exception_wrapper cause) :
       logic_error(what), cause_(cause) {}
   virtual ~IOException() = default;
 
-  std::shared_ptr<std::exception> cause() {
+  virtual folly::exception_wrapper cause() {
     return cause_;
   }
 private:
-  const std::shared_ptr<std::exception> cause_;
+  folly::exception_wrapper cause_;
 };
 
 class RetriesExhaustedException: public IOException {
@@ -77,7 +80,7 @@ public:
       std::shared_ptr<std::vector<ThrowableWithExtraContext>> exceptions) :
         IOException(
             GetMessage(num_retries, exceptions),
-            exceptions->empty() ? nullptr : (*exceptions)[exceptions->size() - 1].cause()){
+            exceptions->empty() ? folly::exception_wrapper{} : (*exceptions)[exceptions->size() - 1].cause()){
   }
   virtual ~RetriesExhaustedException() = default;
 
@@ -99,6 +102,71 @@ private:
 class HBaseIOException : public IOException {
 };
 
-class DoNotRetryIOException : public HBaseIOException {
+class RemoteException : public IOException {
+public:
+
+  RemoteException() : port_(0), do_not_retry_(false) {}
+
+  RemoteException(const std::string& what) :
+      IOException(what), port_(0), do_not_retry_(false) {}
+
+  RemoteException(
+      const std::string& what,
+      folly::exception_wrapper cause) :
+      IOException(what, cause), port_(0), do_not_retry_(false) {}
+
+  virtual ~RemoteException() = default;
+
+  std::string exception_class_name() const {
+    return exception_class_name_;
+  }
+
+  RemoteException* set_exception_class_name(const std::string& value) {
+    exception_class_name_ = value;
+    return this;
+  }
+
+  std::string stack_trace() const {
+    return stack_trace_;
+  }
+
+  RemoteException* set_stack_trace(const std::string& value) {
+    stack_trace_ = value;
+    return this;
+  }
+
+  std::string hostname() const {
+    return hostname_;
+  }
+
+  RemoteException* set_hostname(const std::string& value) {
+    hostname_ = value;
+    return this;
+  }
+
+  int port() const {
+    return port_;
+  }
+
+  RemoteException* set_port(int value) {
+    port_ = value;
+    return this;
+  }
+
+  bool do_not_retry() const {
+    return do_not_retry_;
+  }
+
+  RemoteException* set_do_not_retry(bool value) {
+    do_not_retry_ = value;
+    return this;
+  }
+
+private:
+  std::string exception_class_name_;
+  std::string stack_trace_;
+  std::string hostname_;
+  int port_;
+  bool do_not_retry_;
 };
 }  // namespace hbase
