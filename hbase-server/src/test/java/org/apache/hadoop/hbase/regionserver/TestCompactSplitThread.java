@@ -80,7 +80,6 @@ public class TestCompactSplitThread {
     conf.setInt(CompactSplitThread.LARGE_COMPACTION_THREADS, 3);
     conf.setInt(CompactSplitThread.SMALL_COMPACTION_THREADS, 4);
     conf.setInt(CompactSplitThread.SPLIT_THREADS, 5);
-    conf.setInt(CompactSplitThread.MERGE_THREADS, 6);
   }
 
   @After
@@ -113,13 +112,11 @@ public class TestCompactSplitThread {
       assertEquals(3, regionServer.compactSplitThread.getLargeCompactionThreadNum());
       assertEquals(4, regionServer.compactSplitThread.getSmallCompactionThreadNum());
       assertEquals(5, regionServer.compactSplitThread.getSplitThreadNum());
-      assertEquals(6, regionServer.compactSplitThread.getMergeThreadNum());
 
       // change bigger configurations and do online update
       conf.setInt(CompactSplitThread.LARGE_COMPACTION_THREADS, 4);
       conf.setInt(CompactSplitThread.SMALL_COMPACTION_THREADS, 5);
       conf.setInt(CompactSplitThread.SPLIT_THREADS, 6);
-      conf.setInt(CompactSplitThread.MERGE_THREADS, 7);
       try {
         regionServer.compactSplitThread.onConfigurationChange(conf);
       } catch (IllegalArgumentException iae) {
@@ -130,13 +127,11 @@ public class TestCompactSplitThread {
       assertEquals(4, regionServer.compactSplitThread.getLargeCompactionThreadNum());
       assertEquals(5, regionServer.compactSplitThread.getSmallCompactionThreadNum());
       assertEquals(6, regionServer.compactSplitThread.getSplitThreadNum());
-      assertEquals(7, regionServer.compactSplitThread.getMergeThreadNum());
 
       // change smaller configurations and do online update
       conf.setInt(CompactSplitThread.LARGE_COMPACTION_THREADS, 2);
       conf.setInt(CompactSplitThread.SMALL_COMPACTION_THREADS, 3);
       conf.setInt(CompactSplitThread.SPLIT_THREADS, 4);
-      conf.setInt(CompactSplitThread.MERGE_THREADS, 5);
       try {
         regionServer.compactSplitThread.onConfigurationChange(conf);
       } catch (IllegalArgumentException iae) {
@@ -147,7 +142,6 @@ public class TestCompactSplitThread {
       assertEquals(2, regionServer.compactSplitThread.getLargeCompactionThreadNum());
       assertEquals(3, regionServer.compactSplitThread.getSmallCompactionThreadNum());
       assertEquals(4, regionServer.compactSplitThread.getSplitThreadNum());
-      assertEquals(5, regionServer.compactSplitThread.getMergeThreadNum());
     } finally {
       conn.close();
     }
