@@ -156,6 +156,7 @@ TEST_F(ClientTest, GetForNonExistentTable) {
   // Get to be performed on above HBase Table
   hbase::Get get(row);
 
+  ClientTest::test_util->conf()->SetInt("hbase.client.retries.number", 5);
   // Create a client
   hbase::Client client(*ClientTest::test_util->conf());
 

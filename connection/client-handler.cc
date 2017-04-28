@@ -19,6 +19,7 @@
 
 #include "connection/client-handler.h"
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/Likely.h>
 #include <glog/logging.h>
 
@@ -36,9 +37,11 @@ using hbase::pb::ResponseHeader;
 using hbase::pb::GetResponse;
 using google::protobuf::Message;
 
-ClientHandler::ClientHandler(std::string user_name, std::shared_ptr<Codec> codec)
+ClientHandler::ClientHandler(std::string user_name, std::shared_ptr<Codec> codec,
+                             const std::string &server)
     : user_name_(user_name),
       serde_(codec),
+      server_(server),
       once_flag_(std::make_unique<std::once_flag>()),
       resp_msgs_(
           make_unique<folly::AtomicHashMap<uint32_t, std::shared_ptr<google::protobuf::Message>>>(
@@ -51,7 +54,7 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
     ResponseHeader header;
 
     int used_bytes = serde_.ParseDelimited(buf.get(), &header);
-    VLOG(1) << "Read RPC ResponseHeader size=" << used_bytes << " call_id=" << header.call_id()
+    VLOG(3) << "Read RPC ResponseHeader size=" << used_bytes << " call_id=" << header.call_id()
             << " has_exception=" << header.has_exception();
 
     // Get the response protobuf from the map
@@ -92,9 +95,31 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
       }
 
       received->set_resp_msg(resp_msg);
-    }
-    // TODO: set exception in Response here
+    } else {
+      hbase::pb::ExceptionResponse exceptionResponse = header.exception();
 
+      std::string what;
+      std::string exception_class_name = exceptionResponse.has_exception_class_name()
+                                             ? exceptionResponse.exception_class_name()
+                                             : "";
+      std::string stack_trace =
+          exceptionResponse.has_stack_trace() ? exceptionResponse.stack_trace() : "";
+      what.append(exception_class_name).append(stack_trace);
+
+      auto remote_exception = std::make_unique<RemoteException>(what);
+      remote_exception->set_exception_class_name(exception_class_name)
+          ->set_stack_trace(stack_trace)
+          ->set_hostname(exceptionResponse.has_hostname() ? exceptionResponse.hostname() : "")
+          ->set_port(exceptionResponse.has_port() ? exceptionResponse.port() : 0);
+      if (exceptionResponse.has_do_not_retry()) {
+        remote_exception->set_do_not_retry(exceptionResponse.do_not_retry());
+      }
+
+      VLOG(3) << "Exception RPC ResponseHeader, call_id=" << header.call_id()
+              << " exception.what=" << remote_exception->what()
+              << ", do_not_retry=" << remote_exception->do_not_retry();
+      received->set_exception(::folly::exception_wrapper{*remote_exception});
+    }
     ctx->fireRead(std::move(received));
   }
 }
@@ -103,16 +128,18 @@ Future<Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
   // We need to send the header once.
   // So use call_once to make sure that only one thread wins this.
   std::call_once((*once_flag_), [ctx, this]() {
+    VLOG(3) << "Writing RPC connection Preamble and Header to server: " << server_;
     auto pre = serde_.Preamble();
     auto header = serde_.Header(user_name_);
     pre->appendChain(std::move(header));
     ctx->fireWrite(std::move(pre));
   });
 
+  VLOG(3) << "Writing RPC Request with call_id:"
+          << r->call_id();  // TODO: more logging for RPC Header
+
   // Now store the call id to response.
   resp_msgs_->insert(r->call_id(), r->resp_msg());
-
-  VLOG(1) << "Writing RPC Request with call_id:" << r->call_id();
 
   // Send the data down the pipeline.
   return ctx->fireWrite(serde_.Request(r->call_id(), r->method(), r->req_msg().get()));

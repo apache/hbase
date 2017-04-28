@@ -17,12 +17,14 @@
  *
  */
 #include "connection/client-dispatcher.h"
+#include <folly/ExceptionWrapper.h>
 
 #include <utility>
 
 using namespace folly;
 using namespace hbase;
 using namespace wangle;
+using folly::exception_wrapper;
 
 ClientDispatcher::ClientDispatcher() : requests_(5000), current_call_id_(9) {}
 
@@ -35,9 +37,11 @@ void ClientDispatcher::read(Context *ctx, std::unique_ptr<Response> in) {
 
   requests_.erase(call_id);
 
-  // TODO(eclark): check if the response
-  // is an exception. If it is then set that.
-  p.setValue(std::move(in));
+  if (in->exception()) {
+    p.setException(in->exception());
+  } else {
+    p.setValue(std::move(in));
+  }
 }
 
 Future<std::unique_ptr<Response>> ClientDispatcher::operator()(std::unique_ptr<Request> arg) {

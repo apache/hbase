@@ -19,6 +19,8 @@
 
 #include "core/async-rpc-retrying-caller.h"
 
+#include <folly/Conv.h>
+#include <folly/ExceptionWrapper.h>
 #include <folly/Format.h>
 #include <folly/Logging.h>
 #include <folly/futures/Unit.h>
@@ -34,15 +36,19 @@
 #include "utils/sys-util.h"
 #include "utils/time-util.h"
 
+using folly::exception_wrapper;
+
 namespace hbase {
 
 template <typename RESP>
 AsyncSingleRequestRpcRetryingCaller<RESP>::AsyncSingleRequestRpcRetryingCaller(
-    std::shared_ptr<AsyncConnection> conn, std::shared_ptr<hbase::pb::TableName> table_name,
-    const std::string& row, RegionLocateType locate_type, Callable<RESP> callable,
-    nanoseconds pause, uint32_t max_retries, nanoseconds operation_timeout_nanos,
-    nanoseconds rpc_timeout_nanos, uint32_t start_log_errors_count)
+    std::shared_ptr<AsyncConnection> conn, std::shared_ptr<folly::HHWheelTimer> retry_timer,
+    std::shared_ptr<hbase::pb::TableName> table_name, const std::string& row,
+    RegionLocateType locate_type, Callable<RESP> callable, nanoseconds pause, uint32_t max_retries,
+    nanoseconds operation_timeout_nanos, nanoseconds rpc_timeout_nanos,
+    uint32_t start_log_errors_count)
     : conn_(conn),
+      retry_timer_(retry_timer),
       table_name_(table_name),
       row_(row),
       locate_type_(locate_type),
@@ -58,7 +64,6 @@ AsyncSingleRequestRpcRetryingCaller<RESP>::AsyncSingleRequestRpcRetryingCaller(
   start_ns_ = TimeUtil::GetNowNanos();
   max_attempts_ = ConnectionUtils::Retries2Attempts(max_retries);
   exceptions_ = std::make_shared<std::vector<ThrowableWithExtraContext>>();
-  retry_timer_ = folly::HHWheelTimer::newTimer(&event_base_);
 }
 
 template <typename RESP>
@@ -87,7 +92,7 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::LocateThenCall() {
   conn_->region_locator()
       ->LocateRegion(*table_name_, row_, locate_type_, locate_timeout_ns)
       .then([this](std::shared_ptr<RegionLocation> loc) { Call(*loc); })
-      .onError([this](const std::exception& e) {
+      .onError([this](const exception_wrapper& e) {
         OnError(e,
                 [this]() -> std::string {
                   return "Locate '" + row_ + "' in " + table_name_->namespace_() + "::" +
@@ -96,17 +101,17 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::LocateThenCall() {
                          TimeUtil::ToMillisStr(operation_timeout_nanos_) + " ms, time elapsed = " +
                          TimeUtil::ElapsedMillisStr(this->start_ns_) + " ms";
                 },
-                [](const std::exception& error) {});
+                [](const exception_wrapper& error) {});
       });
 }
 
 template <typename RESP>
 void AsyncSingleRequestRpcRetryingCaller<RESP>::OnError(
-    const std::exception& error, Supplier<std::string> err_msg,
-    Consumer<std::exception> update_cached_location) {
-  ThrowableWithExtraContext twec(std::make_shared<std::exception>(error), TimeUtil::GetNowNanos());
+    const exception_wrapper& error, Supplier<std::string> err_msg,
+    Consumer<exception_wrapper> update_cached_location) {
+  ThrowableWithExtraContext twec(error, TimeUtil::GetNowNanos());
   exceptions_->push_back(twec);
-  if (SysUtil::InstanceOf<DoNotRetryIOException, std::exception>(error) || tries_ >= max_retries_) {
+  if (!ShouldRetry(error) || tries_ >= max_retries_) {
     CompleteExceptionally();
     return;
   }
@@ -124,8 +129,33 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::OnError(
   }
   update_cached_location(error);
   tries_++;
-  retry_timer_->scheduleTimeoutFn([this]() { LocateThenCall(); },
-                                  milliseconds(TimeUtil::ToMillis(delay_ns)));
+
+  /*
+   * The HHWheelTimer::scheduleTimeout() fails with an assertion from
+   * EventBase::isInEventBaseThread() if we execute the schedule in a random thread, or one of
+   * the IOThreadPool threads (with num threads > 1). I think there is a bug there in using retry
+   * timer from IOThreadPool threads. It only works when executed from a single-thread pool
+   * (retry_executor() is). However, the scheduled "work" which is the LocateThenCall() should
+   * still happen in a thread pool, that is why we are submitting the work to the CPUThreadPool.
+   * IOThreadPool cannot be used without fixing the blocking call that we do at TCP connection
+   * establishment time (see ConnectionFactory::Connect()), otherwise, the IOThreadPool thread
+   * just hangs because it deadlocks itself.
+   */
+  conn_->retry_executor()->add([&]() {
+    retry_timer_->scheduleTimeoutFn(
+        [this]() {
+          conn_->cpu_executor()->add([&]() { LocateThenCall(); });
+        },
+        milliseconds(TimeUtil::ToMillis(delay_ns)));
+  });
+}
+
+template <typename RESP>
+bool AsyncSingleRequestRpcRetryingCaller<RESP>::ShouldRetry(const exception_wrapper& error) {
+  bool do_not_retry = false;
+  error.with_exception(
+      [&](const RemoteException& remote_ex) { do_not_retry &= remote_ex.do_not_retry(); });
+  return !do_not_retry;
 }
 
 template <typename RESP>
@@ -143,33 +173,14 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::Call(const RegionLocation& loc) 
   }
 
   std::shared_ptr<RpcClient> rpc_client;
-  try {
-    // TODO: There is no connection attempt happening here, no need to try-catch.
-    rpc_client = conn_->rpc_client();
-  } catch (const IOException& e) {
-    OnError(e,
-            [&, this]() -> std::string {
-              return "Get async rpc_client to " +
-                     folly::sformat("{0}:{1}", loc.server_name().host_name(),
-                                    loc.server_name().port()) +
-                     " for '" + row_ + "' in " + loc.DebugString() + " of " +
-                     table_name_->namespace_() + "::" + table_name_->qualifier() +
-                     " failed, tries = " + std::to_string(tries_) + ", maxAttempts = " +
-                     std::to_string(max_attempts_) + ", timeout = " +
-                     TimeUtil::ToMillisStr(this->operation_timeout_nanos_) +
-                     " ms, time elapsed = " + TimeUtil::ElapsedMillisStr(this->start_ns_) + " ms";
-            },
-            [&, this](const std::exception& error) {
-              conn_->region_locator()->UpdateCachedLocation(loc, error);
-            });
-    return;
-  }
+
+  rpc_client = conn_->rpc_client();
 
   ResetController(controller_, call_timeout_ns);
 
   callable_(controller_, std::make_shared<RegionLocation>(loc), rpc_client)
       .then([this](const RESP& resp) { this->promise_->setValue(std::move(resp)); })
-      .onError([&, this](const std::exception& e) {
+      .onError([&, this](const exception_wrapper& e) {
         OnError(e,
                 [&, this]() -> std::string {
                   return "Call to " + folly::sformat("{0}:{1}", loc.server_name().host_name(),
@@ -182,10 +193,9 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::Call(const RegionLocation& loc) 
                          " ms, time elapsed = " + TimeUtil::ElapsedMillisStr(this->start_ns_) +
                          " ms";
                 },
-                [&, this](const std::exception& error) {
+                [&, this](const exception_wrapper& error) {
                   conn_->region_locator()->UpdateCachedLocation(loc, error);
                 });
-        return;
       });
 }
 

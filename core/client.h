@@ -61,6 +61,11 @@ class Client {
    */
   void Close();
 
+  /**
+   * @brief Internal. DO NOT USE.
+   */
+  std::shared_ptr<AsyncConnectionImpl> async_connection() { return async_connection_; }
+
  private:
   /** Data */
   std::shared_ptr<AsyncConnectionImpl> async_connection_;

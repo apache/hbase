@@ -35,11 +35,14 @@ RpcPipelineFactory::RpcPipelineFactory(std::shared_ptr<Codec> codec)
 
 SerializePipeline::Ptr RpcPipelineFactory::newPipeline(
     std::shared_ptr<AsyncTransportWrapper> sock) {
+  SocketAddress addr;  // for logging
+  sock->getPeerAddress(&addr);
+
   auto pipeline = SerializePipeline::create();
   pipeline->addBack(AsyncSocketHandler{sock});
   pipeline->addBack(EventBaseHandler{});
   pipeline->addBack(LengthFieldBasedFrameDecoder{});
-  pipeline->addBack(ClientHandler{user_util_.user_name(), codec_});
+  pipeline->addBack(ClientHandler{user_util_.user_name(), codec_, addr.describe()});
   pipeline->finalize();
   return pipeline;
 }

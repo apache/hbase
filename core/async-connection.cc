@@ -29,6 +29,13 @@ void AsyncConnectionImpl::Init() {
   auto cpu_threads = conf_->GetInt(kClientCpuThreadPoolSize, 2 * sysconf(_SC_NPROCESSORS_ONLN));
   cpu_executor_ = std::make_shared<wangle::CPUThreadPoolExecutor>(cpu_threads);
   io_executor_ = std::make_shared<wangle::IOThreadPoolExecutor>(io_threads);
+  /*
+   * We need a retry_executor for a thread pool of size 1 due to a possible bug in wangle/folly.
+   * Otherwise, Assertion 'isInEventBaseThread()' always fails. See the comments
+   * in async-rpc-retrying-caller.cc.
+   */
+  retry_executor_ = std::make_shared<wangle::IOThreadPoolExecutor>(1);
+  retry_timer_ = folly::HHWheelTimer::newTimer(retry_executor_->getEventBase());
 
   std::shared_ptr<Codec> codec = nullptr;
   if (conf_->Get(kRpcCodec, hbase::KeyValueCodec::kJavaClassName) ==
@@ -41,22 +48,21 @@ void AsyncConnectionImpl::Init() {
       std::make_shared<hbase::RpcClient>(io_executor_, codec, connection_conf_->connect_timeout());
   location_cache_ =
       std::make_shared<hbase::LocationCache>(conf_, cpu_executor_, rpc_client_->connection_pool());
-  caller_factory_ = std::make_shared<AsyncRpcRetryingCallerFactory>(shared_from_this());
+  caller_factory_ =
+      std::make_shared<AsyncRpcRetryingCallerFactory>(shared_from_this(), retry_timer_);
 }
 
 // We can't have the threads continue running after everything is done
 // that leads to an error.
-AsyncConnectionImpl::~AsyncConnectionImpl() {
-  cpu_executor_->stop();
-  io_executor_->stop();
-  if (rpc_client_.get()) rpc_client_->Close();
-}
+AsyncConnectionImpl::~AsyncConnectionImpl() { Close(); }
 
 void AsyncConnectionImpl::Close() {
   if (is_closed_) return;
 
   cpu_executor_->stop();
   io_executor_->stop();
+  retry_executor_->stop();
+  retry_timer_->destroy();
   if (rpc_client_.get()) rpc_client_->Close();
   is_closed_ = true;
 }

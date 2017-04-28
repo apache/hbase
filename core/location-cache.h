@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/Executor.h>
 #include <folly/SharedMutex.h>
 #include <folly/futures/Future.h>
@@ -180,7 +181,7 @@ class LocationCache : public AsyncRegionLocator {
    * Update cached region location, possibly using the information from exception.
    */
   virtual void UpdateCachedLocation(const RegionLocation &loc,
-                                    const std::exception &error) override;
+                                    const folly::exception_wrapper &error) override;
 
   const std::string &zk_quorum() { return zk_quorum_; }
 

@@ -40,7 +40,7 @@ class MockConnectionFactory : public ConnectionFactory {
   MOCK_METHOD0(MakeBootstrap, std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>());
   MOCK_METHOD3(Connect, std::shared_ptr<HBaseService>(
                             std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>,
-                            const std::string &hostname, int port));
+                            const std::string &hostname, uint16_t port));
 };
 
 class MockBootstrap : public wangle::ClientBootstrap<SerializePipeline> {};

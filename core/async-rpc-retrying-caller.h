@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/HHWheelTimer.h>
@@ -70,6 +71,7 @@ template <typename RESP>
 class AsyncSingleRequestRpcRetryingCaller {
  public:
   AsyncSingleRequestRpcRetryingCaller(std::shared_ptr<AsyncConnection> conn,
+                                      std::shared_ptr<folly::HHWheelTimer> retry_timer,
                                       std::shared_ptr<hbase::pb::TableName> table_name,
                                       const std::string& row, RegionLocateType locate_type,
                                       Callable<RESP> callable, nanoseconds pause,
@@ -84,8 +86,10 @@ class AsyncSingleRequestRpcRetryingCaller {
  private:
   void LocateThenCall();
 
-  void OnError(const std::exception& error, Supplier<std::string> err_msg,
-               Consumer<std::exception> update_cached_location);
+  void OnError(const folly::exception_wrapper& error, Supplier<std::string> err_msg,
+               Consumer<folly::exception_wrapper> update_cached_location);
+
+  bool ShouldRetry(const folly::exception_wrapper& error);
 
   void Call(const RegionLocation& loc);
 
@@ -97,8 +101,8 @@ class AsyncSingleRequestRpcRetryingCaller {
                               const int64_t& timeout_ns);
 
  private:
-  folly::HHWheelTimer::UniquePtr retry_timer_;
   std::shared_ptr<AsyncConnection> conn_;
+  std::shared_ptr<folly::HHWheelTimer> retry_timer_;
   std::shared_ptr<hbase::pb::TableName> table_name_;
   std::string row_;
   RegionLocateType locate_type_;
@@ -114,6 +118,5 @@ class AsyncSingleRequestRpcRetryingCaller {
   uint32_t tries_;
   std::shared_ptr<std::vector<ThrowableWithExtraContext>> exceptions_;
   uint32_t max_attempts_;
-  folly::EventBase event_base_;
 };
 } /* namespace hbase */

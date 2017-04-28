@@ -22,6 +22,8 @@
 #include <memory>
 #include <utility>
 
+#include <folly/ExceptionWrapper.h>
+
 #include "serde/cell-scanner.h"
 
 // Forward
@@ -44,7 +46,7 @@ class Response {
    * Constructor.
    * Initinalizes the call id to 0. 0 should never be a valid call id.
    */
-  Response() : call_id_(0), resp_msg_(nullptr), cell_scanner_(nullptr) {}
+  Response() : call_id_(0), resp_msg_(nullptr), cell_scanner_(nullptr), exception_(nullptr) {}
 
   /** Get the call_id */
   uint32_t call_id() { return call_id_; }
@@ -70,9 +72,14 @@ class Response {
 
   const std::unique_ptr<CellScanner>& cell_scanner() const { return cell_scanner_; }
 
+  folly::exception_wrapper exception() { return exception_; }
+
+  void set_exception(folly::exception_wrapper value) { exception_ = value; }
+
  private:
   uint32_t call_id_;
   std::shared_ptr<google::protobuf::Message> resp_msg_;
   std::unique_ptr<CellScanner> cell_scanner_;
+  folly::exception_wrapper exception_;
 };
 }  // namespace hbase

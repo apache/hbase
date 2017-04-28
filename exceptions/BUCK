@@ -21,4 +21,4 @@ cxx_library(
     srcs=[],
     deps=["//third-party:folly",],
     compiler_flags=['-Weffc++'],
-    visibility=['//core/...'],)
+    visibility=['//core/...','//connection//...'],)
