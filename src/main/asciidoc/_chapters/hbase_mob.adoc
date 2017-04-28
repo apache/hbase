@@ -36,7 +36,7 @@ read and write paths are optimized for values smaller than 100KB in size. When
 HBase deals with large numbers of objects over this threshold, referred to here
 as medium objects, or MOBs, performance is degraded due to write amplification
 caused by splits and compactions. When using MOBs, ideally your objects will be between
-100KB and 10MB. HBase ***FIX_VERSION_NUMBER*** adds support
+100KB and 10MB (see the <<faq>>). HBase ***FIX_VERSION_NUMBER*** adds support
 for better managing large numbers of MOBs while maintaining performance,
 consistency, and low operational overhead. MOB support is provided by the work
 done in link:https://issues.apache.org/jira/browse/HBASE-11339[HBASE-11339]. To
@@ -155,7 +155,7 @@ family as the second argument. and take a compaction type as the third argument.
 
 ----
 hbase> compact 't1', 'c1’, ‘MOB’
-hbase> major_compact_mob 't1', 'c1’, ‘MOB’
+hbase> major_compact 't1', 'c1’, ‘MOB’
 ----
 
 These commands are also available via `Admin.compact` and
