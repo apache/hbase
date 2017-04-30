@@ -93,6 +93,14 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   /** warn on cell with tags */
   private static boolean warnCellWithTags = true;
 
+
+  /** if this feature is enabled, preCalculate encoded data size before real encoding happens*/
+  public static final String UNIFIED_ENCODED_BLOCKSIZE_RATIO = "hbase.writer.unified.encoded.blocksize.ratio";
+
+  /** Block size limit after encoding, used to unify encoded block Cache entry size*/
+  private final int encodedBlockSizeLimit;
+
+
   static class WriterFactoryV2 extends HFile.WriterFactory {
     WriterFactoryV2(Configuration conf, CacheConfig cacheConf) {
       super(conf, cacheConf);
@@ -115,6 +123,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     super(cacheConf,
         ostream == null ? createOutputStream(conf, fs, path, null) : ostream,
         path, comparator, context);
+    float encodeBlockSizeRatio = conf.getFloat(UNIFIED_ENCODED_BLOCKSIZE_RATIO, 1f);
+    this.encodedBlockSizeLimit = (int)(hFileContext.getBlocksize() * encodeBlockSizeRatio);
     finishInit(conf);
   }
 
@@ -147,12 +157,14 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * @throws IOException
    */
   protected void checkBlockBoundary() throws IOException {
-    if (fsBlockWriter.blockSizeWritten() < hFileContext.getBlocksize())
-      return;
-
-    finishBlock();
-    writeInlineBlocks(false);
-    newBlock();
+    //for encoder like prefixTree, encoded size is not available, so we have to compare both encoded size
+    //and unencoded size to blocksize limit.
+    if (fsBlockWriter.encodedBlockSizeWritten() >= encodedBlockSizeLimit
+        || fsBlockWriter.blockSizeWritten() >= hFileContext.getBlocksize()) {
+      finishBlock();
+      writeInlineBlocks(false);
+      newBlock();
+    }
   }
 
   /** Clean up the current data block */
