@@ -186,12 +186,13 @@ public class TestQuotaStatusRPCs {
       }
     });
 
-    Map<TableName,SpaceViolationPolicy> violations =
-        QuotaTableUtil.getRegionServerQuotaViolations(
-            TEST_UTIL.getConnection(), rs.getServerName());
-    SpaceViolationPolicy policy = violations.get(tn);
-    assertNotNull("Did not find policy for " + tn, policy);
-    assertEquals(SpaceViolationPolicy.NO_INSERTS, policy);
+    // We obtain the violations for a RegionServer by observing the snapshots
+    Map<TableName,SpaceQuotaSnapshot> snapshots =
+        QuotaTableUtil.getRegionServerQuotaSnapshots(TEST_UTIL.getConnection(), rs.getServerName());
+    SpaceQuotaSnapshot snapshot = snapshots.get(tn);
+    assertNotNull("Did not find snapshot for " + tn, snapshot);
+    assertTrue(snapshot.getQuotaStatus().isInViolation());
+    assertEquals(SpaceViolationPolicy.NO_INSERTS, snapshot.getQuotaStatus().getPolicy());
   }
 
   @Test

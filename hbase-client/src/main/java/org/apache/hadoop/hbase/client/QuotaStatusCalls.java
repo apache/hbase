@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 
@@ -123,34 +122,6 @@ public class QuotaStatusCalls {
       public GetSpaceQuotaSnapshotsResponse call() throws Exception {
         return admin.getSpaceQuotaSnapshots(
             factory.newController(), RequestConverter.buildGetSpaceQuotaSnapshotsRequest());
-      }
-    };
-    return ProtobufUtil.call(callable);
-  }
-
-  /**
-   * See {@link #getRegionServerSpaceQuotaEnforcements(ClusterConnection, RpcControllerFactory, int, ServerName)}
-   */
-  public static GetSpaceQuotaEnforcementsResponse getRegionServerSpaceQuotaEnforcements(
-      ClusterConnection clusterConn, int timeout, ServerName sn) throws IOException {
-    RpcControllerFactory rpcController = clusterConn.getRpcControllerFactory();
-    return getRegionServerSpaceQuotaEnforcements(clusterConn, rpcController, timeout, sn);
-  }
-
-  /**
-   * Executes an RPC to the RegionServer identified by the {@code ServerName} to fetch its view on
-   * enforced space quotas.
-   */
-  public static GetSpaceQuotaEnforcementsResponse getRegionServerSpaceQuotaEnforcements(
-      ClusterConnection conn, RpcControllerFactory factory,
-      int timeout, ServerName sn) throws IOException {
-    final AdminService.BlockingInterface admin = conn.getAdmin(sn);
-    Callable<GetSpaceQuotaEnforcementsResponse> callable =
-        new Callable<GetSpaceQuotaEnforcementsResponse>() {
-      @Override
-      public GetSpaceQuotaEnforcementsResponse call() throws Exception {
-        return admin.getSpaceQuotaEnforcements(
-            factory.newController(), RequestConverter.buildGetSpaceQuotaEnforcementsRequest());
       }
     };
     return ProtobufUtil.call(callable);

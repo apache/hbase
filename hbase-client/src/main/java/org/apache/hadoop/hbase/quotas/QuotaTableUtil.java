@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.QuotaStatusCalls;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.CompareFilter;
@@ -50,7 +51,6 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
@@ -59,8 +59,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
@@ -237,6 +235,23 @@ public class QuotaTableUtil {
     // Limit rowspace to the "t:" prefix
     s.setRowPrefixFilter(QUOTA_TABLE_ROW_KEY_PREFIX);
     return s;
+  }
+
+  /**
+   * Fetches all {@link SpaceQuotaSnapshot} objects from the {@code hbase:quota} table.
+   *
+   * @param conn The HBase connection
+   * @return A map of table names and their computed snapshot.
+   */
+  public static Map<TableName,SpaceQuotaSnapshot> getSnapshots(Connection conn) throws IOException {
+    Map<TableName,SpaceQuotaSnapshot> snapshots = new HashMap<>();
+    try (Table quotaTable = conn.getTable(QUOTA_TABLE_NAME);
+        ResultScanner rs = quotaTable.getScanner(makeQuotaSnapshotScan())) {
+      for (Result r : rs) {
+        extractQuotaSnapshot(r, snapshots);
+      }
+    }
+    return snapshots;
   }
 
   /**
@@ -450,29 +465,6 @@ public class QuotaTableUtil {
           SpaceQuotaSnapshot.toSpaceQuotaSnapshot(snapshot.getSnapshot()));
     }
     return snapshots;
-  }
-
-  /**
-   * Fetches the active {@link SpaceViolationPolicy}'s that are being enforced on the
-   * given RegionServer.
-   */
-  public static Map<TableName,SpaceViolationPolicy> getRegionServerQuotaViolations(
-      Connection conn, ServerName regionServer) throws IOException {
-    if (!(conn instanceof ClusterConnection)) {
-      throw new IllegalArgumentException("Expected a ClusterConnection");
-    }
-    ClusterConnection clusterConn = (ClusterConnection) conn;
-    RpcControllerFactory rpcController = clusterConn.getRpcControllerFactory();
-    GetSpaceQuotaEnforcementsResponse response =
-        QuotaStatusCalls.getRegionServerSpaceQuotaEnforcements(
-            clusterConn, rpcController, 0, regionServer);
-    Map<TableName,SpaceViolationPolicy> policies = new HashMap<>();
-    for (TableViolationPolicy policy : response.getViolationPoliciesList()) {
-      policies.put(
-          ProtobufUtil.toTableName(policy.getTableName()),
-          ProtobufUtil.toViolationPolicy(policy.getViolationPolicy()));
-    }
-    return policies;
   }
 
   /**

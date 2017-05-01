@@ -136,18 +136,6 @@ message GetSpaceQuotaSnapshotsResponse {
   repeated TableQuotaSnapshot snapshots = 1;
 }
 
-message GetSpaceQuotaEnforcementsRequest {
-}
-
-message GetSpaceQuotaEnforcementsResponse {
-  // Cannot use TableName as a map key, do the repeated nested message by hand.
-  message TableViolationPolicy {
-    optional TableName table_name = 1;
-    optional SpaceViolationPolicy violation_policy = 2;
-  }
-  repeated TableViolationPolicy violation_policies = 1;
-}
-
 message GetQuotaStatesRequest {
 }
 

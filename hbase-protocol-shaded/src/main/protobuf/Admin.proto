@@ -329,8 +329,4 @@ service AdminService {
   /** Fetches the RegionServer's view of space quotas */
   rpc GetSpaceQuotaSnapshots(GetSpaceQuotaSnapshotsRequest)
     returns(GetSpaceQuotaSnapshotsResponse);
-
-  /** Fetches the RegionServer's space quota active enforcements */
-  rpc GetSpaceQuotaEnforcements(GetSpaceQuotaEnforcementsRequest)
-    returns(GetSpaceQuotaEnforcementsResponse);
 }

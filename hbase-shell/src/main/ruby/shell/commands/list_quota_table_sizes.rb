@@ -22,10 +22,10 @@ module Shell
     class ListQuotaTableSizes < Command
       def help
         return <<-EOF
-Lists the sizes of the tables in HBase as collected
-for the purpose of implementing filesystem utilization
-quotas. This information is extracted from the HBase
-Master and drives future quota actions in the cluster.
+Lists the computed size of each table in the cluster as computed by
+all RegionServers. This is the raw information that the Master uses to
+make decisions about space quotas. Most times, using `list_quota_snapshots`
+provides a higher-level of insight than this command.
 
 For example:
 

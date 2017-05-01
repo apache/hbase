@@ -22,25 +22,41 @@ module Shell
     class ListQuotaSnapshots < Command
       def help
         return <<-EOF
-Lists the current snapshot of quotas on the given RegionServer. This
-information filters to each RegionServer from the Master. For each
-table, a snapshot includes the filesystem use, the filesystem limit,
-and the policy to enact when the limit is exceeded. This command is
-useful for debugging the running state of a cluster using filesystem quotas.
+Lists the current space quota snapshots with optional selection criteria.
+Snapshots encapsulate relevant information to space quotas such as space
+use, configured limits, and quota violation details. This command is
+useful for understanding the current state of a cluster with space quotas.
+
+By default, this command will read all snapshots stored in the system from
+the hbase:quota table. A table name or namespace can be provided to filter
+the snapshots returned. RegionServers maintain a copy of snapshots, refreshing
+at a regular interval; by providing a RegionServer option, snapshots will
+be retreived from that RegionServer instead of the quota table.
 
 For example:
 
-    hbase> list_quota_snapshots 'regionserver1.domain,16020,1483482894742'
+    hbase> list_quota_snapshots
+    hbase> list_quota_snapshots({TABLE => 'table1'})
+    hbase> list_quota_snapshots({NAMESPACE => 'org1'})
+    hbase> list_quota_snapshots({REGIONSERVER => 'server1.domain,16020,1483482894742'})
+    hbase> list_quota_snapshots({NAMESPACE => 'org1', REGIONSERVER => 'server1.domain,16020,1483482894742'})
 EOF
       end
 
-      def command(hostname, args = {})
-        formatter.header(["TABLE", "USAGE", "LIMIT", "IN VIOLATION", "POLICY"])
+      def command(args = {})
+        # All arguments may be nil
+        desired_table = args[TABLE]
+        desired_namespace = args[NAMESPACE]
+        desired_regionserver = args[REGIONSERVER]
+        formatter.header(["TABLE", "USAGE", "LIMIT", "IN_VIOLATION", "POLICY"])
         count = 0
-        quotas_admin.get_rs_quota_snapshots(hostname).each do |tableName,snapshot|
+        quotas_admin.get_quota_snapshots(desired_regionserver).each do |table_name,snapshot|
+          # Skip this snapshot if it's for a table/namespace the user did not ask for
+          next unless accept? table_name, desired_table, desired_namespace
           status = snapshot.getQuotaStatus()
           policy = get_policy(status)
-          formatter.row([tableName.to_s, snapshot.getUsage().to_s, snapshot.getLimit().to_s, status.isInViolation().to_s, policy])
+          formatter.row([table_name.to_s, snapshot.getUsage().to_s, snapshot.getLimit().to_s,
+            status.isInViolation().to_s, policy])
           count += 1
         end
         formatter.footer(count)
@@ -53,6 +69,18 @@ EOF
         else
           "None"
         end
+      end
+
+      def accept?(table_name, desired_table=nil, desired_namespace=nil)
+        # Check the table name if given one
+        if desired_table and table_name.getQualifierAsString() != desired_table
+          return false
+        end
+        # Check the namespace if given one
+        if desired_namespace and table_name.getNamespaceAsString() != desired_namespace
+          return false
+        end
+        true
       end
     end
   end

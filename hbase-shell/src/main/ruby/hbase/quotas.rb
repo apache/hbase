@@ -169,13 +169,21 @@ module Hbase
       QuotaTableUtil.getMasterReportedTableSizes(@admin.getConnection())
     end
 
-    def get_rs_quota_snapshots(rs)
-      QuotaTableUtil.getRegionServerQuotaSnapshots(@admin.getConnection(),
-          ServerName.valueOf(rs))
+    def get_quota_snapshots(regionserver=nil)
+      # Ask a regionserver if we were given one
+      return get_rs_quota_snapshots(regionserver) if regionserver
+      # Otherwise, read from the quota table
+      get_quota_snapshots_from_table
     end
 
-    def get_rs_quota_violations(rs)
-      QuotaTableUtil.getRegionServerQuotaViolations(@admin.getConnection(),
+    def get_quota_snapshots_from_table()
+      # Reads the snapshots from the hbase:quota table
+      QuotaTableUtil.getSnapshots(@admin.getConnection())
+    end
+
+    def get_rs_quota_snapshots(rs)
+      # Reads the snapshots from a specific regionserver
+      QuotaTableUtil.getRegionServerQuotaSnapshots(@admin.getConnection(),
           ServerName.valueOf(rs))
     end
 

@@ -25,6 +25,10 @@ require 'hbase/table'
 
 include HBaseConstants
 
+java_import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot
+java_import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy
+java_import org.apache.hadoop.hbase.TableName
+
 module Hbase
   class NoClusterSpaceQuotasTest < Test::Unit::TestCase
     include TestHelpers
@@ -54,9 +58,6 @@ module Hbase
     end
 
     define_test 'get policy name for status not in violation' do
-      java_import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot
-      java_import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy
-
       okStatus = SpaceQuotaSnapshot::SpaceQuotaStatus::notInViolation()
       # By default, statuses are in violation
       violatedStatus = SpaceQuotaSnapshot::SpaceQuotaStatus.new(SpaceViolationPolicy::NO_INSERTS)
@@ -64,6 +65,18 @@ module Hbase
       quotaSnapshotCommand = ::Shell::Commands::ListQuotaSnapshots.new(nil)
       assert_equal('None', quotaSnapshotCommand.get_policy(okStatus))
       assert_equal('NO_INSERTS', quotaSnapshotCommand.get_policy(violatedStatus))
+    end
+
+    define_test 'table and namespace filtering in list_quota_snapshots' do
+      cmd = ::Shell::Commands::ListQuotaSnapshots.new(nil)
+      assert cmd.accept?(TableName.valueOf('t1')) == true
+      assert cmd.accept?(TableName.valueOf('t1'), nil, nil) == true
+      assert cmd.accept?(TableName.valueOf('t1'), 't1', nil) == true
+      assert cmd.accept?(TableName.valueOf('t1'), 't2', nil) == false
+      assert cmd.accept?(TableName.valueOf('t1'), nil, 'ns1') == false
+      assert cmd.accept?(TableName.valueOf('ns1:t1'), nil, 'ns1') == true
+      assert cmd.accept?(TableName.valueOf('ns1:t1'), 't1', nil) == true
+      assert cmd.accept?(TableName.valueOf('ns1:t1'), 't1', 'ns1') == true
     end
   end
 end

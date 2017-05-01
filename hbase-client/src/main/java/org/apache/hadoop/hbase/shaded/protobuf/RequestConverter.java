@@ -120,7 +120,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -1730,16 +1729,6 @@ public final class RequestConverter {
    */
   public static GetSpaceQuotaSnapshotsRequest buildGetSpaceQuotaSnapshotsRequest() {
     return GET_SPACE_QUOTA_SNAPSHOTS_REQUEST;
-  }
-
-  private static final GetSpaceQuotaEnforcementsRequest GET_SPACE_QUOTA_ENFORCEMENTS_REQUEST =
-      GetSpaceQuotaEnforcementsRequest.newBuilder().build();
-
-  /**
-   * Returns a {@link GetSpaceQuotaEnforcementsRequest} object.
-   */
-  public static GetSpaceQuotaEnforcementsRequest buildGetSpaceQuotaEnforcementsRequest() {
-    return GET_SPACE_QUOTA_ENFORCEMENTS_REQUEST;
   }
 
   private static final GetQuotaStatesRequest GET_QUOTA_STATES_REQUEST =

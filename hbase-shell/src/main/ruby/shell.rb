@@ -422,7 +422,6 @@ Shell.load_command_group(
     set_quota
     list_quotas
     list_quota_table_sizes
-    list_quota_violations
     list_quota_snapshots
   ]
 )
