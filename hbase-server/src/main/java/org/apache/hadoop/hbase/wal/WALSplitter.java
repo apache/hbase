@@ -689,12 +689,12 @@ public class WALSplitter {
    * @param fs
    * @param regiondir
    * @param newSeqId
-   * @param saftyBumper
+   * @param safetyBumper
    * @return long new sequence Id value
    * @throws IOException
    */
   public static long writeRegionSequenceIdFile(final FileSystem fs, final Path regiondir,
-      long newSeqId, long saftyBumper) throws IOException {
+      long newSeqId, long safetyBumper) throws IOException {
     // TODO: Why are we using a method in here as part of our normal region open where
     // there is no splitting involved? Fix. St.Ack 01/20/2017.
     Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
@@ -723,7 +723,7 @@ public class WALSplitter {
     if (maxSeqId > newSeqId) {
       newSeqId = maxSeqId;
     }
-    newSeqId += saftyBumper; // bump up SeqId
+    newSeqId += safetyBumper; // bump up SeqId
 
     // write a new seqId file
     Path newSeqIdFile = new Path(editsdir, newSeqId + SEQUENCE_ID_FILE_SUFFIX);
