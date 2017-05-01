@@ -577,6 +577,13 @@
             <xmlOutput>true</xmlOutput>
             <effort>Max</effort>
           </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>com.github.spotbugs</groupId>
+              <artifactId>spotbugs</artifactId>
+              <version>${spotbugs.version}</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -1221,6 +1228,7 @@
     <checkstyle.version>6.18</checkstyle.version>
     <javadoc.version>2.9</javadoc.version>
     <asciidoctor.plugin.version>1.5.2.1</asciidoctor.plugin.version>
+    <spotbugs.version>3.1.0-RC1</spotbugs.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
