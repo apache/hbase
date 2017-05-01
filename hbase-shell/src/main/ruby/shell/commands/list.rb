@@ -22,7 +22,7 @@ module Shell
     class List < Command
       def help
         return <<-EOF
-List all tables in hbase. Optional regular expression parameter could
+List all user tables in hbase. Optional regular expression parameter could
 be used to filter the output. Examples:
 
   hbase> list
