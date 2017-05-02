@@ -134,6 +134,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.quotas.MasterSpaceQuotaObserver;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifier;
@@ -794,6 +795,11 @@ public class HMaster extends HRegionServer implements MasterServices {
             conf, this.clusterConnection);
     tableCFsUpdater.update();
 
+    // Add the Observer to delete space quotas on table deletion before starting all CPs by
+    // default with quota support, avoiding if user specifically asks to not load this Observer.
+    if (QuotaUtil.isQuotaEnabled(conf)) {
+      updateConfigurationForSpaceQuotaObserver(conf);
+    }
     // initialize master side coprocessors before we start handling requests
     status.setStatus("Initializing master coprocessors");
     this.cpHost = new MasterCoprocessorHost(this, this.conf);
@@ -940,6 +946,28 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     zombieDetector.interrupt();
+  }
+
+  /**
+   * Adds the {@code MasterSpaceQuotaObserver} to the list of configured Master observers to
+   * automatically remove space quotas for a table when that table is deleted.
+   */
+  @VisibleForTesting
+  public void updateConfigurationForSpaceQuotaObserver(Configuration conf) {
+    // We're configured to not delete quotas on table deletion, so we don't need to add the obs.
+    if (!conf.getBoolean(
+          MasterSpaceQuotaObserver.REMOVE_QUOTA_ON_TABLE_DELETE,
+          MasterSpaceQuotaObserver.REMOVE_QUOTA_ON_TABLE_DELETE_DEFAULT)) {
+      return;
+    }
+    String[] masterCoprocs = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    final int length = null == masterCoprocs ? 0 : masterCoprocs.length;
+    String[] updatedCoprocs = new String[length + 1];
+    if (length > 0) {
+      System.arraycopy(masterCoprocs, 0, updatedCoprocs, 0, masterCoprocs.length);
+    }
+    updatedCoprocs[length] = MasterSpaceQuotaObserver.class.getName();
+    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs);
   }
 
   private void initMobCleaner() {

@@ -17,8 +17,10 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +32,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -53,7 +57,6 @@ public class TestMasterSpaceQuotaObserver {
   @BeforeClass
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MasterSpaceQuotaObserver.class.getName());
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.startMiniCluster(1);
   }
@@ -132,6 +135,16 @@ public class TestMasterSpaceQuotaObserver {
     // Delete the table and observe the quota being automatically deleted as well
     admin.deleteNamespace(ns);
     assertEquals(0, getNumSpaceQuotas());
+  }
+
+  @Test
+  public void testObserverAddedByDefault() throws Exception {
+    final HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    final MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
+    Set<String> coprocessorNames = cpHost.getCoprocessors();
+    assertTrue(
+        "Did not find MasterSpaceQuotaObserver in list of CPs: " + coprocessorNames,
+        coprocessorNames.contains(MasterSpaceQuotaObserver.class.getSimpleName()));
   }
 
   public boolean namespaceExists(String ns) throws IOException {
