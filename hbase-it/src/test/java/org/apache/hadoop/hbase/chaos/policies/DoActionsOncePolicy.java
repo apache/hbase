@@ -49,7 +49,7 @@ public class DoActionsOncePolicy extends PeriodicPolicy {
     try {
       action.perform();
     } catch (Exception ex) {
-      LOG.warn("Exception occured during performing action: "
+      LOG.warn("Exception occurred during performing action: "
           + StringUtils.stringifyException(ex));
     }
   }

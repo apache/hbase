@@ -577,7 +577,7 @@ public class TestHFileBlockIndex {
      reader.close();
    }
 
-   // to check if ArrayIndexOutOfBoundsException occured
+   // to check if ArrayIndexOutOfBoundsException occurred
    assertFalse(hasArrayIndexOutOfBoundsException);
  }
 

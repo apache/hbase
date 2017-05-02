@@ -78,7 +78,7 @@ final class ClientIdGenerator {
 
   /**
    * @return Some IPv4/IPv6 address available on the current machine that is up, not virtual
-   *         and not a loopback address. Empty array if none can be found or error occured.
+   *         and not a loopback address. Empty array if none can be found or error occurred.
    */
   public static byte[] getIpAddressBytes() {
     try {

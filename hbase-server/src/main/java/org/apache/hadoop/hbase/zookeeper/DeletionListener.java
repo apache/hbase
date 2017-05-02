@@ -44,7 +44,7 @@ public class DeletionListener extends ZooKeeperListener {
    * @param zkWatcher ZookeeperWatcher instance
    * @param pathToWatch (Fully qualified) ZNode path that we are waiting to
    *                    be deleted.
-   * @param deletedLatch Count down on this latch when deletion has occured.
+   * @param deletedLatch Count down on this latch when deletion has occurred.
    */
   public DeletionListener(ZooKeeperWatcher zkWatcher, String pathToWatch,
       CountDownLatch deletedLatch) {

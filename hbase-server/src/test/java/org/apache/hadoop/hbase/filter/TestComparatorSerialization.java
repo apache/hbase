@@ -75,7 +75,7 @@ public class TestComparatorSerialization {
     try {
       new RegexStringComparator("regex", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     } catch (Throwable t) {
-      assertNull("Exception occured while created the RegexStringComparator object", t);
+      assertNull("Exception occurred while created the RegexStringComparator object", t);
     }
   }
 

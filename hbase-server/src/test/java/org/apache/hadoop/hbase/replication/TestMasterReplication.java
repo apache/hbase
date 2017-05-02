@@ -548,7 +548,7 @@ public class TestMasterReplication {
         }
       }
     } catch (Exception e) {
-      LOG.warn("Exception occured while closing the object:", e);
+      LOG.warn("Exception occurred while closing the object:", e);
     }
   }
 
