@@ -20,6 +20,10 @@ require 'hbase_constants'
 
 include HBaseConstants
 
+java_import 'org.apache.hadoop.hbase.HRegionLocation'
+java_import 'org.apache.hadoop.hbase.HRegionInfo'
+java_import 'org.apache.hadoop.hbase.ServerName'
+
 module Hbase
   class NoClusterListRegionsTest < Test::Unit::TestCase
     include TestHelpers
@@ -56,6 +60,20 @@ module Hbase
       assert_equal false, command.accept_region_for_locality?(1.0, 0.8)
       assert_equal false, command.accept_region_for_locality?(1.0, 0.999)
       assert_equal false, command.accept_region_for_locality?(0.5, 0.3)
+    end
+
+    define_test 'filter nondesired servers' do
+      command = ::Shell::Commands::ListRegions.new(nil)
+      server1 = create_region_location('server1,16020,1234')
+      server2 = create_region_location('server2,16020,1234')
+      server3 = create_region_location('server3,16020,1234')
+      assert_equal [server2], command.get_regions_for_server([server1, server2, server3], 'server2')
+      assert_equal [server3], command.get_regions_for_server([server1, server2, server3], 'server3')
+      assert_equal [], command.get_regions_for_server([server1, server2, server3], 'server5')
+    end
+
+    def create_region_location(server_name)
+      HRegionLocation.new(HRegionInfo.new(TableName.valueOf('t1')), ServerName.valueOf(server_name))
     end
   end
 end
