@@ -207,7 +207,7 @@ public class ColumnPaginationFilter extends FilterBase {
 
     ColumnPaginationFilter other = (ColumnPaginationFilter)o;
     if (this.columnOffset != null) {
-      return this.getLimit() == this.getLimit() &&
+      return this.getLimit() == other.getLimit() &&
           Bytes.equals(this.getColumnOffset(), other.getColumnOffset());
     }
     return this.getLimit() == other.getLimit() && this.getOffset() == other.getOffset();
