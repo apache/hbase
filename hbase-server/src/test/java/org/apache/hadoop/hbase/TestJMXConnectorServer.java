@@ -89,7 +89,7 @@ public class TestJMXConnectorServer {
       LOG.info("Stopping HMaster...");
       admin.stopMaster();
     } catch (AccessDeniedException e) {
-      LOG.info("Exception occured while stopping HMaster. ", e);
+      LOG.info("Exception occurred while stopping HMaster. ", e);
       accessDenied = true;
     }
     Assert.assertTrue(accessDenied);
@@ -157,7 +157,7 @@ public class TestJMXConnectorServer {
       LOG.info("Stopping HMaster...");
       admin.shutdown();
     } catch (AccessDeniedException e) {
-      LOG.error("Exception occured while stopping HMaster. ", e);
+      LOG.error("Exception occurred while stopping HMaster. ", e);
       accessDenied = true;
     }
     Assert.assertTrue(accessDenied);

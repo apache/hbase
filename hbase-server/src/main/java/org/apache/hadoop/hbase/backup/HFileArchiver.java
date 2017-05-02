@@ -315,7 +315,7 @@ public class HFileArchiver {
    * @param start time the archiving started - used for resolving archive
    *          conflicts.
    * @return the list of failed to archive files.
-   * @throws IOException if an unexpected file operation exception occured
+   * @throws IOException if an unexpected file operation exception occurred
    */
   private static List<File> resolveAndArchive(FileSystem fs, Path baseArchiveDir,
       Collection<File> toArchive, long start) throws IOException {
