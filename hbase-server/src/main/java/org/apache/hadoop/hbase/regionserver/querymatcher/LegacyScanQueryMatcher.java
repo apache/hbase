@@ -255,7 +255,6 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
           return columns.getNextRowOrNextColumn(cell.getQualifierArray(),
             qualifierOffset, qualifierLength);
         case NEXT_ROW:
-          stickyNextRow = true;
           return MatchCode.SEEK_NEXT_ROW;
         case SEEK_NEXT_USING_HINT:
           return MatchCode.SEEK_NEXT_USING_HINT;
@@ -287,14 +286,10 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
           columns.checkVersions(cell.getQualifierArray(), qualifierOffset,
               qualifierLength, timestamp, typeByte,
             mvccVersion > maxReadPointToTrackVersions);
-      // Optimize with stickyNextRow
-      stickyNextRow = colChecker == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW ? true : stickyNextRow;
       return (filterResponse == ReturnCode.INCLUDE_AND_NEXT_COL &&
           colChecker == MatchCode.INCLUDE) ? MatchCode.INCLUDE_AND_SEEK_NEXT_COL
           : colChecker;
     }
-    stickyNextRow = (colChecker == MatchCode.SEEK_NEXT_ROW) ? true
-        : stickyNextRow;
     return colChecker;
   }
 

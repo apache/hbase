@@ -475,6 +475,24 @@ public final class CellUtil {
   }
 
   /**
+   * Compares the row and column of two keyvalues for equality
+   * @param left
+   * @param right
+   * @return True if same row and column.
+   */
+  public static boolean matchingRowColumn(final Cell left, final Cell right) {
+    if ((left.getRowLength() + left.getFamilyLength() + left.getQualifierLength()) != (right
+        .getRowLength() + right.getFamilyLength() + right.getQualifierLength())) {
+      return false;
+    }
+
+    if (!matchingRow(left, right)) {
+      return false;
+    }
+    return matchingColumn(left, right);
+  }
+
+  /**
    * @return True if a delete type, a {@link KeyValue.Type#Delete} or a
    *         {KeyValue.Type#DeleteFamily} or a
    *         {@link KeyValue.Type#DeleteColumn} KeyValue type.

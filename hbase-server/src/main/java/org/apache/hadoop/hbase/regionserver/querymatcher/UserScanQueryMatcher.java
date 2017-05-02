@@ -113,9 +113,6 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     MatchCode colChecker = columns.checkColumn(cell.getQualifierArray(), qualifierOffset,
       qualifierLength, typeByte);
     if (colChecker != MatchCode.INCLUDE) {
-      if (colChecker == MatchCode.SEEK_NEXT_ROW) {
-        stickyNextRow = true;
-      }
       return colChecker;
     }
     ReturnCode filterResponse = ReturnCode.SKIP;
@@ -130,7 +127,6 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
           return columns.getNextRowOrNextColumn(cell.getQualifierArray(), qualifierOffset,
             qualifierLength);
         case NEXT_ROW:
-          stickyNextRow = true;
           return MatchCode.SEEK_NEXT_ROW;
         case SEEK_NEXT_USING_HINT:
           return MatchCode.SEEK_NEXT_USING_HINT;
@@ -160,8 +156,6 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
      */
     colChecker = columns.checkVersions(cell.getQualifierArray(), qualifierOffset, qualifierLength,
       timestamp, typeByte, false);
-    // Optimize with stickyNextRow
-    stickyNextRow = colChecker == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW ? true : stickyNextRow;
     return (filterResponse == ReturnCode.INCLUDE_AND_NEXT_COL && colChecker == MatchCode.INCLUDE)
         ? MatchCode.INCLUDE_AND_SEEK_NEXT_COL : colChecker;
   }
