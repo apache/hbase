@@ -49,13 +49,11 @@ EOF
         hregion_locator_instance = conn_instance.getRegionLocator(TableName.valueOf(table_name))
         hregion_locator_list = hregion_locator_instance.getAllRegionLocations().to_a
         results = Array.new
+        desired_server_name = options[SERVER_NAME]
 
         begin
           # Filter out region servers which we don't want, default to all RS
-          regions = hregion_locator_list.filter do |hregion|
-            server_name = options[SERVER_NAME] || '*'
-            accept_server_name? server_name, hregion.getServerName().toString()
-          end
+          regions = get_regions_for_table_and_server(table_name, conn_instance, desired_server_name)
           # A locality threshold of "1.0" would be all regions (cannot have greater than 1 locality)
           # Regions which have a `dataLocality` less-than-or-equal to this value are accepted
           locality_threshold = 1.0
@@ -101,8 +99,22 @@ EOF
         value >= 0 and value <= 1.0
       end
 
+      def get_regions_for_table_and_server(table_name, conn, server_name)
+        get_regions_for_server(get_regions_for_table(table_name, conn), server_name)
+      end
+
+      def get_regions_for_server(regions_for_table, server_name)
+        regions_for_table.select do |hregion|
+          accept_server_name? server_name, hregion.getServerName().toString()
+        end
+      end
+
+      def get_regions_for_table(table_name, conn)
+        conn.getRegionLocator(TableName.valueOf(table_name)).getAllRegionLocations().to_a
+      end
+
       def accept_server_name?(desired_server_name, actual_server_name)
-        desired_server_name.eql? '*' or actual_server_name.start_with? desired_server_name
+        desired_server_name.nil? or actual_server_name.start_with? desired_server_name
       end
 
       def accept_region_for_locality?(actual_locality, locality_threshold)
