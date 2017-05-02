@@ -148,6 +148,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -3266,6 +3267,17 @@ public final class ProtobufUtil {
      }
      return builder.build();
    }
+
+  public static ProcedureDescription buildProcedureDescription(String signature, String instance,
+      Map<String, String> props) {
+    ProcedureDescription.Builder builder =
+        ProcedureDescription.newBuilder().setSignature(signature).setInstance(instance);
+    if (props != null && !props.isEmpty()) {
+      props.entrySet().forEach(entry -> builder.addConfiguration(
+        NameStringPair.newBuilder().setName(entry.getKey()).setValue(entry.getValue()).build()));
+    }
+    return builder.build();
+  }
 
   /**
    * Get a ServerName from the passed in data bytes.

@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -82,7 +83,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionRequest;
@@ -101,6 +106,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
@@ -119,10 +126,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsResponse;
@@ -1762,6 +1773,105 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
               .thenAccept(v -> future.complete(v));
         }));
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> execProcedure(String signature, String instance,
+      Map<String, String> props) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    ProcedureDescription procDesc =
+        ProtobufUtil.buildProcedureDescription(signature, instance, props);
+    this.<Long> newMasterCaller()
+        .action((controller, stub) -> this.<ExecProcedureRequest, ExecProcedureResponse, Long> call(
+          controller, stub, ExecProcedureRequest.newBuilder().setProcedure(procDesc).build(),
+          (s, c, req, done) -> s.execProcedure(c, req, done), resp -> resp.getExpectedTimeout()))
+        .call().whenComplete((expectedTimeout, err) -> {
+          if (err != null) {
+            future.completeExceptionally(err);
+            return;
+          }
+          TimerTask pollingTask = new TimerTask() {
+            int tries = 0;
+            long startTime = EnvironmentEdgeManager.currentTime();
+            long endTime = startTime + expectedTimeout;
+            long maxPauseTime = expectedTimeout / maxAttempts;
+
+            @Override
+            public void run(Timeout timeout) throws Exception {
+              if (EnvironmentEdgeManager.currentTime() < endTime) {
+                isProcedureFinished(signature, instance, props).whenComplete((done, err) -> {
+                  if (err != null) {
+                    future.completeExceptionally(err);
+                    return;
+                  }
+                  if (done) {
+                    future.complete(null);
+                  } else {
+                    // retry again after pauseTime.
+                    long pauseTime = ConnectionUtils
+                        .getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
+                    pauseTime = Math.min(pauseTime, maxPauseTime);
+                    AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
+                      TimeUnit.MICROSECONDS);
+                  }
+                });
+              } else {
+                future.completeExceptionally(new IOException("Procedure '" + signature + " : "
+                    + instance + "' wasn't completed in expectedTime:" + expectedTimeout + " ms"));
+              }
+            }
+          };
+          // Queue the polling task into RETRY_TIMER to poll procedure state asynchronously.
+          AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
+        });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<byte[]> execProcedureWithRet(String signature, String instance,
+      Map<String, String> props) {
+    ProcedureDescription proDesc =
+        ProtobufUtil.buildProcedureDescription(signature, instance, props);
+    return this.<byte[]> newMasterCaller()
+        .action(
+          (controller, stub) -> this.<ExecProcedureRequest, ExecProcedureResponse, byte[]> call(
+            controller, stub, ExecProcedureRequest.newBuilder().setProcedure(proDesc).build(),
+            (s, c, req, done) -> s.execProcedureWithRet(c, req, done),
+            resp -> resp.hasReturnData() ? resp.getReturnData().toByteArray() : null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isProcedureFinished(String signature, String instance,
+      Map<String, String> props) {
+    ProcedureDescription proDesc =
+        ProtobufUtil.buildProcedureDescription(signature, instance, props);
+    return this.<Boolean> newMasterCaller()
+        .action((controller, stub) -> this
+            .<IsProcedureDoneRequest, IsProcedureDoneResponse, Boolean> call(controller, stub,
+              IsProcedureDoneRequest.newBuilder().setProcedure(proDesc).build(),
+              (s, c, req, done) -> s.isProcedureDone(c, req, done), resp -> resp.getDone()))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Boolean> abortProcedure(long procId, boolean mayInterruptIfRunning) {
+    return this.<Boolean> newMasterCaller().action(
+      (controller, stub) -> this.<AbortProcedureRequest, AbortProcedureResponse, Boolean> call(
+        controller, stub, AbortProcedureRequest.newBuilder().setProcId(procId).build(),
+        (s, c, req, done) -> s.abortProcedure(c, req, done), resp -> resp.getIsProcedureAborted()))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<ProcedureInfo[]> listProcedures() {
+    return this.<ProcedureInfo[]> newMasterCaller()
+        .action((controller, stub) -> this
+            .<ListProceduresRequest, ListProceduresResponse, ProcedureInfo[]> call(controller, stub,
+              ListProceduresRequest.newBuilder().build(),
+              (s, c, req, done) -> s.listProcedures(c, req, done), resp -> resp.getProcedureList()
+                  .stream().map(ProtobufUtil::toProcedureInfo).toArray(ProcedureInfo[]::new)))
+        .call();
   }
 
   private CompletableFuture<Void> internalDeleteSnapshot(SnapshotDescription snapshot) {

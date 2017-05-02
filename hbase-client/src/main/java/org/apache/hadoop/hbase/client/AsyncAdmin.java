@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -741,4 +742,58 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void> deleteTableSnapshots(Pattern tableNamePattern,
       Pattern snapshotNamePattern);
+
+  /**
+   * Execute a distributed procedure on a cluster.
+   * @param signature A distributed procedure is uniquely identified by its signature (default the
+   *          root ZK node name of the procedure).
+   * @param instance The instance name of the procedure. For some procedures, this parameter is
+   *          optional.
+   * @param props Property/Value pairs of properties passing to the procedure
+   */
+  CompletableFuture<Void> execProcedure(String signature, String instance,
+      Map<String, String> props);
+
+  /**
+   * Execute a distributed procedure on a cluster.
+   * @param signature A distributed procedure is uniquely identified by its signature (default the
+   *          root ZK node name of the procedure).
+   * @param instance The instance name of the procedure. For some procedures, this parameter is
+   *          optional.
+   * @param props Property/Value pairs of properties passing to the procedure
+   * @return data returned after procedure execution. null if no return data.
+   */
+  CompletableFuture<byte[]> execProcedureWithRet(String signature, String instance,
+      Map<String, String> props);
+
+  /**
+   * Check the current state of the specified procedure. There are three possible states:
+   * <ol>
+   * <li>running - returns <tt>false</tt></li>
+   * <li>finished - returns <tt>true</tt></li>
+   * <li>finished with error - throws the exception that caused the procedure to fail</li>
+   * </ol>
+   * @param signature The signature that uniquely identifies a procedure
+   * @param instance The instance name of the procedure
+   * @param props Property/Value pairs of properties passing to the procedure
+   * @return true if the specified procedure is finished successfully, false if it is still running.
+   *         The value is vrapped by {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> isProcedureFinished(String signature, String instance,
+      Map<String, String> props);
+
+  /**
+   * abort a procedure
+   * @param procId ID of the procedure to abort
+   * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
+   * @return true if aborted, false if procedure already completed or does not exist. the value is
+   *         wrapped by {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> abortProcedure(long procId, boolean mayInterruptIfRunning);
+
+  /**
+   * List procedures
+   * @return procedure list wrapped by {@link CompletableFuture}
+   */
+  CompletableFuture<ProcedureInfo[]> listProcedures();
 }

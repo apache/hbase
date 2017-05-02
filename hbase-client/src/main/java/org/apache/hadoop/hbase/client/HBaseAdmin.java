@@ -2657,24 +2657,17 @@ public class HBaseAdmin implements Admin {
   @Override
   public byte[] execProcedureWithRet(String signature, String instance, Map<String, String> props)
       throws IOException {
-    ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
-    builder.setSignature(signature).setInstance(instance);
-    for (Entry<String, String> entry : props.entrySet()) {
-      NameStringPair pair = NameStringPair.newBuilder().setName(entry.getKey())
-          .setValue(entry.getValue()).build();
-      builder.addConfiguration(pair);
-    }
-
-    final ExecProcedureRequest request = ExecProcedureRequest.newBuilder()
-        .setProcedure(builder.build()).build();
+    ProcedureDescription desc = ProtobufUtil.buildProcedureDescription(signature, instance, props);
+    final ExecProcedureRequest request =
+        ExecProcedureRequest.newBuilder().setProcedure(desc).build();
     // run the procedure on the master
-    ExecProcedureResponse response = executeCallable(new MasterCallable<ExecProcedureResponse>(
-        getConnection(), getRpcControllerFactory()) {
-      @Override
-      protected ExecProcedureResponse rpcCall() throws Exception {
-        return master.execProcedureWithRet(getRpcController(), request);
-      }
-    });
+    ExecProcedureResponse response = executeCallable(
+      new MasterCallable<ExecProcedureResponse>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected ExecProcedureResponse rpcCall() throws Exception {
+          return master.execProcedureWithRet(getRpcController(), request);
+        }
+      });
 
     return response.hasReturnData() ? response.getReturnData().toByteArray() : null;
   }
@@ -2682,16 +2675,9 @@ public class HBaseAdmin implements Admin {
   @Override
   public void execProcedure(String signature, String instance, Map<String, String> props)
       throws IOException {
-    ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
-    builder.setSignature(signature).setInstance(instance);
-    for (Entry<String, String> entry : props.entrySet()) {
-      NameStringPair pair = NameStringPair.newBuilder().setName(entry.getKey())
-          .setValue(entry.getValue()).build();
-      builder.addConfiguration(pair);
-    }
-
-    final ExecProcedureRequest request = ExecProcedureRequest.newBuilder()
-        .setProcedure(builder.build()).build();
+    ProcedureDescription desc = ProtobufUtil.buildProcedureDescription(signature, instance, props);
+    final ExecProcedureRequest request =
+        ExecProcedureRequest.newBuilder().setProcedure(desc).build();
     // run the procedure on the master
     ExecProcedureResponse response = executeCallable(new MasterCallable<ExecProcedureResponse>(
         getConnection(), getRpcControllerFactory()) {
@@ -2732,22 +2718,15 @@ public class HBaseAdmin implements Admin {
   @Override
   public boolean isProcedureFinished(String signature, String instance, Map<String, String> props)
       throws IOException {
-    final ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
-    builder.setSignature(signature).setInstance(instance);
-    for (Entry<String, String> entry : props.entrySet()) {
-      NameStringPair pair = NameStringPair.newBuilder().setName(entry.getKey())
-          .setValue(entry.getValue()).build();
-      builder.addConfiguration(pair);
-    }
-    final ProcedureDescription desc = builder.build();
+    ProcedureDescription desc = ProtobufUtil.buildProcedureDescription(signature, instance, props);
     return executeCallable(
-        new MasterCallable<IsProcedureDoneResponse>(getConnection(), getRpcControllerFactory()) {
-          @Override
-          protected IsProcedureDoneResponse rpcCall() throws Exception {
-            return master.isProcedureDone(getRpcController(), IsProcedureDoneRequest
-                .newBuilder().setProcedure(desc).build());
-          }
-        }).getDone();
+      new MasterCallable<IsProcedureDoneResponse>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected IsProcedureDoneResponse rpcCall() throws Exception {
+          return master.isProcedureDone(getRpcController(),
+            IsProcedureDoneRequest.newBuilder().setProcedure(desc).build());
+        }
+      }).getDone();
   }
 
   /**
