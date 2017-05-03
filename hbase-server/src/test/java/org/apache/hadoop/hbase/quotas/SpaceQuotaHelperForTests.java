@@ -110,6 +110,18 @@ public class SpaceQuotaHelperForTests {
     }
   }
 
+  QuotaSettings getTableSpaceQuota(Connection conn, TableName tn) throws IOException {
+    try (QuotaRetriever scanner = QuotaRetriever.open(
+        conn.getConfiguration(), new QuotaFilter().setTableFilter(tn.getNameAsString()))) {
+      for (QuotaSettings setting : scanner) {
+        if (setting.getTableName().equals(tn) && setting.getQuotaType() == QuotaType.SPACE) {
+          return setting;
+        }
+      }
+      return null;
+    }
+  }
+
   /**
    * Waits 30seconds for the HBase quota table to exist.
    */
@@ -130,7 +142,10 @@ public class SpaceQuotaHelperForTests {
   }
 
   void writeData(TableName tn, long sizeInBytes) throws IOException {
-    final Connection conn = testUtil.getConnection();
+    writeData(testUtil.getConnection(), tn, sizeInBytes);
+  }
+
+  void writeData(Connection conn, TableName tn, long sizeInBytes) throws IOException {
     final Table table = conn.getTable(tn);
     try {
       List<Put> updates = new ArrayList<>();
@@ -226,8 +241,16 @@ public class SpaceQuotaHelperForTests {
     return createTableWithRegions(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, numRegions);
   }
 
+  TableName createTableWithRegions(Admin admin, int numRegions) throws Exception {
+    return createTableWithRegions(
+        testUtil.getAdmin(), NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, numRegions);
+  }
+
   TableName createTableWithRegions(String namespace, int numRegions) throws Exception {
-    final Admin admin = testUtil.getAdmin();
+    return createTableWithRegions(testUtil.getAdmin(), namespace, numRegions);
+  }
+
+  TableName createTableWithRegions(Admin admin, String namespace, int numRegions) throws Exception {
     final TableName tn = TableName.valueOf(
         namespace, testName.getMethodName() + counter.getAndIncrement());
 
