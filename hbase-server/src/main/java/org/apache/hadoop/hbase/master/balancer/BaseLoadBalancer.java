@@ -62,11 +62,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
- * The base class for load balancers. It provides the the functions used to by
- * {@link org.apache.hadoop.hbase.master.AssignmentManager} to assign regions
- * in the edge cases. It doesn't provide an implementation of the
- * actual balancing algorithm.
- *
+ * The base class for load balancers. It provides functions used by
+ * {@link org.apache.hadoop.hbase.master.AssignmentManager} to assign regions in the edge cases.
+ * It doesn't provide an implementation of the actual balancing algorithm.
  */
 public abstract class BaseLoadBalancer implements LoadBalancer {
   protected static final int MIN_SERVER_BALANCE = 2;

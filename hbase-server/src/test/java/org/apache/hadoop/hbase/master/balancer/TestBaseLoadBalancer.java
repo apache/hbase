@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -392,11 +393,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   private List<ServerName> getListOfServerNames(final List<ServerAndLoad> sals) {
-    List<ServerName> list = new ArrayList<>();
-    for (ServerAndLoad e : sals) {
-      list.add(e.getServerName());
-    }
-    return list;
+    return sals.stream().map(ServerAndLoad::getServerName).collect(Collectors.toList());
   }
 
   /**
