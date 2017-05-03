@@ -72,7 +72,10 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
         regionInfo = this.toString();
       }
       // Major compaction time has elapsed.
-      long cfTTL = this.storeConfigInfo.getStoreFileTtl();
+      long cfTTL = HConstants.FOREVER;
+      if (this.storeConfigInfo != null) {
+         cfTTL = this.storeConfigInfo.getStoreFileTtl();
+      }
       if (filesToCompact.size() == 1) {
         // Single file
         StoreFile sf = filesToCompact.iterator().next();
