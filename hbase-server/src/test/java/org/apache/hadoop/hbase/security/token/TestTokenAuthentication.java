@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -49,11 +51,13 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
+import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -80,10 +84,14 @@ import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
@@ -97,6 +105,7 @@ import com.google.protobuf.ServiceException;
 // RpcServer is all about shaded protobuf whereas the Token Service is a CPEP which does non-shaded
 // protobufs. Since hbase-2.0.0, we added convertion from shaded to  non-shaded so this test keeps
 // working.
+@RunWith(Parameterized.class)
 @Category({SecurityTests.class, MediumTests.class})
 public class TestTokenAuthentication {
   static {
@@ -116,6 +125,7 @@ public class TestTokenAuthentication {
       AuthenticationProtos.AuthenticationService.BlockingInterface, Runnable, Server {
     private static final Log LOG = LogFactory.getLog(TokenServer.class);
     private Configuration conf;
+    private HBaseTestingUtility TEST_UTIL;
     private RpcServerInterface rpcServer;
     private InetSocketAddress isa;
     private ZooKeeperWatcher zookeeper;
@@ -125,8 +135,10 @@ public class TestTokenAuthentication {
     private boolean stopped = false;
     private long startcode;
 
-    public TokenServer(Configuration conf) throws IOException {
+    public TokenServer(Configuration conf, HBaseTestingUtility TEST_UTIL)
+        throws IOException {
       this.conf = conf;
+      this.TEST_UTIL = TEST_UTIL;
       this.startcode = EnvironmentEdgeManager.currentTime();
       // Server to handle client requests.
       String hostname =
@@ -391,14 +403,23 @@ public class TestTokenAuthentication {
     }
   }
 
-  private static HBaseTestingUtility TEST_UTIL;
-  private static TokenServer server;
-  private static Thread serverThread;
-  private static AuthenticationTokenSecretManager secretManager;
-  private static ClusterId clusterId = new ClusterId();
+  @Parameters(name = "{index}: rpcServerImpl={0}")
+  public static Collection<Object[]> parameters() {
+    return Arrays.asList(new Object[] { SimpleRpcServer.class.getName() },
+        new Object[] { NettyRpcServer.class.getName() });
+  }
 
-  @BeforeClass
-  public static void setupBeforeClass() throws Exception {
+  @Parameter(0)
+  public String rpcServerImpl;
+
+  private HBaseTestingUtility TEST_UTIL;
+  private TokenServer server;
+  private Thread serverThread;
+  private AuthenticationTokenSecretManager secretManager;
+  private ClusterId clusterId = new ClusterId();
+
+  @Before
+  public void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.startMiniZKCluster();
     // register token type for protocol
@@ -410,7 +431,8 @@ public class TestTokenAuthentication {
     conf.set("hadoop.security.authentication", "kerberos");
     conf.set("hbase.security.authentication", "kerberos");
     conf.setBoolean(HADOOP_SECURITY_AUTHORIZATION, true);
-    server = new TokenServer(conf);
+    conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
+    server = new TokenServer(conf, TEST_UTIL);
     serverThread = new Thread(server);
     Threads.setDaemonThreadRunning(serverThread, "TokenServer:"+server.getServerName().toString());
     // wait for startup
@@ -432,8 +454,8 @@ public class TestTokenAuthentication {
     }
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     server.stop("Test complete");
     Threads.shutdown(serverThread);
     TEST_UTIL.shutdownMiniZKCluster();

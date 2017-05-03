@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 import javax.security.sasl.SaslException;
 
@@ -46,11 +47,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.NettyRpcClient;
+import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -72,7 +76,6 @@ import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 
 @RunWith(Parameterized.class)
 @Category({ SecurityTests.class, SmallTests.class })
@@ -96,14 +99,26 @@ public class TestSecureIPC {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @Parameters(name = "{index}: rpcClientImpl={0}")
+  @Parameters(name = "{index}: rpcClientImpl={0}, rpcServerImpl={1}")
   public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[]{BlockingRpcClient.class.getName()},
-        new Object[]{NettyRpcClient.class.getName()});
+    List<Object[]> params = new ArrayList<>();
+    List<String> rpcClientImpls = Arrays.asList(
+        BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
+    List<String> rpcServerImpls = Arrays.asList(
+        SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
+    for (String rpcClientImpl : rpcClientImpls) {
+      for (String rpcServerImpl : rpcServerImpls) {
+        params.add(new Object[] { rpcClientImpl, rpcServerImpl });
+      }
+    }
+    return params;
   }
 
-  @Parameter
+  @Parameter(0)
   public String rpcClientImpl;
+
+  @Parameter(1)
+  public String rpcServerImpl;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -129,6 +144,8 @@ public class TestSecureIPC {
     clientConf = getSecuredConfiguration();
     clientConf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcClientImpl);
     serverConf = getSecuredConfiguration();
+    serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
+        rpcServerImpl);
   }
 
   @Test

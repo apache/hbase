@@ -24,6 +24,8 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -40,6 +42,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.Lists;
 
@@ -48,6 +54,7 @@ import com.google.common.collect.Lists;
  * of types in <code>src/test/protobuf/test.proto</code> and protobuf service definition from
  * <code>src/test/protobuf/test_rpc_service.proto</code>
  */
+@RunWith(Parameterized.class)
 @Category({ RPCTests.class, MediumTests.class })
 public class TestProtoBufRpc {
   public final static String ADDRESS = "localhost";
@@ -56,9 +63,20 @@ public class TestProtoBufRpc {
   private Configuration conf;
   private RpcServerInterface server;
 
+  @Parameters(name = "{index}: rpcServerImpl={0}")
+  public static Collection<Object[]> parameters() {
+    return Arrays.asList(new Object[] { SimpleRpcServer.class.getName() },
+        new Object[] { NettyRpcServer.class.getName() });
+  }
+
+  @Parameter(0)
+  public String rpcServerImpl;
+
   @Before
   public void setUp() throws IOException { // Setup server for both protocols
     this.conf = HBaseConfiguration.create();
+    this.conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
+        rpcServerImpl);
     Logger log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer");
     log.setLevel(Level.DEBUG);
     log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer.trace");

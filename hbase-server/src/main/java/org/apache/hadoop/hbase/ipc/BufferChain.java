@@ -32,11 +32,13 @@ class BufferChain {
   private final ByteBuffer[] buffers;
   private int remaining = 0;
   private int bufferOffset = 0;
+  private int size;
 
   BufferChain(ByteBuffer[] buffers) {
     for (ByteBuffer b : buffers) {
       this.remaining += b.remaining();
     }
+    this.size = remaining;
     this.buffers = buffers;
   }
 
@@ -107,5 +109,13 @@ class BufferChain {
         lastBuffer.limit(restoreLimit);
       }
     }
+  }
+
+  int size() {
+    return size;
+  }
+
+  ByteBuffer[] getBuffers() {
+    return this.buffers;
   }
 }

@@ -321,7 +321,7 @@ public abstract class AbstractTestIPC {
       }
 
       @Override
-      protected void processRequest(ByteBuff buf) throws IOException, InterruptedException {
+      public void processRequest(ByteBuff buf) throws IOException, InterruptedException {
         // this will throw exception after the connection header is read, and an RPC is sent
         // from client
         throw new DoNotRetryIOException("Failing for test");
