@@ -120,6 +120,11 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     public void readFields(DataInput in) throws IOException {
       delegate.readFields(in);
     }
+
+    public HRegionInfo getRegionInfo() {
+      return delegate.getRegionInfo();
+    }
+
   }
 
   @VisibleForTesting

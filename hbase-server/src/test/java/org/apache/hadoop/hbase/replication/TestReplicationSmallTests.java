@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,6 +30,8 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -59,10 +58,12 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -72,6 +73,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+import com.google.common.collect.Lists;
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationSmallTests extends TestReplicationBase {
@@ -593,7 +596,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
   private void runVerifyReplication(String[] args, int expectedGoodRows, int expectedBadRows)
       throws IOException, InterruptedException, ClassNotFoundException {
-    Job job = VerifyReplication.createSubmittableJob(new Configuration(CONF_WITH_LOCALFS), args);
+    Job job = new VerifyReplication().createSubmittableJob(new Configuration(conf1), args);
     if (job == null) {
       fail("Job wasn't created, see the log");
     }
@@ -864,4 +867,114 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     runVerifyReplication(args, NB_ROWS_IN_BATCH *2, 0);
   }
 
+  @Test(timeout = 300000)
+  public void testVerifyReplicationSnapshotArguments() {
+    String[] args =
+        new String[] { "--sourceSnapshotName=snapshot1", "2", tableName.getNameAsString() };
+    assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+
+    args = new String[] { "--sourceSnapshotTmpDir=tmp", "2", tableName.getNameAsString() };
+    assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+
+    args = new String[] { "--sourceSnapshotName=snapshot1", "--sourceSnapshotTmpDir=tmp", "2",
+        tableName.getNameAsString() };
+    assertTrue(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+
+    args = new String[] { "--peerSnapshotName=snapshot1", "2", tableName.getNameAsString() };
+    assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+
+    args = new String[] { "--peerSnapshotTmpDir=/tmp/", "2", tableName.getNameAsString() };
+    assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+
+    args = new String[] { "--peerSnapshotName=snapshot1", "--peerSnapshotTmpDir=/tmp/",
+        "--peerFSAddress=tempfs", "--peerHBaseRootAddress=hdfs://tempfs:50070/hbase/", "2",
+        tableName.getNameAsString() };
+    assertTrue(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+
+    args = new String[] { "--sourceSnapshotName=snapshot1", "--sourceSnapshotTmpDir=/tmp/",
+        "--peerSnapshotName=snapshot2", "--peerSnapshotTmpDir=/tmp/", "--peerFSAddress=tempfs",
+        "--peerHBaseRootAddress=hdfs://tempfs:50070/hbase/", "2", tableName.getNameAsString() };
+
+    assertTrue(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+  }
+
+  @Test(timeout = 300000)
+  public void testVerifyReplicationWithSnapshotSupport() throws Exception {
+    // Populate the tables, at the same time it guarantees that the tables are
+    // identical since it does the check
+    testSmallBatch();
+
+    // Take source and target tables snapshot
+    Path rootDir = FSUtils.getRootDir(conf1);
+    FileSystem fs = rootDir.getFileSystem(conf1);
+    String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    SnapshotTestingUtils.createSnapshotAndValidate(utility1.getHBaseAdmin(), tableName,
+      new String(famName), sourceSnapshotName, rootDir, fs, true);
+
+    // Take target snapshot
+    Path peerRootDir = FSUtils.getRootDir(conf2);
+    FileSystem peerFs = peerRootDir.getFileSystem(conf2);
+    String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    SnapshotTestingUtils.createSnapshotAndValidate(utility2.getHBaseAdmin(), tableName,
+      new String(famName), peerSnapshotName, peerRootDir, peerFs, true);
+
+    String peerFSAddress = peerFs.getUri().toString();
+    String temPath1 = utility1.getRandomDir().toString();
+    String temPath2 = "/tmp2";
+
+    String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
+        "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
+        "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
+        "--peerHBaseRootAddress=" + FSUtils.getRootDir(conf2), "2", tableName.getNameAsString() };
+
+    Job job = new VerifyReplication().createSubmittableJob(conf1, args);
+    if (job == null) {
+      fail("Job wasn't created, see the log");
+    }
+    if (!job.waitForCompletion(true)) {
+      fail("Job failed, see the log");
+    }
+    assertEquals(NB_ROWS_IN_BATCH,
+      job.getCounters().findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
+    assertEquals(0,
+      job.getCounters().findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
+
+    Scan scan = new Scan();
+    ResultScanner rs = htable2.getScanner(scan);
+    Put put = null;
+    for (Result result : rs) {
+      put = new Put(result.getRow());
+      Cell firstVal = result.rawCells()[0];
+      put.addColumn(CellUtil.cloneFamily(firstVal), CellUtil.cloneQualifier(firstVal),
+        Bytes.toBytes("diff data"));
+      htable2.put(put);
+    }
+    Delete delete = new Delete(put.getRow());
+    htable2.delete(delete);
+
+    sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    SnapshotTestingUtils.createSnapshotAndValidate(utility1.getHBaseAdmin(), tableName,
+      new String(famName), sourceSnapshotName, rootDir, fs, true);
+
+    peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    SnapshotTestingUtils.createSnapshotAndValidate(utility2.getHBaseAdmin(), tableName,
+      new String(famName), peerSnapshotName, peerRootDir, peerFs, true);
+
+    args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
+        "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
+        "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
+        "--peerHBaseRootAddress=" + FSUtils.getRootDir(conf2), "2", tableName.getNameAsString() };
+
+    job = new VerifyReplication().createSubmittableJob(conf1, args);
+    if (job == null) {
+      fail("Job wasn't created, see the log");
+    }
+    if (!job.waitForCompletion(true)) {
+      fail("Job failed, see the log");
+    }
+    assertEquals(0,
+      job.getCounters().findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
+    assertEquals(NB_ROWS_IN_BATCH,
+      job.getCounters().findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
+  }
 }
