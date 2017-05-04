@@ -24,6 +24,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -65,6 +67,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBase {
+  private static final Log LOG = LogFactory.getLog(TestTableSnapshotInputFormat.class);
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
@@ -343,10 +346,13 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       String snapshotName, byte[] startRow, byte[] endRow, Path tableDir, int numRegions,
       int expectedNumSplits, boolean shutdownCluster) throws Exception {
 
-    //create the table and snapshot
+    LOG.info("testing with MapReduce");
+
+    LOG.info("create the table and snapshot");
     createTableAndSnapshot(util, tableName, snapshotName, startRow, endRow, numRegions);
 
     if (shutdownCluster) {
+      LOG.info("shutting down hbase cluster.");
       util.shutdownMiniHBaseCluster();
     }
 
