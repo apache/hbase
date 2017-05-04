@@ -460,6 +460,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     private int queuedPriority;
     private ThreadPoolExecutor parent;
     private User user;
+    private long time;
 
     public CompactionRunner(Store store, Region region,
         CompactionContext compaction, ThreadPoolExecutor parent, User user) {
@@ -471,12 +472,14 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
           ? store.getCompactPriority() : compaction.getRequest().getPriority();
       this.parent = parent;
       this.user = user;
+      this.time =  System.currentTimeMillis();
     }
 
     @Override
     public String toString() {
       return (this.compaction != null) ? ("Request = " + compaction.getRequest())
-          : ("Store = " + store.toString() + ", pri = " + queuedPriority);
+          : ("regionName = " + region.toString() + ", storeName = " + store.toString() +
+             ", priority = " + queuedPriority + ", time = " + time);
     }
 
     private void doCompaction(User user) {
