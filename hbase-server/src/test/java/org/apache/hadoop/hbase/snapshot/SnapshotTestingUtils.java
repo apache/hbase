@@ -207,7 +207,7 @@ public final class SnapshotTestingUtils {
     // check snapshot dir
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
         snapshotDescriptor, rootDir);
-    assertTrue(fs.exists(snapshotDir));
+    assertTrue("target snapshot directory, '"+ snapshotDir +"', doesn't exist.", fs.exists(snapshotDir));
 
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
@@ -230,14 +230,14 @@ public final class SnapshotTestingUtils {
     // Verify that there are store files in the specified families
     if (nonEmptyTestFamilies != null) {
       for (final byte[] familyName: nonEmptyTestFamilies) {
-        assertTrue(snapshotFamilies.contains(familyName));
+        assertTrue("Expected snapshot to contain family '" + Bytes.toString(familyName) + "', but it does not.", snapshotFamilies.contains(familyName));
       }
     }
 
     // Verify that there are no store files in the specified families
     if (emptyTestFamilies != null) {
       for (final byte[] familyName: emptyTestFamilies) {
-        assertFalse(snapshotFamilies.contains(familyName));
+        assertFalse("Expected snapshot to skip empty family '" + Bytes.toString(familyName) + "', but it is present.", snapshotFamilies.contains(familyName));
       }
     }
 
@@ -256,12 +256,12 @@ public final class SnapshotTestingUtils {
       }
       regionCountExclusiveSplitParent++;
     }
-    assertEquals(regions.size(), regionCountExclusiveSplitParent);
+    assertEquals("Wrong number of regions.", regions.size(), regionCountExclusiveSplitParent);
 
     // Verify Regions (redundant check, see MasterSnapshotVerifier)
     for (HRegionInfo info : regions) {
       String regionName = info.getEncodedName();
-      assertTrue(regionManifests.containsKey(regionName));
+      assertTrue("Missing region name: '" + regionName + "'", regionManifests.containsKey(regionName));
     }
   }
 
@@ -395,20 +395,24 @@ public final class SnapshotTestingUtils {
         throws Exception {
     if (!onlineSnapshot) {
       try {
+        LOG.info("prepping for offline snapshot.");
         admin.disableTable(tableName);
       } catch (TableNotEnabledException tne) {
         LOG.info("In attempting to disable " + tableName + " it turns out that the this table is " +
             "already disabled.");
       }
     }
+    LOG.info("taking snapshot.");
     admin.snapshot(snapshotNameString, tableName);
 
+    LOG.info("Confirming snapshot exists.");
     List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertExistsMatchingSnapshot(admin,
       snapshotNameString, tableName);
     if (snapshots == null || snapshots.size() != 1) {
       Assert.fail("Incorrect number of snapshots for table " + tableName);
     }
 
+    LOG.info("validating snapshot.");
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), tableName, nonEmptyFamilyNames,
       emptyFamilyNames, rootDir, admin, fs);
   }

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,6 +51,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 public abstract class TableSnapshotInputFormatTestBase {
+  private static final Log LOG = LogFactory.getLog(TableSnapshotInputFormatTestBase.class);
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   protected final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -192,11 +195,13 @@ public abstract class TableSnapshotInputFormatTestBase {
     String snapshotName, byte[] startRow, byte[] endRow, int numRegions)
     throws Exception {
     try {
+      LOG.debug("Ensuring table doesn't exist.");
       util.deleteTable(tableName);
     } catch(Exception ex) {
       // ignore
     }
 
+    LOG.info("creating table '" + tableName + "'");
     if (numRegions > 1) {
       util.createTable(tableName, FAMILIES, 1, startRow, endRow, numRegions);
     } else {
@@ -204,21 +209,22 @@ public abstract class TableSnapshotInputFormatTestBase {
     }
     Admin admin = util.getHBaseAdmin();
 
-    // put some stuff in the table
+    LOG.info("put some stuff in the table");
     HTable table = new HTable(util.getConfiguration(), tableName);
     util.loadTable(table, FAMILIES);
 
     Path rootDir = FSUtils.getRootDir(util.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(util.getConfiguration());
 
+    LOG.info("snapshot");
     SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName,
       Arrays.asList(FAMILIES), null, snapshotName, rootDir, fs, true);
 
-    // load different values
+    LOG.info("load different values");
     byte[] value = Bytes.toBytes("after_snapshot_value");
     util.loadTable(table, FAMILIES, value);
 
-    // cause flush to create new files in the region
+    LOG.info("cause flush to create new files in the region");
     admin.flush(tableName);
     table.close();
   }

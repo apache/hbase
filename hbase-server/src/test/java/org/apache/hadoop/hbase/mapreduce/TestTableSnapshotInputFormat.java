@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,6 +64,7 @@ import com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBase {
+  private static final Log LOG = LogFactory.getLog(TestTableSnapshotInputFormat.class);
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
@@ -332,10 +335,13 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       String snapshotName, byte[] startRow, byte[] endRow, Path tableDir, int numRegions,
       int expectedNumSplits, boolean shutdownCluster) throws Exception {
 
-    //create the table and snapshot
+    LOG.info("testing with MapReduce");
+
+    LOG.info("create the table and snapshot");
     createTableAndSnapshot(util, tableName, snapshotName, startRow, endRow, numRegions);
 
     if (shutdownCluster) {
+      LOG.info("shutting down hbase cluster.");
       util.shutdownMiniHBaseCluster();
     }
 
