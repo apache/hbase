@@ -1943,7 +1943,7 @@ public final class ProtobufUtil {
    * @param proto the GetOnlineRegionResponse
    * @return the list of region info or null if <code>proto</code> is null
    */
-  static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
+  public static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
     if (proto == null) return null;
     List<HRegionInfo> regionInfos = new ArrayList<>(proto.getRegionInfoList().size());
     for (RegionInfo regionInfo: proto.getRegionInfoList()) {

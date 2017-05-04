@@ -406,6 +406,91 @@ public interface AsyncAdmin {
   CompletableFuture<Void> closeRegion(ServerName sn, HRegionInfo hri);
 
   /**
+   * Get all the online regions on a region server.
+   */
+  CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName sn);
+
+  /**
+   * Flush a table.
+   * @param tableName table to flush
+   */
+  CompletableFuture<Void> flush(TableName tableName);
+
+  /**
+   * Flush an individual region.
+   * @param regionName region to flush
+   */
+  CompletableFuture<Void> flushRegion(byte[] regionName);
+
+  /**
+   * Compact a table. Asynchronous operation even if CompletableFuture.get().
+   * @param tableName table to compact
+   */
+  CompletableFuture<Void> compact(TableName tableName);
+
+  /**
+   * Compact a column family within a table. Asynchronous operation even if CompletableFuture.get().
+   * @param tableName table to compact
+   * @param columnFamily column family within a table
+   */
+  CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily);
+
+  /**
+   * Compact an individual region. Asynchronous operation even if CompletableFuture.get().
+   * @param regionName region to compact
+   */
+  CompletableFuture<Void> compactRegion(byte[] regionName);
+
+  /**
+   * Compact a column family within a region. Asynchronous operation even if
+   * CompletableFuture.get().
+   * @param regionName region to compact
+   * @param columnFamily column family within a region
+   */
+  CompletableFuture<Void> compactRegion(byte[] regionName, byte[] columnFamily);
+
+  /**
+   * Major compact a table. Asynchronous operation even if CompletableFuture.get().
+   * @param tableName table to major compact
+   */
+  CompletableFuture<Void> majorCompact(TableName tableName);
+
+  /**
+   * Major compact a column family within a table. Asynchronous operation even if
+   * CompletableFuture.get().
+   * @param tableName table to major compact
+   * @param columnFamily column family within a table
+   */
+  CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily);
+
+  /**
+   * Major compact a table or an individual region. Asynchronous operation even if
+   * CompletableFuture.get().
+   * @param regionName region to major compact
+   */
+  CompletableFuture<Void> majorCompactRegion(byte[] regionName);
+
+  /**
+   * Major compact a column family within region. Asynchronous operation even if
+   * CompletableFuture.get().
+   * @param regionName egion to major compact
+   * @param columnFamily column family within a region
+   */
+  CompletableFuture<Void> majorCompactRegion(byte[] regionName, byte[] columnFamily);
+
+  /**
+   * Compact all regions on the region server.
+   * @param sn the region server name
+   */
+  CompletableFuture<Void> compactRegionServer(ServerName sn);
+
+  /**
+   * Compact all regions on the region server.
+   * @param sn the region server name
+   */
+  CompletableFuture<Void> majorCompactRegionServer(ServerName sn);
+
+  /**
    * Merge two regions.
    * @param nameOfRegionA encoded or full name of region a
    * @param nameOfRegionB encoded or full name of region b

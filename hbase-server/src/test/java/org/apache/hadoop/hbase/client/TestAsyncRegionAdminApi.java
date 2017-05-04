@@ -25,6 +25,9 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,12 +43,15 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -54,6 +60,8 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
+
+  public static Random RANDOM = new Random(System.currentTimeMillis());
 
   private void createTableWithDefaultConf(TableName TABLENAME) throws Exception {
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
@@ -438,6 +446,225 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testGetOnlineRegions() throws Exception {
+    final TableName tableName = TableName.valueOf("testGetOnlineRegions");
+    try {
+      createTableAndGetOneRegion(tableName);
+      AtomicInteger regionServerCount = new AtomicInteger(0);
+      TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+          .map(rsThread -> rsThread.getRegionServer().getServerName()).forEach(serverName -> {
+            try {
+              Assert.assertEquals(admin.getOnlineRegions(serverName).get().size(),
+                TEST_UTIL.getAdmin().getOnlineRegions(serverName).size());
+            } catch (Exception e) {
+              fail("admin.getOnlineRegions() method throws a exception: " + e.getMessage());
+            }
+            regionServerCount.incrementAndGet();
+          });
+      Assert.assertEquals(regionServerCount.get(), 2);
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testFlushTableAndRegion() throws Exception {
+    final TableName tableName = TableName.valueOf("testFlushRegion");
+    try {
+      HRegionInfo hri = createTableAndGetOneRegion(tableName);
+      ServerName serverName = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+          .getRegionStates().getRegionServerOfRegion(hri);
+      HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+          .map(rsThread -> rsThread.getRegionServer())
+          .filter(rs -> rs.getServerName().equals(serverName)).findFirst().get();
+      // write a put into the specific region
+      try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+        table.put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-1")));
+      }
+      Assert.assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0);
+      // flush region and wait flush operation finished.
+      LOG.info("flushing region: " + Bytes.toStringBinary(hri.getRegionName()));
+      admin.flushRegion(hri.getRegionName()).get();
+      LOG.info("blocking until flush is complete: " + Bytes.toStringBinary(hri.getRegionName()));
+      Threads.sleepWithoutInterrupt(500);
+      while (regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0) {
+        Threads.sleep(50);
+      }
+      // check the memstore.
+      Assert.assertEquals(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize(), 0);
+
+      // write another put into the specific region
+      try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+        table.put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-2")));
+      }
+      Assert.assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0);
+      admin.flush(tableName).get();
+      Threads.sleepWithoutInterrupt(500);
+      while (regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0) {
+        Threads.sleep(50);
+      }
+      // check the memstore.
+      Assert.assertEquals(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize(), 0);
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test(timeout = 600000)
+  public void testCompactRpcAPI() throws Exception {
+    String tableName = "testCompactRpcAPI";
+    compactionTest(tableName, 8, CompactionState.MAJOR, false);
+    compactionTest(tableName, 15, CompactionState.MINOR, false);
+    compactionTest(tableName, 8, CompactionState.MAJOR, true);
+    compactionTest(tableName, 15, CompactionState.MINOR, true);
+  }
+
+  @Test(timeout = 600000)
+  public void testCompactRegionServer() throws Exception {
+    TableName table = TableName.valueOf("testCompactRegionServer");
+    byte[][] families = { Bytes.toBytes("f1"), Bytes.toBytes("f2"), Bytes.toBytes("f3") };
+    Table ht = null;
+    try {
+      ht = TEST_UTIL.createTable(table, families);
+      loadData(ht, families, 3000, 8);
+      List<HRegionServer> rsList = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+          .map(rsThread -> rsThread.getRegionServer()).collect(Collectors.toList());
+      List<Region> regions = new ArrayList<>();
+      rsList.forEach(rs -> regions.addAll(rs.getOnlineRegions(table)));
+      Assert.assertEquals(regions.size(), 1);
+      int countBefore = countStoreFilesInFamilies(regions, families);
+      Assert.assertTrue(countBefore > 0);
+      // Minor compaction for all region servers.
+      for (HRegionServer rs : rsList)
+        admin.compactRegionServer(rs.getServerName()).get();
+      Thread.sleep(5000);
+      int countAfterMinorCompaction = countStoreFilesInFamilies(regions, families);
+      Assert.assertTrue(countAfterMinorCompaction < countBefore);
+      // Major compaction for all region servers.
+      for (HRegionServer rs : rsList)
+        admin.majorCompactRegionServer(rs.getServerName()).get();
+      Thread.sleep(5000);
+      int countAfterMajorCompaction = countStoreFilesInFamilies(regions, families);
+      Assert.assertEquals(countAfterMajorCompaction, 3);
+    } finally {
+      if (ht != null) {
+        TEST_UTIL.deleteTable(table);
+      }
+    }
+  }
+
+  private void compactionTest(final String tableName, final int flushes,
+      final CompactionState expectedState, boolean singleFamily) throws Exception {
+    // Create a table with regions
+    final TableName table = TableName.valueOf(tableName);
+    byte[] family = Bytes.toBytes("family");
+    byte[][] families =
+        { family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3")) };
+    Table ht = null;
+    try {
+      ht = TEST_UTIL.createTable(table, families);
+      loadData(ht, families, 3000, flushes);
+      List<Region> regions = new ArrayList<>();
+      TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads()
+          .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getOnlineRegions(table)));
+      Assert.assertEquals(regions.size(), 1);
+      int countBefore = countStoreFilesInFamilies(regions, families);
+      int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
+      assertTrue(countBefore > 0); // there should be some data files
+      if (expectedState == CompactionState.MINOR) {
+        if (singleFamily) {
+          admin.compact(table, family).get();
+        } else {
+          admin.compact(table).get();
+        }
+      } else {
+        if (singleFamily) {
+          admin.majorCompact(table, family).get();
+        } else {
+          admin.majorCompact(table).get();
+        }
+      }
+      long curt = System.currentTimeMillis();
+      long waitTime = 5000;
+      long endt = curt + waitTime;
+      CompactionState state = TEST_UTIL.getAdmin().getCompactionState(table);
+      while (state == CompactionState.NONE && curt < endt) {
+        Thread.sleep(10);
+        state = TEST_UTIL.getAdmin().getCompactionState(table);
+        curt = System.currentTimeMillis();
+      }
+      // Now, should have the right compaction state,
+      // otherwise, the compaction should have already been done
+      if (expectedState != state) {
+        for (Region region : regions) {
+          state = CompactionState.valueOf(region.getCompactionState().toString());
+          assertEquals(CompactionState.NONE, state);
+        }
+      } else {
+        // Wait until the compaction is done
+        state = TEST_UTIL.getAdmin().getCompactionState(table);
+        while (state != CompactionState.NONE && curt < endt) {
+          Thread.sleep(10);
+          state = TEST_UTIL.getAdmin().getCompactionState(table);
+        }
+        // Now, compaction should be done.
+        assertEquals(CompactionState.NONE, state);
+      }
+      int countAfter = countStoreFilesInFamilies(regions, families);
+      int countAfterSingleFamily = countStoreFilesInFamily(regions, family);
+      assertTrue(countAfter < countBefore);
+      if (!singleFamily) {
+        if (expectedState == CompactionState.MAJOR) assertTrue(families.length == countAfter);
+        else assertTrue(families.length < countAfter);
+      } else {
+        int singleFamDiff = countBeforeSingleFamily - countAfterSingleFamily;
+        // assert only change was to single column family
+        assertTrue(singleFamDiff == (countBefore - countAfter));
+        if (expectedState == CompactionState.MAJOR) {
+          assertTrue(1 == countAfterSingleFamily);
+        } else {
+          assertTrue(1 < countAfterSingleFamily);
+        }
+      }
+    } finally {
+      if (ht != null) {
+        TEST_UTIL.deleteTable(table);
+      }
+    }
+  }
+
+  private static int countStoreFilesInFamily(List<Region> regions, final byte[] family) {
+    return countStoreFilesInFamilies(regions, new byte[][] { family });
+  }
+
+  private static int countStoreFilesInFamilies(List<Region> regions, final byte[][] families) {
+    int count = 0;
+    for (Region region : regions) {
+      count += region.getStoreFileList(families).size();
+    }
+    return count;
+  }
+
+  private static void loadData(final Table ht, final byte[][] families, final int rows,
+      final int flushes) throws IOException {
+    List<Put> puts = new ArrayList<>(rows);
+    byte[] qualifier = Bytes.toBytes("val");
+    for (int i = 0; i < flushes; i++) {
+      for (int k = 0; k < rows; k++) {
+        byte[] row = Bytes.toBytes(RANDOM.nextLong());
+        Put p = new Put(row);
+        for (int j = 0; j < families.length; ++j) {
+          p.addColumn(families[j], qualifier, row);
+        }
+        puts.add(p);
+      }
+      ht.put(puts);
+      TEST_UTIL.flush();
+      puts.clear();
     }
   }
 }

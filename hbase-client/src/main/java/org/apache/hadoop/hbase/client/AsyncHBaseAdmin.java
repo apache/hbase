@@ -40,6 +40,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -80,10 +82,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
@@ -185,6 +192,7 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class AsyncHBaseAdmin implements AsyncAdmin {
+  public static final String FLUSH_TABLE_PROCEDURE_SIGNATURE = "flush-table-proc";
 
   private static final Log LOG = LogFactory.getLog(AsyncHBaseAdmin.class);
 
@@ -851,6 +859,274 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
             controller, stub, ProtobufUtil.buildCloseRegionRequest(sn, hri.getRegionName()),
             (s, c, req, done) -> s.closeRegion(controller, req, done), resp -> null))
         .serverName(sn).call();
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName sn) {
+    return this.<List<HRegionInfo>> newAdminCaller()
+        .action((controller, stub) -> this
+            .<GetOnlineRegionRequest, GetOnlineRegionResponse, List<HRegionInfo>> adminCall(
+              controller, stub, RequestConverter.buildGetOnlineRegionRequest(),
+              (s, c, req, done) -> s.getOnlineRegion(c, req, done),
+              resp -> ProtobufUtil.getRegionInfos(resp)))
+        .serverName(sn).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> flush(TableName tableName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    tableExists(tableName).whenComplete((exists, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      } else if (!exists) {
+        future.completeExceptionally(new TableNotFoundException(tableName));
+      } else {
+        isTableEnabled(tableName).whenComplete((tableEnabled, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else if (!tableEnabled) {
+            future.completeExceptionally(new TableNotEnabledException(tableName));
+          } else {
+            execProcedure(FLUSH_TABLE_PROCEDURE_SIGNATURE, tableName.getNameAsString(),
+              new HashMap<>()).whenComplete((ret, err3) -> {
+                if (err3 != null) {
+                  future.completeExceptionally(err3);
+                } else {
+                  future.complete(ret);
+                }
+              });
+          }
+        });
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> flushRegion(byte[] regionName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegion(regionName).whenComplete((p, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      if (p == null || p.getFirst() == null) {
+        future.completeExceptionally(
+          new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName)));
+        return;
+      }
+      if (p.getSecond() == null) {
+        future.completeExceptionally(
+          new NoServerForRegionException(Bytes.toStringBinary(regionName)));
+        return;
+      }
+
+      this.<Void> newAdminCaller().serverName(p.getSecond())
+          .action((controller, stub) -> this
+              .<FlushRegionRequest, FlushRegionResponse, Void> adminCall(controller, stub,
+                RequestConverter.buildFlushRegionRequest(p.getFirst().getRegionName()),
+                (s, c, req, done) -> s.flushRegion(c, req, done), resp -> null))
+          .call().whenComplete((ret, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            } else {
+              future.complete(ret);
+            }
+          });
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> compact(TableName tableName) {
+    return compact(tableName, null, false, CompactType.NORMAL);
+  }
+
+  @Override
+  public CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily) {
+    return compact(tableName, columnFamily, false, CompactType.NORMAL);
+  }
+
+  @Override
+  public CompletableFuture<Void> compactRegion(byte[] regionName) {
+    return compactRegion(regionName, null, false);
+  }
+
+  @Override
+  public CompletableFuture<Void> compactRegion(byte[] regionName, byte[] columnFamily) {
+    return compactRegion(regionName, columnFamily, false);
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompact(TableName tableName) {
+    return compact(tableName, null, true, CompactType.NORMAL);
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily) {
+    return compact(tableName, columnFamily, true, CompactType.NORMAL);
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompactRegion(byte[] regionName) {
+    return compactRegion(regionName, null, true);
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompactRegion(byte[] regionName, byte[] columnFamily) {
+    return compactRegion(regionName, columnFamily, true);
+  }
+
+  @Override
+  public CompletableFuture<Void> compactRegionServer(ServerName sn) {
+    return compactRegionServer(sn, false);
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompactRegionServer(ServerName sn) {
+    return compactRegionServer(sn, true);
+  }
+
+  private CompletableFuture<Void> compactRegionServer(ServerName sn, boolean major) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getOnlineRegions(sn).whenComplete((hRegionInfos, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      List<CompletableFuture<Void>> compactFutures = new ArrayList<>();
+      if (hRegionInfos != null) {
+        hRegionInfos.forEach(region -> compactFutures.add(compact(sn, region, major, null)));
+      }
+      CompletableFuture
+          .allOf(compactFutures.toArray(new CompletableFuture<?>[compactFutures.size()]))
+          .whenComplete((ret, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            } else {
+              future.complete(ret);
+            }
+          });
+    });
+    return future;
+  }
+
+  private CompletableFuture<Void> compactRegion(final byte[] regionName, final byte[] columnFamily,
+      final boolean major) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegion(regionName).whenComplete((p, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      if (p == null || p.getFirst() == null) {
+        future.completeExceptionally(
+          new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName)));
+        return;
+      }
+      if (p.getSecond() == null) {
+        // found a region without region server assigned.
+        future.completeExceptionally(
+          new NoServerForRegionException(Bytes.toStringBinary(regionName)));
+        return;
+      }
+      compact(p.getSecond(), p.getFirst(), major, columnFamily).whenComplete((ret, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+        } else {
+          future.complete(ret);
+        }
+      });
+    });
+    return future;
+  }
+
+  /**
+   * List all region locations for the specific table.
+   */
+  private CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(TableName tableName) {
+    CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      // For meta table, we use zk to fetch all locations.
+      AsyncRegistry registry = AsyncRegistryFactory.getRegistry(connection.getConfiguration());
+      registry.getMetaRegionLocation().whenComplete((metaRegions, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else if (metaRegions == null || metaRegions.isEmpty()
+            || metaRegions.getDefaultRegionLocation() == null) {
+          future.completeExceptionally(new IOException("meta region does not found"));
+        } else {
+          future.complete(Collections.singletonList(metaRegions.getDefaultRegionLocation()));
+        }
+        // close the registry.
+        IOUtils.closeQuietly(registry);
+      });
+    } else {
+      // For non-meta table, we fetch all locations by scanning hbase:meta table
+      AsyncMetaTableAccessor.getTableRegionsAndLocations(metaTable, Optional.of(tableName))
+          .whenComplete((locations, err) -> {
+            if (err != null) {
+              future.completeExceptionally(err);
+            } else if (locations == null || locations.isEmpty()) {
+              future.complete(Collections.emptyList());
+            } else {
+              List<HRegionLocation> regionLocations = locations.stream()
+                  .map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
+                  .collect(Collectors.toList());
+              future.complete(regionLocations);
+            }
+          });
+    }
+    return future;
+  }
+
+  /**
+   * Compact column family of a table, Asynchronous operation even if CompletableFuture.get()
+   */
+  private CompletableFuture<Void> compact(final TableName tableName, final byte[] columnFamily,
+      final boolean major, CompactType compactType) {
+    if (CompactType.MOB.equals(compactType)) {
+      // TODO support MOB compact.
+      return failedFuture(new UnsupportedOperationException("MOB compact does not support"));
+    }
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getTableHRegionLocations(tableName).whenComplete((locations, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      List<CompletableFuture<Void>> compactFutures = new ArrayList<>();
+      for (HRegionLocation location : locations) {
+        if (location.getRegionInfo() == null || location.getRegionInfo().isOffline()) continue;
+        if (location.getServerName() == null) continue;
+        compactFutures
+            .add(compact(location.getServerName(), location.getRegionInfo(), major, columnFamily));
+      }
+      // future complete unless all of the compact futures are completed.
+      CompletableFuture
+          .allOf(compactFutures.toArray(new CompletableFuture<?>[compactFutures.size()]))
+          .whenComplete((ret, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            } else {
+              future.complete(ret);
+            }
+          });
+    });
+    return future;
+  }
+
+  /**
+   * Compact the region at specific region server.
+   */
+  private CompletableFuture<Void> compact(final ServerName sn, final HRegionInfo hri,
+      final boolean major, final byte[] family) {
+    return this.<Void> newAdminCaller().serverName(sn)
+        .action((controller, stub) -> this
+            .<CompactRegionRequest, CompactRegionResponse, Void> adminCall(controller, stub,
+              RequestConverter.buildCompactRegionRequest(hri.getRegionName(), major, family),
+              (s, c, req, done) -> s.compactRegion(c, req, done), resp -> null))
+        .call();
   }
 
   private byte[] toEncodeRegionName(byte[] regionName) {
