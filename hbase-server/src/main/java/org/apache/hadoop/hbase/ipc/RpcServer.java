@@ -1168,7 +1168,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
      * @throws IOException
      */
     private boolean processResponse(final Call call) throws IOException {
-      LOG.info("processing " + call);
       boolean error = true;
       try {
         // Send as much data as we can in the non-blocking fashion
