@@ -3008,6 +3008,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       if (request.hasScannerId()) {
         rsh = getRegionScanner(request);
+        // The downstream projects such as AsyncHBase in OpenTSDB need this value. See HBASE-18000
+        // for more details.
+        builder.setScannerId(request.getScannerId());
       } else {
         rsh = newRegionScanner(request, builder);
       }
