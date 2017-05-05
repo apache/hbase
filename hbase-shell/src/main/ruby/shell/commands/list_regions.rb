@@ -25,17 +25,24 @@ module Shell
         return<<EOF
         List all regions for a particular table as an array and also filter them by server name (optional) as prefix
         and maximum locality (optional). By default, it will return all the regions for the table with any locality.
+        The command displays server name, region name, start key, end key, size of the region in MB, number of requests
+        and the locality. The information can be projected out via an array as third parameter. By default all these information
+        is displayed. Possible array values are SERVER_NAME, REGION_NAME, START_KEY, END_KEY, SIZE, REQ and LOCALITY. Values
+        are not case sensitive. If you don't want to filter by server name, pass an empty hash / string as shown below.
 
         Examples:
         hbase> list_regions 'table_name'
         hbase> list_regions 'table_name', 'server_name'
         hbase> list_regions 'table_name', {SERVER_NAME => 'server_name', LOCALITY_THRESHOLD => 0.8}
+        hbase> list_regions 'table_name', {SERVER_NAME => 'server_name', LOCALITY_THRESHOLD => 0.8}, ['SERVER_NAME']
+        hbase> list_regions 'table_name', {}, ['SERVER_NAME', 'start_key']
+        hbase> list_regions 'table_name', '', ['SERVER_NAME', 'start_key']
 
 EOF
         return
       end
 
-      def command(table_name, options = nil)
+      def command(table_name, options = nil, cols = nil)
         if options.nil?
           options = {}
         elsif not options.is_a? Hash
@@ -43,6 +50,34 @@ EOF
           # and create the hash internally
           options = {SERVER_NAME => options}
         end
+
+        size_hash = Hash.new
+        if cols.nil?
+            size_hash = { "SERVER_NAME" => 12, "REGION_NAME" => 12, "START_KEY" => 10, "END_KEY" => 10, "SIZE" => 5, "REQ" => 5, "LOCALITY" => 10 }
+        elsif cols.is_a?(Array)
+          cols.each do |col|
+            if col.upcase.eql?("SERVER_NAME")
+              size_hash.store("SERVER_NAME", 12)
+            elsif col.upcase.eql?("REGION_NAME")
+              size_hash.store("REGION_NAME", 12)
+            elsif col.upcase.eql?("START_KEY")
+              size_hash.store("START_KEY", 10)
+            elsif col.upcase.eql?("END_KEY")
+              size_hash.store("END_KEY", 10)
+            elsif col.upcase.eql?("SIZE")
+              size_hash.store("SIZE", 5)
+            elsif col.upcase.eql?("REQ")
+              size_hash.store("REQ", 5)
+            elsif col.upcase.eql?("LOCALITY")
+              size_hash.store("LOCALITY", 10)
+            else
+              raise "#{col} is not a valid column. Possible values are SERVER_NAME, REGION_NAME, START_KEY, END_KEY, SIZE, REQ, LOCALITY."
+            end
+          end
+        else
+          raise "#{cols} must be an array of strings. Possible values are SERVER_NAME, REGION_NAME, START_KEY, END_KEY, SIZE, REQ, LOCALITY."
+        end
+
         admin_instance = admin.instance_variable_get("@admin")
         conn_instance = admin_instance.getConnection()
         cluster_status = admin_instance.getClusterStatus()
@@ -64,19 +99,58 @@ EOF
             raise "#{LOCALITY_THRESHOLD} must be between 0 and 1.0, inclusive" unless valid_locality_threshold? value
             locality_threshold = value
           end
+
           regions.each do |hregion|
             hregion_info = hregion.getRegionInfo()
             server_name = hregion.getServerName()
             region_load_map = cluster_status.getLoad(server_name).getRegionsLoad()
             region_load = region_load_map.get(hregion_info.getRegionName())
+
             # Ignore regions which exceed our locality threshold
             if accept_region_for_locality? region_load.getDataLocality(), locality_threshold
-              startKey = Bytes.toString(hregion_info.getStartKey())
-              endKey = Bytes.toString(hregion_info.getEndKey())
-              region_store_file_size = region_load.getStorefileSizeMB()
-              region_requests = region_load.getRequestsCount()
-              results << { "server" => hregion.getServerName().toString(), "name" => hregion_info.getRegionNameAsString(), "startkey" => startKey, "endkey" => endKey,
-                 "size" => region_store_file_size, "requests" => region_requests, "locality" => region_load.getDataLocality() }
+              result_hash = Hash.new
+
+              if size_hash.key?("SERVER_NAME")
+                result_hash.store("SERVER_NAME", server_name.toString().strip)
+                size_hash["SERVER_NAME"] = [size_hash["SERVER_NAME"], server_name.toString().strip.length].max
+              end
+
+              if size_hash.key?("REGION_NAME")
+                result_hash.store("REGION_NAME", hregion_info.getRegionNameAsString().strip)
+                size_hash["REGION_NAME"] = [size_hash["REGION_NAME"], hregion_info.getRegionNameAsString().length].max
+              end
+
+              if size_hash.key?("START_KEY")
+                startKey = Bytes.toStringBinary(hregion_info.getStartKey()).strip
+                result_hash.store("START_KEY", startKey)
+                size_hash["START_KEY"] = [size_hash["START_KEY"], startKey.length].max
+              end
+
+              if size_hash.key?("END_KEY")
+                endKey = Bytes.toStringBinary(hregion_info.getEndKey()).strip
+                result_hash.store("END_KEY", endKey)
+                size_hash["END_KEY"] = [size_hash["END_KEY"], endKey.length].max
+              end
+
+              if size_hash.key?("SIZE")
+                region_store_file_size = region_load.getStorefileSizeMB().to_s.strip
+                result_hash.store("SIZE", region_store_file_size)
+                size_hash["SIZE"] = [size_hash["SIZE"], region_store_file_size.length].max
+              end
+
+              if size_hash.key?("REQ")
+                region_requests = region_load.getRequestsCount().to_s.strip
+                result_hash.store("REQ", region_requests)
+                size_hash["REQ"] = [size_hash["REQ"], region_requests.length].max
+              end
+
+              if size_hash.key?("LOCALITY")
+                locality = region_load.getDataLocality().to_s.strip
+                result_hash.store("LOCALITY", locality)
+                size_hash["LOCALITY"] = [size_hash["LOCALITY"], locality.length].max
+              end
+
+              results << result_hash
             end
           end
         ensure
@@ -85,13 +159,25 @@ EOF
 
         @end_time = Time.now
 
-        printf("%-60s | %-60s | %-15s | %-15s | %-20s | %-20s | %-20s", "SERVER_NAME", "REGION_NAME", "START_KEY", "END_KEY", "SIZE", "REQ", "LOCALITY");
-        printf("\n")
-        for result in results
-          printf("%-60s | %-60s | %-15s | %-15s | %-20s | %-20s | %-20s", result["server"], result["name"], result["startkey"], result["endkey"], result["size"], result["requests"], result['locality']);
-            printf("\n")
+        size_hash.each do | param, length |
+          printf(" %#{length}s |", param)
         end
-        printf("%d rows", results.size)
+        printf("\n")
+
+        size_hash.each do | param, length |
+          str = "-" * length
+          printf(" %#{length}s |", str)
+        end
+        printf("\n")
+
+        results.each do | result |
+          size_hash.each do | param, length |
+            printf(" %#{length}s |", result[param])
+          end
+          printf("\n")
+        end
+
+        printf(" %d rows\n", results.size)
 
       end
 
