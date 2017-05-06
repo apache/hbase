@@ -263,30 +263,34 @@ if defined service_entry (
 )
 
 @rem for jruby
-@rem (1) when JRUBY_HOME is defined
-@rem     for all commands, CLASSPATH and HBASE_OPTS are updated according to JRUBY_HOME specified
-@rem (2) when JRUBY_HOME is not defined
-@rem     A. for jruby-commands defined below, add JRUBY_PACKAGED_WITH_HBASE into CLASSPATH
-@rem     B. for other commands, do nothing
+@rem (1) for the commands which need jruby (see jruby-commands defined below)
+@rem     A. when JRUBY_HOME is defined
+@rem        CLASSPATH and HBASE_OPTS are updated according to JRUBY_HOME defined
+@rem     B. when JRUBY_HOME is not defined
+@rem        add jruby packaged with HBase to CLASSPATH
+@rem (2) for other commands, do nothing
 
-@rem JRUBY_HOME is defined
-if defined JRUBY_HOME (
-  set CLASSPATH=%CLASSPATH%;%JRUBY_HOME%\lib\jruby.jar
-  set HBASE_OPTS=%HBASE_OPTS% -Djruby.home="%JRUBY_HOME%" -Djruby.lib="%JRUBY_HOME%\lib"
+@rem check if the commmand needs jruby
+set jruby-commands=shell org.jruby.Main
+for %%i in ( %jruby-commands% ) do (
+  if "%hbase-command%"=="%%i" set jruby-needed=true
 )
 
-@rem JRUBY_HOME is not defined
-if not defined JRUBY_HOME (
-  @rem check if the commmand needs jruby
-  set jruby-commands=shell org.jruby.Main
-  for %%i in ( !jruby-commands! ) do (
-    if "%hbase-command%"=="%%i" set jruby-needed=true
+@rem the command needs jruby
+if defined jruby-needed (
+  @rem JRUBY_HOME is defined
+  if defined JRUBY_HOME (
+    set CLASSPATH=%JRUBY_HOME%\lib\jruby.jar;%CLASSPATH%
+    set HBASE_OPTS=%HBASE_OPTS% -Djruby.home="%JRUBY_HOME%" -Djruby.lib="%JRUBY_HOME%\lib"
   )
 
-  @rem add JRUBY_PACKAGED_WITH_HBASE to CLASSPATH if jruby is needed
-  set JRUBY_PACKAGED_WITH_HBASE=%HBASE_HOME%\lib\ruby\*
-  if defined jruby-needed (
-    set CLASSPATH=!JRUBY_PACKAGED_WITH_HBASE!;!CLASSPATH!
+  @rem JRUBY_HOME is not defined
+  if not defined JRUBY_HOME (
+    @rem add jruby packaged with HBase to CLASSPATH
+    set JRUBY_PACKAGED_WITH_HBASE=%HBASE_HOME%\lib\ruby\*
+    if defined jruby-needed (
+      set CLASSPATH=!JRUBY_PACKAGED_WITH_HBASE!;!CLASSPATH!
+    )
   )
 )
 
