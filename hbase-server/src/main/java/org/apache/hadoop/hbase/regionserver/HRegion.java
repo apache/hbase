@@ -664,10 +664,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final Durability durability;
   private final boolean regionStatsEnabled;
 
-  // flag and lock for MVCC preassign
-  private final boolean mvccPreAssign;
-  private final ReentrantLock preAssignMvccLock;
-
   // whether to unassign region if we hit FNFE
   private final RegionUnassigner regionUnassigner;
   /**
@@ -820,13 +816,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
               HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
 
-    // get mvcc pre-assign flag and lock
-    this.mvccPreAssign = conf.getBoolean(HREGION_MVCC_PRE_ASSIGN, DEFAULT_HREGION_MVCC_PRE_ASSIGN);
-    if (this.mvccPreAssign) {
-      this.preAssignMvccLock = new ReentrantLock();
-    } else {
-      this.preAssignMvccLock = null;
-    }
     boolean unassignForFNFE =
         conf.getBoolean(HREGION_UNASSIGN_FOR_FNFE, DEFAULT_HREGION_UNASSIGN_FOR_FNFE);
     if (unassignForFNFE) {
@@ -2674,9 +2663,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // a timeout. May happen in tests after we tightened the semantic via HBASE-14317.
     // Also, the getSequenceId blocks on a latch. There is no global list of outstanding latches
     // so if an abort or stop, there is no way to call them in.
-    WALKey key = this.appendEmptyEdit(wal, null);
+    WALKey key = this.appendEmptyEdit(wal);
     mvcc.complete(key.getWriteEntry());
-    return key.getSequenceId(this.maxWaitForSeqId);
+    return key.getSequenceId();
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -3418,29 +3407,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               this.wal.append(this.htableDescriptor, this.getRegionInfo(), walKey, walEdit, true);
         }
       } else {
-        try {
-          if (mvccPreAssign) {
-            preAssignMvccLock.lock();
-            writeEntry = mvcc.begin();
-          }
-          if (walEdit.size() > 0) {
-            // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
-            walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-                this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
-                mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc);
-            if (mvccPreAssign) {
-              walKey.setPreAssignedWriteEntry(writeEntry);
-            }
-            txid =
-                this.wal.append(this.htableDescriptor, this.getRegionInfo(), walKey, walEdit, true);
-          } else {
-            // If this is a skip wal operation just get the read point from mvcc
-            walKey = this.appendEmptyEdit(this.wal, writeEntry);
-          }
-        } finally {
-          if (mvccPreAssign) {
-            preAssignMvccLock.unlock();
-          }
+        if (walEdit.size() > 0) {
+          // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
+          walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+              this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
+              mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc);
+          txid = this.wal
+              .append(this.htableDescriptor, this.getRegionInfo(), walKey,
+                  walEdit, true);
+        } else {
+          walKey = appendEmptyEdit(wal);
         }
       }
       // ------------------------------------
@@ -3478,7 +3454,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // before apply to memstore to avoid scan return incorrect value.
         // we use durability of the original mutation for the mutation passed by CP.
         boolean updateSeqId = isInReplay
-            || batchOp.getMutation(i).getDurability() == Durability.SKIP_WAL || mvccPreAssign;
+            || batchOp.getMutation(i).getDurability() == Durability.SKIP_WAL;
         if (updateSeqId) {
           updateSequenceId(familyMaps[i].values(), mvccNum);
         }
@@ -7402,7 +7378,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if(walKey == null){
             // since we use wal sequence Id as mvcc, for SKIP_WAL changes we need a "faked" WALEdit
             // to get a sequence id assigned which is done by FSWALEntry#stampRegionSequenceId
-            walKey = this.appendEmptyEdit(this.wal, null);
+            walKey = this.appendEmptyEdit(this.wal);
           }
 
           // 7. Start mvcc transaction
@@ -7701,7 +7677,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           boolean updateSeqId = false;
           if (walKey == null) {
             // Append a faked WALEdit in order for SKIP_WAL updates to get mvcc assigned
-            walKey = this.appendEmptyEdit(this.wal, null);
+            walKey = this.appendEmptyEdit(this.wal);
             // If no WAL, FSWALEntry won't be used and no update for sequence id
             updateSeqId = true;
           }
@@ -7934,7 +7910,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               this.wal.append(this.htableDescriptor, this.getRegionInfo(), walKey, walEdits, true);
           } else {
             // Append a faked WALEdit in order for SKIP_WAL updates to get mvccNum assigned
-            walKey = this.appendEmptyEdit(this.wal, null);
+            walKey = this.appendEmptyEdit(this.wal);
             // If no WAL, FSWALEntry won't be used and no update for sequence id
             updateSeqId = true;
           }
@@ -8160,9 +8136,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      47 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
+      46 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
-      6 * Bytes.SIZEOF_BOOLEAN);
+      5 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
@@ -8744,19 +8720,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Append a faked WALEdit in order to get a long sequence number and wal syncer will just ignore
    * the WALEdit append later.
    * @param wal
-   * @param writeEntry Preassigned writeEntry, if any
    * @return Return the key used appending with no sync and no append.
    * @throws IOException
    */
-  private WALKey appendEmptyEdit(final WAL wal, WriteEntry writeEntry) throws IOException {
+  private WALKey appendEmptyEdit(final WAL wal) throws IOException {
     // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
     @SuppressWarnings("deprecation")
     WALKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(),
       getRegionInfo().getTable(), WALKey.NO_SEQUENCE_ID, 0, null,
       HConstants.NO_NONCE, HConstants.NO_NONCE, getMVCC());
-    if (writeEntry != null) {
-      key.setPreAssignedWriteEntry(writeEntry);
-    }
 
     // Call append but with an empty WALEdit.  The returned sequence id will not be associated
     // with any edit and we can be sure it went in after all outstanding appends.

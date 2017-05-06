@@ -48,6 +48,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.lmax.disruptor.*;
+import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -65,6 +67,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.DrainBarrier;
@@ -89,11 +92,6 @@ import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.lmax.disruptor.BlockingWaitStrategy;
-import com.lmax.disruptor.EventHandler;
-import com.lmax.disruptor.ExceptionHandler;
-import com.lmax.disruptor.LifecycleAware;
-import com.lmax.disruptor.TimeoutException;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 
@@ -1112,21 +1110,22 @@ public class FSHLog implements WAL {
     // Make a trace scope for the append.  It is closed on other side of the ring buffer by the
     // single consuming thread.  Don't have to worry about it.
     TraceScope scope = Trace.startSpan("FSHLog.append");
-
-    // This is crazy how much it takes to make an edit.  Do we need all this stuff!!!!????  We need
-    // all this to make a key and then below to append the edit, we need to carry htd, info,
-    // etc. all over the ring buffer.
-    FSWALEntry entry = null;
-    long sequence = this.disruptor.getRingBuffer().next();
+    final MutableLong txidHolder = new MutableLong();
+    final RingBuffer<RingBufferTruck> ringBuffer = disruptor.getRingBuffer();
+    MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin(new Runnable() {
+      @Override public void run() {
+        txidHolder.setValue(ringBuffer.next());
+      }
+    });
+    long txid = txidHolder.longValue();
     try {
-      RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
-      // TODO: reuse FSWALEntry as we do SyncFuture rather create per append.
-      entry = new FSWALEntry(sequence, key, edits, htd, hri, inMemstore);
-      truck.loadPayload(entry, scope.detach());
+      FSWALEntry entry = new FSWALEntry(txid, key, edits, htd, hri, inMemstore);
+      entry.stampRegionSequenceId(we);
+      ringBuffer.get(txid).loadPayload(entry, scope.detach());
     } finally {
-      this.disruptor.getRingBuffer().publish(sequence);
+      ringBuffer.publish(txid);
     }
-    return sequence;
+    return txid;
   }
 
   /**
@@ -1814,12 +1813,6 @@ public class FSHLog implements WAL {
           try {
             FSWALEntry entry = truck.unloadFSWALEntryPayload();
             if (this.exception != null) {
-              // We got an exception on an earlier attempt at append. Do not let this append
-              // go through. Fail it but stamp the sequenceid into this append though failed.
-              // We need to do this to close the latch held down deep in WALKey...that is waiting
-              // on sequenceid assignment otherwise it will just hang out (The #append method
-              // called below does this also internally).
-              entry.stampRegionSequenceId();
               // Return to keep processing events coming off the ringbuffer
               return;
             }
@@ -1940,10 +1933,8 @@ public class FSHLog implements WAL {
       byte [] encodedRegionName = entry.getKey().getEncodedRegionName();
       long regionSequenceId = WALKey.NO_SEQUENCE_ID;
       try {
-        // We are about to append this edit; update the region-scoped sequence number.  Do it
-        // here inside this single appending/writing thread.  Events are ordered on the ringbuffer
-        // so region sequenceids will also be in order.
-        regionSequenceId = entry.stampRegionSequenceId();
+
+        regionSequenceId = entry.getKey().getSequenceId();
         // Edits are empty, there is nothing to append.  Maybe empty when we are looking for a
         // region sequence id only, a region edit/sequence id that is not associated with an actual
         // edit. It has to go through all the rigmarole to be sure we have the right ordering.

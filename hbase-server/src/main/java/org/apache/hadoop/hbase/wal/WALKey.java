@@ -95,37 +95,16 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    */
   @InterfaceAudience.Private // For internal use only.
   public MultiVersionConcurrencyControl.WriteEntry getWriteEntry() throws InterruptedIOException {
-    if (this.preAssignedWriteEntry != null) {
-      // don't wait for seqNumAssignedLatch if writeEntry is preassigned
-      return this.preAssignedWriteEntry;
-    }
-    try {
-      this.seqNumAssignedLatch.await();
-    } catch (InterruptedException ie) {
-      // If interrupted... clear out our entry else we can block up mvcc.
-      MultiVersionConcurrencyControl mvcc = getMvcc();
-      LOG.debug("mvcc=" + mvcc + ", writeEntry=" + this.writeEntry);
-      if (mvcc != null) {
-        if (this.writeEntry != null) {
-          mvcc.complete(this.writeEntry);
-        }
-      }
-      InterruptedIOException iie = new InterruptedIOException();
-      iie.initCause(ie);
-      throw iie;
-    }
+    assert this.writeEntry != null;
     return this.writeEntry;
   }
 
   @InterfaceAudience.Private // For internal use only.
   public void setWriteEntry(MultiVersionConcurrencyControl.WriteEntry writeEntry) {
-    assert this.writeEntry == null : "Non-null writeEntry when trying to set one";
+    assert this.writeEntry == null;
     this.writeEntry = writeEntry;
     // Set our sequenceid now using WriteEntry.
-    if (this.writeEntry != null) {
-      this.logSeqNum = this.writeEntry.getWriteNumber();
-    }
-    this.seqNumAssignedLatch.countDown();
+    this.logSeqNum = writeEntry.getWriteNumber();
   }
 
   // should be < 0 (@see HLogKey#readFields(DataInput))
@@ -189,7 +168,6 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   @InterfaceAudience.Private
   protected long logSeqNum;
   private long origLogSeqNum = 0;
-  private CountDownLatch seqNumAssignedLatch = new CountDownLatch(1);
   // Time at which this edit was written.
   // visible for deprecated HLogKey
   @InterfaceAudience.Private
@@ -206,7 +184,6 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   private long nonce = HConstants.NO_NONCE;
   private MultiVersionConcurrencyControl mvcc;
   private MultiVersionConcurrencyControl.WriteEntry writeEntry;
-  private MultiVersionConcurrencyControl.WriteEntry preAssignedWriteEntry = null;
   public static final List<UUID> EMPTY_UUIDS = Collections.unmodifiableList(new ArrayList<UUID>());
 
   // visible for deprecated HLogKey
@@ -393,36 +370,6 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    */
   @Override
   public long getSequenceId() throws IOException {
-    return getSequenceId(-1);
-  }
-
-  /**
-   * Wait for sequence number to be assigned &amp; return the assigned value.
-   * @param maxWaitForSeqId maximum time to wait in milliseconds for sequenceid
-   * @return long the new assigned sequence number
-   * @throws IOException
-   */
-  public long getSequenceId(final long maxWaitForSeqId) throws IOException {
-    // TODO: This implementation waiting on a latch is problematic because if a higher level
-    // determines we should stop or abort, there is no global list of all these blocked WALKeys
-    // waiting on a sequence id; they can't be cancelled... interrupted. See getNextSequenceId.
-    //
-    // UPDATE: I think we can remove the timeout now we are stamping all walkeys with sequenceid,
-    // even those that have failed (previously we were not... so they would just hang out...).
-    // St.Ack 20150910
-    try {
-      if (maxWaitForSeqId < 0) {
-        this.seqNumAssignedLatch.await();
-      } else if (!this.seqNumAssignedLatch.await(maxWaitForSeqId, TimeUnit.MILLISECONDS)) {
-        throw new TimeoutIOException("Failed to get sequenceid after " + maxWaitForSeqId +
-          "ms; WAL system stuck or has gone away?");
-      }
-    } catch (InterruptedException ie) {
-      LOG.warn("Thread interrupted waiting for next log sequence number");
-      InterruptedIOException iie = new InterruptedIOException();
-      iie.initCause(ie);
-      throw iie;
-    }
     return this.logSeqNum;
   }
 
@@ -667,23 +614,4 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     }
   }
 
-  /**
-   * @return The preassigned writeEntry, if any
-   */
-  @InterfaceAudience.Private // For internal use only.
-  public MultiVersionConcurrencyControl.WriteEntry getPreAssignedWriteEntry() {
-    return this.preAssignedWriteEntry;
-  }
-
-  /**
-   * Preassign writeEntry
-   * @param writeEntry the entry to assign
-   */
-  @InterfaceAudience.Private // For internal use only.
-  public void setPreAssignedWriteEntry(WriteEntry writeEntry) {
-    if (writeEntry != null) {
-      this.preAssignedWriteEntry = writeEntry;
-      this.logSeqNum = writeEntry.getWriteNumber();
-    }
-  }
 }

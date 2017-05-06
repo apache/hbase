@@ -106,34 +106,19 @@ class FSWALEntry extends Entry {
 
   /**
    * Here is where a WAL edit gets its sequenceid.
+   * @param we after HBASE-17471 we already get the mvcc number
+   * in WriteEntry, just stamp the writenumber to cells and walkey
    * @return The sequenceid we stamped on this edit.
    * @throws IOException
    */
-  long stampRegionSequenceId() throws IOException {
-    long regionSequenceId = WALKey.NO_SEQUENCE_ID;
-    WALKey key = getKey();
-    MultiVersionConcurrencyControl.WriteEntry we = key.getPreAssignedWriteEntry();
-    boolean preAssigned = (we != null);
-    if (!preAssigned) {
-      MultiVersionConcurrencyControl mvcc = key.getMvcc();
-      if (mvcc != null) {
-        we = mvcc.begin();
-      }
-    }
-    if (we != null) {
-      regionSequenceId = we.getWriteNumber();
-    }
-
+  long stampRegionSequenceId(MultiVersionConcurrencyControl.WriteEntry we) throws IOException {
+    long regionSequenceId = we.getWriteNumber();
     if (!this.getEdit().isReplay() && inMemstore) {
-      for (Cell c:getEdit().getCells()) {
+      for (Cell c : getEdit().getCells()) {
         CellUtil.setSequenceId(c, regionSequenceId);
       }
     }
-
-    // This has to stay in this order
-    if (!preAssigned) {
-      key.setWriteEntry(we);
-    }
+    getKey().setWriteEntry(we);
     return regionSequenceId;
   }
 

@@ -216,13 +216,15 @@ public class TestWALLockup {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     final HRegion region = initHRegion(tableName, null, null, dodgyWAL);
     byte [] bytes = Bytes.toBytes(getName());
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     try {
       // First get something into memstore. Make a Put and then pull the Cell out of it. Will
       // manage append and sync carefully in below to manufacture hang. We keep adding same
       // edit. WAL subsystem doesn't care.
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
-      WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), htd.getTableName());
+      WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
+          htd.getTableName(), System.currentTimeMillis(), mvcc);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -388,12 +390,12 @@ public class TestWALLockup {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     final HRegion region = initHRegion(tableName, null, null, dodgyWAL1);
     byte[] bytes = Bytes.toBytes(getName());
-
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     try {
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
       WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
-          htd.getTableName());
+          htd.getTableName(), System.currentTimeMillis(), mvcc);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -425,7 +427,7 @@ public class TestWALLockup {
       // make RingBufferEventHandler sleep 1s, so the following sync
       // endOfBatch=false
       key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
-          TableName.valueOf("sleep"));
+          TableName.valueOf("sleep"), System.currentTimeMillis(), mvcc);
       dodgyWAL2.append(htd, region.getRegionInfo(), key, edit, true);
 
       Thread t = new Thread("Sync") {
@@ -449,7 +451,7 @@ public class TestWALLockup {
       }
       // make append throw DamagedWALException
       key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
-          TableName.valueOf("DamagedWALException"));
+          TableName.valueOf("DamagedWALException"), System.currentTimeMillis(), mvcc);
       dodgyWAL2.append(htd, region.getRegionInfo(), key, edit, true);
 
       while (latch.getCount() > 0) {

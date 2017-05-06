@@ -1170,7 +1170,7 @@ public class TestWALReplay {
     FSWALEntry entry =
         new FSWALEntry(sequence, createWALKey(htd.getTableName(), hri, mvcc), createWALEdit(
           rowName, family, ee, index), htd, hri, true);
-    entry.stampRegionSequenceId();
+    entry.stampRegionSequenceId(mvcc.begin());
     return entry;
   }
 

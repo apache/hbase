@@ -370,12 +370,12 @@ public class TestWALFactory {
 
     HTableDescriptor htd = new HTableDescriptor();
     htd.addFamily(new HColumnDescriptor(tableName.getName()));
-
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
       wal.append(htd, regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis()), kvs,  true);
+          System.currentTimeMillis(), mvcc), kvs,  true);
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync();

@@ -242,7 +242,9 @@ public class TestWALObserver {
     // it's where WAL write cp should occur.
     long now = EnvironmentEdgeManager.currentTime();
     // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
-    long txid = log.append(htd, hri, new HLogKey(hri.getEncodedNameAsBytes(), hri.getTable(), now),
+    long txid = log.append(htd, hri,
+        new HLogKey(hri.getEncodedNameAsBytes(), hri.getTable(), now,
+            new MultiVersionConcurrencyControl()),
         edit, true);
     log.sync(txid);
 
@@ -326,7 +328,7 @@ public class TestWALObserver {
 
     LOG.debug("write a log edit that supports legacy cps.");
     final long now = EnvironmentEdgeManager.currentTime();
-    final WALKey legacyKey = new HLogKey(hri.getEncodedNameAsBytes(), hri.getTable(), now);
+    final WALKey legacyKey = new HLogKey(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc);
     final WALEdit edit = new WALEdit();
     final byte[] nonce = Bytes.toBytes("1772");
     edit.add(new KeyValue(TEST_ROW, TEST_FAMILY[0], nonce, now, nonce));
