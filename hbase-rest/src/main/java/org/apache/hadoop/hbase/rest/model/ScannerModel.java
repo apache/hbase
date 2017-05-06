@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.rest.model;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -472,10 +470,6 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
 
   }
-
-  // The singleton <code>JacksonJaxbJsonProvider</code> instance
-  private static JacksonJaxbJsonProvider jsonProvider;
-  private static final Object jsonProviderLock = new Object();
 
   /**
    * Get the <code>JacksonJaxbJsonProvider</code> instance;
