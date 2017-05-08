@@ -30,6 +30,11 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -44,18 +49,16 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.ipc.RpcServer.Call;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandlerImpl;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,17 +66,10 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 
 @Category({RPCTests.class, SmallTests.class})
 public class TestSimpleRpcScheduler {/*
@@ -167,7 +163,7 @@ public class TestSimpleRpcScheduler {/*
   }
 
   private CallRunner createMockTask() {
-    Call call = mock(Call.class);
+    ServerCall call = mock(ServerCall.class);
     CallRunner task = mock(CallRunner.class);
     when(task.getRpcCall()).thenReturn(call);
     return task;
@@ -195,19 +191,19 @@ public class TestSimpleRpcScheduler {/*
       scheduler.start();
 
       CallRunner smallCallTask = mock(CallRunner.class);
-      RpcServer.Call smallCall = mock(RpcServer.Call.class);
+      ServerCall smallCall = mock(ServerCall.class);
       RequestHeader smallHead = RequestHeader.newBuilder().setCallId(1).build();
       when(smallCallTask.getRpcCall()).thenReturn(smallCall);
       when(smallCall.getHeader()).thenReturn(smallHead);
 
       CallRunner largeCallTask = mock(CallRunner.class);
-      RpcServer.Call largeCall = mock(RpcServer.Call.class);
+      ServerCall largeCall = mock(ServerCall.class);
       RequestHeader largeHead = RequestHeader.newBuilder().setCallId(50).build();
       when(largeCallTask.getRpcCall()).thenReturn(largeCall);
       when(largeCall.getHeader()).thenReturn(largeHead);
 
       CallRunner hugeCallTask = mock(CallRunner.class);
-      RpcServer.Call hugeCall = mock(RpcServer.Call.class);
+      ServerCall hugeCall = mock(ServerCall.class);
       RequestHeader hugeHead = RequestHeader.newBuilder().setCallId(100).build();
       when(hugeCallTask.getRpcCall()).thenReturn(hugeCall);
       when(hugeCall.getHeader()).thenReturn(hugeHead);
@@ -290,7 +286,7 @@ public class TestSimpleRpcScheduler {/*
       scheduler.start();
 
       CallRunner putCallTask = mock(CallRunner.class);
-      RpcServer.Call putCall = mock(RpcServer.Call.class);
+      ServerCall putCall = mock(ServerCall.class);
       putCall.param = RequestConverter.buildMutateRequest(
           Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
       RequestHeader putHead = RequestHeader.newBuilder().setMethodName("mutate").build();
@@ -299,13 +295,13 @@ public class TestSimpleRpcScheduler {/*
       when(putCall.getParam()).thenReturn(putCall.param);
 
       CallRunner getCallTask = mock(CallRunner.class);
-      RpcServer.Call getCall = mock(RpcServer.Call.class);
+      ServerCall getCall = mock(ServerCall.class);
       RequestHeader getHead = RequestHeader.newBuilder().setMethodName("get").build();
       when(getCallTask.getRpcCall()).thenReturn(getCall);
       when(getCall.getHeader()).thenReturn(getHead);
 
       CallRunner scanCallTask = mock(CallRunner.class);
-      RpcServer.Call scanCall = mock(RpcServer.Call.class);
+      ServerCall scanCall = mock(ServerCall.class);
       scanCall.param = ScanRequest.newBuilder().setScannerId(1).build();
       RequestHeader scanHead = RequestHeader.newBuilder().setMethodName("scan").build();
       when(scanCallTask.getRpcCall()).thenReturn(scanCall);
@@ -382,7 +378,7 @@ public class TestSimpleRpcScheduler {/*
       scheduler.start();
 
       CallRunner putCallTask = mock(CallRunner.class);
-      RpcServer.Call putCall = mock(RpcServer.Call.class);
+      ServerCall putCall = mock(ServerCall.class);
       putCall.param = RequestConverter.buildMutateRequest(
         Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
       RequestHeader putHead = RequestHeader.newBuilder().setMethodName("mutate").build();
@@ -506,19 +502,15 @@ public class TestSimpleRpcScheduler {/*
   // Get mocked call that has the CallRunner sleep for a while so that the fast
   // path isn't hit.
   private CallRunner getMockedCallRunner(long timestamp, final long sleepTime) throws IOException {
-    final RpcServer.Call putCall = mock(RpcServer.Call.class);
+    ServerCall putCall = new ServerCall(1, null, null,
+        RPCProtos.RequestHeader.newBuilder().setMethodName("mutate").build(),
+        RequestConverter.buildMutateRequest(Bytes.toBytes("abc"), new Put(Bytes.toBytes("row"))),
+        null, null, 9, null, null, timestamp, 0, null, null, null) {
 
-    putCall.timestamp = timestamp;
-    putCall.param = RequestConverter.buildMutateRequest(
-        Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
-
-    RPCProtos.RequestHeader putHead = RPCProtos.RequestHeader.newBuilder()
-                                                             .setMethodName("mutate")
-                                                             .build();
-    when(putCall.getSize()).thenReturn(9L);
-    when(putCall.getHeader()).thenReturn(putHead);
-    when(putCall.getReceiveTime()).thenReturn(putCall.timestamp);
-    when(putCall.getParam()).thenReturn(putCall.param);
+      @Override
+      public void sendResponseIfReady() throws IOException {
+      }
+    };
 
     CallRunner cr = new CallRunner(null, putCall) {
       public void run() {
@@ -530,11 +522,13 @@ public class TestSimpleRpcScheduler {/*
         } catch (InterruptedException e) {
         }
       }
+
       public RpcCall getRpcCall() {
         return putCall;
       }
 
-      public void drop() {}
+      public void drop() {
+      }
     };
 
     return cr;

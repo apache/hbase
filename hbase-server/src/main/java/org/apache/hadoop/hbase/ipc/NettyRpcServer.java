@@ -59,7 +59,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -203,13 +202,14 @@ public class NettyRpcServer extends RpcServer {
         this.hostAddress = inetSocketAddress.getAddress().getHostAddress();
       }
       this.remotePort = inetSocketAddress.getPort();
-      this.saslCall = new Call(SASL_CALLID, null, null, null, null, null, this,
-          0, null, null, 0, null);
-      this.setConnectionHeaderResponseCall = new Call(
-          CONNECTION_HEADER_RESPONSE_CALLID, null, null, null, null, null,
-          this, 0, null, null, 0, null);
-      this.authFailedCall = new Call(AUTHORIZATION_FAILED_CALLID, null, null,
-          null, null, null, this, 0, null, null, 0, null);
+      this.saslCall = new NettyServerCall(SASL_CALLID, null, null, null, null, null, this, 0, null,
+          null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null);
+      this.setConnectionHeaderResponseCall =
+          new NettyServerCall(CONNECTION_HEADER_RESPONSE_CALLID, null, null, null, null, null, this,
+              0, null, null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null);
+      this.authFailedCall =
+          new NettyServerCall(AUTHORIZATION_FAILED_CALLID, null, null, null, null, null, this, 0,
+              null, null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null);
     }
 
     void readPreamble(ByteBuf buffer) throws IOException {
@@ -243,7 +243,7 @@ public class NettyRpcServer extends RpcServer {
           AccessDeniedException ae = new AccessDeniedException(
               "Authentication is required");
           setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
-          ((Call) authFailedCall)
+          ((NettyServerCall) authFailedCall)
               .sendResponseIfReady(ChannelFutureListener.CLOSE);
           return;
         }
@@ -269,8 +269,8 @@ public class NettyRpcServer extends RpcServer {
 
     private void doBadPreambleHandling(final String msg, final Exception e) throws IOException {
       LOG.warn(msg);
-      Call fakeCall = new Call(-1, null, null, null, null, null, this, -1,
-          null, null, 0, null);
+      NettyServerCall fakeCall = new NettyServerCall(-1, null, null, null, null, null, this, -1,
+          null, null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null);
       setupResponse(null, fakeCall, e, msg);
       // closes out the connection.
       fakeCall.sendResponseIfReady(ChannelFutureListener.CLOSE);
@@ -336,57 +336,15 @@ public class NettyRpcServer extends RpcServer {
     }
 
     @Override
-    public RpcServer.Call createCall(int id, final BlockingService service,
+    public ServerCall createCall(int id, final BlockingService service,
         final MethodDescriptor md, RequestHeader header, Message param,
         CellScanner cellScanner, RpcServer.Connection connection, long size,
         TraceInfo tinfo, final InetAddress remoteAddress, int timeout,
         CallCleanup reqCleanup) {
-      return new Call(id, service, md, header, param, cellScanner, connection,
-          size, tinfo, remoteAddress, timeout, reqCleanup);
+      return new NettyServerCall(id, service, md, header, param, cellScanner, connection, size,
+          tinfo, remoteAddress, System.currentTimeMillis(), timeout, reservoir, cellBlockBuilder,
+          reqCleanup);
     }
-  }
-
-  /**
-   * Datastructure that holds all necessary to a method invocation and then afterward, carries the
-   * result.
-   */
-  @InterfaceStability.Evolving
-  public class Call extends RpcServer.Call {
-
-    Call(int id, final BlockingService service, final MethodDescriptor md,
-        RequestHeader header, Message param, CellScanner cellScanner,
-        RpcServer.Connection connection, long size, TraceInfo tinfo,
-        final InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
-      super(id, service, md, header, param, cellScanner,
-          connection, size, tinfo, remoteAddress, timeout, reqCleanup);
-    }
-
-    @Override
-    public long disconnectSince() {
-      if (!getConnection().isConnectionOpen()) {
-        return System.currentTimeMillis() - timestamp;
-      } else {
-        return -1L;
-      }
-    }
-
-    NettyConnection getConnection() {
-      return (NettyConnection) this.connection;
-    }
-
-    /**
-     * If we have a response, and delay is not set, then respond immediately. Otherwise, do not
-     * respond to client. This is called by the RPC code in the context of the Handler thread.
-     */
-    @Override
-    public synchronized void sendResponseIfReady() throws IOException {
-      getConnection().channel.writeAndFlush(this);
-    }
-
-    public synchronized void sendResponseIfReady(ChannelFutureListener listener) throws IOException {
-      getConnection().channel.writeAndFlush(this).addListener(listener);
-    }
-
   }
 
   private class Initializer extends ChannelInitializer<SocketChannel> {
@@ -483,7 +441,7 @@ public class NettyRpcServer extends RpcServer {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-      final Call call = (Call) msg;
+      final NettyServerCall call = (NettyServerCall) msg;
       ByteBuf response = Unpooled.wrappedBuffer(call.response.getBuffers());
       ctx.write(response, promise).addListener(new CallWriteListener(call));
     }
@@ -492,9 +450,9 @@ public class NettyRpcServer extends RpcServer {
 
   private class CallWriteListener implements ChannelFutureListener {
 
-    private Call call;
+    private NettyServerCall call;
 
-    CallWriteListener(Call call) {
+    CallWriteListener(NettyServerCall call) {
       this.call = call;
     }
 
@@ -527,14 +485,11 @@ public class NettyRpcServer extends RpcServer {
   }
 
   @Override
-  public Pair<Message, CellScanner> call(BlockingService service,
-      MethodDescriptor md, Message param, CellScanner cellScanner,
-      long receiveTime, MonitoredRPCHandler status, long startTime, int timeout)
-      throws IOException {
-    Call fakeCall = new Call(-1, service, md, null, param, cellScanner, null,
-        -1, null, null, timeout, null);
-    fakeCall.setReceiveTime(receiveTime);
+  public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
+      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
+      long startTime, int timeout) throws IOException {
+    NettyServerCall fakeCall = new NettyServerCall(-1, service, md, null, param, cellScanner, null,
+        -1, null, null, receiveTime, timeout, reservoir, cellBlockBuilder, null);
     return call(fakeCall, status);
   }
-
 }

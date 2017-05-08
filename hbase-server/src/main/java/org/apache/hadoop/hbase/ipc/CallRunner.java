@@ -75,8 +75,8 @@ public class CallRunner {
    * @deprecated As of release 2.0, this will be removed in HBase 3.0
    */
   @Deprecated
-  public RpcServer.Call getCall() {
-    return (RpcServer.Call) call;
+  public ServerCall getCall() {
+    return (ServerCall) call;
   }
 
   public void setStatus(MonitoredRPCHandler status) {

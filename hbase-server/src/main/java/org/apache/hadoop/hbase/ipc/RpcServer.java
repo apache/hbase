@@ -62,9 +62,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
-import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
@@ -88,7 +86,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteInput;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
@@ -98,13 +95,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.BytesWritable;
@@ -120,7 +113,6 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.TraceInfo;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -265,475 +257,6 @@ public abstract class RpcServer implements RpcServerInterface,
    */
   private RSRpcServices rsRpcServices;
 
-  /**
-   * Datastructure that holds all necessary to a method invocation and then afterward, carries
-   * the result.
-   */
-  @InterfaceStability.Evolving
-  @InterfaceAudience.Private
-  public abstract class Call implements RpcCall {
-    protected int id;                             // the client's call id
-    protected BlockingService service;
-    protected MethodDescriptor md;
-    protected RequestHeader header;
-    protected Message param;                      // the parameter passed
-    // Optional cell data passed outside of protobufs.
-    protected CellScanner cellScanner;
-    protected Connection connection;              // connection to client
-    protected long timestamp;      // the time received when response is null
-                                   // the time served when response is not null
-    protected int timeout;
-    protected long startTime;
-    protected long deadline;// the deadline to handle this call, if exceed we can drop it.
-
-    /**
-     * Chain of buffers to send as response.
-     */
-    protected BufferChain response;
-
-    protected long size;                          // size of current call
-    protected boolean isError;
-    protected TraceInfo tinfo;
-    protected ByteBufferListOutputStream cellBlockStream = null;
-    protected CallCleanup reqCleanup = null;
-
-    protected User user;
-    protected InetAddress remoteAddress;
-    protected RpcCallback rpcCallback;
-
-    private long responseCellSize = 0;
-    private long responseBlockSize = 0;
-    // cumulative size of serialized exceptions
-    private long exceptionSize = 0;
-    private boolean retryImmediatelySupported;
-
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
-        justification="Can't figure why this complaint is happening... see below")
-    Call(int id, final BlockingService service, final MethodDescriptor md,
-        RequestHeader header, Message param, CellScanner cellScanner,
-        Connection connection, long size, TraceInfo tinfo,
-        final InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
-      this.id = id;
-      this.service = service;
-      this.md = md;
-      this.header = header;
-      this.param = param;
-      this.cellScanner = cellScanner;
-      this.connection = connection;
-      this.timestamp = System.currentTimeMillis();
-      this.response = null;
-      this.isError = false;
-      this.size = size;
-      this.tinfo = tinfo;
-      this.user = connection == null? null: connection.user; // FindBugs: NP_NULL_ON_SOME_PATH
-      this.remoteAddress = remoteAddress;
-      this.retryImmediatelySupported =
-          connection == null? null: connection.retryImmediatelySupported;
-      this.timeout = timeout;
-      this.deadline = this.timeout > 0 ? this.timestamp + this.timeout : Long.MAX_VALUE;
-      this.reqCleanup = reqCleanup;
-    }
-
-    /**
-     * Call is done. Execution happened and we returned results to client. It is
-     * now safe to cleanup.
-     */
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
-        justification = "Presume the lock on processing request held by caller is protection enough")
-    void done() {
-      if (this.cellBlockStream != null) {
-        // This will return back the BBs which we got from pool.
-        this.cellBlockStream.releaseResources();
-        this.cellBlockStream = null;
-      }
-      // If the call was run successfuly, we might have already returned the BB
-      // back to pool. No worries..Then inputCellBlock will be null
-      cleanup();
-    }
-
-    @Override
-    public void cleanup() {
-      if (this.reqCleanup != null) {
-        this.reqCleanup.run();
-        this.reqCleanup = null;
-      }
-    }
-
-    @Override
-    public String toString() {
-      return toShortString() + " param: " +
-        (this.param != null? ProtobufUtil.getShortTextFormat(this.param): "") +
-        " connection: " + connection.toString();
-    }
-
-    @Override
-    public RequestHeader getHeader() {
-      return this.header;
-    }
-
-    @Override
-    public int getPriority() {
-      return this.header.getPriority();
-    }
-
-    /*
-     * Short string representation without param info because param itself could be huge depends on
-     * the payload of a command
-     */
-    @Override
-    public String toShortString() {
-      String serviceName = this.connection.service != null ?
-          this.connection.service.getDescriptorForType().getName() : "null";
-      return "callId: " + this.id + " service: " + serviceName +
-          " methodName: " + ((this.md != null) ? this.md.getName() : "n/a") +
-          " size: " + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) +
-          " connection: " + connection.toString() +
-          " deadline: " + deadline;
-    }
-
-    protected synchronized void setSaslTokenResponse(ByteBuffer response) {
-      ByteBuffer[] responseBufs = new ByteBuffer[1];
-      responseBufs[0] = response;
-      this.response = new BufferChain(responseBufs);
-    }
-
-    protected synchronized void setConnectionHeaderResponse(ByteBuffer response) {
-      ByteBuffer[] responseBufs = new ByteBuffer[1];
-      responseBufs[0] = response;
-      this.response = new BufferChain(responseBufs);
-    }
-
-    @Override
-    public synchronized void setResponse(Message m, final CellScanner cells,
-        Throwable t, String errorMsg) {
-      if (this.isError) return;
-      if (t != null) this.isError = true;
-      BufferChain bc = null;
-      try {
-        ResponseHeader.Builder headerBuilder = ResponseHeader.newBuilder();
-        // Call id.
-        headerBuilder.setCallId(this.id);
-        if (t != null) {
-          setExceptionResponse(t, errorMsg, headerBuilder);
-        }
-        // Pass reservoir to buildCellBlock. Keep reference to returne so can add it back to the
-        // reservoir when finished. This is hacky and the hack is not contained but benefits are
-        // high when we can avoid a big buffer allocation on each rpc.
-        List<ByteBuffer> cellBlock = null;
-        int cellBlockSize = 0;
-        if (reservoir != null) {
-          this.cellBlockStream = cellBlockBuilder.buildCellBlockStream(this.connection.codec,
-              this.connection.compressionCodec, cells, reservoir);
-          if (this.cellBlockStream != null) {
-            cellBlock = this.cellBlockStream.getByteBuffers();
-            cellBlockSize = this.cellBlockStream.size();
-          }
-        } else {
-          ByteBuffer b = cellBlockBuilder.buildCellBlock(this.connection.codec,
-              this.connection.compressionCodec, cells);
-          if (b != null) {
-            cellBlockSize = b.remaining();
-            cellBlock = new ArrayList<>(1);
-            cellBlock.add(b);
-          }
-        }
-
-        if (cellBlockSize > 0) {
-          CellBlockMeta.Builder cellBlockBuilder = CellBlockMeta.newBuilder();
-          // Presumes the cellBlock bytebuffer has been flipped so limit has total size in it.
-          cellBlockBuilder.setLength(cellBlockSize);
-          headerBuilder.setCellBlockMeta(cellBlockBuilder.build());
-        }
-        Message header = headerBuilder.build();
-        ByteBuffer headerBuf =
-            createHeaderAndMessageBytes(m, header, cellBlockSize, cellBlock);
-        ByteBuffer[] responseBufs = null;
-        int cellBlockBufferSize = 0;
-        if (cellBlock != null) {
-          cellBlockBufferSize = cellBlock.size();
-          responseBufs = new ByteBuffer[1 + cellBlockBufferSize];
-        } else {
-          responseBufs = new ByteBuffer[1];
-        }
-        responseBufs[0] = headerBuf;
-        if (cellBlock != null) {
-          for (int i = 0; i < cellBlockBufferSize; i++) {
-            responseBufs[i + 1] = cellBlock.get(i);
-          }
-        }
-        bc = new BufferChain(responseBufs);
-        if (connection.useWrap) {
-          bc = wrapWithSasl(bc);
-        }
-      } catch (IOException e) {
-        LOG.warn("Exception while creating response " + e);
-      }
-      this.response = bc;
-      // Once a response message is created and set to this.response, this Call can be treated as
-      // done. The Responder thread will do the n/w write of this message back to client.
-      if (this.rpcCallback != null) {
-        try {
-          this.rpcCallback.run();
-        } catch (Exception e) {
-          // Don't allow any exception here to kill this handler thread.
-          LOG.warn("Exception while running the Rpc Callback.", e);
-        }
-      }
-    }
-
-    protected void setExceptionResponse(Throwable t, String errorMsg,
-        ResponseHeader.Builder headerBuilder) {
-      ExceptionResponse.Builder exceptionBuilder = ExceptionResponse.newBuilder();
-      exceptionBuilder.setExceptionClassName(t.getClass().getName());
-      exceptionBuilder.setStackTrace(errorMsg);
-      exceptionBuilder.setDoNotRetry(t instanceof DoNotRetryIOException);
-      if (t instanceof RegionMovedException) {
-        // Special casing for this exception.  This is only one carrying a payload.
-        // Do this instead of build a generic system for allowing exceptions carry
-        // any kind of payload.
-        RegionMovedException rme = (RegionMovedException)t;
-        exceptionBuilder.setHostname(rme.getHostname());
-        exceptionBuilder.setPort(rme.getPort());
-      }
-      // Set the exception as the result of the method invocation.
-      headerBuilder.setException(exceptionBuilder.build());
-    }
-
-    protected ByteBuffer createHeaderAndMessageBytes(Message result, Message header,
-        int cellBlockSize, List<ByteBuffer> cellBlock) throws IOException {
-      // Organize the response as a set of bytebuffers rather than collect it all together inside
-      // one big byte array; save on allocations.
-      // for writing the header, we check if there is available space in the buffers
-      // created for the cellblock itself. If there is space for the header, we reuse
-      // the last buffer in the cellblock. This applies to the cellblock created from the
-      // pool or even the onheap cellblock buffer in case there is no pool enabled.
-      // Possible reuse would avoid creating a temporary array for storing the header every time.
-      ByteBuffer possiblePBBuf =
-          (cellBlockSize > 0) ? cellBlock.get(cellBlock.size() - 1) : null;
-      int headerSerializedSize = 0, resultSerializedSize = 0, headerVintSize = 0,
-          resultVintSize = 0;
-      if (header != null) {
-        headerSerializedSize = header.getSerializedSize();
-        headerVintSize = CodedOutputStream.computeRawVarint32Size(headerSerializedSize);
-      }
-      if (result != null) {
-        resultSerializedSize = result.getSerializedSize();
-        resultVintSize = CodedOutputStream.computeRawVarint32Size(resultSerializedSize);
-      }
-      // calculate the total size
-      int totalSize = headerSerializedSize + headerVintSize
-          + (resultSerializedSize + resultVintSize)
-          + cellBlockSize;
-      int totalPBSize = headerSerializedSize + headerVintSize + resultSerializedSize
-          + resultVintSize + Bytes.SIZEOF_INT;
-      // Only if the last buffer has enough space for header use it. Else allocate
-      // a new buffer. Assume they are all flipped
-      if (possiblePBBuf != null
-          && possiblePBBuf.limit() + totalPBSize <= possiblePBBuf.capacity()) {
-        // duplicate the buffer. This is where the header is going to be written
-        ByteBuffer pbBuf = possiblePBBuf.duplicate();
-        // get the current limit
-        int limit = pbBuf.limit();
-        // Position such that we write the header to the end of the buffer
-        pbBuf.position(limit);
-        // limit to the header size
-        pbBuf.limit(totalPBSize + limit);
-        // mark the current position
-        pbBuf.mark();
-        writeToCOS(result, header, totalSize, pbBuf);
-        // reset the buffer back to old position
-        pbBuf.reset();
-        return pbBuf;
-      } else {
-        return createHeaderAndMessageBytes(result, header, totalSize, totalPBSize);
-      }
-    }
-
-    private void writeToCOS(Message result, Message header, int totalSize, ByteBuffer pbBuf)
-        throws IOException {
-      ByteBufferUtils.putInt(pbBuf, totalSize);
-      // create COS that works on BB
-      CodedOutputStream cos = CodedOutputStream.newInstance(pbBuf);
-      if (header != null) {
-        cos.writeMessageNoTag(header);
-      }
-      if (result != null) {
-        cos.writeMessageNoTag(result);
-      }
-      cos.flush();
-      cos.checkNoSpaceLeft();
-    }
-
-    private ByteBuffer createHeaderAndMessageBytes(Message result, Message header,
-        int totalSize, int totalPBSize) throws IOException {
-      ByteBuffer pbBuf = ByteBuffer.allocate(totalPBSize);
-      writeToCOS(result, header, totalSize, pbBuf);
-      pbBuf.flip();
-      return pbBuf;
-    }
-
-    protected BufferChain wrapWithSasl(BufferChain bc)
-        throws IOException {
-      if (!this.connection.useSasl) return bc;
-      // Looks like no way around this; saslserver wants a byte array.  I have to make it one.
-      // THIS IS A BIG UGLY COPY.
-      byte [] responseBytes = bc.getBytes();
-      byte [] token;
-      // synchronization may be needed since there can be multiple Handler
-      // threads using saslServer or Crypto AES to wrap responses.
-      if (connection.useCryptoAesWrap) {
-        // wrap with Crypto AES
-        synchronized (connection.cryptoAES) {
-          token = connection.cryptoAES.wrap(responseBytes, 0, responseBytes.length);
-        }
-      } else {
-        synchronized (connection.saslServer) {
-          token = connection.saslServer.wrap(responseBytes, 0, responseBytes.length);
-        }
-      }
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Adding saslServer wrapped token of size " + token.length
-            + " as call response.");
-      }
-
-      ByteBuffer[] responseBufs = new ByteBuffer[2];
-      responseBufs[0] = ByteBuffer.wrap(Bytes.toBytes(token.length));
-      responseBufs[1] = ByteBuffer.wrap(token);
-      return new BufferChain(responseBufs);
-    }
-
-    @Override
-    public boolean isClientCellBlockSupported() {
-      return this.connection != null && this.connection.codec != null;
-    }
-
-    @Override
-    public long getResponseCellSize() {
-      return responseCellSize;
-    }
-
-    @Override
-    public void incrementResponseCellSize(long cellSize) {
-      responseCellSize += cellSize;
-    }
-
-    @Override
-    public long getResponseBlockSize() {
-      return responseBlockSize;
-    }
-
-    @Override
-    public void incrementResponseBlockSize(long blockSize) {
-      responseBlockSize += blockSize;
-    }
-
-    @Override
-    public long getResponseExceptionSize() {
-      return exceptionSize;
-    }
-    @Override
-    public void incrementResponseExceptionSize(long exSize) {
-      exceptionSize += exSize;
-    }
-
-    @Override
-    public long getSize() {
-      return this.size;
-    }
-
-    @Override
-    public long getDeadline() {
-      return deadline;
-    }
-
-    @Override
-    public User getRequestUser() {
-      return user;
-    }
-
-    @Override
-    public String getRequestUserName() {
-      User user = getRequestUser();
-      return user == null? null: user.getShortName();
-    }
-
-    @Override
-    public InetAddress getRemoteAddress() {
-      return remoteAddress;
-    }
-
-    @Override
-    public VersionInfo getClientVersionInfo() {
-      return connection.getVersionInfo();
-    }
-
-    @Override
-    public synchronized void setCallBack(RpcCallback callback) {
-      this.rpcCallback = callback;
-    }
-
-    @Override
-    public boolean isRetryImmediatelySupported() {
-      return retryImmediatelySupported;
-    }
-
-    @Override
-    public BlockingService getService() {
-      return service;
-    }
-
-    @Override
-    public MethodDescriptor getMethod() {
-      return md;
-    }
-
-    @Override
-    public Message getParam() {
-      return param;
-    }
-
-    @Override
-    public CellScanner getCellScanner() {
-      return cellScanner;
-    }
-
-    @Override
-    public long getReceiveTime() {
-      return timestamp;
-    }
-
-    @Override
-    public void setReceiveTime(long t) {
-      this.timestamp = t;
-    }
-
-    @Override
-    public long getStartTime() {
-      return startTime;
-    }
-
-    @Override
-    public void setStartTime(long t) {
-      this.startTime = t;
-    }
-
-    @Override
-    public int getTimeout() {
-      return timeout;
-    }
-
-    @Override
-    public int getRemotePort() {
-      return connection.getRemotePort();
-    }
-
-    @Override
-    public TraceInfo getTraceInfo() {
-      return tinfo;
-    }
-
-  }
-
   @FunctionalInterface
   protected static interface CallCleanup {
     void run();
@@ -781,15 +304,15 @@ public abstract class RpcServer implements RpcServerInterface,
     protected boolean useCryptoAesWrap = false;
     // Fake 'call' for failed authorization response
     protected static final int AUTHORIZATION_FAILED_CALLID = -1;
-    protected Call authFailedCall;
+    protected ServerCall authFailedCall;
     protected ByteArrayOutputStream authFailedResponse =
         new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
     protected static final int SASL_CALLID = -33;
-    protected Call saslCall;
+    protected ServerCall saslCall;
     // Fake 'call' for connection header response
     protected static final int CONNECTION_HEADER_RESPONSE_CALLID = -34;
-    protected Call setConnectionHeaderResponseCall;
+    protected ServerCall setConnectionHeaderResponseCall;
 
     // was authentication allowed with a fallback to simple auth
     protected boolean authenticatedWithFallback;
@@ -1366,7 +889,7 @@ public abstract class RpcServer implements RpcServerInterface,
       // This is a bit late to be doing this check - we have already read in the
       // total request.
       if ((totalRequestSize + callQueueSizeInBytes.sum()) > maxQueueSizeInBytes) {
-        final RpcServer.Call callTooBig = createCall(id, this.service, null,
+        final ServerCall callTooBig = createCall(id, this.service, null,
             null, null, null, this, totalRequestSize, null, null, 0,
             this.callCleanup);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
@@ -1430,7 +953,7 @@ public abstract class RpcServer implements RpcServerInterface,
           t = new DoNotRetryIOException(t);
         }
 
-        final RpcServer.Call readParamsFailedCall = createCall(id,
+        final ServerCall readParamsFailedCall = createCall(id,
             this.service, null, null, null, null, this, totalRequestSize, null,
             null, 0, this.callCleanup);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
@@ -1447,7 +970,7 @@ public abstract class RpcServer implements RpcServerInterface,
       if (header.hasTimeout() && header.getTimeout() > 0) {
         timeout = Math.max(minClientRequestTimeout, header.getTimeout());
       }
-      RpcServer.Call call = createCall(id, this.service, md, header, param,
+      ServerCall call = createCall(id, this.service, md, header, param,
           cellScanner, this, totalRequestSize, traceInfo, this.addr, timeout,
           this.callCleanup);
 
@@ -1465,7 +988,7 @@ public abstract class RpcServer implements RpcServerInterface,
 
     public abstract boolean isConnectionOpen();
 
-    public abstract Call createCall(int id, final BlockingService service,
+    public abstract ServerCall createCall(int id, final BlockingService service,
         final MethodDescriptor md, RequestHeader header, Message param,
         CellScanner cellScanner, Connection connection, long size,
         TraceInfo tinfo, final InetAddress remoteAddress, int timeout,
@@ -1594,14 +1117,13 @@ public abstract class RpcServer implements RpcServerInterface,
 
   /**
    * Setup response for the RPC Call.
-   *
    * @param response buffer to serialize the response into
-   * @param call {@link Call} to which we are setting up the response
+   * @param call {@link ServerCall} to which we are setting up the response
    * @param error error message, if the call failed
    * @throws IOException
    */
-  protected void setupResponse(ByteArrayOutputStream response, Call call, Throwable t, String error)
-  throws IOException {
+  protected void setupResponse(ByteArrayOutputStream response, ServerCall call, Throwable t,
+      String error) throws IOException {
     if (response != null) response.reset();
     call.setResponse(null, null, t, error);
   }

@@ -65,11 +65,6 @@ public interface RpcCall extends RpcCallContext {
   long getReceiveTime();
 
   /**
-   * Set the timestamp when the call is constructed.
-   */
-  void setReceiveTime(long receiveTime);
-
-  /**
    * @return The time when the call starts to be executed.
    */
   long getStartTime();

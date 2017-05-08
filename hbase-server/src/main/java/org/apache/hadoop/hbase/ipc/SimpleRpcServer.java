@@ -127,61 +127,6 @@ public class SimpleRpcServer extends RpcServer {
   private Listener listener = null;
   protected Responder responder = null;
 
-  /**
-   * Datastructure that holds all necessary to a method invocation and then afterward, carries
-   * the result.
-   */
-  @InterfaceStability.Evolving
-  public class Call extends RpcServer.Call {
-
-    protected Responder responder;
-
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
-        justification="Can't figure why this complaint is happening... see below")
-    Call(int id, final BlockingService service, final MethodDescriptor md,
-        RequestHeader header, Message param, CellScanner cellScanner,
-        RpcServer.Connection connection, long size, TraceInfo tinfo,
-        final InetAddress remoteAddress, int timeout, CallCleanup reqCleanup,
-        Responder responder) {
-      super(id, service, md, header, param, cellScanner, connection, size,
-          tinfo, remoteAddress, timeout, reqCleanup);
-      this.responder = responder;
-    }
-
-    /**
-     * Call is done. Execution happened and we returned results to client. It is now safe to
-     * cleanup.
-     */
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-        justification="Presume the lock on processing request held by caller is protection enough")
-    @Override
-    void done() {
-      super.done();
-      this.getConnection().decRpcCount(); // Say that we're done with this call.
-    }
-
-    @Override
-    public long disconnectSince() {
-      if (!getConnection().isConnectionOpen()) {
-        return System.currentTimeMillis() - timestamp;
-      } else {
-        return -1L;
-      }
-    }
-
-    @Override
-    public synchronized void sendResponseIfReady() throws IOException {
-      // set param null to reduce memory pressure
-      this.param = null;
-      this.responder.doRespond(this);
-    }
-
-    Connection getConnection() {
-      return (Connection) this.connection;
-    }
-
-  }
-
   /** Listens on the socket. Creates jobs for the handler threads*/
   private class Listener extends Thread {
 
@@ -589,8 +534,8 @@ public class SimpleRpcServer extends RpcServer {
           if (connection == null) {
             throw new IllegalStateException("Coding error: SelectionKey key without attachment.");
           }
-          Call call = connection.responseQueue.peekFirst();
-          if (call != null && now > call.timestamp + purgeTimeout) {
+          SimpleServerCall call = connection.responseQueue.peekFirst();
+          if (call != null && now > call.lastSentTime + purgeTimeout) {
             conWithOldCalls.add(call.getConnection());
           }
         }
@@ -637,7 +582,7 @@ public class SimpleRpcServer extends RpcServer {
      * @return true if we proceed the call fully, false otherwise.
      * @throws IOException
      */
-    private boolean processResponse(final Call call) throws IOException {
+    private boolean processResponse(final SimpleServerCall call) throws IOException {
       boolean error = true;
       try {
         // Send as much data as we can in the non-blocking fashion
@@ -680,7 +625,7 @@ public class SimpleRpcServer extends RpcServer {
       try {
         for (int i = 0; i < 20; i++) {
           // protection if some handlers manage to need all the responder
-          Call call = connection.responseQueue.pollFirst();
+          SimpleServerCall call = connection.responseQueue.pollFirst();
           if (call == null) {
             return true;
           }
@@ -699,7 +644,7 @@ public class SimpleRpcServer extends RpcServer {
     //
     // Enqueue a response from the application.
     //
-    void doRespond(Call call) throws IOException {
+    void doRespond(SimpleServerCall call) throws IOException {
       boolean added = false;
 
       // If there is already a write in progress, we don't wait. This allows to free the handlers
@@ -728,7 +673,7 @@ public class SimpleRpcServer extends RpcServer {
       call.responder.registerForWrite(call.getConnection());
 
       // set the serve time when the response has to be sent later
-      call.timestamp = System.currentTimeMillis();
+      call.lastSentTime = System.currentTimeMillis();
     }
   }
 
@@ -741,7 +686,7 @@ public class SimpleRpcServer extends RpcServer {
     protected SocketChannel channel;
     private ByteBuff data;
     private ByteBuffer dataLengthBuffer;
-    protected final ConcurrentLinkedDeque<Call> responseQueue = new ConcurrentLinkedDeque<>();
+    protected final ConcurrentLinkedDeque<SimpleServerCall> responseQueue = new ConcurrentLinkedDeque<>();
     private final Lock responseWriteLock = new ReentrantLock();
     private LongAdder rpcCount = new LongAdder(); // number of outstanding rpcs
     private long lastContact;
@@ -769,13 +714,14 @@ public class SimpleRpcServer extends RpcServer {
                    socketSendBufferSize);
         }
       }
-      this.saslCall = new Call(SASL_CALLID, null, null, null, null, null, this,
-          0, null, null, 0, null, responder);
-      this.setConnectionHeaderResponseCall = new Call(
-          CONNECTION_HEADER_RESPONSE_CALLID, null, null, null, null, null,
-          this, 0, null, null, 0, null, responder);
-      this.authFailedCall = new Call(AUTHORIZATION_FAILED_CALLID, null, null,
-          null, null, null, this, 0, null, null, 0, null, responder);
+      this.saslCall = new SimpleServerCall(SASL_CALLID, null, null, null, null, null, this, 0, null,
+          null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null, responder);
+      this.setConnectionHeaderResponseCall = new SimpleServerCall(CONNECTION_HEADER_RESPONSE_CALLID,
+          null, null, null, null, null, this, 0, null, null, System.currentTimeMillis(), 0,
+          reservoir, cellBlockBuilder, null, responder);
+      this.authFailedCall = new SimpleServerCall(AUTHORIZATION_FAILED_CALLID, null, null, null,
+          null, null, this, 0, null, null, System.currentTimeMillis(), 0, reservoir,
+          cellBlockBuilder, null, responder);
     }
 
     public void setLastContact(long lastContact) {
@@ -941,8 +887,9 @@ public class SimpleRpcServer extends RpcServer {
             RequestHeader header = (RequestHeader) builder.build();
 
             // Notify the client about the offending request
-            Call reqTooBig = new Call(header.getCallId(), this.service, null,
-                null, null, null, this, 0, null, this.addr, 0, null, responder);
+            SimpleServerCall reqTooBig = new SimpleServerCall(header.getCallId(), this.service,
+                null, null, null, null, this, 0, null, this.addr, System.currentTimeMillis(), 0,
+                reservoir, cellBlockBuilder, null, responder);
             metrics.exception(REQUEST_TOO_BIG_EXCEPTION);
             // Make sure the client recognizes the underlying exception
             // Otherwise, throw a DoNotRetryIOException.
@@ -1043,8 +990,8 @@ public class SimpleRpcServer extends RpcServer {
 
     private int doBadPreambleHandling(final String msg, final Exception e) throws IOException {
       LOG.warn(msg);
-      Call fakeCall = new Call(-1, null, null, null, null, null, this, -1,
-          null, null, 0, null, responder);
+      SimpleServerCall fakeCall = new SimpleServerCall(-1, null, null, null, null, null, this, -1,
+          null, null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null, responder);
       setupResponse(null, fakeCall, e, msg);
       responder.doRespond(fakeCall);
       // Returning -1 closes out the connection.
@@ -1081,13 +1028,13 @@ public class SimpleRpcServer extends RpcServer {
     }
 
     @Override
-    public RpcServer.Call createCall(int id, final BlockingService service,
-        final MethodDescriptor md, RequestHeader header, Message param,
-        CellScanner cellScanner, RpcServer.Connection connection, long size,
-        TraceInfo tinfo, final InetAddress remoteAddress, int timeout,
-        CallCleanup reqCleanup) {
-      return new Call(id, service, md, header, param, cellScanner, connection,
-          size, tinfo, remoteAddress, timeout, reqCleanup, responder);
+    public ServerCall createCall(int id, final BlockingService service, final MethodDescriptor md,
+        RequestHeader header, Message param, CellScanner cellScanner,
+        RpcServer.Connection connection, long size, TraceInfo tinfo,
+        final InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
+      return new SimpleServerCall(id, service, md, header, param, cellScanner, connection, size,
+          tinfo, remoteAddress, System.currentTimeMillis(), timeout, reservoir, cellBlockBuilder,
+          reqCleanup, responder);
     }
   }
 
@@ -1206,17 +1153,16 @@ public class SimpleRpcServer extends RpcServer {
   public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
       Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
       throws IOException {
-    return call(service, md, param, cellScanner, receiveTime, status, System.currentTimeMillis(),0);
+    return call(service, md, param, cellScanner, receiveTime, status, System.currentTimeMillis(),
+      0);
   }
 
   @Override
-  public Pair<Message, CellScanner> call(BlockingService service,
-      MethodDescriptor md, Message param, CellScanner cellScanner,
-      long receiveTime, MonitoredRPCHandler status, long startTime, int timeout)
-      throws IOException {
-    Call fakeCall = new Call(-1, service, md, null, param, cellScanner, null,
-        -1, null, null, timeout, null, null);
-    fakeCall.setReceiveTime(receiveTime);
+  public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
+      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
+      long startTime, int timeout) throws IOException {
+    SimpleServerCall fakeCall = new SimpleServerCall(-1, service, md, null, param, cellScanner,
+        null, -1, null, null, receiveTime, timeout, reservoir, cellBlockBuilder, null, null);
     return call(fakeCall, status);
   }
 
