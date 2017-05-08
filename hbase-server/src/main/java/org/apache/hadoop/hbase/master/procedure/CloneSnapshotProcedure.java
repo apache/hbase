@@ -69,6 +69,7 @@ public class CloneSnapshotProcedure
 
   private HTableDescriptor hTableDescriptor;
   private SnapshotDescription snapshot;
+  private boolean restoreAcl;
   private List<HRegionInfo> newRegions = null;
   private Map<String, Pair<String, String> > parentsToChildrenPairMap = new HashMap<>();
 
@@ -83,6 +84,11 @@ public class CloneSnapshotProcedure
   public CloneSnapshotProcedure() {
   }
 
+  public CloneSnapshotProcedure(final MasterProcedureEnv env,
+      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot) {
+    this(env, hTableDescriptor, snapshot, false);
+  }
+
   /**
    * Constructor
    * @param env MasterProcedureEnv
@@ -90,10 +96,12 @@ public class CloneSnapshotProcedure
    * @param snapshot snapshot to clone from
    */
   public CloneSnapshotProcedure(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot) {
+      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot,
+      final boolean restoreAcl) {
     super(env);
     this.hTableDescriptor = hTableDescriptor;
     this.snapshot = snapshot;
+    this.restoreAcl = restoreAcl;
 
     getMonitorStatus();
   }
@@ -107,6 +115,16 @@ public class CloneSnapshotProcedure
         "' to table " + getTableName());
     }
     return monitorStatus;
+  }
+
+  private void restoreSnapshotAcl(MasterProcedureEnv env) throws IOException {
+    Configuration conf = env.getMasterServices().getConfiguration();
+    if (restoreAcl && SnapshotDescriptionUtils.isSecurityAvailable(conf)) {
+      MasterFileSystem fileSystemManager = env.getMasterServices().getMasterFileSystem();
+      SnapshotDescriptionUtils.grantSnapshotAcl(
+        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, fileSystemManager.getRootDir()),
+        fileSystemManager.getFileSystem(), hTableDescriptor.getTableName(), conf);
+    }
   }
 
   @Override
@@ -143,6 +161,7 @@ public class CloneSnapshotProcedure
         case CLONE_SNAPSHOT_POST_OPERATION:
           postCloneSnapshot(env);
 
+          restoreSnapshotAcl(env);
           MetricsSnapshot metricsSnapshot = new MetricsSnapshot();
           metricsSnapshot.addSnapshotClone(
             getMonitorStatus().getCompletionTimestamp() - getMonitorStatus().getStartTime());

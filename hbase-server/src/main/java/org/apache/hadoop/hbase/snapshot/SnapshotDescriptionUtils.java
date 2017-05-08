@@ -19,22 +19,33 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
+import java.util.Map.Entry;
 
+import com.google.common.collect.ListMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifestV2;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -54,6 +65,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *
  * <pre>
  * /hbase/.snapshots/completed
+ *                   .aclinfo               &lt;--- TablePermission of the origin table
  *                   .snapshotinfo          &lt;--- Description of the snapshot
  *                   .tableinfo             &lt;--- Copy of the tableinfo
  *                    /.logs
@@ -98,6 +110,7 @@ public final class SnapshotDescriptionUtils {
   public static final int SNAPSHOT_LAYOUT_VERSION = SnapshotManifestV2.DESCRIPTOR_VERSION;
 
   // snapshot directory constants
+  public static final String ACLINFO_FILE = ".aclinfo";
   /**
    * The file contains the snapshot basic information and it is under the directory of a snapshot.
    */
@@ -365,5 +378,87 @@ public final class SnapshotDescriptionUtils {
     if (user == null) return false;
     if (!snapshot.hasOwner()) return false;
     return snapshot.getOwner().equals(user.getShortName());
+  }
+
+  public static boolean isSecurityAvailable(Configuration conf) throws IOException {
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      try (Admin admin = conn.getAdmin()) {
+        return admin.tableExists(AccessControlLists.ACL_TABLE_NAME);
+      }
+    }
+  }
+
+  public static void writeTableAclInfo(SnapshotDescription snapshot, Path workingDir, FileSystem fs,
+      Configuration conf) throws IOException {
+    if (!isSecurityAvailable(conf)) {
+      LOG.warn("security feature is not available, skip saving .aclinfo file.");
+      return;
+    }
+
+    Path aclInfo = new Path(workingDir, SnapshotDescriptionUtils.ACLINFO_FILE);
+    ListMultimap<String, TablePermission> perms =
+        User.runAsLoginUser(new PrivilegedExceptionAction<ListMultimap<String, TablePermission>>() {
+          @Override
+          public ListMultimap<String, TablePermission> run() throws Exception {
+            return AccessControlLists.getTablePermissions(conf,
+              TableName.valueOf(snapshot.getTable()));
+          }
+        });
+    byte[] permBytes = AccessControlLists.writePermissionsAsBytes(perms, conf);
+    FsPermission fsPermission =
+        FSUtils.getFilePermissions(fs, fs.getConf(), HConstants.DATA_FILE_UMASK_KEY);
+    try {
+      FSDataOutputStream out = FSUtils.create(fs, aclInfo, fsPermission, true);
+      try {
+        LOG.debug("write .aclinfo into file, .aclinfo path: " + aclInfo + ", fsPermission: "
+            + fsPermission);
+        out.write(permBytes);
+      } finally {
+        out.close();
+      }
+    } catch (IOException e) {
+      LOG.error("write table acl info file failed: ", e);
+      // if we get an exception, try to remove the snapshot info
+      if (fs.exists(aclInfo) && !fs.delete(aclInfo, false)) {
+        String msg = "Couldn't delete table acl info file: " + aclInfo;
+        LOG.error(msg);
+        throw new IOException(msg);
+      }
+      throw e;
+    }
+  }
+
+  public static void grantSnapshotAcl(Path snapshotDir, FileSystem fs, TableName tableName,
+      Configuration conf) throws IOException {
+    Path aclInfo = new Path(snapshotDir, SnapshotDescriptionUtils.ACLINFO_FILE);
+    if (!fs.exists(aclInfo)) {
+      throw new FileNotFoundException(".aclinfo is not found: " + aclInfo);
+    }
+
+    FSDataInputStream in = null;
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      in = fs.open(aclInfo);
+      FileStatus status = fs.getFileStatus(aclInfo);
+      byte[] bytes = new byte[Math.toIntExact(status.getLen())];
+      int len = in.read(bytes);
+      if (len != status.getLen()) {
+        throw new IOException("read .aclinfo error, length does not match. file size: "
+            + status.getLen() + ", read length: " + len);
+      }
+      ListMultimap<String, TablePermission> perms = AccessControlLists.readPermissions(bytes, conf);
+      for (Entry<String, TablePermission> e : perms.entries()) {
+        String user = e.getKey();
+        TablePermission perm = e.getValue();
+        perm.setTableName(tableName);
+        AccessControlClient.grant(conn, perm.getTableName(), user, perm.getFamily(),
+          perm.getQualifier(), perm.getActions());
+      }
+    } catch (DeserializationException e) {
+      throw new IOException("deserialize .aclinfo bytes to object failed: ", e);
+    } catch (Throwable throwable) {
+      throw new IOException("grant .aclinfo permissions into table failed: ", throwable);
+    } finally {
+      if (in != null) in.close();
+    }
   }
 }

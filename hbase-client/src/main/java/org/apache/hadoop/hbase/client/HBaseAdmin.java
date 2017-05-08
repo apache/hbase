@@ -2572,7 +2572,7 @@ public class HBaseAdmin implements Admin {
     try {
       // Restore snapshot
       get(
-        internalRestoreSnapshotAsync(snapshotName, tableName),
+        internalRestoreSnapshotAsync(snapshotName, tableName, false),
         syncWaitTimeout,
         TimeUnit.MILLISECONDS);
     } catch (IOException e) {
@@ -2581,7 +2581,7 @@ public class HBaseAdmin implements Admin {
       if (takeFailSafeSnapshot) {
         try {
           get(
-            internalRestoreSnapshotAsync(failSafeSnapshotSnapshotName, tableName),
+            internalRestoreSnapshotAsync(failSafeSnapshotSnapshotName, tableName, false),
             syncWaitTimeout,
             TimeUnit.MILLISECONDS);
           String msg = "Restore snapshot=" + snapshotName +
@@ -2624,7 +2624,7 @@ public class HBaseAdmin implements Admin {
       throw new TableNotDisabledException(tableName);
     }
 
-    return internalRestoreSnapshotAsync(snapshotName, tableName);
+    return internalRestoreSnapshotAsync(snapshotName, tableName, false);
   }
 
   @Override
@@ -2634,15 +2634,21 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void cloneSnapshot(final String snapshotName, final TableName tableName)
+  public void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl)
       throws IOException, TableExistsException, RestoreSnapshotException {
     if (tableExists(tableName)) {
       throw new TableExistsException(tableName);
     }
     get(
-      internalRestoreSnapshotAsync(snapshotName, tableName),
+      internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl),
       Integer.MAX_VALUE,
       TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public void cloneSnapshot(final String snapshotName, final TableName tableName)
+      throws IOException, TableExistsException, RestoreSnapshotException {
+    cloneSnapshot(snapshotName, tableName, false);
   }
 
   @Override
@@ -2651,7 +2657,7 @@ public class HBaseAdmin implements Admin {
     if (tableExists(tableName)) {
       throw new TableExistsException(tableName);
     }
-    return internalRestoreSnapshotAsync(snapshotName, tableName);
+    return internalRestoreSnapshotAsync(snapshotName, tableName, false);
   }
 
   @Override
@@ -2739,9 +2745,9 @@ public class HBaseAdmin implements Admin {
    * @throws RestoreSnapshotException if snapshot failed to be restored
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
-  private Future<Void> internalRestoreSnapshotAsync(
-      final String snapshotName,
-      final TableName tableName) throws IOException, RestoreSnapshotException {
+  private Future<Void> internalRestoreSnapshotAsync(final String snapshotName,
+      final TableName tableName, final boolean restoreAcl)
+      throws IOException, RestoreSnapshotException {
     final HBaseProtos.SnapshotDescription snapshot = HBaseProtos.SnapshotDescription.newBuilder()
         .setName(snapshotName).setTable(tableName.getNameAsString()).build();
 
@@ -2756,6 +2762,7 @@ public class HBaseAdmin implements Admin {
             .setSnapshot(snapshot)
             .setNonceGroup(ng.getNonceGroup())
             .setNonce(ng.newNonce())
+            .setRestoreACL(restoreAcl)
             .build();
         return master.restoreSnapshot(getRpcController(), request);
       }

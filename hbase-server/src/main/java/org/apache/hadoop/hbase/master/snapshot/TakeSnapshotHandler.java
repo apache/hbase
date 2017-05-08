@@ -169,6 +169,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       snapshotManifest.addTableDescriptor(this.htd);
       monitor.rethrowException();
 
+      // write down the table acl info in the working directory.
+      SnapshotDescriptionUtils.writeTableAclInfo(snapshot, workingDir, fs, conf);
+
       List<Pair<HRegionInfo, ServerName>> regionsAndLocations;
       if (TableName.META_TABLE_NAME.equals(snapshotTable)) {
         regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(

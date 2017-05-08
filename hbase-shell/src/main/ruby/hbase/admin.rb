@@ -978,8 +978,8 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Create a new table by cloning the snapshot content
-    def clone_snapshot(snapshot_name, table)
-      @admin.cloneSnapshot(snapshot_name, TableName.valueOf(table))
+    def clone_snapshot(snapshot_name, table, restore_acl = false)
+      @admin.cloneSnapshot(snapshot_name, TableName.valueOf(table), restore_acl)
     end
 
     #----------------------------------------------------------------------------------------------

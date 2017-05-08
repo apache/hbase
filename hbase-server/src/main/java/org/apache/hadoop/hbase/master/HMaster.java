@@ -2309,7 +2309,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   public long restoreSnapshot(final SnapshotDescription snapshotDesc,
-      final long nonceGroup, final long nonce) throws IOException {
+      final long nonceGroup, final long nonce, final boolean restoreAcl) throws IOException {
     checkInitialized();
     getSnapshotManager().checkSnapshotSupport();
 
@@ -2321,7 +2321,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
       @Override
       protected void run() throws IOException {
-        setProcId(getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey()));
+          setProcId(
+            getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl));
       }
 
       @Override
