@@ -27,16 +27,8 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -884,6 +876,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
+      /** HBASE-17924
+       * mutationActionMap is a map to map the relation between mutations and actions
+       * since mutation array may have been reoredered.In order to return the right
+       * result or exception to the corresponding actions, We need to know which action
+       * is the mutation belong to. We can't sort ClientProtos.Action array, since they
+       * are bonded to cellscanners.
+       */
+      Map<Mutation, ClientProtos.Action> mutationActionMap = new HashMap<Mutation, ClientProtos.Action>();
       int i = 0;
       for (ClientProtos.Action action: mutations) {
         MutationProto m = action.getMutation();
@@ -895,6 +895,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           mutation = ProtobufUtil.toDelete(m, cells);
           batchContainsDelete = true;
         }
+        mutationActionMap.put(mutation, action);
         mArray[i++] = mutation;
         quota.addMutation(mutation);
       }
@@ -902,11 +903,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (!region.getRegionInfo().isMetaTable()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
-
+      // HBASE-17924
+      // sort to improve lock efficiency
+      Arrays.sort(mArray);
       OperationStatus[] codes = region.batchMutate(mArray, HConstants.NO_NONCE,
         HConstants.NO_NONCE);
       for (i = 0; i < codes.length; i++) {
-        int index = mutations.get(i).getIndex();
+        Mutation currentMutation = mArray[i];
+        ClientProtos.Action currentAction = mutationActionMap.get(currentMutation);
+        int index = currentAction.getIndex();
         Exception e = null;
         switch (codes[i].getOperationStatusCode()) {
           case BAD_FAMILY:
@@ -1951,6 +1956,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           walEntries.add(walEntry);
         }
         if(edits!=null && !edits.isEmpty()) {
+          // HBASE-17924
+          // sort to improve lock efficiency
+          Collections.sort(edits);
           long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ?
             entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
           OperationStatus[] result = doReplayBatchOp(region, edits, replaySeqId);
