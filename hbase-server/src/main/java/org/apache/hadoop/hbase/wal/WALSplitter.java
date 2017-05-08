@@ -2266,7 +2266,7 @@ public class WALSplitter {
   }
 
   /** A struct used by getMutationsFromWALEntry */
-  public static class MutationReplay {
+  public static class MutationReplay implements Comparable<MutationReplay> {
     public MutationReplay(MutationType type, Mutation mutation, long nonceGroup, long nonce) {
       this.type = type;
       this.mutation = mutation;
@@ -2282,6 +2282,25 @@ public class WALSplitter {
     public final Mutation mutation;
     public final long nonceGroup;
     public final long nonce;
+
+    @Override
+    public int compareTo(final MutationReplay d) {
+      return this.mutation.compareTo(d.mutation);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if(!(obj instanceof MutationReplay)) {
+        return false;
+      } else {
+        return this.compareTo((MutationReplay)obj) == 0;
+      }
+    }
+
+    @Override
+    public int hashCode() {
+      return this.mutation.hashCode();
+    }
   }
 
   /**
