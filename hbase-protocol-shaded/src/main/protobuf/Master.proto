@@ -34,6 +34,7 @@ import "LockService.proto";
 import "Procedure.proto";
 import "Quota.proto";
 import "Replication.proto";
+import "Snapshot.proto";
 
 /* Column-level protobufs */
 
@@ -405,6 +406,7 @@ message RestoreSnapshotRequest {
   required SnapshotDescription snapshot = 1;
   optional uint64 nonce_group = 2 [default = 0];
   optional uint64 nonce = 3 [default = 0];
+  optional bool restoreACL = 4 [default = false];
 }
 
 message RestoreSnapshotResponse {

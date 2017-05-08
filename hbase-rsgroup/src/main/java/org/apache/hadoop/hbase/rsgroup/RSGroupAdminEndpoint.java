@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesR
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
 public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService {
@@ -324,7 +324,7 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
 
   @Override
   public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 NamespaceDescriptor ns) throws IOException {
+      NamespaceDescriptor ns) throws IOException {
     preCreateNamespace(ctx, ns);
   }
 

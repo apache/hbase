@@ -972,14 +972,16 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Restore specified snapshot
-    def restore_snapshot(snapshot_name)
-      @admin.restoreSnapshot(snapshot_name)
+    def restore_snapshot(snapshot_name, restore_acl = false)
+      conf = @connection.getConfiguration
+      take_fail_safe_snapshot = conf.getBoolean("hbase.snapshot.restore.take.failsafe.snapshot", false)
+      @admin.restoreSnapshot(snapshot_name, take_fail_safe_snapshot, restore_acl)
     end
 
     #----------------------------------------------------------------------------------------------
     # Create a new table by cloning the snapshot content
-    def clone_snapshot(snapshot_name, table)
-      @admin.cloneSnapshot(snapshot_name, TableName.valueOf(table))
+    def clone_snapshot(snapshot_name, table, restore_acl = false)
+      @admin.cloneSnapshot(snapshot_name, TableName.valueOf(table), restore_acl)
     end
 
     #----------------------------------------------------------------------------------------------

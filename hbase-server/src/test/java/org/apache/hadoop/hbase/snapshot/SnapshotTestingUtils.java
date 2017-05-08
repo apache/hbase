@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
@@ -127,7 +128,7 @@ public final class SnapshotTestingUtils {
    * Make sure that there is only one snapshot returned from the master
    */
   public static void assertOneSnapshotThatMatches(Admin admin,
-      HBaseProtos.SnapshotDescription snapshot) throws IOException {
+      SnapshotProtos.SnapshotDescription snapshot) throws IOException {
     assertOneSnapshotThatMatches(admin, snapshot.getName(), TableName.valueOf(snapshot.getTable()));
   }
 
@@ -159,20 +160,19 @@ public final class SnapshotTestingUtils {
   }
 
   public static void confirmSnapshotValid(HBaseTestingUtility testUtil,
-      HBaseProtos.SnapshotDescription snapshotDescriptor, TableName tableName, byte[] family)
+      SnapshotProtos.SnapshotDescription snapshotDescriptor, TableName tableName, byte[] family)
       throws IOException {
     MasterFileSystem mfs = testUtil.getHBaseCluster().getMaster().getMasterFileSystem();
-    confirmSnapshotValid(snapshotDescriptor, tableName, family,
-        mfs.getRootDir(), testUtil.getAdmin(), mfs.getFileSystem());
+    confirmSnapshotValid(snapshotDescriptor, tableName, family, mfs.getRootDir(),
+      testUtil.getAdmin(), mfs.getFileSystem());
   }
 
   /**
    * Confirm that the snapshot contains references to all the files that should
    * be in the snapshot.
    */
-  public static void confirmSnapshotValid(
-      HBaseProtos.SnapshotDescription snapshotDescriptor, TableName tableName,
-      byte[] testFamily, Path rootDir, Admin admin, FileSystem fs)
+  public static void confirmSnapshotValid(SnapshotProtos.SnapshotDescription snapshotDescriptor,
+      TableName tableName, byte[] testFamily, Path rootDir, Admin admin, FileSystem fs)
       throws IOException {
     ArrayList nonEmptyTestFamilies = new ArrayList(1);
     nonEmptyTestFamilies.add(testFamily);
@@ -184,7 +184,7 @@ public final class SnapshotTestingUtils {
    * Confirm that the snapshot has no references files but only metadata.
    */
   public static void confirmEmptySnapshotValid(
-      HBaseProtos.SnapshotDescription snapshotDescriptor, TableName tableName,
+      SnapshotProtos.SnapshotDescription snapshotDescriptor, TableName tableName,
       byte[] testFamily, Path rootDir, Admin admin, FileSystem fs)
       throws IOException {
     ArrayList emptyTestFamilies = new ArrayList(1);
@@ -200,7 +200,7 @@ public final class SnapshotTestingUtils {
    * by the MasterSnapshotVerifier, at the end of the snapshot operation.
    */
   public static void confirmSnapshotValid(
-      HBaseProtos.SnapshotDescription snapshotDescriptor, TableName tableName,
+      SnapshotProtos.SnapshotDescription snapshotDescriptor, TableName tableName,
       List<byte[]> nonEmptyTestFamilies, List<byte[]> emptyTestFamilies,
       Path rootDir, Admin admin, FileSystem fs) throws IOException {
     final Configuration conf = admin.getConfiguration();
@@ -210,7 +210,7 @@ public final class SnapshotTestingUtils {
         snapshotDescriptor, rootDir);
     assertTrue(fs.exists(snapshotDir));
 
-    HBaseProtos.SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    SnapshotProtos.SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
     // Extract regions and families with store files
     final Set<byte[]> snapshotFamilies = new TreeSet<>(Bytes.BYTES_COMPARATOR);
@@ -272,7 +272,7 @@ public final class SnapshotTestingUtils {
    * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException
    */
   public static void waitForSnapshotToComplete(HMaster master,
-      HBaseProtos.SnapshotDescription snapshot, long sleep)
+      SnapshotProtos.SnapshotDescription snapshot, long sleep)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
     final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder()
         .setSnapshot(snapshot).build();
@@ -426,7 +426,7 @@ public final class SnapshotTestingUtils {
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
                                                                         mfs.getRootDir());
-    HBaseProtos.SnapshotDescription snapshotDesc =
+    SnapshotProtos.SnapshotDescription snapshotDesc =
         SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     final TableName table = TableName.valueOf(snapshotDesc.getTable());
 
@@ -476,7 +476,7 @@ public final class SnapshotTestingUtils {
 
     public static class SnapshotBuilder {
       private final RegionData[] tableRegions;
-      private final HBaseProtos.SnapshotDescription desc;
+      private final SnapshotProtos.SnapshotDescription desc;
       private final HTableDescriptor htd;
       private final Configuration conf;
       private final FileSystem fs;
@@ -486,7 +486,7 @@ public final class SnapshotTestingUtils {
 
       public SnapshotBuilder(final Configuration conf, final FileSystem fs,
           final Path rootDir, final HTableDescriptor htd,
-          final HBaseProtos.SnapshotDescription desc, final RegionData[] tableRegions)
+          final SnapshotProtos.SnapshotDescription desc, final RegionData[] tableRegions)
           throws IOException {
         this.fs = fs;
         this.conf = conf;
@@ -503,7 +503,7 @@ public final class SnapshotTestingUtils {
         return this.htd;
       }
 
-      public HBaseProtos.SnapshotDescription getSnapshotDescription() {
+      public SnapshotProtos.SnapshotDescription getSnapshotDescription() {
         return this.desc;
       }
 
@@ -527,7 +527,7 @@ public final class SnapshotTestingUtils {
                           .build());
       }
 
-      private Path[] addRegion(final HBaseProtos.SnapshotDescription desc) throws IOException {
+      private Path[] addRegion(final SnapshotProtos.SnapshotDescription desc) throws IOException {
         if (this.snapshotted == tableRegions.length) {
           throw new UnsupportedOperationException("No more regions in the table");
         }
@@ -668,7 +668,7 @@ public final class SnapshotTestingUtils {
       HTableDescriptor htd = createHtd(tableName);
       RegionData[] regions = createTable(htd, numRegions);
 
-      HBaseProtos.SnapshotDescription desc = HBaseProtos.SnapshotDescription.newBuilder()
+      SnapshotProtos.SnapshotDescription desc = SnapshotProtos.SnapshotDescription.newBuilder()
         .setTable(htd.getNameAsString())
         .setName(snapshotName)
         .setVersion(version)

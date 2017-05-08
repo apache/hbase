@@ -107,7 +107,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
@@ -186,6 +185,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -2420,7 +2420,7 @@ public class HBaseAdmin implements Admin {
   public void snapshot(SnapshotDescription snapshotDesc)
       throws IOException, SnapshotCreationException, IllegalArgumentException {
     // actually take the snapshot
-    HBaseProtos.SnapshotDescription snapshot =
+    SnapshotProtos.SnapshotDescription snapshot =
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc);
     SnapshotResponse response = asyncSnapshot(snapshot);
     final IsSnapshotDoneRequest request =
@@ -2466,7 +2466,7 @@ public class HBaseAdmin implements Admin {
     asyncSnapshot(ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc));
   }
 
-  private SnapshotResponse asyncSnapshot(HBaseProtos.SnapshotDescription snapshot)
+  private SnapshotResponse asyncSnapshot(SnapshotProtos.SnapshotDescription snapshot)
       throws IOException {
     ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
     final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot)
@@ -2484,7 +2484,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public boolean isSnapshotFinished(final SnapshotDescription snapshotDesc)
       throws IOException, HBaseSnapshotException, UnknownSnapshotException {
-    final HBaseProtos.SnapshotDescription snapshot =
+    final SnapshotProtos.SnapshotDescription snapshot =
         ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc);
     return executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection(),
         getRpcControllerFactory()) {
@@ -2542,13 +2542,19 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void restoreSnapshot(final String snapshotName, final boolean takeFailSafeSnapshot)
+  public void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot)
       throws IOException, RestoreSnapshotException {
+    restoreSnapshot(snapshotName, takeFailSafeSnapshot, false);
+  }
+
+  @Override
+  public void restoreSnapshot(final String snapshotName, final boolean takeFailSafeSnapshot,
+      final boolean restoreAcl) throws IOException, RestoreSnapshotException {
     TableName tableName = getTableNameBeforeRestoreSnapshot(snapshotName);
 
     // The table does not exists, switch to clone.
     if (!tableExists(tableName)) {
-      cloneSnapshot(snapshotName, tableName);
+      cloneSnapshot(snapshotName, tableName, restoreAcl);
       return;
     }
 
@@ -2573,7 +2579,7 @@ public class HBaseAdmin implements Admin {
     try {
       // Restore snapshot
       get(
-        internalRestoreSnapshotAsync(snapshotName, tableName),
+        internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl),
         syncWaitTimeout,
         TimeUnit.MILLISECONDS);
     } catch (IOException e) {
@@ -2582,7 +2588,7 @@ public class HBaseAdmin implements Admin {
       if (takeFailSafeSnapshot) {
         try {
           get(
-            internalRestoreSnapshotAsync(failSafeSnapshotSnapshotName, tableName),
+            internalRestoreSnapshotAsync(failSafeSnapshotSnapshotName, tableName, restoreAcl),
             syncWaitTimeout,
             TimeUnit.MILLISECONDS);
           String msg = "Restore snapshot=" + snapshotName +
@@ -2625,7 +2631,7 @@ public class HBaseAdmin implements Admin {
       throw new TableNotDisabledException(tableName);
     }
 
-    return internalRestoreSnapshotAsync(snapshotName, tableName);
+    return internalRestoreSnapshotAsync(snapshotName, tableName, false);
   }
 
   @Override
@@ -2635,15 +2641,21 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void cloneSnapshot(final String snapshotName, final TableName tableName)
+  public void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl)
       throws IOException, TableExistsException, RestoreSnapshotException {
     if (tableExists(tableName)) {
       throw new TableExistsException(tableName);
     }
     get(
-      internalRestoreSnapshotAsync(snapshotName, tableName),
+      internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl),
       Integer.MAX_VALUE,
       TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public void cloneSnapshot(final String snapshotName, final TableName tableName)
+      throws IOException, TableExistsException, RestoreSnapshotException {
+    cloneSnapshot(snapshotName, tableName, false);
   }
 
   @Override
@@ -2652,7 +2664,7 @@ public class HBaseAdmin implements Admin {
     if (tableExists(tableName)) {
       throw new TableExistsException(tableName);
     }
-    return internalRestoreSnapshotAsync(snapshotName, tableName);
+    return internalRestoreSnapshotAsync(snapshotName, tableName, false);
   }
 
   @Override
@@ -2740,10 +2752,10 @@ public class HBaseAdmin implements Admin {
    * @throws RestoreSnapshotException if snapshot failed to be restored
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
-  private Future<Void> internalRestoreSnapshotAsync(
-      final String snapshotName,
-      final TableName tableName) throws IOException, RestoreSnapshotException {
-    final HBaseProtos.SnapshotDescription snapshot = HBaseProtos.SnapshotDescription.newBuilder()
+  private Future<Void> internalRestoreSnapshotAsync(final String snapshotName,
+      final TableName tableName, final boolean restoreAcl)
+      throws IOException, RestoreSnapshotException {
+    final SnapshotProtos.SnapshotDescription snapshot = SnapshotProtos.SnapshotDescription.newBuilder()
         .setName(snapshotName).setTable(tableName.getNameAsString()).build();
 
     // actually restore the snapshot
@@ -2757,6 +2769,7 @@ public class HBaseAdmin implements Admin {
             .setSnapshot(snapshot)
             .setNonceGroup(ng.getNonceGroup())
             .setNonce(ng.newNonce())
+            .setRestoreACL(restoreAcl)
             .build();
         return master.restoreSnapshot(getRpcController(), request);
       }
@@ -2768,7 +2781,7 @@ public class HBaseAdmin implements Admin {
   private static class RestoreSnapshotFuture extends TableFuture<Void> {
     public RestoreSnapshotFuture(
         final HBaseAdmin admin,
-        final HBaseProtos.SnapshotDescription snapshot,
+        final SnapshotProtos.SnapshotDescription snapshot,
         final TableName tableName,
         final RestoreSnapshotResponse response) {
       super(admin, tableName,
@@ -2798,12 +2811,12 @@ public class HBaseAdmin implements Admin {
         getRpcControllerFactory()) {
       @Override
       protected List<SnapshotDescription> rpcCall() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotsList = master
+        List<SnapshotProtos.SnapshotDescription> snapshotsList = master
             .getCompletedSnapshots(getRpcController(),
                 GetCompletedSnapshotsRequest.newBuilder().build())
             .getSnapshotsList();
         List<SnapshotDescription> result = new ArrayList<>(snapshotsList.size());
-        for (HBaseProtos.SnapshotDescription snapshot : snapshotsList) {
+        for (SnapshotProtos.SnapshotDescription snapshot : snapshotsList) {
           result.add(ProtobufUtil.createSnapshotDesc(snapshot));
         }
         return result;
@@ -2866,7 +2879,7 @@ public class HBaseAdmin implements Admin {
       protected Void rpcCall() throws Exception {
         master.deleteSnapshot(getRpcController(),
           DeleteSnapshotRequest.newBuilder().setSnapshot(
-                HBaseProtos.SnapshotDescription.newBuilder().setName(snapshotName).build())
+                SnapshotProtos.SnapshotDescription.newBuilder().setName(snapshotName).build())
               .build()
         );
         return null;
@@ -4122,7 +4135,7 @@ public class HBaseAdmin implements Admin {
   /**
    * Decide whether the table need replicate to the peer cluster according to the peer config
    * @param table name of the table
-   * @param peerConfig config for the peer
+   * @param peer config for the peer
    * @return true if the table need replicate to the peer cluster
    */
   private boolean needToReplicate(TableName table, ReplicationPeerDescription peer) {

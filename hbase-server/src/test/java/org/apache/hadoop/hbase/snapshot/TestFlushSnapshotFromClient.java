@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -274,9 +275,9 @@ public class TestFlushSnapshotFromClient {
 
   @Test
   public void testAsyncFlushSnapshot() throws Exception {
-    HBaseProtos.SnapshotDescription snapshot = HBaseProtos.SnapshotDescription.newBuilder()
+    SnapshotProtos.SnapshotDescription snapshot = SnapshotProtos.SnapshotDescription.newBuilder()
         .setName("asyncSnapshot").setTable(TABLE_NAME.getNameAsString())
-        .setType(HBaseProtos.SnapshotDescription.Type.FLUSH).build();
+        .setType(SnapshotProtos.SnapshotDescription.Type.FLUSH).build();
 
     // take the snapshot async
     admin.takeSnapshotAsync(

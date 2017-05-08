@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -67,7 +68,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
   protected final int rowCountCF4 = 40;
   protected final int rowCountCF1addition = 10;
 
-  private HBaseProtos.SnapshotDescription snapshot = null;
+  private SnapshotProtos.SnapshotDescription snapshot = null;
   private HTableDescriptor snapshotHTD = null;
 
   @Rule

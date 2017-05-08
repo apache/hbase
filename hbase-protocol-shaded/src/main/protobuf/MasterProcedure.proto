@@ -25,6 +25,7 @@ option optimize_for = SPEED;
 
 import "HBase.proto";
 import "RPC.proto";
+import "Snapshot.proto";
 
 // ============================================================================
 //  WARNING - Compatibility rules
@@ -235,6 +236,7 @@ enum CloneSnapshotState {
   CLONE_SNAPSHOT_ASSIGN_REGIONS = 4;
   CLONE_SNAPSHOT_UPDATE_DESC_CACHE = 5;
   CLONE_SNAPSHOT_POST_OPERATION = 6;
+  CLONE_SNAPHOST_RESTORE_ACL = 7;
 }
 
 message CloneSnapshotStateData {
@@ -250,6 +252,7 @@ enum RestoreSnapshotState {
   RESTORE_SNAPSHOT_UPDATE_TABLE_DESCRIPTOR = 2;
   RESTORE_SNAPSHOT_WRITE_FS_LAYOUT = 3;
   RESTORE_SNAPSHOT_UPDATE_META = 4;
+  RESTORE_SNAPSHOT_RESTORE_ACL = 5;
 }
 
 message RestoreSnapshotStateData {

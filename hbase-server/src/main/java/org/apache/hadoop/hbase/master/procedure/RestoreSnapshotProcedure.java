@@ -48,9 +48,9 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -69,6 +69,7 @@ public class RestoreSnapshotProcedure
   private Map<String, Pair<String, String>> parentsToChildrenPairMap = new HashMap<>();
 
   private SnapshotDescription snapshot;
+  private boolean restoreAcl;
 
   // Monitor
   private MonitoredTask monitorStatus = null;
@@ -81,6 +82,10 @@ public class RestoreSnapshotProcedure
   public RestoreSnapshotProcedure() {
   }
 
+  public RestoreSnapshotProcedure(final MasterProcedureEnv env,
+      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot) {
+    this(env, hTableDescriptor, snapshot, false);
+  }
   /**
    * Constructor
    * @param env MasterProcedureEnv
@@ -91,12 +96,14 @@ public class RestoreSnapshotProcedure
   public RestoreSnapshotProcedure(
       final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor,
-      final SnapshotDescription snapshot) {
+      final SnapshotDescription snapshot,
+      final boolean restoreAcl) {
     super(env);
     // This is the new schema we are going to write out as this modification.
     this.modifiedHTableDescriptor = hTableDescriptor;
     // Snapshot information
     this.snapshot = snapshot;
+    this.restoreAcl = restoreAcl;
 
     // Monitor
     getMonitorStatus();
@@ -140,6 +147,10 @@ public class RestoreSnapshotProcedure
           break;
         case RESTORE_SNAPSHOT_UPDATE_META:
           updateMETA(env);
+          setNextState(RestoreSnapshotState.RESTORE_SNAPSHOT_RESTORE_ACL);
+          break;
+        case RESTORE_SNAPSHOT_RESTORE_ACL:
+          restoreSnapshotAcl(env);
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
@@ -472,6 +483,16 @@ public class RestoreSnapshotProcedure
     MetricsSnapshot metricsSnapshot = new MetricsSnapshot();
     metricsSnapshot.addSnapshotRestore(
       monitorStatus.getCompletionTimestamp() - monitorStatus.getStartTime());
+  }
+
+  private void restoreSnapshotAcl(final MasterProcedureEnv env) throws IOException {
+    if (restoreAcl && snapshot.hasUsersAndPermissions() && snapshot.getUsersAndPermissions() != null
+        && SnapshotDescriptionUtils
+            .isSecurityAvailable(env.getMasterServices().getConfiguration())) {
+      // restore acl of snapshot to table.
+      RestoreSnapshotHelper.restoreSnapshotAcl(snapshot, TableName.valueOf(snapshot.getTable()),
+        env.getMasterServices().getConfiguration());
+    }
   }
 
   /**

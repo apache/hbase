@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -69,7 +69,7 @@ public class TestSnapshotDescriptionUtils {
   private static final Log LOG = LogFactory.getLog(TestSnapshotDescriptionUtils.class);
 
   @Test
-  public void testValidateMissingTableName() {
+  public void testValidateMissingTableName() throws IOException {
     Configuration conf = new Configuration(false);
     try {
       SnapshotDescriptionUtils.validate(SnapshotDescription.newBuilder().setName("fail").build(),

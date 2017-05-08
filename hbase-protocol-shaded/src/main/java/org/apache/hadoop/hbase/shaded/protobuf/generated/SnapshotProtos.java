@@ -14,6 +14,1526 @@ public final class SnapshotProtos {
     registerAllExtensions(
         (org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite) registry);
   }
+  public interface SnapshotDescriptionOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.SnapshotDescription)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required string name = 1;</code>
+     */
+    boolean hasName();
+    /**
+     * <code>required string name = 1;</code>
+     */
+    java.lang.String getName();
+    /**
+     * <code>required string name = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getNameBytes();
+
+    /**
+     * <pre>
+     * not needed for delete, but checked for in taking snapshot
+     * </pre>
+     *
+     * <code>optional string table = 2;</code>
+     */
+    boolean hasTable();
+    /**
+     * <pre>
+     * not needed for delete, but checked for in taking snapshot
+     * </pre>
+     *
+     * <code>optional string table = 2;</code>
+     */
+    java.lang.String getTable();
+    /**
+     * <pre>
+     * not needed for delete, but checked for in taking snapshot
+     * </pre>
+     *
+     * <code>optional string table = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getTableBytes();
+
+    /**
+     * <code>optional int64 creation_time = 3 [default = 0];</code>
+     */
+    boolean hasCreationTime();
+    /**
+     * <code>optional int64 creation_time = 3 [default = 0];</code>
+     */
+    long getCreationTime();
+
+    /**
+     * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+     */
+    boolean hasType();
+    /**
+     * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type getType();
+
+    /**
+     * <code>optional int32 version = 5;</code>
+     */
+    boolean hasVersion();
+    /**
+     * <code>optional int32 version = 5;</code>
+     */
+    int getVersion();
+
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    boolean hasOwner();
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    java.lang.String getOwner();
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getOwnerBytes();
+
+    /**
+     * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+     */
+    boolean hasUsersAndPermissions();
+    /**
+     * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions getUsersAndPermissions();
+    /**
+     * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder getUsersAndPermissionsOrBuilder();
+  }
+  /**
+   * <pre>
+   **
+   * Description of the snapshot to take
+   * </pre>
+   *
+   * Protobuf type {@code hbase.pb.SnapshotDescription}
+   */
+  public  static final class SnapshotDescription extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.SnapshotDescription)
+      SnapshotDescriptionOrBuilder {
+    // Use SnapshotDescription.newBuilder() to construct.
+    private SnapshotDescription(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private SnapshotDescription() {
+      name_ = "";
+      table_ = "";
+      creationTime_ = 0L;
+      type_ = 1;
+      version_ = 0;
+      owner_ = "";
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SnapshotDescription(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              name_ = bs;
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000002;
+              table_ = bs;
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              creationTime_ = input.readInt64();
+              break;
+            }
+            case 32: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type value = org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(4, rawValue);
+              } else {
+                bitField0_ |= 0x00000008;
+                type_ = rawValue;
+              }
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              version_ = input.readInt32();
+              break;
+            }
+            case 50: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000020;
+              owner_ = bs;
+              break;
+            }
+            case 58: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000040) == 0x00000040)) {
+                subBuilder = usersAndPermissions_.toBuilder();
+              }
+              usersAndPermissions_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(usersAndPermissions_);
+                usersAndPermissions_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000040;
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDescription_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.class, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder.class);
+    }
+
+    /**
+     * Protobuf enum {@code hbase.pb.SnapshotDescription.Type}
+     */
+    public enum Type
+        implements org.apache.hadoop.hbase.shaded.com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>DISABLED = 0;</code>
+       */
+      DISABLED(0),
+      /**
+       * <code>FLUSH = 1;</code>
+       */
+      FLUSH(1),
+      /**
+       * <code>SKIPFLUSH = 2;</code>
+       */
+      SKIPFLUSH(2),
+      ;
+
+      /**
+       * <code>DISABLED = 0;</code>
+       */
+      public static final int DISABLED_VALUE = 0;
+      /**
+       * <code>FLUSH = 1;</code>
+       */
+      public static final int FLUSH_VALUE = 1;
+      /**
+       * <code>SKIPFLUSH = 2;</code>
+       */
+      public static final int SKIPFLUSH_VALUE = 2;
+
+
+      public final int getNumber() {
+        return value;
+      }
+
+      /**
+       * @deprecated Use {@link #forNumber(int)} instead.
+       */
+      @java.lang.Deprecated
+      public static Type valueOf(int value) {
+        return forNumber(value);
+      }
+
+      public static Type forNumber(int value) {
+        switch (value) {
+          case 0: return DISABLED;
+          case 1: return FLUSH;
+          case 2: return SKIPFLUSH;
+          default: return null;
+        }
+      }
+
+      public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<Type>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<
+          Type> internalValueMap =
+            new org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<Type>() {
+              public Type findValueByNumber(int number) {
+                return Type.forNumber(number);
+              }
+            };
+
+      public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(ordinal());
+      }
+      public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final Type[] VALUES = values();
+
+      public static Type valueOf(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int value;
+
+      private Type(int value) {
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:hbase.pb.SnapshotDescription.Type)
+    }
+
+    private int bitField0_;
+    public static final int NAME_FIELD_NUMBER = 1;
+    private volatile java.lang.Object name_;
+    /**
+     * <code>required string name = 1;</code>
+     */
+    public boolean hasName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string name = 1;</code>
+     */
+    public java.lang.String getName() {
+      java.lang.Object ref = name_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          name_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string name = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getNameBytes() {
+      java.lang.Object ref = name_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        name_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int TABLE_FIELD_NUMBER = 2;
+    private volatile java.lang.Object table_;
+    /**
+     * <pre>
+     * not needed for delete, but checked for in taking snapshot
+     * </pre>
+     *
+     * <code>optional string table = 2;</code>
+     */
+    public boolean hasTable() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <pre>
+     * not needed for delete, but checked for in taking snapshot
+     * </pre>
+     *
+     * <code>optional string table = 2;</code>
+     */
+    public java.lang.String getTable() {
+      java.lang.Object ref = table_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          table_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * not needed for delete, but checked for in taking snapshot
+     * </pre>
+     *
+     * <code>optional string table = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getTableBytes() {
+      java.lang.Object ref = table_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        table_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int CREATION_TIME_FIELD_NUMBER = 3;
+    private long creationTime_;
+    /**
+     * <code>optional int64 creation_time = 3 [default = 0];</code>
+     */
+    public boolean hasCreationTime() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional int64 creation_time = 3 [default = 0];</code>
+     */
+    public long getCreationTime() {
+      return creationTime_;
+    }
+
+    public static final int TYPE_FIELD_NUMBER = 4;
+    private int type_;
+    /**
+     * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+     */
+    public boolean hasType() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type getType() {
+      org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type result = org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type.valueOf(type_);
+      return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type.FLUSH : result;
+    }
+
+    public static final int VERSION_FIELD_NUMBER = 5;
+    private int version_;
+    /**
+     * <code>optional int32 version = 5;</code>
+     */
+    public boolean hasVersion() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional int32 version = 5;</code>
+     */
+    public int getVersion() {
+      return version_;
+    }
+
+    public static final int OWNER_FIELD_NUMBER = 6;
+    private volatile java.lang.Object owner_;
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    public boolean hasOwner() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    public java.lang.String getOwner() {
+      java.lang.Object ref = owner_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          owner_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getOwnerBytes() {
+      java.lang.Object ref = owner_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        owner_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int USERS_AND_PERMISSIONS_FIELD_NUMBER = 7;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions usersAndPermissions_;
+    /**
+     * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+     */
+    public boolean hasUsersAndPermissions() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions getUsersAndPermissions() {
+      return usersAndPermissions_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.getDefaultInstance() : usersAndPermissions_;
+    }
+    /**
+     * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder getUsersAndPermissionsOrBuilder() {
+      return usersAndPermissions_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.getDefaultInstance() : usersAndPermissions_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (hasUsersAndPermissions()) {
+        if (!getUsersAndPermissions().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 1, name_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 2, table_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt64(3, creationTime_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeEnum(4, type_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeInt32(5, version_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 6, owner_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeMessage(7, getUsersAndPermissions());
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(1, name_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(2, table_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeInt64Size(3, creationTime_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeEnumSize(4, type_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeInt32Size(5, version_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(6, owner_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(7, getUsersAndPermissions());
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription other = (org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription) obj;
+
+      boolean result = true;
+      result = result && (hasName() == other.hasName());
+      if (hasName()) {
+        result = result && getName()
+            .equals(other.getName());
+      }
+      result = result && (hasTable() == other.hasTable());
+      if (hasTable()) {
+        result = result && getTable()
+            .equals(other.getTable());
+      }
+      result = result && (hasCreationTime() == other.hasCreationTime());
+      if (hasCreationTime()) {
+        result = result && (getCreationTime()
+            == other.getCreationTime());
+      }
+      result = result && (hasType() == other.hasType());
+      if (hasType()) {
+        result = result && type_ == other.type_;
+      }
+      result = result && (hasVersion() == other.hasVersion());
+      if (hasVersion()) {
+        result = result && (getVersion()
+            == other.getVersion());
+      }
+      result = result && (hasOwner() == other.hasOwner());
+      if (hasOwner()) {
+        result = result && getOwner()
+            .equals(other.getOwner());
+      }
+      result = result && (hasUsersAndPermissions() == other.hasUsersAndPermissions());
+      if (hasUsersAndPermissions()) {
+        result = result && getUsersAndPermissions()
+            .equals(other.getUsersAndPermissions());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasName()) {
+        hash = (37 * hash) + NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getName().hashCode();
+      }
+      if (hasTable()) {
+        hash = (37 * hash) + TABLE_FIELD_NUMBER;
+        hash = (53 * hash) + getTable().hashCode();
+      }
+      if (hasCreationTime()) {
+        hash = (37 * hash) + CREATION_TIME_FIELD_NUMBER;
+        hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
+            getCreationTime());
+      }
+      if (hasType()) {
+        hash = (37 * hash) + TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + type_;
+      }
+      if (hasVersion()) {
+        hash = (37 * hash) + VERSION_FIELD_NUMBER;
+        hash = (53 * hash) + getVersion();
+      }
+      if (hasOwner()) {
+        hash = (37 * hash) + OWNER_FIELD_NUMBER;
+        hash = (53 * hash) + getOwner().hashCode();
+      }
+      if (hasUsersAndPermissions()) {
+        hash = (37 * hash) + USERS_AND_PERMISSIONS_FIELD_NUMBER;
+        hash = (53 * hash) + getUsersAndPermissions().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     **
+     * Description of the snapshot to take
+     * </pre>
+     *
+     * Protobuf type {@code hbase.pb.SnapshotDescription}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.SnapshotDescription)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDescription_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.class, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getUsersAndPermissionsFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        name_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        table_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        creationTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        type_ = 1;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        version_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        owner_ = "";
+        bitField0_ = (bitField0_ & ~0x00000020);
+        if (usersAndPermissionsBuilder_ == null) {
+          usersAndPermissions_ = null;
+        } else {
+          usersAndPermissionsBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000040);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.internal_static_hbase_pb_SnapshotDescription_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription result = new org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.name_ = name_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.table_ = table_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.creationTime_ = creationTime_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.type_ = type_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.version_ = version_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.owner_ = owner_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        if (usersAndPermissionsBuilder_ == null) {
+          result.usersAndPermissions_ = usersAndPermissions_;
+        } else {
+          result.usersAndPermissions_ = usersAndPermissionsBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance()) return this;
+        if (other.hasName()) {
+          bitField0_ |= 0x00000001;
+          name_ = other.name_;
+          onChanged();
+        }
+        if (other.hasTable()) {
+          bitField0_ |= 0x00000002;
+          table_ = other.table_;
+          onChanged();
+        }
+        if (other.hasCreationTime()) {
+          setCreationTime(other.getCreationTime());
+        }
+        if (other.hasType()) {
+          setType(other.getType());
+        }
+        if (other.hasVersion()) {
+          setVersion(other.getVersion());
+        }
+        if (other.hasOwner()) {
+          bitField0_ |= 0x00000020;
+          owner_ = other.owner_;
+          onChanged();
+        }
+        if (other.hasUsersAndPermissions()) {
+          mergeUsersAndPermissions(other.getUsersAndPermissions());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasName()) {
+          return false;
+        }
+        if (hasUsersAndPermissions()) {
+          if (!getUsersAndPermissions().isInitialized()) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object name_ = "";
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public java.lang.String getName() {
+        java.lang.Object ref = name_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            name_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getNameBytes() {
+        java.lang.Object ref = name_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          name_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public Builder setName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        name_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public Builder clearName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        name_ = getDefaultInstance().getName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public Builder setNameBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        name_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object table_ = "";
+      /**
+       * <pre>
+       * not needed for delete, but checked for in taking snapshot
+       * </pre>
+       *
+       * <code>optional string table = 2;</code>
+       */
+      public boolean hasTable() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <pre>
+       * not needed for delete, but checked for in taking snapshot
+       * </pre>
+       *
+       * <code>optional string table = 2;</code>
+       */
+      public java.lang.String getTable() {
+        java.lang.Object ref = table_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            table_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * not needed for delete, but checked for in taking snapshot
+       * </pre>
+       *
+       * <code>optional string table = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getTableBytes() {
+        java.lang.Object ref = table_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          table_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * not needed for delete, but checked for in taking snapshot
+       * </pre>
+       *
+       * <code>optional string table = 2;</code>
+       */
+      public Builder setTable(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        table_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * not needed for delete, but checked for in taking snapshot
+       * </pre>
+       *
+       * <code>optional string table = 2;</code>
+       */
+      public Builder clearTable() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        table_ = getDefaultInstance().getTable();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * not needed for delete, but checked for in taking snapshot
+       * </pre>
+       *
+       * <code>optional string table = 2;</code>
+       */
+      public Builder setTableBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        table_ = value;
+        onChanged();
+        return this;
+      }
+
+      private long creationTime_ ;
+      /**
+       * <code>optional int64 creation_time = 3 [default = 0];</code>
+       */
+      public boolean hasCreationTime() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional int64 creation_time = 3 [default = 0];</code>
+       */
+      public long getCreationTime() {
+        return creationTime_;
+      }
+      /**
+       * <code>optional int64 creation_time = 3 [default = 0];</code>
+       */
+      public Builder setCreationTime(long value) {
+        bitField0_ |= 0x00000004;
+        creationTime_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 creation_time = 3 [default = 0];</code>
+       */
+      public Builder clearCreationTime() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        creationTime_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private int type_ = 1;
+      /**
+       * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+       */
+      public boolean hasType() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type getType() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type result = org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type.valueOf(type_);
+        return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type.FLUSH : result;
+      }
+      /**
+       * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+       */
+      public Builder setType(org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
+        type_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+       */
+      public Builder clearType() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        type_ = 1;
+        onChanged();
+        return this;
+      }
+
+      private int version_ ;
+      /**
+       * <code>optional int32 version = 5;</code>
+       */
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional int32 version = 5;</code>
+       */
+      public int getVersion() {
+        return version_;
+      }
+      /**
+       * <code>optional int32 version = 5;</code>
+       */
+      public Builder setVersion(int value) {
+        bitField0_ |= 0x00000010;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 version = 5;</code>
+       */
+      public Builder clearVersion() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        version_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object owner_ = "";
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public boolean hasOwner() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public java.lang.String getOwner() {
+        java.lang.Object ref = owner_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            owner_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getOwnerBytes() {
+        java.lang.Object ref = owner_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          owner_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public Builder setOwner(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        owner_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public Builder clearOwner() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        owner_ = getDefaultInstance().getOwner();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public Builder setOwnerBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        owner_ = value;
+        onChanged();
+        return this;
+      }
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions usersAndPermissions_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder> usersAndPermissionsBuilder_;
+      /**
+       * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+       */
+      public boolean hasUsersAndPermissions() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions getUsersAndPermissions() {
+        if (usersAndPermissionsBuilder_ == null) {
+          return usersAndPermissions_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.getDefaultInstance() : usersAndPermissions_;
+        } else {
+          return usersAndPermissionsBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+       */
+      public Builder setUsersAndPermissions(org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions value) {
+        if (usersAndPermissionsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          usersAndPermissions_ = value;
+          onChanged();
+        } else {
+          usersAndPermissionsBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000040;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+       */
+      public Builder setUsersAndPermissions(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder builderForValue) {
+        if (usersAndPermissionsBuilder_ == null) {
+          usersAndPermissions_ = builderForValue.build();
+          onChanged();
+        } else {
+          usersAndPermissionsBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000040;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+       */
+      public Builder mergeUsersAndPermissions(org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions value) {
+        if (usersAndPermissionsBuilder_ == null) {
+          if (((bitField0_ & 0x00000040) == 0x00000040) &&
+              usersAndPermissions_ != null &&
+              usersAndPermissions_ != org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.getDefaultInstance()) {
+            usersAndPermissions_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.newBuilder(usersAndPermissions_).mergeFrom(value).buildPartial();
+          } else {
+            usersAndPermissions_ = value;
+          }
+          onChanged();
+        } else {
+          usersAndPermissionsBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000040;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+       */
+      public Builder clearUsersAndPermissions() {
+        if (usersAndPermissionsBuilder_ == null) {
+          usersAndPermissions_ = null;
+          onChanged();
+        } else {
+          usersAndPermissionsBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000040);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder getUsersAndPermissionsBuilder() {
+        bitField0_ |= 0x00000040;
+        onChanged();
+        return getUsersAndPermissionsFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder getUsersAndPermissionsOrBuilder() {
+        if (usersAndPermissionsBuilder_ != null) {
+          return usersAndPermissionsBuilder_.getMessageOrBuilder();
+        } else {
+          return usersAndPermissions_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.getDefaultInstance() : usersAndPermissions_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder>
+          getUsersAndPermissionsFieldBuilder() {
+        if (usersAndPermissionsBuilder_ == null) {
+          usersAndPermissionsBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder>(
+                  getUsersAndPermissions(),
+                  getParentForChildren(),
+                  isClean());
+          usersAndPermissions_ = null;
+        }
+        return usersAndPermissionsBuilder_;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SnapshotDescription)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.SnapshotDescription)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<SnapshotDescription>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<SnapshotDescription>() {
+      public SnapshotDescription parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new SnapshotDescription(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<SnapshotDescription> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<SnapshotDescription> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface SnapshotFileInfoOrBuilder extends
       // @@protoc_insertion_point(interface_extends:hbase.pb.SnapshotFileInfo)
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
@@ -4845,6 +6365,11 @@ public final class SnapshotProtos {
   }
 
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_SnapshotDescription_descriptor;
+  private static final
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SnapshotFileInfo_descriptor;
   private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -4878,25 +6403,33 @@ public final class SnapshotProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\016Snapshot.proto\022\010hbase.pb\032\010FS.proto\032\013HB" +
-      "ase.proto\"\222\001\n\020SnapshotFileInfo\022-\n\004type\030\001" +
-      " \002(\0162\037.hbase.pb.SnapshotFileInfo.Type\022\r\n" +
-      "\005hfile\030\003 \001(\t\022\022\n\nwal_server\030\004 \001(\t\022\020\n\010wal_" +
-      "name\030\005 \001(\t\"\032\n\004Type\022\t\n\005HFILE\020\001\022\007\n\003WAL\020\002\"\323" +
-      "\002\n\026SnapshotRegionManifest\022\017\n\007version\030\001 \001" +
-      "(\005\022)\n\013region_info\030\002 \002(\0132\024.hbase.pb.Regio" +
-      "nInfo\022B\n\014family_files\030\003 \003(\0132,.hbase.pb.S" +
-      "napshotRegionManifest.FamilyFiles\032T\n\tSto" +
-      "reFile\022\014\n\004name\030\001 \002(\t\022&\n\treference\030\002 \001(\0132",
-      "\023.hbase.pb.Reference\022\021\n\tfile_size\030\003 \001(\004\032" +
-      "c\n\013FamilyFiles\022\023\n\013family_name\030\001 \002(\014\022?\n\013s" +
-      "tore_files\030\002 \003(\0132*.hbase.pb.SnapshotRegi" +
-      "onManifest.StoreFile\"\177\n\024SnapshotDataMani" +
-      "fest\022+\n\014table_schema\030\001 \002(\0132\025.hbase.pb.Ta" +
-      "bleSchema\022:\n\020region_manifests\030\002 \003(\0132 .hb" +
-      "ase.pb.SnapshotRegionManifestBK\n1org.apa" +
-      "che.hadoop.hbase.shaded.protobuf.generat" +
-      "edB\016SnapshotProtosH\001\210\001\001\240\001\001"
+      "\n\016Snapshot.proto\022\010hbase.pb\032\023AccessContro" +
+      "l.proto\032\010FS.proto\032\013HBase.proto\"\223\002\n\023Snaps" +
+      "hotDescription\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 " +
+      "\001(\t\022\030\n\rcreation_time\030\003 \001(\003:\0010\0227\n\004type\030\004 " +
+      "\001(\0162\".hbase.pb.SnapshotDescription.Type:" +
+      "\005FLUSH\022\017\n\007version\030\005 \001(\005\022\r\n\005owner\030\006 \001(\t\022<" +
+      "\n\025users_and_permissions\030\007 \001(\0132\035.hbase.pb" +
+      ".UsersAndPermissions\".\n\004Type\022\014\n\010DISABLED" +
+      "\020\000\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLUSH\020\002\"\222\001\n\020Snapsho" +
+      "tFileInfo\022-\n\004type\030\001 \002(\0162\037.hbase.pb.Snaps",
+      "hotFileInfo.Type\022\r\n\005hfile\030\003 \001(\t\022\022\n\nwal_s" +
+      "erver\030\004 \001(\t\022\020\n\010wal_name\030\005 \001(\t\"\032\n\004Type\022\t\n" +
+      "\005HFILE\020\001\022\007\n\003WAL\020\002\"\323\002\n\026SnapshotRegionMani" +
+      "fest\022\017\n\007version\030\001 \001(\005\022)\n\013region_info\030\002 \002" +
+      "(\0132\024.hbase.pb.RegionInfo\022B\n\014family_files" +
+      "\030\003 \003(\0132,.hbase.pb.SnapshotRegionManifest" +
+      ".FamilyFiles\032T\n\tStoreFile\022\014\n\004name\030\001 \002(\t\022" +
+      "&\n\treference\030\002 \001(\0132\023.hbase.pb.Reference\022" +
+      "\021\n\tfile_size\030\003 \001(\004\032c\n\013FamilyFiles\022\023\n\013fam" +
+      "ily_name\030\001 \002(\014\022?\n\013store_files\030\002 \003(\0132*.hb",
+      "ase.pb.SnapshotRegionManifest.StoreFile\"" +
+      "\177\n\024SnapshotDataManifest\022+\n\014table_schema\030" +
+      "\001 \002(\0132\025.hbase.pb.TableSchema\022:\n\020region_m" +
+      "anifests\030\002 \003(\0132 .hbase.pb.SnapshotRegion" +
+      "ManifestBK\n1org.apache.hadoop.hbase.shad" +
+      "ed.protobuf.generatedB\016SnapshotProtosH\001\210" +
+      "\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -4909,17 +6442,24 @@ public final class SnapshotProtos {
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor[] {
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.getDescriptor(),
           org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos.getDescriptor(),
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.getDescriptor(),
         }, assigner);
-    internal_static_hbase_pb_SnapshotFileInfo_descriptor =
+    internal_static_hbase_pb_SnapshotDescription_descriptor =
       getDescriptor().getMessageTypes().get(0);
+    internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_SnapshotDescription_descriptor,
+        new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", "Owner", "UsersAndPermissions", });
+    internal_static_hbase_pb_SnapshotFileInfo_descriptor =
+      getDescriptor().getMessageTypes().get(1);
     internal_static_hbase_pb_SnapshotFileInfo_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SnapshotFileInfo_descriptor,
         new java.lang.String[] { "Type", "Hfile", "WalServer", "WalName", });
     internal_static_hbase_pb_SnapshotRegionManifest_descriptor =
-      getDescriptor().getMessageTypes().get(1);
+      getDescriptor().getMessageTypes().get(2);
     internal_static_hbase_pb_SnapshotRegionManifest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SnapshotRegionManifest_descriptor,
@@ -4937,11 +6477,12 @@ public final class SnapshotProtos {
         internal_static_hbase_pb_SnapshotRegionManifest_FamilyFiles_descriptor,
         new java.lang.String[] { "FamilyName", "StoreFiles", });
     internal_static_hbase_pb_SnapshotDataManifest_descriptor =
-      getDescriptor().getMessageTypes().get(2);
+      getDescriptor().getMessageTypes().get(3);
     internal_static_hbase_pb_SnapshotDataManifest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SnapshotDataManifest_descriptor,
         new java.lang.String[] { "TableSchema", "RegionManifests", });
+    org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.getDescriptor();
     org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos.getDescriptor();
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.getDescriptor();
   }

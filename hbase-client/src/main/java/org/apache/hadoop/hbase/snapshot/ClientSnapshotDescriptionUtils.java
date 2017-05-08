@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.snapshot;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -36,7 +37,7 @@ public class ClientSnapshotDescriptionUtils {
    * @throws IllegalArgumentException if the name of the snapshot or the name of the table to
    *           snapshot are not valid names.
    */
-  public static void assertSnapshotRequestIsValid(HBaseProtos.SnapshotDescription snapshot)
+  public static void assertSnapshotRequestIsValid(SnapshotProtos.SnapshotDescription snapshot)
       throws IllegalArgumentException {
     // make sure the snapshot name is valid
     TableName.isLegalTableQualifierName(Bytes.toBytes(snapshot.getName()), true);
@@ -57,7 +58,7 @@ public class ClientSnapshotDescriptionUtils {
    * @param ssd
    * @return Single line string with a summary of the snapshot parameters
    */
-  public static String toString(HBaseProtos.SnapshotDescription ssd) {
+  public static String toString(SnapshotProtos.SnapshotDescription ssd) {
     if (ssd == null) {
       return null;
     }

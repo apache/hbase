@@ -48,9 +48,9 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
@@ -69,6 +69,7 @@ public class CloneSnapshotProcedure
 
   private HTableDescriptor hTableDescriptor;
   private SnapshotDescription snapshot;
+  private boolean restoreAcl;
   private List<HRegionInfo> newRegions = null;
   private Map<String, Pair<String, String> > parentsToChildrenPairMap = new HashMap<>();
 
@@ -83,6 +84,11 @@ public class CloneSnapshotProcedure
   public CloneSnapshotProcedure() {
   }
 
+  public CloneSnapshotProcedure(final MasterProcedureEnv env,
+      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot) {
+    this(env, hTableDescriptor, snapshot, false);
+  }
+
   /**
    * Constructor
    * @param env MasterProcedureEnv
@@ -90,10 +96,12 @@ public class CloneSnapshotProcedure
    * @param snapshot snapshot to clone from
    */
   public CloneSnapshotProcedure(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot) {
+      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot,
+      final boolean restoreAcl) {
     super(env);
     this.hTableDescriptor = hTableDescriptor;
     this.snapshot = snapshot;
+    this.restoreAcl = restoreAcl;
 
     getMonitorStatus();
   }
@@ -107,6 +115,14 @@ public class CloneSnapshotProcedure
         "' to table " + getTableName());
     }
     return monitorStatus;
+  }
+
+  private void restoreSnapshotAcl(MasterProcedureEnv env) throws IOException {
+    Configuration conf = env.getMasterServices().getConfiguration();
+    if (restoreAcl && snapshot.hasUsersAndPermissions() && snapshot.getUsersAndPermissions() != null
+        && SnapshotDescriptionUtils.isSecurityAvailable(conf)) {
+      RestoreSnapshotHelper.restoreSnapshotAcl(snapshot, hTableDescriptor.getTableName(), conf);
+    }
   }
 
   @Override
@@ -138,6 +154,10 @@ public class CloneSnapshotProcedure
           break;
         case CLONE_SNAPSHOT_UPDATE_DESC_CACHE:
           CreateTableProcedure.updateTableDescCache(env, getTableName());
+          setNextState(CloneSnapshotState.CLONE_SNAPHOST_RESTORE_ACL);
+          break;
+        case CLONE_SNAPHOST_RESTORE_ACL:
+          restoreSnapshotAcl(env);
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_POST_OPERATION);
           break;
         case CLONE_SNAPSHOT_POST_OPERATION:

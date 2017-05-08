@@ -35,7 +35,6 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -164,6 +163,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -2954,9 +2954,9 @@ public final class ProtobufUtil {
    * @param type the SnapshotDescription type
    * @return the protobuf SnapshotDescription type
    */
-  public static HBaseProtos.SnapshotDescription.Type
+  public static SnapshotProtos.SnapshotDescription.Type
       createProtosSnapShotDescType(SnapshotType type) {
-    return HBaseProtos.SnapshotDescription.Type.valueOf(type.name());
+    return SnapshotProtos.SnapshotDescription.Type.valueOf(type.name());
   }
 
   /**
@@ -2965,9 +2965,9 @@ public final class ProtobufUtil {
    * @param snapshotDesc string representing the snapshot description type
    * @return the protobuf SnapshotDescription type
    */
-  public static HBaseProtos.SnapshotDescription.Type
+  public static SnapshotProtos.SnapshotDescription.Type
       createProtosSnapShotDescType(String snapshotDesc) {
-    return HBaseProtos.SnapshotDescription.Type.valueOf(snapshotDesc.toUpperCase(Locale.ROOT));
+    return SnapshotProtos.SnapshotDescription.Type.valueOf(snapshotDesc.toUpperCase(Locale.ROOT));
   }
 
   /**
@@ -2976,7 +2976,7 @@ public final class ProtobufUtil {
    * @param type the snapshot description type
    * @return the protobuf SnapshotDescription type
    */
-  public static SnapshotType createSnapshotType(HBaseProtos.SnapshotDescription.Type type) {
+  public static SnapshotType createSnapshotType(SnapshotProtos.SnapshotDescription.Type type) {
     return SnapshotType.valueOf(type.toString());
   }
 
@@ -2986,9 +2986,9 @@ public final class ProtobufUtil {
    * @param snapshotDesc the POJO SnapshotDescription
    * @return the protobuf SnapshotDescription
    */
-  public static HBaseProtos.SnapshotDescription
+  public static SnapshotProtos.SnapshotDescription
       createHBaseProtosSnapshotDesc(SnapshotDescription snapshotDesc) {
-    HBaseProtos.SnapshotDescription.Builder builder = HBaseProtos.SnapshotDescription.newBuilder();
+    SnapshotProtos.SnapshotDescription.Builder builder = SnapshotProtos.SnapshotDescription.newBuilder();
     if (snapshotDesc.getTableName() != null) {
       builder.setTable(snapshotDesc.getTableNameAsString());
     }
@@ -3005,7 +3005,7 @@ public final class ProtobufUtil {
       builder.setVersion(snapshotDesc.getVersion());
     }
     builder.setType(ProtobufUtil.createProtosSnapShotDescType(snapshotDesc.getType()));
-    HBaseProtos.SnapshotDescription snapshot = builder.build();
+    SnapshotProtos.SnapshotDescription snapshot = builder.build();
     return snapshot;
   }
 
@@ -3017,7 +3017,7 @@ public final class ProtobufUtil {
    * @return the POJO SnapshotDescription
    */
   public static SnapshotDescription
-      createSnapshotDesc(HBaseProtos.SnapshotDescription snapshotDesc) {
+      createSnapshotDesc(SnapshotProtos.SnapshotDescription snapshotDesc) {
     return new SnapshotDescription(snapshotDesc.getName(),
         snapshotDesc.hasTable() ? TableName.valueOf(snapshotDesc.getTable()) : null,
         createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),

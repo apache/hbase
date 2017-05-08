@@ -29,10 +29,12 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import com.google.common.collect.ListMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -46,13 +48,17 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
+import org.apache.hadoop.hbase.security.access.TablePermission;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -824,5 +830,26 @@ public class RestoreSnapshotHelper {
       FSUtils.logFileSystemState(fs, restoreDir, LOG);
     }
     return metaChanges;
+  }
+
+  public static void restoreSnapshotAcl(SnapshotDescription snapshot, TableName newTableName,
+      Configuration conf) throws IOException {
+    if (snapshot.hasUsersAndPermissions() && snapshot.getUsersAndPermissions() != null) {
+      LOG.info("Restore snapshot acl to table. snapshot: " + snapshot + ", table: " + newTableName);
+      ListMultimap<String, TablePermission> perms =
+          ShadedAccessControlUtil.toUserTablePermissions(snapshot.getUsersAndPermissions());
+      try (Connection conn = ConnectionFactory.createConnection(conf)) {
+        for (Entry<String, TablePermission> e : perms.entries()) {
+          String user = e.getKey();
+          TablePermission perm = e.getValue();
+          perm.setTableName(newTableName);
+          AccessControlClient.grant(conn, perm.getTableName(), user, perm.getFamily(),
+            perm.getQualifier(), perm.getActions());
+        }
+      } catch (Throwable e) {
+        throw new IOException("Grant acl into newly creatd table failed. snapshot: " + snapshot
+            + ", table: " + newTableName, e);
+      }
+    }
   }
 }

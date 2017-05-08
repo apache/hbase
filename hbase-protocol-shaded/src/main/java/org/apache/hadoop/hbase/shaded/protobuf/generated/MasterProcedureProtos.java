@@ -1510,6 +1510,10 @@ public final class MasterProcedureProtos {
      * <code>CLONE_SNAPSHOT_POST_OPERATION = 6;</code>
      */
     CLONE_SNAPSHOT_POST_OPERATION(6),
+    /**
+     * <code>CLONE_SNAPHOST_RESTORE_ACL = 7;</code>
+     */
+    CLONE_SNAPHOST_RESTORE_ACL(7),
     ;
 
     /**
@@ -1536,6 +1540,10 @@ public final class MasterProcedureProtos {
      * <code>CLONE_SNAPSHOT_POST_OPERATION = 6;</code>
      */
     public static final int CLONE_SNAPSHOT_POST_OPERATION_VALUE = 6;
+    /**
+     * <code>CLONE_SNAPHOST_RESTORE_ACL = 7;</code>
+     */
+    public static final int CLONE_SNAPHOST_RESTORE_ACL_VALUE = 7;
 
 
     public final int getNumber() {
@@ -1558,6 +1566,7 @@ public final class MasterProcedureProtos {
         case 4: return CLONE_SNAPSHOT_ASSIGN_REGIONS;
         case 5: return CLONE_SNAPSHOT_UPDATE_DESC_CACHE;
         case 6: return CLONE_SNAPSHOT_POST_OPERATION;
+        case 7: return CLONE_SNAPHOST_RESTORE_ACL;
         default: return null;
       }
     }
@@ -1628,6 +1637,10 @@ public final class MasterProcedureProtos {
      * <code>RESTORE_SNAPSHOT_UPDATE_META = 4;</code>
      */
     RESTORE_SNAPSHOT_UPDATE_META(4),
+    /**
+     * <code>RESTORE_SNAPSHOT_RESTORE_ACL = 5;</code>
+     */
+    RESTORE_SNAPSHOT_RESTORE_ACL(5),
     ;
 
     /**
@@ -1646,6 +1659,10 @@ public final class MasterProcedureProtos {
      * <code>RESTORE_SNAPSHOT_UPDATE_META = 4;</code>
      */
     public static final int RESTORE_SNAPSHOT_UPDATE_META_VALUE = 4;
+    /**
+     * <code>RESTORE_SNAPSHOT_RESTORE_ACL = 5;</code>
+     */
+    public static final int RESTORE_SNAPSHOT_RESTORE_ACL_VALUE = 5;
 
 
     public final int getNumber() {
@@ -1666,6 +1683,7 @@ public final class MasterProcedureProtos {
         case 2: return RESTORE_SNAPSHOT_UPDATE_TABLE_DESCRIPTOR;
         case 3: return RESTORE_SNAPSHOT_WRITE_FS_LAYOUT;
         case 4: return RESTORE_SNAPSHOT_UPDATE_META;
+        case 5: return RESTORE_SNAPSHOT_RESTORE_ACL;
         default: return null;
       }
     }
@@ -15612,11 +15630,11 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription getSnapshot();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription getSnapshot();
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder();
 
     /**
      * <code>required .hbase.pb.TableSchema table_schema = 3;</code>
@@ -15737,11 +15755,11 @@ public final class MasterProcedureProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder subBuilder = null;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = snapshot_.toBuilder();
               }
-              snapshot_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.PARSER, extensionRegistry);
+              snapshot_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(snapshot_);
                 snapshot_ = subBuilder.buildPartial();
@@ -15833,7 +15851,7 @@ public final class MasterProcedureProtos {
     }
 
     public static final int SNAPSHOT_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription snapshot_;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription snapshot_;
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
@@ -15843,14 +15861,14 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription getSnapshot() {
-      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription getSnapshot() {
+      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
     }
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
-      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
+      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
     }
 
     public static final int TABLE_SCHEMA_FIELD_NUMBER = 3;
@@ -16598,9 +16616,9 @@ public final class MasterProcedureProtos {
         return userInfoBuilder_;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription snapshot_ = null;
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription snapshot_ = null;
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder> snapshotBuilder_;
+          org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder> snapshotBuilder_;
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
@@ -16610,9 +16628,9 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription getSnapshot() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription getSnapshot() {
         if (snapshotBuilder_ == null) {
-          return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+          return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
         } else {
           return snapshotBuilder_.getMessage();
         }
@@ -16620,7 +16638,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public Builder setSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription value) {
+      public Builder setSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription value) {
         if (snapshotBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -16637,7 +16655,7 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
       public Builder setSnapshot(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder builderForValue) {
+          org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder builderForValue) {
         if (snapshotBuilder_ == null) {
           snapshot_ = builderForValue.build();
           onChanged();
@@ -16650,13 +16668,13 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public Builder mergeSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription value) {
+      public Builder mergeSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription value) {
         if (snapshotBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
               snapshot_ != null &&
-              snapshot_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance()) {
+              snapshot_ != org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance()) {
             snapshot_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.newBuilder(snapshot_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.newBuilder(snapshot_).mergeFrom(value).buildPartial();
           } else {
             snapshot_ = value;
           }
@@ -16683,7 +16701,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder getSnapshotBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder getSnapshotBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getSnapshotFieldBuilder().getBuilder();
@@ -16691,23 +16709,23 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
         if (snapshotBuilder_ != null) {
           return snapshotBuilder_.getMessageOrBuilder();
         } else {
           return snapshot_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
         }
       }
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder>
           getSnapshotFieldBuilder() {
         if (snapshotBuilder_ == null) {
           snapshotBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder>(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder>(
                   getSnapshot(),
                   getParentForChildren(),
                   isClean());
@@ -17386,11 +17404,11 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription getSnapshot();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription getSnapshot();
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder();
 
     /**
      * <code>required .hbase.pb.TableSchema modified_table_schema = 3;</code>
@@ -17561,11 +17579,11 @@ public final class MasterProcedureProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder subBuilder = null;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = snapshot_.toBuilder();
               }
-              snapshot_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.PARSER, extensionRegistry);
+              snapshot_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(snapshot_);
                 snapshot_ = subBuilder.buildPartial();
@@ -17681,7 +17699,7 @@ public final class MasterProcedureProtos {
     }
 
     public static final int SNAPSHOT_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription snapshot_;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription snapshot_;
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
@@ -17691,14 +17709,14 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription getSnapshot() {
-      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription getSnapshot() {
+      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
     }
     /**
      * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
-      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
+      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
     }
 
     public static final int MODIFIED_TABLE_SCHEMA_FIELD_NUMBER = 3;
@@ -18648,9 +18666,9 @@ public final class MasterProcedureProtos {
         return userInfoBuilder_;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription snapshot_ = null;
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription snapshot_ = null;
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder> snapshotBuilder_;
+          org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder> snapshotBuilder_;
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
@@ -18660,9 +18678,9 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription getSnapshot() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription getSnapshot() {
         if (snapshotBuilder_ == null) {
-          return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+          return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
         } else {
           return snapshotBuilder_.getMessage();
         }
@@ -18670,7 +18688,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public Builder setSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription value) {
+      public Builder setSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription value) {
         if (snapshotBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -18687,7 +18705,7 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
       public Builder setSnapshot(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder builderForValue) {
+          org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder builderForValue) {
         if (snapshotBuilder_ == null) {
           snapshot_ = builderForValue.build();
           onChanged();
@@ -18700,13 +18718,13 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public Builder mergeSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription value) {
+      public Builder mergeSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription value) {
         if (snapshotBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
               snapshot_ != null &&
-              snapshot_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance()) {
+              snapshot_ != org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance()) {
             snapshot_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.newBuilder(snapshot_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.newBuilder(snapshot_).mergeFrom(value).buildPartial();
           } else {
             snapshot_ = value;
           }
@@ -18733,7 +18751,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder getSnapshotBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder getSnapshotBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getSnapshotFieldBuilder().getBuilder();
@@ -18741,23 +18759,23 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
         if (snapshotBuilder_ != null) {
           return snapshotBuilder_.getMessageOrBuilder();
         } else {
           return snapshot_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
         }
       }
       /**
        * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder>
           getSnapshotFieldBuilder() {
         if (snapshotBuilder_ == null) {
           snapshotBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder>(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescriptionOrBuilder>(
                   getSnapshot(),
                   getParentForChildren(),
                   isClean());
@@ -24058,208 +24076,210 @@ public final class MasterProcedureProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\025MasterProcedure.proto\022\010hbase.pb\032\013HBase" +
-      ".proto\032\tRPC.proto\"\234\001\n\024CreateTableStateDa" +
-      "ta\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInf" +
-      "ormation\022+\n\014table_schema\030\002 \002(\0132\025.hbase.p" +
-      "b.TableSchema\022)\n\013region_info\030\003 \003(\0132\024.hba" +
-      "se.pb.RegionInfo\"\332\001\n\024ModifyTableStateDat" +
-      "a\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInfo" +
-      "rmation\0226\n\027unmodified_table_schema\030\002 \001(\013" +
-      "2\025.hbase.pb.TableSchema\0224\n\025modified_tabl" +
-      "e_schema\030\003 \002(\0132\025.hbase.pb.TableSchema\022&\n",
-      "\036delete_column_family_in_modify\030\004 \002(\010\"\340\001" +
-      "\n\026TruncateTableStateData\022,\n\tuser_info\030\001 " +
-      "\002(\0132\031.hbase.pb.UserInformation\022\027\n\017preser" +
-      "ve_splits\030\002 \002(\010\022\'\n\ntable_name\030\003 \001(\0132\023.hb" +
-      "ase.pb.TableName\022+\n\014table_schema\030\004 \001(\0132\025" +
-      ".hbase.pb.TableSchema\022)\n\013region_info\030\005 \003" +
-      "(\0132\024.hbase.pb.RegionInfo\"\230\001\n\024DeleteTable" +
-      "StateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb." +
-      "UserInformation\022\'\n\ntable_name\030\002 \002(\0132\023.hb" +
-      "ase.pb.TableName\022)\n\013region_info\030\003 \003(\0132\024.",
-      "hbase.pb.RegionInfo\"W\n\030CreateNamespaceSt" +
-      "ateData\022;\n\024namespace_descriptor\030\001 \002(\0132\035." +
-      "hbase.pb.NamespaceDescriptor\"\237\001\n\030ModifyN" +
-      "amespaceStateData\022;\n\024namespace_descripto" +
-      "r\030\001 \002(\0132\035.hbase.pb.NamespaceDescriptor\022F" +
-      "\n\037unmodified_namespace_descriptor\030\002 \001(\0132" +
-      "\035.hbase.pb.NamespaceDescriptor\"o\n\030Delete" +
-      "NamespaceStateData\022\026\n\016namespace_name\030\001 \002" +
-      "(\t\022;\n\024namespace_descriptor\030\002 \001(\0132\035.hbase" +
-      ".pb.NamespaceDescriptor\"\344\001\n\030AddColumnFam",
-      "ilyStateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase." +
-      "pb.UserInformation\022\'\n\ntable_name\030\002 \002(\0132\023" +
-      ".hbase.pb.TableName\0229\n\023columnfamily_sche" +
-      "ma\030\003 \002(\0132\034.hbase.pb.ColumnFamilySchema\0226" +
-      "\n\027unmodified_table_schema\030\004 \001(\0132\025.hbase." +
-      "pb.TableSchema\"\347\001\n\033ModifyColumnFamilySta" +
-      "teData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.Use" +
-      "rInformation\022\'\n\ntable_name\030\002 \002(\0132\023.hbase" +
-      ".pb.TableName\0229\n\023columnfamily_schema\030\003 \002" +
-      "(\0132\034.hbase.pb.ColumnFamilySchema\0226\n\027unmo",
-      "dified_table_schema\030\004 \001(\0132\025.hbase.pb.Tab" +
-      "leSchema\"\307\001\n\033DeleteColumnFamilyStateData" +
+      ".proto\032\tRPC.proto\032\016Snapshot.proto\"\234\001\n\024Cr" +
+      "eateTableStateData\022,\n\tuser_info\030\001 \002(\0132\031." +
+      "hbase.pb.UserInformation\022+\n\014table_schema" +
+      "\030\002 \002(\0132\025.hbase.pb.TableSchema\022)\n\013region_" +
+      "info\030\003 \003(\0132\024.hbase.pb.RegionInfo\"\332\001\n\024Mod" +
+      "ifyTableStateData\022,\n\tuser_info\030\001 \002(\0132\031.h" +
+      "base.pb.UserInformation\0226\n\027unmodified_ta" +
+      "ble_schema\030\002 \001(\0132\025.hbase.pb.TableSchema\022" +
+      "4\n\025modified_table_schema\030\003 \002(\0132\025.hbase.p",
+      "b.TableSchema\022&\n\036delete_column_family_in" +
+      "_modify\030\004 \002(\010\"\340\001\n\026TruncateTableStateData" +
       "\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInfor" +
-      "mation\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.Ta" +
-      "bleName\022\031\n\021columnfamily_name\030\003 \002(\014\0226\n\027un" +
-      "modified_table_schema\030\004 \001(\0132\025.hbase.pb.T" +
-      "ableSchema\"\215\001\n\024EnableTableStateData\022,\n\tu" +
-      "ser_info\030\001 \002(\0132\031.hbase.pb.UserInformatio" +
-      "n\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.TableNa" +
-      "me\022\036\n\026skip_table_state_check\030\003 \002(\010\"\216\001\n\025D",
-      "isableTableStateData\022,\n\tuser_info\030\001 \002(\0132" +
-      "\031.hbase.pb.UserInformation\022\'\n\ntable_name" +
-      "\030\002 \002(\0132\023.hbase.pb.TableName\022\036\n\026skip_tabl" +
-      "e_state_check\030\003 \002(\010\"u\n\037RestoreParentToCh" +
-      "ildRegionsPair\022\032\n\022parent_region_name\030\001 \002" +
-      "(\t\022\032\n\022child1_region_name\030\002 \002(\t\022\032\n\022child2" +
-      "_region_name\030\003 \002(\t\"\245\002\n\026CloneSnapshotStat" +
-      "eData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.User" +
-      "Information\022/\n\010snapshot\030\002 \002(\0132\035.hbase.pb" +
-      ".SnapshotDescription\022+\n\014table_schema\030\003 \002",
-      "(\0132\025.hbase.pb.TableSchema\022)\n\013region_info" +
-      "\030\004 \003(\0132\024.hbase.pb.RegionInfo\022T\n!parent_t" +
-      "o_child_regions_pair_list\030\005 \003(\0132).hbase." +
-      "pb.RestoreParentToChildRegionsPair\"\245\003\n\030R" +
-      "estoreSnapshotStateData\022,\n\tuser_info\030\001 \002" +
-      "(\0132\031.hbase.pb.UserInformation\022/\n\010snapsho" +
-      "t\030\002 \002(\0132\035.hbase.pb.SnapshotDescription\0224" +
-      "\n\025modified_table_schema\030\003 \002(\0132\025.hbase.pb" +
-      ".TableSchema\0225\n\027region_info_for_restore\030" +
-      "\004 \003(\0132\024.hbase.pb.RegionInfo\0224\n\026region_in",
-      "fo_for_remove\030\005 \003(\0132\024.hbase.pb.RegionInf" +
-      "o\0221\n\023region_info_for_add\030\006 \003(\0132\024.hbase.p" +
-      "b.RegionInfo\022T\n!parent_to_child_regions_" +
-      "pair_list\030\007 \003(\0132).hbase.pb.RestoreParent" +
-      "ToChildRegionsPair\"\300\001\n\032MergeTableRegions" +
-      "StateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb." +
-      "UserInformation\022)\n\013region_info\030\002 \003(\0132\024.h" +
-      "base.pb.RegionInfo\0220\n\022merged_region_info" +
-      "\030\003 \002(\0132\024.hbase.pb.RegionInfo\022\027\n\010forcible" +
-      "\030\004 \001(\010:\005false\"\254\001\n\031SplitTableRegionStateD",
-      "ata\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserIn" +
-      "formation\0220\n\022parent_region_info\030\002 \002(\0132\024." +
-      "hbase.pb.RegionInfo\022/\n\021child_region_info" +
-      "\030\003 \003(\0132\024.hbase.pb.RegionInfo\"\201\002\n\024ServerC" +
-      "rashStateData\022)\n\013server_name\030\001 \002(\0132\024.hba" +
-      "se.pb.ServerName\022\036\n\026distributed_log_repl" +
-      "ay\030\002 \001(\010\0227\n\031regions_on_crashed_server\030\003 " +
-      "\003(\0132\024.hbase.pb.RegionInfo\022.\n\020regions_ass" +
-      "igned\030\004 \003(\0132\024.hbase.pb.RegionInfo\022\025\n\rcar" +
-      "rying_meta\030\005 \001(\010\022\036\n\020should_split_wal\030\006 \001",
-      "(\010:\004true*\330\001\n\020CreateTableState\022\036\n\032CREATE_" +
-      "TABLE_PRE_OPERATION\020\001\022 \n\034CREATE_TABLE_WR" +
-      "ITE_FS_LAYOUT\020\002\022\034\n\030CREATE_TABLE_ADD_TO_M" +
-      "ETA\020\003\022\037\n\033CREATE_TABLE_ASSIGN_REGIONS\020\004\022\"" +
-      "\n\036CREATE_TABLE_UPDATE_DESC_CACHE\020\005\022\037\n\033CR" +
-      "EATE_TABLE_POST_OPERATION\020\006*\207\002\n\020ModifyTa" +
-      "bleState\022\030\n\024MODIFY_TABLE_PREPARE\020\001\022\036\n\032MO" +
-      "DIFY_TABLE_PRE_OPERATION\020\002\022(\n$MODIFY_TAB" +
-      "LE_UPDATE_TABLE_DESCRIPTOR\020\003\022&\n\"MODIFY_T" +
-      "ABLE_REMOVE_REPLICA_COLUMN\020\004\022!\n\035MODIFY_T",
-      "ABLE_DELETE_FS_LAYOUT\020\005\022\037\n\033MODIFY_TABLE_" +
-      "POST_OPERATION\020\006\022#\n\037MODIFY_TABLE_REOPEN_" +
-      "ALL_REGIONS\020\007*\212\002\n\022TruncateTableState\022 \n\034" +
-      "TRUNCATE_TABLE_PRE_OPERATION\020\001\022#\n\037TRUNCA" +
-      "TE_TABLE_REMOVE_FROM_META\020\002\022\"\n\036TRUNCATE_" +
-      "TABLE_CLEAR_FS_LAYOUT\020\003\022#\n\037TRUNCATE_TABL" +
-      "E_CREATE_FS_LAYOUT\020\004\022\036\n\032TRUNCATE_TABLE_A" +
-      "DD_TO_META\020\005\022!\n\035TRUNCATE_TABLE_ASSIGN_RE" +
-      "GIONS\020\006\022!\n\035TRUNCATE_TABLE_POST_OPERATION" +
-      "\020\007*\337\001\n\020DeleteTableState\022\036\n\032DELETE_TABLE_",
-      "PRE_OPERATION\020\001\022!\n\035DELETE_TABLE_REMOVE_F" +
-      "ROM_META\020\002\022 \n\034DELETE_TABLE_CLEAR_FS_LAYO" +
-      "UT\020\003\022\"\n\036DELETE_TABLE_UPDATE_DESC_CACHE\020\004" +
-      "\022!\n\035DELETE_TABLE_UNASSIGN_REGIONS\020\005\022\037\n\033D" +
-      "ELETE_TABLE_POST_OPERATION\020\006*\320\001\n\024CreateN" +
-      "amespaceState\022\034\n\030CREATE_NAMESPACE_PREPAR" +
-      "E\020\001\022%\n!CREATE_NAMESPACE_CREATE_DIRECTORY" +
-      "\020\002\022)\n%CREATE_NAMESPACE_INSERT_INTO_NS_TA" +
-      "BLE\020\003\022\036\n\032CREATE_NAMESPACE_UPDATE_ZK\020\004\022(\n" +
-      "$CREATE_NAMESPACE_SET_NAMESPACE_QUOTA\020\005*",
-      "z\n\024ModifyNamespaceState\022\034\n\030MODIFY_NAMESP" +
-      "ACE_PREPARE\020\001\022$\n MODIFY_NAMESPACE_UPDATE" +
-      "_NS_TABLE\020\002\022\036\n\032MODIFY_NAMESPACE_UPDATE_Z" +
-      "K\020\003*\332\001\n\024DeleteNamespaceState\022\034\n\030DELETE_N" +
-      "AMESPACE_PREPARE\020\001\022)\n%DELETE_NAMESPACE_D" +
-      "ELETE_FROM_NS_TABLE\020\002\022#\n\037DELETE_NAMESPAC" +
-      "E_REMOVE_FROM_ZK\020\003\022\'\n#DELETE_NAMESPACE_D" +
-      "ELETE_DIRECTORIES\020\004\022+\n\'DELETE_NAMESPACE_" +
-      "REMOVE_NAMESPACE_QUOTA\020\005*\331\001\n\024AddColumnFa" +
-      "milyState\022\035\n\031ADD_COLUMN_FAMILY_PREPARE\020\001",
-      "\022#\n\037ADD_COLUMN_FAMILY_PRE_OPERATION\020\002\022-\n" +
-      ")ADD_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPT" +
-      "OR\020\003\022$\n ADD_COLUMN_FAMILY_POST_OPERATION" +
-      "\020\004\022(\n$ADD_COLUMN_FAMILY_REOPEN_ALL_REGIO" +
-      "NS\020\005*\353\001\n\027ModifyColumnFamilyState\022 \n\034MODI" +
-      "FY_COLUMN_FAMILY_PREPARE\020\001\022&\n\"MODIFY_COL" +
-      "UMN_FAMILY_PRE_OPERATION\020\002\0220\n,MODIFY_COL" +
-      "UMN_FAMILY_UPDATE_TABLE_DESCRIPTOR\020\003\022\'\n#" +
-      "MODIFY_COLUMN_FAMILY_POST_OPERATION\020\004\022+\n" +
-      "\'MODIFY_COLUMN_FAMILY_REOPEN_ALL_REGIONS",
-      "\020\005*\226\002\n\027DeleteColumnFamilyState\022 \n\034DELETE" +
-      "_COLUMN_FAMILY_PREPARE\020\001\022&\n\"DELETE_COLUM" +
-      "N_FAMILY_PRE_OPERATION\020\002\0220\n,DELETE_COLUM" +
-      "N_FAMILY_UPDATE_TABLE_DESCRIPTOR\020\003\022)\n%DE" +
-      "LETE_COLUMN_FAMILY_DELETE_FS_LAYOUT\020\004\022\'\n" +
-      "#DELETE_COLUMN_FAMILY_POST_OPERATION\020\005\022+" +
-      "\n\'DELETE_COLUMN_FAMILY_REOPEN_ALL_REGION" +
-      "S\020\006*\350\001\n\020EnableTableState\022\030\n\024ENABLE_TABLE" +
-      "_PREPARE\020\001\022\036\n\032ENABLE_TABLE_PRE_OPERATION" +
-      "\020\002\022)\n%ENABLE_TABLE_SET_ENABLING_TABLE_ST",
-      "ATE\020\003\022$\n ENABLE_TABLE_MARK_REGIONS_ONLIN" +
-      "E\020\004\022(\n$ENABLE_TABLE_SET_ENABLED_TABLE_ST" +
-      "ATE\020\005\022\037\n\033ENABLE_TABLE_POST_OPERATION\020\006*\362" +
-      "\001\n\021DisableTableState\022\031\n\025DISABLE_TABLE_PR" +
-      "EPARE\020\001\022\037\n\033DISABLE_TABLE_PRE_OPERATION\020\002" +
-      "\022+\n\'DISABLE_TABLE_SET_DISABLING_TABLE_ST" +
-      "ATE\020\003\022&\n\"DISABLE_TABLE_MARK_REGIONS_OFFL" +
-      "INE\020\004\022*\n&DISABLE_TABLE_SET_DISABLED_TABL" +
-      "E_STATE\020\005\022 \n\034DISABLE_TABLE_POST_OPERATIO" +
-      "N\020\006*\346\001\n\022CloneSnapshotState\022 \n\034CLONE_SNAP",
-      "SHOT_PRE_OPERATION\020\001\022\"\n\036CLONE_SNAPSHOT_W" +
-      "RITE_FS_LAYOUT\020\002\022\036\n\032CLONE_SNAPSHOT_ADD_T" +
-      "O_META\020\003\022!\n\035CLONE_SNAPSHOT_ASSIGN_REGION" +
-      "S\020\004\022$\n CLONE_SNAPSHOT_UPDATE_DESC_CACHE\020" +
-      "\005\022!\n\035CLONE_SNAPSHOT_POST_OPERATION\020\006*\260\001\n" +
-      "\024RestoreSnapshotState\022\"\n\036RESTORE_SNAPSHO" +
-      "T_PRE_OPERATION\020\001\022,\n(RESTORE_SNAPSHOT_UP" +
-      "DATE_TABLE_DESCRIPTOR\020\002\022$\n RESTORE_SNAPS" +
-      "HOT_WRITE_FS_LAYOUT\020\003\022 \n\034RESTORE_SNAPSHO" +
-      "T_UPDATE_META\020\004*\376\003\n\026MergeTableRegionsSta",
-      "te\022\037\n\033MERGE_TABLE_REGIONS_PREPARE\020\001\022.\n*M" +
-      "ERGE_TABLE_REGIONS_MOVE_REGION_TO_SAME_R" +
-      "S\020\002\022+\n\'MERGE_TABLE_REGIONS_PRE_MERGE_OPE" +
-      "RATION\020\003\022/\n+MERGE_TABLE_REGIONS_SET_MERG" +
-      "ING_TABLE_STATE\020\004\022%\n!MERGE_TABLE_REGIONS" +
-      "_CLOSE_REGIONS\020\005\022,\n(MERGE_TABLE_REGIONS_" +
-      "CREATE_MERGED_REGION\020\006\0222\n.MERGE_TABLE_RE" +
-      "GIONS_PRE_MERGE_COMMIT_OPERATION\020\007\022#\n\037ME" +
-      "RGE_TABLE_REGIONS_UPDATE_META\020\010\0223\n/MERGE" +
-      "_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATI",
-      "ON\020\t\022*\n&MERGE_TABLE_REGIONS_OPEN_MERGED_" +
-      "REGION\020\n\022&\n\"MERGE_TABLE_REGIONS_POST_OPE" +
-      "RATION\020\013*\304\003\n\025SplitTableRegionState\022\036\n\032SP" +
-      "LIT_TABLE_REGION_PREPARE\020\001\022$\n SPLIT_TABL" +
-      "E_REGION_PRE_OPERATION\020\002\0220\n,SPLIT_TABLE_" +
-      "REGION_SET_SPLITTING_TABLE_STATE\020\003\022*\n&SP" +
-      "LIT_TABLE_REGION_CLOSE_PARENT_REGION\020\004\022." +
-      "\n*SPLIT_TABLE_REGION_CREATE_DAUGHTER_REG" +
-      "IONS\020\005\0220\n,SPLIT_TABLE_REGION_PRE_OPERATI" +
-      "ON_BEFORE_PONR\020\006\022\"\n\036SPLIT_TABLE_REGION_U",
-      "PDATE_META\020\007\022/\n+SPLIT_TABLE_REGION_PRE_O" +
-      "PERATION_AFTER_PONR\020\010\022)\n%SPLIT_TABLE_REG" +
-      "ION_OPEN_CHILD_REGIONS\020\t\022%\n!SPLIT_TABLE_" +
-      "REGION_POST_OPERATION\020\n*\234\002\n\020ServerCrashS" +
-      "tate\022\026\n\022SERVER_CRASH_START\020\001\022\035\n\031SERVER_C" +
-      "RASH_PROCESS_META\020\002\022\034\n\030SERVER_CRASH_GET_" +
-      "REGIONS\020\003\022\036\n\032SERVER_CRASH_NO_SPLIT_LOGS\020" +
-      "\004\022\033\n\027SERVER_CRASH_SPLIT_LOGS\020\005\022#\n\037SERVER" +
-      "_CRASH_PREPARE_LOG_REPLAY\020\006\022\027\n\023SERVER_CR" +
-      "ASH_ASSIGN\020\010\022\037\n\033SERVER_CRASH_WAIT_ON_ASS",
-      "IGN\020\t\022\027\n\023SERVER_CRASH_FINISH\020dBR\n1org.ap" +
-      "ache.hadoop.hbase.shaded.protobuf.genera" +
-      "tedB\025MasterProcedureProtosH\001\210\001\001\240\001\001"
+      "mation\022\027\n\017preserve_splits\030\002 \002(\010\022\'\n\ntable" +
+      "_name\030\003 \001(\0132\023.hbase.pb.TableName\022+\n\014tabl" +
+      "e_schema\030\004 \001(\0132\025.hbase.pb.TableSchema\022)\n" +
+      "\013region_info\030\005 \003(\0132\024.hbase.pb.RegionInfo" +
+      "\"\230\001\n\024DeleteTableStateData\022,\n\tuser_info\030\001" +
+      " \002(\0132\031.hbase.pb.UserInformation\022\'\n\ntable" +
+      "_name\030\002 \002(\0132\023.hbase.pb.TableName\022)\n\013regi",
+      "on_info\030\003 \003(\0132\024.hbase.pb.RegionInfo\"W\n\030C" +
+      "reateNamespaceStateData\022;\n\024namespace_des" +
+      "criptor\030\001 \002(\0132\035.hbase.pb.NamespaceDescri" +
+      "ptor\"\237\001\n\030ModifyNamespaceStateData\022;\n\024nam" +
+      "espace_descriptor\030\001 \002(\0132\035.hbase.pb.Names" +
+      "paceDescriptor\022F\n\037unmodified_namespace_d" +
+      "escriptor\030\002 \001(\0132\035.hbase.pb.NamespaceDesc" +
+      "riptor\"o\n\030DeleteNamespaceStateData\022\026\n\016na" +
+      "mespace_name\030\001 \002(\t\022;\n\024namespace_descript" +
+      "or\030\002 \001(\0132\035.hbase.pb.NamespaceDescriptor\"",
+      "\344\001\n\030AddColumnFamilyStateData\022,\n\tuser_inf" +
+      "o\030\001 \002(\0132\031.hbase.pb.UserInformation\022\'\n\nta" +
+      "ble_name\030\002 \002(\0132\023.hbase.pb.TableName\0229\n\023c" +
+      "olumnfamily_schema\030\003 \002(\0132\034.hbase.pb.Colu" +
+      "mnFamilySchema\0226\n\027unmodified_table_schem" +
+      "a\030\004 \001(\0132\025.hbase.pb.TableSchema\"\347\001\n\033Modif" +
+      "yColumnFamilyStateData\022,\n\tuser_info\030\001 \002(" +
+      "\0132\031.hbase.pb.UserInformation\022\'\n\ntable_na" +
+      "me\030\002 \002(\0132\023.hbase.pb.TableName\0229\n\023columnf" +
+      "amily_schema\030\003 \002(\0132\034.hbase.pb.ColumnFami",
+      "lySchema\0226\n\027unmodified_table_schema\030\004 \001(" +
+      "\0132\025.hbase.pb.TableSchema\"\307\001\n\033DeleteColum" +
+      "nFamilyStateData\022,\n\tuser_info\030\001 \002(\0132\031.hb" +
+      "ase.pb.UserInformation\022\'\n\ntable_name\030\002 \002" +
+      "(\0132\023.hbase.pb.TableName\022\031\n\021columnfamily_" +
+      "name\030\003 \002(\014\0226\n\027unmodified_table_schema\030\004 " +
+      "\001(\0132\025.hbase.pb.TableSchema\"\215\001\n\024EnableTab" +
+      "leStateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.p" +
+      "b.UserInformation\022\'\n\ntable_name\030\002 \002(\0132\023." +
+      "hbase.pb.TableName\022\036\n\026skip_table_state_c",
+      "heck\030\003 \002(\010\"\216\001\n\025DisableTableStateData\022,\n\t" +
+      "user_info\030\001 \002(\0132\031.hbase.pb.UserInformati" +
+      "on\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.TableN" +
+      "ame\022\036\n\026skip_table_state_check\030\003 \002(\010\"u\n\037R" +
+      "estoreParentToChildRegionsPair\022\032\n\022parent" +
+      "_region_name\030\001 \002(\t\022\032\n\022child1_region_name" +
+      "\030\002 \002(\t\022\032\n\022child2_region_name\030\003 \002(\t\"\245\002\n\026C" +
+      "loneSnapshotStateData\022,\n\tuser_info\030\001 \002(\013" +
+      "2\031.hbase.pb.UserInformation\022/\n\010snapshot\030" +
+      "\002 \002(\0132\035.hbase.pb.SnapshotDescription\022+\n\014",
+      "table_schema\030\003 \002(\0132\025.hbase.pb.TableSchem" +
+      "a\022)\n\013region_info\030\004 \003(\0132\024.hbase.pb.Region" +
+      "Info\022T\n!parent_to_child_regions_pair_lis" +
+      "t\030\005 \003(\0132).hbase.pb.RestoreParentToChildR" +
+      "egionsPair\"\245\003\n\030RestoreSnapshotStateData\022" +
+      ",\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInform" +
+      "ation\022/\n\010snapshot\030\002 \002(\0132\035.hbase.pb.Snaps" +
+      "hotDescription\0224\n\025modified_table_schema\030" +
+      "\003 \002(\0132\025.hbase.pb.TableSchema\0225\n\027region_i" +
+      "nfo_for_restore\030\004 \003(\0132\024.hbase.pb.RegionI",
+      "nfo\0224\n\026region_info_for_remove\030\005 \003(\0132\024.hb" +
+      "ase.pb.RegionInfo\0221\n\023region_info_for_add" +
+      "\030\006 \003(\0132\024.hbase.pb.RegionInfo\022T\n!parent_t" +
+      "o_child_regions_pair_list\030\007 \003(\0132).hbase." +
+      "pb.RestoreParentToChildRegionsPair\"\300\001\n\032M" +
+      "ergeTableRegionsStateData\022,\n\tuser_info\030\001" +
+      " \002(\0132\031.hbase.pb.UserInformation\022)\n\013regio" +
+      "n_info\030\002 \003(\0132\024.hbase.pb.RegionInfo\0220\n\022me" +
+      "rged_region_info\030\003 \002(\0132\024.hbase.pb.Region" +
+      "Info\022\027\n\010forcible\030\004 \001(\010:\005false\"\254\001\n\031SplitT",
+      "ableRegionStateData\022,\n\tuser_info\030\001 \002(\0132\031" +
+      ".hbase.pb.UserInformation\0220\n\022parent_regi" +
+      "on_info\030\002 \002(\0132\024.hbase.pb.RegionInfo\022/\n\021c" +
+      "hild_region_info\030\003 \003(\0132\024.hbase.pb.Region" +
+      "Info\"\201\002\n\024ServerCrashStateData\022)\n\013server_" +
+      "name\030\001 \002(\0132\024.hbase.pb.ServerName\022\036\n\026dist" +
+      "ributed_log_replay\030\002 \001(\010\0227\n\031regions_on_c" +
+      "rashed_server\030\003 \003(\0132\024.hbase.pb.RegionInf" +
+      "o\022.\n\020regions_assigned\030\004 \003(\0132\024.hbase.pb.R" +
+      "egionInfo\022\025\n\rcarrying_meta\030\005 \001(\010\022\036\n\020shou",
+      "ld_split_wal\030\006 \001(\010:\004true*\330\001\n\020CreateTable" +
+      "State\022\036\n\032CREATE_TABLE_PRE_OPERATION\020\001\022 \n" +
+      "\034CREATE_TABLE_WRITE_FS_LAYOUT\020\002\022\034\n\030CREAT" +
+      "E_TABLE_ADD_TO_META\020\003\022\037\n\033CREATE_TABLE_AS" +
+      "SIGN_REGIONS\020\004\022\"\n\036CREATE_TABLE_UPDATE_DE" +
+      "SC_CACHE\020\005\022\037\n\033CREATE_TABLE_POST_OPERATIO" +
+      "N\020\006*\207\002\n\020ModifyTableState\022\030\n\024MODIFY_TABLE" +
+      "_PREPARE\020\001\022\036\n\032MODIFY_TABLE_PRE_OPERATION" +
+      "\020\002\022(\n$MODIFY_TABLE_UPDATE_TABLE_DESCRIPT" +
+      "OR\020\003\022&\n\"MODIFY_TABLE_REMOVE_REPLICA_COLU",
+      "MN\020\004\022!\n\035MODIFY_TABLE_DELETE_FS_LAYOUT\020\005\022" +
+      "\037\n\033MODIFY_TABLE_POST_OPERATION\020\006\022#\n\037MODI" +
+      "FY_TABLE_REOPEN_ALL_REGIONS\020\007*\212\002\n\022Trunca" +
+      "teTableState\022 \n\034TRUNCATE_TABLE_PRE_OPERA" +
+      "TION\020\001\022#\n\037TRUNCATE_TABLE_REMOVE_FROM_MET" +
+      "A\020\002\022\"\n\036TRUNCATE_TABLE_CLEAR_FS_LAYOUT\020\003\022" +
+      "#\n\037TRUNCATE_TABLE_CREATE_FS_LAYOUT\020\004\022\036\n\032" +
+      "TRUNCATE_TABLE_ADD_TO_META\020\005\022!\n\035TRUNCATE" +
+      "_TABLE_ASSIGN_REGIONS\020\006\022!\n\035TRUNCATE_TABL" +
+      "E_POST_OPERATION\020\007*\337\001\n\020DeleteTableState\022",
+      "\036\n\032DELETE_TABLE_PRE_OPERATION\020\001\022!\n\035DELET" +
+      "E_TABLE_REMOVE_FROM_META\020\002\022 \n\034DELETE_TAB" +
+      "LE_CLEAR_FS_LAYOUT\020\003\022\"\n\036DELETE_TABLE_UPD" +
+      "ATE_DESC_CACHE\020\004\022!\n\035DELETE_TABLE_UNASSIG" +
+      "N_REGIONS\020\005\022\037\n\033DELETE_TABLE_POST_OPERATI" +
+      "ON\020\006*\320\001\n\024CreateNamespaceState\022\034\n\030CREATE_" +
+      "NAMESPACE_PREPARE\020\001\022%\n!CREATE_NAMESPACE_" +
+      "CREATE_DIRECTORY\020\002\022)\n%CREATE_NAMESPACE_I" +
+      "NSERT_INTO_NS_TABLE\020\003\022\036\n\032CREATE_NAMESPAC" +
+      "E_UPDATE_ZK\020\004\022(\n$CREATE_NAMESPACE_SET_NA",
+      "MESPACE_QUOTA\020\005*z\n\024ModifyNamespaceState\022" +
+      "\034\n\030MODIFY_NAMESPACE_PREPARE\020\001\022$\n MODIFY_" +
+      "NAMESPACE_UPDATE_NS_TABLE\020\002\022\036\n\032MODIFY_NA" +
+      "MESPACE_UPDATE_ZK\020\003*\332\001\n\024DeleteNamespaceS" +
+      "tate\022\034\n\030DELETE_NAMESPACE_PREPARE\020\001\022)\n%DE" +
+      "LETE_NAMESPACE_DELETE_FROM_NS_TABLE\020\002\022#\n" +
+      "\037DELETE_NAMESPACE_REMOVE_FROM_ZK\020\003\022\'\n#DE" +
+      "LETE_NAMESPACE_DELETE_DIRECTORIES\020\004\022+\n\'D" +
+      "ELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA\020\005" +
+      "*\331\001\n\024AddColumnFamilyState\022\035\n\031ADD_COLUMN_",
+      "FAMILY_PREPARE\020\001\022#\n\037ADD_COLUMN_FAMILY_PR" +
+      "E_OPERATION\020\002\022-\n)ADD_COLUMN_FAMILY_UPDAT" +
+      "E_TABLE_DESCRIPTOR\020\003\022$\n ADD_COLUMN_FAMIL" +
+      "Y_POST_OPERATION\020\004\022(\n$ADD_COLUMN_FAMILY_" +
+      "REOPEN_ALL_REGIONS\020\005*\353\001\n\027ModifyColumnFam" +
+      "ilyState\022 \n\034MODIFY_COLUMN_FAMILY_PREPARE" +
+      "\020\001\022&\n\"MODIFY_COLUMN_FAMILY_PRE_OPERATION" +
+      "\020\002\0220\n,MODIFY_COLUMN_FAMILY_UPDATE_TABLE_" +
+      "DESCRIPTOR\020\003\022\'\n#MODIFY_COLUMN_FAMILY_POS" +
+      "T_OPERATION\020\004\022+\n\'MODIFY_COLUMN_FAMILY_RE",
+      "OPEN_ALL_REGIONS\020\005*\226\002\n\027DeleteColumnFamil" +
+      "yState\022 \n\034DELETE_COLUMN_FAMILY_PREPARE\020\001" +
+      "\022&\n\"DELETE_COLUMN_FAMILY_PRE_OPERATION\020\002" +
+      "\0220\n,DELETE_COLUMN_FAMILY_UPDATE_TABLE_DE" +
+      "SCRIPTOR\020\003\022)\n%DELETE_COLUMN_FAMILY_DELET" +
+      "E_FS_LAYOUT\020\004\022\'\n#DELETE_COLUMN_FAMILY_PO" +
+      "ST_OPERATION\020\005\022+\n\'DELETE_COLUMN_FAMILY_R" +
+      "EOPEN_ALL_REGIONS\020\006*\350\001\n\020EnableTableState" +
+      "\022\030\n\024ENABLE_TABLE_PREPARE\020\001\022\036\n\032ENABLE_TAB" +
+      "LE_PRE_OPERATION\020\002\022)\n%ENABLE_TABLE_SET_E",
+      "NABLING_TABLE_STATE\020\003\022$\n ENABLE_TABLE_MA" +
+      "RK_REGIONS_ONLINE\020\004\022(\n$ENABLE_TABLE_SET_" +
+      "ENABLED_TABLE_STATE\020\005\022\037\n\033ENABLE_TABLE_PO" +
+      "ST_OPERATION\020\006*\362\001\n\021DisableTableState\022\031\n\025" +
+      "DISABLE_TABLE_PREPARE\020\001\022\037\n\033DISABLE_TABLE" +
+      "_PRE_OPERATION\020\002\022+\n\'DISABLE_TABLE_SET_DI" +
+      "SABLING_TABLE_STATE\020\003\022&\n\"DISABLE_TABLE_M" +
+      "ARK_REGIONS_OFFLINE\020\004\022*\n&DISABLE_TABLE_S" +
+      "ET_DISABLED_TABLE_STATE\020\005\022 \n\034DISABLE_TAB" +
+      "LE_POST_OPERATION\020\006*\206\002\n\022CloneSnapshotSta",
+      "te\022 \n\034CLONE_SNAPSHOT_PRE_OPERATION\020\001\022\"\n\036" +
+      "CLONE_SNAPSHOT_WRITE_FS_LAYOUT\020\002\022\036\n\032CLON" +
+      "E_SNAPSHOT_ADD_TO_META\020\003\022!\n\035CLONE_SNAPSH" +
+      "OT_ASSIGN_REGIONS\020\004\022$\n CLONE_SNAPSHOT_UP" +
+      "DATE_DESC_CACHE\020\005\022!\n\035CLONE_SNAPSHOT_POST" +
+      "_OPERATION\020\006\022\036\n\032CLONE_SNAPHOST_RESTORE_A" +
+      "CL\020\007*\322\001\n\024RestoreSnapshotState\022\"\n\036RESTORE" +
+      "_SNAPSHOT_PRE_OPERATION\020\001\022,\n(RESTORE_SNA" +
+      "PSHOT_UPDATE_TABLE_DESCRIPTOR\020\002\022$\n RESTO" +
+      "RE_SNAPSHOT_WRITE_FS_LAYOUT\020\003\022 \n\034RESTORE",
+      "_SNAPSHOT_UPDATE_META\020\004\022 \n\034RESTORE_SNAPS" +
+      "HOT_RESTORE_ACL\020\005*\376\003\n\026MergeTableRegionsS" +
+      "tate\022\037\n\033MERGE_TABLE_REGIONS_PREPARE\020\001\022.\n" +
+      "*MERGE_TABLE_REGIONS_MOVE_REGION_TO_SAME" +
+      "_RS\020\002\022+\n\'MERGE_TABLE_REGIONS_PRE_MERGE_O" +
+      "PERATION\020\003\022/\n+MERGE_TABLE_REGIONS_SET_ME" +
+      "RGING_TABLE_STATE\020\004\022%\n!MERGE_TABLE_REGIO" +
+      "NS_CLOSE_REGIONS\020\005\022,\n(MERGE_TABLE_REGION" +
+      "S_CREATE_MERGED_REGION\020\006\0222\n.MERGE_TABLE_" +
+      "REGIONS_PRE_MERGE_COMMIT_OPERATION\020\007\022#\n\037",
+      "MERGE_TABLE_REGIONS_UPDATE_META\020\010\0223\n/MER" +
+      "GE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERA" +
+      "TION\020\t\022*\n&MERGE_TABLE_REGIONS_OPEN_MERGE" +
+      "D_REGION\020\n\022&\n\"MERGE_TABLE_REGIONS_POST_O" +
+      "PERATION\020\013*\304\003\n\025SplitTableRegionState\022\036\n\032" +
+      "SPLIT_TABLE_REGION_PREPARE\020\001\022$\n SPLIT_TA" +
+      "BLE_REGION_PRE_OPERATION\020\002\0220\n,SPLIT_TABL" +
+      "E_REGION_SET_SPLITTING_TABLE_STATE\020\003\022*\n&" +
+      "SPLIT_TABLE_REGION_CLOSE_PARENT_REGION\020\004" +
+      "\022.\n*SPLIT_TABLE_REGION_CREATE_DAUGHTER_R",
+      "EGIONS\020\005\0220\n,SPLIT_TABLE_REGION_PRE_OPERA" +
+      "TION_BEFORE_PONR\020\006\022\"\n\036SPLIT_TABLE_REGION" +
+      "_UPDATE_META\020\007\022/\n+SPLIT_TABLE_REGION_PRE" +
+      "_OPERATION_AFTER_PONR\020\010\022)\n%SPLIT_TABLE_R" +
+      "EGION_OPEN_CHILD_REGIONS\020\t\022%\n!SPLIT_TABL" +
+      "E_REGION_POST_OPERATION\020\n*\234\002\n\020ServerCras" +
+      "hState\022\026\n\022SERVER_CRASH_START\020\001\022\035\n\031SERVER" +
+      "_CRASH_PROCESS_META\020\002\022\034\n\030SERVER_CRASH_GE" +
+      "T_REGIONS\020\003\022\036\n\032SERVER_CRASH_NO_SPLIT_LOG" +
+      "S\020\004\022\033\n\027SERVER_CRASH_SPLIT_LOGS\020\005\022#\n\037SERV",
+      "ER_CRASH_PREPARE_LOG_REPLAY\020\006\022\027\n\023SERVER_" +
+      "CRASH_ASSIGN\020\010\022\037\n\033SERVER_CRASH_WAIT_ON_A" +
+      "SSIGN\020\t\022\027\n\023SERVER_CRASH_FINISH\020dBR\n1org." +
+      "apache.hadoop.hbase.shaded.protobuf.gene" +
+      "ratedB\025MasterProcedureProtosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -24274,6 +24294,7 @@ public final class MasterProcedureProtos {
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.getDescriptor(),
           org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.getDescriptor(),
+          org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.getDescriptor(),
         }, assigner);
     internal_static_hbase_pb_CreateTableStateData_descriptor =
       getDescriptor().getMessageTypes().get(0);
@@ -24385,6 +24406,7 @@ public final class MasterProcedureProtos {
         new java.lang.String[] { "ServerName", "DistributedLogReplay", "RegionsOnCrashedServer", "RegionsAssigned", "CarryingMeta", "ShouldSplitWal", });
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.getDescriptor();
     org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.getDescriptor();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

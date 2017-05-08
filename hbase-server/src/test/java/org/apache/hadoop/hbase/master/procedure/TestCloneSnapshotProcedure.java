@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -50,7 +51,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
 
   protected final byte[] CF = Bytes.toBytes("cf1");
 
-  private static HBaseProtos.SnapshotDescription snapshot = null;
+  private static SnapshotProtos.SnapshotDescription snapshot = null;
 
   @After
   @Override
@@ -60,7 +61,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     snapshot = null;
   }
 
-  private HBaseProtos.SnapshotDescription getSnapshot() throws Exception {
+  private SnapshotProtos.SnapshotDescription getSnapshot() throws Exception {
     if (snapshot == null) {
       final TableName snapshotTableName = TableName.valueOf("testCloneSnapshot");
       long tid = System.currentTimeMillis();
@@ -102,7 +103,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
 
     // take the snapshot
-    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
+    SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
 
     long procId = ProcedureTestingUtility.submitAndWait(
       procExec, new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
@@ -115,7 +116,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
   @Test(timeout=60000)
   public void testCloneSnapshotToSameTable() throws Exception {
     // take the snapshot
-    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
+    SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName clonedTableName = TableName.valueOf(snapshotDesc.getTable());
@@ -137,7 +138,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
 
     // take the snapshot
-    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
+    SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
@@ -161,7 +162,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
 
     // take the snapshot
-    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
+    SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);

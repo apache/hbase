@@ -67,10 +67,10 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -680,7 +680,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    */
   private long cloneSnapshot(final SnapshotDescription reqSnapshot, final TableName tableName,
       final SnapshotDescription snapshot, final HTableDescriptor snapshotTableDesc,
-      final NonceKey nonceKey) throws IOException {
+      final NonceKey nonceKey, final boolean restoreAcl) throws IOException {
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     HTableDescriptor htd = new HTableDescriptor(tableName, snapshotTableDesc);
     if (cpHost != null) {
@@ -688,7 +688,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
     long procId;
     try {
-      procId = cloneSnapshot(snapshot, htd, nonceKey);
+      procId = cloneSnapshot(snapshot, htd, nonceKey, restoreAcl);
     } catch (IOException e) {
       LOG.error("Exception occurred while cloning the snapshot " + snapshot.getName()
         + " as table " + tableName.getNameAsString(), e);
@@ -712,7 +712,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @return procId the ID of the clone snapshot procedure
    */
   synchronized long cloneSnapshot(final SnapshotDescription snapshot,
-      final HTableDescriptor hTableDescriptor, final NonceKey nonceKey)
+      final HTableDescriptor hTableDescriptor, final NonceKey nonceKey, final boolean restoreAcl)
       throws HBaseSnapshotException {
     TableName tableName = hTableDescriptor.getTableName();
 
@@ -728,8 +728,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     try {
       long procId = master.getMasterProcedureExecutor().submitProcedure(
-        new CloneSnapshotProcedure(
-          master.getMasterProcedureExecutor().getEnvironment(), hTableDescriptor, snapshot),
+        new CloneSnapshotProcedure(master.getMasterProcedureExecutor().getEnvironment(),
+            hTableDescriptor, snapshot, restoreAcl),
         nonceKey);
       this.restoreTableToProcIdMap.put(tableName, procId);
       return procId;
@@ -747,8 +747,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param nonceKey unique identifier to prevent duplicated RPC
    * @throws IOException
    */
-  public long restoreOrCloneSnapshot(final SnapshotDescription reqSnapshot, final NonceKey nonceKey)
-      throws IOException {
+  public long restoreOrCloneSnapshot(final SnapshotDescription reqSnapshot, final NonceKey nonceKey,
+      final boolean restoreAcl) throws IOException {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(reqSnapshot, rootDir);
 
@@ -777,28 +777,30 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // Execute the restore/clone operation
     long procId;
     if (MetaTableAccessor.tableExists(master.getConnection(), tableName)) {
-      procId = restoreSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey);
+      procId = restoreSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey,
+        restoreAcl);
     } else {
-      procId = cloneSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey);
+      procId =
+          cloneSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey, restoreAcl);
     }
     return procId;
   }
 
   /**
-   * Restore the specified snapshot.
-   * The restore will fail if the destination table has a snapshot or restore in progress.
-   *
+   * Restore the specified snapshot. The restore will fail if the destination table has a snapshot
+   * or restore in progress.
    * @param reqSnapshot Snapshot Descriptor from request
    * @param tableName table to restore
    * @param snapshot Snapshot Descriptor
    * @param snapshotTableDesc Table Descriptor
    * @param nonceKey unique identifier to prevent duplicated RPC
+   * @param restoreAcl true to restore acl of snapshot
    * @return procId the ID of the restore snapshot procedure
    * @throws IOException
    */
   private long restoreSnapshot(final SnapshotDescription reqSnapshot, final TableName tableName,
       final SnapshotDescription snapshot, final HTableDescriptor snapshotTableDesc,
-      final NonceKey nonceKey) throws IOException {
+      final NonceKey nonceKey, final boolean restoreAcl) throws IOException {
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
 
     if (master.getTableStateManager().isTableState(
@@ -815,7 +817,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     long procId;
     try {
-      procId = restoreSnapshot(snapshot, snapshotTableDesc, nonceKey);
+      procId = restoreSnapshot(snapshot, snapshotTableDesc, nonceKey, restoreAcl);
     } catch (IOException e) {
       LOG.error("Exception occurred while restoring the snapshot " + snapshot.getName()
         + " as table " + tableName.getNameAsString(), e);
@@ -831,16 +833,16 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   }
 
   /**
-   * Restore the specified snapshot.
-   * The restore will fail if the destination table has a snapshot or restore in progress.
-   *
+   * Restore the specified snapshot. The restore will fail if the destination table has a snapshot
+   * or restore in progress.
    * @param snapshot Snapshot Descriptor
    * @param hTableDescriptor Table Descriptor
    * @param nonceKey unique identifier to prevent duplicated RPC
+   * @param restoreAcl true to restore acl of snapshot
    * @return procId the ID of the restore snapshot procedure
    */
   private synchronized long restoreSnapshot(final SnapshotDescription snapshot,
-      final HTableDescriptor hTableDescriptor, final NonceKey nonceKey)
+      final HTableDescriptor hTableDescriptor, final NonceKey nonceKey, final boolean restoreAcl)
       throws HBaseSnapshotException {
     final TableName tableName = hTableDescriptor.getTableName();
 
@@ -856,8 +858,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     try {
       long procId = master.getMasterProcedureExecutor().submitProcedure(
-        new RestoreSnapshotProcedure(
-          master.getMasterProcedureExecutor().getEnvironment(), hTableDescriptor, snapshot),
+        new RestoreSnapshotProcedure(master.getMasterProcedureExecutor().getEnvironment(),
+            hTableDescriptor, snapshot, restoreAcl),
         nonceKey);
       this.restoreTableToProcIdMap.put(tableName, procId);
       return procId;

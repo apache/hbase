@@ -19532,7 +19532,6 @@ public final class AdminProtos {
   }
   /**
    * <pre>
-   *
    * Roll request responses no longer include regions to flush
    * this list will always be empty when talking to a 1.0 server
    * </pre>
@@ -19798,7 +19797,6 @@ public final class AdminProtos {
     }
     /**
      * <pre>
-     *
      * Roll request responses no longer include regions to flush
      * this list will always be empty when talking to a 1.0 server
      * </pre>

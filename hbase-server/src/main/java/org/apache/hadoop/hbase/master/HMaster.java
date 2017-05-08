@@ -153,7 +153,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -2309,7 +2309,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   public long restoreSnapshot(final SnapshotDescription snapshotDesc,
-      final long nonceGroup, final long nonce) throws IOException {
+      final long nonceGroup, final long nonce, final boolean restoreAcl) throws IOException {
     checkInitialized();
     getSnapshotManager().checkSnapshotSupport();
 
@@ -2321,7 +2321,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
       @Override
       protected void run() throws IOException {
-        setProcId(getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey()));
+          setProcId(
+            getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl));
       }
 
       @Override

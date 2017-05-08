@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.StringUtils;
 
@@ -144,7 +145,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     private AtomicLong nonSharedHfilesArchiveSize = new AtomicLong();
     private AtomicLong logSize = new AtomicLong();
 
-    private final HBaseProtos.SnapshotDescription snapshot;
+    private final SnapshotProtos.SnapshotDescription snapshot;
     private final TableName snapshotTable;
     private final Configuration conf;
     private final FileSystem fs;
@@ -159,7 +160,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     }
 
     SnapshotStats(final Configuration conf, final FileSystem fs,
-        final HBaseProtos.SnapshotDescription snapshot) {
+        final SnapshotProtos.SnapshotDescription snapshot) {
       this.snapshot = snapshot;
       this.snapshotTable = TableName.valueOf(snapshot.getTable());
       this.conf = conf;
@@ -234,7 +235,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
      *    with other snapshots and tables
      *
      *    This is only calculated when
-     *  {@link #getSnapshotStats(Configuration, HBaseProtos.SnapshotDescription, Map)}
+     *  {@link #getSnapshotStats(Configuration, SnapshotProtos.SnapshotDescription, Map)}
      *    is called with a non-null Map
      */
     public long getNonSharedArchivedStoreFilesSize() {
@@ -413,7 +414,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       return false;
     }
 
-    HBaseProtos.SnapshotDescription snapshotDesc =
+    SnapshotProtos.SnapshotDescription snapshotDesc =
         SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     snapshotManifest = SnapshotManifest.open(getConf(), fs, snapshotDir, snapshotDesc);
     return true;
@@ -423,7 +424,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
    * Dump the {@link SnapshotDescription}
    */
   private void printInfo() {
-    HBaseProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
+    SnapshotProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     System.out.println("Snapshot Info");
     System.out.println("----------------------------------------");
@@ -457,7 +458,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     }
 
     // Collect information about hfiles and logs in the snapshot
-    final HBaseProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
+    final SnapshotProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     final String table = snapshotDesc.getTable();
     final SnapshotDescription desc = ProtobufUtil.createSnapshotDesc(snapshotDesc);
     final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, desc);
@@ -552,7 +553,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
    */
   public static SnapshotStats getSnapshotStats(final Configuration conf,
       final SnapshotDescription snapshot) throws IOException {
-    HBaseProtos.SnapshotDescription snapshotDesc =
+    SnapshotProtos.SnapshotDescription snapshotDesc =
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
     return getSnapshotStats(conf, snapshotDesc, null);
   }
@@ -565,7 +566,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
    * @return the snapshot stats
    */
   public static SnapshotStats getSnapshotStats(final Configuration conf,
-      final HBaseProtos.SnapshotDescription snapshotDesc,
+      final SnapshotProtos.SnapshotDescription snapshotDesc,
       final Map<Path, Integer> filesMap) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
@@ -598,7 +599,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
         new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
     List<SnapshotDescription> snapshotLists = new ArrayList<>(snapshots.length);
     for (FileStatus snapshotDirStat: snapshots) {
-      HBaseProtos.SnapshotDescription snapshotDesc =
+      SnapshotProtos.SnapshotDescription snapshotDesc =
           SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDirStat.getPath());
       snapshotLists.add(ProtobufUtil.createSnapshotDesc(snapshotDesc));
     }
@@ -621,7 +622,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       final ConcurrentHashMap<Path, Integer> filesMap,
       final AtomicLong uniqueHFilesArchiveSize, final AtomicLong uniqueHFilesSize,
       final AtomicLong uniqueHFilesMobSize) throws IOException {
-    HBaseProtos.SnapshotDescription snapshotDesc =
+    SnapshotProtos.SnapshotDescription snapshotDesc =
         ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
     Path rootDir = FSUtils.getRootDir(conf);
     final FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
