@@ -152,6 +152,9 @@ public abstract class FSUtils {
     setStoragePolicy(fs, path, storagePolicy);
   }
 
+  private static final Map<FileSystem, Boolean> warningMap =
+      new ConcurrentHashMap<FileSystem, Boolean>();
+
   /**
    * Sets storage policy for given path.
    * If the passed path is a directory, we'll set the storage policy for all files
@@ -187,17 +190,20 @@ public abstract class FSUtils {
     try {
       distributed = isDistributedFileSystem(fs);
     } catch (IOException ioe) {
-      // This should NEVER happen.
-      LOG.warn("Failed setStoragePolicy=" + trimmedStoragePolicy + " on path=" +
-          path + "; failed isDFS test", ioe);
+      if (!warningMap.containsKey(fs)) {
+        warningMap.put(fs, true);
+        LOG.warn("FileSystem isn't an instance of DistributedFileSystem; presuming it doesn't "
+            + "support setStoragePolicy. Unable to set storagePolicy=" + trimmedStoragePolicy
+            + " on path=" + path);
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug("FileSystem isn't an instance of DistributedFileSystem; presuming it doesn't "
+            + "support setStoragePolicy. Unable to set storagePolicy=" + trimmedStoragePolicy
+            + " on path=" + path);
+      }
       return;
     }
     if (distributed) {
       invokeSetStoragePolicy(fs, path, trimmedStoragePolicy);
-    } else {
-      LOG.info("FileSystem isn't an instance of DistributedFileSystem; presuming it doesn't " +
-          "support setStoragePolicy. Unable to set storagePolicy=" + trimmedStoragePolicy +
-          " on path=" + path);
     }
   }
 
@@ -209,40 +215,55 @@ public abstract class FSUtils {
     Method m = null;
     try {
       m = fs.getClass().getDeclaredMethod("setStoragePolicy",
-          new Class<?>[] { Path.class, String.class });
+        new Class<?>[] { Path.class, String.class });
       m.setAccessible(true);
     } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support setStoragePolicy; HDFS-6584 not available "
-          + "(hadoop-2.6.0+): " + e.getMessage());
+      final String msg = "FileSystem doesn't support setStoragePolicy; HDFS-6584 not available";
+      if (!warningMap.containsKey(fs)) {
+        warningMap.put(fs, true);
+        LOG.warn(msg, e);
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug(msg, e);
+      }
+      m = null;
     } catch (SecurityException e) {
-      LOG.info("Don't have access to setStoragePolicy on FileSystems; HDFS-6584 not available "
-          + "(hadoop-2.6.0+): ", e);
+      final String msg = "No access to setStoragePolicy on FileSystem; HDFS-6584 not available";
+      if (!warningMap.containsKey(fs)) {
+        warningMap.put(fs, true);
+        LOG.warn(msg, e);
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug(msg, e);
+      }
       m = null; // could happen on setAccessible()
     }
     if (m != null) {
       try {
         m.invoke(fs, path, storagePolicy);
-        LOG.info("Set storagePolicy=" + storagePolicy + " for path=" + path);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Set storagePolicy=" + storagePolicy + " for path=" + path);
+        }
       } catch (Exception e) {
+        // This swallows FNFE, should we be throwing it? seems more likely to indicate dev
+        // misuse than a runtime problem with HDFS.
+        if (!warningMap.containsKey(fs)) {
+          warningMap.put(fs, true);
+          LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
+        } else if (LOG.isDebugEnabled()) {
+          LOG.debug("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
+        }
         // check for lack of HDFS-7228
-        boolean probablyBadPolicy = false;
         if (e instanceof InvocationTargetException) {
           final Throwable exception = e.getCause();
           if (exception instanceof RemoteException &&
               HadoopIllegalArgumentException.class.getName().equals(
-                  ((RemoteException)exception).getClassName())) {
-            LOG.warn("Given storage policy, '" + storagePolicy + "', was rejected and probably " +
+                ((RemoteException)exception).getClassName())) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
                 "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
                 "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
                 "more information see the 'ArchivalStorage' docs for your Hadoop release.");
-            LOG.debug("More information about the invalid storage policy.", exception);
-            probablyBadPolicy = true;
+            }
           }
-        }
-        if (!probablyBadPolicy) {
-          // This swallows FNFE, should we be throwing it? seems more likely to indicate dev
-          // misuse than a runtime problem with HDFS.
-          LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
         }
       }
     }
