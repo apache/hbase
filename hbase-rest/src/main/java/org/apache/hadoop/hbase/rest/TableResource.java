@@ -135,14 +135,14 @@ public class TableResource extends ResourceBase {
       @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
       @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks,
       @DefaultValue("false") @QueryParam(Constants.SCAN_REVERSED) boolean reversed,
-      @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String filters) {
+      @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String paramFilter) {
     try {
-      Filter filter = null;
+      Filter prefixFilter = null;
       Scan tableScan = new Scan();
       if (scanSpec.indexOf('*') > 0) {
         String prefix = scanSpec.substring(0, scanSpec.indexOf('*'));
         byte[] prefixBytes = Bytes.toBytes(prefix);
-        filter = new PrefixFilter(Bytes.toBytes(prefix));
+        prefixFilter = new PrefixFilter(Bytes.toBytes(prefix));
         if (startRow.isEmpty()) {
           tableScan.setStartRow(prefixBytes);
         }
@@ -183,22 +183,21 @@ public class TableResource extends ResourceBase {
           tableScan.addFamily(Bytes.toBytes(familysplit[0]));
         }
       }
-      FilterList filterList = null;
-      if (StringUtils.isNotEmpty(filters)) {
-          ParseFilter pf = new ParseFilter();
-          Filter filterParam = pf.parseFilterString(filters);
-          if (filter != null) {
-            filterList = new FilterList(filter, filterParam);
-          }
-          else {
-            filter = filterParam;
-          }
+      FilterList filterList = new FilterList();
+      if (StringUtils.isNotEmpty(paramFilter)) {
+        ParseFilter pf = new ParseFilter();
+        Filter parsedParamFilter = pf.parseFilterString(paramFilter);
+        if (parsedParamFilter != null) {
+          filterList.addFilter(parsedParamFilter);
+        }
+        if (prefixFilter != null) {
+          filterList.addFilter(prefixFilter);
+        }
       }
-      if (filterList != null) {
+      if (filterList.size() > 0) {
         tableScan.setFilter(filterList);
-      } else if (filter != null) {
-        tableScan.setFilter(filter);
       }
+
       int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);
       tableScan.setCaching(fetchSize);
       tableScan.setReversed(reversed);

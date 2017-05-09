@@ -148,7 +148,7 @@ final public class FilterList extends FilterBase {
     return filters;
   }
 
-  private int size() {
+  public int size() {
     return filters.size();
   }
 

@@ -30,7 +30,6 @@ import java.io.Serializable;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.ws.rs.core.MediaType;
@@ -94,7 +93,7 @@ public class TestTableScan {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    conf.set(Constants.CUSTOM_FILTERS, "CustomFilter:" + CustomFilter.class.getName()); 
+    conf.set(Constants.CUSTOM_FILTERS, "CustomFilter:" + CustomFilter.class.getName());
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
     client = new Client(new Cluster().add("localhost",
@@ -146,7 +145,7 @@ public class TestTableScan {
     response = client.get("/" + TABLE + builder.toString(),
       Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
-    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type")); 
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     model = (CellSetModel) ush.unmarshal(response.getStream());
     count = TestScannerResource.countCellSet(model);
     assertEquals(expectedRows1, count);
@@ -466,11 +465,10 @@ public class TestTableScan {
     int count = TestScannerResource.countCellSet(model);
     assertEquals(0, count);
   }
-  
+
   @Test
   public void testSimpleFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
-    builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
@@ -492,9 +490,26 @@ public class TestTableScan {
   }
 
   @Test
+  public void testQualifierAndPrefixFilters() throws IOException, JAXBException {
+    StringBuilder builder = new StringBuilder();
+    builder.append("/abc*");
+    builder.append("?");
+    builder.append(Constants.SCAN_FILTER + "="
+        + URLEncoder.encode("QualifierFilter(=,'binary:1')", "UTF-8"));
+    Response response =
+        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
+    Unmarshaller ush = ctx.createUnmarshaller();
+    CellSetModel model = (CellSetModel) ush.unmarshal(response.getStream());
+    int count = TestScannerResource.countCellSet(model);
+    assertEquals(1, count);
+    assertEquals("abc", new String(model.getRows().get(0).getCells().get(0).getValue()));
+  }
+
+  @Test
   public void testCompoundFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
-    builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_FILTER + "="
@@ -513,7 +528,6 @@ public class TestTableScan {
   @Test
   public void testCustomFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
-    builder = new StringBuilder();
     builder.append("/a*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
@@ -529,11 +543,10 @@ public class TestTableScan {
     assertEquals(1, count);
     assertEquals("abc", new String(model.getRows().get(0).getCells().get(0).getValue()));
   }
-  
+
   @Test
   public void testNegativeCustomFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
-    builder = new StringBuilder();
     builder.append("/b*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
@@ -606,7 +619,7 @@ public class TestTableScan {
     public CustomFilter(byte[] key) {
       super(key);
     }
-    
+
     @Override
     public boolean filterRowKey(byte[] buffer, int offset, int length) {
       int cmp = Bytes.compareTo(buffer, offset, length, this.key, 0, this.key.length);
