@@ -1290,7 +1290,7 @@ public class RegionCoprocessorHost
   /**
    * @param scan the Scan specification
    * @return scanner id to return to client if default operation should be
-   * bypassed, false otherwise
+   * bypassed, null otherwise
    * @exception IOException Exception
    */
   public RegionScanner preScannerOpen(final Scan scan) throws IOException {
