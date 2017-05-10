@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -46,10 +45,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
@@ -57,31 +53,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.SingleByteBuff;
-import org.apache.hadoop.hbase.security.AccessDeniedException;
-import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
-import org.apache.hadoop.hbase.security.SaslStatus;
-import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVM;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
-import org.apache.htrace.TraceInfo;
 
 /**
  * An RPC server with Netty4 implementation.
- *
  */
+@InterfaceAudience.Private
 public class NettyRpcServer extends RpcServer {
 
   public static final Log LOG = LogFactory.getLog(NettyRpcServer.class);
@@ -187,166 +173,6 @@ public class NettyRpcServer extends RpcServer {
     return ((InetSocketAddress) serverChannel.localAddress());
   }
 
-  public class NettyConnection extends RpcServer.Connection {
-
-    protected Channel channel;
-
-    NettyConnection(Channel channel) {
-      super();
-      this.channel = channel;
-      InetSocketAddress inetSocketAddress = ((InetSocketAddress) channel.remoteAddress());
-      this.addr = inetSocketAddress.getAddress();
-      if (addr == null) {
-        this.hostAddress = "*Unknown*";
-      } else {
-        this.hostAddress = inetSocketAddress.getAddress().getHostAddress();
-      }
-      this.remotePort = inetSocketAddress.getPort();
-      this.saslCall = new NettyServerCall(SASL_CALLID, null, null, null, null, null, this, 0, null,
-          null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null);
-      this.setConnectionHeaderResponseCall =
-          new NettyServerCall(CONNECTION_HEADER_RESPONSE_CALLID, null, null, null, null, null, this,
-              0, null, null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null);
-      this.authFailedCall =
-          new NettyServerCall(AUTHORIZATION_FAILED_CALLID, null, null, null, null, null, this, 0,
-              null, null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null);
-    }
-
-    void readPreamble(ByteBuf buffer) throws IOException {
-      byte[] rpcHead =
-          { buffer.readByte(), buffer.readByte(), buffer.readByte(), buffer.readByte() };
-      if (!Arrays.equals(HConstants.RPC_HEADER, rpcHead)) {
-         doBadPreambleHandling("Expected HEADER="
-            + Bytes.toStringBinary(HConstants.RPC_HEADER) + " but received HEADER="
-            + Bytes.toStringBinary(rpcHead) + " from " + toString());
-         return;
-      }
-      // Now read the next two bytes, the version and the auth to use.
-      int version = buffer.readByte();
-      byte authbyte = buffer.readByte();
-      this.authMethod = AuthMethod.valueOf(authbyte);
-      if (version != CURRENT_VERSION) {
-        String msg = getFatalConnectionString(version, authbyte);
-        doBadPreambleHandling(msg, new WrongVersionException(msg));
-        return;
-      }
-      if (authMethod == null) {
-        String msg = getFatalConnectionString(version, authbyte);
-        doBadPreambleHandling(msg, new BadAuthException(msg));
-        return;
-      }
-      if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-        if (allowFallbackToSimpleAuth) {
-          metrics.authenticationFallback();
-          authenticatedWithFallback = true;
-        } else {
-          AccessDeniedException ae = new AccessDeniedException(
-              "Authentication is required");
-          setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
-          ((NettyServerCall) authFailedCall)
-              .sendResponseIfReady(ChannelFutureListener.CLOSE);
-          return;
-        }
-      }
-      if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
-        doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(SaslUtil.SWITCH_TO_SIMPLE_AUTH), null,
-          null);
-        authMethod = AuthMethod.SIMPLE;
-        // client has already sent the initial Sasl message and we
-        // should ignore it. Both client and server should fall back
-        // to simple auth from now on.
-        skipInitialSaslHandshake = true;
-      }
-      if (authMethod != AuthMethod.SIMPLE) {
-        useSasl = true;
-      }
-      connectionPreambleRead = true;
-    }
-
-    private void doBadPreambleHandling(final String msg) throws IOException {
-      doBadPreambleHandling(msg, new FatalConnectionException(msg));
-    }
-
-    private void doBadPreambleHandling(final String msg, final Exception e) throws IOException {
-      LOG.warn(msg);
-      NettyServerCall fakeCall = new NettyServerCall(-1, null, null, null, null, null, this, -1,
-          null, null, System.currentTimeMillis(), 0, reservoir, cellBlockBuilder, null);
-      setupResponse(null, fakeCall, e, msg);
-      // closes out the connection.
-      fakeCall.sendResponseIfReady(ChannelFutureListener.CLOSE);
-    }
-
-    void process(final ByteBuf buf) throws IOException, InterruptedException {
-      if (connectionHeaderRead) {
-        this.callCleanup = new RpcServer.CallCleanup() {
-          @Override
-          public void run() {
-            buf.release();
-          }
-        };
-        process(new SingleByteBuff(buf.nioBuffer()));
-      } else {
-        byte[] data = new byte[buf.readableBytes()];
-        buf.readBytes(data, 0, data.length);
-        ByteBuffer connectionHeader = ByteBuffer.wrap(data);
-        buf.release();
-        process(connectionHeader);
-      }
-    }
-
-    void process(ByteBuffer buf) throws IOException, InterruptedException {
-      process(new SingleByteBuff(buf));
-    }
-
-    void process(ByteBuff buf) throws IOException, InterruptedException {
-      try {
-        if (skipInitialSaslHandshake) {
-          skipInitialSaslHandshake = false;
-          if (callCleanup != null) {
-            callCleanup.run();
-          }
-          return;
-        }
-
-        if (useSasl) {
-          saslReadAndProcess(buf);
-        } else {
-          processOneRpc(buf);
-        }
-      } catch (Exception e) {
-        if (callCleanup != null) {
-          callCleanup.run();
-        }
-        throw e;
-      } finally {
-        this.callCleanup = null;
-      }
-    }
-
-    @Override
-    public synchronized void close() {
-      disposeSasl();
-      channel.close();
-      callCleanup = null;
-    }
-
-    @Override
-    public boolean isConnectionOpen() {
-      return channel.isOpen();
-    }
-
-    @Override
-    public ServerCall createCall(int id, final BlockingService service,
-        final MethodDescriptor md, RequestHeader header, Message param,
-        CellScanner cellScanner, RpcServer.Connection connection, long size,
-        TraceInfo tinfo, final InetAddress remoteAddress, int timeout,
-        CallCleanup reqCleanup) {
-      return new NettyServerCall(id, service, md, header, param, cellScanner, connection, size,
-          tinfo, remoteAddress, System.currentTimeMillis(), timeout, reservoir, cellBlockBuilder,
-          reqCleanup);
-    }
-  }
-
   private class Initializer extends ChannelInitializer<SocketChannel> {
 
     final int maxRequestSize;
@@ -368,7 +194,7 @@ public class NettyRpcServer extends RpcServer {
   }
 
   private class ConnectionHeaderHandler extends ByteToMessageDecoder {
-    private NettyConnection connection;
+    private NettyServerRpcConnection connection;
 
     ConnectionHeaderHandler() {
     }
@@ -379,7 +205,7 @@ public class NettyRpcServer extends RpcServer {
       if (byteBuf.readableBytes() < 6) {
         return;
       }
-      connection = new NettyConnection(ctx.channel());
+      connection = new NettyServerRpcConnection(NettyRpcServer.this, ctx.channel());
       connection.readPreamble(byteBuf);
       ((MessageDecoder) ctx.pipeline().get("decoder"))
           .setConnection(connection);
@@ -390,9 +216,9 @@ public class NettyRpcServer extends RpcServer {
 
   private class MessageDecoder extends ChannelInboundHandlerAdapter {
 
-    private NettyConnection connection;
+    private NettyServerRpcConnection connection;
 
-    void setConnection(NettyConnection connection) {
+    void setConnection(NettyServerRpcConnection connection) {
       this.connection = connection;
     }
 

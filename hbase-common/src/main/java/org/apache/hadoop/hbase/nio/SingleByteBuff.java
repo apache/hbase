@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.nio;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
@@ -26,8 +28,6 @@ import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
-
-import com.google.common.annotations.VisibleForTesting;
 
 import sun.nio.ch.DirectBuffer;
 

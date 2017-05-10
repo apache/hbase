@@ -24,8 +24,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
-import org.apache.hadoop.hbase.ipc.SimpleRpcServer.Connection;
-import org.apache.hadoop.hbase.ipc.SimpleRpcServer.Responder;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
@@ -37,19 +35,19 @@ import org.apache.htrace.TraceInfo;
  * result.
  */
 @InterfaceAudience.Private
-class SimpleServerCall extends ServerCall {
+class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
 
   long lastSentTime;
 
-  final Responder responder;
+  final SimpleRpcServerResponder responder;
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
       justification = "Can't figure why this complaint is happening... see below")
   SimpleServerCall(int id, final BlockingService service, final MethodDescriptor md,
-      RequestHeader header, Message param, CellScanner cellScanner, RpcServer.Connection connection,
-      long size, TraceInfo tinfo, final InetAddress remoteAddress, long receiveTime, int timeout,
-      ByteBufferPool reservoir, CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup,
-      Responder responder) {
+      RequestHeader header, Message param, CellScanner cellScanner,
+      SimpleServerRpcConnection connection, long size, TraceInfo tinfo,
+      final InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
+      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SimpleRpcServerResponder responder) {
     super(id, service, md, header, param, cellScanner, connection, size, tinfo, remoteAddress,
         receiveTime, timeout, reservoir, cellBlockBuilder, reqCleanup);
     this.responder = responder;
@@ -73,7 +71,7 @@ class SimpleServerCall extends ServerCall {
     this.responder.doRespond(this);
   }
 
-  Connection getConnection() {
-    return (Connection) this.connection;
+  SimpleServerRpcConnection getConnection() {
+    return (SimpleServerRpcConnection) this.connection;
   }
 }

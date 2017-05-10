@@ -315,9 +315,10 @@ public abstract class AbstractTestIPC {
           new InetSocketAddress("localhost", 0), conf, scheduler);
     }
 
-    class FailingConnection extends Connection {
-      public FailingConnection(SocketChannel channel, long lastContact) {
-        super(channel, lastContact);
+    class FailingConnection extends SimpleServerRpcConnection {
+      public FailingConnection(TestFailingRpcServer rpcServer, SocketChannel channel,
+          long lastContact) {
+        super(rpcServer, channel, lastContact);
       }
 
       @Override
@@ -329,8 +330,8 @@ public abstract class AbstractTestIPC {
     }
 
     @Override
-    protected Connection getConnection(SocketChannel channel, long time) {
-      return new FailingConnection(channel, time);
+    protected SimpleServerRpcConnection getConnection(SocketChannel channel, long time) {
+      return new FailingConnection(this, channel, time);
     }
   }
 

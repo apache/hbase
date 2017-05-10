@@ -23,6 +23,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -34,14 +35,13 @@ import javax.security.sasl.RealmCallback;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
  * A utility class for dealing with SASL on RPC server
@@ -79,13 +79,12 @@ public class HBaseSaslRpcServer {
   /** CallbackHandler for SASL DIGEST-MD5 mechanism */
   public static class SaslDigestCallbackHandler implements CallbackHandler {
     private SecretManager<TokenIdentifier> secretManager;
-    private RpcServer.Connection connection;
+    private Consumer<UserGroupInformation> attemptingUserConsumer;
 
-    public SaslDigestCallbackHandler(
-        SecretManager<TokenIdentifier> secretManager,
-        RpcServer.Connection connection) {
+    public SaslDigestCallbackHandler(SecretManager<TokenIdentifier> secretManager,
+        Consumer<UserGroupInformation> attemptingUserConsumer) {
       this.secretManager = secretManager;
-      this.connection = connection;
+      this.attemptingUserConsumer = attemptingUserConsumer;
     }
 
     private char[] getPassword(TokenIdentifier tokenid) throws InvalidToken {
@@ -116,12 +115,11 @@ public class HBaseSaslRpcServer {
       if (pc != null) {
         TokenIdentifier tokenIdentifier = getIdentifier(nc.getDefaultName(), secretManager);
         char[] password = getPassword(tokenIdentifier);
-        UserGroupInformation user = null;
-        user = tokenIdentifier.getUser(); // may throw exception
-        connection.attemptingUser = user;
+        UserGroupInformation user = tokenIdentifier.getUser(); // may throw exception
+        attemptingUserConsumer.accept(user);
         if (LOG.isTraceEnabled()) {
-          LOG.trace("SASL server DIGEST-MD5 callback: setting password "
-              + "for client: " + tokenIdentifier.getUser());
+          LOG.trace("SASL server DIGEST-MD5 callback: setting password " + "for client: " +
+              tokenIdentifier.getUser());
         }
         pc.setPassword(password);
       }

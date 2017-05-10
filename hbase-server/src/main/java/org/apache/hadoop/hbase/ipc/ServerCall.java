@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
-import org.apache.hadoop.hbase.ipc.RpcServer.Connection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream;
@@ -52,7 +51,7 @@ import org.apache.htrace.TraceInfo;
  * the result.
  */
 @InterfaceAudience.Private
-abstract class ServerCall implements RpcCall {
+abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall {
 
   protected final int id;                             // the client's call id
   protected final BlockingService service;
@@ -61,7 +60,7 @@ abstract class ServerCall implements RpcCall {
   protected Message param;                      // the parameter passed
   // Optional cell data passed outside of protobufs.
   protected final CellScanner cellScanner;
-  protected final Connection connection;              // connection to client
+  protected final T connection;              // connection to client
   protected final long receiveTime;      // the time received when response is null
                                  // the time served when response is not null
   protected final int timeout;
@@ -96,7 +95,7 @@ abstract class ServerCall implements RpcCall {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
       justification="Can't figure why this complaint is happening... see below")
   ServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
-      Message param, CellScanner cellScanner, Connection connection, long size, TraceInfo tinfo,
+      Message param, CellScanner cellScanner, T connection, long size, TraceInfo tinfo,
       InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
       CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
     this.id = id;

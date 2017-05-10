@@ -25,7 +25,6 @@ import java.net.InetAddress;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
-import org.apache.hadoop.hbase.ipc.NettyRpcServer.NettyConnection;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
@@ -38,18 +37,14 @@ import org.apache.htrace.TraceInfo;
  * result.
  */
 @InterfaceAudience.Private
-class NettyServerCall extends ServerCall {
+class NettyServerCall extends ServerCall<NettyServerRpcConnection> {
 
   NettyServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
-      Message param, CellScanner cellScanner, RpcServer.Connection connection, long size,
+      Message param, CellScanner cellScanner, NettyServerRpcConnection connection, long size,
       TraceInfo tinfo, InetAddress remoteAddress, long receiveTime, int timeout,
       ByteBufferPool reservoir, CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
     super(id, service, md, header, param, cellScanner, connection, size, tinfo, remoteAddress,
         receiveTime, timeout, reservoir, cellBlockBuilder, reqCleanup);
-  }
-
-  NettyConnection getConnection() {
-    return (NettyConnection) this.connection;
   }
 
   /**
@@ -58,10 +53,10 @@ class NettyServerCall extends ServerCall {
    */
   @Override
   public synchronized void sendResponseIfReady() throws IOException {
-    getConnection().channel.writeAndFlush(this);
+    connection.channel.writeAndFlush(this);
   }
 
   public synchronized void sendResponseIfReady(ChannelFutureListener listener) throws IOException {
-    getConnection().channel.writeAndFlush(this).addListener(listener);
+    connection.channel.writeAndFlush(this).addListener(listener);
   }
 }
