@@ -468,7 +468,6 @@ public class TestTableScan {
   @Test
   public void testSimpleFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
-    builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
@@ -490,9 +489,27 @@ public class TestTableScan {
   }
 
   @Test
+  public void testQualifierAndPrefixFilters() throws IOException, JAXBException {
+    StringBuilder builder = new StringBuilder();
+    builder.append("/abc*");
+    builder.append("?");
+    builder.append(Constants.SCAN_FILTER + "="
+        + URLEncoder.encode("QualifierFilter(=,'binary:1')", "UTF-8"));
+    Response response = 
+        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
+    Unmarshaller ush = ctx.createUnmarshaller();
+    CellSetModel model = (CellSetModel) ush.unmarshal(response.getStream());
+    int count = TestScannerResource.countCellSet(model);
+    assertEquals(1, count);
+    assertEquals("abc", new String(model.getRows().get(0).getCells().get(0).getValue()));
+  }
+
+
+  @Test
   public void testCompoundFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
-    builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_FILTER + "="
@@ -511,7 +528,6 @@ public class TestTableScan {
   @Test
   public void testCustomFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
-    builder = new StringBuilder();
     builder.append("/a*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
@@ -531,7 +547,6 @@ public class TestTableScan {
   @Test
   public void testNegativeCustomFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
-    builder = new StringBuilder();
     builder.append("/b*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
