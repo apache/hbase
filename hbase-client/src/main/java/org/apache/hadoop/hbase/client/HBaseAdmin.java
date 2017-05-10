@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -4226,5 +4227,26 @@ public class HBaseAdmin implements Admin {
     }
 
     return otherConf;
+  }
+
+  @Override
+  public void clearCompactionQueues(final ServerName sn, final Set<String> queues)
+    throws IOException, InterruptedException {
+    if (queues == null || queues.size() == 0) {
+      throw new IllegalArgumentException("queues cannot be null or empty");
+    }
+    final AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    Callable<Void> callable = new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        // TODO: There is no timeout on this controller. Set one!
+        HBaseRpcController controller = rpcControllerFactory.newController();
+        ClearCompactionQueuesRequest request =
+                RequestConverter.buildClearCompactionQueuesRequest(queues);
+        admin.clearCompactionQueues(controller, request);
+        return null;
+      }
+    };
+    ProtobufUtil.call(callable);
   }
 }

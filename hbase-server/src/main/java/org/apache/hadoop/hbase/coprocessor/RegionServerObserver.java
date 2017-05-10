@@ -171,4 +171,20 @@ public interface RegionServerObserver extends Coprocessor {
   default void postReplicateLogEntries(
       final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
       List<WALEntry> entries, CellScanner cells) throws IOException {}
+
+  /**
+   * This will be called before clearing compaction queues
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void preClearCompactionQueues(
+      final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * This will be called after clearing compaction queues
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void postClearCompactionQueues(
+      final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {}
 }
