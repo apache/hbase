@@ -123,15 +123,17 @@ class ReversedStoreScanner extends StoreScanner implements KeyValueScanner {
 
   @Override
   public boolean seekToPreviousRow(Cell key) throws IOException {
-    boolean flushed = checkFlushed();
-    checkReseek(flushed);
+    if (checkFlushed()) {
+      reopenAfterFlush();
+    }
     return this.heap.seekToPreviousRow(key);
   }
-  
+
   @Override
   public boolean backwardSeek(Cell key) throws IOException {
-    boolean flushed = checkFlushed();
-    checkReseek(flushed);
+    if (checkFlushed()) {
+      reopenAfterFlush();
+    }
     return this.heap.backwardSeek(key);
   }
 }

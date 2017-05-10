@@ -564,4 +564,19 @@ public class StoreFileInfo {
     hash = hash * 31 + ((link == null) ? 0 : link.hashCode());
     return  hash;
   }
+
+  /**
+   * Return the active file name that contains the real data.
+   * <p>
+   * For referenced hfile, we will return the name of the reference file as it will be used to
+   * construct the StoreFileReader. And for linked hfile, we will return the name of the file being
+   * linked.
+   */
+  public String getActiveFileName() {
+    if (reference != null || link == null) {
+      return initialPath.getName();
+    } else {
+      return HFileLink.getReferencedHFileName(initialPath.getName());
+    }
+  }
 }

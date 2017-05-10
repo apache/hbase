@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
 
@@ -65,6 +66,14 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
     // Not a file by default.
     return false;
   }
+
+
+  @Override
+  public Path getFilePath() {
+    // Not a file by default.
+    return null;
+  }
+
   @Override
   public Cell getNextIndexedKey() {
     return null;

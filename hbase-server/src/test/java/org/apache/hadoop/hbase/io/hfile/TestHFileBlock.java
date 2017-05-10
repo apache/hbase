@@ -671,7 +671,8 @@ public class TestHFileBlock {
       while (System.currentTimeMillis() < endTime) {
         int blockId = rand.nextInt(NUM_TEST_BLOCKS);
         long offset = offsets.get(blockId);
-        boolean pread = rand.nextBoolean();
+        // now we only support concurrent read with pread = true
+        boolean pread = true;
         boolean withOnDiskSize = rand.nextBoolean();
         long expectedSize =
           (blockId == NUM_TEST_BLOCKS - 1 ? fileSize

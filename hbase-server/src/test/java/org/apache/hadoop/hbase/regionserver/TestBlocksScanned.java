@@ -96,14 +96,14 @@ public class TestBlocksScanned extends HBaseTestCase {
     CacheStats stats = new CacheConfig(TEST_UTIL.getConfiguration()).getBlockCache().getStats();
     long before = stats.getHitCount() + stats.getMissCount();
     // Do simple test of getting one row only first.
-    Scan scan = new Scan(Bytes.toBytes("aaa"), Bytes.toBytes("aaz"));
+    Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"))
+        .setReadType(Scan.ReadType.PREAD);
     scan.addColumn(FAMILY, COL);
     scan.setMaxVersions(1);
 
     InternalScanner s = r.getScanner(scan);
     List<Cell> results = new ArrayList<>();
-    while (s.next(results))
-      ;
+    while (s.next(results));
     s.close();
 
     int expectResultSize = 'z' - 'a';

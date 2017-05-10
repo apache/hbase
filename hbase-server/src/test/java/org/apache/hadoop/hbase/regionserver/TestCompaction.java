@@ -212,9 +212,9 @@ public class TestCompaction {
       for (Store hstore: this.r.stores.values()) {
         HStore store = (HStore)hstore;
         ScanInfo old = store.getScanInfo();
-        ScanInfo si = new ScanInfo(old.getConfiguration(), old.getFamily(),
-            old.getMinVersions(), old.getMaxVersions(), ttl,
-            old.getKeepDeletedCells(), 0, old.getComparator());
+        ScanInfo si = new ScanInfo(old.getConfiguration(), old.getFamily(), old.getMinVersions(),
+            old.getMaxVersions(), ttl, old.getKeepDeletedCells(), HConstants.DEFAULT_BLOCKSIZE, 0,
+            old.getComparator());
         store.setScanInfo(si);
       }
       Thread.sleep(ttl);

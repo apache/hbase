@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -24,8 +27,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,9 +53,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.IOUtils;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 
 /**
  * Reads {@link HFile} version 2 blocks to HFiles and via {@link Cacheable} Interface to caches.
@@ -1418,7 +1416,7 @@ public class HFileBlock implements Cacheable {
   static class FSReaderImpl implements FSReader {
     /** The file system stream of the underlying {@link HFile} that
      * does or doesn't do checksum validations in the filesystem */
-    protected FSDataInputStreamWrapper streamWrapper;
+    private FSDataInputStreamWrapper streamWrapper;
 
     private HFileBlockDecodingContext encodedBlockDecodingCtx;
 
@@ -1434,22 +1432,18 @@ public class HFileBlock implements Cacheable {
     private AtomicReference<PrefetchedHeader> prefetchedHeader = new AtomicReference<>(new PrefetchedHeader());
 
     /** The size of the file we are reading from, or -1 if unknown. */
-    protected long fileSize;
+    private long fileSize;
 
     /** The size of the header */
+    @VisibleForTesting
     protected final int hdrSize;
 
     /** The filesystem used to access data */
-    protected HFileSystem hfs;
+    private HFileSystem hfs;
 
-    private final Lock streamLock = new ReentrantLock();
-
-    /** The default buffer size for our buffered streams */
-    public static final int DEFAULT_BUFFER_SIZE = 1 << 20;
-
-    protected HFileContext fileContext;
+    private HFileContext fileContext;
     // Cache the fileName
-    protected String pathName;
+    private String pathName;
 
     FSReaderImpl(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
         HFileContext fileContext) throws IOException {
@@ -1524,39 +1518,33 @@ public class HFileBlock implements Cacheable {
      *         next header
      * @throws IOException
      */
-    protected int readAtOffset(FSDataInputStream istream, byte [] dest, int destOffset, int size,
+    @VisibleForTesting
+    protected int readAtOffset(FSDataInputStream istream, byte[] dest, int destOffset, int size,
         boolean peekIntoNextBlock, long fileOffset, boolean pread) throws IOException {
       if (peekIntoNextBlock && destOffset + size + hdrSize > dest.length) {
         // We are asked to read the next block's header as well, but there is
         // not enough room in the array.
-        throw new IOException("Attempted to read " + size + " bytes and " +
-            hdrSize + " bytes of next header into a " + dest.length +
-            "-byte array at offset " + destOffset);
+        throw new IOException("Attempted to read " + size + " bytes and " + hdrSize +
+            " bytes of next header into a " + dest.length + "-byte array at offset " + destOffset);
       }
 
-      if (!pread && streamLock.tryLock()) {
+      if (!pread) {
         // Seek + read. Better for scanning.
-        try {
-          HFileUtil.seekOnMultipleSources(istream, fileOffset);
+        HFileUtil.seekOnMultipleSources(istream, fileOffset);
+        long realOffset = istream.getPos();
+        if (realOffset != fileOffset) {
+          throw new IOException("Tried to seek to " + fileOffset + " to " + "read " + size +
+              " bytes, but pos=" + realOffset + " after seek");
+        }
 
-          long realOffset = istream.getPos();
-          if (realOffset != fileOffset) {
-            throw new IOException("Tried to seek to " + fileOffset + " to "
-                + "read " + size + " bytes, but pos=" + realOffset
-                + " after seek");
-          }
+        if (!peekIntoNextBlock) {
+          IOUtils.readFully(istream, dest, destOffset, size);
+          return -1;
+        }
 
-          if (!peekIntoNextBlock) {
-            IOUtils.readFully(istream, dest, destOffset, size);
-            return -1;
-          }
-
-          // Try to read the next block header.
-          if (!readWithExtra(istream, dest, destOffset, size, hdrSize)) {
-            return -1;
-          }
-        } finally {
-          streamLock.unlock();
+        // Try to read the next block header.
+        if (!readWithExtra(istream, dest, destOffset, size, hdrSize)) {
+          return -1;
         }
       } else {
         // Positional read. Better for random reads; or when the streamLock is already locked.
@@ -1565,7 +1553,6 @@ public class HFileBlock implements Cacheable {
           return -1;
         }
       }
-
       assert peekIntoNextBlock;
       return Bytes.toInt(dest, destOffset + size + BlockType.MAGIC_LENGTH) + hdrSize;
     }
@@ -1719,6 +1706,7 @@ public class HFileBlock implements Cacheable {
      *        If HBase checksum is switched off, then use HDFS checksum.
      * @return the HFileBlock or null if there is a HBase checksum mismatch
      */
+    @VisibleForTesting
     protected HFileBlock readBlockDataInternal(FSDataInputStream is, long offset,
         long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum)
      throws IOException {
@@ -1830,7 +1818,7 @@ public class HFileBlock implements Cacheable {
      * If the block doesn't uses checksum, returns false.
      * @return True if checksum matches, else false.
      */
-    protected boolean validateChecksum(long offset, ByteBuffer data, int hdrSize)
+    private boolean validateChecksum(long offset, ByteBuffer data, int hdrSize)
         throws IOException {
       // If this is an older version of the block that does not have checksums, then return false
       // indicating that checksum verification did not succeed. Actually, this method should never

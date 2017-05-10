@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -133,6 +134,12 @@ public interface KeyValueScanner extends Shipper, Closeable {
    *         assumed.
    */
   boolean isFileScanner();
+
+  /**
+   * @return the file path if this is a file scanner, otherwise null.
+   * @see #isFileScanner()
+   */
+  Path getFilePath();
 
   // Support for "Reversed Scanner"
   /**

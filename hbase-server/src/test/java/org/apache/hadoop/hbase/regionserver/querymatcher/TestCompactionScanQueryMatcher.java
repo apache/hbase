@@ -73,8 +73,8 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
       throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     // Set time to purge deletes to negative value to avoid it ever happening.
-    ScanInfo scanInfo = new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, -1L,
-        rowComparator);
+    ScanInfo scanInfo = new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE,
+        HConstants.DEFAULT_BLOCKSIZE, -1L, rowComparator);
 
     CompactionScanQueryMatcher qm = CompactionScanQueryMatcher.create(scanInfo,
       ScanType.COMPACT_RETAIN_DELETES, Long.MAX_VALUE, HConstants.OLDEST_TIMESTAMP,

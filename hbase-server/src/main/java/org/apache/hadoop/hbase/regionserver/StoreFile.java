@@ -589,11 +589,17 @@ public class StoreFile {
     return reader;
   }
 
+  public StoreFileScanner getPreadScanner(boolean cacheBlocks, long readPt, long scannerOrder,
+      boolean canOptimizeForNonNullColumn) {
+    return getReader().getStoreFileScanner(cacheBlocks, true, false, readPt, scannerOrder,
+      canOptimizeForNonNullColumn);
+  }
+
   public StoreFileScanner getStreamScanner(boolean canUseDropBehind, boolean cacheBlocks,
-      boolean pread, boolean isCompaction, long readPt, long scannerOrder,
-      boolean canOptimizeForNonNullColumn) throws IOException {
-    return createStreamReader(canUseDropBehind).getStoreFileScanner(
-      cacheBlocks, pread, isCompaction, readPt, scannerOrder, canOptimizeForNonNullColumn);
+      boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn)
+      throws IOException {
+    return createStreamReader(canUseDropBehind).getStoreFileScanner(cacheBlocks, false,
+      isCompaction, readPt, scannerOrder, canOptimizeForNonNullColumn);
   }
 
   /**

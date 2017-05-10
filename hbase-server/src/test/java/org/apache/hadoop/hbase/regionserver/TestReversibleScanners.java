@@ -264,8 +264,9 @@ public class TestReversibleScanners {
         BloomType.NONE, true);
 
     ScanType scanType = ScanType.USER_SCAN;
-    ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), FAMILYNAME, 0, Integer.MAX_VALUE,
-        Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, CellComparator.COMPARATOR);
+    ScanInfo scanInfo =
+        new ScanInfo(TEST_UTIL.getConfiguration(), FAMILYNAME, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
+            KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
 
     // Case 1.Test a full reversed scan
     Scan scan = new Scan();

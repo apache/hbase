@@ -67,8 +67,8 @@ public class TestStoreScanner {
   private static final String CF_STR = "cf";
   private static final byte [] CF = Bytes.toBytes(CF_STR);
   static Configuration CONF = HBaseConfiguration.create();
-  private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE,
-      Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, CellComparator.COMPARATOR);
+  private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
+      KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
   private ScanType scanType = ScanType.USER_SCAN;
 
   /**
@@ -829,8 +829,8 @@ public class TestStoreScanner {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scan = new Scan();
     scan.setMaxVersions(1);
-    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
-        CellComparator.COMPARATOR);
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
+        HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
     try (StoreScanner scanner = new StoreScanner(scan, scanInfo, scanType, null, scanners)) {
       List<Cell> results = new ArrayList<>();
@@ -902,8 +902,8 @@ public class TestStoreScanner {
     Scan scan = new Scan();
     scan.setMaxVersions(1);
     // scanner with ttl equal to 500
-    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
-        CellComparator.COMPARATOR);
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
+        HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
     try (StoreScanner scanner =
         new StoreScanner(scan, scanInfo, scanType, null, scanners)) {
@@ -968,6 +968,7 @@ public class TestStoreScanner {
         0 /* minVersions */,
         2 /* maxVersions */, 500 /* ttl */,
         KeepDeletedCells.FALSE /* keepDeletedCells */,
+        HConstants.DEFAULT_BLOCKSIZE /* block size */,
         200, /* timeToPurgeDeletes */
         CellComparator.COMPARATOR);
       try (StoreScanner scanner =

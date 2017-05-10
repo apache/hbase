@@ -48,6 +48,7 @@ public class ScanInfo {
   private boolean usePread;
   private long cellsPerTimeoutCheck;
   private boolean parallelSeekEnabled;
+  private final long preadMaxBytes;
   private final Configuration conf;
 
   public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
@@ -58,14 +59,14 @@ public class ScanInfo {
    * @param conf
    * @param family {@link HColumnDescriptor} describing the column family
    * @param ttl Store's TTL (in ms)
-   * @param timeToPurgeDeletes duration in ms after which a delete marker can
-   *        be purged during a major compaction.
+   * @param timeToPurgeDeletes duration in ms after which a delete marker can be purged during a
+   *          major compaction.
    * @param comparator The store's comparator
    */
   public ScanInfo(final Configuration conf, final HColumnDescriptor family, final long ttl,
       final long timeToPurgeDeletes, final CellComparator comparator) {
-    this(conf, family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl, family
-        .getKeepDeletedCells(), timeToPurgeDeletes, comparator);
+    this(conf, family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl,
+        family.getKeepDeletedCells(), family.getBlocksize(), timeToPurgeDeletes, comparator);
   }
 
   /**
@@ -74,6 +75,7 @@ public class ScanInfo {
    * @param minVersions Store's MIN_VERSIONS setting
    * @param maxVersions Store's VERSIONS setting
    * @param ttl Store's TTL (in ms)
+   * @param blockSize Store's block size
    * @param timeToPurgeDeletes duration in ms after which a delete marker can
    *        be purged during a major compaction.
    * @param keepDeletedCells Store's keepDeletedCells setting
@@ -81,7 +83,7 @@ public class ScanInfo {
    */
   public ScanInfo(final Configuration conf, final byte[] family, final int minVersions,
       final int maxVersions, final long ttl, final KeepDeletedCells keepDeletedCells,
-      final long timeToPurgeDeletes, final CellComparator comparator) {
+      final long blockSize, final long timeToPurgeDeletes, final CellComparator comparator) {
     this.family = family;
     this.minVersions = minVersions;
     this.maxVersions = maxVersions;
@@ -99,6 +101,7 @@ public class ScanInfo {
         perHeartbeat: StoreScanner.DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
     this.parallelSeekEnabled =
       conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false);
+    this.preadMaxBytes = conf.getLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 4 * blockSize);
     this.conf = conf;
   }
 
@@ -148,5 +151,9 @@ public class ScanInfo {
 
   public CellComparator getComparator() {
     return comparator;
+  }
+
+  long getPreadMaxBytes() {
+    return preadMaxBytes;
   }
 }

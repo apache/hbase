@@ -76,7 +76,8 @@ public class StoreFileReader {
 
   // indicate that whether this StoreFileReader is shared, i.e., used for pread. If not, we will
   // close the internal reader when readCompleted is called.
-  private final boolean shared;
+  @VisibleForTesting
+  final boolean shared;
 
   private StoreFileReader(HFile.Reader reader, AtomicInteger refCount, boolean shared) {
     this.reader = reader;

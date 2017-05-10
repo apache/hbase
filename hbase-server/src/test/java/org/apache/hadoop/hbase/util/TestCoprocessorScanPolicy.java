@@ -245,11 +245,10 @@ public class TestCoprocessorScanPolicy {
       Integer newVersions = versions.get(store.getTableName());
       ScanInfo oldSI = store.getScanInfo();
       HColumnDescriptor family = store.getFamily();
-      ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(),
-          family.getName(), family.getMinVersions(),
-          newVersions == null ? family.getMaxVersions() : newVersions,
+      ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
+          family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-          oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
+          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
       Scan scan = new Scan();
       scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
       return new StoreScanner(store, scanInfo, scan, scanners,
@@ -266,11 +265,10 @@ public class TestCoprocessorScanPolicy {
       Integer newVersions = versions.get(store.getTableName());
       ScanInfo oldSI = store.getScanInfo();
       HColumnDescriptor family = store.getFamily();
-      ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(),
-          family.getName(), family.getMinVersions(),
-          newVersions == null ? family.getMaxVersions() : newVersions,
+      ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
+          family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-          oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
+          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
       Scan scan = new Scan();
       scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
       return new StoreScanner(store, scanInfo, scan, scanners, scanType,
@@ -287,11 +285,10 @@ public class TestCoprocessorScanPolicy {
         Integer newVersions = versions.get(store.getTableName());
         ScanInfo oldSI = store.getScanInfo();
         HColumnDescriptor family = store.getFamily();
-        ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(),
-            family.getName(), family.getMinVersions(),
-            newVersions == null ? family.getMaxVersions() : newVersions,
+        ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
+            family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
             newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-            oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
+            family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
         return new StoreScanner(store, scanInfo, scan, targetCols, readPt);
       } else {
         return s;

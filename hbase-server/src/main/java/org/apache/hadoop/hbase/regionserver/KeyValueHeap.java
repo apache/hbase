@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -422,6 +424,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     return 0;
   }
 
+  @VisibleForTesting
   KeyValueScanner getCurrentForTesting() {
     return current;
   }

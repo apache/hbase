@@ -160,8 +160,8 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     ScanInfo oldScanInfo = store.getScanInfo();
     ScanInfo newScanInfo = new ScanInfo(oldScanInfo.getConfiguration(), oldScanInfo.getFamily(),
         oldScanInfo.getMinVersions(), oldScanInfo.getMaxVersions(), 600,
-        oldScanInfo.getKeepDeletedCells(), oldScanInfo.getTimeToPurgeDeletes(),
-        oldScanInfo.getComparator());
+        oldScanInfo.getKeepDeletedCells(), oldScanInfo.getPreadMaxBytes(),
+        oldScanInfo.getTimeToPurgeDeletes(), oldScanInfo.getComparator());
     store.setScanInfo(newScanInfo);
     // Do not compact empty store file
     List<StoreFile> candidates = sfCreate(0);

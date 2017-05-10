@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.LongAdder;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -95,25 +96,21 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   /**
-   * Return an array of scanners corresponding to the given
-   * set of store files.
+   * Return an array of scanners corresponding to the given set of store files.
    */
-  public static List<StoreFileScanner> getScannersForStoreFiles(
-      Collection<StoreFile> files,
-      boolean cacheBlocks,
-      boolean usePread, long readPt) throws IOException {
-    return getScannersForStoreFiles(files, cacheBlocks,
-                                   usePread, false, false, readPt);
+  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
+      boolean cacheBlocks, boolean usePread, long readPt) throws IOException {
+    return getScannersForStoreFiles(files, cacheBlocks, usePread, false, false, readPt);
   }
 
   /**
    * Return an array of scanners corresponding to the given set of store files.
    */
-  public static List<StoreFileScanner> getScannersForStoreFiles(
-      Collection<StoreFile> files, boolean cacheBlocks, boolean usePread,
-      boolean isCompaction, boolean useDropBehind, long readPt) throws IOException {
-    return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction,
-        useDropBehind, null, readPt);
+  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
+      boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean useDropBehind,
+      long readPt) throws IOException {
+    return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, useDropBehind, null,
+      readPt);
   }
 
   /**
@@ -126,11 +123,17 @@ public class StoreFileScanner implements KeyValueScanner {
     List<StoreFileScanner> scanners = new ArrayList<>(files.size());
     List<StoreFile> sortedFiles = new ArrayList<>(files);
     Collections.sort(sortedFiles, StoreFile.Comparators.SEQ_ID);
+    boolean canOptimizeForNonNullColumn = matcher != null ? !matcher.hasNullColumnInQuery() : false;
     for (int i = 0, n = sortedFiles.size(); i < n; i++) {
       StoreFile sf = sortedFiles.get(i);
       sf.initReader();
-      StoreFileScanner scanner = sf.getReader().getStoreFileScanner(cacheBlocks, usePread,
-        isCompaction, readPt, i, matcher != null ? !matcher.hasNullColumnInQuery() : false);
+      StoreFileScanner scanner;
+      if (usePread) {
+        scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn);
+      } else {
+        scanner = sf.getStreamScanner(canUseDrop, cacheBlocks, isCompaction, readPt, i,
+          canOptimizeForNonNullColumn);
+      }
       scanners.add(scanner);
     }
     return scanners;
@@ -148,8 +151,8 @@ public class StoreFileScanner implements KeyValueScanner {
     boolean succ = false;
     try {
       for (int i = 0, n = sortedFiles.size(); i < n; i++) {
-        scanners.add(sortedFiles.get(i).getStreamScanner(canUseDropBehind, false, false, true,
-          readPt, i, false));
+        scanners.add(
+          sortedFiles.get(i).getStreamScanner(canUseDropBehind, false, true, readPt, i, false));
       }
       succ = true;
     } finally {
@@ -442,6 +445,11 @@ public class StoreFileScanner implements KeyValueScanner {
   @Override
   public boolean isFileScanner() {
     return true;
+  }
+
+  @Override
+  public Path getFilePath() {
+    return reader.getHFileReader().getPath();
   }
 
   // Test methods

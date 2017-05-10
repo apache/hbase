@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import com.google.common.collect.Lists;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -31,8 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -45,7 +47,9 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -53,28 +57,26 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 /**
- * Test for the case where a regionserver going down has enough cycles to do damage to regions
- * that have actually been assigned elsehwere.
- *
- * <p>If we happen to assign a region before it fully done with in its old location -- i.e. it is on two servers at the
- * same time -- all can work fine until the case where the region on the dying server decides to compact or otherwise
- * change the region file set.  The region in its new location will then get a surprise when it tries to do something
- * w/ a file removed by the region in its old location on dying server.
- *
- * <p>Making a test for this case is a little tough in that even if a file is deleted up on the namenode,
- * if the file was opened before the delete, it will continue to let reads happen until something changes the
- * state of cached blocks in the dfsclient that was already open (a block from the deleted file is cleaned
- * from the datanode by NN).
- *
- * <p>What we will do below is do an explicit check for existence on the files listed in the region that
- * has had some files removed because of a compaction.  This sort of hurry's along and makes certain what is a chance
- * occurance.
+ * Test for the case where a regionserver going down has enough cycles to do damage to regions that
+ * have actually been assigned elsehwere.
+ * <p>
+ * If we happen to assign a region before it fully done with in its old location -- i.e. it is on
+ * two servers at the same time -- all can work fine until the case where the region on the dying
+ * server decides to compact or otherwise change the region file set. The region in its new location
+ * will then get a surprise when it tries to do something w/ a file removed by the region in its old
+ * location on dying server.
+ * <p>
+ * Making a test for this case is a little tough in that even if a file is deleted up on the
+ * namenode, if the file was opened before the delete, it will continue to let reads happen until
+ * something changes the state of cached blocks in the dfsclient that was already open (a block from
+ * the deleted file is cleaned from the datanode by NN).
+ * <p>
+ * What we will do below is do an explicit check for existence on the files listed in the region
+ * that has had some files removed because of a compaction. This sort of hurry's along and makes
+ * certain what is a chance occurance.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({MiscTests.class, LargeTests.class})
 public class TestIOFencing {
   private static final Log LOG = LogFactory.getLog(TestIOFencing.class);
   static {
@@ -334,23 +336,38 @@ public class TestIOFencing {
       while (compactingRegion.compactCount == 0) {
         Thread.sleep(1000);
       }
-      // The server we killed stays up until the compaction that was started before it was killed completes.  In logs
-      // you should see the old regionserver now going down.
+      // The server we killed stays up until the compaction that was started before it was killed
+      // completes. In logs you should see the old regionserver now going down.
       LOG.info("Compaction finished");
 
       // If we survive the split keep going...
       // Now we make sure that the region isn't totally confused.  Load up more rows.
-      TEST_UTIL.loadNumericRows(table, FAMILY, FIRST_BATCH_COUNT, FIRST_BATCH_COUNT + SECOND_BATCH_COUNT);
+      TEST_UTIL.loadNumericRows(table, FAMILY, FIRST_BATCH_COUNT,
+        FIRST_BATCH_COUNT + SECOND_BATCH_COUNT);
       admin.majorCompact(TABLE_NAME);
       startWaitTime = System.currentTimeMillis();
       while (newRegion.compactCount == 0) {
         Thread.sleep(1000);
-        assertTrue("New region never compacted", System.currentTimeMillis() - startWaitTime < 180000);
+        assertTrue("New region never compacted",
+          System.currentTimeMillis() - startWaitTime < 180000);
       }
-      if(policy == MemoryCompactionPolicy.EAGER) {
-        assertTrue(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT >= TEST_UTIL.countRows(table));
+      int count;
+      for (int i = 0;; i++) {
+        try {
+          count = TEST_UTIL.countRows(table);
+          break;
+        } catch (DoNotRetryIOException e) {
+          // wait up to 30s
+          if (i >= 30 || !e.getMessage().contains("File does not exist")) {
+            throw e;
+          }
+          Thread.sleep(1000);
+        }
+      }
+      if (policy == MemoryCompactionPolicy.EAGER) {
+        assertTrue(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT >= count);
       } else {
-        assertEquals(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT, TEST_UTIL.countRows(table));
+        assertEquals(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT, count);
       }
     } finally {
       if (compactingRegion != null) {

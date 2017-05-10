@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.SortedSet;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -316,6 +317,11 @@ public class SegmentScanner implements KeyValueScanner {
     return false;
   }
 
+  @Override
+  public Path getFilePath() {
+    return null;
+  }
+
   /**
    * @return the next key in the index (the key to seek to the next block)
    *     if known, or null otherwise
@@ -396,5 +402,4 @@ public class SegmentScanner implements KeyValueScanner {
     }
     return (first != null ? first : second);
   }
-
 }
