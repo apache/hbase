@@ -93,6 +93,21 @@ public class TestStateMachineProcedure {
   }
 
   @Test
+  public void testAbortStuckProcedure() throws InterruptedException {
+    try {
+      procExecutor.getEnvironment().loop = true;
+      TestSMProcedure proc = new TestSMProcedure();
+      long procId = procExecutor.submitProcedure(proc);
+      Thread.sleep(1000 + (int) (Math.random() * 4001));
+      proc.abort(procExecutor.getEnvironment());
+      ProcedureTestingUtility.waitProcedure(procExecutor, procId);
+      assertEquals(true, proc.isFailed());
+    } finally {
+      procExecutor.getEnvironment().loop = false;
+    }
+  }
+
+  @Test
   public void testChildOnLastStep() {
     long procId = procExecutor.submitProcedure(new TestSMProcedure());
     ProcedureTestingUtility.waitProcedure(procExecutor, procId);
@@ -142,7 +157,9 @@ public class TestStateMachineProcedure {
       env.execCount.incrementAndGet();
       switch (state) {
         case STEP_1:
-          setNextState(TestSMProcedureState.STEP_2);
+          if (!env.loop) {
+            setNextState(TestSMProcedureState.STEP_2);
+          }
           break;
         case STEP_2:
           addChildProcedure(new SimpleChildProcedure());
@@ -190,5 +207,6 @@ public class TestStateMachineProcedure {
     AtomicInteger execCount = new AtomicInteger(0);
     AtomicInteger rollbackCount = new AtomicInteger(0);
     boolean triggerChildRollback = false;
+    boolean loop = false;
   }
 }

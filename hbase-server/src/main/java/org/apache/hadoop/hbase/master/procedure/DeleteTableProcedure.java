@@ -146,6 +146,15 @@ public class DeleteTableProcedure
   }
 
   @Override
+  protected boolean abort(MasterProcedureEnv env) {
+    // TODO: Current behavior is: with no rollback and no abort support, procedure may stuck
+    // looping in retrying failing step forever. Default behavior of abort is changed to support
+    // aborting all procedures. Override the default wisely. Following code retains the current
+    // behavior. Revisit it later.
+    return isRollbackSupported(getCurrentState()) ? super.abort(env) : false;
+  }
+
+  @Override
   protected void rollbackState(final MasterProcedureEnv env, final DeleteTableState state) {
     if (state == DeleteTableState.DELETE_TABLE_PRE_OPERATION) {
       // nothing to rollback, pre-delete is just table-state checks.

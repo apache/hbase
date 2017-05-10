@@ -105,14 +105,8 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    * @param state the state enum object
    */
   protected void setNextState(final TState state) {
-    if (aborted.get() && isRollbackSupported(getCurrentState())) {
-      setAbortFailure(getClass().getSimpleName(), "abort requested");
-    } else {
-      if (aborted.get()) {
-        LOG.warn("ignoring abort request " + state);
-      }
-      setNextState(getStateId(state));
-    }
+    setNextState(getStateId(state));
+    failIfAborted();
   }
 
   /**
@@ -147,6 +141,8 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     updateTimestamp();
     try {
+      failIfAborted();
+
       if (!hasMoreState() || isFailed()) return null;
 
       TState state = getCurrentState();
@@ -190,16 +186,31 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   protected boolean abort(final TEnvironment env) {
     final boolean isDebugEnabled = LOG.isDebugEnabled();
     final TState state = getCurrentState();
-    if (isRollbackSupported(state)) {
-      if (isDebugEnabled) {
-        LOG.debug("abort requested for " + this + " state=" + state);
-      }
+    if (isDebugEnabled) {
+      LOG.debug("abort requested for " + this + " state=" + state);
+    }
+
+    if (hasMoreState()) {
       aborted.set(true);
       return true;
     } else if (isDebugEnabled) {
       LOG.debug("ignoring abort request on state=" + state + " for " + this);
     }
     return false;
+  }
+
+  /**
+   * If procedure has more states then abort it otherwise procedure is finished and abort can be
+   * ignored.
+   */
+  protected final void failIfAborted() {
+    if (aborted.get()) {
+      if (hasMoreState()) {
+        setAbortFailure(getClass().getSimpleName(), "abort requested");
+      } else {
+        LOG.warn("Ignoring abort request on state='" + getCurrentState() + "' for " + this);
+      }
+    }
   }
 
   /**
@@ -219,7 +230,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
     return stateFlow != Flow.NO_MORE_STATE;
   }
 
-  private TState getCurrentState() {
+  protected TState getCurrentState() {
     return stateCount > 0 ? getState(states[stateCount-1]) : getInitialState();
   }
 
