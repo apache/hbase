@@ -859,8 +859,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         // possible we got a region of a different table...
         if (!regionInfo.getTable().equals(tableName)) {
           throw new TableNotFoundException(
-                "Table '" + tableName + "' was not found, got: " +
-                regionInfo.getTable() + ".");
+            "Region of '" + regionInfo.getRegionNameAsString() + "' is expected in the table of '" + tableName + "', " +
+            "but hbase:meta says it is in the table of '" + regionInfo.getTable() + "'. " +
+            "hbase:meta might be damaged.");
         }
         if (regionInfo.isSplit()) {
           throw new RegionOfflineException("the only available region for" +
