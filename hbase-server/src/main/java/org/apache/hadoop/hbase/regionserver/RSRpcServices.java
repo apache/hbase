@@ -2747,11 +2747,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     boolean isSmallScan;
     try {
       if (request.hasScannerId()) {
-        rsh = getRegionScanner(request);
-        isSmallScan = false;
         // The downstream projects such as AsyncHBase in OpenTSDB need this value. See HBASE-18000
         // for more details.
         builder.setScannerId(request.getScannerId());
+        rsh = getRegionScanner(request);
+        isSmallScan = false;
       } else {
         Pair<RegionScannerHolder, Boolean> pair = newRegionScanner(request, builder);
         rsh = pair.getFirst();
