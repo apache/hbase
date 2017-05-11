@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.protobuf;
 
 
+import static com.google.protobuf.HBaseZeroCopyByteString.zeroCopyGetBytes;
 import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -475,7 +476,7 @@ public final class ProtobufUtil {
   public static Get toGet(
       final ClientProtos.Get proto) throws IOException {
     if (proto == null) return null;
-    byte[] row = proto.getRow().toByteArray();
+    byte[] row = zeroCopyGetBytes(proto.getRow());
     Get get = new Get(row);
     if (proto.hasCacheBlocks()) {
       get.setCacheBlocks(proto.getCacheBlocks());
@@ -573,7 +574,7 @@ public final class ProtobufUtil {
     MutationType type = proto.getMutateType();
     assert type == MutationType.PUT: type.name();
     long timestamp = proto.hasTimestamp()? proto.getTimestamp(): HConstants.LATEST_TIMESTAMP;
-    Put put = proto.hasRow() ? new Put(proto.getRow().toByteArray(), timestamp) : null;
+    Put put = proto.hasRow() ? new Put(zeroCopyGetBytes(proto.getRow()), timestamp) : null;
     int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
@@ -598,7 +599,7 @@ public final class ProtobufUtil {
       }
       // The proto has the metadata and the data itself
       for (ColumnValue column: proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
+        byte[] family = zeroCopyGetBytes(column.getFamily());
         for (QualifierValue qv: column.getQualifierValueList()) {
           if (!qv.hasValue()) {
             throw new DoNotRetryIOException(
@@ -614,23 +615,23 @@ public final class ProtobufUtil {
           }
           byte[] tags;
           if (qv.hasTags()) {
-            tags = qv.getTags().toByteArray();
+            tags = zeroCopyGetBytes(qv.getTags());
             Object[] array = Tag.asList(tags, 0, (short)tags.length).toArray();
             Tag[] tagArray = new Tag[array.length];
             for(int i = 0; i< array.length; i++) {
               tagArray[i] = (Tag)array[i];
             }
             if(qv.hasDeleteType()) {
-              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
-              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
+              byte[] qual = qv.hasQualifier() ? zeroCopyGetBytes(qv.getQualifier()) : null;
+              put.add(new KeyValue(zeroCopyGetBytes(proto.getRow()), family, qual, ts,
                   fromDeleteType(qv.getDeleteType()), null, tags));
             } else {
               put.addImmutable(family, qualifier, ts, value, tagArray);
             }
           } else {
             if(qv.hasDeleteType()) {
-              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
-              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
+              byte[] qual = qv.hasQualifier() ? zeroCopyGetBytes(qv.getQualifier()) : null;
+              put.add(new KeyValue(zeroCopyGetBytes(proto.getRow()), family, qual, ts,
                   fromDeleteType(qv.getDeleteType())));
             } else{
               put.addImmutable(family, qualifier, ts, value);
@@ -671,7 +672,7 @@ public final class ProtobufUtil {
     MutationType type = proto.getMutateType();
     assert type == MutationType.DELETE : type.name();
     long timestamp = proto.hasTimestamp() ? proto.getTimestamp() : HConstants.LATEST_TIMESTAMP;
-    Delete delete = proto.hasRow() ? new Delete(proto.getRow().toByteArray(), timestamp) : null;
+    Delete delete = proto.hasRow() ? new Delete(zeroCopyGetBytes(proto.getRow()), timestamp) : null;
     int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
@@ -739,7 +740,7 @@ public final class ProtobufUtil {
   throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.APPEND : type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
+    byte [] row = proto.hasRow()? zeroCopyGetBytes(proto.getRow()): null;
     Append append = null;
     int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
     if (cellCount > 0) {
@@ -762,17 +763,17 @@ public final class ProtobufUtil {
     } else {
       append = new Append(row);
       for (ColumnValue column: proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
+        byte[] family = zeroCopyGetBytes(column.getFamily());
         for (QualifierValue qv: column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
+          byte[] qualifier = zeroCopyGetBytes(qv.getQualifier());
           if (!qv.hasValue()) {
             throw new DoNotRetryIOException(
               "Missing required field: qualifier value");
           }
-          byte[] value = qv.getValue().toByteArray();
+          byte[] value = zeroCopyGetBytes(qv.getValue());
           byte[] tags = null;
           if (qv.hasTags()) {
-            tags = qv.getTags().toByteArray();
+            tags = zeroCopyGetBytes(qv.getTags());
           }
           append.add(CellUtil.createCell(row, family, qualifier, qv.getTimestamp(),
               KeyValue.Type.Put, value, tags));
@@ -818,7 +819,7 @@ public final class ProtobufUtil {
   throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.INCREMENT : type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
+    byte [] row = proto.hasRow()? zeroCopyGetBytes(proto.getRow()): null;
     Increment increment = null;
     int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
     if (cellCount > 0) {
@@ -841,16 +842,16 @@ public final class ProtobufUtil {
     } else {
       increment = new Increment(row);
       for (ColumnValue column: proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
+        byte[] family = zeroCopyGetBytes(column.getFamily());
         for (QualifierValue qv: column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
+          byte[] qualifier = zeroCopyGetBytes(qv.getQualifier());
           if (!qv.hasValue()) {
             throw new DoNotRetryIOException("Missing required field: qualifier value");
           }
-          byte[] value = qv.getValue().toByteArray();
+          byte[] value = zeroCopyGetBytes(qv.getValue());
           byte[] tags = null;
           if (qv.hasTags()) {
-            tags = qv.getTags().toByteArray();
+            tags = zeroCopyGetBytes(qv.getTags());
           }
           increment.add(CellUtil.createCell(row, family, qualifier, qv.getTimestamp(),
               KeyValue.Type.Put, value, tags));
@@ -879,7 +880,7 @@ public final class ProtobufUtil {
       throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.INCREMENT || type == MutationType.APPEND : type.name();
-    byte[] row = proto.hasRow() ? proto.getRow().toByteArray() : null;
+    byte[] row = proto.hasRow() ? zeroCopyGetBytes(proto.getRow()) : null;
     Get get = null;
     int cellCount = proto.hasAssociatedCellCount() ? proto.getAssociatedCellCount() : 0;
     if (cellCount > 0) {
@@ -904,9 +905,9 @@ public final class ProtobufUtil {
     } else {
       get = new Get(row);
       for (ColumnValue column : proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
+        byte[] family = zeroCopyGetBytes(column.getFamily());
         for (QualifierValue qv : column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
+          byte[] qualifier = zeroCopyGetBytes(qv.getQualifier());
           if (!qv.hasValue()) {
             throw new DoNotRetryIOException("Missing required field: qualifier value");
           }
