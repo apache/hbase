@@ -31,7 +31,6 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -111,8 +110,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitOrMergeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitOrMergeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -270,8 +267,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * The minimum allowable delta to use for the scan limit
    */
   private final long minimumScanTimeLimitDelta;
-
-  final AtomicBoolean clearCompactionQueues = new AtomicBoolean(false);
 
   /**
    * An Rpc callback for closing a RegionScanner.
@@ -1614,44 +1609,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     GetRegionLoadResponse.Builder builder = GetRegionLoadResponse.newBuilder();
     builder.addAllRegionLoads(rLoads);
     return builder.build();
-  }
-
-  @Override
-  @QosPriority(priority=HConstants.ADMIN_QOS)
-  public ClearCompactionQueuesResponse clearCompactionQueues(RpcController controller,
-    ClearCompactionQueuesRequest request) throws ServiceException {
-    LOG.debug("Client=" + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress()
-            + " clear compactions queue");
-    ClearCompactionQueuesResponse.Builder respBuilder = ClearCompactionQueuesResponse.newBuilder();
-    requestCount.increment();
-    if (clearCompactionQueues.compareAndSet(false,true)) {
-      try {
-        checkOpen();
-        regionServer.getRegionServerCoprocessorHost().preClearCompactionQueues();
-        for (String queueName : request.getQueueNameList()) {
-          LOG.debug("clear " + queueName + " compaction queue");
-          switch (queueName) {
-            case "long":
-              regionServer.compactSplitThread.clearLongCompactionsQueue();
-              break;
-            case "short":
-              regionServer.compactSplitThread.clearShortCompactionsQueue();
-              break;
-            default:
-              LOG.warn("Unknown queue name " + queueName);
-              throw new IOException("Unknown queue name " + queueName);
-          }
-        }
-        regionServer.getRegionServerCoprocessorHost().postClearCompactionQueues();
-      } catch (IOException ie) {
-        throw new ServiceException(ie);
-      } finally {
-        clearCompactionQueues.set(false);
-      }
-    } else {
-      LOG.warn("Clear compactions queue is executing by other admin.");
-    }
-    return respBuilder.build();
   }
 
   /**

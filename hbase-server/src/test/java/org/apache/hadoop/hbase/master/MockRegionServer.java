@@ -50,8 +50,6 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitOrMergeRequest;
@@ -451,12 +449,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
       GetRegionLoadRequest request) throws ServiceException {
     GetRegionLoadResponse.Builder builder = GetRegionLoadResponse.newBuilder();
     return builder.build();
-  }
-
-  @Override
-  public ClearCompactionQueuesResponse clearCompactionQueues(RpcController controller,
-    ClearCompactionQueuesRequest request) throws ServiceException {
-    return null;
   }
 
   @Override

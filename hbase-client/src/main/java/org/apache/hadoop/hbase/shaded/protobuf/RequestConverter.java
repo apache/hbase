@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.CellScannable;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -1696,14 +1694,6 @@ public final class RequestConverter {
   public static GetNamespaceDescriptorRequest buildGetNamespaceDescriptorRequest(final String name) {
     GetNamespaceDescriptorRequest.Builder builder = GetNamespaceDescriptorRequest.newBuilder();
     builder.setNamespaceName(name);
-    return builder.build();
-  }
-
-  public static ClearCompactionQueuesRequest buildClearCompactionQueuesRequest(Set<String> queues) {
-    ClearCompactionQueuesRequest.Builder builder = ClearCompactionQueuesRequest.newBuilder();
-    for(String name: queues) {
-      builder.addQueueName(name);
-    }
     return builder.build();
   }
 }

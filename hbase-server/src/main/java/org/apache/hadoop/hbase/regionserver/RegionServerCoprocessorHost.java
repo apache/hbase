@@ -218,26 +218,6 @@ public class RegionServerCoprocessorHost extends
         });
   }
 
-  public void preClearCompactionQueues() throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
-      @Override
-      public void call(RegionServerObserver oserver,
-                       ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preClearCompactionQueues(ctx);
-      }
-    });
-  }
-
-  public void postClearCompactionQueues() throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
-      @Override
-      public void call(RegionServerObserver oserver,
-                       ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postClearCompactionQueues(ctx);
-      }
-    });
-  }
-
   private <T> T execOperationWithResult(final T defaultValue,
       final CoprocessOperationWithResult<T> ctx) throws IOException {
     if (ctx == null)
