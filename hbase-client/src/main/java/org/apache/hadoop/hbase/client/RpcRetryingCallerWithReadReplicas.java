@@ -209,7 +209,9 @@ public class RpcRetryingCallerWithReadReplicas {
       Future<Result> f = cs.pollForFirstSuccessfullyCompletedTask(operationTimeout,
           TimeUnit.MILLISECONDS, startIndex, endIndex);
       if (f == null) {
-        throw new RetriesExhaustedException("timed out after " + operationTimeout + " ms");
+        throw new RetriesExhaustedException("Timed out after " + operationTimeout +
+            "ms. Get is sent to replicas with startIndex: " + startIndex +
+            ", endIndex: " + endIndex + ", Locations: " + rl);
       }
       return f.get();
     } catch (ExecutionException e) {
