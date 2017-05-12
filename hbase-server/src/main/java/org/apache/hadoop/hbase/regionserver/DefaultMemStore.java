@@ -70,38 +70,26 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class DefaultMemStore implements MemStore {
   private static final Log LOG = LogFactory.getLog(DefaultMemStore.class);
+  @VisibleForTesting
   static final String USEMSLAB_KEY = "hbase.hregion.memstore.mslab.enabled";
   private static final boolean USEMSLAB_DEFAULT = true;
-  static final String MSLAB_CLASS_NAME = "hbase.regionserver.mslab.class";
+  private static final String MSLAB_CLASS_NAME = "hbase.regionserver.mslab.class";
 
   private Configuration conf;
 
-  // MemStore.  Use a CellSkipListSet rather than SkipListSet because of the
-  // better semantics.  The Map will overwrite if passed a key it already had
-  // whereas the Set will not add new Cell if key is same though value might be
-  // different.  Value is not important -- just make sure always same
-  // reference passed.
-  volatile CellSkipListSet cellSet;
-
-  // Snapshot of memstore.  Made for flusher.
-  volatile CellSkipListSet snapshot;
-
+  @VisibleForTesting
   final KeyValue.KVComparator comparator;
 
-  // Used to track own heapSize
-  final AtomicLong size;
-  private volatile long snapshotSize;
-
   // Used to track when to flush
-  volatile long timeOfOldestEdit = Long.MAX_VALUE;
+  private volatile long timeOfOldestEdit = Long.MAX_VALUE;
 
-  TimeRangeTracker timeRangeTracker;
-  TimeRangeTracker snapshotTimeRangeTracker;
+  private volatile long snapshotId;
+  private volatile boolean tagsPresent;
 
-  volatile MemStoreLAB allocator;
-  volatile MemStoreLAB snapshotAllocator;
-  volatile long snapshotId;
-  volatile boolean tagsPresent;
+  @VisibleForTesting
+  volatile Section activeSection;
+  @VisibleForTesting
+  volatile Section snapshotSection;
 
   /**
    * Default constructor. Used for tests.
@@ -118,28 +106,8 @@ public class DefaultMemStore implements MemStore {
                   final KeyValue.KVComparator c) {
     this.conf = conf;
     this.comparator = c;
-    this.cellSet = new CellSkipListSet(c);
-    this.snapshot = new CellSkipListSet(c);
-    timeRangeTracker = new TimeRangeTracker();
-    snapshotTimeRangeTracker = new TimeRangeTracker();
-    this.size = new AtomicLong(DEEP_OVERHEAD);
-    this.snapshotSize = 0;
-    if (conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT)) {
-      String className = conf.get(MSLAB_CLASS_NAME, HeapMemStoreLAB.class.getName());
-      this.allocator = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class }, new Object[] { conf });
-    } else {
-      this.allocator = null;
-    }
-  }
-
-  void dump() {
-    for (Cell cell: this.cellSet) {
-      LOG.info(cell);
-    }
-    for (Cell cell: this.snapshot) {
-      LOG.info(cell);
-    }
+    this.activeSection = Section.newActiveSection(comparator, conf);
+    this.snapshotSection = Section.newSnapshotSection(comparator);
   }
 
   /**
@@ -150,31 +118,22 @@ public class DefaultMemStore implements MemStore {
   public MemStoreSnapshot snapshot() {
     // If snapshot currently has entries, then flusher failed or didn't call
     // cleanup.  Log a warning.
-    if (!this.snapshot.isEmpty()) {
+    if (!snapshotSection.getCellSkipListSet().isEmpty()) {
       LOG.warn("Snapshot called again without clearing previous. " +
           "Doing nothing. Another ongoing flush or did we fail last attempt?");
     } else {
       this.snapshotId = EnvironmentEdgeManager.currentTime();
-      this.snapshotSize = keySize();
-      if (!this.cellSet.isEmpty()) {
-        this.snapshot = this.cellSet;
-        this.cellSet = new CellSkipListSet(this.comparator);
-        this.snapshotTimeRangeTracker = this.timeRangeTracker;
-        this.timeRangeTracker = new TimeRangeTracker();
-        // Reset heap to not include any keys
-        this.size.set(DEEP_OVERHEAD);
-        this.snapshotAllocator = this.allocator;
-        // Reset allocator so we get a fresh buffer for the new memstore
-        if (allocator != null) {
-          String className = conf.get(MSLAB_CLASS_NAME, HeapMemStoreLAB.class.getName());
-          this.allocator = ReflectionUtils.instantiateWithCustomCtor(className,
-              new Class[] { Configuration.class }, new Object[] { conf });
-        }
+      if (!activeSection.getCellSkipListSet().isEmpty()) {
+        snapshotSection = activeSection;
+        activeSection = Section.newActiveSection(comparator, conf);
+        snapshotSection.getHeapSize().addAndGet(-DEEP_OVERHEAD);
         timeOfOldestEdit = Long.MAX_VALUE;
       }
     }
-    MemStoreSnapshot memStoreSnapshot = new MemStoreSnapshot(this.snapshotId, snapshot.size(), this.snapshotSize,
-        this.snapshotTimeRangeTracker, new CollectionBackedScanner(snapshot, this.comparator),
+    MemStoreSnapshot memStoreSnapshot = new MemStoreSnapshot(this.snapshotId,
+        snapshotSection.getCellSkipListSet().size(), snapshotSection.getHeapSize().get(),
+        snapshotSection.getTimeRangeTracker(),
+        new CollectionBackedScanner(snapshotSection.getCellSkipListSet(), this.comparator),
         this.tagsPresent);
     this.tagsPresent = false;
     return memStoreSnapshot;
@@ -188,37 +147,29 @@ public class DefaultMemStore implements MemStore {
    */
   @Override
   public void clearSnapshot(long id) throws UnexpectedStateException {
-    MemStoreLAB tmpAllocator = null;
     if (this.snapshotId == -1) return;  // already cleared
     if (this.snapshotId != id) {
       throw new UnexpectedStateException("Current snapshot id is " + this.snapshotId + ",passed "
           + id);
     }
-    // OK. Passed in snapshot is same as current snapshot. If not-empty,
-    // create a new snapshot and let the old one go.
-    if (!this.snapshot.isEmpty()) {
-      this.snapshot = new CellSkipListSet(this.comparator);
-      this.snapshotTimeRangeTracker = new TimeRangeTracker();
-    }
-    this.snapshotSize = 0;
-    this.snapshotId = -1;
-    if (this.snapshotAllocator != null) {
-      tmpAllocator = this.snapshotAllocator;
-      this.snapshotAllocator = null;
-    }
+    // OK. Passed in snapshot is same as current snapshot.
+    MemStoreLAB tmpAllocator = snapshotSection.getMemStoreLAB();
+    snapshotSection = Section.newSnapshotSection(comparator);
     if (tmpAllocator != null) {
       tmpAllocator.close();
     }
+    this.snapshotId = -1;
   }
 
   @Override
   public long getFlushableSize() {
-    return this.snapshotSize > 0 ? this.snapshotSize : keySize();
+    long snapshotSize = snapshotSection.getHeapSize().get();
+    return snapshotSize > 0 ? snapshotSize : keySize();
   }
 
   @Override
   public long getSnapshotSize() {
-    return this.snapshotSize;
+    return snapshotSection.getHeapSize().get();
   }
 
   /**
@@ -239,7 +190,7 @@ public class DefaultMemStore implements MemStore {
   }
 
   private boolean addToCellSet(Cell e) {
-    boolean b = this.cellSet.add(e);
+    boolean b = this.activeSection.getCellSkipListSet().add(e);
     // In no tags case this NoTagsKeyValue.getTagsLength() is a cheap call.
     // When we use ACL CP or Visibility CP which deals with Tags during
     // mutation, the TagRewriteCell.getTagsLength() is a cheaper call. We do not
@@ -252,7 +203,7 @@ public class DefaultMemStore implements MemStore {
   }
 
   private boolean removeFromCellSet(Cell e) {
-    boolean b = this.cellSet.remove(e);
+    boolean b = this.activeSection.getCellSkipListSet().remove(e);
     setOldestEditTimeToNow();
     return b;
   }
@@ -281,8 +232,8 @@ public class DefaultMemStore implements MemStore {
     if (!notPresent && mslabUsed) {
       s += getCellLength(toAdd);
     }
-    timeRangeTracker.includeTimestamp(toAdd);
-    this.size.addAndGet(s);
+    activeSection.getTimeRangeTracker().includeTimestamp(toAdd);
+    activeSection.getHeapSize().addAndGet(s);
     return s;
   }
 
@@ -295,12 +246,12 @@ public class DefaultMemStore implements MemStore {
   }
 
   private Cell maybeCloneWithAllocator(Cell cell) {
-    if (allocator == null) {
+    if (activeSection.getMemStoreLAB() == null) {
       return cell;
     }
 
     int len = getCellLength(cell);
-    ByteRange alloc = allocator.allocateBytes(len);
+    ByteRange alloc = activeSection.getMemStoreLAB().allocateBytes(len);
     if (alloc == null) {
       // The allocation was too large, allocator decided
       // not to do anything with it.
@@ -328,18 +279,18 @@ public class DefaultMemStore implements MemStore {
     // not the snapshot. The flush of this snapshot to disk has not
     // yet started because Store.flush() waits for all rwcc transactions to
     // commit before starting the flush to disk.
-    Cell found = this.snapshot.get(cell);
+    Cell found = snapshotSection.getCellSkipListSet().get(cell);
     if (found != null && found.getSequenceId() == cell.getSequenceId()) {
-      this.snapshot.remove(cell);
+      snapshotSection.getCellSkipListSet().remove(cell);
       long sz = heapSizeChange(cell, true);
-      this.snapshotSize -= sz;
+      snapshotSection.getHeapSize().addAndGet(-sz);
     }
     // If the key is in the memstore, delete it. Update this.size.
-    found = this.cellSet.get(cell);
+    found = activeSection.getCellSkipListSet().get(cell);
     if (found != null && found.getSequenceId() == cell.getSequenceId()) {
       removeFromCellSet(cell);
-      long s = heapSizeChange(cell, true);
-      this.size.addAndGet(-s);
+      long sz = heapSizeChange(found, true);
+      activeSection.getHeapSize().addAndGet(-sz);
     }
   }
 
@@ -361,7 +312,8 @@ public class DefaultMemStore implements MemStore {
    * @return Next row or null if none found.
    */
   Cell getNextRow(final Cell cell) {
-    return getLowest(getNextRow(cell, this.cellSet), getNextRow(cell, this.snapshot));
+    return getLowest(getNextRow(cell, activeSection.getCellSkipListSet()),
+          getNextRow(cell, snapshotSection.getCellSkipListSet()));
   }
 
   /*
@@ -406,8 +358,8 @@ public class DefaultMemStore implements MemStore {
    */
   @Override
   public void getRowKeyAtOrBefore(final GetClosestRowBeforeTracker state) {
-    getRowKeyAtOrBefore(cellSet, state);
-    getRowKeyAtOrBefore(snapshot, state);
+    getRowKeyAtOrBefore(activeSection.getCellSkipListSet(), state);
+    getRowKeyAtOrBefore(snapshotSection.getCellSkipListSet(), state);
   }
 
   /*
@@ -505,7 +457,7 @@ public class DefaultMemStore implements MemStore {
                                 long now) {
     Cell firstCell = KeyValueUtil.createFirstOnRow(row, family, qualifier);
     // Is there a Cell in 'snapshot' with the same TS? If so, upgrade the timestamp a bit.
-    SortedSet<Cell> snSs = snapshot.tailSet(firstCell);
+    SortedSet<Cell> snSs = snapshotSection.getCellSkipListSet().tailSet(firstCell);
     if (!snSs.isEmpty()) {
       Cell snc = snSs.first();
       // is there a matching Cell in the snapshot?
@@ -523,7 +475,7 @@ public class DefaultMemStore implements MemStore {
     // so we cant add the new Cell w/o knowing what's there already, but we also
     // want to take this chance to delete some cells. So two loops (sad)
 
-    SortedSet<Cell> ss = cellSet.tailSet(firstCell);
+    SortedSet<Cell> ss = activeSection.getCellSkipListSet().tailSet(firstCell);
     for (Cell cell : ss) {
       // if this isnt the row we are interested in, then bail:
       if (!CellUtil.matchingColumn(cell, family, qualifier)
@@ -601,7 +553,7 @@ public class DefaultMemStore implements MemStore {
         cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
         cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
         cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
-    SortedSet<Cell> ss = cellSet.tailSet(firstCell);
+    SortedSet<Cell> ss = activeSection.getCellSkipListSet().tailSet(firstCell);
     Iterator<Cell> it = ss.iterator();
     // versions visible to oldest scanner
     int versionsVisible = 0;
@@ -624,7 +576,7 @@ public class DefaultMemStore implements MemStore {
             // false means there was a change, so give us the size.
             long delta = heapSizeChange(cur, true);
             addedSize -= delta;
-            this.size.addAndGet(-delta);
+            activeSection.getHeapSize().addAndGet(-delta);
             it.remove();
             setOldestEditTimeToNow();
           } else {
@@ -680,7 +632,8 @@ public class DefaultMemStore implements MemStore {
    */
   @Override
   public List<KeyValueScanner> getScanners(long readPt) {
-    return Collections.<KeyValueScanner> singletonList(new MemStoreScanner(readPt));
+    return Collections.<KeyValueScanner> singletonList(
+        new MemStoreScanner(activeSection, snapshotSection, readPt, comparator));
   }
 
   /**
@@ -691,14 +644,29 @@ public class DefaultMemStore implements MemStore {
    * @return False if the key definitely does not exist in this Memstore
    */
   public boolean shouldSeek(Scan scan, Store store, long oldestUnexpiredTS) {
+    return shouldSeek(activeSection.getTimeRangeTracker(),
+        snapshotSection.getTimeRangeTracker(), scan, store, oldestUnexpiredTS);
+  }
+
+  /**
+   * Check if this memstore may contain the required keys
+   * @param activeTimeRangeTracker the tracker of active data
+   * @param snapshotTimeRangeTracker the tracker of snapshot data
+   * @param scan scan
+   * @param store holds reference to cf
+   * @param oldestUnexpiredTS
+   * @return False if the key definitely does not exist in this Memstore
+   */
+  private static boolean shouldSeek(TimeRangeTracker activeTimeRangeTracker,
+      TimeRangeTracker snapshotTimeRangeTracker, Scan scan, Store store, long oldestUnexpiredTS) {
     byte[] cf = store.getFamily().getName();
     TimeRange timeRange = scan.getColumnFamilyTimeRange().get(cf);
     if (timeRange == null) {
       timeRange = scan.getTimeRange();
     }
-    return (timeRangeTracker.includesTimeRange(timeRange) ||
+    return (activeTimeRangeTracker.includesTimeRange(timeRange) ||
       snapshotTimeRangeTracker.includesTimeRange(timeRange)) &&
-      (Math.max(timeRangeTracker.getMax(), snapshotTimeRangeTracker.getMax()) >= oldestUnexpiredTS);
+      (Math.max(activeTimeRangeTracker.getMax(), snapshotTimeRangeTracker.getMax()) >= oldestUnexpiredTS);
   }
 
   /*
@@ -707,7 +675,7 @@ public class DefaultMemStore implements MemStore {
    * map and snapshot.
    * This behaves as if it were a real scanner but does not maintain position.
    */
-  protected class MemStoreScanner extends NonLazyKeyValueScanner {
+  protected static class MemStoreScanner extends NonLazyKeyValueScanner {
     // Next row information for either cellSet or snapshot
     private Cell cellSetNextRow = null;
     private Cell snapshotNextRow = null;
@@ -721,22 +689,18 @@ public class DefaultMemStore implements MemStore {
     private Iterator<Cell> snapshotIt;
 
     // The cellSet and snapshot at the time of creating this scanner
-    private CellSkipListSet cellSetAtCreation;
-    private CellSkipListSet snapshotAtCreation;
+    private final Section activeAtCreation;
+    private final Section snapshotAtCreation;
 
     // the pre-calculated Cell to be returned by peek() or next()
     private Cell theNext;
 
-    // The allocator and snapshot allocator at the time of creating this scanner
-    volatile MemStoreLAB allocatorAtCreation;
-    volatile MemStoreLAB snapshotAllocatorAtCreation;
-    
     // A flag represents whether could stop skipping Cells for MVCC
     // if have encountered the next row. Only used for reversed scan
     private boolean stopSkippingCellsIfNextRow = false;
 
-    private long readPoint;
-
+    private final long readPoint;
+    private final KeyValue.KVComparator comparator;
     /*
     Some notes...
 
@@ -758,19 +722,16 @@ public class DefaultMemStore implements MemStore {
       the adds to kvset in the MemStoreScanner.
     */
 
-    MemStoreScanner(long readPoint) {
-      super();
-
+    MemStoreScanner(Section activeSection, Section snapshotSection, long readPoint, final KeyValue.KVComparator c) {
       this.readPoint = readPoint;
-      cellSetAtCreation = cellSet;
-      snapshotAtCreation = snapshot;
-      if (allocator != null) {
-        this.allocatorAtCreation = allocator;
-        this.allocatorAtCreation.incScannerCount();
+      this.comparator = c;
+      activeAtCreation = activeSection;
+      snapshotAtCreation = snapshotSection;
+      if (activeAtCreation.getMemStoreLAB() != null) {
+        activeAtCreation.getMemStoreLAB().incScannerCount();
       }
-      if (snapshotAllocator != null) {
-        this.snapshotAllocatorAtCreation = snapshotAllocator;
-        this.snapshotAllocatorAtCreation.incScannerCount();
+      if (snapshotAtCreation.getMemStoreLAB() != null) {
+        snapshotAtCreation.getMemStoreLAB().incScannerCount();
       }
       if (Trace.isTracing() && Trace.currentSpan() != null) {
         Trace.currentSpan().addTimelineAnnotation("Creating MemStoreScanner");
@@ -825,8 +786,8 @@ public class DefaultMemStore implements MemStore {
       }
       // kvset and snapshot will never be null.
       // if tailSet can't find anything, SortedSet is empty (not null).
-      cellSetIt = cellSetAtCreation.tailSet(key).iterator();
-      snapshotIt = snapshotAtCreation.tailSet(key).iterator();
+      cellSetIt = activeAtCreation.getCellSkipListSet().tailSet(key).iterator();
+      snapshotIt = snapshotAtCreation.getCellSkipListSet().tailSet(key).iterator();
       cellSetItRow = null;
       snapshotItRow = null;
 
@@ -868,8 +829,8 @@ public class DefaultMemStore implements MemStore {
        get it. So we remember the last keys we iterated to and restore
        the reseeked set to at least that point.
        */
-      cellSetIt = cellSetAtCreation.tailSet(getHighest(key, cellSetItRow)).iterator();
-      snapshotIt = snapshotAtCreation.tailSet(getHighest(key, snapshotItRow)).iterator();
+      cellSetIt = activeAtCreation.getCellSkipListSet().tailSet(getHighest(key, cellSetItRow)).iterator();
+      snapshotIt = snapshotAtCreation.getCellSkipListSet().tailSet(getHighest(key, snapshotItRow)).iterator();
 
       return seekInSubLists(key);
     }
@@ -937,20 +898,19 @@ public class DefaultMemStore implements MemStore {
       return (first != null ? first : second);
     }
 
+    @Override
     public synchronized void close() {
       this.cellSetNextRow = null;
       this.snapshotNextRow = null;
 
       this.cellSetIt = null;
       this.snapshotIt = null;
-      
-      if (allocatorAtCreation != null) {
-        this.allocatorAtCreation.decScannerCount();
-        this.allocatorAtCreation = null;
+
+      if (activeAtCreation != null && activeAtCreation.getMemStoreLAB() != null) {
+        activeAtCreation.getMemStoreLAB().decScannerCount();
       }
-      if (snapshotAllocatorAtCreation != null) {
-        this.snapshotAllocatorAtCreation.decScannerCount();
-        this.snapshotAllocatorAtCreation = null;
+      if (snapshotAtCreation != null && snapshotAtCreation.getMemStoreLAB() != null) {
+        snapshotAtCreation.getMemStoreLAB().decScannerCount();
       }
 
       this.cellSetItRow = null;
@@ -968,7 +928,8 @@ public class DefaultMemStore implements MemStore {
 
     @Override
     public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
-      return shouldSeek(scan, store, oldestUnexpiredTS);
+      return shouldSeek(activeAtCreation.getTimeRangeTracker(),
+        snapshotAtCreation.getTimeRangeTracker(), scan, store, oldestUnexpiredTS);
     }
 
     /**
@@ -997,9 +958,9 @@ public class DefaultMemStore implements MemStore {
       do {
         Cell firstKeyOnRow = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
             key.getRowLength());
-        SortedSet<Cell> cellHead = cellSetAtCreation.headSet(firstKeyOnRow);
+        SortedSet<Cell> cellHead = activeAtCreation.getCellSkipListSet().headSet(firstKeyOnRow);
         Cell cellSetBeforeRow = cellHead.isEmpty() ? null : cellHead.last();
-        SortedSet<Cell> snapshotHead = snapshotAtCreation
+        SortedSet<Cell> snapshotHead = snapshotAtCreation.getCellSkipListSet()
             .headSet(firstKeyOnRow);
         Cell snapshotBeforeRow = snapshotHead.isEmpty() ? null : snapshotHead
             .last();
@@ -1027,10 +988,10 @@ public class DefaultMemStore implements MemStore {
 
     @Override
     public synchronized boolean seekToLastRow() {
-      Cell first = cellSetAtCreation.isEmpty() ? null : cellSetAtCreation
-          .last();
-      Cell second = snapshotAtCreation.isEmpty() ? null
-          : snapshotAtCreation.last();
+      Cell first = activeAtCreation.getCellSkipListSet().isEmpty() ? null
+        : activeAtCreation.getCellSkipListSet().last();
+      Cell second = snapshotAtCreation.getCellSkipListSet().isEmpty() ? null
+          : snapshotAtCreation.getCellSkipListSet().last();
       Cell higherCell = getHighest(first, second);
       if (higherCell == null) {
         return false;
@@ -1047,10 +1008,10 @@ public class DefaultMemStore implements MemStore {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-      + (9 * ClassSize.REFERENCE) + (3 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN);
+      + (4 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN);
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
-      ClassSize.ATOMIC_LONG + (2 * ClassSize.TIMERANGE_TRACKER) +
+      (2 * ClassSize.ATOMIC_LONG) + (2 * ClassSize.TIMERANGE_TRACKER) +
       (2 * ClassSize.CELL_SKIPLIST_SET) + (2 * ClassSize.CONCURRENT_SKIPLISTMAP));
 
   /*
@@ -1075,7 +1036,7 @@ public class DefaultMemStore implements MemStore {
    */
   @Override
   public long heapSize() {
-    return size.get();
+    return activeSection.getHeapSize().get();
   }
 
   @Override
@@ -1125,4 +1086,63 @@ public class DefaultMemStore implements MemStore {
     LOG.info("Exiting.");
   }
 
+  /**
+   * Contains the fields which are useful to MemStoreScanner.
+   */
+  @InterfaceAudience.Private
+  @VisibleForTesting
+  static class Section {
+    /**
+     * MemStore.  Use a CellSkipListSet rather than SkipListSet because of the
+     * better semantics.  The Map will overwrite if passed a key it already had
+     * whereas the Set will not add new Cell if key is same though value might be
+     * different.  Value is not important -- just make sure always same reference passed.
+     */
+    private final CellSkipListSet cellSet;
+    private final TimeRangeTracker tracker = new TimeRangeTracker();
+    /**
+     * Used to track own heapSize.
+     */
+    private final AtomicLong heapSize;
+    private final MemStoreLAB allocator;
+
+    static Section newSnapshotSection(final KeyValue.KVComparator c) {
+      return new Section(c, null, 0);
+    }
+
+    static Section newActiveSection(final KeyValue.KVComparator c,
+            final Configuration conf) {
+      return new Section(c, conf, DEEP_OVERHEAD);
+    }
+
+    private Section(final KeyValue.KVComparator c,
+            final Configuration conf, long initHeapSize) {
+      this.cellSet = new CellSkipListSet(c);
+      this.heapSize = new AtomicLong(initHeapSize);
+      if (conf != null && conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT)) {
+        String className = conf.get(MSLAB_CLASS_NAME, HeapMemStoreLAB.class.getName());
+        this.allocator = ReflectionUtils.instantiateWithCustomCtor(className,
+                new Class[]{Configuration.class}, new Object[]{conf});
+      } else {
+        this.allocator = null;
+      }
+    }
+
+    CellSkipListSet getCellSkipListSet() {
+      return cellSet;
+    }
+
+    TimeRangeTracker getTimeRangeTracker() {
+      return tracker;
+    }
+
+    AtomicLong getHeapSize() {
+      return heapSize;
+    }
+
+    MemStoreLAB getMemStoreLAB() {
+      return allocator;
+    }
+
+  }
 }

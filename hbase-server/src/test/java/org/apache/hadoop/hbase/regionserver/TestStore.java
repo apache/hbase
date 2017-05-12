@@ -19,24 +19,31 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -57,9 +64,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -70,15 +77,16 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.util.Progressable;
 import org.junit.After;
 import org.junit.Assert;
@@ -162,9 +170,14 @@ public class TestStore {
     init(methodName, conf, htd, hcd);
   }
 
-  @SuppressWarnings("deprecation")
   private Store init(String methodName, Configuration conf, HTableDescriptor htd,
       HColumnDescriptor hcd) throws IOException {
+    return init(methodName, conf, htd, hcd, null);
+  }
+
+  @SuppressWarnings("deprecation")
+  private Store init(String methodName, Configuration conf, HTableDescriptor htd,
+      HColumnDescriptor hcd, MyScannerHook hook) throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
@@ -185,8 +198,11 @@ public class TestStore {
     final WALFactory wals = new WALFactory(walConf, null, methodName);
     HRegion region = new HRegion(tableDir, wals.getWAL(info.getEncodedNameAsBytes(),
             info.getTable().getNamespace()), fs, conf, info, htd, null);
-
-    store = new HStore(region, hcd, conf);
+    if (hook == null) {
+      store = new HStore(region, hcd, conf);
+    } else {
+      store = new MyStore(region, hcd, conf, hook);
+    }
     return store;
   }
 
@@ -552,7 +568,7 @@ public class TestStore {
     this.store.snapshot();
     flushStore(store, id++);
     Assert.assertEquals(storeFilessize, this.store.getStorefiles().size());
-    Assert.assertEquals(0, ((DefaultMemStore)this.store.memstore).cellSet.size());
+    Assert.assertEquals(0, ((DefaultMemStore)this.store.memstore).activeSection.getCellSkipListSet().size());
   }
 
   private void assertCheck() {
@@ -597,7 +613,7 @@ public class TestStore {
     flushStore(store, id++);
     Assert.assertEquals(1, this.store.getStorefiles().size());
     // from the one we inserted up there, and a new one
-    Assert.assertEquals(2, ((DefaultMemStore)this.store.memstore).cellSet.size());
+    Assert.assertEquals(2, ((DefaultMemStore)this.store.memstore).activeSection.getCellSkipListSet().size());
 
     // how many key/values for this row are there?
     Get get = new Get(row);
@@ -666,7 +682,7 @@ public class TestStore {
     }
 
     long computedSize=0;
-    for (Cell cell : ((DefaultMemStore)this.store.memstore).cellSet) {
+    for (Cell cell : ((DefaultMemStore)this.store.memstore).activeSection.getCellSkipListSet()) {
       long kvsize = DefaultMemStore.heapSizeChange(cell, true);
       //System.out.println(kv + " size= " + kvsize + " kvsize= " + kv.heapSize());
       computedSize += kvsize;
@@ -698,7 +714,7 @@ public class TestStore {
     // then flush.
     flushStore(store, id++);
     Assert.assertEquals(1, this.store.getStorefiles().size());
-    Assert.assertEquals(1, ((DefaultMemStore)this.store.memstore).cellSet.size());
+    Assert.assertEquals(1, ((DefaultMemStore)this.store.memstore).activeSection.getCellSkipListSet().size());
 
     // now increment again:
     newValue += 1;
@@ -1111,5 +1127,114 @@ public class TestStore {
 
     //ensure that replaceStoreFiles is not called if files are not refreshed
     verify(spiedStore, times(0)).replaceStoreFiles(null, null);
+  }
+
+  private Cell createCell(byte[] qualifier, long ts, long sequenceId, byte[] value) throws IOException {
+    Cell c = CellUtil.createCell(row, family, qualifier, ts, KeyValue.Type.Put.getCode(), value);
+    CellUtil.setSequenceId(c, sequenceId);
+    return c;
+  }
+
+  @Test
+  public void testScanWithDoubleFlush() throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    // Initialize region
+    MyStore myStore = initMyStore(name.getMethodName(), conf, new MyScannerHook() {
+      @Override
+      public void hook(final MyStore store) throws IOException {
+        final long tmpId = id++;
+        ExecutorService s = Executors.newSingleThreadExecutor();
+        s.submit(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              // flush the store before storescanner updates the scanners from store.
+              // The current data will be flushed into files and the memstore will
+              // be clear.
+              // -- phase (4/4)
+              flushStore(store, tmpId);
+            } catch (IOException ex) {
+              throw new RuntimeException(ex);
+            }
+          }
+        });
+        s.shutdown();
+        try {
+          // wait for the flush, the thread will be blocked in HStore#notifyChangedReadersObservers.
+          s.awaitTermination(500, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ex) {
+        }
+      }
+    });
+    byte[] oldValue = Bytes.toBytes("oldValue");
+    byte[] currentValue = Bytes.toBytes("currentValue");
+    long ts = EnvironmentEdgeManager.currentTime();
+    long seqId = 100;
+    // older data whihc shouldn't be "seen" by client
+    myStore.add(createCell(qf1, ts, seqId, oldValue));
+    myStore.add(createCell(qf2, ts, seqId, oldValue));
+    myStore.add(createCell(qf3, ts, seqId, oldValue));
+    long snapshotId = id++;
+    // push older data into snapshot -- phase (1/4)
+    StoreFlushContext storeFlushCtx = store.createFlushContext(snapshotId);
+    storeFlushCtx.prepare();
+
+    // insert current data into active -- phase (2/4)
+    myStore.add(createCell(qf1, ts + 1, seqId + 1, currentValue));
+    myStore.add(createCell(qf2, ts + 1, seqId + 1, currentValue));
+    myStore.add(createCell(qf3, ts + 1, seqId + 1, currentValue));
+    TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    quals.add(qf1);
+    quals.add(qf2);
+    quals.add(qf3);
+    try (InternalScanner scanner = (InternalScanner) myStore.getScanner(
+            new Scan(new Get(row)), quals, seqId + 1)) {
+      // complete the flush -- phase (3/4)
+      storeFlushCtx.flushCache(Mockito.mock(MonitoredTask.class));
+      storeFlushCtx.commit(Mockito.mock(MonitoredTask.class));
+
+      List<Cell> results = new ArrayList<>();
+      scanner.next(results);
+      assertEquals(3, results.size());
+      for (Cell c : results) {
+        byte[] actualValue = CellUtil.cloneValue(c);
+        assertTrue("expected:" + Bytes.toStringBinary(currentValue)
+                + ", actual:" + Bytes.toStringBinary(actualValue),
+                 Bytes.equals(actualValue, currentValue));
+      }
+    }
+
+  }
+
+  private MyStore initMyStore(String methodName, Configuration conf, MyScannerHook hook) throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setMaxVersions(5);
+    return (MyStore) init(methodName, conf, htd, hcd, hook);
+  }
+
+  private static class MyStore extends HStore {
+
+    private final MyScannerHook hook;
+
+    MyStore(final HRegion region, final HColumnDescriptor family,
+            final Configuration confParam, MyScannerHook hook) throws IOException {
+      super(region, family, confParam);
+      this.hook = hook;
+    }
+
+    @Override
+    public List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks,
+            boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
+            byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner) throws IOException {
+      hook.hook(this);
+      return super.getScanners(files, cacheBlocks, isGet, usePread,
+              isCompaction, matcher, startRow, stopRow, readPt, includeMemstoreScanner);
+    }
+  }
+
+  private interface MyScannerHook {
+
+    void hook(MyStore store) throws IOException;
   }
 }
