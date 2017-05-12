@@ -672,4 +672,12 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   void shutdownLongCompactions(){
     this.longCompactions.shutdown();
   }
+
+  public void clearLongCompactionsQueue() {
+    longCompactions.getQueue().clear();
+  }
+
+  public void clearShortCompactionsQueue() {
+    shortCompactions.getQueue().clear();
+  }
 }

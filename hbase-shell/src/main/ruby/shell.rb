@@ -357,6 +357,7 @@ Shell.load_command_group(
     trace
     splitormerge_switch
     splitormerge_enabled
+    clear_compaction_queues
   ],
   # TODO remove older hlog_roll command
   :aliases => {

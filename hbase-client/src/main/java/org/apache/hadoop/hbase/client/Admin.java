@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
@@ -2026,4 +2027,14 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void disableTableReplication(final TableName tableName) throws IOException;
+
+  /**
+   * Clear compacting queues on a regionserver.
+   * @param sn the region server name
+   * @param queues the set of queue name
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException
+   */
+  void clearCompactionQueues(final ServerName sn, final Set<String> queues)
+    throws IOException, InterruptedException;
 }

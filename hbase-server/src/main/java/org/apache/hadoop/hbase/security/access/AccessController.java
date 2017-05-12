@@ -2668,6 +2668,12 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   }
 
   @Override
+  public void  preClearCompactionQueues(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+          throws IOException {
+    requirePermission(getActiveUser(ctx), "preClearCompactionQueues", Permission.Action.ADMIN);
+  }
+
+  @Override
   public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
       Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
     requirePermission(getActiveUser(ctx), "moveServersAndTables", Action.ADMIN);
