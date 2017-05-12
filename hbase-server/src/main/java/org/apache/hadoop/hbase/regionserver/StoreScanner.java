@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.CompactionScanQueryMatc
 import org.apache.hadoop.hbase.regionserver.querymatcher.LegacyScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.UserScanQueryMatcher;
+import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -145,6 +146,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private volatile boolean flushed = false;
   // generally we get one file from a flush
   private final List<StoreFile> flushedStoreFiles = new ArrayList<>(1);
+  // generally we get one memstroe scanner from a flush
+  private final List<KeyValueScanner> memStoreScannersAfterFlush = new ArrayList<>(1);
   // The current list of scanners
   private final List<KeyValueScanner> currentScanners = new ArrayList<>();
   // flush update lock
@@ -493,6 +496,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       this.store.deleteChangedReaderObserver(this);
     }
     if (withHeapClose) {
+      clearAndClose(memStoreScannersAfterFlush);
       for (KeyValueHeap h : this.heapsForDelayedClose) {
         h.close();
       }
@@ -814,13 +818,33 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return true;
   }
 
+  @Override
+  public long getReadPoint() {
+    return this.readPt;
+  }
+
+  private static void clearAndClose(List<KeyValueScanner> scanners) {
+    for (KeyValueScanner s : scanners) {
+      s.close();
+    }
+    scanners.clear();
+  }
+
   // Implementation of ChangedReadersObserver
   @Override
-  public void updateReaders(List<StoreFile> sfs) throws IOException {
-    flushed = true;
+  public void updateReaders(List<StoreFile> sfs, List<KeyValueScanner> memStoreScanners) throws IOException {
+    if (CollectionUtils.isEmpty(sfs)
+      && CollectionUtils.isEmpty(memStoreScanners)) {
+      return;
+    }
     flushLock.lock();
     try {
+      flushed = true;
       flushedStoreFiles.addAll(sfs);
+      if (!CollectionUtils.isEmpty(memStoreScanners)) {
+        clearAndClose(memStoreScannersAfterFlush);
+        memStoreScannersAfterFlush.addAll(memStoreScanners);
+      }
     } finally {
       flushLock.unlock();
     }
@@ -838,10 +862,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     List<KeyValueScanner> scanners;
     flushLock.lock();
     try {
-      scanners = selectScannersFrom(store.getScanners(flushedStoreFiles, cacheBlocks, get,
-        scanUsePread, false, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, true));
+      List<KeyValueScanner> allScanners = new ArrayList<>(flushedStoreFiles.size() + memStoreScannersAfterFlush.size());
+      allScanners.addAll(store.getScanners(flushedStoreFiles, cacheBlocks, get,
+        scanUsePread, false, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, false));
+      allScanners.addAll(memStoreScannersAfterFlush);
+      scanners = selectScannersFrom(allScanners);
       // Clear the current set of flushed store files so that they don't get added again
       flushedStoreFiles.clear();
+      memStoreScannersAfterFlush.clear();
     } finally {
       flushLock.unlock();
     }
@@ -851,7 +879,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // remove the older memstore scanner
     for (int i = 0; i < currentScanners.size(); i++) {
       if (!currentScanners.get(i).isFileScanner()) {
-        currentScanners.remove(i);
+        currentScanners.remove(i).close();
         break;
       }
     }

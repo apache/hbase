@@ -105,7 +105,7 @@ import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
  */
 @InterfaceAudience.Private
 public class HStore implements Store {
-  private static final String MEMSTORE_CLASS_NAME = "hbase.regionserver.memstore.class";
+  public static final String MEMSTORE_CLASS_NAME = "hbase.regionserver.memstore.class";
   public static final String COMPACTCHECKER_INTERVAL_MULTIPLIER_KEY =
       "hbase.server.compactchecker.interval.multiplier";
   public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
@@ -244,24 +244,27 @@ public class HStore implements Store {
     // Why not just pass a HColumnDescriptor in here altogether?  Even if have
     // to clone it?
     scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, this.comparator);
-    String className = conf.get(MEMSTORE_CLASS_NAME, DefaultMemStore.class.getName());
     MemoryCompactionPolicy inMemoryCompaction = family.getInMemoryCompaction();
     if(inMemoryCompaction == null) {
       inMemoryCompaction = MemoryCompactionPolicy.valueOf(
           conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
               CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT));
     }
+    String className;
     switch (inMemoryCompaction) {
       case BASIC :
       case EAGER :
-        className = CompactingMemStore.class.getName();
-        this.memstore = new CompactingMemStore(conf, this.comparator, this,
-            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction);
+        Class<? extends CompactingMemStore> clz = conf.getClass(MEMSTORE_CLASS_NAME,
+          CompactingMemStore.class, CompactingMemStore.class);
+        className = clz.getName();
+        this.memstore = ReflectionUtils.newInstance(clz, new Object[] { conf, this.comparator, this,
+            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction});
         break;
       case NONE :
       default:
-          this.memstore = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
-          Configuration.class, CellComparator.class }, new Object[] { conf, this.comparator });
+        className = DefaultMemStore.class.getName();
+        this.memstore = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
+        Configuration.class, CellComparator.class }, new Object[] { conf, this.comparator });
     }
     LOG.info("Memstore class name is " + className);
     this.offPeakHours = OffPeakHours.getInstance(conf);
@@ -1149,7 +1152,14 @@ public class HStore implements Store {
    */
   private void notifyChangedReadersObservers(List<StoreFile> sfs) throws IOException {
     for (ChangedReadersObserver o : this.changedReaderObservers) {
-      o.updateReaders(sfs);
+      List<KeyValueScanner> memStoreScanners;
+      this.lock.readLock().lock();
+      try {
+        memStoreScanners = this.memstore.getScanners(o.getReadPoint());
+      } finally {
+        this.lock.readLock().unlock();
+      }
+      o.updateReaders(sfs, memStoreScanners);
     }
   }
 
