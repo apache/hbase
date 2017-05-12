@@ -83,7 +83,6 @@ module HBaseConstants
   DATA = 'DATA'
   SERVER_NAME = 'SERVER_NAME'
   LOCALITY_THRESHOLD = 'LOCALITY_THRESHOLD'
-  RESTORE_ACL = 'RESTORE_ACL'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)

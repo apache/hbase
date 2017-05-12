@@ -461,7 +461,7 @@ public class AccessControlLists {
     return allPerms;
   }
 
-  public static ListMultimap<String, TablePermission> getTablePermissions(Configuration conf,
+  static ListMultimap<String, TablePermission> getTablePermissions(Configuration conf,
       TableName tableName) throws IOException {
     return getPermissions(conf, tableName != null ? tableName.getName() : null, null);
   }

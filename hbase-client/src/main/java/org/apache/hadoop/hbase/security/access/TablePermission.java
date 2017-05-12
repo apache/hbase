@@ -155,10 +155,6 @@ public class TablePermission extends Permission {
     return table;
   }
 
-  public void setTableName(TableName table) {
-    this.table = table;
-  }
-
   public boolean hasFamily() {
     return family != null;
   }

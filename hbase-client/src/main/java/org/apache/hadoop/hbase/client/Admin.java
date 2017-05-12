@@ -1535,19 +1535,6 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Create a new table by cloning the snapshot content.
-   * @param snapshotName name of the snapshot to be cloned
-   * @param tableName name of the table where the snapshot will be restored
-   * @param restoreAcl true to clone acl into newly created table
-   * @throws IOException if a remote or network exception occurs
-   * @throws TableExistsException if table to be created already exists
-   * @throws RestoreSnapshotException if snapshot failed to be cloned
-   * @throws IllegalArgumentException if the specified table has not a valid name
-   */
-  void cloneSnapshot(final String snapshotName, final TableName tableName, final boolean restoreAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException;
-
-  /**
-   * Create a new table by cloning the snapshot content.
    *
    * @param snapshotName name of the snapshot to be cloned
    * @param tableName name of the table where the snapshot will be restored
