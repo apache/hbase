@@ -87,8 +87,8 @@ public class TestDefaultMemStore extends TestCase {
     byte [] other = Bytes.toBytes("somethingelse");
     KeyValue samekey = new KeyValue(bytes, bytes, bytes, other);
     this.memstore.add(samekey);
-    Cell found = this.memstore.cellSet.first();
-    assertEquals(1, this.memstore.cellSet.size());
+    Cell found = this.memstore.activeSection.getCellSkipListSet().first();
+    assertEquals(1, this.memstore.activeSection.getCellSkipListSet().size());
     assertTrue(Bytes.toString(found.getValue()), CellUtil.matchingValue(samekey, found));
   }
 
@@ -99,13 +99,13 @@ public class TestDefaultMemStore extends TestCase {
     long sizeChangeForSecondCell = this.memstore.add(kv);
     // make sure memstore size increase won't double-count MSLAB chunk size
     assertEquals(DefaultMemStore.heapSizeChange(kv, true), sizeChangeForFirstCell);
-    if (this.memstore.allocator != null) {
+    if (this.memstore.activeSection.getMemStoreLAB() != null) {
       // make sure memstore size increased when using MSLAB
       assertEquals(memstore.getCellLength(kv), sizeChangeForSecondCell);
       // make sure chunk size increased even when writing the same cell, if using MSLAB
-      if (this.memstore.allocator instanceof HeapMemStoreLAB) {
+      if (this.memstore.activeSection.getMemStoreLAB() instanceof HeapMemStoreLAB) {
         assertEquals(2 * memstore.getCellLength(kv),
-          ((HeapMemStoreLAB) this.memstore.allocator).getCurrentChunk().getNextFreeOffset());
+          ((HeapMemStoreLAB) this.memstore.activeSection.getMemStoreLAB()).getCurrentChunk().getNextFreeOffset());
       }
     } else {
       // make sure no memstore size change w/o MSLAB
@@ -493,7 +493,7 @@ public class TestDefaultMemStore extends TestCase {
     for (int i = 0; i < snapshotCount; i++) {
       addRows(this.memstore);
       runSnapshot(this.memstore);
-      assertEquals("History not being cleared", 0, this.memstore.snapshot.size());
+      assertEquals("History not being cleared", 0, this.memstore.snapshotSection.getCellSkipListSet().size());
     }
   }
 
@@ -514,7 +514,7 @@ public class TestDefaultMemStore extends TestCase {
     m.add(key2);
 
     assertTrue("Expected memstore to hold 3 values, actually has " +
-        m.cellSet.size(), m.cellSet.size() == 3);
+        m.activeSection.getCellSkipListSet().size(), m.activeSection.getCellSkipListSet().size() == 3);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -588,12 +588,12 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(new KeyValue(row, fam ,qf3, val));
     //Creating a snapshot
     memstore.snapshot();
-    assertEquals(3, memstore.snapshot.size());
+    assertEquals(3, memstore.snapshotSection.getCellSkipListSet().size());
     //Adding value to "new" memstore
-    assertEquals(0, memstore.cellSet.size());
+    assertEquals(0, memstore.activeSection.getCellSkipListSet().size());
     memstore.add(new KeyValue(row, fam ,qf4, val));
     memstore.add(new KeyValue(row, fam ,qf5, val));
-    assertEquals(2, memstore.cellSet.size());
+    assertEquals(2, memstore.activeSection.getCellSkipListSet().size());
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -615,7 +615,7 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(put2);
     memstore.add(put3);
 
-    assertEquals(3, memstore.cellSet.size());
+    assertEquals(3, memstore.activeSection.getCellSkipListSet().size());
 
     KeyValue del2 = new KeyValue(row, fam, qf1, ts2, KeyValue.Type.Delete, val);
     memstore.delete(del2);
@@ -626,9 +626,9 @@ public class TestDefaultMemStore extends TestCase {
     expected.add(put2);
     expected.add(put1);
 
-    assertEquals(4, memstore.cellSet.size());
+    assertEquals(4, memstore.activeSection.getCellSkipListSet().size());
     int i = 0;
-    for(Cell cell : memstore.cellSet) {
+    for(Cell cell : memstore.activeSection.getCellSkipListSet()) {
       assertEquals(expected.get(i++), cell);
     }
   }
@@ -649,7 +649,7 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(put2);
     memstore.add(put3);
 
-    assertEquals(3, memstore.cellSet.size());
+    assertEquals(3, memstore.activeSection.getCellSkipListSet().size());
 
     KeyValue del2 =
       new KeyValue(row, fam, qf1, ts2, KeyValue.Type.DeleteColumn, val);
@@ -662,9 +662,9 @@ public class TestDefaultMemStore extends TestCase {
     expected.add(put1);
 
 
-    assertEquals(4, memstore.cellSet.size());
+    assertEquals(4, memstore.activeSection.getCellSkipListSet().size());
     int i = 0;
-    for (Cell cell: memstore.cellSet) {
+    for (Cell cell: memstore.activeSection.getCellSkipListSet()) {
       assertEquals(expected.get(i++), cell);
     }
   }
@@ -702,9 +702,9 @@ public class TestDefaultMemStore extends TestCase {
 
 
 
-    assertEquals(5, memstore.cellSet.size());
+    assertEquals(5, memstore.activeSection.getCellSkipListSet().size());
     int i = 0;
-    for (Cell cell: memstore.cellSet) {
+    for (Cell cell: memstore.activeSection.getCellSkipListSet()) {
       assertEquals(expected.get(i++), cell);
     }
   }
@@ -718,8 +718,8 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(new KeyValue(row, fam, qf, ts, val));
     KeyValue delete = new KeyValue(row, fam, qf, ts, KeyValue.Type.Delete, val);
     memstore.delete(delete);
-    assertEquals(2, memstore.cellSet.size());
-    assertEquals(delete, memstore.cellSet.first());
+    assertEquals(2, memstore.activeSection.getCellSkipListSet().size());
+    assertEquals(delete, memstore.activeSection.getCellSkipListSet().first());
   }
 
   public void testRetainsDeleteVersion() throws IOException {
@@ -731,8 +731,8 @@ public class TestDefaultMemStore extends TestCase {
         "row1", "fam", "a", 100, KeyValue.Type.Delete, "dont-care");
     memstore.delete(delete);
 
-    assertEquals(2, memstore.cellSet.size());
-    assertEquals(delete, memstore.cellSet.first());
+    assertEquals(2, memstore.activeSection.getCellSkipListSet().size());
+    assertEquals(delete, memstore.activeSection.getCellSkipListSet().first());
   }
   public void testRetainsDeleteColumn() throws IOException {
     // add a put to memstore
@@ -743,8 +743,8 @@ public class TestDefaultMemStore extends TestCase {
         KeyValue.Type.DeleteColumn, "dont-care");
     memstore.delete(delete);
 
-    assertEquals(2, memstore.cellSet.size());
-    assertEquals(delete, memstore.cellSet.first());
+    assertEquals(2, memstore.activeSection.getCellSkipListSet().size());
+    assertEquals(delete, memstore.activeSection.getCellSkipListSet().first());
   }
   public void testRetainsDeleteFamily() throws IOException {
     // add a put to memstore
@@ -755,8 +755,8 @@ public class TestDefaultMemStore extends TestCase {
         KeyValue.Type.DeleteFamily, "dont-care");
     memstore.delete(delete);
 
-    assertEquals(2, memstore.cellSet.size());
-    assertEquals(delete, memstore.cellSet.first());
+    assertEquals(2, memstore.activeSection.getCellSkipListSet().size());
+    assertEquals(delete, memstore.activeSection.getCellSkipListSet().first());
   }
 
   ////////////////////////////////////
@@ -856,7 +856,7 @@ public class TestDefaultMemStore extends TestCase {
   public void testUpsertMemstoreSize() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     memstore = new DefaultMemStore(conf, KeyValue.COMPARATOR);
-    long oldSize = memstore.size.get();
+    long oldSize = memstore.activeSection.getHeapSize().get();
 
     List<Cell> l = new ArrayList<Cell>();
     KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
@@ -867,18 +867,18 @@ public class TestDefaultMemStore extends TestCase {
     l.add(kv1); l.add(kv2); l.add(kv3);
 
     this.memstore.upsert(l, 2, null);// readpoint is 2
-    long newSize = this.memstore.size.get();
+    long newSize = this.memstore.activeSection.getHeapSize().get();
     assert(newSize > oldSize);
     //The kv1 should be removed.
-    assert(memstore.cellSet.size() == 2);
-    
+    assert(memstore.activeSection.getCellSkipListSet().size() == 2);
+
     KeyValue kv4 = KeyValueTestUtil.create("r", "f", "q", 104, "v");
     kv4.setSequenceId(1);
     l.clear(); l.add(kv4);
     this.memstore.upsert(l, 3, null);
-    assertEquals(newSize, this.memstore.size.get());
+    assertEquals(newSize, this.memstore.activeSection.getHeapSize().get());
     //The kv2 should be removed.
-    assert(memstore.cellSet.size() == 2);
+    assert(memstore.activeSection.getCellSkipListSet().size() == 2);
     //this.memstore = null;
   }
 
@@ -1039,10 +1039,10 @@ public class TestDefaultMemStore extends TestCase {
 
   private long runSnapshot(final DefaultMemStore hmc) throws UnexpectedStateException {
     // Save off old state.
-    int oldHistorySize = hmc.snapshot.size();
+    int oldHistorySize = hmc.snapshotSection.getCellSkipListSet().size();
     MemStoreSnapshot snapshot = hmc.snapshot();
     // Make some assertions about what just happened.
-    assertTrue("History size has not increased", oldHistorySize < hmc.snapshot.size());
+    assertTrue("History size has not increased", oldHistorySize < hmc.snapshotSection.getCellSkipListSet().size());
     long t = memstore.timeOfOldestEdit();
     assertTrue("Time of oldest edit is not Long.MAX_VALUE", t == Long.MAX_VALUE);
     hmc.clearSnapshot(snapshot.getId());

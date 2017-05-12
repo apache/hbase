@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixtu
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
@@ -831,9 +832,9 @@ public class TestStoreScanner extends TestCase {
     // normally cause an NPE because scan.store is null.  So as long as we get through these
     // two calls we are good and the bug was quashed.
 
-    scan.updateReaders(new ArrayList<StoreFile>());
+    scan.updateReaders(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
 
-    scan.updateReaders(new ArrayList<StoreFile>());
+    scan.updateReaders(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
 
     scan.peek();
   }

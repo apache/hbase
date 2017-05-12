@@ -30,9 +30,16 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface ChangedReadersObserver {
+
+  /**
+   * @return the read point of the current scan
+   */
+  long getReadPoint();
   /**
    * Notify observers.
+   * @param sfs The new files
+   * @param memStoreScanners scanner of current memstore
    * @throws IOException e
    */
-  void updateReaders(List<StoreFile> sfs) throws IOException;
+  void updateReaders(List<StoreFile> sfs, List<KeyValueScanner> memStoreScanners) throws IOException;
 }

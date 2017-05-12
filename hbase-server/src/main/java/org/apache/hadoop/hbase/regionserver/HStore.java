@@ -1152,7 +1152,14 @@ public class HStore implements Store {
    */
   private void notifyChangedReadersObservers(List<StoreFile> sfs) throws IOException {
     for (ChangedReadersObserver o : this.changedReaderObservers) {
-      o.updateReaders(sfs);
+      List<KeyValueScanner> memStoreScanners;
+      this.lock.readLock().lock();
+      try {
+        memStoreScanners = this.memstore.getScanners(o.getReadPoint());
+      } finally {
+        this.lock.readLock().unlock();
+      }
+      o.updateReaders(sfs, memStoreScanners);
     }
   }
 
