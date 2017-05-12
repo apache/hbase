@@ -1561,6 +1561,8 @@ public class AssignmentManager extends ZooKeeperListener {
         EventType.RS_ZK_REGION_CLOSED, EventType.M_ZK_REGION_OFFLINE);
     }
     replicasToClose.remove(regionInfo);
+    //Set servername in regionstate to null, see HBASE-18014
+    getRegionStates().updateRegionState(regionInfo, State.OFFLINE, null);
     regionOffline(regionInfo);
   }
 

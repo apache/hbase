@@ -88,6 +88,12 @@ public class TestAdmin2 {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.metahandler.count", 30);
     TEST_UTIL.getConfiguration().setBoolean(
         "hbase.master.enabletable.roundrobin", true);
+    //Set a very short keeptime for processedServers, see HBASE-18014
+    TEST_UTIL.getConfiguration().setLong("hbase.master.maximum.logsplit.keeptime", 100);
+    //HBASE-18014, don't Know why @Test (timeout=30000) attribute doesn't work when
+    //calling enableTable.So I have to set the sync wait time to a short time to timeout
+    //the test of testEnableTableAfterprocessedServersCleaned
+    TEST_UTIL.getConfiguration().setInt("hbase.client.sync.wait.timeout.msec", 30000);
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -789,5 +795,34 @@ public class TestAdmin2 {
     assertEquals(!initialState, prevState);
     // Current state should be the original state again
     assertEquals(initialState, admin.isNormalizerEnabled());
+  }
+
+  /**
+   * a UT for HBASE-18014
+   * @throws Exception
+   */
+  @Test (timeout=30000)
+  public void testEnableTableAfterprocessedServersCleaned() throws Exception {
+    String TABLENAME = "testEnableTableAfterprocessedServersCleaned";
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    HTableDescriptor hds = new HTableDescriptor(TableName.valueOf(TABLENAME));
+    HColumnDescriptor hcs = new HColumnDescriptor("cf".getBytes());
+    hds.addFamily(hcs);
+    admin.createTable(hds);
+    HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
+    ServerName serverName = server.getServerName();
+    HRegionInfo region = admin.getTableRegions(TableName.valueOf(TABLENAME)).get(0);
+    //move the region to the first server so we can abort this rs
+    admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(serverName.toString()));
+    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.valueOf(TABLENAME));
+    admin.disableTable(TABLENAME);
+    server.abort("abort");
+    //wait for SSH to handle server shutdown
+    Thread.sleep(5000);
+    //trigger a clean of processedServers
+    TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+        .getRegionStates().logSplit(ServerName.valueOf("fakeServer", 5000, 0));
+    admin.enableTable(TABLENAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.valueOf(TABLENAME), 10000);
   }
 }
