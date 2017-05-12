@@ -55,22 +55,19 @@
 <br><br>
 <span style="font-size:20px;"><b>List of Jobs</b></span><br>
 <br>
-{% set counter = 0 %}
 {% for url in results %}
-{% set counter = counter + 1 %}
-<a href="#job_{{ counter }}">{{ url |e }}</a>
+<a href="#job_{{ loop.index }}">{{ url |e }}</a>
 <br>
 {% endfor %}
 <br>
 <br>
 <span style="font-size:20px;"><b>Results</b></span><br>
 <br>
-{% set counter = 0 %}
 {% for url in results %}
 {% set result = results[url] %}
+{% set url_counter = loop.index %}
 {# Dedup ids since test names may duplicate across urls #}
-{% set counter = counter + 1 %}
-<span id="job_{{ counter }}" style="font-weight:bold;">
+<span id="job_{{ url_counter }}" style="font-weight:bold;">
     {{ url |e }}<br>
     <a href="{{ url |e }}">
         Go to <img height="16px" src="https://jenkins.io/sites/default/files/jenkins_favicon.ico">
@@ -108,7 +105,7 @@
             {{ failed|length }} / {{ timeout|length }} / {{ hanging|length }}
         </td>
         <td>
-            {% set id = "details_" ~ test ~ "_" ~ counter  %}
+            {% set id = "details_" ~ test ~ "_" ~ url_counter %}
             <button class="show_hide_button" onclick="toggle('{{ id }}')">
                 show/hide</button>
             <br/>
