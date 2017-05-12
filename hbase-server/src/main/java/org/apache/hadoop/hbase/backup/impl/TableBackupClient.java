@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -51,6 +52,9 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.Private
 public abstract class TableBackupClient {
+
+  public static final String BACKUP_CLIENT_IMPL_CLASS = "backup.client.impl.class";
+
   private static final Log LOG = LogFactory.getLog(TableBackupClient.class);
 
   protected Configuration conf;
@@ -62,8 +66,17 @@ public abstract class TableBackupClient {
   protected BackupManager backupManager;
   protected BackupInfo backupInfo;
 
+  public TableBackupClient() {
+  }
+
   public TableBackupClient(final Connection conn, final String backupId, BackupRequest request)
       throws IOException {
+    init(conn, backupId, request);
+  }
+
+  public void init(final Connection conn, final String backupId, BackupRequest request)
+      throws IOException
+  {
     if (request.getBackupType() == BackupType.FULL) {
       backupManager = new BackupManager(conn, conn.getConfiguration());
     } else {
@@ -79,6 +92,8 @@ public abstract class TableBackupClient {
     if (tableList == null || tableList.isEmpty()) {
       this.tableList = new ArrayList<>(backupInfo.getTables());
     }
+    // Start new session
+    backupManager.startBackupSession();
   }
 
   /**
@@ -88,6 +103,8 @@ public abstract class TableBackupClient {
    */
   protected void beginBackup(BackupManager backupManager, BackupInfo backupInfo)
       throws IOException {
+
+    snapshotBackupTable();
     backupManager.setBackupInfo(backupInfo);
     // set the start timestamp of the overall backup
     long startTs = EnvironmentEdgeManager.currentTime();
@@ -103,7 +120,7 @@ public abstract class TableBackupClient {
     }
   }
 
-  private String getMessage(Exception e) {
+  protected String getMessage(Exception e) {
     String msg = e.getMessage();
     if (msg == null || msg.equals("")) {
       msg = e.getClass().getName();
@@ -116,7 +133,7 @@ public abstract class TableBackupClient {
    * @param backupInfo backup info
    * @throws Exception exception
    */
-  private void deleteSnapshot(final Connection conn, BackupInfo backupInfo, Configuration conf)
+  protected static void deleteSnapshots(final Connection conn, BackupInfo backupInfo, Configuration conf)
       throws IOException {
     LOG.debug("Trying to delete snapshot for full backup.");
     for (String snapshotName : backupInfo.getSnapshotNames()) {
@@ -127,8 +144,6 @@ public abstract class TableBackupClient {
 
       try (Admin admin = conn.getAdmin();) {
         admin.deleteSnapshot(snapshotName);
-      } catch (IOException ioe) {
-        LOG.debug("when deleting snapshot " + snapshotName, ioe);
       }
       LOG.debug("Deleting the snapshot " + snapshotName + " for backup " + backupInfo.getBackupId()
           + " succeeded.");
@@ -140,7 +155,7 @@ public abstract class TableBackupClient {
    * snapshots.
    * @throws IOException exception
    */
-  private void cleanupExportSnapshotLog(Configuration conf) throws IOException {
+  protected static void cleanupExportSnapshotLog(Configuration conf) throws IOException {
     FileSystem fs = FSUtils.getCurrentFileSystem(conf);
     Path stagingDir =
         new Path(conf.get(BackupRestoreConstants.CONF_STAGING_ROOT, fs.getWorkingDirectory()
@@ -163,7 +178,7 @@ public abstract class TableBackupClient {
    * Clean up the uncompleted data at target directory if the ongoing backup has already entered
    * the copy phase.
    */
-  private void cleanupTargetDir(BackupInfo backupInfo, Configuration conf) {
+  protected static void cleanupTargetDir(BackupInfo backupInfo, Configuration conf) {
     try {
       // clean up the uncompleted data at target directory if the ongoing backup has already entered
       // the copy phase
@@ -182,10 +197,10 @@ public abstract class TableBackupClient {
               new Path(HBackupFileSystem.getTableBackupDir(backupInfo.getBackupRootDir(),
                 backupInfo.getBackupId(), table));
           if (outputFs.delete(targetDirPath, true)) {
-            LOG.info("Cleaning up uncompleted backup data at " + targetDirPath.toString()
+            LOG.debug("Cleaning up uncompleted backup data at " + targetDirPath.toString()
                 + " done.");
           } else {
-            LOG.info("No data has been copied to " + targetDirPath.toString() + ".");
+            LOG.debug("No data has been copied to " + targetDirPath.toString() + ".");
           }
 
           Path tableDir = targetDirPath.getParent();
@@ -211,39 +226,106 @@ public abstract class TableBackupClient {
    */
   protected void failBackup(Connection conn, BackupInfo backupInfo, BackupManager backupManager,
       Exception e, String msg, BackupType type, Configuration conf) throws IOException {
-    LOG.error(msg + getMessage(e), e);
-    // If this is a cancel exception, then we've already cleaned.
 
-    // set the failure timestamp of the overall backup
-    backupInfo.setCompleteTs(EnvironmentEdgeManager.currentTime());
-
-    // set failure message
-    backupInfo.setFailedMsg(e.getMessage());
-
-    // set overall backup status: failed
-    backupInfo.setState(BackupState.FAILED);
-
-    // compose the backup failed data
-    String backupFailedData =
-        "BackupId=" + backupInfo.getBackupId() + ",startts=" + backupInfo.getStartTs()
-            + ",failedts=" + backupInfo.getCompleteTs() + ",failedphase=" + backupInfo.getPhase()
-            + ",failedmessage=" + backupInfo.getFailedMsg();
-    LOG.error(backupFailedData);
-
-    backupManager.updateBackupInfo(backupInfo);
-
-    // if full backup, then delete HBase snapshots if there already are snapshots taken
-    // and also clean up export snapshot log files if exist
-    if (type == BackupType.FULL) {
-      deleteSnapshot(conn, backupInfo, conf);
-      cleanupExportSnapshotLog(conf);
+    try {
+      LOG.error(msg + getMessage(e), e);
+      // If this is a cancel exception, then we've already cleaned.
+      // set the failure timestamp of the overall backup
+      backupInfo.setCompleteTs(EnvironmentEdgeManager.currentTime());
+      // set failure message
+      backupInfo.setFailedMsg(e.getMessage());
+      // set overall backup status: failed
+      backupInfo.setState(BackupState.FAILED);
+      // compose the backup failed data
+      String backupFailedData =
+          "BackupId=" + backupInfo.getBackupId() + ",startts=" + backupInfo.getStartTs()
+              + ",failedts=" + backupInfo.getCompleteTs() + ",failedphase=" + backupInfo.getPhase()
+              + ",failedmessage=" + backupInfo.getFailedMsg();
+      LOG.error(backupFailedData);
+      cleanupAndRestoreBackupSystem(conn, backupInfo, conf);
+      // If backup session is updated to FAILED state - means we
+      // processed recovery already.
+      backupManager.updateBackupInfo(backupInfo);
+      backupManager.finishBackupSession();
+      LOG.error("Backup " + backupInfo.getBackupId() + " failed.");
+    } catch (IOException ee) {
+      LOG.error("Please run backup repair tool manually to restore backup system integrity");
+      throw ee;
     }
+  }
 
-    // clean up the uncompleted data at target directory if the ongoing backup has already entered
-    // the copy phase
-    // For incremental backup, DistCp logs will be cleaned with the targetDir.
-    cleanupTargetDir(backupInfo, conf);
-    LOG.info("Backup " + backupInfo.getBackupId() + " failed.");
+  public static void cleanupAndRestoreBackupSystem (Connection conn, BackupInfo backupInfo,
+      Configuration conf) throws IOException
+  {
+    BackupType type = backupInfo.getType();
+     // if full backup, then delete HBase snapshots if there already are snapshots taken
+     // and also clean up export snapshot log files if exist
+     if (type == BackupType.FULL) {
+       deleteSnapshots(conn, backupInfo, conf);
+       cleanupExportSnapshotLog(conf);
+     }
+     restoreBackupTable(conn, conf);
+     deleteBackupTableSnapshot(conn, conf);
+     // clean up the uncompleted data at target directory if the ongoing backup has already entered
+     // the copy phase
+     // For incremental backup, DistCp logs will be cleaned with the targetDir.
+     cleanupTargetDir(backupInfo, conf);
+  }
+
+  protected void snapshotBackupTable() throws IOException {
+
+    try (Admin admin = conn.getAdmin();){
+      admin.snapshot(BackupSystemTable.getSnapshotName(conf),
+        BackupSystemTable.getTableName(conf));
+    }
+  }
+
+  protected static void restoreBackupTable(Connection conn, Configuration conf)
+      throws IOException {
+
+    LOG.debug("Restoring " + BackupSystemTable.getTableNameAsString(conf) +
+        " from snapshot");
+    try (Admin admin = conn.getAdmin();) {
+      String snapshotName = BackupSystemTable.getSnapshotName(conf);
+      if (snapshotExists(admin, snapshotName)) {
+        admin.disableTable(BackupSystemTable.getTableName(conf));
+        admin.restoreSnapshot(snapshotName);
+        admin.enableTable(BackupSystemTable.getTableName(conf));
+        LOG.debug("Done restoring backup system table");
+      } else {
+        // Snapshot does not exists, i.e completeBackup failed after
+        // deleting backup system table snapshot
+        // In this case we log WARN and proceed
+        LOG.error("Could not restore backup system table. Snapshot " + snapshotName+
+          " does not exists.");
+      }
+    }
+  }
+
+  protected static boolean snapshotExists(Admin admin, String snapshotName) throws IOException {
+
+    List<SnapshotDescription> list = admin.listSnapshots();
+    for (SnapshotDescription desc: list) {
+      if (desc.getName().equals(snapshotName)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  protected static void deleteBackupTableSnapshot(Connection conn, Configuration conf)
+      throws IOException {
+    LOG.debug("Deleting " + BackupSystemTable.getSnapshotName(conf) +
+        " from the system");
+    try (Admin admin = conn.getAdmin();) {
+      String snapshotName = BackupSystemTable.getSnapshotName(conf);
+      if (snapshotExists(admin, snapshotName)) {
+        admin.deleteSnapshot(snapshotName);
+        LOG.debug("Done deleting backup system table snapshot");
+      } else {
+        LOG.error("Snapshot "+snapshotName+" does not exists");
+      }
+    }
   }
 
   /**
@@ -252,7 +334,7 @@ public abstract class TableBackupClient {
    * @throws IOException exception
    * @throws BackupException exception
    */
-  private void addManifest(BackupInfo backupInfo, BackupManager backupManager, BackupType type,
+  protected void addManifest(BackupInfo backupInfo, BackupManager backupManager, BackupType type,
       Configuration conf) throws IOException, BackupException {
     // set the overall backup phase : store manifest
     backupInfo.setPhase(BackupPhase.STORE_MANIFEST);
@@ -302,7 +384,7 @@ public abstract class TableBackupClient {
    * @param backupInfo backup info
    * @return meta data dir
    */
-  private String obtainBackupMetaDataStr(BackupInfo backupInfo) {
+  protected String obtainBackupMetaDataStr(BackupInfo backupInfo) {
     StringBuffer sb = new StringBuffer();
     sb.append("type=" + backupInfo.getType() + ",tablelist=");
     for (TableName table : backupInfo.getTables()) {
@@ -321,7 +403,7 @@ public abstract class TableBackupClient {
    * hlogs.
    * @throws IOException exception
    */
-  private void cleanupDistCpLog(BackupInfo backupInfo, Configuration conf) throws IOException {
+  protected void cleanupDistCpLog(BackupInfo backupInfo, Configuration conf) throws IOException {
     Path rootPath = new Path(backupInfo.getHLogTargetDir()).getParent();
     FileSystem fs = FileSystem.get(rootPath.toUri(), conf);
     FileStatus[] files = FSUtils.listStatus(fs, rootPath);
@@ -366,11 +448,15 @@ public abstract class TableBackupClient {
     // - clean up directories with prefix "exportSnapshot-", which are generated when exporting
     // snapshots
     if (type == BackupType.FULL) {
-      deleteSnapshot(conn, backupInfo, conf);
+      deleteSnapshots(conn, backupInfo, conf);
       cleanupExportSnapshotLog(conf);
     } else if (type == BackupType.INCREMENTAL) {
       cleanupDistCpLog(backupInfo, conf);
     }
+    deleteBackupTableSnapshot(conn, conf);
+    // Finish active session
+    backupManager.finishBackupSession();
+
     LOG.info("Backup " + backupInfo.getBackupId() + " completed.");
   }
 

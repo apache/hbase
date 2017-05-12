@@ -53,8 +53,8 @@ import org.apache.hadoop.hbase.backup.BackupRequest;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants.BackupCommand;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.backup.util.BackupSet;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -114,9 +114,12 @@ public final class BackupCommands  {
 
   public static abstract class Command extends Configured {
     CommandLine cmdline;
-
+    Connection conn;
     Command(Configuration conf) {
-      super(conf);
+      if (conf == null) {
+        conf = HBaseConfiguration.create();
+      }
+      setConf(conf);
     }
 
     public void execute() throws IOException {
@@ -124,9 +127,40 @@ public final class BackupCommands  {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
+
+      // Create connection
+      conn = ConnectionFactory.createConnection(getConf());
+      if (requiresNoActiveSession()) {
+        // Check active session
+        try (BackupSystemTable table = new BackupSystemTable(conn);) {
+          List<BackupInfo> sessions = table.getBackupInfos(BackupState.RUNNING);
+
+          if(sessions.size() > 0) {
+            System.err.println("Found backup session in a RUNNING state: ");
+            System.err.println(sessions.get(0));
+            System.err.println("This may indicate that a previous session has failed abnormally.");
+            System.err.println("In this case, backup recovery is recommended.");
+            throw new IOException("Active session found, aborted command execution");
+          }
+        }
+      }
+    }
+
+    public void finish() throws IOException {
+      if (conn != null) {
+        conn.close();
+      }
     }
 
     protected abstract void printUsage();
+
+    /**
+     * The command can't be run if active backup session is in progress
+     * @return true if no active sessions are in progress
+     */
+    protected boolean requiresNoActiveSession() {
+      return false;
+    }
   }
 
   private BackupCommands() {
@@ -178,8 +212,12 @@ public final class BackupCommands  {
     }
 
     @Override
+    protected boolean requiresNoActiveSession() {
+      return true;
+    }
+
+    @Override
     public void execute() throws IOException {
-      super.execute();
       if (cmdline == null || cmdline.getArgs() == null) {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
@@ -202,8 +240,8 @@ public final class BackupCommands  {
         throw new IOException(INCORRECT_USAGE);
       }
 
+
       String tables = null;
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
 
       // Check if we have both: backup set and list of tables
       if (cmdline.hasOption(OPTION_TABLE) && cmdline.hasOption(OPTION_SET)) {
@@ -212,12 +250,13 @@ public final class BackupCommands  {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
-
+      // Creates connection
+      super.execute();
       // Check backup set
       String setName = null;
       if (cmdline.hasOption(OPTION_SET)) {
         setName = cmdline.getOptionValue(OPTION_SET);
-        tables = getTablesForSet(setName, conf);
+        tables = getTablesForSet(setName, getConf());
 
         if (tables == null) {
           System.out.println("ERROR: Backup set '" + setName
@@ -235,8 +274,7 @@ public final class BackupCommands  {
           cmdline.hasOption(OPTION_WORKERS) ? Integer.parseInt(cmdline
               .getOptionValue(OPTION_WORKERS)) : -1;
 
-      try (Connection conn = ConnectionFactory.createConnection(getConf());
-          BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
 
        BackupRequest.Builder builder = new BackupRequest.Builder();
        BackupRequest request = builder.withBackupType(BackupType.valueOf(args[1].toUpperCase()))
@@ -268,8 +306,7 @@ public final class BackupCommands  {
     }
 
     private String getTablesForSet(String name, Configuration conf) throws IOException {
-      try (final Connection conn = ConnectionFactory.createConnection(conf);
-          final BackupSystemTable table = new BackupSystemTable(conn)) {
+      try (final BackupSystemTable table = new BackupSystemTable(conn)) {
         List<TableName> tables = table.describeBackupSet(name);
         if (tables == null) return null;
         return StringUtils.join(tables, BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND);
@@ -304,7 +341,6 @@ public final class BackupCommands  {
 
     @Override
     public void execute() throws IOException {
-      super.execute();
       if (cmdline == null) {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
@@ -359,7 +395,6 @@ public final class BackupCommands  {
 
     @Override
     public void execute() throws IOException {
-      super.execute();
       if (cmdline == null || cmdline.getArgs() == null) {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
@@ -370,10 +405,10 @@ public final class BackupCommands  {
         throw new IOException(INCORRECT_USAGE);
       }
 
+      super.execute();
+
       String backupId = args[1];
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
-      try (final Connection conn = ConnectionFactory.createConnection(conf);
-          final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
+      try (final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
         BackupInfo info = sysTable.readBackupInfo(backupId);
         if (info == null) {
           System.out.println("ERROR: " + backupId + " does not exist");
@@ -399,7 +434,6 @@ public final class BackupCommands  {
 
     @Override
     public void execute() throws IOException {
-      super.execute();
 
       if (cmdline == null || cmdline.getArgs() == null || cmdline.getArgs().length == 1) {
         System.out.println("No backup id was specified, "
@@ -412,10 +446,10 @@ public final class BackupCommands  {
         throw new IOException(INCORRECT_USAGE);
       }
 
+      super.execute();
+
       String backupId = (args == null || args.length <= 1) ? null : args[1];
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
-      try (final Connection conn = ConnectionFactory.createConnection(conf);
-          final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
+      try (final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
         BackupInfo info = null;
 
         if (backupId != null) {
@@ -456,19 +490,23 @@ public final class BackupCommands  {
     }
 
     @Override
+    protected boolean requiresNoActiveSession() {
+      return true;
+    }
+
+    @Override
     public void execute() throws IOException {
-      super.execute();
       if (cmdline == null || cmdline.getArgs() == null || cmdline.getArgs().length < 2) {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
 
+      super.execute();
+
       String[] args = cmdline.getArgs();
       String[] backupIds = new String[args.length - 1];
       System.arraycopy(args, 1, backupIds, 0, backupIds.length);
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
-      try (final Connection conn = ConnectionFactory.createConnection(conf);
-          BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total requested: " + args.length);
       }
@@ -512,7 +550,6 @@ public final class BackupCommands  {
     @Override
     public void execute() throws IOException {
 
-      super.execute();
 
       int n = parseHistoryLength();
       final TableName tableName = getTableName();
@@ -535,18 +572,16 @@ public final class BackupCommands  {
       };
       Path backupRootPath = getBackupRootPath();
       List<BackupInfo> history = null;
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
       if (backupRootPath == null) {
         // Load from backup system table
-        try (final Connection conn = ConnectionFactory.createConnection(conf);
-            final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
-
+        super.execute();
+        try (final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
           history = sysTable.getBackupHistory(n, tableNameFilter, tableSetFilter);
         }
       } else {
         // load from backup FS
         history =
-            BackupUtils.getHistory(conf, n, backupRootPath, tableNameFilter, tableSetFilter);
+            BackupUtils.getHistory(getConf(), n, backupRootPath, tableNameFilter, tableSetFilter);
       }
       for (BackupInfo info : history) {
         System.out.println(info.getShortDescription());
@@ -627,7 +662,6 @@ public final class BackupCommands  {
 
     @Override
     public void execute() throws IOException {
-      super.execute();
       // Command-line must have at least one element
       if (cmdline == null || cmdline.getArgs() == null || cmdline.getArgs().length < 2) {
         printUsage();
@@ -661,11 +695,11 @@ public final class BackupCommands  {
     }
 
     private void processSetList(String[] args) throws IOException {
+      super.execute();
+
       // List all backup set names
       // does not expect any args
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
-      try (final Connection conn = ConnectionFactory.createConnection(conf);
-          BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
         List<BackupSet> list = admin.listBackupSets();
         for (BackupSet bs : list) {
           System.out.println(bs);
@@ -678,10 +712,10 @@ public final class BackupCommands  {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
+      super.execute();
+
       String setName = args[2];
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
-      try (final Connection conn = ConnectionFactory.createConnection(conf);
-          final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
+      try (final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
         List<TableName> tables = sysTable.describeBackupSet(setName);
         BackupSet set = tables == null ? null : new BackupSet(setName, tables);
         if (set == null) {
@@ -697,10 +731,10 @@ public final class BackupCommands  {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
+      super.execute();
+
       String setName = args[2];
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
-      try (final Connection conn = ConnectionFactory.createConnection(conf);
-          final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
         boolean result = admin.deleteBackupSet(setName);
         if (result) {
           System.out.println("Delete set " + setName + " OK.");
@@ -715,13 +749,12 @@ public final class BackupCommands  {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
+      super.execute();
 
       String setName = args[2];
       String[] tables = args[3].split(",");
       TableName[] tableNames = toTableNames(tables);
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
-      try (final Connection conn = ConnectionFactory.createConnection(conf);
-          final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
         admin.removeFromBackupSet(setName, tableNames);
       }
     }
@@ -739,15 +772,15 @@ public final class BackupCommands  {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
+      super.execute();
+
       String setName = args[2];
       String[] tables = args[3].split(",");
       TableName[] tableNames = new TableName[tables.length];
       for (int i = 0; i < tables.length; i++) {
         tableNames[i] = TableName.valueOf(tables[i]);
       }
-      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
-      try (final Connection conn = ConnectionFactory.createConnection(conf);
-          final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
         admin.addToBackupSet(setName, tableNames);
       }
 

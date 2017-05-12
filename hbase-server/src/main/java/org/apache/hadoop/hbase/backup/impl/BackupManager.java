@@ -367,6 +367,23 @@ public class BackupManager implements Closeable {
   }
 
   /**
+   * Starts new backup session
+   * @throws IOException if active session already exists
+   */
+  public void startBackupSession() throws IOException {
+    systemTable.startBackupSession();
+  }
+
+  /**
+   * Finishes active backup session
+   * @throws IOException if no active session
+   */
+  public void finishBackupSession() throws IOException {
+    systemTable.finishBackupSession();
+  }
+
+
+  /**
    * Read the last backup start code (timestamp) of last successful backup. Will return null if
    * there is no startcode stored in backup system table or the value is of length 0. These two
    * cases indicate there is no successful backup completed so far.

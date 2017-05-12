@@ -69,7 +69,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     super(conn, backupId, request);
   }
 
-  private List<String> filterMissingFiles(List<String> incrBackupFileList) throws IOException {
+  protected List<String> filterMissingFiles(List<String> incrBackupFileList) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     List<String> list = new ArrayList<String>();
     for (String file : incrBackupFileList) {
@@ -88,11 +88,11 @@ public class IncrementalTableBackupClient extends TableBackupClient {
    * @param p path
    * @return true, if yes
    */
-  private boolean isActiveWalPath(Path p) {
+  protected boolean isActiveWalPath(Path p) {
     return !AbstractFSWALProvider.isArchivedLogFile(p);
   }
 
-  static int getIndex(TableName tbl, List<TableName> sTableList) {
+  protected static int getIndex(TableName tbl, List<TableName> sTableList) {
     if (sTableList == null) return 0;
     for (int i = 0; i < sTableList.size(); i++) {
       if (tbl.equals(sTableList.get(i))) {
@@ -108,7 +108,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
    * @param sTableList list of tables to be backed up
    * @return map of table to List of files
    */
-  Map<byte[], List<Path>>[] handleBulkLoad(List<TableName> sTableList) throws IOException {
+  protected Map<byte[], List<Path>>[] handleBulkLoad(List<TableName> sTableList) throws IOException {
     Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList.size()];
     Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>> pair =
     backupManager.readBulkloadRows(sTableList);
@@ -207,18 +207,19 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   @Override
   public void execute() throws IOException {
 
-    // case PREPARE_INCREMENTAL:
-    beginBackup(backupManager, backupInfo);
-    backupInfo.setPhase(BackupPhase.PREPARE_INCREMENTAL);
-    LOG.debug("For incremental backup, current table set is "
-        + backupManager.getIncrementalBackupTableSet());
     try {
+      // case PREPARE_INCREMENTAL:
+      beginBackup(backupManager, backupInfo);
+      backupInfo.setPhase(BackupPhase.PREPARE_INCREMENTAL);
+      LOG.debug("For incremental backup, current table set is "
+          + backupManager.getIncrementalBackupTableSet());
       newTimestamps =
           ((IncrementalBackupManager) backupManager).getIncrBackupLogFileMap();
     } catch (Exception e) {
       // fail the overall backup and return
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
         BackupType.INCREMENTAL, conf);
+      return;
     }
 
     // case INCREMENTAL_COPY:
@@ -267,7 +268,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
   }
 
-  private void incrementalCopyHFiles(BackupInfo backupInfo) throws Exception {
+  protected void incrementalCopyHFiles(BackupInfo backupInfo) throws Exception {
 
     try {
       LOG.debug("Incremental copy HFiles is starting.");
@@ -293,7 +294,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
   }
 
-  private void deleteBulkLoadDirectory() throws IOException {
+  protected void deleteBulkLoadDirectory() throws IOException {
     // delete original bulk load directory on method exit
     Path path = getBulkOutputDir();
     FileSystem fs = FileSystem.get(conf);
@@ -304,7 +305,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
   }
 
-  private void convertWALsToHFiles(BackupInfo backupInfo) throws IOException {
+  protected void convertWALsToHFiles(BackupInfo backupInfo) throws IOException {
     // get incremental backup file list and prepare parameters for DistCp
     List<String> incrBackupFileList = backupInfo.getIncrBackupFileList();
     // Get list of tables in incremental backup set
@@ -322,13 +323,13 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   }
 
 
-  private boolean tableExists(TableName table, Connection conn) throws IOException {
+  protected boolean tableExists(TableName table, Connection conn) throws IOException {
     try (Admin admin = conn.getAdmin();) {
       return admin.tableExists(table);
     }
   }
 
-  private void walToHFiles(List<String> dirPaths, TableName tableName) throws IOException {
+  protected void walToHFiles(List<String> dirPaths, TableName tableName) throws IOException {
 
     Tool player = new WALPlayer();
 
@@ -357,14 +358,14 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
   }
 
-  private Path getBulkOutputDirForTable(TableName table) {
+  protected Path getBulkOutputDirForTable(TableName table) {
     Path tablePath = getBulkOutputDir();
     tablePath = new Path(tablePath, table.getNamespaceAsString());
     tablePath = new Path(tablePath, table.getQualifierAsString());
     return new Path(tablePath, "data");
   }
 
-  private Path getBulkOutputDir() {
+  protected Path getBulkOutputDir() {
     String backupId = backupInfo.getBackupId();
     Path path = new Path(backupInfo.getBackupRootDir());
     path = new Path(path, ".tmp");

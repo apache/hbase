@@ -45,8 +45,6 @@ public interface BackupRestoreConstants {
   public static final String BACKUP_ATTEMPTS_PAUSE_MS_KEY = "hbase.backup.attempts.pause.ms";
   public static final int DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS = 10000;
 
-
-
   /*
    *  Drivers option list
    */

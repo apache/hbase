@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupAdmin;
+import org.apache.hadoop.hbase.backup.BackupClientFactory;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRequest;
@@ -530,11 +531,16 @@ public class BackupAdminImpl implements BackupAdmin {
                       withTotalTasks(request.getTotalTasks()).
                       withBandwidthPerTasks((int)request.getBandwidth()).build();
 
-    if (type == BackupType.FULL) {
-      new FullTableBackupClient(conn, backupId, request).execute();
-    } else {
-      new IncrementalTableBackupClient(conn, backupId, request).execute();
+    TableBackupClient client =null;
+    try {
+      client = BackupClientFactory.create(conn, backupId, request);
+    } catch (IOException e) {
+      LOG.error("There is an active session already running");
+      throw e;
     }
+
+    client.execute();
+
     return backupId;
   }
 

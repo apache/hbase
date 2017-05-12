@@ -133,6 +133,12 @@ public final class BackupSystemTable implements Closeable {
 
   private final static String BACKUP_INFO_PREFIX = "session:";
   private final static String START_CODE_ROW = "startcode:";
+  private final static byte[] ACTIVE_SESSION_ROW = "activesession:".getBytes();
+  private final static byte[] ACTIVE_SESSION_COL = "c".getBytes();
+
+  private final static byte[] ACTIVE_SESSION_YES = "yes".getBytes();
+  private final static byte[] ACTIVE_SESSION_NO = "no".getBytes();
+
   private final static String INCR_BACKUP_SET = "incrbackupset:";
   private final static String TABLE_RS_LOG_MAP_PREFIX = "trslm:";
   private final static String RS_LOG_TS_PREFIX = "rslogts:";
@@ -553,6 +559,50 @@ public final class BackupSystemTable implements Closeable {
       Put put = createPutForStartCode(startCode.toString(), backupRoot);
       table.put(put);
     }
+  }
+
+  public void startBackupSession() throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Start new backup session");
+    }
+    try (Table table = connection.getTable(tableName)) {
+      Put put = createPutForStartBackupSession();
+      //First try to put if row does not exist
+      if (!table.checkAndPut(ACTIVE_SESSION_ROW, SESSIONS_FAMILY, ACTIVE_SESSION_COL, null, put)) {
+        // Row exists, try to put if value == ACTIVE_SESSION_NO
+        if (!table.checkAndPut(ACTIVE_SESSION_ROW, SESSIONS_FAMILY, ACTIVE_SESSION_COL,
+          ACTIVE_SESSION_NO, put)) {
+          throw new IOException("There is an active backup session");
+        }
+      }
+    }
+  }
+
+  private Put createPutForStartBackupSession() {
+    Put put = new Put(ACTIVE_SESSION_ROW);
+    put.addColumn(SESSIONS_FAMILY, ACTIVE_SESSION_COL, ACTIVE_SESSION_YES);
+    return put;
+  }
+
+  public void finishBackupSession() throws IOException
+  {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Stop backup session");
+    }
+    try (Table table = connection.getTable(tableName)) {
+      Put put = createPutForStopBackupSession();
+      if(!table.checkAndPut(ACTIVE_SESSION_ROW, SESSIONS_FAMILY, ACTIVE_SESSION_COL,
+        ACTIVE_SESSION_YES, put))
+      {
+        throw new IOException("There is no active backup session");
+      }
+    }
+  }
+
+  private Put createPutForStopBackupSession() {
+    Put put = new Put(ACTIVE_SESSION_ROW);
+    put.addColumn(SESSIONS_FAMILY, ACTIVE_SESSION_COL, ACTIVE_SESSION_NO);
+    return put;
   }
 
   /**
@@ -1302,9 +1352,9 @@ public final class BackupSystemTable implements Closeable {
     return getTableName(conf).getNameAsString();
   }
 
-
-
-
+  public static String getSnapshotName(Configuration conf) {
+    return "snapshot_"+getTableNameAsString(conf).replace(":", "_");
+  }
 
   /**
    * Creates Put operation for a given backup info object

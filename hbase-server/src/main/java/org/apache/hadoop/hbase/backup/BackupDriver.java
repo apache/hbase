@@ -134,6 +134,8 @@ public class BackupDriver extends AbstractHBaseTool {
         return -1;
       }
       throw e;
+    } finally {
+      command.finish();
     }
     return 0;
   }

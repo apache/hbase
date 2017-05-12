@@ -53,6 +53,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 public class FullTableBackupClient extends TableBackupClient {
   private static final Log LOG = LogFactory.getLog(FullTableBackupClient.class);
 
+  public FullTableBackupClient() {
+  }
+
   public FullTableBackupClient(final Connection conn, final String backupId, BackupRequest request)
       throws IOException {
     super(conn, backupId, request);
@@ -63,7 +66,7 @@ public class FullTableBackupClient extends TableBackupClient {
    * @param backupInfo backup info
    * @throws Exception exception
    */
-  private void snapshotCopy(BackupInfo backupInfo) throws Exception {
+  protected void snapshotCopy(BackupInfo backupInfo) throws Exception {
     LOG.info("Snapshot copy is starting.");
 
     // set overall backup phase: snapshot_copy
@@ -108,7 +111,6 @@ public class FullTableBackupClient extends TableBackupClient {
    */
   @Override
   public void execute() throws IOException {
-
     try (Admin admin = conn.getAdmin();) {
 
       // Begin BACKUP
@@ -190,7 +192,8 @@ public class FullTableBackupClient extends TableBackupClient {
 
   }
 
-  private void snapshotTable(Admin admin, TableName tableName, String snapshotName)
+
+  protected void snapshotTable(Admin admin, TableName tableName, String snapshotName)
       throws IOException {
 
     int maxAttempts =
