@@ -112,6 +112,8 @@ public class TestAssignmentManager {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final ServerName SERVERNAME_A =
       ServerName.valueOf("example.org", 1234, 5678);
+  private static final ServerName SERVERNAME_AA =
+      ServerName.valueOf("example.org", 1234, 9999);
   private static final ServerName SERVERNAME_B =
       ServerName.valueOf("example.org", 0, 5678);
   private static final HRegionInfo REGIONINFO =
@@ -487,6 +489,33 @@ public class TestAssignmentManager {
   }
 
   /**
+   * Run a simple server shutdown handler after the same server restarts.
+   * @throws KeeperException
+   * @throws IOException
+   */
+  @Test (timeout=180000)
+  public void testShutdownHandlerWithRestartedServer()
+      throws KeeperException, IOException, CoordinatedStateException, ServiceException {
+    // Create and startup an executor.  This is used by AssignmentManager
+    // handling zk callbacks.
+    ExecutorService executor = startupMasterExecutor("testShutdownHandlerWithRestartedServer");
+
+    // Create an AM.
+    AssignmentManagerWithExtrasForTesting am =
+      setUpMockedAssignmentManager(this.server, this.serverManager);
+    am.getRegionStates().regionOnline(REGIONINFO, SERVERNAME_A);
+    am.getTableStateManager().setTableState(REGIONINFO.getTable(), Table.State.ENABLED);
+    try {
+      processServerShutdownHandler(am, false, true);
+    } finally {
+      executor.shutdown();
+      am.shutdown();
+      // Clean up all znodes
+      ZKAssign.deleteAllNodes(this.watcher);
+    }
+  }
+
+  /**
    * To test closed region handler to remove rit and delete corresponding znode
    * if region in pending close or closing while processing shutdown of a region
    * server.(HBASE-5927).
@@ -621,6 +650,12 @@ public class TestAssignmentManager {
 
   private void processServerShutdownHandler(AssignmentManager am, boolean splitRegion)
       throws IOException, ServiceException {
+    processServerShutdownHandler(am, splitRegion, false);
+  }
+
+  private void processServerShutdownHandler(
+      AssignmentManager am, boolean splitRegion, boolean deadserverRestarted)
+      throws IOException, ServiceException {
     // Make sure our new AM gets callbacks; once registered, can't unregister.
     // Thats ok because we make a new zk watcher for each test.
     this.watcher.registerListenerFirst(am);
@@ -676,6 +711,25 @@ public class TestAssignmentManager {
       // Have it that SERVERNAME_A died.
       DeadServer deadServers = new DeadServer();
       deadServers.add(SERVERNAME_A);
+      Mockito.when(this.serverManager.isServerReachable(SERVERNAME_B)).thenReturn(true);
+      Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(false);
+      final Map<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
+      onlineServers.put(SERVERNAME_B, ServerLoad.EMPTY_SERVERLOAD);
+      if (deadserverRestarted) {
+        // Now make the same server (same host name and port) online again with a different
+        // start code.
+        Mockito.when(this.serverManager.isServerOnline(SERVERNAME_AA)).thenReturn(true);
+        Mockito.when(this.serverManager.isServerReachable(SERVERNAME_AA)).thenReturn(true);
+        Mockito.when(
+          this.serverManager.isServerWithSameHostnamePortOnline(SERVERNAME_A)).thenReturn(true);
+        onlineServers.put(SERVERNAME_AA, ServerLoad.EMPTY_SERVERLOAD);
+      }
+      Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(
+          new ArrayList<ServerName>(onlineServers.keySet()));
+      Mockito.when(this.serverManager.getOnlineServers()).thenReturn(onlineServers);
+      List<ServerName> avServers = new ArrayList<ServerName>();
+      avServers.addAll(onlineServers.keySet());
+      Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(avServers);
       // I need a services instance that will return the AM
       MasterFileSystem fs = Mockito.mock(MasterFileSystem.class);
       Mockito.doNothing().when(fs).setLogRecoveryMode();
@@ -1380,6 +1434,14 @@ public class TestAssignmentManager {
         return true;
       }
       return super.assign(destination, regions);
+    }
+
+    @Override
+    public void assign(Map<HRegionInfo, ServerName> regionServerMap)
+        throws IOException, InterruptedException {
+      assignInvoked = (regionServerMap != null && regionServerMap.size() > 0);
+      super.assign(regionServerMap);
+      this.gate.set(true);
     }
 
     @Override

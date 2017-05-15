@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.master.handler;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 
@@ -307,13 +309,32 @@ public class ServerShutdownHandler extends EventHandler {
         }
       }
 
+      // Determine what type of assignment to do if the dead server already restarted.
+      boolean retainAssignment =
+          (server.getConfiguration().getBoolean("hbase.master.retain.assignment", true) &&
+          serverManager.isServerWithSameHostnamePortOnline(serverName)) ? true : false;
+
       try {
-        am.assign(toAssignRegions);
+        if (retainAssignment) {
+          Map<HRegionInfo, ServerName> toAssignRegionsMap =
+              new HashMap<HRegionInfo, ServerName>(toAssignRegions.size());
+          for (HRegionInfo hri: toAssignRegions) {
+            toAssignRegionsMap.put(hri, serverName);
+          }
+          LOG.info("Best effort in SSH to retain assignment of " + toAssignRegions.size()
+            + " regions from the dead server " + serverName);
+          am.assign(toAssignRegionsMap);
+        } else {
+          LOG.info("Using round robin in SSH to assign " + toAssignRegions.size()
+          + " regions from the dead server " + serverName);
+          am.assign(toAssignRegions);
+        }
       } catch (InterruptedException ie) {
-        LOG.error("Caught " + ie + " during round-robin assignment");
+        LOG.error("Caught " + ie + " during " + (retainAssignment ? "retaining" : "round-robin")
+          + " assignment");
         throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
       } catch (IOException ioe) {
-        LOG.info("Caught " + ioe + " during region assignment, will retry");
+        LOG.warn("Caught " + ioe + " during region assignment, will retry");
         // Only do wal splitting if shouldSplitWal and in DLR mode
         serverManager.processDeadServer(serverName,
           this.shouldSplitWal && distributedLogReplay);
