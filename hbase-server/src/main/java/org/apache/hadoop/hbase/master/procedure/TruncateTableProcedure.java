@@ -197,12 +197,6 @@ public class TruncateTableProcedure
   }
 
   @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    // TODO: We may be able to abort if the procedure is not started yet.
-    return false;
-  }
-
-  @Override
   public void toStringClassDetails(StringBuilder sb) {
     sb.append(getClass().getSimpleName());
     sb.append(" (table=");
