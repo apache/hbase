@@ -28,12 +28,18 @@ The table must be disabled.
 
 Examples:
   hbase> restore_snapshot 'snapshotName'
+
+Following command will restore all acl from snapshot into the table.
+
+  hbase> restore_snapshot 'snapshotName', {RESTORE_ACL=>true}
 EOF
       end
 
-      def command(snapshot_name)
+      def command(snapshot_name, args = {})
         format_simple_command do
-          admin.restore_snapshot(snapshot_name)
+          raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
+          restore_acl = args.delete(RESTORE_ACL) || false
+          admin.restore_snapshot(snapshot_name, restore_acl)
         end
       end
     end

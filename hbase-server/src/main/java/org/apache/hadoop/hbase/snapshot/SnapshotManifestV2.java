@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -126,7 +126,7 @@ public final class SnapshotManifestV2 {
   }
 
   static List<SnapshotRegionManifest> loadRegionManifests(final Configuration conf,
-      final Executor executor,final FileSystem fs, final Path snapshotDir,
+      final Executor executor, final FileSystem fs, final Path snapshotDir,
       final SnapshotDescription desc, final int manifestSizeLimit) throws IOException {
     FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
       @Override

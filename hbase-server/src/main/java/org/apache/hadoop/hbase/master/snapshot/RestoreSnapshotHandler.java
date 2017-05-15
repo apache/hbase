@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
@@ -65,6 +65,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
 
   private final HTableDescriptor hTableDescriptor;
   private final SnapshotDescription snapshot;
+  private final boolean restoreAcl;
 
   private final ForeignExceptionDispatcher monitor;
   private final MetricsSnapshot metricsSnapshot = new MetricsSnapshot();
@@ -73,11 +74,13 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   private volatile boolean stopped = false;
 
   public RestoreSnapshotHandler(final MasterServices masterServices,
-      final SnapshotDescription snapshot, final HTableDescriptor htd) throws IOException {
+      final SnapshotDescription snapshot, final HTableDescriptor htd, final boolean restoreAcl)
+      throws IOException {
     super(EventType.C_M_RESTORE_SNAPSHOT, htd.getTableName(), masterServices, masterServices);
 
     // Snapshot information
     this.snapshot = snapshot;
+    this.restoreAcl = restoreAcl;
 
     // Monitor
     this.monitor = new ForeignExceptionDispatcher();
@@ -165,6 +168,14 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
           hTableDescriptor.getRegionReplication());
       }
       metaChanges.updateMetaParentRegions(this.server.getConnection(), hris);
+
+      // 5. restore acl of snapshot into the table.
+      if (restoreAcl && snapshot.hasUsersAndPermissions()
+          && snapshot.getUsersAndPermissions() != null
+          && SnapshotDescriptionUtils.isSecurityAvailable(server.getConfiguration())) {
+        RestoreSnapshotHelper.restoreSnapshotACL(snapshot, tableName, server.getConfiguration());
+      }
+
 
       // At this point the restore is complete. Next step is enabling the table.
       LOG.info("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +

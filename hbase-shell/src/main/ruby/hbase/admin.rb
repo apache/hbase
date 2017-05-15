@@ -24,7 +24,7 @@ java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.TableName
-java_import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos::SnapshotDescription
+java_import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos::SnapshotDescription
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -907,14 +907,16 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Restore specified snapshot
-    def restore_snapshot(snapshot_name)
-      @admin.restoreSnapshot(snapshot_name.to_java_bytes)
+    def restore_snapshot(snapshot_name, restore_acl = false)
+      conf = @connection.getConfiguration
+      take_fail_safe_snapshot = conf.getBoolean("hbase.snapshot.restore.take.failsafe.snapshot", false)
+      @admin.restoreSnapshot(snapshot_name, take_fail_safe_snapshot, restore_acl)
     end
 
     #----------------------------------------------------------------------------------------------
     # Create a new table by cloning the snapshot content
-    def clone_snapshot(snapshot_name, table)
-      @admin.cloneSnapshot(snapshot_name.to_java_bytes, table.to_java_bytes)
+    def clone_snapshot(snapshot_name, table, restore_acl = false)
+      @admin.cloneSnapshot(snapshot_name, org.apache.hadoop.hbase::TableName.valueOf(table), restore_acl)
     end
 
     #----------------------------------------------------------------------------------------------

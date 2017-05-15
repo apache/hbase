@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -49,7 +49,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
   private final ProcedureCoordinator coordinator;
 
   public EnabledTableSnapshotHandler(SnapshotDescription snapshot, MasterServices master,
-      final SnapshotManager manager) {
+                                     final SnapshotManager manager) {
     super(snapshot, master);
     this.coordinator = manager.getCoordinator();
   }

@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
@@ -263,8 +263,8 @@ public final class SnapshotTestingUtils {
    * @param sleep: amount to sleep between checks to see if the snapshot is done
    * @throws ServiceException if the snapshot fails
    */
-  public static void waitForSnapshotToComplete(HMaster master,
-      SnapshotDescription snapshot, long sleep) throws ServiceException {
+  public static void waitForSnapshotToComplete(HMaster master, SnapshotDescription snapshot,
+      long sleep) throws ServiceException {
     final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder()
         .setSnapshot(snapshot).build();
     IsSnapshotDoneResponse done = IsSnapshotDoneResponse.newBuilder()

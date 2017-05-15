@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * Provides the coprocessor framework and environment for master oriented

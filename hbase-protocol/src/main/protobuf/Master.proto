@@ -32,6 +32,7 @@ import "ClusterStatus.proto";
 import "ErrorHandling.proto";
 import "Procedure.proto";
 import "Quota.proto";
+import "Snapshot.proto";
 
 /* Column-level protobufs */
 
@@ -391,6 +392,7 @@ message DeleteSnapshotResponse {
 
 message RestoreSnapshotRequest {
   required SnapshotDescription snapshot = 1;
+  optional bool restoreACL = 2 [default=false];
 }
 
 message RestoreSnapshotResponse {

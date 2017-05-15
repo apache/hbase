@@ -28,12 +28,19 @@ And writing on the newly created table will not influence the snapshot data.
 Examples:
   hbase> clone_snapshot 'snapshotName', 'tableName'
   hbase> clone_snapshot 'snapshotName', 'namespace:tableName'
+
+Following command will restore all acl from origin snapshot table into the
+newly created table.
+
+  hbase> clone_snapshot 'snapshotName', 'namespace:tableName', {RESTORE_ACL=>true}
 EOF
       end
 
-      def command(snapshot_name, table)
+      def command(snapshot_name, table, args = {})
         format_simple_command do
-          admin.clone_snapshot(snapshot_name, table)
+          raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
+          restore_acl = args.delete(RESTORE_ACL) || false
+          admin.clone_snapshot(snapshot_name, table, restore_acl)
         end
       end
 

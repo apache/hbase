@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 
+import com.google.common.collect.ListMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -30,10 +31,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifestV2;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -246,7 +253,7 @@ public final class SnapshotDescriptionUtils {
    *           {@link SnapshotDescription}.
    */
   public static SnapshotDescription validate(SnapshotDescription snapshot, Configuration conf)
-      throws IllegalArgumentException {
+      throws IllegalArgumentException, IOException {
     if (!snapshot.hasTable()) {
       throw new IllegalArgumentException(
         "Descriptor doesn't apply to a table, so we can't build it.");
@@ -262,6 +269,12 @@ public final class SnapshotDescriptionUtils {
       builder.setCreationTime(time);
       snapshot = builder.build();
     }
+
+    // set the acl to snapshot if security feature is enabled.
+    if(isSecurityAvailable(conf)){
+      snapshot = writeAclToSnapshotDescription(snapshot, conf);
+    }
+
     return snapshot;
   }
 
@@ -306,7 +319,7 @@ public final class SnapshotDescriptionUtils {
   }
 
   /**
-   * Read in the {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} stored for the snapshot in the passed directory
+   * Read in the {@link SnapshotDescription} stored for the snapshot in the passed directory
    * @param fs filesystem where the snapshot was taken
    * @param snapshotDir directory where the snapshot was stored
    * @return the stored snapshot description
@@ -363,5 +376,33 @@ public final class SnapshotDescriptionUtils {
     if (user == null) return false;
     if (!snapshot.hasOwner()) return false;
     return snapshot.getOwner().equals(user.getShortName());
+  }
+
+  public static boolean isSecurityAvailable(Configuration conf) throws IOException {
+    Connection conn = ConnectionFactory.createConnection(conf);
+    try {
+      Admin admin = conn.getAdmin();
+      try {
+        return admin.tableExists(AccessControlLists.ACL_TABLE_NAME);
+      } finally {
+        admin.close();
+      }
+    } finally {
+      conn.close();
+    }
+  }
+
+  private static SnapshotDescription writeAclToSnapshotDescription(
+      final SnapshotDescription snapshot, final Configuration conf) throws IOException {
+    ListMultimap<String, TablePermission> perms =
+        User.runAsLoginUser(new PrivilegedExceptionAction<ListMultimap<String, TablePermission>>() {
+          @Override
+          public ListMultimap<String, TablePermission> run() throws Exception {
+            return AccessControlLists.getTablePermissions(conf,
+              TableName.valueOf(snapshot.getTable()));
+          }
+        });
+    return snapshot.toBuilder().setUsersAndPermissions(ProtobufUtil.toUserTablePermissions(perms))
+        .build();
   }
 }
