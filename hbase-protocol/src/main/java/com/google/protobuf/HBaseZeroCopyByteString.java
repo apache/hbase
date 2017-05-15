@@ -61,7 +61,7 @@ public final class HBaseZeroCopyByteString extends LiteralByteString {
     if (buf instanceof LiteralByteString) {
       return ((LiteralByteString) buf).bytes;
     }
-    throw new UnsupportedOperationException("Need a LiteralByteString, got a "
-                                            + buf.getClass().getName());
+    // In case it's BoundedByteString
+    return buf.toByteArray();
   }
 }
