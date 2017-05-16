@@ -104,6 +104,7 @@ public class TestSwitchToStreamRead {
         Result result = Result.create(cells);
         assertEquals(VALUE_PREFIX + i, Bytes.toString(result.getValue(FAMILY, QUAL)));
         cells.clear();
+        scanner.shipped();
       }
       for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
         if (kvs instanceof StoreFileScanner) {
@@ -117,6 +118,7 @@ public class TestSwitchToStreamRead {
         Result result = Result.create(cells);
         assertEquals(VALUE_PREFIX + i, Bytes.toString(result.getValue(FAMILY, QUAL)));
         cells.clear();
+        scanner.shipped();
       }
     }
     // make sure all scanners are closed.
