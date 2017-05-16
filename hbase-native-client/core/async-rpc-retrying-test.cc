@@ -159,9 +159,9 @@ class MockFailingAsyncRegionLocator : public AsyncRegionLocatorBase {
   uint32_t num_fails_ = 0;
 
  public:
-  explicit  MockFailingAsyncRegionLocator(uint32_t num_fails)
+  explicit MockFailingAsyncRegionLocator(uint32_t num_fails)
       : AsyncRegionLocatorBase(), num_fails_(num_fails) {}
-  explicit  MockFailingAsyncRegionLocator(std::shared_ptr<RegionLocation> region_location)
+  explicit MockFailingAsyncRegionLocator(std::shared_ptr<RegionLocation> region_location)
       : AsyncRegionLocatorBase(region_location) {}
   virtual ~MockFailingAsyncRegionLocator() {}
   folly::Future<std::shared_ptr<hbase::RegionLocation>> LocateRegion(

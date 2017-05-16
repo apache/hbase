@@ -143,9 +143,7 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::OnError(
    */
   conn_->retry_executor()->add([&]() {
     retry_timer_->scheduleTimeoutFn(
-        [this]() {
-          conn_->cpu_executor()->add([&]() { LocateThenCall(); });
-        },
+        [this]() { conn_->cpu_executor()->add([&]() { LocateThenCall(); }); },
         milliseconds(TimeUtil::ToMillis(delay_ns)));
   });
 }

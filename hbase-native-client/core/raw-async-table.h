@@ -20,11 +20,11 @@
 
 #include <folly/futures/Future.h>
 #include <folly/futures/Unit.h>
-
 #include <chrono>
 #include <memory>
 #include <string>
-
+#include <vector>
+#include "core/async-batch-rpc-retrying-caller.h"
 #include "core/async-connection.h"
 #include "core/async-rpc-retrying-caller-factory.h"
 #include "core/async-rpc-retrying-caller.h"
@@ -34,6 +34,7 @@
 #include "core/result.h"
 
 using folly::Future;
+using folly::Try;
 using folly::Unit;
 using hbase::pb::TableName;
 using std::chrono::nanoseconds;
@@ -59,6 +60,9 @@ class RawAsyncTable {
   Future<Unit> Put(const hbase::Put& put);
   void Close() {}
 
+  Future<std::vector<Try<std::shared_ptr<Result>>>> Get(const std::vector<hbase::Get>& gets);
+  Future<std::vector<Try<std::shared_ptr<Result>>>> Batch(const std::vector<hbase::Get>& gets);
+
  private:
   /* Data */
   std::shared_ptr<AsyncConnection> connection_;
@@ -78,5 +82,4 @@ class RawAsyncTable {
   std::shared_ptr<SingleRequestCallerBuilder<RESP>> CreateCallerBuilder(std::string row,
                                                                         nanoseconds rpc_timeout);
 };
-
 }  // namespace hbase

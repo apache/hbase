@@ -26,6 +26,7 @@
 #include <iostream>
 #include <thread>
 
+#include "connection/rpc-client.h"
 #include "core/client.h"
 #include "core/get.h"
 #include "core/put.h"
@@ -75,14 +76,16 @@ int main(int argc, char *argv[]) {
   conf->SetInt("hbase.client.cpu.thread.pool.size", FLAGS_threads);
 
   auto row = FLAGS_row;
+
   auto tn = std::make_shared<TableName>(folly::to<TableName>(FLAGS_table));
   auto num_puts = FLAGS_num_rows;
 
   auto client = std::make_unique<Client>(*conf);
   auto table = client->Table(*tn);
 
-  // Do the Put requests
   auto start_ns = TimeUtil::GetNowNanos();
+
+  // Do the Put requests
   for (uint64_t i = 0; i < num_puts; i++) {
     table->Put(*MakePut(Row(FLAGS_row, i)));
   }
@@ -100,6 +103,23 @@ int main(int argc, char *argv[]) {
   }
 
   LOG(INFO) << "Successfully sent  " << num_puts << " Get requests in "
+            << TimeUtil::ElapsedMillis(start_ns) << " ms.";
+
+  // Do the Multi-Gets
+  std::vector<hbase::Get> gets;
+  for (uint64_t i = 0; i < num_puts; ++i) {
+    hbase::Get get(Row(FLAGS_row, i));
+    gets.push_back(get);
+  }
+
+  start_ns = TimeUtil::GetNowNanos();
+  auto results = table->Get(gets);
+
+  if (FLAGS_display_results) {
+    for (const auto &result : results) LOG(INFO) << result->DebugString();
+  }
+
+  LOG(INFO) << "Successfully sent  " << gets.size() << " Multi-Get requests in "
             << TimeUtil::ElapsedMillis(start_ns) << " ms.";
 
   table->Close();

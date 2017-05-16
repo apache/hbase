@@ -91,4 +91,24 @@ Future<Unit> RawAsyncTable::Put(const hbase::Put& put) {
   return caller->Call().then([caller](const auto r) { return r; });
 }
 
-} /* namespace hbase */
+Future<std::vector<Try<std::shared_ptr<Result>>>> RawAsyncTable::Get(
+    const std::vector<hbase::Get>& gets) {
+  return this->Batch(gets);
+}
+
+Future<std::vector<Try<std::shared_ptr<Result>>>> RawAsyncTable::Batch(
+    const std::vector<hbase::Get>& gets) {
+  auto caller = connection_->caller_factory()
+                    ->Batch()
+                    ->table(table_name_)
+                    ->actions(std::make_shared<std::vector<hbase::Get>>(gets))
+                    ->rpc_timeout(connection_conf_->read_rpc_timeout())
+                    ->operation_timeout(connection_conf_->operation_timeout())
+                    ->pause(connection_conf_->pause())
+                    ->max_attempts(connection_conf_->max_retries())
+                    ->start_log_errors_count(connection_conf_->start_log_errors_count())
+                    ->Build();
+
+  return caller->Call().then([caller](auto r) { return r; });
+}
+}  // namespace hbase

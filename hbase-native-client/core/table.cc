@@ -19,7 +19,6 @@
 
 #include "core/table.h"
 
-#include <folly/futures/Future.h>
 #include <chrono>
 #include <limits>
 #include <utility>
@@ -33,7 +32,6 @@
 #include "serde/server-name.h"
 #include "utils/time-util.h"
 
-using folly::Future;
 using hbase::pb::TableName;
 using hbase::security::User;
 using std::chrono::milliseconds;
@@ -67,6 +65,22 @@ void Table::Close() { async_table_->Close(); }
 
 std::shared_ptr<RegionLocation> Table::GetRegionLocation(const std::string &row) {
   return async_connection_->region_locator()->LocateRegion(*table_name_, row).get();
+}
+
+std::vector<std::shared_ptr<hbase::Result>> Table::Get(const std::vector<hbase::Get> &gets) {
+  auto tresults = async_table_->Get(gets).get(operation_timeout());
+  std::vector<std::shared_ptr<hbase::Result>> results{};
+  uint32_t num = 0;
+  for (auto tresult : tresults) {
+    if (tresult.hasValue()) {
+      results.push_back(tresult.value());
+    } else if (tresult.hasException()) {
+      LOG(ERROR) << "Caught exception:- " << tresult.exception().getCopied()->what() << " for "
+                 << gets[num++].row();
+      throw tresult.exception().getCopied();
+    }
+  }
+  return results;
 }
 
 } /* namespace hbase */
