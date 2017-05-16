@@ -205,6 +205,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String HREGION_UNASSIGN_FOR_FNFE = "hbase.hregion.unassign.for.fnfe";
   public static final boolean DEFAULT_HREGION_UNASSIGN_FOR_FNFE = true;
 
+  public static final String HBASE_MAX_CELL_SIZE_KEY = "hbase.server.keyvalue.maxsize";
+  public static final int DEFAULT_MAX_CELL_SIZE = 10485760;
+
   /**
    * This is the global default value for durability. All tables/mutations not
    * defining a durability or using USE_DEFAULT will default to this value.
@@ -306,6 +309,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // Max busy wait duration. There is no point to wait longer than the RPC
   // purge timeout, when a RPC call will be terminated by the RPC engine.
   final long maxBusyWaitDuration;
+
+  // Max cell size. If nonzero, the maximum allowed size for any given cell
+  // in bytes
+  final long maxCellSize;
 
   // negative number indicates infinite timeout
   static final long DEFAULT_ROW_PROCESSOR_TIMEOUT = 60 * 1000L;
@@ -801,6 +808,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           false :
           conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
               HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
+
+    this.maxCellSize = conf.getLong(HBASE_MAX_CELL_SIZE_KEY, DEFAULT_MAX_CELL_SIZE);
+
     boolean unassignForFNFE =
         conf.getBoolean(HREGION_UNASSIGN_FOR_FNFE, DEFAULT_HREGION_UNASSIGN_FOR_FNFE);
     if (unassignForFNFE) {
@@ -7613,7 +7623,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       49 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (14 * Bytes.SIZEOF_LONG) +
+      (15 * Bytes.SIZEOF_LONG) +
       6 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:

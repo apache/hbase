@@ -525,7 +525,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       switch (type) {
         case PUT:
-          rm.add(ProtobufUtil.toPut(action.getMutation(), cellScanner));
+          Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
+          checkCellSizeLimit(region, put);
+          rm.add(put);
           break;
         case DELETE:
           rm.add(ProtobufUtil.toDelete(action.getMutation(), cellScanner));
@@ -577,7 +579,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       switch (type) {
         case PUT:
-          rm.add(ProtobufUtil.toPut(action.getMutation(), cellScanner));
+          Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
+          checkCellSizeLimit(region, put);
+          rm.add(put);
           break;
         case DELETE:
           rm.add(ProtobufUtil.toDelete(action.getMutation(), cellScanner));
@@ -611,6 +615,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throws IOException {
     long before = EnvironmentEdgeManager.currentTime();
     Append append = ProtobufUtil.toAppend(mutation, cellScanner);
+    checkCellSizeLimit(region, append);
     quota.addMutation(append);
     Result r = null;
     if (region.getCoprocessorHost() != null) {
@@ -659,6 +664,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throws IOException {
     long before = EnvironmentEdgeManager.currentTime();
     Increment increment = ProtobufUtil.toIncrement(mutation, cells);
+    checkCellSizeLimit(region, increment);
     quota.addMutation(increment);
     Result r = null;
     if (region.getCoprocessorHost() != null) {
@@ -867,6 +873,26 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return cellsToReturn;
   }
 
+  private void checkCellSizeLimit(final Region region, final Mutation m) throws IOException {
+    if (!(region instanceof HRegion)) {
+      return;
+    }
+    HRegion r = (HRegion)region;
+    if (r.maxCellSize > 0) {
+      CellScanner cells = m.cellScanner();
+      while (cells.advance()) {
+        int size = CellUtil.estimatedSerializedSizeOf(cells.current());
+        if (size > r.maxCellSize) {
+          String msg = "Cell with size " + size + " exceeds limit of " + r.maxCellSize + " bytes";
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(msg);
+          }
+          throw new DoNotRetryIOException(msg);
+        }
+      }
+    }
+  }
+
   /**
    * Execute a list of Put/Delete mutations.
    *
@@ -902,15 +928,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         mutationActionMap.put(mutation, action);
         mArray[i++] = mutation;
+        checkCellSizeLimit(region, mutation);
         quota.addMutation(mutation);
       }
 
       if (!region.getRegionInfo().isMetaTable()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
+
       // HBASE-17924
       // sort to improve lock efficiency
       Arrays.sort(mArray);
+
       OperationStatus[] codes = region.batchMutate(mArray, HConstants.NO_NONCE,
         HConstants.NO_NONCE);
       for (i = 0; i < codes.length; i++) {
@@ -2604,6 +2633,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         break;
       case PUT:
         Put put = ProtobufUtil.toPut(mutation, cellScanner);
+        checkCellSizeLimit(region, put);
         quota.addMutation(put);
         if (request.hasCondition()) {
           Condition condition = request.getCondition();
@@ -2633,6 +2663,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         break;
       case DELETE:
         Delete delete = ProtobufUtil.toDelete(mutation, cellScanner);
+        checkCellSizeLimit(region, delete);
         quota.addMutation(delete);
         if (request.hasCondition()) {
           Condition condition = request.getCondition();
