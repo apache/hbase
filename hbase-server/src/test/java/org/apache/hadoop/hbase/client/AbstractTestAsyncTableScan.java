@@ -30,6 +30,7 @@ import java.util.stream.IntStream;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
@@ -161,6 +162,16 @@ public abstract class AbstractTestAsyncTableScan {
       createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))).setReversed(true));
     assertEquals(start + 1, results.size());
     IntStream.range(0, start + 1).forEach(i -> assertResultEquals(results.get(i), start - i));
+  }
+
+  @Test
+  public void testScanWrongColumnFamily() throws Exception {
+    try {
+      doScan(createScan().addFamily(Bytes.toBytes("WrongColumnFamily")));
+    } catch (Exception e) {
+      assertTrue(e instanceof NoSuchColumnFamilyException
+          || e.getCause() instanceof NoSuchColumnFamilyException);
+    }
   }
 
   private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive,

@@ -104,6 +104,7 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   @Override
   public synchronized void onError(Throwable error) {
     this.error = error;
+    notifyAll();
   }
 
   @Override
