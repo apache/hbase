@@ -20,24 +20,23 @@
 #pragma once
 
 #include <memory>
-#include "core/row.h"
+#include "core/get.h"
 
-using hbase::Row;
 namespace hbase {
 
 class Action {
  public:
-  Action(std::shared_ptr<Row> action, int original_index)
+  Action(std::shared_ptr<hbase::Get> action, int32_t original_index)
       : action_(action), original_index_(original_index) {}
   ~Action() {}
 
-  int64_t original_index() const { return original_index_; }
+  int32_t original_index() const { return original_index_; }
 
-  std::shared_ptr<Row> action() const { return action_; }
+  std::shared_ptr<hbase::Get> action() const { return action_; }
 
  private:
-  std::shared_ptr<Row> action_;
-  int64_t original_index_;
+  std::shared_ptr<hbase::Get> action_;
+  int32_t original_index_;
   int64_t nonce_ = -1;
   int32_t replica_id_ = -1;
 };

@@ -54,8 +54,7 @@ class Table {
    */
   std::shared_ptr<hbase::Result> Get(const hbase::Get &get);
 
-  // TODO: next jira
-  // std::vector<std::unique_ptr<hbase::Result>> Get(const std::vector<hbase::Get> &gets);
+  std::vector<std::shared_ptr<hbase::Result>> Get(const std::vector<hbase::Get> &gets);
 
   /**
    * @brief - Puts some data in the table.

@@ -50,7 +50,6 @@ std::unique_ptr<Request> RequestConverter::ToGetRequest(const Get &get,
   auto pb_msg = std::static_pointer_cast<GetRequest>(pb_req->req_msg());
   RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
   pb_msg->set_allocated_get((RequestConverter::ToGet(get)).release());
-
   return pb_req;
 }
 
@@ -114,12 +113,12 @@ std::unique_ptr<Request> RequestConverter::ToMultiRequest(
     int action_num = 0;
     for (const auto &region_action : action_by_region.second->actions()) {
       auto pb_action = pb_region_action->add_action();
-      auto action = region_action->action();
-      if (auto pget = std::dynamic_pointer_cast<Get>(action)) {
-        auto pb_get = RequestConverter::ToGet(*pget.get());
-        pb_action->set_allocated_get(pb_get.release());
-        pb_action->set_index(action_num);
-      }
+      auto pget = region_action->action();
+      // We store only hbase::Get in hbase::Action as of now. It will be changed later on.
+      CHECK(pget) << "Unexpected. action can't be null";
+      auto pb_get = RequestConverter::ToGet(*pget);
+      pb_action->set_allocated_get(pb_get.release());
+      pb_action->set_index(action_num);
       action_num++;
     }
   }

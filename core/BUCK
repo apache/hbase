@@ -53,6 +53,7 @@ cxx_library(
         "region-result.h",
         "row.h",
         "server-request.h",
+        "async-batch-rpc-retrying-caller.h",
     ],
     srcs=[
         "async-connection.cc",
@@ -77,6 +78,7 @@ cxx_library(
         "zk-util.cc",
         "multi-response.cc",
         "region-result.cc",
+        "async-batch-rpc-retrying-caller.cc",
     ],
     deps=[
         "//exceptions:exceptions",

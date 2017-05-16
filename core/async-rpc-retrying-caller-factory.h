@@ -19,19 +19,18 @@
 #pragma once
 
 #include <folly/Logging.h>
-#include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <chrono>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "connection/rpc-client.h"
+#include "core/async-batch-rpc-retrying-caller.h"
 #include "core/async-rpc-retrying-caller.h"
+#include "core/row.h"
 #include "if/Client.pb.h"
 #include "if/HBase.pb.h"
-
-using hbase::pb::TableName;
-using std::chrono::nanoseconds;
 
 namespace hbase {
 
@@ -58,7 +57,7 @@ class SingleRequestCallerBuilder
   typedef SingleRequestCallerBuilder<RESP> GenenericThisType;
   typedef std::shared_ptr<GenenericThisType> SharedThisPtr;
 
-  SharedThisPtr table(std::shared_ptr<TableName> table_name) {
+  SharedThisPtr table(std::shared_ptr<pb::TableName> table_name) {
     table_name_ = table_name;
     return shared_this();
   }
@@ -119,7 +118,7 @@ class SingleRequestCallerBuilder
  private:
   std::shared_ptr<AsyncConnection> conn_;
   std::shared_ptr<folly::HHWheelTimer> retry_timer_;
-  std::shared_ptr<TableName> table_name_;
+  std::shared_ptr<pb::TableName> table_name_;
   nanoseconds rpc_timeout_nanos_;
   nanoseconds operation_timeout_nanos_;
   nanoseconds pause_;
@@ -130,6 +129,75 @@ class SingleRequestCallerBuilder
   Callable<RESP> callable_;
 };  // end of SingleRequestCallerBuilder
 
+class BatchCallerBuilder : public std::enable_shared_from_this<BatchCallerBuilder> {
+ public:
+  explicit BatchCallerBuilder(std::shared_ptr<AsyncConnection> conn,
+                              std::shared_ptr<folly::HHWheelTimer> retry_timer)
+      : conn_(conn), retry_timer_(retry_timer) {}
+
+  virtual ~BatchCallerBuilder() = default;
+
+  typedef std::shared_ptr<BatchCallerBuilder> SharedThisPtr;
+
+  SharedThisPtr table(std::shared_ptr<pb::TableName> table_name) {
+    table_name_ = table_name;
+    return shared_this();
+  }
+
+  SharedThisPtr actions(std::shared_ptr<std::vector<hbase::Get>> actions) {
+    actions_ = actions;
+    return shared_this();
+  }
+
+  SharedThisPtr operation_timeout(nanoseconds operation_timeout_nanos) {
+    operation_timeout_nanos_ = operation_timeout_nanos;
+    return shared_this();
+  }
+
+  SharedThisPtr rpc_timeout(nanoseconds rpc_timeout_nanos) {
+    rpc_timeout_nanos_ = rpc_timeout_nanos;
+    return shared_this();
+  }
+
+  SharedThisPtr pause(nanoseconds pause_ns) {
+    pause_ns_ = pause_ns;
+    return shared_this();
+  }
+
+  SharedThisPtr max_attempts(int32_t max_attempts) {
+    max_attempts_ = max_attempts;
+    return shared_this();
+  }
+
+  SharedThisPtr start_log_errors_count(int32_t start_log_errors_count) {
+    start_log_errors_count_ = start_log_errors_count;
+    return shared_this();
+  }
+
+  folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Call() { return Build()->Call(); }
+
+  std::shared_ptr<AsyncBatchRpcRetryingCaller> Build() {
+    return std::make_shared<AsyncBatchRpcRetryingCaller>(
+        conn_, retry_timer_, table_name_, *actions_, pause_ns_, max_attempts_,
+        operation_timeout_nanos_, rpc_timeout_nanos_, start_log_errors_count_);
+  }
+
+ private:
+  SharedThisPtr shared_this() {
+    return std::enable_shared_from_this<BatchCallerBuilder>::shared_from_this();
+  }
+
+ private:
+  std::shared_ptr<AsyncConnection> conn_;
+  std::shared_ptr<folly::HHWheelTimer> retry_timer_;
+  std::shared_ptr<hbase::pb::TableName> table_name_ = nullptr;
+  std::shared_ptr<std::vector<hbase::Get>> actions_ = nullptr;
+  nanoseconds pause_ns_;
+  int32_t max_attempts_ = 0;
+  nanoseconds operation_timeout_nanos_;
+  nanoseconds rpc_timeout_nanos_;
+  int32_t start_log_errors_count_ = 0;
+};
 class AsyncRpcRetryingCallerFactory {
  private:
   std::shared_ptr<AsyncConnection> conn_;
@@ -145,6 +213,10 @@ class AsyncRpcRetryingCallerFactory {
   template <typename RESP>
   std::shared_ptr<SingleRequestCallerBuilder<RESP>> Single() {
     return std::make_shared<SingleRequestCallerBuilder<RESP>>(conn_, retry_timer_);
+  }
+
+  std::shared_ptr<BatchCallerBuilder> Batch() {
+    return std::make_shared<BatchCallerBuilder>(conn_, retry_timer_);
   }
 };
 
