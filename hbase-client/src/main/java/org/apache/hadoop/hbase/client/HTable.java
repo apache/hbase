@@ -232,7 +232,7 @@ public class HTable implements Table {
    * @return maxKeyValueSize from configuration.
    */
   public static int getMaxKeyValueSize(Configuration conf) {
-    return conf.getInt("hbase.client.keyvalue.maxsize", -1);
+    return conf.getInt(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, -1);
   }
 
   /**
