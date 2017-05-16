@@ -260,7 +260,9 @@ public class TestRSGroups extends TestRSGroupsBase {
     rsGroupAdminEndpoint.getGroupInfoManager()
         .moveTables(Sets.newHashSet(tableName), RSGroupInfo.getName());
 
+    admin.setBalancerRunning(true,true);
     assertTrue(rsGroupAdmin.balanceRSGroup(RSGroupInfo.getName()));
+    admin.setBalancerRunning(false,true);
 
     TEST_UTIL.waitFor(60000, new Predicate<Exception>() {
       @Override

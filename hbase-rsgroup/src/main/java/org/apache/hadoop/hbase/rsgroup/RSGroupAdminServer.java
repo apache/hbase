@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -492,6 +493,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
     boolean balancerRan;
     synchronized (balancer) {
+      // If balance not true, don't run balancer.
+      if (!((HMaster) master).isBalancerOn()) return false;
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preBalanceRSGroup(groupName);
       }

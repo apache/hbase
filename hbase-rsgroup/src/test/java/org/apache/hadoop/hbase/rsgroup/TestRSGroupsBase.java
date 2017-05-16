@@ -210,7 +210,9 @@ public abstract class TestRSGroupsBase {
     }
 
     try {
+      admin.setBalancerRunning(true,true);
       rsGroupAdmin.balanceRSGroup("bogus");
+      admin.setBalancerRunning(false,true);
       fail("Expected move with bogus group to fail");
     } catch(ConstraintException ex) {
       //expected
@@ -433,9 +435,17 @@ public abstract class TestRSGroupsBase {
     });
 
     //balance the other group and make sure it doesn't affect the new group
+    admin.setBalancerRunning(true,true);
     rsGroupAdmin.balanceRSGroup(RSGroupInfo.DEFAULT_GROUP);
     assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
 
+    //disable balance, balancer will not be run and return false
+    admin.setBalancerRunning(false,true);
+    assertFalse(rsGroupAdmin.balanceRSGroup(newGroupName));
+    assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
+
+    //enable balance
+    admin.setBalancerRunning(true,true);
     rsGroupAdmin.balanceRSGroup(newGroupName);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -448,6 +458,7 @@ public abstract class TestRSGroupsBase {
         return true;
       }
     });
+    admin.setBalancerRunning(false,true);
   }
 
   @Test
