@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Mut
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.regionserver.DelegatingKeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
@@ -6462,4 +6463,40 @@ public class TestFromClientSide {
       .getNumberOfCachedRegionLocations(htd.getTableName());
     assertEquals(results.size(), number);
   }
+
+  @Test
+  public void testCellSizeLimit() throws IOException {
+    final TableName tableName = TableName.valueOf("testCellSizeLimit");
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.setConfiguration(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(10 * 1024)); // 10K
+    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
+    htd.addFamily(fam);
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    admin.createTable(htd);
+    // Will succeed
+    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+      t.put(new Put(ROW).add(FAMILY, QUALIFIER, Bytes.toBytes(0L)));
+      t.increment(new Increment(ROW).addColumn(FAMILY, QUALIFIER, 1L));
+    }
+    // Will succeed
+    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+      t.put(new Put(ROW).add(FAMILY, QUALIFIER, new byte[9*1024]));
+    }
+    // Will fail
+    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+      try {
+        t.put(new Put(ROW).add(FAMILY, QUALIFIER, new byte[10 * 1024]));
+        fail("Oversize cell failed to trigger exception");
+      } catch (IOException e) {
+        // expected
+      }
+      try {
+        t.append(new Append(ROW).add(FAMILY, QUALIFIER, new byte[10 * 1024]));
+        fail("Oversize cell failed to trigger exception");
+      } catch (IOException e) {
+        // expected
+      }
+    }
+  }
+
 }
