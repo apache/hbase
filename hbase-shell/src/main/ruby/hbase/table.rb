@@ -347,6 +347,8 @@ EOF
       authorizations = args[AUTHORIZATIONS]
       consistency = args.delete(CONSISTENCY) if args[CONSISTENCY]
       replicaId = args.delete(REGION_REPLICA_ID) if args[REGION_REPLICA_ID]
+      converter = args.delete(FORMATTER) || nil
+      converter_class = args.delete(FORMATTER_CLASS) || 'org.apache.hadoop.hbase.util.Bytes'
       unless args.empty?
         columns = args[COLUMN] || args[COLUMNS]
         if args[VERSIONS]
@@ -419,13 +421,13 @@ EOF
       # Print out results.  Result can be Cell or RowResult.
       res = {}
       result.listCells.each do |c|
-        family = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getFamilyArray,
-          c.getFamilyOffset, c.getFamilyLength)
-        qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifierArray,
-          c.getQualifierOffset, c.getQualifierLength)
+        family = convert_bytes_with_position(c.getFamilyArray,
+          c.getFamilyOffset, c.getFamilyLength, converter_class, converter)
+        qualifier = convert_bytes_with_position(c.getQualifierArray,
+          c.getQualifierOffset, c.getQualifierLength, converter_class, converter)
 
         column = "#{family}:#{qualifier}"
-        value = to_string(column, c, maxlength)
+        value = to_string(column, c, maxlength, converter_class, converter)
 
         if block_given?
           yield(column, value)
@@ -544,6 +546,8 @@ EOF
 
       limit = args["LIMIT"] || -1
       maxlength = args.delete("MAXLENGTH") || -1
+      converter = args.delete(FORMATTER) || nil
+      converter_class = args.delete(FORMATTER_CLASS) || 'org.apache.hadoop.hbase.util.Bytes'
       count = 0
       res = {}
 
@@ -555,17 +559,17 @@ EOF
       # Iterate results
       while iter.hasNext
         row = iter.next
-        key = org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow)
+        key = convert_bytes(row.getRow, nil, converter)
         is_stale |= row.isStale
 
         row.listCells.each do |c|
-          family = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getFamilyArray,
-            c.getFamilyOffset, c.getFamilyLength)
-          qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifierArray,
-            c.getQualifierOffset, c.getQualifierLength)
+          family = convert_bytes_with_position(c.getFamilyArray,
+            c.getFamilyOffset, c.getFamilyLength, converter_class, converter)
+          qualifier = convert_bytes_with_position(c.getQualifierArray,
+            c.getQualifierOffset, c.getQualifierLength, converter_class, converter)
 
           column = "#{family}:#{qualifier}"
-          cell = to_string(column, c, maxlength)
+          cell = to_string(column, c, maxlength, converter_class, converter)
 
           if block_given?
             yield(key, "column=#{column}, #{cell}")
@@ -693,7 +697,7 @@ EOF
 
     # Make a String of the passed kv
     # Intercept cells whose format we know such as the info:regioninfo in hbase:meta
-    def to_string(column, kv, maxlength = -1)
+    def to_string(column, kv, maxlength = -1, converter_class = nil, converter=nil)
       if is_meta_table?
         if column == 'info:regioninfo' or column == 'info:splitA' or column == 'info:splitB'
           hri = org.apache.hadoop.hbase.HRegionInfo.parseFromOrNull(kv.getValueArray,
@@ -715,16 +719,16 @@ EOF
       if kv.isDelete
         val = "timestamp=#{kv.getTimestamp}, type=#{org.apache.hadoop.hbase.KeyValue::Type::codeToType(kv.getType)}"
       else
-        val = "timestamp=#{kv.getTimestamp}, value=#{convert(column, kv)}"
+        val = "timestamp=#{kv.getTimestamp}, value=#{convert(column, kv, converter_class, converter)}"
       end
       (maxlength != -1) ? val[0, maxlength] : val
     end
 
-    def convert(column, kv)
+    def convert(column, kv, converter_class='org.apache.hadoop.hbase.util.Bytes', converter='toStringBinary')
       #use org.apache.hadoop.hbase.util.Bytes as the default class
-      klazz_name = 'org.apache.hadoop.hbase.util.Bytes'
+      converter_class = 'org.apache.hadoop.hbase.util.Bytes' unless converter_class
       #use org.apache.hadoop.hbase.util.Bytes::toStringBinary as the default convertor
-      converter = 'toStringBinary'
+      converter = 'toStringBinary' unless converter
       if @converters.has_key?(column)
         # lookup the CONVERTER for certain column - "cf:qualifier"
         matches = /c\((.+)\)\.(.+)/.match(@converters[column])
@@ -737,8 +741,19 @@ EOF
           converter = matches[2]
         end
       end
-      method = eval(klazz_name).method(converter)
-      return method.call(org.apache.hadoop.hbase.CellUtil.cloneValue(kv)) # apply the converter
+      # apply the converter
+      convert_bytes(org.apache.hadoop.hbase.CellUtil.cloneValue(kv), klazz_name, converter)
+    end
+
+    def convert_bytes(bytes, converter_class=nil, converter_method=nil)
+      convert_bytes_with_position(bytes, 0, bytes.length, converter_class, converter_method)
+    end
+
+    def convert_bytes_with_position(bytes, offset, len, converter_class, converter_method)
+      # Avoid nil
+      converter_class = 'org.apache.hadoop.hbase.util.Bytes' unless converter_class
+      converter_method = 'toStringBinary' unless converter_method
+      eval(converter_class).method(converter_method).call(bytes, offset, len)
     end
 
     # if the column spec contains CONVERTER information, to get rid of :CONVERTER info from column pair.

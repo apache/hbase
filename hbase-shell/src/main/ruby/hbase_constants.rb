@@ -84,6 +84,8 @@ module HBaseConstants
   SERVER_NAME = 'SERVER_NAME'
   LOCALITY_THRESHOLD = 'LOCALITY_THRESHOLD'
   RESTORE_ACL = 'RESTORE_ACL'
+  FORMATTER = 'FORMATTER'
+  FORMATTER_CLASS = 'FORMATTER_CLASS'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
