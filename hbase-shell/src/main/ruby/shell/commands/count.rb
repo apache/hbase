@@ -35,6 +35,9 @@ parameter. Examples:
  hbase> count 't1', INTERVAL => 100000
  hbase> count 't1', CACHE => 1000
  hbase> count 't1', INTERVAL => 10, CACHE => 1000
+ hbase> count 't1', FILTER => "
+    (QualifierFilter (>=, 'binary:xyz')) AND (TimestampsFilter ( 123, 456))"
+ hbase> count 't1', COLUMNS => ['c1', 'c2'], STARTROW => 'abc', STOPROW => 'xyz'
 
 The same commands also can be run on a table reference. Suppose you had a reference
 t to table 't1', the corresponding commands would be:
@@ -43,6 +46,9 @@ t to table 't1', the corresponding commands would be:
  hbase> t.count INTERVAL => 100000
  hbase> t.count CACHE => 1000
  hbase> t.count INTERVAL => 10, CACHE => 1000
+ hbase> t.count FILTER => "
+    (QualifierFilter (>=, 'binary:xyz')) AND (TimestampsFilter ( 123, 456))"
+ hbase> t.count COLUMNS => ['c1', 'c2'], STARTROW => 'abc', STOPROW => 'xyz'
 EOF
       end
 
@@ -60,10 +66,11 @@ EOF
           'CACHE' => 10
         }.merge(params)
 
+        scan = table._hash_to_scan(params)
         # Call the counter method
         @start_time = Time.now
         formatter.header
-        count = table._count_internal(params['INTERVAL'].to_i, params['CACHE'].to_i) do |cnt, row|
+        count = table._count_internal(params['INTERVAL'].to_i, scan) do |cnt, row|
           formatter.row([ "Current count: #{cnt}, row: #{row}" ])
         end
         formatter.footer(count)

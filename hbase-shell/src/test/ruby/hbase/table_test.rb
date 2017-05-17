@@ -250,6 +250,31 @@ module Hbase
       assert(!rows.empty?)
     end
 
+    define_test "count should support STARTROW parameter" do
+      count = @test_table.count STARTROW => '4'
+      assert(count == 0)
+    end
+
+    define_test "count should support STOPROW parameter" do
+      count = @test_table.count STOPROW => '0'
+      assert(count == 0)
+    end
+
+    define_test "count should support COLUMNS parameter" do
+      @test_table.put(4, "x:c", "31")
+      begin
+        count = @test_table.count COLUMNS => [ 'x:c']
+        assert(count == 1)
+      ensure
+        @test_table.delete(4, "x:c")
+      end
+    end
+
+    define_test "count should support FILTER parameter" do
+      count = @test_table.count FILTER => "ValueFilter(=, 'binary:11')"
+      assert(count == 1)
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "get should work w/o columns specification" do

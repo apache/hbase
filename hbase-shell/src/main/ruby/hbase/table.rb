@@ -297,12 +297,28 @@ EOF
 
     #----------------------------------------------------------------------------------------------
     # Count rows in a table
-    def _count_internal(interval = 1000, caching_rows = 10)
+    def _count_internal(interval = 1000, scan = nil)
+
+      raise(ArgumentError, "Scan argument should be org.apache.hadoop.hbase.client.Scan") \
+        unless scan == nil || scan.kind_of?(org.apache.hadoop.hbase.client.Scan)
       # We can safely set scanner caching with the first key only filter
-      scan = org.apache.hadoop.hbase.client.Scan.new
-      scan.setCacheBlocks(false)
-      scan.setCaching(caching_rows)
-      scan.setFilter(org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new)
+
+      if scan == nil
+        scan = org.apache.hadoop.hbase.client.Scan.new
+        scan.setCacheBlocks(false)
+        scan.setCaching(10)
+        scan.setFilter(org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new)
+      else
+        scan.setCacheBlocks(false)
+        filter = scan.getFilter()
+        firstKeyOnlyFilter = org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new
+        if filter == nil
+          scan.setFilter(firstKeyOnlyFilter)
+        else
+          firstKeyOnlyFilter.setReversed(filter.isReversed())
+          scan.setFilter(org.apache.hadoop.hbase.filter.FilterList.new(filter, firstKeyOnlyFilter))
+        end
+      end
 
       # Run the scanner
       scanner = @table.getScanner(scan)
