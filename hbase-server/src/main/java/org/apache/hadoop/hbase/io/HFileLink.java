@@ -64,7 +64,8 @@ public class HFileLink extends FileLink {
    * The HFileLink describe a link to an hfile in a different table/region
    * and the name is in the form: table=region-hfile.
    * <p>
-   * Table name is ([a-zA-Z_0-9][a-zA-Z_0-9.-]*), so '=' is an invalid character for the table name.
+   * Table name is ([\p{IsAlphabetic}\p{Digit}][\p{IsAlphabetic}\p{Digit}.-]*), so '=' is an invalid
+   * character for the table name.
    * Region name is ([a-f0-9]+), so '-' is an invalid character for the region name.
    * HFile is ([0-9a-f]+(?:_SeqId_[0-9]+_)?) covering the plain hfiles (uuid)
    * and the bulk loaded (_SeqId_[0-9]+_) hfiles.
