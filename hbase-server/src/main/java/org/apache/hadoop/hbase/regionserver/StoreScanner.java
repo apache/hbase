@@ -146,10 +146,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private volatile boolean flushed = false;
   // generally we get one file from a flush
   private final List<StoreFile> flushedStoreFiles = new ArrayList<>(1);
-  // generally we get one memstore scanner from a flush
-  private final List<KeyValueScanner> memStoreScannersAfterFlush = new ArrayList<>(1);
+  // Since CompactingMemstore is now default, we get three memstore scanners from a flush
+  private final List<KeyValueScanner> memStoreScannersAfterFlush = new ArrayList<>(3);
   // The current list of scanners
-  private final List<KeyValueScanner> currentScanners = new ArrayList<>();
+  @VisibleForTesting
+  final List<KeyValueScanner> currentScanners = new ArrayList<>();
   // flush update lock
   private final ReentrantLock flushLock = new ReentrantLock();
 
@@ -876,9 +877,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // Seek the new scanners to the last key
     seekScanners(scanners, lastTop, false, parallelSeekEnabled);
     // remove the older memstore scanner
-    for (int i = 0; i < currentScanners.size(); i++) {
+    for (int i = currentScanners.size() - 1; i >=0; i--) {
       if (!currentScanners.get(i).isFileScanner()) {
         currentScanners.remove(i).close();
+      } else {
+        // we add the memstore scanner to the end of currentScanners
         break;
       }
     }
