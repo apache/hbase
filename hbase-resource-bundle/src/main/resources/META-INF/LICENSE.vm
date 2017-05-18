@@ -1349,134 +1349,52 @@ JRuby Incorporated Works
 Some additional libraries distributed with JRuby are not covered by
 JRuby's licence.
 
-## skip bytelist and yydebug because they're covered by the jruby copyright and license
+## skip bytelist, jnr-posix, jruby-openssl, jruby-readline, psych, and yydebug
+## because they're covered by the jruby copyright and license
+
 ## skip rails benchmark javascript, because it's not in the complete jar
+
+## jruby bundles asm, but we already ref that in our included deps
+
+jline2 is distributed under the BSD license (available above) and is
+
+   Copyright (c) 2002-2012, the original author or authors.
+   All rights reserved.
+
+jzlib is distributed under the BSD license (available above) and is:
+
+   Copyright (c) 2000-2011 ymnk, JCraft,Inc. All rights reserved.
+
 The "rake" library (http://rake.rubyforge.org/) is distributed under
  the MIT license (available above), and has the following copyright:
 
    Copyright (c) 2003, 2004 Jim Weirich
-## jruby bundles asm, but we already ref that in our included deps
 
-## joda-time only in NOTICE because it's ASLv2
-## commons-logging in NOTICE because it's ASLv2
- build_lib/apt-mirror-api.jar, build_lib/bnd-0.0.249.jar,
- BSF and ant are distributed under the Apache Software License,
- Version 1.1 (shown below)
-
---- ASL v1.1 license
-/* ====================================================================
- * The Apache Software License, Version 1.1
- *
- * Copyright (c) 2000 The Apache Software Foundation.  All rights
- * reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *
- * 3. The end-user documentation included with the redistribution,
- *    if any, must include the following acknowledgment:
- *       "This product includes software developed by the
- *        Apache Software Foundation (http://www.apache.org/)."
- *    Alternately, this acknowledgment may appear in the software itself,
- *    if and wherever such third-party acknowledgments normally appear.
- *
- * 4. The names "Apache" and "Apache Software Foundation" must
- *    not be used to endorse or promote products derived from this
- *    software without prior written permission. For written
- *    permission, please contact apache@apache.org.
- *
- * 5. Products derived from this software may not be called "Apache",
- *    nor may "Apache" appear in their name, without prior written
- *    permission of the Apache Software Foundation.
- *
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE APACHE SOFTWARE FOUNDATION OR
- * ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- * ====================================================================
- *
- * This software consists of voluntary contributions made by many
- * individuals on behalf of the Apache Software Foundation.  For more
- * information on the Apache Software Foundation, please see
- * <http://www.apache.org/>.
- *
- * Portions of this software are based upon public domain software
- * originally written at the National Center for Supercomputing Applications,
- * University of Illinois, Urbana-Champaign.
- */
---- End ASL v1.1 license
-
- build_lib/constantine.jar (http://kenai.com/projects/constantine)
 ## jruby bundles jcodings and joni, but we already ref that in our included deps
- distributed under the MIT license (available above).
 
-## section on ASLv2 incorporated works just in NOTICE
-## skip emma and junit; both aren't in the complete jar
- build_lib/jline-* (http://jline.sourceforge.net) is distributed
- under the following BSD-style license:
+Bouncycastle is released under the MIT license (available above),
+and is Copyright (c) 2000 - 2006 The Legion Of The Bouncy Castle.
 
-   Redistribution and use in source and binary forms, with or
-   without modification, are permitted provided that the following
-   conditions are met:
+jnr-x86asm is distributed under the MIT license (available above),
+with the following copyrights:
 
-   Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
+   Copyright (C) 2010 Wayne Meissner
+   Copyright (c) 2008-2009, Petr Kobalicek <kobalicek.petr@gmail.com>
 
-   Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer
-   in the documentation and/or other materials provided with
-   the distribution.
+## The following only in NOTICE because they are all ASLv2
+##   invokebinder, jffi, jitescript, jnr-constants, jnr-enxio, jnr-ffi,
+##   jnr-netdb, jnr-unixsocket, joda-time, maven, nailgun, options,
+##   snakeyaml, unsafe-fences
 
-   Neither the name of JLine nor the names of its contributors
-   may be used to endorse or promote products derived from this
-   software without specific prior written permission.
-
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-   BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
-   AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
-   EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
-   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
-   OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-   AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
-   IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-   OF THE POSSIBILITY OF SUCH DAMAGE.
-
-## I couldn't determine what use of bouncycastle this referred to
-## so I'm not sure if it's included in the jruby-complete jar or not.
- Bouncycastle is released under the MIT license (available above),
- and is Copyright (c) 2000 - 2006 The Legion Of The Bouncy Castle.
-
- The "yecht" library is Copyright (c) 2009-2011 Ola Bini, and released
- under the MIT license (available above).
+## Skip racc, json-generator, json-parser because it is under Ruby license
 
 ## jruby bundles jquery, but we already ref that above.
-  most files found in lib/ruby/1.8, lib/ruby/1.9, and lib/ruby/site_ruby/1.8/rubygems*
-  are distributed under The Ruby License's non-GPL provision (available below).
+JRuby distributes some ruby modules which are distributed under Ruby
+license:
 
 Ruby is copyrighted free software by Yukihiro Matsumoto <matz@netlab.jp>.
-You can redistribute it and/or modify it under either the terms of the GPL
-(see the file GPL), or the conditions below:
+You can redistribute it and/or modify it under either the terms of the
+2-clause BSDL (see the file BSDL), or the conditions below:
 
   1. You may make and give away verbatim copies of the source form of the
      software without restriction, provided that you duplicate all of the
@@ -2574,10 +2492,6 @@ Common Public License - v 1.0
   more than one year after the cause of action arose. Each party waives
  its rights to a jury trial in any resulting litigation.
 #end
-## We put the JRuby incorporated works bits here, since we first reference JRuby in the CPL section.
-#if($jruby)
-#jruby_license()
-#end
 #if(!(${epl.isEmpty()}))
 ====
 ## print all the EPL 1.0 licensed works
@@ -2832,5 +2746,9 @@ This product includes the following works licensed under the Eclipse Public Lice
   party to this Agreement will bring a legal action under this
   Agreement more than one year after the cause of action arose. Each
   party waives its rights to a jury trial in any resulting litigation.
+#end
+## We put the JRuby incorporated works bits here, since we first reference JRuby in the EPL section.
+#if($jruby)
+#jruby_license()
 #end
 #end

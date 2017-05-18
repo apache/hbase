@@ -18,10 +18,10 @@
 # Prints the hostname of the machine running the active master.
 
 include Java 
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.ServerName
-import org.apache.hadoop.hbase.zookeeper.ZKUtil
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher
+java_import org.apache.hadoop.hbase.HBaseConfiguration
+java_import org.apache.hadoop.hbase.ServerName
+java_import org.apache.hadoop.hbase.zookeeper.ZKUtil
+java_import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher
 
 # disable debug/info logging on this script for clarity
 log_level = org.apache.log4j.Level::ERROR

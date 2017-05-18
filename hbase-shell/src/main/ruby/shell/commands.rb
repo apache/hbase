@@ -39,7 +39,9 @@ module Shell
         translate_hbase_exceptions(*args) { send(cmd, *args) }
       rescue => e
         rootCause = e
-        while rootCause != nil && rootCause.respond_to?(:cause) && rootCause.cause != nil
+
+        # JRuby9000 made RubyException respond to cause, ignore it for back compat
+        while !rootCause.is_a?(Exception) && rootCause.respond_to?(:cause) && !rootCause.cause.nil?
           rootCause = rootCause.cause
         end
         if @shell.interactive?
@@ -105,13 +107,8 @@ module Shell
 
       def translate_hbase_exceptions(*args)
         yield
-      rescue => e
-        # Since exceptions will be thrown from the java code, 'e' will always be NativeException.
-        # Check for the original java exception and use it if present.
-        raise e unless e.respond_to?(:cause) && e.cause != nil
-        cause = e.cause
-
-         # let individual command handle exceptions first
+      rescue => cause
+        # let individual command handle exceptions first
         if self.respond_to?(:handle_exceptions)
           self.handle_exceptions(cause, *args)
         end
@@ -153,7 +150,7 @@ module Shell
         end
 
         # Throw the other exception which hasn't been handled above
-        raise e
+        raise cause
       end
     end
   end

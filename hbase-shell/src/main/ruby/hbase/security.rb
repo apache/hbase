@@ -154,7 +154,7 @@ module Hbase
             yield(user_name, "#{namespace},#{table},#{family},#{qualifier}: #{action.to_s}")
           else
             res[user_name] ||= {}
-            res[user_name][family + ":" +qualifier] = action
+            res[user_name]["#{family}:#{qualifier}"] = action
           end
           count += 1
       end

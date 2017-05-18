@@ -19,7 +19,7 @@
 require 'rbconfig'
 
 module IRB
-  WINDOZE = Config::CONFIG['host_os'] =~ /mswin|mingw/
+  WINDOZE = RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
 
   # Subclass of IRB so can intercept methods
   class HIRB < Irb

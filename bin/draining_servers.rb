@@ -21,12 +21,12 @@
 require 'optparse'
 include Java
 
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.client.ConnectionFactory
-import org.apache.hadoop.hbase.client.HBaseAdmin
-import org.apache.hadoop.hbase.zookeeper.ZKUtil
-import org.apache.commons.logging.Log
-import org.apache.commons.logging.LogFactory
+java_import org.apache.hadoop.hbase.HBaseConfiguration
+java_import org.apache.hadoop.hbase.client.ConnectionFactory
+java_import org.apache.hadoop.hbase.client.HBaseAdmin
+java_import org.apache.hadoop.hbase.zookeeper.ZKUtil
+java_import org.apache.commons.logging.Log
+java_import org.apache.commons.logging.LogFactory
 
 # Name of this script
 NAME = "draining_servers"

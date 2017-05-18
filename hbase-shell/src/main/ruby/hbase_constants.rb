@@ -27,9 +27,9 @@
 # whether the table exists and returns nil regardless.
 include Java
 
-include_class('java.lang.Integer') {|package,name| "J#{name}" }
-include_class('java.lang.Long') {|package,name| "J#{name}" }
-include_class('java.lang.Boolean') {|package,name| "J#{name}" }
+java_import('java.lang.Integer') { |_package, name| "J#{name}" }
+java_import('java.lang.Long') { |_package, name| "J#{name}" }
+java_import('java.lang.Boolean') { |_package, name| "J#{name}" }
 
 module HBaseConstants
   COLUMN = "COLUMN"

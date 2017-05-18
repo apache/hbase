@@ -31,10 +31,13 @@ module Shell
       end
 
       def refresh_width()
+        @max_width = 0
         if $stdout.tty?
-          @max_width = Java::jline.Terminal.getTerminal().getTerminalWidth()
-        else
-          @max_width = 0
+          begin
+            @max_width = Java::jline.TerminalFactory.get.getWidth
+          rescue NameError => e
+            # nocommit debug log and ignore
+          end
         end
       end
 

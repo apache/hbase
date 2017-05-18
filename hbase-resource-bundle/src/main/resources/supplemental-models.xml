@@ -2671,11 +2671,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
       <licenses>
         <license>
-          <name>Common Public License Version 1.0</name>
-          <url>http://www-128.ibm.com/developerworks/library/os-cpl.html</url>
+          <name>Eclipse Public License 1.0</name>
+          <url>http://www.eclipse.org/legal/epl-v10.html</url>
           <distribution>repo</distribution>
           <comments>
-Copyright (c) 2007-2011 The JRuby project
+Copyright (c) 2007-2017 The JRuby project
 </comments>
         </license>
       </licenses>

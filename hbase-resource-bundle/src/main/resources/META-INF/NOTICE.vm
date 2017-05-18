@@ -175,38 +175,29 @@ JRuby Incorporated Works
 Some additional libraries distributed with JRuby are not covered by
 JRuby's licence.
 
-## skip bytelist and yydebug because they're covered by the jruby copyright and license
+## skip bytelist, jnr-posix, jruby-openssl, jruby-readline, psych, and yydebug
+## because they're covered by the jruby copyright and license
+
 ## skip rails benchmark javascript, because it's not in the complete jar
-## skip rake because MIT
+
 ## jruby bundles asm, but we already ref that in our included deps
 
- build_lib/apt-mirror-api.jar, build_lib/bnd-0.0.249.jar,
- BSF and ant are distributed under the Apache Software License,
- Version 1.1
+## skip jline2, jzlib because BSD-3
 
-## skip constantine because MIT
+## skip rake because MIT
+
 ## jruby bundles jcodings and joni, but we already ref that in our included deps
 
- build_lib/commons-logging-1.1.1.jar
- build_lib/jarjar-1.0rc8.jar (http://code.google.com/p/jarjar),
- build_lib/joda-time-1.6.2.jar (http://joda-time.sourceforge.net),
- build_lib/jffi*jar (https://github.com/wmeissner/jffi),
- build_lib/jaffl.jar (https://github.com/wmeissner/jaffl),
- build_lib/jnr-netdb.jar (http://github.com/wmeissner/jnr-netdb),
- build_lib/dynalang-0.3.jar (http://dynalang.sourceforge.net),
- build_lib/nailgun-0.7.1.jar and tool/nailgun/ng.exe
- (http://martiansoftware.com/nailgun) are distributed under the
- Apache License version 2.0.
-## skip emma and junit; both aren't in the complete jar
-## skip jline because BSD-3
-## skip bouncy because MIT
-## skip yecht because MIT
-## skip jquery because MIT
+## skip Bouncycastle, jnr-x86asm because MIT
 
-  most files found in lib/ruby/1.8, lib/ruby/1.9, and lib/ruby/site_ruby/1.8/rubygems*
-  are distributed under The Ruby License's non-GPL provision, see LICENSE for details and
-  http://jruby.org/ for source.
+ invokebinder, jffi, jitescript, jnr-constants, jnr-enxio, jnr-ffi,
+ jnr-netdb, jnr-unixsocket, joda-time, maven, nailgun, options,
+ snakeyaml, unsafe-fences are distributed under the Apache License
+ version 2.0.
 
+## Skip racc, json-generator, json-parser because it is under Ruby license
+
+## jruby bundles jquery, but we already ref that above.
 #end
 ## first bundled source
 #if(${bundled-logo})

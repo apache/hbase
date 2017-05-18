@@ -24,13 +24,14 @@
 #
 
 include Java
-import org.apache.commons.logging.LogFactory
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.HConstants
-import org.apache.hadoop.hbase.client.HBaseAdmin
-import org.apache.hadoop.hbase.HTableDescriptor
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.hbase.client.ConnectionFactory
+java_import org.apache.commons.logging.LogFactory
+java_import org.apache.hadoop.conf.Configuration
+java_import org.apache.hadoop.hbase.HBaseConfiguration
+java_import org.apache.hadoop.hbase.HConstants
+java_import org.apache.hadoop.hbase.HTableDescriptor
+java_import org.apache.hadoop.hbase.TableName
+java_import org.apache.hadoop.hbase.client.ConnectionFactory
+java_import org.apache.hadoop.hbase.client.HBaseAdmin
 
 # Name of this script
 NAME = "copy_tables_desc"
@@ -44,7 +45,7 @@ end
 def copy (src, dst, table)
   # verify if table exists in source cluster
   begin
-    t = src.getTableDescriptor(table.to_java_bytes)
+    t = src.getTableDescriptor(TableName.valueOf(table))
   rescue org.apache.hadoop.hbase.TableNotFoundException
     puts "Source table \"%s\" doesn't exist, skipping." % table
     return

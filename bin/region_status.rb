@@ -45,19 +45,19 @@ end
 
 require 'java'
 
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.TableName
-import org.apache.hadoop.hbase.HConstants
-import org.apache.hadoop.hbase.MasterNotRunningException
-import org.apache.hadoop.hbase.client.HBaseAdmin
-import org.apache.hadoop.hbase.client.Table
-import org.apache.hadoop.hbase.client.Scan
-import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
-import org.apache.hadoop.hbase.util.Bytes
-import org.apache.hadoop.hbase.HRegionInfo
-import org.apache.hadoop.hbase.MetaTableAccessor
-import org.apache.hadoop.hbase.HTableDescriptor
-import org.apache.hadoop.hbase.client.ConnectionFactory
+java_import org.apache.hadoop.hbase.HBaseConfiguration
+java_import org.apache.hadoop.hbase.TableName
+java_import org.apache.hadoop.hbase.HConstants
+java_import org.apache.hadoop.hbase.MasterNotRunningException
+java_import org.apache.hadoop.hbase.client.HBaseAdmin
+java_import org.apache.hadoop.hbase.client.Table
+java_import org.apache.hadoop.hbase.client.Scan
+java_import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
+java_import org.apache.hadoop.hbase.util.Bytes
+java_import org.apache.hadoop.hbase.HRegionInfo
+java_import org.apache.hadoop.hbase.MetaTableAccessor
+java_import org.apache.hadoop.hbase.HTableDescriptor
+java_import org.apache.hadoop.hbase.client.ConnectionFactory
 
 # disable debug logging on this script for clarity
 log_level = org.apache.log4j.Level::ERROR

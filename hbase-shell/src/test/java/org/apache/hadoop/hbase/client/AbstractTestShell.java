@@ -58,7 +58,7 @@ public abstract class AbstractTestShell {
     List<String> loadPaths = new ArrayList<>(2);
     loadPaths.add("src/main/ruby");
     loadPaths.add("src/test/ruby");
-    jruby.getProvider().setLoadPaths(loadPaths);
+    jruby.setLoadPaths(loadPaths);
     jruby.put("$TEST_CLUSTER", TEST_UTIL);
     System.setProperty("jruby.jit.logging.verbose", "true");
     System.setProperty("jruby.jit.logging", "true");
