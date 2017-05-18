@@ -36,8 +36,14 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.coprocessor.*;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
+import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -59,17 +65,32 @@ public class MasterCoprocessorHost
    */
   static class MasterEnvironment extends CoprocessorHost.Environment
       implements MasterCoprocessorEnvironment {
-    private MasterServices masterServices;
+    private final MasterServices masterServices;
+    private final MetricRegistry metricRegistry;
 
     public MasterEnvironment(final Class<?> implClass, final Coprocessor impl,
         final int priority, final int seq, final Configuration conf,
         final MasterServices services) {
       super(impl, priority, seq, conf);
       this.masterServices = services;
+      this.metricRegistry =
+          MetricsCoprocessor.createRegistryForMasterCoprocessor(implClass.getName());
     }
 
+    @Override
     public MasterServices getMasterServices() {
       return masterServices;
+    }
+
+    @Override
+    public MetricRegistry getMetricRegistryForMaster() {
+      return metricRegistry;
+    }
+
+    @Override
+    protected void shutdown() {
+      super.shutdown();
+      MetricsCoprocessor.removeRegistry(this.metricRegistry);
     }
   }
 

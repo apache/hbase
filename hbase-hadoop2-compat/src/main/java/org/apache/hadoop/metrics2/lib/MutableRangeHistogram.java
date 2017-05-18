@@ -20,7 +20,7 @@ package org.apache.hadoop.metrics2.lib;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Interns;
-import org.apache.hadoop.hbase.util.FastLongHistogram;
+import org.apache.hadoop.hbase.metrics.Snapshot;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -56,22 +56,22 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
   @Override
   public synchronized void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
     // Get a reference to the old histogram.
-    FastLongHistogram histo = histogram.reset();
-    if (histo != null) {
-      updateSnapshotMetrics(metricsRecordBuilder, histo);
-      updateSnapshotRangeMetrics(metricsRecordBuilder, histo);
+    Snapshot snapshot = histogram.snapshot();
+    if (snapshot != null) {
+      updateSnapshotMetrics(name, desc, histogram, snapshot, metricsRecordBuilder);
+      updateSnapshotRangeMetrics(metricsRecordBuilder, snapshot);
     }
   }
 
   public void updateSnapshotRangeMetrics(MetricsRecordBuilder metricsRecordBuilder,
-                                         FastLongHistogram histogram) {
+                                         Snapshot snapshot) {
     long priorRange = 0;
     long cumNum = 0;
 
     final long[] ranges = getRanges();
     final String rangeType = getRangeType();
     for (int i = 0; i < ranges.length - 1; i++) {
-      long val = histogram.getNumAtOrBelow(ranges[i]);
+      long val = snapshot.getCountAtOrBelow(ranges[i]);
       if (val - cumNum > 0) {
         metricsRecordBuilder.addCounter(
             Interns.info(name + "_" + rangeType + "_" + priorRange + "-" + ranges[i], desc),

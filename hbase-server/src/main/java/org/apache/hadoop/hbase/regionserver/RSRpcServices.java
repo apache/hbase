@@ -197,6 +197,8 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Implements the regionserver RPC services.
  */
@@ -2061,6 +2063,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public BulkLoadHFileResponse bulkLoadHFile(final RpcController controller,
       final BulkLoadHFileRequest request) throws ServiceException {
+    long start = EnvironmentEdgeManager.currentTime();
     try {
       checkOpen();
       requestCount.increment();
@@ -2089,6 +2092,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
+    } finally {
+      if (regionServer.metricsRegionServer != null) {
+        regionServer.metricsRegionServer.updateBulkLoad(
+            EnvironmentEdgeManager.currentTime() - start);
+      }
     }
   }
 

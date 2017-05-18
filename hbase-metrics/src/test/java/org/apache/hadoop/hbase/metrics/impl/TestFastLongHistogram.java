@@ -15,7 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.metrics.impl;
+
+import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -25,8 +27,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Testcases for FastLongHistogram.
@@ -51,7 +51,7 @@ public class TestFastLongHistogram {
         Assert.assertTrue(j + "-th element org: " + VALUES[j] + ", act: " + vals[j],
           Math.abs(vals[j] - VALUES[j]) <= 10);
       }
-      hist.reset();
+      hist.snapshotAndReset();
     }
   }
 
@@ -86,7 +86,7 @@ public class TestFastLongHistogram {
         Assert.assertTrue("Out of possible value", vals[2] >= 900 && vals[2] <= 1100);
       }
 
-      hist.reset();
+      hist.snapshotAndReset();
     }
   }
 
@@ -104,7 +104,7 @@ public class TestFastLongHistogram {
 
     h.add(Integer.MAX_VALUE, 1);
 
-    h.reset();
+    h.snapshotAndReset();
 
     for (long v : VALUES) {
       for (int i = 0; i < 100; i++) {
@@ -126,7 +126,7 @@ public class TestFastLongHistogram {
 
     hist.add(50, 100);
 
-    hist.reset();
+    hist.snapshotAndReset();
     doTestUniform(hist);
   }
 }

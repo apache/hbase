@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 
 import org.apache.hadoop.hbase.util.Counter;
-import org.apache.hadoop.hbase.util.FastLongHistogram;
 
 /**
  * Class that implements cache metrics.

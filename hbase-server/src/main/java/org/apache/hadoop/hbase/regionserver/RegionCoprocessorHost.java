@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
+import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -70,6 +71,8 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
@@ -79,6 +82,11 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -103,7 +111,7 @@ public class RegionCoprocessorHost
   private final boolean hasCustomPostScannerFilterRow;
 
   /**
-   * 
+   *
    * Encapsulation of the environment of each coprocessor
    */
   static class RegionEnvironment extends CoprocessorHost.Environment
@@ -114,6 +122,7 @@ public class RegionCoprocessorHost
     ConcurrentMap<String, Object> sharedData;
     private final boolean useLegacyPre;
     private final boolean useLegacyPost;
+    private final MetricRegistry metricRegistry;
 
     /**
      * Constructor
@@ -135,6 +144,8 @@ public class RegionCoprocessorHost
           HRegionInfo.class, WALKey.class, WALEdit.class);
       useLegacyPost = useLegacyMethod(impl.getClass(), "postWALRestore", ObserverContext.class,
           HRegionInfo.class, WALKey.class, WALEdit.class);
+      this.metricRegistry =
+          MetricsCoprocessor.createRegistryForRegionCoprocessor(impl.getClass().getName());
     }
 
     /** @return the region */
@@ -151,6 +162,7 @@ public class RegionCoprocessorHost
 
     public void shutdown() {
       super.shutdown();
+      MetricsCoprocessor.removeRegistry(this.metricRegistry);
     }
 
     @Override
@@ -163,6 +175,10 @@ public class RegionCoprocessorHost
       return region.getRegionInfo();
     }
 
+    @Override
+    public MetricRegistry getMetricRegistryForRegionServer() {
+      return metricRegistry;
+    }
   }
 
   static class TableCoprocessorAttribute {
@@ -358,7 +374,7 @@ public class RegionCoprocessorHost
     // scan the table attributes for coprocessor load specifications
     // initialize the coprocessors
     List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
-    for (TableCoprocessorAttribute attr: getTableCoprocessorAttrsFromSchema(conf, 
+    for (TableCoprocessorAttribute attr: getTableCoprocessorAttrsFromSchema(conf,
         region.getTableDesc())) {
       // Load encompasses classloading and coprocessor initialization
       try {

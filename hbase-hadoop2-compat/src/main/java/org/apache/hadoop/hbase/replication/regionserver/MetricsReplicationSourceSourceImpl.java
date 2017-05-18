@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
@@ -305,5 +306,11 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   @Override
   public String getMetricsName() {
     return rms.getMetricsName();
+  }
+
+  @Override
+  public MetricRegistryInfo getMetricRegistryInfo() {
+    return new MetricRegistryInfo(getMetricsName(), getMetricsDescription(),
+      getMetricsContext(), getMetricsJmxContext(), true);
   }
 }

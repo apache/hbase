@@ -205,6 +205,16 @@
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
+       <artifactId>hbase-metrics-api</artifactId>
+       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+       <groupId>org.apache.hbase</groupId>
+       <artifactId>hbase-metrics</artifactId>
+       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+       <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-resource-bundle</artifactId>
        <version>${project.version}</version>
        <optional>true</optional>

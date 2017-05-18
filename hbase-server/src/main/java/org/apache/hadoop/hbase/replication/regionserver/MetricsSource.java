@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -337,5 +338,11 @@ public class MetricsSource implements BaseSource {
   @Override
   public String getMetricsName() {
     return globalSourceSource.getMetricsName();
+  }
+
+  @Override
+  public MetricRegistryInfo getMetricRegistryInfo() {
+    return new MetricRegistryInfo(getMetricsName(), getMetricsDescription(),
+      getMetricsContext(), getMetricsJmxContext(), true);
   }
 }

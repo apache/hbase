@@ -19,6 +19,9 @@
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.metrics.impl.GlobalMetricRegistriesAdapter;
+import org.apache.hadoop.hbase.metrics.impl.HBaseMetrics2HadoopMetricsAdapter;
+import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSourceImpl;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
@@ -47,14 +50,52 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
       inited = true;
       DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
       JvmMetrics.initSingleton(name, "");
+      // initialize hbase-metrics module based metric system as well. GlobalMetricRegistriesSource
+      // initialization depends on the metric system being already initialized, that is why we are
+      // doing it here. Once BaseSourceSourceImpl is removed, we should do the initialization of
+      // these elsewhere.
+      GlobalMetricRegistriesAdapter.init();
     }
   }
 
+  /**
+   * @deprecated Use hbase-metrics/hbase-metrics-api module interfaces for new metrics.
+   * Defining BaseSources for new metric groups (WAL, RPC, etc) is not needed anymore, however,
+   * for existing BaseSource implemetnations, please use the field named "registry" which is a
+   * MetricRegistry instance together with the HBaseMetrics2HadoopMetricsAdapter.
+   */
+  @Deprecated
   protected final DynamicMetricsRegistry metricsRegistry;
   protected final String metricsName;
   protected final String metricsDescription;
   protected final String metricsContext;
   protected final String metricsJmxContext;
+
+  /**
+   * Note that there are at least 4 MetricRegistry definitions in the source code. The first one is
+   * Hadoop Metrics2 MetricRegistry, second one is DynamicMetricsRegistry which is HBase's fork
+   * of the Hadoop metrics2 class. The third one is the dropwizard metrics implementation of
+   * MetricRegistry, and finally a new API abstraction in HBase that is the
+   * o.a.h.h.metrics.MetricRegistry class. This last one is the new way to use metrics within the
+   * HBase code. However, the others are in play because of existing metrics2 based code still
+   * needs to coexists until we get rid of all of our BaseSource and convert them to the new
+   * framework. Until that happens, new metrics can use the new API, but will be collected
+   * through the HBaseMetrics2HadoopMetricsAdapter class.
+   *
+   * BaseSourceImpl has two MetricRegistries. metricRegistry is for hadoop Metrics2 based
+   * metrics, while the registry is for hbase-metrics based metrics.
+   */
+  protected final MetricRegistry registry;
+
+  /**
+   * The adapter from hbase-metrics module to metrics2. This adepter is the connection between the
+   * Metrics in the MetricRegistry and the Hadoop Metrics2 system. Using this adapter, existing
+   * BaseSource implementations can define new metrics using the hbase-metrics/hbase-metrics-api
+   * module interfaces and still be able to make use of metrics2 sinks (including JMX). Existing
+   * BaseSources should call metricsAdapter.snapshotAllMetrics() in getMetrics() method. See
+   * {@link MetricsRegionServerSourceImpl}.
+   */
+  protected final HBaseMetrics2HadoopMetricsAdapter metricsAdapter;
 
   public BaseSourceImpl(
       String metricsName,
@@ -72,6 +113,11 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
     //Register this instance.
     DefaultMetricsSystem.instance().register(metricsJmxContext, metricsDescription, this);
+
+    // hbase-metrics module based metrics are registered in the hbase MetricsRegistry.
+    registry = MetricRegistries.global().create(this.getMetricRegistryInfo());
+    metricsAdapter = new HBaseMetrics2HadoopMetricsAdapter();
+
     init();
 
   }
@@ -164,6 +210,12 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   public String getMetricsName() {
     return metricsName;
+  }
+
+  @Override
+  public MetricRegistryInfo getMetricRegistryInfo() {
+    return new MetricRegistryInfo(getMetricsName(), getMetricsDescription(),
+      getMetricsContext(), getMetricsJmxContext(), true);
   }
 
 }

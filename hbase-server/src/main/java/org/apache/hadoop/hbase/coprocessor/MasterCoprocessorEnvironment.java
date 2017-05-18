@@ -24,10 +24,20 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface MasterCoprocessorEnvironment extends CoprocessorEnvironment {
   /** @return reference to the HMaster services */
   MasterServices getMasterServices();
+
+  /**
+   * Returns a MetricRegistry that can be used to track metrics at the master level.
+   *
+   * <p>See ExampleMasterObserverWithMetrics class in the hbase-examples modules for examples
+   * of how metrics can be instantiated and used.</p>
+   * @return A MetricRegistry for the coprocessor class to track and export metrics.
+   */
+  MetricRegistry getMetricRegistryForMaster();
 }

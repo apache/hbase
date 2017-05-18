@@ -81,6 +81,8 @@
     <module>hbase-external-blockcache</module>
     <module>hbase-shaded</module>
     <module>hbase-archetypes</module>
+    <module>hbase-metrics-api</module>
+    <module>hbase-metrics</module>
   </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
       e.g. surefire 2.18-SNAPSHOT-->
@@ -1430,6 +1432,30 @@
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <artifactId>hbase-metrics-api</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-metrics-api</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-metrics</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-metrics</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
       <!-- General dependencies -->
       <dependency>
         <groupId>com.github.stephenc.findbugs</groupId>
@@ -1458,6 +1484,11 @@
         <groupId>com.yammer.metrics</groupId>
         <artifactId>metrics-core</artifactId>
         <version>${metrics-core.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.dropwizard.metrics</groupId>
+        <artifactId>metrics-core</artifactId>
+        <version>3.1.2</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>

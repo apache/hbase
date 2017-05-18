@@ -29,6 +29,12 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.WALCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.WALObserver;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 
@@ -50,6 +56,7 @@ public class WALCoprocessorHost
 
     final boolean useLegacyPre;
     final boolean useLegacyPost;
+    private final MetricRegistry metricRegistry;
 
     @Override
     public WAL getWAL() {
@@ -78,6 +85,18 @@ public class WALCoprocessorHost
           HRegionInfo.class, WALKey.class, WALEdit.class);
       useLegacyPost = useLegacyMethod(impl.getClass(), "postWALWrite", ObserverContext.class,
           HRegionInfo.class, WALKey.class, WALEdit.class);
+      this.metricRegistry = MetricsCoprocessor.createRegistryForWALCoprocessor(implClass.getName());
+    }
+
+    @Override
+    public MetricRegistry getMetricRegistryForRegionServer() {
+      return metricRegistry;
+    }
+
+    @Override
+    protected void shutdown() {
+      super.shutdown();
+      MetricsCoprocessor.removeRegistry(this.metricRegistry);
     }
   }
 

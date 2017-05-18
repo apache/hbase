@@ -473,6 +473,12 @@ public class MetricsRegionServerSourceImpl
     }
 
     metricsRegistry.snapshot(mrb, all);
+
+    // source is registered in supers constructor, sometimes called before the whole initialization.
+    if (metricsAdapter != null) {
+      // snapshot MetricRegistry as well
+      metricsAdapter.snapshotAllMetrics(registry, mrb);
+    }
   }
 
   @Override

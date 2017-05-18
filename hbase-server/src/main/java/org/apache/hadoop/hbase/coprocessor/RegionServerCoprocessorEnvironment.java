@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 public interface RegionServerCoprocessorEnvironment extends CoprocessorEnvironment {
@@ -28,4 +29,13 @@ public interface RegionServerCoprocessorEnvironment extends CoprocessorEnvironme
    * @return the region server services
    */
   RegionServerServices getRegionServerServices();
+
+  /**
+   * Returns a MetricRegistry that can be used to track metrics at the region server level.
+   *
+   * <p>See ExampleMasterObserverWithMetrics class in the hbase-examples modules for examples
+   * of how metrics can be instantiated and used.</p>
+   * @return A MetricRegistry for the coprocessor class to track and export metrics.
+   */
+  MetricRegistry getMetricRegistryForRegionServer();
 }

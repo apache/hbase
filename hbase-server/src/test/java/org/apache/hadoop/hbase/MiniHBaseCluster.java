@@ -660,6 +660,16 @@ public class MiniHBaseCluster extends HBaseCluster {
     return hbaseCluster.getRegionServer(serverNumber);
   }
 
+  public HRegionServer getRegionServer(ServerName serverName) {
+    for (RegionServerThread t : hbaseCluster.getRegionServers()) {
+      HRegionServer r = t.getRegionServer();
+      if (r.getServerName().equals(serverName)) {
+        return r;
+      }
+    }
+    return null;
+  }
+
   public List<HRegion> getRegions(byte[] tableName) {
     return getRegions(TableName.valueOf(tableName));
   }
