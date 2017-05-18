@@ -358,7 +358,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       throws IOException, InterruptedException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILY));
-    admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5);
+    admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5).get();
 
     // wait till the table is assigned
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
