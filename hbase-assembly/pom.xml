@@ -44,7 +44,10 @@
         <version>1.5</version>
         <executions>
           <execution>
-            <id>default</id>
+            <id>aggregate-licenses</id>
+            <goals>
+              <goal>process</goal>
+            </goals>
             <configuration>
               <properties>
                 <copyright-end-year>${build.year}</copyright-end-year>
