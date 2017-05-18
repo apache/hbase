@@ -125,6 +125,9 @@ all_hanging_tests = set()
 # Contains { <url> : { <bad_test> : { 'all': [<build ids>], 'failed': [<build ids>],
 #                                     'timeout': [<build ids>], 'hanging': [<builds ids>] } } }
 url_to_bad_test_results = OrderedDict()
+# Contains { <url> : [run_ids] }
+# Used for common min/max build ids when generating sparklines.
+url_to_build_ids = OrderedDict()
 
 # Iterates over each url, gets test results and prints flaky tests.
 expanded_urls = expand_multi_config_projects(args)
@@ -140,7 +143,7 @@ for url_max_build in expanded_urls:
         logger.info("Analyzing build : %s", url)
     build_id_to_results = {}
     num_builds = 0
-    build_ids = []
+    url_to_build_ids[url] = []
     build_ids_without_tests_run = []
     for build in builds:
         build_id = build["number"]
@@ -154,9 +157,10 @@ for url_max_build in expanded_urls:
         else:
             build_ids_without_tests_run.append(build_id)
         num_builds += 1
-        build_ids.append(build_id)
+        url_to_build_ids[url].append(build_id)
         if num_builds == url_max_build["max_builds"]:
             break
+    url_to_build_ids[url].sort()
 
     # Collect list of bad tests.
     bad_tests = set()
@@ -217,10 +221,10 @@ for url_max_build in expanded_urls:
                 len(test_status['hanging']), test_status['flakyness'])
     else:
         print "No flaky tests founds."
-        if len(build_ids) == len(build_ids_without_tests_run):
+        if len(url_to_build_ids[url]) == len(build_ids_without_tests_run):
             print "None of the analyzed builds have test result."
 
-    print "Builds analyzed: {}".format(build_ids)
+    print "Builds analyzed: {}".format(url_to_build_ids[url])
     print "Builds without any test runs: {}".format(build_ids_without_tests_run)
     print ""
 
@@ -248,4 +252,4 @@ with open(os.path.join(dev_support_dir, "flaky-dashboard-template.html"), "r") a
 with open("dashboard.html", "w") as f:
     datetime = time.strftime("%m/%d/%Y %H:%M:%S")
     f.write(template.render(datetime=datetime, bad_tests_count=len(all_bad_tests),
-                            results=url_to_bad_test_results))
+                            results=url_to_bad_test_results, build_ids=url_to_build_ids))

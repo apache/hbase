@@ -41,6 +41,56 @@
     </style>
 </head>
 <body>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script>
+        var width = 300;
+        var height = 25;
+        var x = d3.scale.linear().range([0, width]);
+
+        function csvToArray(csv) {
+            if (csv.length == 0)
+                return [];
+            splits = csv.split(",");
+            ret = [];
+            for (i = 0; i < splits.length; i++) {
+                ret.push(parseInt(splits[i]));
+            }
+            return ret;
+        }
+
+        function sortNumber(a,b) {
+            return a - b;
+        }
+
+        function sparkline(elemId, failed, timeout, hanging, success, domain_min, domain_max) {
+            failed = csvToArray(failed);
+            timeout = csvToArray(timeout);
+            hanging = csvToArray(hanging);
+            success = csvToArray(success);
+            all = failed.concat(timeout).concat(hanging).concat(success);
+            all.sort(sortNumber);
+            x.domain([domain_min, domain_max + 1]);
+            rect_width = x(domain_min + 1) - x(domain_min) - 1;
+            svg = d3.select("#" + elemId).append('svg').attr('width', width).attr('height', height);
+            svg.selectAll("dot")
+                    .data(all)
+                    .enter()
+                    .append("svg:rect")
+                    .attr("x", function(d) { return x(d); })
+                    .attr("y", 3)
+                    .attr("height", height- 6)
+                    .attr("width", rect_width)
+                    .attr("fill", function(d) {
+                        if (success.includes(d)) return "green";
+                        else if (timeout.includes(d)) return "gold";
+                        else if (hanging.includes(d)) return "blue";
+                        else if (failed.includes(d)) return "red";
+                        else return "black";
+                    })
+                    .append('svg:title')
+                    .text(function(d) { return d; });
+        }
+    </script>
 <p>
     <img style="vertical-align:middle; display:inline-block;" height="80px"
          src="https://hbase.apache.org/images/hbase_logo_with_orca_large.png">
@@ -76,11 +126,13 @@
     <a href="#">Go to top</a>
 </span>
 <br/><br/>
+Legend : green: success, red: failed, yellow: timeout, blue: hanging
 <table>
     <tr>
         <th width="400px">Test Name</th>
         <th width="150px">Flakyness</th>
         <th width="200px">Failed/Timeout/Hanging</th>
+        <th width="300px">Trends</th>
         <th>Run Ids</th>
     </tr>
     {% for test in result %}
@@ -104,13 +156,19 @@
         <td align="middle">
             {{ failed|length }} / {{ timeout|length }} / {{ hanging|length }}
         </td>
+        {% set sparkline_id = "sparkline_" ~ test ~ "_" ~ counter  %}
+        <td id="{{ sparkline_id }}" align="middle">
+        </td>
+        <script>sparkline("{{ sparkline_id }}", "{{ failed|join(',') }}", "{{ timeout|join(',') }}",
+                "{{ hanging|join(',') }}", "{{ success|join(',') }}", {{ build_ids[url][0] }},
+                {{ build_ids[url][-1] }});</script>
         <td>
             {% set id = "details_" ~ test ~ "_" ~ url_counter %}
             <button class="show_hide_button" onclick="toggle('{{ id }}')">
                 show/hide</button>
             <br/>
             <div id="{{ id }}"
-                 style="display: none; width:500px; white-space: normal">
+                 style="display: none; width:300px; white-space: normal">
                 {% macro print_run_ids(url, run_ids) -%}
                 {% for i in run_ids %}
                 <a href="{{ url }}/{{ i }}">{{ i }}</a>&nbsp;
