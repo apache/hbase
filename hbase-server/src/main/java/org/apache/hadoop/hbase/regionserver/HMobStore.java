@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -427,6 +428,13 @@ public class HMobStore extends HStore {
       + " or it is corrupt");
     if (readEmptyValueOnMobCellMiss) {
       return null;
+    } else if ((throwable instanceof FileNotFoundException)
+        || (throwable.getCause() instanceof FileNotFoundException)) {
+      // The region is re-opened when FileNotFoundException is thrown.
+      // This is not necessary when MOB files cannot be found, because the store files
+      // in a region only contain the references to MOB files and a re-open on a region
+      // doesn't help fix the lost MOB files.
+      throw new DoNotRetryIOException(throwable);
     } else if (throwable instanceof IOException) {
       throw (IOException) throwable;
     } else {
