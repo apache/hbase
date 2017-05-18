@@ -32,12 +32,14 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -63,6 +65,8 @@ class WALEntryStream implements Closeable {
   private final FileSystem fs;
   private final Configuration conf;
   private final WALFileLengthProvider walFileLengthProvider;
+  // which region server the WALs belong to
+  private final ServerName serverName;
   private final MetricsSource metrics;
 
   /**
@@ -71,17 +75,19 @@ class WALEntryStream implements Closeable {
    * @param fs {@link FileSystem} to use to create {@link Reader} for this stream
    * @param conf {@link Configuration} to use to create {@link Reader} for this stream
    * @param startPosition the position in the first WAL to start reading at
+   * @param serverName the server name which all WALs belong to
    * @param metrics replication metrics
    * @throws IOException
    */
   public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
-      long startPosition, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
-      throws IOException {
+      long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
+      MetricsSource metrics) throws IOException {
     this.logQueue = logQueue;
     this.fs = fs;
     this.conf = conf;
     this.currentPosition = startPosition;
     this.walFileLengthProvider = walFileLengthProvider;
+    this.serverName = serverName;
     this.metrics = metrics;
   }
 
@@ -296,15 +302,27 @@ class WALEntryStream implements Closeable {
 
   private Path getArchivedLog(Path path) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
+
+    // Try found the log in old dir
     Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path archivedLogLocation = new Path(oldLogDir, path.getName());
     if (fs.exists(archivedLogLocation)) {
       LOG.info("Log " + path + " was moved to " + archivedLogLocation);
       return archivedLogLocation;
-    } else {
-      LOG.error("Couldn't locate log: " + path);
-      return path;
     }
+
+    // Try found the log in the seperate old log dir
+    oldLogDir =
+        new Path(rootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
+            .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
+    archivedLogLocation = new Path(oldLogDir, path.getName());
+    if (fs.exists(archivedLogLocation)) {
+      LOG.info("Log " + path + " was moved to " + archivedLogLocation);
+      return archivedLogLocation;
+    }
+
+    LOG.error("Couldn't locate log: " + path);
+    return path;
   }
 
   private void handleFileNotFound(Path path, FileNotFoundException fnfe) throws IOException {
@@ -316,6 +334,7 @@ class WALEntryStream implements Closeable {
       throw fnfe;
     }
   }
+
   private void openReader(Path path) throws IOException {
     try {
       // Detect if this is a new file, if so get a new reader else

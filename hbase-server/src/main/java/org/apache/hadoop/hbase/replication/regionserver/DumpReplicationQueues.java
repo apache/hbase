@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -58,7 +59,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.AtomicLongMap;
 
 /**
@@ -356,7 +356,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
 
     StringBuilder sb = new StringBuilder();
 
-    List<String> deadServers ;
+    List<ServerName> deadServers;
 
     sb.append("Dumping replication queue info for RegionServer: [" + regionserver + "]" + "\n");
     sb.append("    Queue znode: " + queueId + "\n");
@@ -385,6 +385,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
     }
     return sb.toString();
   }
+
   /**
    *  return total size in bytes from a list of WALs
    */

@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -59,7 +61,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 
@@ -94,7 +95,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   // The manager of all sources to which we ping back our progress
   protected ReplicationSourceManager manager;
   // Should we stop everything?
-  protected Stoppable stopper;
+  protected Server server;
   // How long should we sleep for each retry
   private long sleepForRetries;
   protected FileSystem fs;
@@ -139,7 +140,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
    * @param conf configuration to use
    * @param fs file system to use
    * @param manager replication manager to ping to
-   * @param stopper     the atomic boolean to use to stop the regionserver
+   * @param server the server for this region server
    * @param peerClusterZnode the name of our znode
    * @param clusterId unique UUID for the cluster
    * @param replicationEndpoint the replication endpoint implementation
@@ -148,10 +149,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
    */
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueues replicationQueues, ReplicationPeers replicationPeers, Stoppable stopper,
+      ReplicationQueues replicationQueues, ReplicationPeers replicationPeers, Server server,
       String peerClusterZnode, UUID clusterId, ReplicationEndpoint replicationEndpoint,
       WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
-    this.stopper = stopper;
+    this.server = server;
     this.conf = HBaseConfiguration.create(conf);
     this.waitOnEndpointSeconds =
       this.conf.getInt(WAIT_ON_ENDPOINT_SECONDS, DEFAULT_WAIT_ON_ENDPOINT_SECONDS);
@@ -330,7 +331,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       public void uncaughtException(final Thread t, final Throwable e) {
         RSRpcServices.exitIfOOME(e);
         LOG.error("Unexpected exception in " + t.getName() + " currentPath=" + getCurrentPath(), e);
-        stopper.stop("Unexpected exception in " + t.getName());
+        server.stop("Unexpected exception in " + t.getName());
       }
     };
   }
@@ -500,7 +501,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
 
   @Override
   public boolean isSourceActive() {
-    return !this.stopper.isStopped() && this.sourceRunning;
+    return !this.server.isStopped() && this.sourceRunning;
   }
 
   /**
@@ -563,5 +564,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   @Override
   public WALFileLengthProvider getWALFileLengthProvider() {
     return walFileLengthProvider;
+  }
+
+  @Override
+  public ServerName getServerWALsBelongTo() {
+    return server.getServerName();
   }
 }

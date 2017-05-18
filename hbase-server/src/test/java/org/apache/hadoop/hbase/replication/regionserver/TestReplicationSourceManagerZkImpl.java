@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
@@ -105,11 +106,11 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
     String queue3 = rq3.claimQueue(serverName, unclaimed.get(0)).getFirst();
     rq3.removeReplicatorIfQueueIsEmpty(unclaimed.get(0));
     ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queue3);
-    List<String> result = replicationQueueInfo.getDeadRegionServers();
+    List<ServerName> result = replicationQueueInfo.getDeadRegionServers();
     // verify
-    assertTrue(result.contains(server.getServerName().getServerName()));
-    assertTrue(result.contains(s1.getServerName().getServerName()));
-    assertTrue(result.contains(s2.getServerName().getServerName()));
+    assertTrue(result.contains(server.getServerName()));
+    assertTrue(result.contains(s1.getServerName()));
+    assertTrue(result.contains(s2.getServerName()));
 
     server.stop("");
   }

@@ -225,6 +225,7 @@ public class TestLogsCleaner {
         "testZooKeeperAbort-faulty", null)) {
       faultyZK.init();
       cleaner.setConf(conf, faultyZK);
+      cleaner.preClean();
       // should keep all files due to a ConnectionLossException getting the queues znodes
       Iterable<FileStatus> toDelete = cleaner.getDeletableFiles(dummyFiles);
       assertFalse(toDelete.iterator().hasNext());
@@ -235,6 +236,7 @@ public class TestLogsCleaner {
     cleaner = new ReplicationLogCleaner();
     try (ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testZooKeeperAbort-normal", null)) {
       cleaner.setConf(conf, zkw);
+      cleaner.preClean();
       Iterable<FileStatus> filesToDelete = cleaner.getDeletableFiles(dummyFiles);
       Iterator<FileStatus> iter = filesToDelete.iterator();
       assertTrue(iter.hasNext());
