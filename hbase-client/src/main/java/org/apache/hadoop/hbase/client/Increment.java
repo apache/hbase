@@ -119,9 +119,6 @@ public class Increment extends Mutation implements Comparable<Row> {
     if (family == null) {
       throw new IllegalArgumentException("family cannot be null");
     }
-    if (qualifier == null) {
-      throw new IllegalArgumentException("qualifier cannot be null");
-    }
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, Bytes.toBytes(amount));
     list.add(kv);
