@@ -40,6 +40,7 @@ public class ConnectionConfiguration {
   private final long scannerMaxResultSize;
   private final int primaryCallTimeoutMicroSecond;
   private final int replicaCallTimeoutMicroSecondScan;
+  private final int metaReplicaCallTimeoutMicroSecondScan;
   private final int retries;
   private final int maxKeyValueSize;
   private final int rpcTimeout;
@@ -55,9 +56,8 @@ public class ConnectionConfiguration {
   ConnectionConfiguration(Configuration conf) {
     this.writeBufferSize = conf.getLong(WRITE_BUFFER_SIZE_KEY, WRITE_BUFFER_SIZE_DEFAULT);
 
-    this.metaOperationTimeout = conf.getInt(
-      HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
-      HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+    this.metaOperationTimeout = conf.getInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
 
     this.operationTimeout = conf.getInt(
       HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
@@ -67,13 +67,17 @@ public class ConnectionConfiguration {
 
     this.scannerMaxResultSize =
         conf.getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
-          HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+            HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
 
     this.primaryCallTimeoutMicroSecond =
         conf.getInt("hbase.client.primaryCallTimeout.get", 10000); // 10ms
 
     this.replicaCallTimeoutMicroSecondScan =
         conf.getInt("hbase.client.replicaCallTimeout.scan", 1000000); // 1000 ms
+
+    this.metaReplicaCallTimeoutMicroSecondScan =
+        conf.getInt(HConstants.HBASE_CLIENT_MEAT_REPLICA_SCAN_TIMEOUT,
+            HConstants.HBASE_CLIENT_MEAT_REPLICA_SCAN_TIMEOUT_DEFAULT);
 
     this.retries = conf.getInt(
        HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
@@ -107,6 +111,8 @@ public class ConnectionConfiguration {
     this.scannerMaxResultSize = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE;
     this.primaryCallTimeoutMicroSecond = 10000;
     this.replicaCallTimeoutMicroSecondScan = 1000000;
+    this.metaReplicaCallTimeoutMicroSecondScan =
+        HConstants.HBASE_CLIENT_MEAT_REPLICA_SCAN_TIMEOUT_DEFAULT;
     this.retries = HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER;
     this.clientScannerAsyncPrefetch = Scan.DEFAULT_HBASE_CLIENT_SCANNER_ASYNC_PREFETCH;
     this.maxKeyValueSize = MAX_KEYVALUE_SIZE_DEFAULT;
@@ -145,6 +151,10 @@ public class ConnectionConfiguration {
 
   public int getReplicaCallTimeoutMicroSecondScan() {
     return replicaCallTimeoutMicroSecondScan;
+  }
+
+  public int getMetaReplicaCallTimeoutMicroSecondScan() {
+    return metaReplicaCallTimeoutMicroSecondScan;
   }
 
   public int getRetriesNumber() {

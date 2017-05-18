@@ -139,7 +139,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private final boolean hostnamesCanChange;
   private final long pause;
   private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
-  private final boolean useMetaReplicas;
+  private boolean useMetaReplicas;
+  private final int metaReplicaCallTimeoutScanInMicroSecond;
   private final int numTries;
   final int rpcTimeout;
 
@@ -235,6 +236,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
     this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
       HConstants.DEFAULT_USE_META_REPLICAS);
+    this.metaReplicaCallTimeoutScanInMicroSecond =
+        connectionConfig.getMetaReplicaCallTimeoutMicroSecondScan();
+
     // how many times to try, one more than max *retry* time
     this.numTries = retries2Attempts(connectionConfig.getRetriesNumber());
     this.rpcTimeout = conf.getInt(
@@ -303,6 +307,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       close();
       throw e;
     }
+  }
+
+  /**
+   * @param useMetaReplicas
+   */
+  @VisibleForTesting
+  void setUseMetaReplicas(final boolean useMetaReplicas) {
+    this.useMetaReplicas = useMetaReplicas;
   }
 
   /**
@@ -820,7 +832,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         s.resetMvccReadPoint();
         try (ReversedClientScanner rcs =
             new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
-                rpcControllerFactory, getMetaLookupPool(), 0)) {
+                rpcControllerFactory, getMetaLookupPool(), metaReplicaCallTimeoutScanInMicroSecond)) {
           regionInfoRow = rcs.next();
         }
 
