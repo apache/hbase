@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
@@ -1528,7 +1527,8 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  public CompletableFuture<Void> addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig) {
+  public CompletableFuture<Void> addReplicationPeer(String peerId,
+      ReplicationPeerConfig peerConfig) {
     return this
         .<Void> newMasterCaller()
         .action(
@@ -1798,11 +1798,11 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
           future.completeExceptionally(err);
         } else {
           // Step.2 Restore snapshot
-          internalRestoreSnapshot(snapshotName, tableName).whenComplete((ret2, err2) -> {
+          internalRestoreSnapshot(snapshotName, tableName).whenComplete((void2, err2) -> {
             if (err2 != null) {
               // Step.3.a Something went wrong during the restore and try to rollback.
               internalRestoreSnapshot(failSafeSnapshotSnapshotName, tableName)
-                  .whenComplete((ret3, err3) -> {
+                  .whenComplete((void3, err3) -> {
                     if (err3 != null) {
                       future.completeExceptionally(err3);
                     } else {
@@ -1864,13 +1864,8 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
           future.completeExceptionally(err2);
         } else if (!exists) {
           // if table does not exist, then just clone snapshot into new table.
-          internalRestoreSnapshot(snapshotName, finalTableName).whenComplete((ret, err3) -> {
-            if (err3 != null) {
-              future.completeExceptionally(err3);
-            } else {
-              future.complete(ret);
-            }
-          });
+          completeConditionalOnFuture(future,
+              internalRestoreSnapshot(snapshotName, finalTableName));
         } else {
           isTableDisabled(finalTableName).whenComplete((disabled, err4) -> {
             if (err4 != null) {
@@ -1878,20 +1873,25 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
             } else if (!disabled) {
               future.completeExceptionally(new TableNotDisabledException(finalTableName));
             } else {
-              restoreSnapshotWithFailSafe(snapshotName, finalTableName, takeFailSafeSnapshot)
-                  .whenComplete((ret, err5) -> {
-                    if (err5 != null) {
-                      future.completeExceptionally(err5);
-                    } else {
-                      future.complete(ret);
-                    }
-                  });
+              completeConditionalOnFuture(future,
+                  restoreSnapshotWithFailSafe(snapshotName, finalTableName, takeFailSafeSnapshot));
             }
           });
         }
       });
     });
     return future;
+  }
+
+  private <T> void completeConditionalOnFuture(CompletableFuture<T> dependentFuture,
+      CompletableFuture<T> parentFuture) {
+    parentFuture.whenComplete((res, err) -> {
+      if (err != null) {
+        dependentFuture.completeExceptionally(err);
+      } else {
+        dependentFuture.complete(res);
+      }
+    });
   }
 
   @Override
@@ -1903,13 +1903,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
       } else if (exists) {
         future.completeExceptionally(new TableExistsException(tableName));
       } else {
-        internalRestoreSnapshot(snapshotName, tableName).whenComplete((ret, err2) -> {
-          if (err2 != null) {
-            future.completeExceptionally(err2);
-          } else {
-            future.complete(ret);
-          }
-        });
+        completeConditionalOnFuture(future, internalRestoreSnapshot(snapshotName, tableName));
       }
     });
     return future;
@@ -1924,13 +1918,15 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     } catch (IllegalArgumentException e) {
       return failedFuture(e);
     }
-    return this.<Void> newMasterCaller()
-        .action((controller, stub) -> this
-            .<RestoreSnapshotRequest, RestoreSnapshotResponse, Void> call(controller, stub,
-              RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot)
-                  .setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce()).build(),
-              (s, c, req, done) -> s.restoreSnapshot(c, req, done), resp -> null))
-        .call();
+    return waitProcedureResult(
+        this.<Long> newMasterCaller()
+            .action((controller, stub) -> this
+                .<RestoreSnapshotRequest, RestoreSnapshotResponse, Long> call(controller, stub,
+                    RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot)
+                        .setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce()).build(),
+                    (s, c, req, done) -> s.restoreSnapshot(c, req, done),
+                    (resp) -> resp.getProcId()))
+            .call());
   }
 
   @Override
