@@ -29,7 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
@@ -51,10 +52,10 @@ public class RecoveredReplicationSource extends ReplicationSource {
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueues replicationQueues, ReplicationPeers replicationPeers, Stoppable stopper,
+      ReplicationQueues replicationQueues, ReplicationPeers replicationPeers, Server server,
       String peerClusterZnode, UUID clusterId, ReplicationEndpoint replicationEndpoint,
       WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
-    super.init(conf, fs, manager, replicationQueues, replicationPeers, stopper, peerClusterZnode,
+    super.init(conf, fs, manager, replicationQueues, replicationPeers, server, peerClusterZnode,
       clusterId, replicationEndpoint, walFileLengthProvider, metrics);
     this.actualPeerId = this.replicationQueueInfo.getPeerId();
   }
@@ -98,7 +99,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
       }
       // Path changed - try to find the right path.
       hasPathChanged = true;
-      if (stopper instanceof ReplicationSyncUp.DummyServer) {
+      if (server instanceof ReplicationSyncUp.DummyServer) {
         // In the case of disaster/recovery, HMaster may be shutdown/crashed before flush data
         // from .logs to .oldlogs. Loop into .logs folders and check whether a match exists
         Path newPath = getReplSyncUpPath(path);
@@ -107,12 +108,13 @@ public class RecoveredReplicationSource extends ReplicationSource {
       } else {
         // See if Path exists in the dead RS folder (there could be a chain of failures
         // to look at)
-        List<String> deadRegionServers = this.replicationQueueInfo.getDeadRegionServers();
+        List<ServerName> deadRegionServers = this.replicationQueueInfo.getDeadRegionServers();
         LOG.info("NB dead servers : " + deadRegionServers.size());
         final Path walDir = FSUtils.getWALRootDir(conf);
-        for (String curDeadServerName : deadRegionServers) {
+        for (ServerName curDeadServerName : deadRegionServers) {
           final Path deadRsDirectory =
-              new Path(walDir, AbstractFSWALProvider.getWALDirectoryName(curDeadServerName));
+              new Path(walDir, AbstractFSWALProvider.getWALDirectoryName(curDeadServerName
+                  .getServerName()));
           Path[] locs = new Path[] { new Path(deadRsDirectory, path.getName()), new Path(
               deadRsDirectory.suffix(AbstractFSWALProvider.SPLITTING_EXT), path.getName()) };
           for (Path possibleLogLocation : locs) {
@@ -188,5 +190,10 @@ public class RecoveredReplicationSource extends ReplicationSource {
   @Override
   public String getPeerId() {
     return this.actualPeerId;
+  }
+
+  @Override
+  public ServerName getServerWALsBelongTo() {
+    return this.replicationQueueInfo.getDeadRegionServers().get(0);
   }
 }

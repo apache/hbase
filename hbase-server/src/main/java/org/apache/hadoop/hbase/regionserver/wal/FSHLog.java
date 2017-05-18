@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -58,7 +59,6 @@ import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 import com.lmax.disruptor.BlockingWaitStrategy;
@@ -797,7 +797,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
 
     final Path baseDir = FSUtils.getWALRootDir(conf);
-    final Path archiveDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    Path archiveDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    if (conf.getBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR,
+      AbstractFSWALProvider.DEFAULT_SEPARATE_OLDLOGDIR)) {
+      archiveDir = new Path(archiveDir, p.getName());
+    }
     WALSplitter.split(baseDir, p, archiveDir, fs, conf, WALFactory.getInstance(conf));
   }
 
@@ -1141,10 +1145,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     System.err.println("Arguments:");
     System.err.println(" --dump  Dump textual representation of passed one or more files");
     System.err.println("         For example: "
-        + "FSHLog --dump hdfs://example.com:9000/hbase/.logs/MACHINE/LOGFILE");
+        + "FSHLog --dump hdfs://example.com:9000/hbase/WALs/MACHINE/LOGFILE");
     System.err.println(" --split Split the passed directory of WAL logs");
     System.err.println(
-      "         For example: " + "FSHLog --split hdfs://example.com:9000/hbase/.logs/DIR");
+      "         For example: " + "FSHLog --split hdfs://example.com:9000/hbase/WALs/DIR");
   }
 
   /**

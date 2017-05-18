@@ -42,7 +42,7 @@ public class ReplicationQueueInfo {
   private final String peerClusterZnode;
   private boolean queueRecovered;
   // List of all the dead region servers that had this queue (if recovered)
-  private List<String> deadRegionServers = new ArrayList<>();
+  private List<ServerName> deadRegionServers = new ArrayList<>();
 
   /**
    * The passed znode will be either the id of the peer cluster or
@@ -66,7 +66,7 @@ public class ReplicationQueueInfo {
    * cases: 2-ip-10-46-221-101.ec2.internal,52170,1364333181125-&lt;server name>-...
    */
   private static void
-      extractDeadServersFromZNodeString(String deadServerListStr, List<String> result) {
+      extractDeadServersFromZNodeString(String deadServerListStr, List<ServerName> result) {
 
     if(deadServerListStr == null || result == null || deadServerListStr.isEmpty()) return;
 
@@ -85,7 +85,7 @@ public class ReplicationQueueInfo {
           if (i > startIndex) {
             String serverName = deadServerListStr.substring(startIndex, i);
             if(ServerName.isFullServerName(serverName)){
-              result.add(serverName);
+              result.add(ServerName.valueOf(serverName));
             } else {
               LOG.error("Found invalid server name:" + serverName);
             }
@@ -103,7 +103,7 @@ public class ReplicationQueueInfo {
     if(startIndex < len - 1){
       String serverName = deadServerListStr.substring(startIndex, len);
       if(ServerName.isFullServerName(serverName)){
-        result.add(serverName);
+        result.add(ServerName.valueOf(serverName));
       } else {
         LOG.error("Found invalid server name at the end:" + serverName);
       }
@@ -112,7 +112,7 @@ public class ReplicationQueueInfo {
     LOG.debug("Found dead servers:" + result);
   }
 
-  public List<String> getDeadRegionServers() {
+  public List<ServerName> getDeadRegionServers() {
     return Collections.unmodifiableList(this.deadRegionServers);
   }
 

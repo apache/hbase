@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -58,6 +57,10 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implements WALProvider {
 
   private static final Log LOG = LogFactory.getLog(AbstractFSWALProvider.class);
+
+  /** Separate old log into different dir by regionserver name **/
+  public static final String SEPARATE_OLDLOGDIR = "hbase.separate.oldlogdir.by.regionserver";
+  public static final boolean DEFAULT_SEPARATE_OLDLOGDIR = false;
 
   // Only public so classes back in regionserver.wal can access
   public interface Reader extends WAL.Reader {
@@ -273,6 +276,23 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
+   * Construct the directory name for all old WALs on a given server. The default old WALs dir
+   * looks like: <code>hbase/oldWALs</code>. If you config hbase.separate.oldlogdir.by.regionserver
+   * to true, it looks like <code>hbase//oldWALs/kalashnikov.att.net,61634,1486865297088</code>.
+   * @param conf
+   * @param serverName Server name formatted as described in {@link ServerName}
+   * @return the relative WAL directory name
+   */
+  public static String getWALArchiveDirectoryName(Configuration conf, final String serverName) {
+    StringBuilder dirName = new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME);
+    if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
+      dirName.append(Path.SEPARATOR);
+      dirName.append(serverName);
+    }
+    return dirName.toString();
+  }
+
+  /**
    * Pulls a ServerName out of a Path generated according to our layout rules. In the below layouts,
    * this method ignores the format of the logfile component. Current format: [base directory for
    * hbase]/hbase/.logs/ServerName/logfile or [base directory for
@@ -387,6 +407,14 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   public static Path getArchivedLogPath(Path path, Configuration conf) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
     Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
+      ServerName serverName = getServerNameFromWALDirectoryName(path);
+      if (serverName == null) {
+        LOG.error("Couldn't locate log: " + path);
+        return path;
+      }
+      oldLogDir = new Path(oldLogDir, serverName.getServerName());
+    }
     Path archivedLogLocation = new Path(oldLogDir, path.getName());
     final FileSystem fs = FSUtils.getCurrentFileSystem(conf);
 

@@ -21,11 +21,14 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Runs the TestReplicationKillRS test and selects the RS to kill in the master cluster
  * Do not add other tests in this class.
  */
+@RunWith(Parameterized.class)
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationKillMasterRS extends TestReplicationKillRS {
 

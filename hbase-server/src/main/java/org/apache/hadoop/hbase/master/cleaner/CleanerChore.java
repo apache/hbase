@@ -141,7 +141,12 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     }
   }
 
+  private void preRunCleaner() {
+    cleanersChain.forEach(FileCleanerDelegate::preClean);
+  }
+
   public Boolean runCleaner() {
+    preRunCleaner();
     try {
       FileStatus[] files = FSUtils.listStatus(this.fs, this.oldFileDir);
       checkAndDeleteEntries(files);
