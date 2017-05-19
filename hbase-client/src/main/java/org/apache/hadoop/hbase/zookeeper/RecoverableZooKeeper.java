@@ -98,20 +98,20 @@ public class RecoverableZooKeeper {
   private static final int ID_LENGTH_SIZE =  Bytes.SIZEOF_INT;
 
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
-      Watcher watcher, int maxRetries, int retryIntervalMillis)
+      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime)
   throws IOException {
-    this(quorumServers, sessionTimeout, watcher, maxRetries, retryIntervalMillis,
+    this(quorumServers, sessionTimeout, watcher, maxRetries, retryIntervalMillis, maxSleepTime,
         null);
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
       justification="None. Its always been this way.")
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
-      Watcher watcher, int maxRetries, int retryIntervalMillis, String identifier)
+      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier)
   throws IOException {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.retryCounterFactory =
-      new RetryCounterFactory(maxRetries+1, retryIntervalMillis);
+      new RetryCounterFactory(maxRetries+1, retryIntervalMillis, maxSleepTime);
 
     if (identifier == null || identifier.length() == 0) {
       // the identifier = processID@hostName
