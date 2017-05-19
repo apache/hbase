@@ -184,7 +184,6 @@ public interface AsyncTableBase {
       long amount, Durability durability) {
     Preconditions.checkNotNull(row, "row is null");
     Preconditions.checkNotNull(family, "family is null");
-    Preconditions.checkNotNull(qualifier, "qualifier is null");
     return increment(
       new Increment(row).addColumn(family, qualifier, amount).setDurability(durability))
           .thenApply(r -> Bytes.toLong(r.getValue(family, qualifier)));
