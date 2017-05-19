@@ -133,10 +133,11 @@ public class ZKUtil {
     int retry = conf.getInt("zookeeper.recovery.retry", 3);
     int retryIntervalMillis =
       conf.getInt("zookeeper.recovery.retry.intervalmill", 1000);
+    int maxSleepTime = conf.getInt("zookeeper.recovery.retry.maxsleeptime", 60000);
     zkDumpConnectionTimeOut = conf.getInt("zookeeper.dump.connection.timeout",
         1000);
     return new RecoverableZooKeeper(ensemble, timeout, watcher,
-        retry, retryIntervalMillis, identifier);
+        retry, retryIntervalMillis, maxSleepTime, identifier);
   }
 
   /**

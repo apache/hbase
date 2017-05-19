@@ -103,6 +103,13 @@ possible configurations would overwhelm and obscure the important.
     and running -->
 
   <property>
+    <name>zookeeper.recovery.retry.maxsleeptime</name>
+    <value>60000</value>
+    <description>Max sleep time before retry zookeeper operations in milliseconds,
+    a max time is needed here so that sleep time won't grow unboundedly
+    </description>
+  </property>
+  <property>
     <name>hbase.local.dir</name>
     <value>${hbase.tmp.dir}/local/</value>
     <description>Directory on the local filesystem to be used
