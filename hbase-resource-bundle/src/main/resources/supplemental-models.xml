@@ -2067,10 +2067,11 @@ Copyright (c) 2010 Oracle and/or its affiliates.
 
       <licenses>
         <license>
-          <name>Common Public License Version 1.0</name>
-          <url>http://www.opensource.org/licenses/cpl1.0.txt</url>
+          <name>Eclipse Public License 1.0</name>
+          <url>http://www.eclipse.org/legal/epl-v10.html</url>
           <distribution>repo</distribution>
           <comments>
+Copyright (c) 2002-2017 JUnit. All Rights Reserved.
 </comments>
         </license>
       </licenses>
