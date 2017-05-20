@@ -85,13 +85,13 @@ public abstract class AbstractTestIPC {
             @Override
             public EmptyResponseProto ping(RpcController controller, EmptyRequestProto request)
                 throws ServiceException {
-              return null;
+              return EmptyResponseProto.getDefaultInstance();
             }
 
             @Override
             public EmptyResponseProto error(RpcController controller, EmptyRequestProto request)
                 throws ServiceException {
-              return null;
+              return EmptyResponseProto.getDefaultInstance();
             }
 
             @Override
