@@ -1270,6 +1270,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     protected SocketChannel channel;
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
+    private ByteBuffer preambleBuffer;
     protected final ConcurrentLinkedDeque<Call> responseQueue = new ConcurrentLinkedDeque<Call>();
     private final Lock responseWriteLock = new ReentrantLock();
     private Counter rpcCount = new Counter(); // number of outstanding rpcs
@@ -1560,23 +1561,25 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     private int readPreamble() throws IOException {
-      int count;
-      // Check for 'HBas' magic.
-      this.dataLengthBuffer.flip();
-      if (!Arrays.equals(HConstants.RPC_HEADER, dataLengthBuffer.array())) {
-        return doBadPreambleHandling("Expected HEADER=" +
-            Bytes.toStringBinary(HConstants.RPC_HEADER) +
-            " but received HEADER=" + Bytes.toStringBinary(dataLengthBuffer.array()) +
-            " from " + toString());
+      if (preambleBuffer == null) {
+        preambleBuffer = ByteBuffer.allocate(6);
       }
-      // Now read the next two bytes, the version and the auth to use.
-      ByteBuffer versionAndAuthBytes = ByteBuffer.allocate(2);
-      count = channelRead(channel, versionAndAuthBytes);
-      if (count < 0 || versionAndAuthBytes.remaining() > 0) {
+      int count = channelRead(channel, preambleBuffer);
+      if (count < 0 || preambleBuffer.remaining() > 0) {
         return count;
       }
-      int version = versionAndAuthBytes.get(0);
-      byte authbyte = versionAndAuthBytes.get(1);
+      // Check for 'HBas' magic.
+      preambleBuffer.flip();
+      for (int i = 0; i < HConstants.RPC_HEADER.length; i++) {
+        if (HConstants.RPC_HEADER[i] != preambleBuffer.get(i)) {
+          return doBadPreambleHandling("Expected HEADER=" +
+              Bytes.toStringBinary(HConstants.RPC_HEADER) + " but received HEADER=" +
+              Bytes.toStringBinary(preambleBuffer.array(), 0, HConstants.RPC_HEADER.length) +
+              " from " + toString());
+        }
+      }
+      int version = preambleBuffer.get(HConstants.RPC_HEADER.length);
+      byte authbyte = preambleBuffer.get(HConstants.RPC_HEADER.length + 1);
       this.authMethod = AuthMethod.valueOf(authbyte);
       if (version != CURRENT_VERSION) {
         String msg = getFatalConnectionString(version, authbyte);
@@ -1610,7 +1613,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         useSasl = true;
       }
 
-      dataLengthBuffer.clear();
+      preambleBuffer = null; // do not need it anymore
       connectionPreambleRead = true;
       return count;
     }
@@ -1632,10 +1635,15 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
      * @throws InterruptedException
      */
     public int readAndProcess() throws IOException, InterruptedException {
-      // Try and read in an int.  If new connection, the int will hold the 'HBas' HEADER.  If it
-      // does, read in the rest of the connection preamble, the version and the auth method.
-      // Else it will be length of the data to read (or -1 if a ping).  We catch the integer
-      // length into the 4-byte this.dataLengthBuffer.
+      // If we have not read the connection setup preamble, look to see if that is on the wire.
+      if (!connectionPreambleRead) {
+        int count = readPreamble();
+        if (!connectionPreambleRead) {
+          return count;
+        }
+      }
+      // Try and read in an int. It will be length of the data to read (or -1 if a ping). We catch
+      // the integer length into the 4-byte this.dataLengthBuffer.
       int count = read4Bytes();
       if (count < 0 || dataLengthBuffer.remaining() > 0) {
         return count;
