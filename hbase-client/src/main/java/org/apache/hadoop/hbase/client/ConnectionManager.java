@@ -565,7 +565,8 @@ class ConnectionManager {
     private final boolean hostnamesCanChange;
     private final long pause;
     private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
-    private final boolean useMetaReplicas;
+    private boolean useMetaReplicas;
+    private final int metaReplicaCallTimeoutScanInMicroSecond;
     private final int numTries;
     final int rpcTimeout;
     final int writeRpcTimeout;
@@ -668,6 +669,9 @@ class ConnectionManager {
       }
       this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
           HConstants.DEFAULT_USE_META_REPLICAS);
+      this.metaReplicaCallTimeoutScanInMicroSecond =
+          connectionConfig.getMetaReplicaCallTimeoutMicroSecondScan();
+
       this.numTries = connectionConfig.getRetriesNumber();
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
@@ -735,6 +739,14 @@ class ConnectionManager {
         close();
         throw e;
       }
+    }
+
+    /**
+     * @param useMetaReplicas
+     */
+    @VisibleForTesting
+    void setUseMetaReplicas(final boolean useMetaReplicas) {
+      this.useMetaReplicas = useMetaReplicas;
     }
 
     @Override
@@ -1294,7 +1306,8 @@ class ConnectionManager {
           s.resetMvccReadPoint();
           try (ReversedClientScanner rcs =
               new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
-                  rpcControllerFactory, getMetaLookupPool(), 0)) {
+                  rpcControllerFactory, getMetaLookupPool(),
+                  metaReplicaCallTimeoutScanInMicroSecond)) {
             regionInfoRow = rcs.next();
           }
 

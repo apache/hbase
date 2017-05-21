@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
@@ -74,6 +75,7 @@ public class TestReplicaWithCluster {
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   private final static int REFRESH_PERIOD = 1000;
+  private final static int META_SCAN_TIMEOUT_IN_MILLISEC = 200;
 
   /**
    * This copro is used to synchronize the tests.
@@ -157,6 +159,34 @@ public class TestReplicaWithCluster {
     }
   }
 
+  /**
+   * This copro is used to slow down the primary meta region scan a bit
+   */
+  public static class RegionServerHostingPrimayMetaRegionSlowCopro extends BaseRegionObserver {
+    static boolean slowDownPrimaryMetaScan = false;
+
+    @Override
+    public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Scan scan, final RegionScanner s) throws IOException {
+
+      int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
+
+      // Slow down with the primary meta region scan
+      if (slowDownPrimaryMetaScan && (e.getEnvironment().getRegion().getRegionInfo().isMetaRegion()
+          && (replicaId == 0))) {
+        LOG.info("Scan with primary meta region, slow down a bit");
+        try {
+          Thread.sleep(META_SCAN_TIMEOUT_IN_MILLISEC - 50);
+        } catch (InterruptedException ie) {
+          // Ingore
+        }
+
+      }
+      return null;
+    }
+  }
+
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     // enable store file refreshing
@@ -174,6 +204,19 @@ public class TestReplicaWithCluster {
     // Wait for primary call longer so make sure that it will get exception from the primary call
     HTU.getConfiguration().setInt("hbase.client.primaryCallTimeout.get", 1000000);
     HTU.getConfiguration().setInt("hbase.client.primaryCallTimeout.scan", 1000000);
+
+    // Enable meta replica at server side
+    HTU.getConfiguration().setInt("hbase.meta.replica.count", 2);
+
+    // Make sure master does not host system tables.
+    HTU.getConfiguration().set("hbase.balancer.tablesOnMaster", "none");
+
+    // Set system coprocessor so it can be applied to meta regions
+    HTU.getConfiguration().set("hbase.coprocessor.region.classes",
+        RegionServerHostingPrimayMetaRegionSlowCopro.class.getName());
+
+    HTU.getConfiguration().setInt(HConstants.HBASE_CLIENT_MEAT_REPLICA_SCAN_TIMEOUT,
+        META_SCAN_TIMEOUT_IN_MILLISEC * 1000);
 
     HTU.startMiniCluster(NB_SERVERS);
     HTU.getHBaseCluster().startMaster();
@@ -567,6 +610,39 @@ public class TestReplicaWithCluster {
     } finally {
       HTU.getConfiguration().unset("hbase.ipc.client.specificThreadForWriting");
       HTU.getConfiguration().unset("hbase.rpc.client.impl");
+      HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+      HTU.deleteTable(hdt.getTableName());
+    }
+  }
+
+  // This test is to test when hbase.client.metaReplicaCallTimeout.scan is configured, meta table
+  // scan will always get the result from primary meta region as long as the result is returned
+  // within configured hbase.client.metaReplicaCallTimeout.scan from primary meta region.
+  @Test
+  public void testGetRegionLocationFromPrimaryMetaRegion() throws IOException, InterruptedException {
+    HTU.getHBaseAdmin().setBalancerRunning(false, true);
+
+    ((ConnectionManager.HConnectionImplementation) HTU.getHBaseAdmin().getConnection()).
+        setUseMetaReplicas(true);
+
+    // Create table then get the single region for our new table.
+    HTableDescriptor hdt = HTU.createTableDescriptor("testGetRegionLocationFromPrimaryMetaRegion");
+    hdt.setRegionReplication(2);
+    try {
+
+      HTU.createTable(hdt, new byte[][] { f }, null);
+
+      RegionServerHostingPrimayMetaRegionSlowCopro.slowDownPrimaryMetaScan = true;
+
+      // Get user table location, always get it from the primary meta replica
+      RegionLocations url = ((ClusterConnection) HTU.getConnection())
+          .locateRegion(hdt.getTableName(), row, false, false);
+
+    } finally {
+      RegionServerHostingPrimayMetaRegionSlowCopro.slowDownPrimaryMetaScan = false;
+      ((ConnectionManager.HConnectionImplementation) HTU.getHBaseAdmin().getConnection()).
+          setUseMetaReplicas(false);
+      HTU.getHBaseAdmin().setBalancerRunning(true, true);
       HTU.getHBaseAdmin().disableTable(hdt.getTableName());
       HTU.deleteTable(hdt.getTableName());
     }
