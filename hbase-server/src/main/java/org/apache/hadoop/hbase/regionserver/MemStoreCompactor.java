@@ -50,7 +50,7 @@ public class MemStoreCompactor {
   public static final String COMPACTING_MEMSTORE_THRESHOLD_KEY =
       "hbase.hregion.compacting.pipeline.segments.limit";
   // remaining with the same ("infinity") but configurable default for now
-  public static final int COMPACTING_MEMSTORE_THRESHOLD_DEFAULT = 30;
+  public static final int COMPACTING_MEMSTORE_THRESHOLD_DEFAULT = 1;
 
   public static final long DEEP_OVERHEAD = ClassSize
       .align(ClassSize.OBJECT
