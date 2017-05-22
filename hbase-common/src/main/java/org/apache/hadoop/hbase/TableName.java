@@ -221,7 +221,7 @@ public final class TableName implements Comparable<TableName> {
   }
 
   /**
-   * Valid namespace characters are [a-zA-Z_0-9]
+   * Valid namespace characters are alphabetic characters, numbers, and underscores.
    */
   public static void isLegalNamespaceName(final byte[] namespaceName,
                                            final int start,
