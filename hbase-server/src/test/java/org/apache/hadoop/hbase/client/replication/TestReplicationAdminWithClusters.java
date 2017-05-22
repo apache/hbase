@@ -155,10 +155,6 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_LOCAL);
     }
-    table = admin2.getTableDescriptor(tableName);
-    for (HColumnDescriptor fam : table.getColumnFamilies()) {
-      assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_LOCAL);
-    }
     admin1.enableTableReplication(tableName);
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
