@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Base class for backup operation. Concrete implementation for
  * full and incremental backup are delegated to corresponding sub-classes:
@@ -54,6 +56,9 @@ import org.apache.hadoop.hbase.util.FSUtils;
 public abstract class TableBackupClient {
 
   public static final String BACKUP_CLIENT_IMPL_CLASS = "backup.client.impl.class";
+
+  @VisibleForTesting
+  public static final String BACKUP_TEST_MODE_STAGE = "backup.test.mode.stage";
 
   private static final Log LOG = LogFactory.getLog(TableBackupClient.class);
 
@@ -441,7 +446,6 @@ public abstract class TableBackupClient {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Backup " + backupInfo.getBackupId() + " finished: " + backupCompleteData);
     }
-    backupManager.updateBackupInfo(backupInfo);
 
     // when full backup is done:
     // - delete HBase snapshot
@@ -454,6 +458,8 @@ public abstract class TableBackupClient {
       cleanupDistCpLog(backupInfo, conf);
     }
     deleteBackupTableSnapshot(conn, conf);
+    backupManager.updateBackupInfo(backupInfo);
+
     // Finish active session
     backupManager.finishBackupSession();
 
@@ -466,4 +472,20 @@ public abstract class TableBackupClient {
    */
   public abstract void execute() throws IOException;
 
+  @VisibleForTesting
+  protected Stage getTestStage() {
+    return Stage.valueOf("stage_"+ conf.getInt(BACKUP_TEST_MODE_STAGE, 0));
+  }
+
+  @VisibleForTesting
+  protected void failStageIf(Stage stage) throws IOException {
+    Stage current = getTestStage();
+    if (current == stage) {
+      throw new IOException("Failed stage " + stage+" in testing");
+    }
+  }
+
+  public static enum Stage {
+    stage_0, stage_1, stage_2, stage_3, stage_4
+  }
 }

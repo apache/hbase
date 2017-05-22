@@ -34,24 +34,29 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
-public class TestFullBackupWithFailures extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestFullBackupWithFailures.class);
+@Category(LargeTests.class)
+public class TestBackupRepair extends TestBackupBase {
+
+  private static final Log LOG = LogFactory.getLog(TestBackupRepair.class);
+
 
   @Test
-  public void testFullBackupWithFailures() throws Exception {
+  public void testFullBackupWithFailuresAndRestore() throws Exception {
+
+    autoRestoreOnFailure = false;
+
     conf1.set(TableBackupClient.BACKUP_CLIENT_IMPL_CLASS,
       FullTableBackupClientForTest.class.getName());
     int maxStage = Stage.values().length -1;
-    // Fail stages between 0 and 4 inclusive
-    for (int stage = 0; stage <= maxStage; stage++) {
+    // Fail stage in loop between 0 and 4 inclusive
+    for (int stage = 0; stage < maxStage; stage++) {
       LOG.info("Running stage " + stage);
-      runBackupAndFailAtStage(stage);
+      runBackupAndFailAtStageWithRestore(stage);
     }
   }
 
-  public void runBackupAndFailAtStage(int stage) throws Exception {
+  public void runBackupAndFailAtStageWithRestore(int stage) throws Exception {
 
     conf1.setInt(FullTableBackupClientForTest.BACKUP_TEST_MODE_STAGE, stage);
     try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
@@ -62,6 +67,13 @@ public class TestFullBackupWithFailures extends TestBackupBase {
       // Run backup
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertFalse(ret == 0);
+
+      // Now run restore
+      args = new String[] {"repair"};
+
+      ret  = ToolRunner.run(conf1, new BackupDriver(), args);
+      assertTrue(ret == 0);
+
       List<BackupInfo> backups = table.getBackupHistory();
       int after = table.getBackupHistory().size();
 

@@ -109,6 +109,8 @@ public class BackupDriver extends AbstractHBaseTool {
       type = BackupCommand.PROGRESS;
     } else if (BackupCommand.SET.name().equalsIgnoreCase(cmd)) {
       type = BackupCommand.SET;
+    } else if (BackupCommand.REPAIR.name().equalsIgnoreCase(cmd)) {
+      type = BackupCommand.REPAIR;
     } else {
       System.out.println("Unsupported command for backup: " + cmd);
       printToolUsage();

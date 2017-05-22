@@ -96,7 +96,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   /**
    * Backup phase
    */
-  private BackupPhase phase;
+  private BackupPhase phase = BackupPhase.REQUEST;
 
   /**
    * Backup failure message

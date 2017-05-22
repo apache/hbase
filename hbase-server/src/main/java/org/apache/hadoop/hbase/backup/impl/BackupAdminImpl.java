@@ -93,9 +93,7 @@ public class BackupAdminImpl implements BackupAdmin {
 
   @Override
   public int deleteBackups(String[] backupIds) throws IOException {
-    // TODO: requires Fault tolerance support, failure will leave system
-    // in a non-consistent state
-    // see HBASE-15227
+
     int totalDeleted = 0;
     Map<String, HashSet<TableName>> allTablesMap = new HashMap<String, HashSet<TableName>>();
 

@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.collect.Lists;
 
@@ -77,6 +78,7 @@ public final class BackupCommands  {
       + "  history    show history of all successful backups\n"
       + "  progress   show the progress of the latest backup request\n"
       + "  set        backup set management\n"
+      + "  repair     repair backup system table"
       + "Run \'hbase backup COMMAND -h\' to see help message for each command\n";
 
   public static final String CREATE_CMD_USAGE =
@@ -98,6 +100,8 @@ public final class BackupCommands  {
 
   public static final String DELETE_CMD_USAGE = "Usage: hbase backup delete <backup_id>\n"
       + "  backup_id       Backup image id\n";
+
+  public static final String REPAIR_CMD_USAGE = "Usage: hbase backup repair\n";
 
   public static final String CANCEL_CMD_USAGE = "Usage: hbase backup cancel <backup_id>\n"
       + "  backup_id       Backup image id\n";
@@ -190,6 +194,9 @@ public final class BackupCommands  {
       break;
     case SET:
       cmd = new BackupSetCommand(conf, cmdline);
+      break;
+    case REPAIR:
+      cmd = new RepairCommand(conf, cmdline);
       break;
     case HELP:
     default:
@@ -509,6 +516,9 @@ public final class BackupCommands  {
       try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total requested: " + args.length);
+      } catch (IOException e) {
+        System.err.println("Delete command FAILED. Please run backup repair tool to restore backup system integrity");
+        throw e;
       }
 
     }
@@ -516,6 +526,66 @@ public final class BackupCommands  {
     @Override
     protected void printUsage() {
       System.out.println(DELETE_CMD_USAGE);
+    }
+  }
+
+  private static class RepairCommand extends Command {
+
+    RepairCommand(Configuration conf, CommandLine cmdline) {
+      super(conf);
+      this.cmdline = cmdline;
+    }
+
+    @Override
+    public void execute() throws IOException {
+      super.execute();
+
+      String[] args = cmdline == null ? null : cmdline.getArgs();
+      if (args != null && args.length > 1) {
+        System.err.println("ERROR: wrong number of arguments: " + args.length);
+        printUsage();
+        throw new IOException(INCORRECT_USAGE);
+      }
+
+      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
+      try (final Connection conn = ConnectionFactory.createConnection(conf);
+          final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
+
+        // Failed backup
+        BackupInfo backupInfo;
+        List<BackupInfo> list = sysTable.getBackupInfos(BackupState.RUNNING);
+        if (list.size() == 0) {
+          // No failed sessions found
+          System.out.println("REPAIR status: no failed sessions found.");
+          return;
+        }
+        backupInfo = list.get(0);
+        // If this is a cancel exception, then we've already cleaned.
+        // set the failure timestamp of the overall backup
+        backupInfo.setCompleteTs(EnvironmentEdgeManager.currentTime());
+        // set failure message
+        backupInfo.setFailedMsg("REPAIR status: repaired after failure:\n" + backupInfo);
+        // set overall backup status: failed
+        backupInfo.setState(BackupState.FAILED);
+        // compose the backup failed data
+        String backupFailedData =
+            "BackupId=" + backupInfo.getBackupId() + ",startts=" + backupInfo.getStartTs()
+                + ",failedts=" + backupInfo.getCompleteTs() + ",failedphase="
+                + backupInfo.getPhase() + ",failedmessage=" + backupInfo.getFailedMsg();
+        System.out.println(backupFailedData);
+        TableBackupClient.cleanupAndRestoreBackupSystem(conn, backupInfo, conf);
+        // If backup session is updated to FAILED state - means we
+        // processed recovery already.
+        sysTable.updateBackupInfo(backupInfo);
+        sysTable.finishBackupSession();
+        System.out.println("REPAIR status: finished repair failed session:\n "+ backupInfo);
+
+      }
+    }
+
+    @Override
+    protected void printUsage() {
+      System.out.println(REPAIR_CMD_USAGE);
     }
   }
 

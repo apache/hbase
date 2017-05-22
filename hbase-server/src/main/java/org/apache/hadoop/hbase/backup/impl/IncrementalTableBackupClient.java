@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupPhase;
-import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRequest;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
@@ -63,6 +62,9 @@ import org.apache.hadoop.util.Tool;
 @InterfaceAudience.Private
 public class IncrementalTableBackupClient extends TableBackupClient {
   private static final Log LOG = LogFactory.getLog(IncrementalTableBackupClient.class);
+
+  protected IncrementalTableBackupClient() {
+  }
 
   public IncrementalTableBackupClient(final Connection conn, final String backupId,
       BackupRequest request) throws IOException {
@@ -241,7 +243,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     // set overall backup status: complete. Here we make sure to complete the backup.
     // After this checkpoint, even if entering cancel process, will let the backup finished
     try {
-      backupInfo.setState(BackupState.COMPLETE);
       // Set the previousTimestampMap which is before this current log roll to the manifest.
       HashMap<TableName, HashMap<String, Long>> previousTimestampMap =
           backupManager.readLogTimestampMap();
