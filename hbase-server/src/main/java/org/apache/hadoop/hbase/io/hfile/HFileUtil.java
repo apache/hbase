@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-public class HFileUtil {
+@InterfaceAudience.Private
+class HFileUtil {
 
   /** guards against NullPointer
    * utility which tries to seek on the DFSIS and will try an alternative source
