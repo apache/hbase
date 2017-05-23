@@ -24,7 +24,6 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
@@ -32,26 +31,19 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
-import org.apache.hadoop.hbase.security.AccessDeniedException;
-import org.apache.hadoop.hbase.security.AuthMethod;
-import org.apache.hadoop.hbase.security.SaslStatus;
-import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.htrace.TraceInfo;
 
 /** Reads calls from a connection and queues them for handling. */
@@ -64,13 +56,17 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   private ByteBuff data;
   private ByteBuffer dataLengthBuffer;
   private ByteBuffer preambleBuffer;
-  protected final ConcurrentLinkedDeque<SimpleServerCall> responseQueue =
-      new ConcurrentLinkedDeque<>();
-  final Lock responseWriteLock = new ReentrantLock();
   private final LongAdder rpcCount = new LongAdder(); // number of outstanding rpcs
   private long lastContact;
   private final Socket socket;
-  private final SimpleRpcServerResponder responder;
+  final SimpleRpcServerResponder responder;
+
+  // If initial preamble with version and magic has been read or not.
+  private boolean connectionPreambleRead = false;
+
+  final ConcurrentLinkedDeque<RpcResponse> responseQueue = new ConcurrentLinkedDeque<>();
+  final Lock responseWriteLock = new ReentrantLock();
+  long lastSentTime = -1L;
 
   public SimpleServerRpcConnection(SimpleRpcServer rpcServer, SocketChannel channel,
       long lastContact) {
@@ -95,15 +91,6 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
           "Connection: unable to set socket send buffer size to " + rpcServer.socketSendBufferSize);
       }
     }
-    this.saslCall = new SimpleServerCall(SASL_CALLID, null, null, null, null, null, this, 0, null,
-        null, System.currentTimeMillis(), 0, rpcServer.reservoir, rpcServer.cellBlockBuilder, null,
-        rpcServer.responder);
-    this.setConnectionHeaderResponseCall = new SimpleServerCall(CONNECTION_HEADER_RESPONSE_CALLID,
-        null, null, null, null, null, this, 0, null, null, System.currentTimeMillis(), 0,
-        rpcServer.reservoir, rpcServer.cellBlockBuilder, null, rpcServer.responder);
-    this.authFailedCall = new SimpleServerCall(AUTHORIZATION_FAILED_CALLID, null, null, null, null,
-        null, this, 0, null, null, System.currentTimeMillis(), 0, rpcServer.reservoir,
-        rpcServer.cellBlockBuilder, null, rpcServer.responder);
     this.responder = rpcServer.responder;
   }
 
@@ -138,49 +125,9 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     if (count < 0 || preambleBuffer.remaining() > 0) {
       return count;
     }
-    // Check for 'HBas' magic.
     preambleBuffer.flip();
-    for (int i = 0; i < HConstants.RPC_HEADER.length; i++) {
-      if (HConstants.RPC_HEADER[i] != preambleBuffer.get(i)) {
-        return doBadPreambleHandling("Expected HEADER=" +
-            Bytes.toStringBinary(HConstants.RPC_HEADER) + " but received HEADER=" +
-            Bytes.toStringBinary(preambleBuffer.array(), 0, HConstants.RPC_HEADER.length) +
-            " from " + toString());
-      }
-    }
-    int version = preambleBuffer.get(HConstants.RPC_HEADER.length);
-    byte authbyte = preambleBuffer.get(HConstants.RPC_HEADER.length + 1);
-    this.authMethod = AuthMethod.valueOf(authbyte);
-    if (version != SimpleRpcServer.CURRENT_VERSION) {
-      String msg = getFatalConnectionString(version, authbyte);
-      return doBadPreambleHandling(msg, new WrongVersionException(msg));
-    }
-    if (authMethod == null) {
-      String msg = getFatalConnectionString(version, authbyte);
-      return doBadPreambleHandling(msg, new BadAuthException(msg));
-    }
-    if (this.rpcServer.isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-      if (this.rpcServer.allowFallbackToSimpleAuth) {
-        this.rpcServer.metrics.authenticationFallback();
-        authenticatedWithFallback = true;
-      } else {
-        AccessDeniedException ae = new AccessDeniedException("Authentication is required");
-        this.rpcServer.setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
-        authFailedCall.sendResponseIfReady();
-        throw ae;
-      }
-    }
-    if (!this.rpcServer.isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
-      doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(SaslUtil.SWITCH_TO_SIMPLE_AUTH), null,
-        null);
-      authMethod = AuthMethod.SIMPLE;
-      // client has already sent the initial Sasl message and we
-      // should ignore it. Both client and server should fall back
-      // to simple auth from now on.
-      skipInitialSaslHandshake = true;
-    }
-    if (authMethod != AuthMethod.SIMPLE) {
-      useSasl = true;
+    if (!processPreamble(preambleBuffer)) {
+      return -1;
     }
     preambleBuffer = null; // do not need it anymore
     connectionPreambleRead = true;
@@ -272,19 +219,15 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
           // Otherwise, throw a DoNotRetryIOException.
           if (VersionInfoUtil.hasMinimumVersion(connectionHeader.getVersionInfo(),
             RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)) {
-            this.rpcServer.setupResponse(null, reqTooBig, SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION,
-              msg);
+            reqTooBig.setResponse(null, null, SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION, msg);
           } else {
-            this.rpcServer.setupResponse(null, reqTooBig, new DoNotRetryIOException(), msg);
+            reqTooBig.setResponse(null, null, new DoNotRetryIOException(), msg);
           }
-          // We are going to close the connection, make sure we process the response
-          // before that. In rare case when this fails, we still close the connection.
-          responseWriteLock.lock();
-          try {
-            this.responder.processResponse(reqTooBig);
-          } finally {
-            responseWriteLock.unlock();
-          }
+          // In most cases we will write out the response directly. If not, it is still OK to just
+          // close the connection without writing out the reqTooBig response. Do not try to write
+          // out directly here, and it will cause deserialization error if the connection is slow
+          // and we have a half writing response in the queue.
+          reqTooBig.sendResponseIfReady();
         }
         // Close the connection
         return -1;
@@ -365,21 +308,6 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     }
   }
 
-  private int doBadPreambleHandling(final String msg) throws IOException {
-    return doBadPreambleHandling(msg, new FatalConnectionException(msg));
-  }
-
-  private int doBadPreambleHandling(final String msg, final Exception e) throws IOException {
-    SimpleRpcServer.LOG.warn(msg);
-    SimpleServerCall fakeCall = new SimpleServerCall(-1, null, null, null, null, null, this, -1,
-        null, null, System.currentTimeMillis(), 0, this.rpcServer.reservoir,
-        this.rpcServer.cellBlockBuilder, null, responder);
-    this.rpcServer.setupResponse(null, fakeCall, e, msg);
-    this.responder.doRespond(fakeCall);
-    // Returning -1 closes out the connection.
-    return -1;
-  }
-
   @Override
   public synchronized void close() {
     disposeSasl();
@@ -420,5 +348,10 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     return new SimpleServerCall(id, service, md, header, param, cellScanner, this, size, tinfo,
         remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.reservoir,
         this.rpcServer.cellBlockBuilder, reqCleanup, this.responder);
+  }
+
+  @Override
+  protected void doRespond(RpcResponse resp) throws IOException {
+    responder.doRespond(this, resp);
   }
 }

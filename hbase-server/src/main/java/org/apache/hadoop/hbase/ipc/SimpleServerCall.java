@@ -37,8 +37,6 @@ import org.apache.htrace.TraceInfo;
 @InterfaceAudience.Private
 class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
 
-  long lastSentTime;
-
   final SimpleRpcServerResponder responder;
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
@@ -59,7 +57,7 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
       justification = "Presume the lock on processing request held by caller is protection enough")
   @Override
-  void done() {
+  public void done() {
     super.done();
     this.getConnection().decRpcCount(); // Say that we're done with this call.
   }
@@ -68,10 +66,10 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
   public synchronized void sendResponseIfReady() throws IOException {
     // set param null to reduce memory pressure
     this.param = null;
-    this.responder.doRespond(this);
+    this.responder.doRespond(getConnection(), this);
   }
 
   SimpleServerRpcConnection getConnection() {
-    return (SimpleServerRpcConnection) this.connection;
+    return this.connection;
   }
 }

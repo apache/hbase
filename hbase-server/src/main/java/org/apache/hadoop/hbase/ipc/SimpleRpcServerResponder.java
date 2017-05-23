@@ -38,11 +38,11 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 class SimpleRpcServerResponder extends Thread {
-  /**  */
+
   private final SimpleRpcServer simpleRpcServer;
   private final Selector writeSelector;
   private final Set<SimpleServerRpcConnection> writingCons =
-      Collections.newSetFromMap(new ConcurrentHashMap<SimpleServerRpcConnection, Boolean>());
+      Collections.newSetFromMap(new ConcurrentHashMap<>());
 
   SimpleRpcServerResponder(SimpleRpcServer simpleRpcServer) throws IOException {
     this.simpleRpcServer = simpleRpcServer;
@@ -175,9 +175,9 @@ class SimpleRpcServerResponder extends Thread {
         if (connection == null) {
           throw new IllegalStateException("Coding error: SelectionKey key without attachment.");
         }
-        SimpleServerCall call = connection.responseQueue.peekFirst();
-        if (call != null && now > call.lastSentTime + this.simpleRpcServer.purgeTimeout) {
-          conWithOldCalls.add(call.getConnection());
+        if (connection.lastSentTime > 0 &&
+            now > connection.lastSentTime + this.simpleRpcServer.purgeTimeout) {
+          conWithOldCalls.add(connection);
         }
       }
     }
@@ -217,35 +217,37 @@ class SimpleRpcServerResponder extends Thread {
   /**
    * Process the response for this call. You need to have the lock on
    * {@link org.apache.hadoop.hbase.ipc.SimpleServerRpcConnection#responseWriteLock}
-   * @param call the call
    * @return true if we proceed the call fully, false otherwise.
    * @throws IOException
    */
-  boolean processResponse(final SimpleServerCall call) throws IOException {
+  private boolean processResponse(SimpleServerRpcConnection conn, RpcResponse resp)
+      throws IOException {
     boolean error = true;
+    BufferChain buf = resp.getResponse();
     try {
       // Send as much data as we can in the non-blocking fashion
       long numBytes =
-          this.simpleRpcServer.channelWrite(call.getConnection().channel, call.response);
+          this.simpleRpcServer.channelWrite(conn.channel, buf);
       if (numBytes < 0) {
-        throw new HBaseIOException(
-            "Error writing on the socket " + "for the call:" + call.toShortString());
+        throw new HBaseIOException("Error writing on the socket " + conn);
       }
       error = false;
     } finally {
       if (error) {
-        SimpleRpcServer.LOG.debug(getName() + call.toShortString() + ": output error -- closing");
+        SimpleRpcServer.LOG.debug(conn + ": output error -- closing");
         // We will be closing this connection itself. Mark this call as done so that all the
         // buffer(s) it got from pool can get released
-        call.done();
-        this.simpleRpcServer.closeConnection(call.getConnection());
+        resp.done();
+        this.simpleRpcServer.closeConnection(conn);
       }
     }
 
-    if (!call.response.hasRemaining()) {
-      call.done();
+    if (!buf.hasRemaining()) {
+      resp.done();
       return true;
     } else {
+      // set the serve time when the response has to be sent later
+      conn.lastSentTime = System.currentTimeMillis();
       return false; // Socket can't take more, we will have to come back.
     }
   }
@@ -263,12 +265,12 @@ class SimpleRpcServerResponder extends Thread {
     try {
       for (int i = 0; i < 20; i++) {
         // protection if some handlers manage to need all the responder
-        SimpleServerCall call = connection.responseQueue.pollFirst();
-        if (call == null) {
+        RpcResponse resp = connection.responseQueue.pollFirst();
+        if (resp == null) {
           return true;
         }
-        if (!processResponse(call)) {
-          connection.responseQueue.addFirst(call);
+        if (!processResponse(connection, resp)) {
+          connection.responseQueue.addFirst(resp);
           return false;
         }
       }
@@ -282,35 +284,30 @@ class SimpleRpcServerResponder extends Thread {
   //
   // Enqueue a response from the application.
   //
-  void doRespond(SimpleServerCall call) throws IOException {
+  void doRespond(SimpleServerRpcConnection conn, RpcResponse resp) throws IOException {
     boolean added = false;
-
     // If there is already a write in progress, we don't wait. This allows to free the handlers
     // immediately for other tasks.
-    if (call.getConnection().responseQueue.isEmpty() &&
-        call.getConnection().responseWriteLock.tryLock()) {
+    if (conn.responseQueue.isEmpty() && conn.responseWriteLock.tryLock()) {
       try {
-        if (call.getConnection().responseQueue.isEmpty()) {
+        if (conn.responseQueue.isEmpty()) {
           // If we're alone, we can try to do a direct call to the socket. It's
-          // an optimisation to save on context switches and data transfer between cores..
-          if (processResponse(call)) {
+          // an optimization to save on context switches and data transfer between cores..
+          if (processResponse(conn, resp)) {
             return; // we're done.
           }
           // Too big to fit, putting ahead.
-          call.getConnection().responseQueue.addFirst(call);
+          conn.responseQueue.addFirst(resp);
           added = true; // We will register to the selector later, outside of the lock.
         }
       } finally {
-        call.getConnection().responseWriteLock.unlock();
+        conn.responseWriteLock.unlock();
       }
     }
 
     if (!added) {
-      call.getConnection().responseQueue.addLast(call);
+      conn.responseQueue.addLast(resp);
     }
-    call.responder.registerForWrite(call.getConnection());
-
-    // set the serve time when the response has to be sent later
-    call.lastSentTime = System.currentTimeMillis();
+    registerForWrite(conn);
   }
 }

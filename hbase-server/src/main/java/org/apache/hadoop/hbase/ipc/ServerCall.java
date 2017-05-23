@@ -51,7 +51,7 @@ import org.apache.htrace.TraceInfo;
  * the result.
  */
 @InterfaceAudience.Private
-abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall {
+abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, RpcResponse {
 
   protected final int id;                             // the client's call id
   protected final BlockingService service;
@@ -127,7 +127,8 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
       justification = "Presume the lock on processing request held by caller is protection enough")
-  void done() {
+  @Override
+  public void done() {
     if (this.cellBlockStream != null) {
       // This will return back the BBs which we got from pool.
       this.cellBlockStream.releaseResources();
@@ -176,18 +177,6 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall {
         " size: " + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) +
         " connection: " + connection.toString() +
         " deadline: " + deadline;
-  }
-
-  protected synchronized void setSaslTokenResponse(ByteBuffer response) {
-    ByteBuffer[] responseBufs = new ByteBuffer[1];
-    responseBufs[0] = response;
-    this.response = new BufferChain(responseBufs);
-  }
-
-  protected synchronized void setConnectionHeaderResponse(ByteBuffer response) {
-    ByteBuffer[] responseBufs = new ByteBuffer[1];
-    responseBufs[0] = response;
-    this.response = new BufferChain(responseBufs);
   }
 
   @Override
@@ -268,7 +257,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall {
     }
   }
 
-  protected void setExceptionResponse(Throwable t, String errorMsg,
+  static void setExceptionResponse(Throwable t, String errorMsg,
       ResponseHeader.Builder headerBuilder) {
     ExceptionResponse.Builder exceptionBuilder = ExceptionResponse.newBuilder();
     exceptionBuilder.setExceptionClassName(t.getClass().getName());
@@ -286,7 +275,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall {
     headerBuilder.setException(exceptionBuilder.build());
   }
 
-  protected ByteBuffer createHeaderAndMessageBytes(Message result, Message header,
+  static ByteBuffer createHeaderAndMessageBytes(Message result, Message header,
       int cellBlockSize, List<ByteBuffer> cellBlock) throws IOException {
     // Organize the response as a set of bytebuffers rather than collect it all together inside
     // one big byte array; save on allocations.
@@ -336,7 +325,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall {
     }
   }
 
-  private void writeToCOS(Message result, Message header, int totalSize, ByteBuffer pbBuf)
+  private static void writeToCOS(Message result, Message header, int totalSize, ByteBuffer pbBuf)
       throws IOException {
     ByteBufferUtils.putInt(pbBuf, totalSize);
     // create COS that works on BB
@@ -351,7 +340,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall {
     cos.checkNoSpaceLeft();
   }
 
-  private ByteBuffer createHeaderAndMessageBytes(Message result, Message header,
+  private static ByteBuffer createHeaderAndMessageBytes(Message result, Message header,
       int totalSize, int totalPBSize) throws IOException {
     ByteBuffer pbBuf = ByteBuffer.allocate(totalPBSize);
     writeToCOS(result, header, totalSize, pbBuf);
@@ -523,4 +512,8 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall {
     return tinfo;
   }
 
+  @Override
+  public synchronized BufferChain getResponse() {
+    return response;
+  }
 }

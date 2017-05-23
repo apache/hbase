@@ -22,7 +22,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 
 import com.google.common.annotations.VisibleForTesting;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -339,19 +338,6 @@ public abstract class RpcServer implements RpcServerInterface,
       LOG.warn("by setting " + FALLBACK_TO_INSECURE_CLIENT_AUTH + " = false in hbase-site.xml");
       LOG.warn("****************************");
     }
-  }
-
-  /**
-   * Setup response for the RPC Call.
-   * @param response buffer to serialize the response into
-   * @param call {@link ServerCall} to which we are setting up the response
-   * @param error error message, if the call failed
-   * @throws IOException
-   */
-  protected void setupResponse(ByteArrayOutputStream response, ServerCall<?> call, Throwable t,
-      String error) throws IOException {
-    if (response != null) response.reset();
-    call.setResponse(null, null, t, error);
   }
 
   Configuration getConf() {

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.channel.ChannelFutureListener;
-
 import java.io.IOException;
 import java.net.InetAddress;
 
@@ -53,10 +51,8 @@ class NettyServerCall extends ServerCall<NettyServerRpcConnection> {
    */
   @Override
   public synchronized void sendResponseIfReady() throws IOException {
+    // set param null to reduce memory pressure
+    this.param = null;
     connection.channel.writeAndFlush(this);
-  }
-
-  public synchronized void sendResponseIfReady(ChannelFutureListener listener) throws IOException {
-    connection.channel.writeAndFlush(this).addListener(listener);
   }
 }

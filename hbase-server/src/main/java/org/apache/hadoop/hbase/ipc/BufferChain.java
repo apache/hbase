@@ -34,7 +34,7 @@ class BufferChain {
   private int bufferOffset = 0;
   private int size;
 
-  BufferChain(ByteBuffer[] buffers) {
+  BufferChain(ByteBuffer... buffers) {
     for (ByteBuffer b : buffers) {
       this.remaining += b.remaining();
     }
