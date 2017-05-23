@@ -76,7 +76,7 @@ public class TestSimpleRegionNormalizerOnCluster {
 
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(1);
-    TestNamespaceAuditor.waitForQuotaEnabled(TEST_UTIL);
+    TestNamespaceAuditor.waitForQuotaInitialize(TEST_UTIL);
     admin = TEST_UTIL.getAdmin();
   }
 
