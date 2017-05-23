@@ -128,6 +128,10 @@ public interface ProcedureScheduler {
   List<LockInfo> listLocks();
 
   /**
+   * @return {@link LockInfo} for resource of specified type & name. null if resource is not locked.
+   */
+  LockInfo getLockInfoForResource(LockInfo.ResourceType resourceType, String resourceName);
+  /**
    * Returns the number of elements in this queue.
    * @return the number of elements in this queue.
    */

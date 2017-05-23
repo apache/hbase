@@ -339,6 +339,32 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   @Override
+  public LockInfo getLockInfoForResource(LockInfo.ResourceType resourceType, String resourceName) {
+    LockAndQueue queue = null;
+    schedLock();
+    try {
+      switch (resourceType) {
+        case SERVER:
+          queue = locking.serverLocks.get(ServerName.valueOf(resourceName));
+          break;
+        case NAMESPACE:
+          queue = locking.namespaceLocks.get(resourceName);
+          break;
+        case TABLE:
+          queue = locking.tableLocks.get(TableName.valueOf(resourceName));
+          break;
+        case REGION:
+          queue = locking.regionLocks.get(resourceName);
+          break;
+      }
+
+      return queue != null ? createLockInfo(resourceType, resourceName, queue) : null;
+    } finally {
+      schedUnlock();
+    }
+  }
+
+  @Override
   public void clear() {
     schedLock();
     try {
@@ -586,6 +612,27 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   /**
+   * Get lock info for a resource of specified type and name and log details
+   */
+  protected void logLockInfoForResource(LockInfo.ResourceType resourceType, String resourceName) {
+    if (!LOG.isDebugEnabled()) {
+      return;
+    }
+
+    LockInfo lockInfo = getLockInfoForResource(resourceType, resourceName);
+    if (lockInfo != null) {
+      String msg = resourceType.toString() + " '" + resourceName + "', shared lock count=" +
+          lockInfo.getSharedLockCount();
+
+      ProcedureInfo proc = lockInfo.getExclusiveLockOwnerProcedure();
+      if (proc != null) {
+        msg += ", exclusively locked by procId=" + proc.getProcId();
+      }
+      LOG.debug(msg);
+    }
+  }
+
+  /**
    * Suspend the procedure if the specified table is already locked.
    * Other operations in the table-queue will be executed after the lock is released.
    * @param procedure the procedure trying to acquire the lock
@@ -595,15 +642,18 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   public boolean waitTableExclusiveLock(final Procedure procedure, final TableName table) {
     schedLock();
     try {
-      final LockAndQueue namespaceLock = locking.getNamespaceLock(table.getNamespaceAsString());
+      final String namespace = table.getNamespaceAsString();
+      final LockAndQueue namespaceLock = locking.getNamespaceLock(namespace);
       final LockAndQueue tableLock = locking.getTableLock(table);
       if (!namespaceLock.trySharedLock()) {
         waitProcedure(namespaceLock, procedure);
+        logLockInfoForResource(LockInfo.ResourceType.NAMESPACE, namespace);
         return true;
       }
       if (!tableLock.tryExclusiveLock(procedure)) {
         namespaceLock.releaseSharedLock();
         waitProcedure(tableLock, procedure);
+        logLockInfoForResource(LockInfo.ResourceType.TABLE, table.getNameAsString());
         return true;
       }
       removeFromRunQueue(tableRunQueue, getTableQueue(table));
@@ -856,6 +906,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
           locking.getTableLock(TableName.NAMESPACE_TABLE_NAME);
       if (!systemNamespaceTableLock.trySharedLock()) {
         waitProcedure(systemNamespaceTableLock, procedure);
+        logLockInfoForResource(LockInfo.ResourceType.TABLE,
+            TableName.NAMESPACE_TABLE_NAME.getNameAsString());
         return true;
       }
 
@@ -863,6 +915,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (!namespaceLock.tryExclusiveLock(procedure)) {
         systemNamespaceTableLock.releaseSharedLock();
         waitProcedure(namespaceLock, procedure);
+        logLockInfoForResource(LockInfo.ResourceType.NAMESPACE, namespace);
         return true;
       }
       return false;
@@ -915,6 +968,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         return false;
       }
       waitProcedure(lock, procedure);
+      logLockInfoForResource(LockInfo.ResourceType.SERVER, serverName.getServerName());
       return true;
     } finally {
       schedUnlock();
