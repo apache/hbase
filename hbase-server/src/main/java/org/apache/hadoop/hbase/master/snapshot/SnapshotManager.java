@@ -795,7 +795,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
   private void checkAndUpdateNamespaceQuota(SnapshotManifest manifest, TableName tableName)
       throws IOException {
-    if (this.master.getMasterQuotaManager().isQuotaEnabled()) {
+    if (this.master.getMasterQuotaManager().isQuotaInitialized()) {
       this.master.getMasterQuotaManager().checkNamespaceTableAndRegionQuota(tableName,
         manifest.getRegionManifestsMap().size());
     }
@@ -803,7 +803,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
   private void checkAndUpdateNamespaceRegionQuota(int updatedRegionCount, TableName tableName)
       throws IOException {
-    if (this.master.getMasterQuotaManager().isQuotaEnabled()) {
+    if (this.master.getMasterQuotaManager().isQuotaInitialized()) {
       this.master.getMasterQuotaManager().checkAndUpdateNamespaceRegionQuota(tableName,
         updatedRegionCount);
     }
@@ -813,7 +813,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @return cached region count, or -1 if quota manager is disabled or table status not found
   */
   private int getRegionCountOfTable(TableName tableName) throws IOException {
-    if (this.master.getMasterQuotaManager().isQuotaEnabled()) {
+    if (this.master.getMasterQuotaManager().isQuotaInitialized()) {
       return this.master.getMasterQuotaManager().getRegionCountOfTable(tableName);
     }
     return -1;
