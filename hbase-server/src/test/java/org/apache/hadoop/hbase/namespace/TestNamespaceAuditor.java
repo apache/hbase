@@ -126,8 +126,8 @@ public class TestNamespaceAuditor {
         ADMIN.deleteNamespace(ns.getName());
       }
     }
-    assertTrue("Quota manager not enabled", UTIL.getHBaseCluster().getMaster()
-        .getMasterQuotaManager().isQuotaEnabled());
+    assertTrue("Quota manager not initialized", UTIL.getHBaseCluster().getMaster()
+        .getMasterQuotaManager().isQuotaInitialized());
   }
 
   @Test(timeout = 60000)
@@ -629,7 +629,7 @@ public class TestNamespaceAuditor {
           return false;
         }
         MasterQuotaManager quotaManager = master.getMasterQuotaManager();
-        return quotaManager != null && quotaManager.isQuotaEnabled();
+        return quotaManager != null && quotaManager.isQuotaInitialized();
       }
     });
   }
