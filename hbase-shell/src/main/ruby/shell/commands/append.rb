@@ -40,8 +40,10 @@ EOF
       end
 
       def append(table, row, column, value, args={})
-      	format_simple_command do
-        	table._append_internal(row, column, value, args)
+        format_simple_command do
+          if current_value = table._append_internal(row, column, value, args)
+            puts "CURRENT VALUE = #{current_value}"
+          end
         end
       end
     end
