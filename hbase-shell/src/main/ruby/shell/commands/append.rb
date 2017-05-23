@@ -42,7 +42,9 @@ EOF
       end
 
       def append(table, row, column, value, args={})
-        table._append_internal(row, column, value, args)
+        if current_value = table._append_internal(row, column, value, args)
+          puts "CURRENT VALUE = #{current_value}"
+        end
       end
     end
   end

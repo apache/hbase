@@ -286,7 +286,13 @@ EOF
         set_op_ttl(append, ttl) if ttl
       end
       append.add(family, qualifier, value.to_s.to_java_bytes)
-      @table.append(append)
+      result = @table.append(append)
+      return nil if result.isEmpty
+
+      # Fetch cell value
+      cell = result.listCells[0]
+      org.apache.hadoop.hbase.util.Bytes::toStringBinary(cell.getValueArray,
+        cell.getValueOffset, cell.getValueLength)
     end
 
     #----------------------------------------------------------------------------------------------

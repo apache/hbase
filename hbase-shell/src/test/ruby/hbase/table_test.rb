@@ -195,6 +195,7 @@ module Hbase
 
     define_test "append should work with value" do
       @test_table.append("123", 'x:cnt2', '123')
+      assert_equal("123123", @test_table._append_internal("123", 'x:cnt2', '123'))
     end
     #-------------------------------------------------------------------------------
 
