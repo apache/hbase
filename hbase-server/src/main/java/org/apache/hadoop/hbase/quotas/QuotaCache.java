@@ -190,11 +190,11 @@ public class QuotaCache implements Stoppable {
       // Prefetch online tables/namespaces
       for (TableName table: QuotaCache.this.rsServices.getOnlineTables()) {
         if (table.isSystemTable()) continue;
-        if (!QuotaCache.this.tableQuotaCache.contains(table)) {
+        if (!QuotaCache.this.tableQuotaCache.containsKey(table)) {
           QuotaCache.this.tableQuotaCache.putIfAbsent(table, new QuotaState());
         }
         String ns = table.getNamespaceAsString();
-        if (!QuotaCache.this.namespaceQuotaCache.contains(ns)) {
+        if (!QuotaCache.this.namespaceQuotaCache.containsKey(ns)) {
           QuotaCache.this.namespaceQuotaCache.putIfAbsent(ns, new QuotaState());
         }
       }
