@@ -129,6 +129,9 @@ public class TableSnapshotScanner extends AbstractClientScanner {
     htd = meta.getTableDescriptor();
     regions = new ArrayList<HRegionInfo>(restoredRegions.size());
     for (HRegionInfo hri: restoredRegions) {
+      if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
+        continue;
+      }
       if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
           hri.getStartKey(), hri.getEndKey())) {
         regions.add(hri);
