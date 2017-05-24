@@ -118,6 +118,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -2493,15 +2494,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     startRegionOperation(Operation.GET);
     this.readRequestsCount.increment();
     try {
-      Store store = getStore(family);
-      // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
-      Cell key = store.getRowKeyAtOrBefore(row);
       Result result = null;
-      if (key != null) {
-        Get get = new Get(CellUtil.cloneRow(key));
-        get.addFamily(family);
-        result = get(get);
-      }
+      Get get = new Get(row);
+      get.addFamily(family);
+      get.setClosestRowBefore(true);
+      result = get(get);
+      // for compatibility
+      result = result.isEmpty() ? null : result;
       if (coprocessorHost != null) {
         coprocessorHost.postGetClosestRowBefore(row, family, result);
       }
@@ -6582,6 +6581,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
+  private Scan buildScanForGetWithClosestRowBefore(Get get) throws IOException {
+    Scan scan = new Scan().setStartRow(get.getRow())
+        .addFamily(get.getFamilyMap().keySet().iterator().next()).setReversed(true)
+        .setStopRow(HConstants.EMPTY_END_ROW);
+    if (this.getRegionInfo().isMetaRegion()) {
+      int delimiterIdx =
+          KeyValue.getDelimiter(get.getRow(), 0, get.getRow().length, HConstants.DELIMITER);
+      if (delimiterIdx >= 0) {
+        scan.setFilter(new PrefixFilter(Bytes.copy(get.getRow(), 0, delimiterIdx + 1)));
+      }
+    }
+    return scan;
+  }
+
   @Override
   public List<Cell> get(Get get, boolean withCoprocessor) throws IOException {
 
@@ -6594,7 +6607,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
        }
     }
 
-    Scan scan = new Scan(get);
+    Scan scan;
+    if (get.isClosestRowBefore()) {
+      scan = buildScanForGetWithClosestRowBefore(get);
+    } else {
+      scan = new Scan(get);
+    }
 
     RegionScanner scanner = null;
     try {
