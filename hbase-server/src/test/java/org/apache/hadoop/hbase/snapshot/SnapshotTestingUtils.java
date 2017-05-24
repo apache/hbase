@@ -238,7 +238,18 @@ public final class SnapshotTestingUtils {
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
     // remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);
-    assertEquals(regions.size(), regionManifests.size());
+
+    // if create snapshot when table splitting, parent region will be included to the snapshot
+    // region manifest. we should exclude the parent regions.
+    int regionCountExclusiveSplitParent = 0;
+    for (SnapshotRegionManifest snapshotRegionManifest : regionManifests.values()) {
+      HRegionInfo hri = HRegionInfo.convert(snapshotRegionManifest.getRegionInfo());
+      if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
+        continue;
+      }
+      regionCountExclusiveSplitParent++;
+    }
+    assertEquals(regions.size(), regionCountExclusiveSplitParent);
 
     // Verify Regions (redundant check, see MasterSnapshotVerifier)
     for (HRegionInfo info : regions) {

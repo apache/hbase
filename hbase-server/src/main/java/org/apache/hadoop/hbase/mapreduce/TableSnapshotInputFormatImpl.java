@@ -266,6 +266,9 @@ public class TableSnapshotInputFormatImpl {
     for (SnapshotRegionManifest regionManifest : regionManifests) {
       // load region descriptor
       HRegionInfo hri = HRegionInfo.convert(regionManifest.getRegionInfo());
+      if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
+        continue;
+      }
 
       if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
         hri.getStartKey(), hri.getEndKey())) {
