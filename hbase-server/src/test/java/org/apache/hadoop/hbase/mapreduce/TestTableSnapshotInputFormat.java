@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -54,6 +55,13 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 import com.google.common.collect.Lists;
+
+import java.util.Arrays;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBase {
@@ -218,6 +226,69 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       util.getAdmin().deleteSnapshot(snapshotName);
       util.deleteTable(tableName);
+      tearDownCluster();
+    }
+  }
+
+  public static void blockUntilSplitFinished(HBaseTestingUtility util, TableName tableName,
+      int expectedRegionSize) throws Exception {
+    for (int i = 0; i < 100; i++) {
+      List<HRegionInfo> hRegionInfoList = util.getAdmin().getTableRegions(tableName);
+      if (hRegionInfoList.size() >= expectedRegionSize) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+  }
+
+  @Test
+  public void testNoDuplicateResultsWhenSplitting() throws Exception {
+    setupCluster();
+    TableName tableName = TableName.valueOf("testNoDuplicateResultsWhenSplitting");
+    String snapshotName = "testSnapshotBug";
+    try {
+      if (UTIL.getAdmin().tableExists(tableName)) {
+        UTIL.deleteTable(tableName);
+      }
+
+      UTIL.createTable(tableName, FAMILIES);
+      Admin admin = UTIL.getAdmin();
+
+      // put some stuff in the table
+      Table table = UTIL.getConnection().getTable(tableName);
+      UTIL.loadTable(table, FAMILIES);
+
+      // split to 2 regions
+      admin.split(tableName, Bytes.toBytes("eee"));
+      blockUntilSplitFinished(UTIL, tableName, 2);
+
+      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+      FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
+
+      SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES),
+        null, snapshotName, rootDir, fs, true);
+
+      // load different values
+      byte[] value = Bytes.toBytes("after_snapshot_value");
+      UTIL.loadTable(table, FAMILIES, value);
+
+      // cause flush to create new files in the region
+      admin.flush(tableName);
+      table.close();
+
+      Job job = new Job(UTIL.getConfiguration());
+      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      // limit the scan
+      Scan scan = new Scan().withStartRow(getStartRow()).withStopRow(getEndRow());
+
+      TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan,
+        TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job, false,
+        tmpTableDir);
+
+      verifyWithMockedMapReduce(job, 2, 2, getStartRow(), getEndRow());
+    } finally {
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
       tearDownCluster();
     }
   }

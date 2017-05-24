@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
@@ -251,7 +252,17 @@ public final class SnapshotTestingUtils {
     if (hasMob) {
       assertEquals(regions.size(), regionManifests.size() - 1);
     } else {
-      assertEquals(regions.size(), regionManifests.size());
+      // if create snapshot when table splitting, parent region will be included to the snapshot
+      // region manifest. we should exclude the parent regions.
+      int regionCountExclusiveSplitParent = 0;
+      for (SnapshotRegionManifest snapshotRegionManifest : regionManifests.values()) {
+        HRegionInfo hri = HRegionInfo.convert(snapshotRegionManifest.getRegionInfo());
+        if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
+          continue;
+        }
+        regionCountExclusiveSplitParent++;
+      }
+      assertEquals(regions.size(), regionCountExclusiveSplitParent);
     }
 
     // Verify Regions (redundant check, see MasterSnapshotVerifier)
