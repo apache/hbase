@@ -49,22 +49,6 @@ public class WeakObjectPool<K,V> extends ObjectPool<K,V> {
   }
 
   @Override
-  public void purge() {
-    // This method is lightweight while there is no stale reference
-    // with the Oracle (Sun) implementation of {@code ReferenceQueue},
-    // because {@code ReferenceQueue.poll} just checks a volatile instance
-    // variable in {@code ReferenceQueue}.
-    while (true) {
-      @SuppressWarnings("unchecked")
-      WeakObjectReference ref = (WeakObjectReference) staleRefQueue.poll();
-      if (ref == null) {
-        break;
-      }
-      referenceCache.remove(ref.key, ref);
-    }
-  }
-
-  @Override
   public Reference<V> createReference(K key, V obj) {
     return new WeakObjectReference(key, obj);
   }
@@ -76,6 +60,11 @@ public class WeakObjectPool<K,V> extends ObjectPool<K,V> {
       super(obj, staleRefQueue);
       this.key = key;
     }
+  }
+
+  @Override
+  public K getReferenceKey(Reference<V> ref) {
+    return ((WeakObjectReference)ref).key;
   }
 
 }
