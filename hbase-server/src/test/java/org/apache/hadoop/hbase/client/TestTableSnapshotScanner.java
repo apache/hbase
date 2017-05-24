@@ -110,6 +110,56 @@ public class TestTableSnapshotScanner {
   }
 
   @Test
+  public void testNoDuplicateResultsWhenSplitting() throws Exception {
+    setupCluster();
+    TableName tableName = TableName.valueOf("testNoDuplicateResultsWhenSplitting");
+    String snapshotName = "testSnapshotBug";
+    try {
+      if (UTIL.getHBaseAdmin().tableExists(tableName)) {
+        UTIL.deleteTable(tableName);
+      }
+
+      UTIL.createTable(tableName, FAMILIES);
+      Admin admin = UTIL.getHBaseAdmin();
+
+      // put some stuff in the table
+      Table table = UTIL.getConnection().getTable(tableName);
+      UTIL.loadTable(table, FAMILIES);
+
+      // split to 2 regions
+      admin.split(tableName, Bytes.toBytes("eee"));
+      TestTableSnapshotInputFormat.blockUntilSplitFinished(UTIL, tableName, 2);
+
+      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+      FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
+
+      SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName,
+        Arrays.asList(FAMILIES), null, snapshotName, rootDir, fs, true);
+
+      // load different values
+      byte[] value = Bytes.toBytes("after_snapshot_value");
+      UTIL.loadTable(table, FAMILIES, value);
+
+      // cause flush to create new files in the region
+      admin.flush(tableName);
+      table.close();
+
+      Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
+
+      TableSnapshotScanner scanner =
+          new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir, snapshotName, scan);
+
+      verifyScanner(scanner, bbb, yyy);
+      scanner.close();
+    } finally {
+      UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+      tearDownCluster();
+    }
+  }
+
+  @Test
   public void testWithSingleRegion() throws Exception {
     testScanner(UTIL, "testWithSingleRegion", 1, false);
   }

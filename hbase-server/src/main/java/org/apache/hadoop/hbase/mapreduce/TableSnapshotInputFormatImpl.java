@@ -274,7 +274,11 @@ public class TableSnapshotInputFormatImpl {
     List<HRegionInfo> regionInfos = Lists.newArrayListWithCapacity(regionManifests.size());
 
     for (SnapshotRegionManifest regionManifest : regionManifests) {
-      regionInfos.add(HRegionInfo.convert(regionManifest.getRegionInfo()));
+      HRegionInfo hri = HRegionInfo.convert(regionManifest.getRegionInfo());
+      if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
+        continue;
+      }
+      regionInfos.add(hri);
     }
     return regionInfos;
   }
