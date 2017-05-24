@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 
 /**
  * Utility methods for interacting with the regions.
@@ -223,7 +223,7 @@ public abstract class ModifyRegionUtils {
   static ThreadPoolExecutor getRegionOpenAndInitThreadPool(final Configuration conf,
       final String threadNamePrefix, int regionNumber) {
     int maxThreads = Math.min(regionNumber, conf.getInt(
-        "hbase.hregion.open.and.init.threads.max", 10));
+        "hbase.hregion.open.and.init.threads.max", 16));
     ThreadPoolExecutor regionOpenAndInitThreadPool = Threads
     .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
         new ThreadFactory() {
@@ -235,25 +235,5 @@ public abstract class ModifyRegionUtils {
           }
         });
     return regionOpenAndInitThreadPool;
-  }
-
-  /**
-   * Triggers a bulk assignment of the specified regions
-   *
-   * @param assignmentManager the Assignment Manger
-   * @param regionInfos the list of regions to assign
-   * @throws IOException if an error occurred during the assignment
-   */
-  public static void assignRegions(final AssignmentManager assignmentManager,
-      final List<HRegionInfo> regionInfos) throws IOException {
-    try {
-      assignmentManager.getRegionStates().createRegionStates(regionInfos);
-      assignmentManager.assign(regionInfos);
-    } catch (InterruptedException e) {
-      LOG.error("Caught " + e + " during round-robin assignment");
-      InterruptedIOException ie = new InterruptedIOException(e.getMessage());
-      ie.initCause(e);
-      throw ie;
-    }
   }
 }

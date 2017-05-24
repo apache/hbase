@@ -710,7 +710,7 @@ public class SplitLogManager {
         long now = EnvironmentEdgeManager.currentTime();
         if (now > lastLog + 5000) {
           lastLog = now;
-          LOG.info("total tasks = " + tot + " unassigned = " + unassigned + " tasks=" + tasks);
+          LOG.info("total=" + tot + ", unassigned=" + unassigned + ", tasks=" + tasks);
         }
       }
       if (resubmitted > 0) {

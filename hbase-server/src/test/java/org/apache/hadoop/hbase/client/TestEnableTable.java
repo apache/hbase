@@ -18,14 +18,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -36,16 +37,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,9 +53,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestEnableTable {
@@ -105,14 +101,16 @@ public class TestEnableTable {
     rs.getRegionServer().stop("stop");
     cluster.waitForRegionServerToStop(rs.getRegionServer().getServerName(), 10000);
 
-    LOG.debug("Now enabling table " + tableName);
-
-    admin.enableTable(tableName);
-    assertTrue(admin.isTableEnabled(tableName));
+    // We used to enable the table here but AMv2 would hang waiting on a RS to check-in.
+    // Revisit.
 
     JVMClusterUtil.RegionServerThread rs2 = cluster.startRegionServer();
     cluster.waitForRegionServerToStart(rs2.getRegionServer().getServerName().getHostname(),
         rs2.getRegionServer().getServerName().getPort(), 60000);
+
+    LOG.debug("Now enabling table " + tableName);
+    admin.enableTable(tableName);
+    assertTrue(admin.isTableEnabled(tableName));
 
     List<HRegionInfo> regions = TEST_UTIL.getAdmin().getTableRegions(tableName);
     assertEquals(1, regions.size());

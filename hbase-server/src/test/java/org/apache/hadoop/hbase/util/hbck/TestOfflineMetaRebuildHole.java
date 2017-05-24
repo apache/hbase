@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -38,6 +39,7 @@ import org.junit.experimental.categories.Category;
  * This builds a table, removes info from meta, and then fails when attempting
  * to rebuild meta.
  */
+@Ignore
 @Category({MiscTests.class, MediumTests.class})
 public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
   private final static Log LOG = LogFactory.getLog(TestOfflineMetaRebuildHole.class);

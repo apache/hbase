@@ -21,12 +21,9 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -34,17 +31,11 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.BulkAssigner;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
-import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DisableTableState;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.htrace.Trace;
 
 @InterfaceAudience.Private
 public class DisableTableProcedure
@@ -116,12 +107,8 @@ public class DisableTableProcedure
         setNextState(DisableTableState.DISABLE_TABLE_MARK_REGIONS_OFFLINE);
         break;
       case DISABLE_TABLE_MARK_REGIONS_OFFLINE:
-        if (markRegionsOffline(env, tableName, true) ==
-            MarkRegionOfflineOpResult.MARK_ALL_REGIONS_OFFLINE_SUCCESSFUL) {
-          setNextState(DisableTableState.DISABLE_TABLE_SET_DISABLED_TABLE_STATE);
-        } else {
-          LOG.trace("Retrying later to disable the missing regions");
-        }
+        addChildProcedure(env.getAssignmentManager().createUnassignProcedures(tableName));
+        setNextState(DisableTableState.DISABLE_TABLE_SET_DISABLED_TABLE_STATE);
         break;
       case DISABLE_TABLE_SET_DISABLED_TABLE_STATE:
         setTableStateToDisabled(env, tableName);
@@ -249,7 +236,7 @@ public class DisableTableProcedure
       // set the state later on). A quick state check should be enough for us to move forward.
       TableStateManager tsm = env.getMasterServices().getTableStateManager();
       TableState.State state = tsm.getTableState(tableName);
-      if(!state.equals(TableState.State.ENABLED)){
+      if (!state.equals(TableState.State.ENABLED)){
         LOG.info("Table " + tableName + " isn't enabled;is "+state.name()+"; skipping disable");
         setFailure("master-disable-table", new TableNotEnabledException(
                 tableName+" state is "+state.name()));
@@ -287,83 +274,6 @@ public class DisableTableProcedure
     env.getMasterServices().getTableStateManager().setTableState(
       tableName,
       TableState.State.DISABLING);
-  }
-
-  /**
-   * Mark regions of the table offline with retries
-   * @param env MasterProcedureEnv
-   * @param tableName the target table
-   * @param retryRequired whether to retry if the first run failed
-   * @return whether the operation is fully completed or being interrupted.
-   * @throws IOException
-   */
-  protected static MarkRegionOfflineOpResult markRegionsOffline(
-      final MasterProcedureEnv env,
-      final TableName tableName,
-      final Boolean retryRequired) throws IOException {
-    // Dev consideration: add a config to control max number of retry. For now, it is hard coded.
-    int maxTry = (retryRequired ? 10 : 1);
-    MarkRegionOfflineOpResult operationResult =
-        MarkRegionOfflineOpResult.BULK_ASSIGN_REGIONS_FAILED;
-    do {
-      try {
-        operationResult = markRegionsOffline(env, tableName);
-        if (operationResult == MarkRegionOfflineOpResult.MARK_ALL_REGIONS_OFFLINE_SUCCESSFUL) {
-          break;
-        }
-        maxTry--;
-      } catch (Exception e) {
-        LOG.warn("Received exception while marking regions online. tries left: " + maxTry, e);
-        maxTry--;
-        if (maxTry > 0) {
-          continue; // we still have some retry left, try again.
-        }
-        throw e;
-      }
-    } while (maxTry > 0);
-
-    if (operationResult != MarkRegionOfflineOpResult.MARK_ALL_REGIONS_OFFLINE_SUCCESSFUL) {
-      LOG.warn("Some or all regions of the Table '" + tableName + "' were still online");
-    }
-
-    return operationResult;
-  }
-
-  /**
-   * Mark regions of the table offline
-   * @param env MasterProcedureEnv
-   * @param tableName the target table
-   * @return whether the operation is fully completed or being interrupted.
-   * @throws IOException
-   */
-  private static MarkRegionOfflineOpResult markRegionsOffline(
-      final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
-    // Get list of online regions that are of this table.  Regions that are
-    // already closed will not be included in this list; i.e. the returned
-    // list is not ALL regions in a table, its all online regions according
-    // to the in-memory state on this master.
-    MarkRegionOfflineOpResult operationResult =
-        MarkRegionOfflineOpResult.MARK_ALL_REGIONS_OFFLINE_SUCCESSFUL;
-    final List<HRegionInfo> regions =
-        env.getMasterServices().getAssignmentManager().getRegionStates()
-            .getRegionsOfTable(tableName);
-    if (regions.size() > 0) {
-      LOG.info("Offlining " + regions.size() + " regions.");
-
-      BulkDisabler bd = new BulkDisabler(env, tableName, regions);
-      try {
-        if (!bd.bulkAssign()) {
-          operationResult = MarkRegionOfflineOpResult.BULK_ASSIGN_REGIONS_FAILED;
-        }
-      } catch (InterruptedException e) {
-        LOG.warn("Disable was interrupted");
-        // Preserve the interrupt.
-        Thread.currentThread().interrupt();
-        operationResult = MarkRegionOfflineOpResult.MARK_ALL_REGIONS_OFFLINE_INTERRUPTED;
-      }
-    }
-    return operationResult;
   }
 
   /**
@@ -426,66 +336,6 @@ public class DisableTableProcedure
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
-    }
-  }
-
-  /**
-   * Run bulk disable.
-   */
-  private static class BulkDisabler extends BulkAssigner {
-    private final AssignmentManager assignmentManager;
-    private final List<HRegionInfo> regions;
-    private final TableName tableName;
-    private final int waitingTimeForEvents;
-
-    public BulkDisabler(final MasterProcedureEnv env, final TableName tableName,
-        final List<HRegionInfo> regions) {
-      super(env.getMasterServices());
-      this.assignmentManager = env.getMasterServices().getAssignmentManager();
-      this.tableName = tableName;
-      this.regions = regions;
-      this.waitingTimeForEvents =
-          env.getMasterServices().getConfiguration()
-              .getInt("hbase.master.event.waiting.time", 1000);
-    }
-
-    @Override
-    protected void populatePool(ExecutorService pool) {
-      RegionStates regionStates = assignmentManager.getRegionStates();
-      for (final HRegionInfo region : regions) {
-        if (regionStates.isRegionInTransition(region)
-            && !regionStates.isRegionInState(region, RegionState.State.FAILED_CLOSE)) {
-          continue;
-        }
-        pool.execute(Trace.wrap("DisableTableHandler.BulkDisabler", new Runnable() {
-          @Override
-          public void run() {
-            assignmentManager.unassign(region);
-          }
-        }));
-      }
-    }
-
-    @Override
-    protected boolean waitUntilDone(long timeout) throws InterruptedException {
-      long startTime = EnvironmentEdgeManager.currentTime();
-      long remaining = timeout;
-      List<HRegionInfo> regions = null;
-      long lastLogTime = startTime;
-      while (!server.isStopped() && remaining > 0) {
-        Thread.sleep(waitingTimeForEvents);
-        regions = assignmentManager.getRegionStates().getRegionsOfTable(tableName);
-        long now = EnvironmentEdgeManager.currentTime();
-        // Don't log more than once every ten seconds. Its obnoxious. And only log table regions
-        // if we are waiting a while for them to go down...
-        if (LOG.isDebugEnabled() && ((now - lastLogTime) > 10000)) {
-          lastLogTime = now;
-          LOG.debug("Disable waiting until done; " + remaining + " ms remaining; " + regions);
-        }
-        if (regions.isEmpty()) break;
-        remaining = timeout - (now - startTime);
-      }
-      return regions != null && regions.isEmpty();
     }
   }
 }

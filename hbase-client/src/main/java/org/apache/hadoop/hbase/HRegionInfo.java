@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -165,6 +166,19 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    */
   public String getShortNameToLog() {
     return prettyPrint(this.getEncodedName());
+  }
+
+  public static String getShortNameToLog(HRegionInfo...hris) {
+    return getShortNameToLog(Arrays.asList(hris));
+  }
+
+  /**
+   * @return Return a String of short, printable names for <code>hris</code>
+   * (usually encoded name) for us logging.
+   */
+  public static String getShortNameToLog(final List<HRegionInfo> hris) {
+    return hris.stream().map(hri -> hri.getShortNameToLog()).
+        collect(Collectors.toList()).toString();
   }
 
   /**

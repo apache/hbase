@@ -57,22 +57,26 @@ import com.google.common.base.Preconditions;
  * Compact region on request and then run split if appropriate
  */
 @InterfaceAudience.Private
-public class CompactSplitThread implements CompactionRequestor, PropagatingConfigurationObserver {
-  private static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
+public class CompactSplit implements CompactionRequestor, PropagatingConfigurationObserver {
+  private static final Log LOG = LogFactory.getLog(CompactSplit.class);
 
   // Configuration key for the large compaction threads.
   public final static String LARGE_COMPACTION_THREADS =
       "hbase.regionserver.thread.compaction.large";
   public final static int LARGE_COMPACTION_THREADS_DEFAULT = 1;
-  
+
   // Configuration key for the small compaction threads.
   public final static String SMALL_COMPACTION_THREADS =
       "hbase.regionserver.thread.compaction.small";
   public final static int SMALL_COMPACTION_THREADS_DEFAULT = 1;
-  
+
   // Configuration key for split threads
   public final static String SPLIT_THREADS = "hbase.regionserver.thread.split";
   public final static int SPLIT_THREADS_DEFAULT = 1;
+
+  // Configuration keys for merge threads
+  public final static String MERGE_THREADS = "hbase.regionserver.thread.merge";
+  public final static int MERGE_THREADS_DEFAULT = 1;
 
   public static final String REGION_SERVER_REGION_SPLIT_LIMIT =
       "hbase.regionserver.regionSplitLimit";
@@ -84,6 +88,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   private final ThreadPoolExecutor longCompactions;
   private final ThreadPoolExecutor shortCompactions;
   private final ThreadPoolExecutor splits;
+  private final ThreadPoolExecutor mergePool;
 
   private volatile ThroughputController compactionThroughputController;
 
@@ -95,7 +100,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   private int regionSplitLimit;
 
   /** @param server */
-  CompactSplitThread(HRegionServer server) {
+  CompactSplit(HRegionServer server) {
     super();
     this.server = server;
     this.conf = server.getConfiguration();
@@ -146,6 +151,15 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
             return new Thread(r, name);
           }
       });
+    int mergeThreads = conf.getInt(MERGE_THREADS, MERGE_THREADS_DEFAULT);
+    this.mergePool = (ThreadPoolExecutor) Executors.newFixedThreadPool(
+        mergeThreads, new ThreadFactory() {
+          @Override
+          public Thread newThread(Runnable r) {
+            String name = n + "-merges-" + System.currentTimeMillis();
+            return new Thread(r, name);
+          }
+        });
 
     // compaction throughput controller
     this.compactionThroughputController =
@@ -159,7 +173,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
         + shortCompactions.getQueue().size() + ")"
         + ", split_queue=" + splits.getQueue().size();
   }
-  
+
   public String dumpQueue() {
     StringBuffer queueLists = new StringBuffer();
     queueLists.append("Compaction/Split Queue dump:\n");
@@ -194,6 +208,20 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     return queueLists.toString();
   }
 
+  public synchronized void requestRegionsMerge(final Region a,
+      final Region b, final boolean forcible, long masterSystemTime, User user) {
+    try {
+      mergePool.execute(new RegionMergeRequest(a, b, this.server, forcible, masterSystemTime,user));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Region merge requested for " + a + "," + b + ", forcible="
+            + forcible + ".  " + this);
+      }
+    } catch (RejectedExecutionException ree) {
+      LOG.warn("Could not execute merge for " + a + "," + b + ", forcible="
+          + forcible, ree);
+    }
+  }
+
   public synchronized boolean requestSplit(final Region r) {
     // don't split regions that are blocking
     if (shouldSplitRegion() && ((HRegion)r).getCompactPriority() >= Store.PRIORITY_USER) {
@@ -225,7 +253,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     try {
       this.splits.execute(new SplitRequest(r, midKey, this.server, user));
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Split requested for " + r + ".  " + this);
+        LOG.debug("Splitting " + r + ", " + this);
       }
     } catch (RejectedExecutionException ree) {
       LOG.info("Could not execute split for " + r, ree);
@@ -262,14 +290,14 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     // not a special compaction request, so make our own list
     List<CompactionRequest> ret = null;
     if (requests == null) {
-      ret = selectNow ? new ArrayList<>(r.getStores().size()) : null;
+      ret = selectNow ? new ArrayList<CompactionRequest>(r.getStores().size()) : null;
       for (Store s : r.getStores()) {
         CompactionRequest cr = requestCompactionInternal(r, s, why, p, null, selectNow, user);
         if (selectNow) ret.add(cr);
       }
     } else {
       Preconditions.checkArgument(selectNow); // only system requests have selectNow == false
-      ret = new ArrayList<>(requests.size());
+      ret = new ArrayList<CompactionRequest>(requests.size());
       for (Pair<CompactionRequest, Store> pair : requests) {
         ret.add(requestCompaction(r, pair.getSecond(), why, p, pair.getFirst(), user));
       }
@@ -525,7 +553,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
         region.reportCompactionRequestFailure();
         server.checkFileSystem();
       } finally {
-        LOG.debug("CompactSplitThread Status: " + CompactSplitThread.this);
+        LOG.debug("CompactSplitThread Status: " + CompactSplit.this);
       }
       this.compaction.getRequest().afterExecute();
     }

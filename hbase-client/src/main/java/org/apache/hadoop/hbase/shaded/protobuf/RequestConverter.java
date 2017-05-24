@@ -123,7 +123,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaSta
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -1120,19 +1119,6 @@ public final class RequestConverter {
     return builder.build();
   }
 
-  public static SplitTableRegionRequest buildSplitTableRegionRequest(
-      final HRegionInfo regionInfo,
-      final byte[] splitPoint,
-      final long nonceGroup,
-      final long nonce) {
-    SplitTableRegionRequest.Builder builder = SplitTableRegionRequest.newBuilder();
-    builder.setRegionInfo(HRegionInfo.convert(regionInfo));
-    builder.setSplitRow(UnsafeByteOperations.unsafeWrap(splitPoint));
-    builder.setNonceGroup(nonceGroup);
-    builder.setNonce(nonce);
-    return builder.build();
-  }
-
   /**
    * Create a protocol buffer AssignRegionRequest
    *
@@ -1515,7 +1501,7 @@ public final class RequestConverter {
   /**
    * Create a RegionOpenInfo based on given region info and version of offline node
    */
-  private static RegionOpenInfo buildRegionOpenInfo(
+  public static RegionOpenInfo buildRegionOpenInfo(
       final HRegionInfo region,
       final List<ServerName> favoredNodes, Boolean openForReplay) {
     RegionOpenInfo.Builder builder = RegionOpenInfo.newBuilder();

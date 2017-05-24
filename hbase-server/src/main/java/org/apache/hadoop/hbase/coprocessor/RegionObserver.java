@@ -448,8 +448,8 @@ public interface RegionObserver extends Coprocessor {
    * Called before the region is split.
    * @param c the environment provided by the region server
    * (e.getRegion() returns the parent region)
-   * @deprecated Use preSplit(
-   *    final ObserverContext&lt;RegionCoprocessorEnvironment&gt; c, byte[] splitRow)
+   * @deprecated No longer called in hbase2/AMv2 given the master runs splits now;
+   * @see MasterObserver
    */
   @Deprecated
   default void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException {}
@@ -460,6 +460,8 @@ public interface RegionObserver extends Coprocessor {
    * (e.getRegion() returns the parent region)
    *
    * Note: the logic moves to Master; it is unused in RS
+   * @deprecated No longer called in hbase2/AMv2 given the master runs splits now;
+   * @see MasterObserver
    */
   @Deprecated
   default void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c, byte[] splitRow)
@@ -471,7 +473,8 @@ public interface RegionObserver extends Coprocessor {
    * (e.getRegion() returns the parent region)
    * @param l the left daughter region
    * @param r the right daughter region
-   * @deprecated Use postCompleteSplit() instead
+   * @deprecated No longer called in hbase2/AMv2 given the master runs splits now;
+   * @see MasterObserver
    */
   @Deprecated
   default void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final Region l,
@@ -485,6 +488,8 @@ public interface RegionObserver extends Coprocessor {
    * @param metaEntries
    *
    * Note: the logic moves to Master; it is unused in RS
+   * @deprecated No longer called in hbase2/AMv2 given the master runs splits now;
+   * @see MasterObserver
   */
   @Deprecated
   default void preSplitBeforePONR(final ObserverContext<RegionCoprocessorEnvironment> ctx,
@@ -495,8 +500,9 @@ public interface RegionObserver extends Coprocessor {
    * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
    * effect in this hook.
    * @param ctx
-   *
    * Note: the logic moves to Master; it is unused in RS
+   * @deprecated No longer called in hbase2/AMv2 given the master runs splits now;
+   * @see MasterObserver
   */
   @Deprecated
   default void preSplitAfterPONR(final ObserverContext<RegionCoprocessorEnvironment> ctx)
@@ -507,6 +513,8 @@ public interface RegionObserver extends Coprocessor {
    * @param ctx
    *
    * Note: the logic moves to Master; it is unused in RS
+   * @deprecated No longer called in hbase2/AMv2 given the master runs splits now;
+   * @see MasterObserver
   */
   @Deprecated
   default void preRollBackSplit(final ObserverContext<RegionCoprocessorEnvironment> ctx)
@@ -517,6 +525,8 @@ public interface RegionObserver extends Coprocessor {
    * @param ctx
    *
    * Note: the logic moves to Master; it is unused in RS
+   * @deprecated No longer called in hbase2/AMv2 given the master runs splits now;
+   * @see MasterObserver
   */
   @Deprecated
   default void postRollBackSplit(final ObserverContext<RegionCoprocessorEnvironment> ctx)
@@ -526,7 +536,11 @@ public interface RegionObserver extends Coprocessor {
    * Called after any split request is processed.  This will be called irrespective of success or
    * failure of the split.
    * @param ctx
+   * @deprecated No longer called in hbase2/AMv2 given the master runs splits now;
+   * implement {@link MasterObserver#postCompletedSplitRegionAction(ObserverContext, HRegionInfo, HRegionInfo)}
+   * instead.
    */
+  @Deprecated
   default void postCompleteSplit(final ObserverContext<RegionCoprocessorEnvironment> ctx)
     throws IOException {}
   /**

@@ -155,9 +155,23 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
     this.logSize += size;
   }
 
-  public void removeFile() throws IOException {
+  public void removeFile(final Path walArchiveDir) throws IOException {
     close();
-    fs.delete(logFile, false);
+    boolean archived = false;
+    if (walArchiveDir != null) {
+      Path archivedFile = new Path(walArchiveDir, logFile.getName());
+      LOG.info("ARCHIVED (TODO: FILES ARE NOT PURGED FROM ARCHIVE!) " + logFile + " to " + archivedFile);
+      if (!fs.rename(logFile, archivedFile)) {
+        LOG.warn("Failed archive of " + logFile + ", deleting");
+      } else {
+        archived = true;
+      }
+    }
+    if (!archived) {
+      if (!fs.delete(logFile, false)) {
+        LOG.warn("Failed delete of " + logFile);
+      }
+    }
   }
 
   public void setProcIds(long minId, long maxId) {

@@ -81,7 +81,7 @@ public class TestMasterWalManager {
     // Create a ZKW to use in the test
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(UTIL);
     zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, walPath),
-      new SplitLogTask.Owned(inRecoveryServerName, mwm.getLogRecoveryMode()).toByteArray(),
+      new SplitLogTask.Owned(inRecoveryServerName).toByteArray(),
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     String staleRegionPath = ZKUtil.joinZNode(zkw.znodePaths.recoveringRegionsZNode, staleRegion);
     ZKUtil.createWithParents(zkw, staleRegionPath);

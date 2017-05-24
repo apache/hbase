@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.TestTableName;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -54,6 +55,10 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * HBASE-13651 Handle StoreFileScanner FileNotFoundException
+ */
+@Ignore
 @Category({MasterTests.class, LargeTests.class})
 public class TestCorruptedRegionStoreFile {
   private static final Log LOG = LogFactory.getLog(TestCorruptedRegionStoreFile.class);

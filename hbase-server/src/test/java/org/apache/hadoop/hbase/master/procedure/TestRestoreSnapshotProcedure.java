@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
@@ -47,6 +53,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -56,6 +63,8 @@ import static org.junit.Assert.assertTrue;
 @Category({MasterTests.class, MediumTests.class})
 public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestRestoreSnapshotProcedure.class);
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
 
   protected final TableName snapshotTableName = TableName.valueOf("testRestoreSnapshot");
   protected final byte[] CF1 = Bytes.toBytes("cf1");
@@ -202,8 +211,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
       new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot));
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = RestoreSnapshotState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     resetProcExecutorTestingKillFlag();
     validateSnapshotRestore();

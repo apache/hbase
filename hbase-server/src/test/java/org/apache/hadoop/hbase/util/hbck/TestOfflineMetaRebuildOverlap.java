@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -41,6 +42,7 @@ import com.google.common.collect.Multimap;
  * This builds a table, builds an overlap, and then fails when attempting to
  * rebuild meta.
  */
+@Ignore
 @Category({MiscTests.class, MediumTests.class})
 public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
   private final static Log LOG = LogFactory.getLog(TestOfflineMetaRebuildOverlap.class);

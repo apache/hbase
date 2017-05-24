@@ -289,8 +289,8 @@ public class WALSplitter {
     this.fileBeingSplit = logfile;
     try {
       long logLength = logfile.getLen();
-      LOG.info("Splitting wal: " + logPath + ", length=" + logLength);
-      LOG.info("DistributedLogReplay = " + this.distributedLogReplay);
+      LOG.info("Splitting WAL=" + logPath + ", length=" + logLength +
+          ", distributedLogReplay=" + this.distributedLogReplay);
       status.setStatus("Opening log file");
       if (reporter != null && !reporter.progress()) {
         progress_failed = true;
@@ -298,7 +298,7 @@ public class WALSplitter {
       }
       in = getReader(logfile, skipErrors, reporter);
       if (in == null) {
-        LOG.warn("Nothing to split in log file " + logPath);
+        LOG.warn("Nothing to split in WAL=" + logPath);
         return true;
       }
       int numOpenedFilesBeforeReporting = conf.getInt("hbase.splitlog.report.openedfiles", 3);
@@ -377,7 +377,7 @@ public class WALSplitter {
       iie.initCause(ie);
       throw iie;
     } catch (CorruptedLogFileException e) {
-      LOG.warn("Could not parse, corrupted log file " + logPath, e);
+      LOG.warn("Could not parse, corrupted WAL=" + logPath, e);
       if (this.csm != null) {
         // Some tests pass in a csm of null.
         this.csm.getSplitLogWorkerCoordination().markCorrupted(rootDir,
@@ -397,7 +397,7 @@ public class WALSplitter {
           in.close();
         }
       } catch (IOException exception) {
-        LOG.warn("Could not close wal reader: " + exception.getMessage());
+        LOG.warn("Could not close WAL reader: " + exception.getMessage());
         LOG.debug("exception details", exception);
       }
       try {
@@ -1595,8 +1595,10 @@ public class WALSplitter {
           if (wap == null) {
             wap = getWriterAndPath(logEntry);
             if (wap == null) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("getWriterAndPath decided we don't need to write edits for " + logEntry);
+              if (LOG.isTraceEnabled()) {
+                // This log spews the full edit. Can be massive in the log. Enable only debugging
+                // WAL lost edit issues.
+                LOG.trace("getWriterAndPath decided we don't need to write edits for " + logEntry);
               }
               return;
             }

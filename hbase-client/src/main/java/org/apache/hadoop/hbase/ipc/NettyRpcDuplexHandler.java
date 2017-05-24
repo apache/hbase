@@ -226,8 +226,8 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
       switch (idleEvt.state()) {
         case WRITER_IDLE:
           if (id2Call.isEmpty()) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("shutdown connection to " + conn.remoteId().address
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("shutdown connection to " + conn.remoteId().address
                   + " because idle for a long time");
             }
             // It may happen that there are still some pending calls in the event loop queue and

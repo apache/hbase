@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Special procedure used as a chore.
- * instead of bringing the Chore class in (dependencies reason),
+ * Instead of bringing the Chore class in (dependencies reason),
  * we reuse the executor timeout thread for this special case.
  *
  * The assumption is that procedure is used as hook to dispatch other procedures
@@ -43,7 +43,7 @@ public abstract class ProcedureInMemoryChore<TEnvironment> extends Procedure<TEn
   protected abstract void periodicExecute(final TEnvironment env);
 
   @Override
-  protected Procedure[] execute(final TEnvironment env) {
+  protected Procedure<TEnvironment>[] execute(final TEnvironment env) {
     throw new UnsupportedOperationException();
   }
 

@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -71,6 +70,16 @@ public class HFileArchiver {
 
   private HFileArchiver() {
     // hidden ctor since this is just a util
+  }
+
+  /**
+   * @return True if the Region exits in the filesystem.
+   */
+  public static boolean exists(Configuration conf, FileSystem fs, HRegionInfo info)
+      throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    Path regionDir = HRegion.getRegionDir(rootDir, info);
+    return fs.exists(regionDir);
   }
 
   /**
@@ -137,7 +146,7 @@ public class HFileArchiver {
     FileStatus[] storeDirs = FSUtils.listStatus(fs, regionDir, nonHidden);
     // if there no files, we can just delete the directory and return;
     if (storeDirs == null) {
-      LOG.debug("Region directory (" + regionDir + ") was empty, just deleting and returning!");
+      LOG.debug("Region directory " + regionDir + " empty.");
       return deleteRegionWithoutArchiving(fs, regionDir);
     }
 
@@ -454,7 +463,7 @@ public class HFileArchiver {
   private static boolean deleteRegionWithoutArchiving(FileSystem fs, Path regionDir)
       throws IOException {
     if (fs.delete(regionDir, true)) {
-      LOG.debug("Deleted all region files in: " + regionDir);
+      LOG.debug("Deleted " + regionDir);
       return true;
     }
     LOG.debug("Failed to delete region directory:" + regionDir);

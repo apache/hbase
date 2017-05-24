@@ -153,8 +153,9 @@ public interface ProcedureStore {
   /**
    * Set the number of procedure running.
    * This can be used, for example, by the store to know how long to wait before a sync.
+   * @return how many procedures are running (may not be same as <code>count</code>).
    */
-  void setRunningProcedureCount(int count);
+  int setRunningProcedureCount(int count);
 
   /**
    * Acquire the lease for the procedure store.

@@ -20,28 +20,27 @@ package org.apache.hadoop.hbase.master.balancer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.Comparator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.collect.MinMaxPriorityQueue;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -54,7 +53,7 @@ import org.apache.hadoop.hbase.util.Pair;
  * locations for all Regions in a cluster.
  *
  * <p>This classes produces plans for the
- * {@link org.apache.hadoop.hbase.master.AssignmentManager} to execute.
+ * {@link org.apache.hadoop.hbase.master.assignment.AssignmentManager} to execute.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SimpleLoadBalancer extends BaseLoadBalancer {

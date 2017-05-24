@@ -18,16 +18,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import java.security.PrivilegedAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.common.base.Preconditions;
 
@@ -37,14 +37,14 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 class SplitRequest implements Runnable {
   private static final Log LOG = LogFactory.getLog(SplitRequest.class);
-  private final HRegion parent;
+  private final HRegionInfo parent;
   private final byte[] midKey;
   private final HRegionServer server;
   private final User user;
 
   SplitRequest(Region region, byte[] midKey, HRegionServer hrs, User user) {
     Preconditions.checkNotNull(hrs);
-    this.parent = (HRegion)region;
+    this.parent = region.getRegionInfo();
     this.midKey = midKey;
     this.server = hrs;
     this.user = user;
@@ -56,67 +56,30 @@ class SplitRequest implements Runnable {
   }
 
   private void doSplitting() {
-    boolean success = false;
     server.metricsRegionServer.incrSplitRequest();
-    long startTime = EnvironmentEdgeManager.currentTime();
-
-    try {
-      long procId;
-      if (user != null && user.getUGI() != null) {
-        procId = user.getUGI().doAs (new PrivilegedAction<Long>() {
-          @Override
-          public Long run() {
-            try {
-              return server.requestRegionSplit(parent.getRegionInfo(), midKey);
-            } catch (Exception e) {
-              LOG.error("Failed to complete region split ", e);
-            }
-            return (long)-1;
-          }
-        });
-      } else {
-        procId = server.requestRegionSplit(parent.getRegionInfo(), midKey);
-      }
-
-      if (procId != -1) {
-        // wait for the split to complete or get interrupted.  If the split completes successfully,
-        // the procedure will return true; if the split fails, the procedure would throw exception.
-        //
-        try {
-          while (!(success = server.isProcedureFinished(procId))) {
-            try {
-              Thread.sleep(1000);
-            } catch (InterruptedException e) {
-              LOG.warn("Split region " + parent + " is still in progress.  Not waiting...");
-              break;
-            }
-          }
-        } catch (IOException e) {
-          LOG.error("Split region " + parent + " failed.", e);
+    if (user != null && user.getUGI() != null) {
+      user.getUGI().doAs (new PrivilegedAction<Void>() {
+        @Override
+        public Void run() {
+          requestRegionSplit();
+          return null;
         }
-      } else {
-        LOG.error("Fail to split region " + parent);
-      }
-    } finally {
-      if (this.parent.getCoprocessorHost() != null) {
-        try {
-          this.parent.getCoprocessorHost().postCompleteSplit();
-        } catch (IOException io) {
-          LOG.error("Split failed " + this,
-            io instanceof RemoteException ? ((RemoteException) io).unwrapRemoteException() : io);
-        }
-      }
+      });
+    } else {
+      requestRegionSplit();
+    }
+  }
 
-      // Update regionserver metrics with the split transaction total running time
-      server.metricsRegionServer.updateSplitTime(EnvironmentEdgeManager.currentTime() - startTime);
-
-      if (parent.shouldForceSplit()) {
-        parent.clearSplit();
-      }
-
-      if (success) {
-        server.metricsRegionServer.incrSplitSuccess();
-      }
+  private void requestRegionSplit() {
+    final TableName table = parent.getTable();
+    final HRegionInfo hri_a = new HRegionInfo(table, parent.getStartKey(), midKey);
+    final HRegionInfo hri_b = new HRegionInfo(table, midKey, parent.getEndKey());
+    // Send the split request to the master. the master will do the validation on the split-key.
+    // The parent region will be unassigned and the two new regions will be assigned.
+    // hri_a and hri_b objects may not reflect the regions that will be created, those objects
+    // are created just to pass the information to the reportRegionStateTransition().
+    if (!server.reportRegionStateTransition(TransitionCode.READY_TO_SPLIT, parent, hri_a, hri_b)) {
+      LOG.error("Unable to ask master to split " + parent.getRegionNameAsString());
     }
   }
 

@@ -32,7 +32,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
@@ -40,11 +42,14 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Service;
 
 /**
@@ -121,6 +126,12 @@ public interface MasterServices extends Server {
    * @return Master's instance of {@link ProcedureExecutor}
    */
   ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor();
+
+  /**
+   * @return Tripped when Master has finished initialization.
+   */
+  @VisibleForTesting
+  public ProcedureEvent getInitializedEvent();
 
   /**
    * Check table is modifiable; i.e. exists and is offline.
@@ -266,6 +277,23 @@ public interface MasterServices extends Server {
       throws IOException;
 
   /**
+   * Merge two regions. The real implementation is on the regionserver, master
+   * just move the regions together and send MERGE RPC to regionserver
+   * @param region_a region to merge
+   * @param region_b region to merge
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          two adjacent regions
+   * @return procedure Id
+   * @throws IOException
+   */
+  long dispatchMergingRegions(
+    final HRegionInfo region_a,
+    final HRegionInfo region_b,
+    final boolean forcible,
+    final long nonceGroup,
+    final long nonce) throws IOException;
+
+  /**
    * Merge regions in a table.
    * @param regionsToMerge daughter regions to merge
    * @param forcible whether to force to merge even two regions are not adjacent
@@ -400,6 +428,8 @@ public interface MasterServices extends Server {
    * @return True if this master is stopping.
    */
   boolean isStopping();
+
+  boolean isSplitOrMergeEnabled(MasterSwitchType switchType);
 
   /**
    * @return Favored Nodes Manager

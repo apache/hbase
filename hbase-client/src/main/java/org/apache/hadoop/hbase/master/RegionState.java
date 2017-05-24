@@ -36,10 +36,8 @@ public class RegionState {
   @InterfaceStability.Evolving
   public enum State {
     OFFLINE,        // region is in an offline state
-    PENDING_OPEN,   // same as OPENING, to be removed
     OPENING,        // server has begun to open but not yet done
     OPEN,           // server opened region and updated meta
-    PENDING_CLOSE,  // same as CLOSING, to be removed
     CLOSING,        // server has begun to close but not yet done
     CLOSED,         // server closed region and updated meta
     SPLITTING,      // server started split of a region
@@ -64,17 +62,11 @@ public class RegionState {
       case OFFLINE:
         rs = ClusterStatusProtos.RegionState.State.OFFLINE;
         break;
-      case PENDING_OPEN:
-        rs = ClusterStatusProtos.RegionState.State.PENDING_OPEN;
-        break;
       case OPENING:
         rs = ClusterStatusProtos.RegionState.State.OPENING;
         break;
       case OPEN:
         rs = ClusterStatusProtos.RegionState.State.OPEN;
-        break;
-      case PENDING_CLOSE:
-        rs = ClusterStatusProtos.RegionState.State.PENDING_CLOSE;
         break;
       case CLOSING:
         rs = ClusterStatusProtos.RegionState.State.CLOSING;
@@ -124,8 +116,6 @@ public class RegionState {
         state = OFFLINE;
         break;
       case PENDING_OPEN:
-        state = PENDING_OPEN;
-        break;
       case OPENING:
         state = OPENING;
         break;
@@ -133,8 +123,6 @@ public class RegionState {
         state = OPEN;
         break;
       case PENDING_CLOSE:
-        state = PENDING_CLOSE;
-        break;
       case CLOSING:
         state = CLOSING;
         break;
@@ -231,22 +219,16 @@ public class RegionState {
     this.ritDuration += (this.stamp - previousStamp);
   }
 
-  /**
-   * PENDING_CLOSE (to be removed) is the same as CLOSING
-   */
   public boolean isClosing() {
-    return state == State.PENDING_CLOSE || state == State.CLOSING;
+    return state == State.CLOSING;
   }
 
   public boolean isClosed() {
     return state == State.CLOSED;
   }
 
-  /**
-   * PENDING_OPEN (to be removed) is the same as OPENING
-   */
   public boolean isOpening() {
-    return state == State.PENDING_OPEN || state == State.OPENING;
+    return state == State.OPENING;
   }
 
   public boolean isOpened() {

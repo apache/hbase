@@ -135,8 +135,8 @@ public class RegionPlan implements Comparable<RegionPlan> {
 
   @Override
   public String toString() {
-    return "hri=" + this.hri.getRegionNameAsString() + ", src=" +
+    return "hri=" + this.hri.getRegionNameAsString() + ", source=" +
       (this.source == null? "": this.source.toString()) +
-      ", dest=" + (this.dest == null? "": this.dest.toString());
+      ", destination=" + (this.dest == null? "": this.dest.toString());
   }
 }

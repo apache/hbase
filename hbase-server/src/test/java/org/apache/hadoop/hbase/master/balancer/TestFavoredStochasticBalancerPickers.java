@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -96,7 +97,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
   }
 
 
-  @Test
+  @Ignore @Test
   public void testPickers() throws Exception {
 
     TableName tableName = TableName.valueOf("testPickers");

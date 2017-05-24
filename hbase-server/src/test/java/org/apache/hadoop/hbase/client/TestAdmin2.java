@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -528,8 +528,6 @@ public class TestAdmin2 {
     List<HRegionInfo> tableRegions = localAdmin.getTableRegions(tableName);
     HRegionInfo hri = tableRegions.get(0);
     AssignmentManager am = master.getAssignmentManager();
-    assertTrue("Region " + hri.getRegionNameAsString()
-      + " should be assigned properly", am.waitForAssignment(hri));
     ServerName server = am.getRegionStates().getRegionServerOfRegion(hri);
     localAdmin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(server.getServerName()));
     assertEquals("Current region server and region server before move should be same.", server,

@@ -598,11 +598,13 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         return false;
       // region operations are using the shared-lock on the table
       // and then they will grab an xlock on the region.
-      case SPLIT:
-      case MERGE:
-      case ASSIGN:
-      case UNASSIGN:
+      case REGION_SPLIT:
+      case REGION_MERGE:
+      case REGION_ASSIGN:
+      case REGION_UNASSIGN:
       case REGION_EDIT:
+      case REGION_GC:
+      case MERGED_REGIONS_GC:
         return false;
       default:
         break;
@@ -815,7 +817,11 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       boolean hasLock = true;
       final LockAndQueue[] regionLocks = new LockAndQueue[regionInfo.length];
       for (int i = 0; i < regionInfo.length; ++i) {
-        assert regionInfo[i].getTable().equals(table);
+        LOG.info(procedure + " " + table + " " + regionInfo[i].getRegionNameAsString());
+        assert table != null;
+        assert regionInfo[i] != null;
+        assert regionInfo[i].getTable() != null;
+        assert regionInfo[i].getTable().equals(table): regionInfo[i] + " " + procedure;
         assert i == 0 || regionInfo[i] != regionInfo[i - 1] : "duplicate region: " + regionInfo[i];
 
         regionLocks[i] = locking.getRegionLock(regionInfo[i].getEncodedName());
@@ -1254,7 +1260,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     */
   @VisibleForTesting
   public String dumpLocks() throws IOException {
-    // TODO: Refactor so we stream out locks for case when millions; i.e. take a PrintWriter
-    return this.locking.toString();
+    schedLock();
+    try {
+      // TODO: Refactor so we stream out locks for case when millions; i.e. take a PrintWriter
+      return this.locking.toString();
+    } finally {
+      schedUnlock();
+    }
   }
 }

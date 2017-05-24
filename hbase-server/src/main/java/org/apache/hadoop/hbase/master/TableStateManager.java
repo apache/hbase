@@ -183,8 +183,9 @@ public class TableStateManager {
 
   @Nullable
   protected TableState readMetaState(TableName tableName) throws IOException {
-    if (tableName.equals(TableName.META_TABLE_NAME))
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
       return new TableState(tableName, TableState.State.ENABLED);
+    }
     return MetaTableAccessor.getTableState(master.getConnection(), tableName);
   }
 

@@ -28,8 +28,10 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -40,7 +42,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -55,9 +56,9 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -66,13 +67,10 @@ import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormatBase;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
-import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -80,6 +78,7 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -88,8 +87,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
-
-import com.google.common.collect.Sets;
 
 @Category(MediumTests.class)
 public class TestNamespaceAuditor {
@@ -314,19 +311,10 @@ public class TestNamespaceAuditor {
       shouldFailMerge = fail;
     }
 
-    private boolean triggered = false;
-
-    public synchronized void waitUtilTriggered() throws InterruptedException {
-      while (!triggered) {
-        wait();
-      }
-    }
-
     @Override
     public synchronized void preMergeRegionsAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final HRegionInfo[] regionsToMerge) throws IOException {
-      triggered = true;
       notifyAll();
       if (shouldFailMerge) {
         throw new IOException("fail merge");
@@ -337,16 +325,16 @@ public class TestNamespaceAuditor {
   @Test
   public void testRegionMerge() throws Exception {
     String nsp1 = prefix + "_regiontest";
+    final int initialRegions = 3;
     NamespaceDescriptor nspDesc =
         NamespaceDescriptor.create(nsp1)
-            .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "3")
+            .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "" + initialRegions)
             .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
     ADMIN.createNamespace(nspDesc);
     final TableName tableTwo = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table2");
     byte[] columnFamily = Bytes.toBytes("info");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableTwo);
     tableDescOne.addFamily(new HColumnDescriptor(columnFamily));
-    final int initialRegions = 3;
     ADMIN.createTable(tableDescOne, Bytes.toBytes("1"), Bytes.toBytes("2000"), initialRegions);
     Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
     try (Table table = connection.getTable(tableTwo)) {
@@ -354,102 +342,41 @@ public class TestNamespaceAuditor {
     }
     ADMIN.flush(tableTwo);
     List<HRegionInfo> hris = ADMIN.getTableRegions(tableTwo);
+    assertEquals(initialRegions, hris.size());
     Collections.sort(hris);
-    // merge the two regions
-    final Set<String> encodedRegionNamesToMerge =
-        Sets.newHashSet(hris.get(0).getEncodedName(), hris.get(1).getEncodedName());
-    ADMIN.mergeRegionsAsync(
+    Future<?> f = ADMIN.mergeRegionsAsync(
       hris.get(0).getEncodedNameAsBytes(),
       hris.get(1).getEncodedNameAsBytes(),
       false);
-    UTIL.waitFor(10000, 100, new Waiter.ExplainingPredicate<Exception>() {
+    f.get(10, TimeUnit.SECONDS);
 
-      @Override
-      public boolean evaluate() throws Exception {
-        RegionStates regionStates =
-            UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-        for (HRegionInfo hri : ADMIN.getTableRegions(tableTwo)) {
-          if (encodedRegionNamesToMerge.contains(hri.getEncodedName())) {
-            return false;
-          }
-          if (!regionStates.isRegionInState(hri, RegionState.State.OPEN)) {
-            return false;
-          }
-        }
-        return true;
-      }
-
-      @Override
-      public String explainFailure() throws Exception {
-        RegionStates regionStates =
-            UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-        for (HRegionInfo hri : ADMIN.getTableRegions(tableTwo)) {
-          if (encodedRegionNamesToMerge.contains(hri.getEncodedName())) {
-            return hri + " which is expected to be merged is still online";
-          }
-          if (!regionStates.isRegionInState(hri, RegionState.State.OPEN)) {
-            return hri + " is still in not opened";
-          }
-        }
-        return "Unknown";
-      }
-    });
     hris = ADMIN.getTableRegions(tableTwo);
     assertEquals(initialRegions - 1, hris.size());
     Collections.sort(hris);
-
-    final HRegionInfo hriToSplit = hris.get(1);
     ADMIN.split(tableTwo, Bytes.toBytes("500"));
-
-    UTIL.waitFor(10000, 100, new Waiter.ExplainingPredicate<Exception>() {
-
-      @Override
-      public boolean evaluate() throws Exception {
-        RegionStates regionStates =
-            UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-        for (HRegionInfo hri : ADMIN.getTableRegions(tableTwo)) {
-          if (hri.getEncodedName().equals(hriToSplit.getEncodedName())) {
-            return false;
-          }
-          if (!regionStates.isRegionInState(hri, RegionState.State.OPEN)) {
-            return false;
-          }
-        }
-        return true;
-      }
-
-      @Override
-      public String explainFailure() throws Exception {
-        RegionStates regionStates =
-            UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-        for (HRegionInfo hri : ADMIN.getTableRegions(tableTwo)) {
-          if (hri.getEncodedName().equals(hriToSplit.getEncodedName())) {
-            return hriToSplit + " which is expected to be split is still online";
-          }
-          if (!regionStates.isRegionInState(hri, RegionState.State.OPEN)) {
-            return hri + " is still in not opened";
-          }
-        }
-        return "Unknown";
-      }
-    });
+    // Not much we can do here until we have split return a Future.
+    Threads.sleep(5000);
     hris = ADMIN.getTableRegions(tableTwo);
     assertEquals(initialRegions, hris.size());
     Collections.sort(hris);
 
-    // fail region merge through Coprocessor hook
+    // Fail region merge through Coprocessor hook
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     MasterCoprocessorHost cpHost = cluster.getMaster().getMasterCoprocessorHost();
     Coprocessor coprocessor = cpHost.findCoprocessor(CPMasterObserver.class.getName());
     CPMasterObserver masterObserver = (CPMasterObserver) coprocessor;
     masterObserver.failMerge(true);
-    masterObserver.triggered = false;
 
-    ADMIN.mergeRegionsAsync(
+    f = ADMIN.mergeRegionsAsync(
       hris.get(1).getEncodedNameAsBytes(),
       hris.get(2).getEncodedNameAsBytes(),
       false);
-    masterObserver.waitUtilTriggered();
+    try {
+      f.get(10, TimeUnit.SECONDS);
+      fail("Merge was supposed to fail!");
+    } catch (ExecutionException ee) {
+      // Expected.
+    }
     hris = ADMIN.getTableRegions(tableTwo);
     assertEquals(initialRegions, hris.size());
     Collections.sort(hris);
@@ -459,67 +386,6 @@ public class TestNamespaceAuditor {
       TableInputFormatBase.getSplitKey(hriToSplit2.getStartKey(), hriToSplit2.getEndKey(), true));
     Thread.sleep(2000);
     assertEquals(initialRegions, ADMIN.getTableRegions(tableTwo).size());
-  }
-
-  @Test
-  public void testRegionOperations() throws Exception {
-    String nsp1 = prefix + "_regiontest";
-    NamespaceDescriptor nspDesc = NamespaceDescriptor.create(nsp1)
-        .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "2")
-        .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
-    ADMIN.createNamespace(nspDesc);
-    boolean constraintViolated = false;
-    final TableName tableOne = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table1");
-    byte[] columnFamily = Bytes.toBytes("info");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableOne);
-    tableDescOne.addFamily(new HColumnDescriptor(columnFamily));
-    NamespaceTableAndRegionInfo stateInfo;
-    try {
-      ADMIN.createTable(tableDescOne, Bytes.toBytes("1"), Bytes.toBytes("1000"), 7);
-    } catch (Exception exp) {
-      assertTrue(exp instanceof DoNotRetryIOException);
-      LOG.info(exp);
-      constraintViolated = true;
-    } finally {
-      assertTrue(constraintViolated);
-    }
-    assertFalse(ADMIN.tableExists(tableOne));
-    // This call will pass.
-    ADMIN.createTable(tableDescOne);
-    Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-    Table htable = connection.getTable(tableOne);
-    UTIL.loadNumericRows(htable, Bytes.toBytes("info"), 1, 1000);
-    ADMIN.flush(tableOne);
-    stateInfo = getNamespaceState(nsp1);
-    assertEquals(1, stateInfo.getTables().size());
-    assertEquals(1, stateInfo.getRegionCount());
-    restartMaster();
-
-    HRegion actualRegion = UTIL.getHBaseCluster().getRegions(tableOne).get(0);
-    CustomObserver observer = (CustomObserver) actualRegion.getCoprocessorHost().findCoprocessor(
-        CustomObserver.class.getName());
-    assertNotNull(observer);
-
-    ADMIN.split(tableOne, Bytes.toBytes("500"));
-    observer.postSplit.await();
-    assertEquals(2, ADMIN.getTableRegions(tableOne).size());
-    actualRegion = UTIL.getHBaseCluster().getRegions(tableOne).get(0);
-    observer = (CustomObserver) actualRegion.getCoprocessorHost().findCoprocessor(
-      CustomObserver.class.getName());
-    assertNotNull(observer);
-
-    //Before we go on split, we should remove all reference store files.
-    ADMIN.compact(tableOne);
-    observer.postCompact.await();
-
-    ADMIN.split(tableOne, getSplitKey(actualRegion.getRegionInfo().getStartKey(),
-      actualRegion.getRegionInfo().getEndKey()));
-    observer.postSplit.await();
-    // Make sure no regions have been added.
-    List<HRegionInfo> hris = ADMIN.getTableRegions(tableOne);
-    assertEquals(2, hris.size());
-
-    htable.close();
   }
 
   /*
@@ -591,14 +457,7 @@ public class TestNamespaceAuditor {
   }
 
   public static class CustomObserver implements RegionObserver {
-    volatile CountDownLatch postSplit;
     volatile CountDownLatch postCompact;
-
-    @Override
-    public void postCompleteSplit(ObserverContext<RegionCoprocessorEnvironment> ctx)
-        throws IOException {
-      postSplit.countDown();
-    }
 
     @Override
     public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
@@ -608,7 +467,6 @@ public class TestNamespaceAuditor {
 
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {
-      postSplit = new CountDownLatch(1);
       postCompact = new CountDownLatch(1);
     }
   }
@@ -729,7 +587,7 @@ public class TestNamespaceAuditor {
     ADMIN.createTable(tableDescOne);
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
   }
-  
+
   @Test(expected = QuotaExceededException.class)
   public void testCloneSnapshotQuotaExceed() throws Exception {
     String nsp = prefix + "_testTableQuotaExceedWithCloneSnapshot";

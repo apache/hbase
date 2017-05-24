@@ -593,12 +593,14 @@ public class TestBlockEvictionFromClient {
       put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       region.flush(true);
+      LOG.info("About to SPLIT on " + Bytes.toString(ROW1));
       TEST_UTIL.getAdmin().split(tableName, ROW1);
       List<HRegionInfo> tableRegions = TEST_UTIL.getAdmin().getTableRegions(tableName);
       // Wait for splits
       while (tableRegions.size() != 2) {
         tableRegions = TEST_UTIL.getAdmin().getTableRegions(tableName);
         Thread.sleep(100);
+        LOG.info("Waiting on SPLIT to complete...");
       }
       region.compact(true);
       Iterator<CachedBlock> iterator = cache.iterator();

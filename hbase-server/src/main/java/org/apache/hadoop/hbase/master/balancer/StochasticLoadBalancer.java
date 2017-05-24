@@ -293,9 +293,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     if (total <= 0 || sumMultiplier <= 0
         || (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance)) {
-      LOG.info("Skipping load balancing because balanced cluster; " + "total cost is " + total
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Skipping load balancing because balanced cluster; " + "total cost is " + total
           + ", sum multiplier is " + sumMultiplier + " min cost which need balance is "
           + minCostNeedBalance);
+      }
       return false;
     }
     return true;
@@ -1153,11 +1155,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         stats = new double[cluster.numServers];
       }
 
-      for (int i =0; i < cluster.numServers; i++) {
+      for (int i = 0; i < cluster.numServers; i++) {
         stats[i] = 0;
         for (int regionIdx : cluster.regionsPerServer[i]) {
           if (regionIdx == cluster.regionIndexToPrimaryIndex[regionIdx]) {
-            stats[i] ++;
+            stats[i]++;
           }
         }
       }

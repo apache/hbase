@@ -42,23 +42,18 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -103,7 +98,7 @@ public class TestAdmin1 {
 
   @Before
   public void setUp() throws Exception {
-    this.admin = TEST_UTIL.getHBaseAdmin();
+    this.admin = TEST_UTIL.getAdmin();
   }
 
   @After
@@ -751,7 +746,7 @@ public class TestAdmin1 {
 
     desc = new HTableDescriptor(TABLE_2);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_2)) {
@@ -806,7 +801,7 @@ public class TestAdmin1 {
 
     desc = new HTableDescriptor(TABLE_3);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
 
@@ -992,7 +987,7 @@ public class TestAdmin1 {
       sb.append("_").append(Integer.toString(rowCounts[i]));
     }
     assertFalse(admin.tableExists(tableName));
-    try(final Table table = TEST_UTIL.createTable(tableName, familyNames,
+    try (final Table table = TEST_UTIL.createTable(tableName, familyNames,
       numVersions, blockSize);
       final RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
 
@@ -1057,8 +1052,7 @@ public class TestAdmin1 {
             } catch (IOException e) {
               e.printStackTrace();
             }
-            if (regions == null)
-              continue;
+            if (regions == null) continue;
             count.set(regions.size());
             if (count.get() >= 2) {
               LOG.info("Found: " + regions);

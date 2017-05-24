@@ -130,7 +130,7 @@ public class SimpleRpcServer extends RpcServer {
       // has an advantage in that it is easy to shutdown the pool.
       readPool = Executors.newFixedThreadPool(readThreads,
         new ThreadFactoryBuilder().setNameFormat(
-          "RpcServer.reader=%d,bindAddress=" + bindAddress.getHostName() +
+          "Reader=%d,bindAddress=" + bindAddress.getHostName() +
           ",port=" + port).setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       for (int i = 0; i < readThreads; ++i) {
@@ -142,7 +142,7 @@ public class SimpleRpcServer extends RpcServer {
 
       // Register accepts on the server socket with the selector.
       acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
-      this.setName("RpcServer.listener,port=" + port);
+      this.setName("Listener,port=" + port);
       this.setDaemon(true);
     }
 
@@ -331,7 +331,7 @@ public class SimpleRpcServer extends RpcServer {
         throw ieo;
       } catch (Exception e) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug(getName() + ": Caught exception while reading:", e);
+          LOG.debug("Caught exception while reading:", e);
         }
         count = -1; //so that the (count < 0) block is executed
       }
@@ -608,8 +608,8 @@ public class SimpleRpcServer extends RpcServer {
     SimpleServerRpcConnection register(SocketChannel channel) {
       SimpleServerRpcConnection connection = getConnection(channel, System.currentTimeMillis());
       add(connection);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Server connection from " + connection +
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Connection from " + connection +
             "; connections=" + size() +
             ", queued calls size (bytes)=" + callQueueSizeInBytes.sum() +
             ", general queued calls=" + scheduler.getGeneralQueueLength() +
@@ -621,8 +621,8 @@ public class SimpleRpcServer extends RpcServer {
     boolean close(SimpleServerRpcConnection connection) {
       boolean exists = remove(connection);
       if (exists) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(Thread.currentThread().getName() +
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(Thread.currentThread().getName() +
               ": disconnecting client " + connection +
               ". Number of active connections: "+ size());
         }

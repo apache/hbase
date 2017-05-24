@@ -31,7 +31,8 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 public interface TableProcedureInterface {
   public enum TableOperationType {
     CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
-    REGION_EDIT, SPLIT, MERGE, ASSIGN, UNASSIGN, /* region operations */
+    REGION_EDIT, REGION_SPLIT, REGION_MERGE, REGION_ASSIGN, REGION_UNASSIGN,
+      REGION_GC, MERGED_REGIONS_GC/* region operations */
   };
 
   /**

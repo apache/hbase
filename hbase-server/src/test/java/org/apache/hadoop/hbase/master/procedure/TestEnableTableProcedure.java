@@ -22,12 +22,12 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.EnableTableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -36,13 +36,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestEnableTableProcedure.class);
-
-  @Rule
-  public TestName name = new TestName();
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
+  @Rule public TestName name = new TestName();
 
   @Test(timeout = 60000)
   public void testEnableTable() throws Exception {
@@ -58,8 +59,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
-    MasterProcedureTestingUtility.validateTableIsEnabled(UTIL.getHBaseCluster().getMaster(),
-      tableName);
+    MasterProcedureTestingUtility.validateTableIsEnabled(getMaster(), tableName);
   }
 
   @Test(timeout=60000, expected=TableNotDisabledException.class)
@@ -113,10 +113,9 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
         new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = EnableTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
-    MasterProcedureTestingUtility.validateTableIsEnabled(UTIL.getHBaseCluster().getMaster(),
-      tableName);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+
+    MasterProcedureTestingUtility.validateTableIsEnabled(getMaster(), tableName);
   }
 
   @Test(timeout = 60000)
@@ -136,9 +135,8 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     long procId = procExec.submitProcedure(
         new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
 
-    int numberOfSteps = 1; // failing at pre operation
+    int numberOfSteps = 0; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
-    MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),
-      tableName);
+    MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 }

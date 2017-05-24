@@ -26,7 +26,6 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
-import "Master.proto";
 import "ClusterStatus.proto";
 
 message RegionServerStartupRequest {
@@ -127,19 +126,6 @@ message ReportRegionStateTransitionResponse {
   optional string error_message = 1;
 }
 
-/**
- * Splits the specified region.
- */
-message SplitTableRegionRequest {
-  required RegionInfo region_info = 1;
-  required bytes split_row = 2;
-  optional uint64 nonce_group = 3 [default = 0];
-  optional uint64 nonce = 4 [default = 0];
-}
-
-message SplitTableRegionResponse {
-  optional uint64 proc_id = 1;
-}
 
 message RegionSpaceUse {
   optional RegionInfo region_info = 1; // A region identifier
@@ -186,18 +172,6 @@ service RegionServerStatusService {
    */
   rpc ReportRegionStateTransition(ReportRegionStateTransitionRequest)
     returns(ReportRegionStateTransitionResponse);
-
-  /**
-   * Split region
-   */
-  rpc SplitRegion(SplitTableRegionRequest)
-    returns(SplitTableRegionResponse);
-
-  /**
-   * Get procedure result
-   */
-  rpc getProcedureResult(GetProcedureResultRequest)
-    returns(GetProcedureResultResponse);
 
   /**
    * Reports Region filesystem space use

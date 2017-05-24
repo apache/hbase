@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -97,8 +96,8 @@ public class DeleteTableProcedure
           }
 
           // TODO: Move out... in the acquireLock()
-          LOG.debug("waiting for '" + getTableName() + "' regions in transition");
-          regions = ProcedureSyncWait.getRegionsFromMeta(env, getTableName());
+          LOG.debug("Waiting for '" + getTableName() + "' regions in transition");
+          regions = env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName());
           assert regions != null && !regions.isEmpty() : "unexpected 0 regions";
           ProcedureSyncWait.waitRegionInTransition(env, regions);
 
@@ -350,8 +349,7 @@ public class DeleteTableProcedure
       final TableName tableName) throws IOException {
     Connection connection = env.getMasterServices().getConnection();
     Scan tableScan = MetaTableAccessor.getScanForTableName(connection, tableName);
-    try (Table metaTable =
-        connection.getTable(TableName.META_TABLE_NAME)) {
+    try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
       List<Delete> deletes = new ArrayList<>();
       try (ResultScanner resScanner = metaTable.getScanner(tableScan)) {
         for (Result result : resScanner) {
@@ -385,11 +383,9 @@ public class DeleteTableProcedure
 
   protected static void deleteAssignmentState(final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
-    final AssignmentManager am = env.getMasterServices().getAssignmentManager();
-
     // Clean up regions of the table in RegionStates.
     LOG.debug("Removing '" + tableName + "' from region states.");
-    am.getRegionStates().tableDeleted(tableName);
+    env.getMasterServices().getAssignmentManager().deleteTable(tableName);
 
     // If entry for this table states, remove it.
     LOG.debug("Marking '" + tableName + "' as deleted.");
