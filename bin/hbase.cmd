@@ -286,10 +286,23 @@ if defined jruby-needed (
 
   @rem JRUBY_HOME is not defined
   if not defined JRUBY_HOME (
-    @rem add jruby packaged with HBase to CLASSPATH
-    set JRUBY_PACKAGED_WITH_HBASE=%HBASE_HOME%\lib\ruby\*
-    if defined jruby-needed (
-      set CLASSPATH=!JRUBY_PACKAGED_WITH_HBASE!;!CLASSPATH!
+    @rem in dev environment
+    if "%in_dev_env%"=="true" (
+      set cached_classpath_jruby_filename=%HBASE_HOME%\target\cached_classpath_jruby.txt
+      if not exist "!cached_classpath_jruby_filename!" (
+        echo "As this is a development environment, we need !cached_classpath_jruby_filename! to be generated from maven (command: mvn install -DskipTests)"
+        goto :eof
+      )
+      for /f "delims=" %%i in ('type "!cached_classpath_jruby_filename!"') do set CLASSPATH=%%i;%CLASSPATH%
+    )
+
+    @rem not in dev environment
+    if "%in_dev_env%"=="false" (
+      @rem add jruby packaged with HBase to CLASSPATH
+      set JRUBY_PACKAGED_WITH_HBASE=%HBASE_HOME%\lib\ruby\*
+      if defined jruby-needed (
+        set CLASSPATH=!JRUBY_PACKAGED_WITH_HBASE!;!CLASSPATH!
+      )
     )
   )
 )

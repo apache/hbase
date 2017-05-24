@@ -320,11 +320,20 @@ if [[ $jruby_needed ]]; then
     HBASE_OPTS="$HBASE_OPTS -Djruby.home=$JRUBY_HOME -Djruby.lib=$JRUBY_HOME/lib"
 
   else  # JRUBY_HOME is not specified explicitly
-    # add jruby packaged with HBase to CLASSPATH
-    JRUBY_PACKAGED_WITH_HBASE="$HBASE_HOME/lib/ruby/*.jar"
-    for jruby_jar in $JRUBY_PACKAGED_WITH_HBASE; do
-      CLASSPATH=$jruby_jar:$CLASSPATH;
-    done
+    if $in_dev_env; then  # in dev environment
+      F_JRUBY="${HBASE_HOME}/target/cached_classpath_jruby.txt"
+      if [ ! -f "${F_JRUBY}" ]; then
+        echo "As this is a development environment, we need ${F_JRUBY} to be generated from maven (command: mvn install -DskipTests)"
+        exit 1
+      fi
+      CLASSPATH=$(cat "${F_JRUBY}"):$CLASSPATH;
+    else  # not in dev environment
+      # add jruby packaged with HBase to CLASSPATH
+      JRUBY_PACKAGED_WITH_HBASE="$HBASE_HOME/lib/ruby/*.jar"
+      for jruby_jar in $JRUBY_PACKAGED_WITH_HBASE; do
+        CLASSPATH=$jruby_jar:$CLASSPATH;
+      done
+    fi
   fi
 fi
 
