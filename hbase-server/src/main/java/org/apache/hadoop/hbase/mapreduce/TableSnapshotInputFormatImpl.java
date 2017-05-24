@@ -313,6 +313,9 @@ public class TableSnapshotInputFormatImpl {
     List<InputSplit> splits = new ArrayList<InputSplit>();
     for (HRegionInfo hri : regionManifests) {
       // load region descriptor
+      if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
+        continue;
+      }
 
       if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
           hri.getEndKey())) {
