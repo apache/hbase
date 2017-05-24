@@ -21,6 +21,17 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -31,12 +42,6 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.ipc.RemoteException;
-
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Abstract Cleaner that uses a chain of delegates to clean a directory of files
@@ -151,6 +156,46 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   }
 
   /**
+   * Sort the given list in (descending) order of the space each element takes
+   * @param dirs the list to sort, element in it should be directory (not file)
+   */
+  private void sortByConsumedSpace(List<FileStatus> dirs) {
+    if (dirs == null || dirs.size() < 2) {
+      // no need to sort for empty or single directory
+      return;
+    }
+    Collections.sort(dirs, new Comparator<FileStatus>() {
+      HashMap<FileStatus, Long> directorySpaces = new HashMap<FileStatus, Long>();
+
+      @Override
+      public int compare(FileStatus f1, FileStatus f2) {
+        long f1ConsumedSpace = getSpace(f1);
+        long f2ConsumedSpace = getSpace(f2);
+        return (f1ConsumedSpace > f2ConsumedSpace) ? -1
+            : (f1ConsumedSpace < f2ConsumedSpace ? 1 : 0);
+      }
+
+      private long getSpace(FileStatus f) {
+        Long cached = directorySpaces.get(f);
+        if (cached != null) {
+          return cached;
+        }
+        try {
+          long space =
+              f.isDirectory() ? fs.getContentSummary(f.getPath()).getSpaceConsumed() : f.getLen();
+          directorySpaces.put(f, space);
+          return space;
+        } catch (IOException e) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("failed to get space consumed by path " + f.getPath(), e);
+          }
+          return -1;
+        }
+      }
+    });
+  }
+
+  /**
    * Loop over the given directory entries, and check whether they can be deleted.
    * If an entry is itself a directory it will be recursively checked and deleted itself iff
    * all subentries are deleted (and no new subentries are added in the mean time)
@@ -164,16 +209,24 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     }
     boolean allEntriesDeleted = true;
     List<FileStatus> files = Lists.newArrayListWithCapacity(entries.length);
+    List<FileStatus> dirs = new ArrayList<>();
     for (FileStatus child : entries) {
-      Path path = child.getPath();
       if (child.isDirectory()) {
+        dirs.add(child);
+      } else {
+        // collect all files to attempt to delete in one batch
+        files.add(child);
+      }
+    }
+    if (dirs.size() > 0) {
+      sortByConsumedSpace(dirs);
+      LOG.debug("Prepared to delete files in directories: " + dirs);
+      for (FileStatus child : dirs) {
+        Path path = child.getPath();
         // for each subdirectory delete it and all entries if possible
         if (!checkAndDeleteDirectory(path)) {
           allEntriesDeleted = false;
         }
-      } else {
-        // collect all files to attempt to delete in one batch
-        files.add(child);
       }
     }
     if (!checkAndDeleteFiles(files)) {
