@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
@@ -44,6 +46,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang.mutable.MutableObject;
@@ -197,8 +200,6 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Implements the regionserver RPC services.
  */
@@ -252,7 +253,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   private final AtomicLong scannerIdGen = new AtomicLong(0L);
   private final ConcurrentMap<String, RegionScannerHolder> scanners = new ConcurrentHashMap<>();
-
+  // Hold the name of a closed scanner for a while. This is used to keep compatible for old clients
+  // which may send next or close request to a region scanner which has already been exhausted. The
+  // entries will be removed automatically after scannerLeaseTimeoutPeriod.
+  private final Cache<String, String> closedScanners;
   /**
    * The lease timeout period for client scanners (milliseconds).
    */
@@ -1072,6 +1076,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     isa = new InetSocketAddress(initialIsa.getHostName(), address.getPort());
     rpcServer.setErrorHandler(this);
     rs.setName(name);
+
+    closedScanners = CacheBuilder.newBuilder()
+        .expireAfterAccess(scannerLeaseTimeoutPeriod, TimeUnit.MILLISECONDS).build();
   }
 
   @Override
@@ -2492,18 +2499,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     String scannerName = Long.toString(request.getScannerId());
     RegionScannerHolder rsh = scanners.get(scannerName);
     if (rsh == null) {
-      // just ignore the close request if scanner does not exists.
-      if (request.hasCloseScanner() && request.getCloseScanner()) {
+      // just ignore the next or close request if scanner does not exists.
+      if (closedScanners.getIfPresent(scannerName) != null) {
         throw SCANNER_ALREADY_CLOSED;
       } else {
         LOG.warn("Client tried to access missing scanner " + scannerName);
         throw new UnknownScannerException(
-            "Unknown scanner '" + scannerName + "'. This can happen due to any of the following "
-                + "reasons: a) Scanner id given is wrong, b) Scanner lease expired because of "
-                + "long wait between consecutive client checkins, c) Server may be closing down, "
-                + "d) RegionServer restart during upgrade.\nIf the issue is due to reason (b), a "
-                + "possible fix would be increasing the value of"
-                + "'hbase.client.scanner.timeout.period' configuration.");
+            "Unknown scanner '" + scannerName + "'. This can happen due to any of the following " +
+                "reasons: a) Scanner id given is wrong, b) Scanner lease expired because of " +
+                "long wait between consecutive client checkins, c) Server may be closing down, " +
+                "d) RegionServer restart during upgrade.\nIf the issue is due to reason (b), a " +
+                "possible fix would be increasing the value of" +
+                "'hbase.client.scanner.timeout.period' configuration.");
       }
     }
     HRegionInfo hri = rsh.s.getRegionInfo();
@@ -2761,13 +2768,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
           values.clear();
         }
-        if (limitReached || moreRows) {
-          // We stopped prematurely
-          builder.setMoreResultsInRegion(true);
-        } else {
-          // We didn't get a single batch
-          builder.setMoreResultsInRegion(false);
-        }
+        builder.setMoreResultsInRegion(moreRows);
         // Check to see if the client requested that we track metrics server side. If the
         // client requested metrics, retrieve the metrics from the scanner context.
         if (trackMetrics) {
@@ -2938,7 +2939,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         if (!done) {
           scan((HBaseRpcController) controller, request, rsh, maxQuotaResultSize, rows, limitOfRows,
             results, builder, lastBlock, context);
+        } else {
+          builder.setMoreResultsInRegion(!results.isEmpty());
         }
+      } else {
+        // This is a open scanner call with numberOfRow = 0, so set more results in region to true.
+        builder.setMoreResultsInRegion(true);
       }
 
       quota.addScanResult(results);
@@ -2951,6 +2957,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // is false. Can remove the isEmpty check after we get rid of the old implementation.
         builder.setMoreResults(false);
       }
+      // Later we may close the scanner depending on this flag so here we need to make sure that we
+      // have already set this flag.
+      assert builder.hasMoreResultsInRegion();
       // we only set moreResults to false in the above code, so set it to true if we haven't set it
       // yet.
       if (!builder.hasMoreResults()) {
@@ -2975,7 +2984,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         closeScanner(region, scanner, scannerName, context);
       }
       return builder.build();
-    } catch (Exception e) {
+    } catch (IOException e) {
       try {
         // scanner is closed here
         scannerClosed = true;
@@ -3042,6 +3051,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postScannerClose(scanner);
       }
+      closedScanners.put(scannerName, scannerName);
     }
   }
 
