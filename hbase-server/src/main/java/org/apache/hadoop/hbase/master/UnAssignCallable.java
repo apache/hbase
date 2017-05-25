@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,32 +16,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.procedure;
+package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.ServerName;
+import java.util.concurrent.Callable;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
- * Passed as Exception by {@link ServerCrashProcedure}
- * notifying on-going RIT that server has failed.
+ * A callable object that invokes the corresponding action that needs to be
+ * taken for unassignment of a region in transition. Implementing as future
+ * callable we are able to act on the timeout asynchronously.
  */
 @InterfaceAudience.Private
-@SuppressWarnings("serial")
-public class ServerCrashException extends HBaseIOException {
-  private final long procId;
-  private final ServerName serverName;
+public class UnAssignCallable implements Callable<Object> {
+  private AssignmentManager assignmentManager;
 
-  /**
-   * @param serverName The server that crashed.
-   */
-  public ServerCrashException(long procId, ServerName serverName) {
-    this.procId = procId;
-    this.serverName = serverName;
+  private HRegionInfo hri;
+
+  public UnAssignCallable(AssignmentManager assignmentManager, HRegionInfo hri) {
+    this.assignmentManager = assignmentManager;
+    this.hri = hri;
   }
 
   @Override
-  public String getMessage() {
-    return "ServerCrashProcedure pid=" + this.procId + ", server=" + this.serverName;
+  public Object call() throws Exception {
+    assignmentManager.unassign(hri);
+    return null;
   }
 }

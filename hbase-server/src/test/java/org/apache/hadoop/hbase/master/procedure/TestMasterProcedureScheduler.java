@@ -343,11 +343,11 @@ public class TestMasterProcedureScheduler {
     final HRegionInfo regionA = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
 
     queue.addBack(new TestRegionProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.REGION_ASSIGN, regionA));
+        TableProcedureInterface.TableOperationType.ASSIGN, regionA));
     queue.addBack(new TestTableProcedure(2, tableName,
           TableProcedureInterface.TableOperationType.EDIT));
     queue.addBack(new TestRegionProcedure(3, tableName,
-        TableProcedureInterface.TableOperationType.REGION_UNASSIGN, regionA));
+        TableProcedureInterface.TableOperationType.UNASSIGN, regionA));
 
     // Fetch the 1st item and take the shared lock
     Procedure proc = queue.poll();
@@ -391,13 +391,13 @@ public class TestMasterProcedureScheduler {
     queue.addBack(new TestTableProcedure(1, tableName,
           TableProcedureInterface.TableOperationType.EDIT));
     queue.addBack(new TestRegionProcedure(2, tableName,
-        TableProcedureInterface.TableOperationType.REGION_MERGE, regionA, regionB));
+        TableProcedureInterface.TableOperationType.MERGE, regionA, regionB));
     queue.addBack(new TestRegionProcedure(3, tableName,
-        TableProcedureInterface.TableOperationType.REGION_SPLIT, regionA));
+        TableProcedureInterface.TableOperationType.SPLIT, regionA));
     queue.addBack(new TestRegionProcedure(4, tableName,
-        TableProcedureInterface.TableOperationType.REGION_SPLIT, regionB));
+        TableProcedureInterface.TableOperationType.SPLIT, regionB));
     queue.addBack(new TestRegionProcedure(5, tableName,
-        TableProcedureInterface.TableOperationType.REGION_UNASSIGN, regionC));
+        TableProcedureInterface.TableOperationType.UNASSIGN, regionC));
 
     // Fetch the 1st item and take the write lock
     Procedure proc = queue.poll();
@@ -520,9 +520,9 @@ public class TestMasterProcedureScheduler {
     final HRegionInfo region = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
 
     queue.addBack(new TestRegionProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.REGION_SPLIT, region));
+        TableProcedureInterface.TableOperationType.SPLIT, region));
     queue.addBack(new TestRegionProcedure(1, 2, tableName,
-        TableProcedureInterface.TableOperationType.REGION_UNASSIGN, region));
+        TableProcedureInterface.TableOperationType.UNASSIGN, region));
     queue.addBack(new TestRegionProcedure(3, tableName,
         TableProcedureInterface.TableOperationType.REGION_EDIT, region));
 
@@ -600,7 +600,7 @@ public class TestMasterProcedureScheduler {
     final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
     for (int i = 0; i < regions.length; ++i) {
       childProcs[i] = new TestRegionProcedure(1, 2 + i, tableName,
-          TableProcedureInterface.TableOperationType.REGION_ASSIGN, regions[i]);
+          TableProcedureInterface.TableOperationType.ASSIGN, regions[i]);
     }
     testInheritedXLockAndChildrenSharedLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.CREATE),
@@ -615,7 +615,7 @@ public class TestMasterProcedureScheduler {
     final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
     for (int i = 0; i < regions.length; ++i) {
       childProcs[i] = new TestRegionProcedure(1, 2, 3 + i, tableName,
-          TableProcedureInterface.TableOperationType.REGION_ASSIGN, regions[i]);
+          TableProcedureInterface.TableOperationType.ASSIGN, regions[i]);
     }
     testInheritedXLockAndChildrenSharedLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.CREATE),

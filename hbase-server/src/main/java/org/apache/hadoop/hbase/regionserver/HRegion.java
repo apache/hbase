@@ -1390,14 +1390,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return !isClosed() && !isClosing();
   }
 
-  @Override
+  /** @return true if region is splittable */
   public boolean isSplittable() {
-    boolean result = isAvailable() && !hasReferences();
-    LOG.info("ASKED IF SPLITTABLE " + result, new Throwable("LOGGING"));
-    return result;
+    return isAvailable() && !hasReferences();
   }
 
-  @Override
+  /**
+   * @return true if region is mergeable
+   */
   public boolean isMergeable() {
     if (!isAvailable()) {
       LOG.debug("Region " + this
@@ -5086,15 +5086,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @Override
-  public boolean refreshStoreFiles() throws IOException {
-    return refreshStoreFiles(false);
-  }
-
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NN_NAKED_NOTIFY",
       justification = "Notify is about post replay. Intentional")
-  protected boolean refreshStoreFiles(boolean force) throws IOException {
-    if (!force && ServerRegionReplicaUtil.isDefaultReplica(this.getRegionInfo())) {
+  @Override
+  public boolean refreshStoreFiles() throws IOException {
+    if (ServerRegionReplicaUtil.isDefaultReplica(this.getRegionInfo())) {
       return false; // if primary nothing to do
     }
 
@@ -5852,12 +5848,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try {
         for (Map.Entry<byte[], NavigableSet<byte[]>> entry : scan.getFamilyMap().entrySet()) {
           Store store = stores.get(entry.getKey());
-          KeyValueScanner scanner;
-          try {
-            scanner = store.getScanner(scan, entry.getValue(), this.readPt);
-          } catch (FileNotFoundException e) {
-            throw handleFileNotFound(e);
-          }
+          KeyValueScanner scanner = store.getScanner(scan, entry.getValue(), this.readPt);
           instantiatedScanners.add(scanner);
           if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
               || this.filter.isFamilyEssential(entry.getKey())) {
@@ -5881,20 +5872,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
-    private FileNotFoundException handleFileNotFound(FileNotFoundException fnfe) {
+    private void handleFileNotFound(Throwable fnfe) {
       // Try reopening the region since we have lost some storefiles.
       // See HBASE-17712 for more details.
-      LOG.warn("Store file is lost; close and reopen region", fnfe);
+      LOG.warn("A store file got lost, so close and reopen region", fnfe);
       if (regionUnassigner != null) {
         regionUnassigner.unassign();
       }
-      return fnfe;
     }
 
     private IOException handleException(List<KeyValueScanner> instantiatedScanners,
         Throwable t) {
       if (t instanceof FileNotFoundException) {
-        handleFileNotFound((FileNotFoundException)t);
+        handleFileNotFound(t);
       }
       // remove scaner read point before throw the exception
       scannerReadPoints.remove(this);
@@ -6040,33 +6030,29 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       boolean tmpKeepProgress = scannerContext.getKeepProgress();
       // Scanning between column families and thus the scope is between cells
       LimitScope limitScope = LimitScope.BETWEEN_CELLS;
-      try {
-        do {
-          // We want to maintain any progress that is made towards the limits while scanning across
-          // different column families. To do this, we toggle the keep progress flag on during calls
-          // to the StoreScanner to ensure that any progress made thus far is not wiped away.
-          scannerContext.setKeepProgress(true);
-          heap.next(results, scannerContext);
-          scannerContext.setKeepProgress(tmpKeepProgress);
+      do {
+        // We want to maintain any progress that is made towards the limits while scanning across
+        // different column families. To do this, we toggle the keep progress flag on during calls
+        // to the StoreScanner to ensure that any progress made thus far is not wiped away.
+        scannerContext.setKeepProgress(true);
+        heap.next(results, scannerContext);
+        scannerContext.setKeepProgress(tmpKeepProgress);
 
-          nextKv = heap.peek();
-          moreCellsInRow = moreCellsInRow(nextKv, currentRowCell);
-          if (!moreCellsInRow) incrementCountOfRowsScannedMetric(scannerContext);
-          if (moreCellsInRow && scannerContext.checkBatchLimit(limitScope)) {
-            return scannerContext.setScannerState(NextState.BATCH_LIMIT_REACHED).hasMoreValues();
-          } else if (scannerContext.checkSizeLimit(limitScope)) {
-            ScannerContext.NextState state =
-                moreCellsInRow ? NextState.SIZE_LIMIT_REACHED_MID_ROW : NextState.SIZE_LIMIT_REACHED;
-            return scannerContext.setScannerState(state).hasMoreValues();
-          } else if (scannerContext.checkTimeLimit(limitScope)) {
-            ScannerContext.NextState state =
-                moreCellsInRow ? NextState.TIME_LIMIT_REACHED_MID_ROW : NextState.TIME_LIMIT_REACHED;
-            return scannerContext.setScannerState(state).hasMoreValues();
-          }
-        } while (moreCellsInRow);
-      } catch (FileNotFoundException e) {
-        throw handleFileNotFound(e);
-      }
+        nextKv = heap.peek();
+        moreCellsInRow = moreCellsInRow(nextKv, currentRowCell);
+        if (!moreCellsInRow) incrementCountOfRowsScannedMetric(scannerContext);
+        if (moreCellsInRow && scannerContext.checkBatchLimit(limitScope)) {
+          return scannerContext.setScannerState(NextState.BATCH_LIMIT_REACHED).hasMoreValues();
+        } else if (scannerContext.checkSizeLimit(limitScope)) {
+          ScannerContext.NextState state =
+              moreCellsInRow ? NextState.SIZE_LIMIT_REACHED_MID_ROW : NextState.SIZE_LIMIT_REACHED;
+          return scannerContext.setScannerState(state).hasMoreValues();
+        } else if (scannerContext.checkTimeLimit(limitScope)) {
+          ScannerContext.NextState state =
+              moreCellsInRow ? NextState.TIME_LIMIT_REACHED_MID_ROW : NextState.TIME_LIMIT_REACHED;
+          return scannerContext.setScannerState(state).hasMoreValues();
+        }
+      } while (moreCellsInRow);
       return nextKv != null;
     }
 
@@ -6415,7 +6401,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           result = this.joinedHeap.requestSeek(kv, true, true) || result;
         }
       } catch (FileNotFoundException e) {
-        throw handleFileNotFound(e);
+        handleFileNotFound(e);
+        throw e;
       } finally {
         closeRegionOperation();
       }
@@ -7797,11 +7784,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Can't split region which is in recovering state
     if (this.isRecovering()) {
       LOG.info("Cannot split region " + this.getRegionInfo().getEncodedName() + " in recovery.");
-      return null;
-    }
-
-    // Can't split a region that is closing.
-    if (this.isClosing()) {
       return null;
     }
 

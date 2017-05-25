@@ -35,19 +35,14 @@ public class TestRegionState {
   public TestName name = new TestName();
 
   @Test
-  public void testSerializeDeserialize() {
-    final TableName tableName = TableName.valueOf("testtb");
-    for (RegionState.State state: RegionState.State.values()) {
-      testSerializeDeserialize(tableName, state);
-    }
-  }
-
-  private void testSerializeDeserialize(final TableName tableName, final RegionState.State state) {
-    RegionState state1 = new RegionState(new HRegionInfo(tableName), state);
+  public void test() {
+    RegionState state1 = new RegionState(
+            new HRegionInfo(TableName.valueOf(name.getMethodName())), RegionState.State.OPENING);
     ClusterStatusProtos.RegionState protobuf1 = state1.convert();
     RegionState state2 = RegionState.convert(protobuf1);
     ClusterStatusProtos.RegionState protobuf2 = state1.convert();
-    assertEquals("RegionState does not match " + state, state1, state2);
-    assertEquals("Protobuf does not match " + state, protobuf1, protobuf2);
+
+    assertEquals(state1, state2);
+    assertEquals(protobuf1, protobuf2);
   }
 }

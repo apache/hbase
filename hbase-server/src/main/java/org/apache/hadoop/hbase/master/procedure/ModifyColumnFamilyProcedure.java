@@ -21,14 +21,17 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -94,9 +97,7 @@ public class ModifyColumnFamilyProcedure
         setNextState(ModifyColumnFamilyState.MODIFY_COLUMN_FAMILY_REOPEN_ALL_REGIONS);
         break;
       case MODIFY_COLUMN_FAMILY_REOPEN_ALL_REGIONS:
-        if (env.getAssignmentManager().isTableEnabled(getTableName())) {
-          addChildProcedure(env.getAssignmentManager().createReopenProcedures(getTableName()));
-        }
+        reOpenAllRegionsIfTableIsOnline(env);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
@@ -264,8 +265,7 @@ public class ModifyColumnFamilyProcedure
     env.getMasterServices().getTableDescriptors().add(unmodifiedHTableDescriptor);
 
     // Make sure regions are opened after table descriptor is updated.
-    //reOpenAllRegionsIfTableIsOnline(env);
-    // TODO: NUKE ROLLBACK!!!!
+    reOpenAllRegionsIfTableIsOnline(env);
   }
 
   /**
@@ -278,6 +278,26 @@ public class ModifyColumnFamilyProcedure
   private void postModify(final MasterProcedureEnv env, final ModifyColumnFamilyState state)
       throws IOException, InterruptedException {
     runCoprocessorAction(env, state);
+  }
+
+  /**
+   * Last action from the procedure - executed when online schema change is supported.
+   * @param env MasterProcedureEnv
+   * @throws IOException
+   */
+  private void reOpenAllRegionsIfTableIsOnline(final MasterProcedureEnv env) throws IOException {
+    // This operation only run when the table is enabled.
+    if (!env.getMasterServices().getTableStateManager()
+        .isTableState(getTableName(), TableState.State.ENABLED)) {
+      return;
+    }
+
+    List<HRegionInfo> regionInfoList = ProcedureSyncWait.getRegionsFromMeta(env, getTableName());
+    if (MasterDDLOperationHelper.reOpenAllRegions(env, getTableName(), regionInfoList)) {
+      LOG.info("Completed add column family operation on table " + getTableName());
+    } else {
+      LOG.warn("Error on reopening the regions on table " + getTableName());
+    }
   }
 
   /**

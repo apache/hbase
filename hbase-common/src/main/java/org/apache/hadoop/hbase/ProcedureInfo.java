@@ -80,11 +80,12 @@ public class ProcedureInfo implements Cloneable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
+    sb.append("Procedure=");
     sb.append(procName);
-    sb.append(" pid=");
+    sb.append(" (id=");
     sb.append(procId);
     if (hasParentId()) {
-      sb.append(", ppid=");
+      sb.append(", parent=");
       sb.append(parentId);
     }
     if (hasOwner()) {
@@ -106,6 +107,7 @@ public class ProcedureInfo implements Cloneable {
       sb.append(this.exception.getMessage());
       sb.append("\"");
     }
+    sb.append(")");
     return sb.toString();
   }
 

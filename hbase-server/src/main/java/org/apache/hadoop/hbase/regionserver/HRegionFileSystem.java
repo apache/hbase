@@ -318,15 +318,13 @@ public class HRegionFileSystem {
    * @throws IOException
    */
   public boolean hasReferences(final String familyName) throws IOException {
-    Path storeDir = getStoreDir(familyName);
-    FileStatus[] files = FSUtils.listStatus(fs, storeDir);
+    FileStatus[] files = FSUtils.listStatus(fs, getStoreDir(familyName));
     if (files != null) {
       for(FileStatus stat: files) {
         if(stat.isDirectory()) {
           continue;
         }
         if(StoreFileInfo.isReference(stat.getPath())) {
-          if (LOG.isTraceEnabled()) LOG.trace("Reference " + stat.getPath());
           return true;
         }
       }

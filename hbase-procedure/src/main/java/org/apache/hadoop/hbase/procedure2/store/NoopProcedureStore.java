@@ -52,8 +52,8 @@ public class NoopProcedureStore extends ProcedureStoreBase {
   }
 
   @Override
-  public int setRunningProcedureCount(final int count) {
-    return count;
+  public void setRunningProcedureCount(final int count) {
+    // no-op
   }
 
   @Override

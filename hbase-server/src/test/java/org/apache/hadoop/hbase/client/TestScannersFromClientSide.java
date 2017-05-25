@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -44,7 +43,11 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -616,33 +619,34 @@ public class TestScannersFromClientSide {
     byte[] regionName = hri.getRegionName();
     int i = cluster.getServerWith(regionName);
     HRegionServer rs = cluster.getRegionServer(i);
-    LOG.info("Unassigning " + hri);
-    TEST_UTIL.getAdmin().unassign(hri.getRegionName(), true);
+    ProtobufUtil.closeRegion(null,
+      rs.getRSRpcServices(), rs.getServerName(), regionName);
     long startTime = EnvironmentEdgeManager.currentTime();
-    long timeOut = 10000;
-    boolean offline = false;
+    long timeOut = 300000;
     while (true) {
       if (rs.getOnlineRegion(regionName) == null) {
-        offline = true;
         break;
       }
       assertTrue("Timed out in closing the testing region",
         EnvironmentEdgeManager.currentTime() < startTime + timeOut);
+      Thread.sleep(500);
     }
-    assertTrue(offline);
-    LOG.info("Assigning " + hri);
-    TEST_UTIL.getAdmin().assign(hri.getRegionName());
+
+    // Now open the region again.
+    HMaster master = cluster.getMaster();
+    RegionStates states = master.getAssignmentManager().getRegionStates();
+    states.regionOffline(hri);
+    states.updateRegionState(hri, State.OPENING);
+    ProtobufUtil.openRegion(null, rs.getRSRpcServices(), rs.getServerName(), hri);
     startTime = EnvironmentEdgeManager.currentTime();
     while (true) {
-      rs = cluster.getRegionServer(cluster.getServerWith(regionName));
-      if (rs != null && rs.getOnlineRegion(regionName) != null) {
-        offline = false;
+      if (rs.getOnlineRegion(regionName) != null) {
         break;
       }
       assertTrue("Timed out in open the testing region",
         EnvironmentEdgeManager.currentTime() < startTime + timeOut);
+      Thread.sleep(500);
     }
-    assertFalse(offline);
 
     // c0:0, c1:1
     kvListExp = new ArrayList<>();

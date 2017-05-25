@@ -129,11 +129,7 @@ abstract class RpcConnection {
       authMethod = AuthMethod.KERBEROS;
     }
 
-    // Log if debug AND non-default auth, else if trace enabled.
-    // No point logging obvious.
-    if ((LOG.isDebugEnabled() && !authMethod.equals(AuthMethod.SIMPLE)) ||
-        LOG.isTraceEnabled()) {
-      // Only log if not default auth.
+    if (LOG.isDebugEnabled()) {
       LOG.debug("Use " + authMethod + " authentication for service " + remoteId.serviceName
           + ", sasl=" + useSasl);
     }

@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,19 +16,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.assignment;
+package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.HBaseIOException;
+import java.util.concurrent.Callable;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
- * Used internally signaling failed queue of a remote procedure
- * operation.
+ * A callable object that invokes the corresponding action that needs to be
+ * taken for assignment of a region in transition. 
+ * Implementing as future callable we are able to act on the timeout
+ * asynchronously.
  */
-@SuppressWarnings("serial")
 @InterfaceAudience.Private
-public class FailedRemoteDispatchException extends HBaseIOException {
-  public FailedRemoteDispatchException(String msg) {
-    super(msg);
+public class AssignCallable implements Callable<Object> {
+  private AssignmentManager assignmentManager;
+
+  private HRegionInfo hri;
+
+  public AssignCallable(
+      AssignmentManager assignmentManager, HRegionInfo hri) {
+    this.assignmentManager = assignmentManager;
+    this.hri = hri;
+  }
+
+  @Override
+  public Object call() throws Exception {
+    assignmentManager.assign(hri);
+    return null;
   }
 }

@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 /**
@@ -53,7 +52,7 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
   private static final Log LOG = LogFactory.getLog(TestOfflineMetaRebuildBase.class);
 
   @SuppressWarnings("deprecation")
-  @Ignore @Test(timeout = 120000) // To fix post HBASE-14614
+  @Test(timeout = 120000)
   public void testMetaRebuild() throws Exception {
     wipeOutMeta();
 

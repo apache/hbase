@@ -57,11 +57,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Performs checks for reference counting w.r.t. TableAuthManager which is used by
- * AccessController.
- *
- * NOTE: Only one test in  here. In AMv2, there is problem deleting because
- * we are missing auth. For now disabled. See the cleanup method.
+ * Performs checks for reference counting w.r.t. TableAuthManager which is used by AccessController.
  */
 @Category({SecurityTests.class, MediumTests.class})
 public class TestAccessController3 extends SecureTestUtil {
@@ -204,7 +200,7 @@ public class TestAccessController3 extends SecureTestUtil {
       TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
       rs = thread.getRegionServer();
     }
-    // cleanUp();
+    cleanUp();
     TEST_UTIL.shutdownMiniCluster();
     assertTrue("region server should have aborted due to FaultyAccessController", rs.isAborted());
   }
@@ -266,16 +262,12 @@ public class TestAccessController3 extends SecureTestUtil {
 
   private static void cleanUp() throws Exception {
     // Clean the _acl_ table
-    // TODO: Skipping delete because of access issues w/ AMv2.
-    // AMv1 seems to crash servers on exit too for same lack of
-    // auth perms but it gets hung up.
-    /*
     try {
       deleteTable(TEST_UTIL, TEST_TABLE);
     } catch (TableNotFoundException ex) {
       // Test deleted the table, no problem
       LOG.info("Test deleted table " + TEST_TABLE);
-    }*/
+    }
     // Verify all table/namespace permissions are erased
     assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
     assertEquals(

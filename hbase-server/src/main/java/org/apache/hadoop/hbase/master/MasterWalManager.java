@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -39,12 +41,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class abstracts a bunch of operations the HMaster needs
@@ -330,5 +331,17 @@ public class MasterWalManager {
         this.metricsMasterFilesystem.addSplit(splitTime, splitLogSize);
       }
     }
+  }
+
+  /**
+   * The function is used in SSH to set recovery mode based on configuration after all outstanding
+   * log split tasks drained.
+   */
+  public void setLogRecoveryMode() throws IOException {
+    this.splitLogManager.setRecoveryMode(false);
+  }
+
+  public RecoveryMode getLogRecoveryMode() {
+    return this.splitLogManager.getRecoveryMode();
   }
 }

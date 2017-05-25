@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -35,14 +34,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.NoSuchProcedureException;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -323,10 +321,17 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc).get();
 
+      // add region to meta.
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
+      HRegionInfo hri =
+          new HRegionInfo(desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaTableAccessor.addRegionToMeta(meta, hri);
+
       // assign region.
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       AssignmentManager am = master.getAssignmentManager();
-      HRegionInfo hri = am.getRegionStates().getRegionsOfTable(tableName).get(0);
+      admin.assign(hri.getRegionName()).get();
+      am.waitForAssignment(hri);
 
       // assert region on server
       RegionStates regionStates = am.getRegionStates();
@@ -335,32 +340,22 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       assertTrue(regionStates.getRegionState(hri).isOpened());
 
       // Region is assigned now. Let's assign it again.
-      // Master should not abort, and region should stay assigned.
+      // Master should not abort, and region should be assigned.
       admin.assign(hri.getRegionName()).get();
-      try {
-        am.waitForAssignment(hri);
-        fail("Expected NoSuchProcedureException");
-      } catch (NoSuchProcedureException e) {
-        // Expected
-      }
+      am.waitForAssignment(hri);
       assertTrue(regionStates.getRegionState(hri).isOpened());
 
       // unassign region
       admin.unassign(hri.getRegionName(), true).get();
-      try {
-        am.waitForAssignment(hri);
-        fail("Expected NoSuchProcedureException");
-      } catch (NoSuchProcedureException e) {
-        // Expected
-      }
-      assertTrue(regionStates.getRegionState(hri).isClosed());
+      am.waitForAssignment(hri);
+      assertTrue(regionStates.getRegionState(hri).isOpened());
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }
 
   HRegionInfo createTableAndGetOneRegion(final TableName tableName)
-      throws IOException, InterruptedException, ExecutionException {
+      throws IOException, InterruptedException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5);
@@ -382,12 +377,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Ignore @Test
-  // Turning off this tests in AMv2. Doesn't make sense.Offlining means something
-  // different now.
-  // You can't 'offline' a region unless you know what you are doing
-  // Will cause the Master to tell the regionserver to shut itself down because
-  // regionserver is reporting the state as OPEN.
+  @Test
   public void testOfflineRegion() throws Exception {
     final TableName tableName = TableName.valueOf("testOfflineRegion");
     try {
@@ -395,6 +385,8 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
       RegionStates regionStates =
           TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+      ServerName serverName = regionStates.getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
       admin.offline(hri.getRegionName()).get();
 
       long timeoutTime = System.currentTimeMillis() + 3000;
@@ -450,7 +442,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
         if (now > timeoutTime) {
           fail("Failed to move the region in time: " + regionStates.getRegionState(hri));
         }
-        regionStates.wait(50);
+        regionStates.waitForUpdate(50);
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);
@@ -474,9 +466,6 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
             regionServerCount.incrementAndGet();
           });
       Assert.assertEquals(regionServerCount.get(), 2);
-    } catch (Exception e) {
-      LOG.info("Exception", e);
-      throw e;
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }

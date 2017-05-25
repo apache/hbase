@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyColumnFamilyState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Rule;
@@ -124,7 +125,8 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
       new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     // Restart the executor and execute the step twice
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+    int numberOfSteps = ModifyColumnFamilyState.values().length;
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateColumnFamilyModification(UTIL.getHBaseCluster()
         .getMaster(), tableName, cf3, columnDescriptor);
@@ -151,7 +153,8 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
       new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     // Restart the executor and execute the step twice
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+    int numberOfSteps = ModifyColumnFamilyState.values().length;
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateColumnFamilyModification(UTIL.getHBaseCluster()
         .getMaster(), tableName, cf4, columnDescriptor);
@@ -177,7 +180,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
     long procId = procExec.submitProcedure(
       new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
-    int numberOfSteps = 0; // failing at pre operation
+    int numberOfSteps = 1; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
   }
 }

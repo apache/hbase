@@ -93,7 +93,7 @@ public interface ProcedureScheduler {
 
   /**
    * Mark the event as not ready.
-   * Procedures calling waitEvent() will be suspended.
+   * procedures calling waitEvent() will be suspended.
    * @param event the event to mark as suspended/not ready
    */
   void suspendEvent(ProcedureEvent event);
@@ -125,7 +125,6 @@ public interface ProcedureScheduler {
    * List lock queues.
    * @return the locks
    */
-  // TODO: This seems to be the wrong place to hang this method.
   List<LockInfo> listLocks();
 
   /**

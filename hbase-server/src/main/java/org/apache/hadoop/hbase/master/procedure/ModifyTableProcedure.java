@@ -120,10 +120,7 @@ public class ModifyTableProcedure
         setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
         break;
       case MODIFY_TABLE_REOPEN_ALL_REGIONS:
-        if (env.getAssignmentManager().isTableEnabled(getTableName())) {
-          addChildProcedure(env.getAssignmentManager()
-            .createReopenProcedures(getRegionInfoList(env)));
-        }
+        reOpenAllRegionsIfTableIsOnline(env);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
@@ -302,8 +299,7 @@ public class ModifyTableProcedure
     deleteFromFs(env, modifiedHTableDescriptor, unmodifiedHTableDescriptor);
 
     // Make sure regions are opened after table descriptor is updated.
-    //reOpenAllRegionsIfTableIsOnline(env);
-    // TODO: NUKE ROLLBACK!!!!
+    reOpenAllRegionsIfTableIsOnline(env);
   }
 
   /**
@@ -378,6 +374,25 @@ public class ModifyTableProcedure
   }
 
   /**
+   * Last action from the procedure - executed when online schema change is supported.
+   * @param env MasterProcedureEnv
+   * @throws IOException
+   */
+  private void reOpenAllRegionsIfTableIsOnline(final MasterProcedureEnv env) throws IOException {
+    // This operation only run when the table is enabled.
+    if (!env.getMasterServices().getTableStateManager()
+        .isTableState(getTableName(), TableState.State.ENABLED)) {
+      return;
+    }
+
+    if (MasterDDLOperationHelper.reOpenAllRegions(env, getTableName(), getRegionInfoList(env))) {
+      LOG.info("Completed modify table operation on table " + getTableName());
+    } else {
+      LOG.warn("Error on reopening the regions on table " + getTableName());
+    }
+  }
+
+  /**
    * The procedure could be restarted from a different machine. If the variable is null, we need to
    * retrieve it.
    * @return traceEnabled whether the trace is enabled
@@ -415,8 +430,7 @@ public class ModifyTableProcedure
 
   private List<HRegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {
     if (regionInfoList == null) {
-      regionInfoList = env.getAssignmentManager().getRegionStates()
-          .getRegionsOfTable(getTableName());
+      regionInfoList = ProcedureSyncWait.getRegionsFromMeta(env, getTableName());
     }
     return regionInfoList;
   }

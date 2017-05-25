@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
-import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
 @InterfaceAudience.Private
@@ -33,10 +32,8 @@ public class MetricsAssignmentManagerSourceImpl
   private MutableGaugeLong ritCountOverThresholdGauge;
   private MutableGaugeLong ritOldestAgeGauge;
   private MetricHistogram ritDurationHisto;
-
-  private MutableFastCounter operationCounter;
   private MetricHistogram assignTimeHisto;
-  private MetricHistogram unassignTimeHisto;
+  private MetricHistogram bulkAssignTimeHisto;
 
   public MetricsAssignmentManagerSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
@@ -54,39 +51,30 @@ public class MetricsAssignmentManagerSourceImpl
         RIT_COUNT_OVER_THRESHOLD_DESC,0l);
     ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, RIT_OLDEST_AGE_DESC, 0l);
     assignTimeHisto = metricsRegistry.newTimeHistogram(ASSIGN_TIME_NAME);
-    unassignTimeHisto = metricsRegistry.newTimeHistogram(UNASSIGN_TIME_NAME);
+    bulkAssignTimeHisto = metricsRegistry.newTimeHistogram(BULK_ASSIGN_TIME_NAME);
     ritDurationHisto = metricsRegistry.newTimeHistogram(RIT_DURATION_NAME, RIT_DURATION_DESC);
-    operationCounter = metricsRegistry.getCounter(OPERATION_COUNT_NAME, 0l);
   }
 
   @Override
-  public void setRIT(final int ritCount) {
-    ritGauge.set(ritCount);
-  }
-
-  @Override
-  public void setRITCountOverThreshold(final int ritCount) {
-    ritCountOverThresholdGauge.set(ritCount);
-  }
-
-  @Override
-  public void setRITOldestAge(final long ritCount) {
-    ritOldestAgeGauge.set(ritCount);
-  }
-
-  @Override
-  public void incrementOperationCounter() {
-    operationCounter.incr();
-  }
-
-  @Override
-  public void updateAssignTime(final long time) {
+  public void updateAssignmentTime(long time) {
     assignTimeHisto.add(time);
   }
 
   @Override
-  public void updateUnassignTime(final long time) {
-    unassignTimeHisto.add(time);
+  public void updateBulkAssignTime(long time) {
+    bulkAssignTimeHisto.add(time);
+  }
+
+  public void setRIT(int ritCount) {
+    ritGauge.set(ritCount);
+  }
+
+  public void setRITCountOverThreshold(int ritCount) {
+    ritCountOverThresholdGauge.set(ritCount);
+  }
+
+  public void setRITOldestAge(long ritCount) {
+    ritOldestAgeGauge.set(ritCount);
   }
 
   @Override

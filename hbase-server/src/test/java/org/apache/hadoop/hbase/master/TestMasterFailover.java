@@ -43,8 +43,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -57,12 +55,10 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({FlakeyTests.class, LargeTests.class})
-@Ignore // Needs to be rewritten for AMv2. Uses tricks not ordained when up on AMv2.
 public class TestMasterFailover {
   private static final Log LOG = LogFactory.getLog(TestMasterFailover.class);
 
@@ -256,22 +252,23 @@ public class TestMasterFailover {
     // Put the online region in pending_close. It is actually already opened.
     // This is to simulate that the region close RPC is not sent out before failover
     RegionState oldState = regionStates.getRegionState(hriOnline);
-    RegionState newState = new RegionState(hriOnline, State.CLOSING, oldState.getServerName());
-    stateStore.updateRegionState(HConstants.NO_SEQNUM, -1, newState, oldState);
+    RegionState newState = new RegionState(
+      hriOnline, State.PENDING_CLOSE, oldState.getServerName());
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
 
     // Put the offline region in pending_open. It is actually not opened yet.
     // This is to simulate that the region open RPC is not sent out before failover
     oldState = new RegionState(hriOffline, State.OFFLINE);
-    newState = new RegionState(hriOffline, State.OPENING, newState.getServerName());
-    stateStore.updateRegionState(HConstants.NO_SEQNUM, -1, newState, oldState);
+    newState = new RegionState(hriOffline, State.PENDING_OPEN, newState.getServerName());
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
 
     HRegionInfo failedClose = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(failedClose, rootdir, conf, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedClose);
 
-    oldState = new RegionState(failedClose, State.CLOSING);
+    oldState = new RegionState(failedClose, State.PENDING_CLOSE);
     newState = new RegionState(failedClose, State.FAILED_CLOSE, newState.getServerName());
-    stateStore.updateRegionState(HConstants.NO_SEQNUM, -1, newState, oldState);
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
 
     HRegionInfo failedOpen = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(failedOpen, rootdir, conf, offlineTable);
@@ -279,9 +276,9 @@ public class TestMasterFailover {
 
     // Simulate a region transitioning to failed open when the region server reports the
     // transition as FAILED_OPEN
-    oldState = new RegionState(failedOpen, State.OPENING);
+    oldState = new RegionState(failedOpen, State.PENDING_OPEN);
     newState = new RegionState(failedOpen, State.FAILED_OPEN, newState.getServerName());
-    stateStore.updateRegionState(HConstants.NO_SEQNUM, -1, newState, oldState);
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
 
     HRegionInfo failedOpenNullServer = new HRegionInfo(offlineTable.getTableName(), null, null);
     LOG.info("Failed open NUll server " + failedOpenNullServer.getEncodedName());
@@ -292,7 +289,7 @@ public class TestMasterFailover {
     // the region
     oldState = new RegionState(failedOpenNullServer, State.OFFLINE);
     newState = new RegionState(failedOpenNullServer, State.FAILED_OPEN, null);
-    stateStore.updateRegionState(HConstants.NO_SEQNUM, -1, newState, oldState);
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
 
     // Stop the master
     log("Aborting master");
@@ -381,12 +378,12 @@ public class TestMasterFailover {
     assertEquals("hbase:meta should be onlined on RS",
       metaState.getState(), State.OPEN);
 
-    // Update meta state as OPENING, then kill master
+    // Update meta state as PENDING_OPEN, then kill master
     // that simulates, that RS successfully deployed, but
     // RPC was lost right before failure.
     // region server should expire (how it can be verified?)
     MetaTableLocator.setMetaLocation(activeMaster.getZooKeeper(),
-      rs.getServerName(), State.OPENING);
+      rs.getServerName(), State.PENDING_OPEN);
     Region meta = rs.getFromOnlineRegions(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
     rs.removeFromOnlineRegions(meta, null);
     ((HRegion)meta).close();
@@ -413,12 +410,12 @@ public class TestMasterFailover {
     assertEquals("hbase:meta should be onlined on RS",
       metaState.getState(), State.OPEN);
 
-    // Update meta state as CLOSING, then kill master
+    // Update meta state as PENDING_CLOSE, then kill master
     // that simulates, that RS successfully deployed, but
     // RPC was lost right before failure.
     // region server should expire (how it can be verified?)
     MetaTableLocator.setMetaLocation(activeMaster.getZooKeeper(),
-      rs.getServerName(), State.CLOSING);
+      rs.getServerName(), State.PENDING_CLOSE);
 
     log("Aborting master");
     activeMaster.abort("test-kill");

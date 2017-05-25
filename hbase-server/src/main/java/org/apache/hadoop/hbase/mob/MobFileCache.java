@@ -118,10 +118,8 @@ public class MobFileCache {
       this.scheduleThreadPool.scheduleAtFixedRate(new EvictionThread(this), period, period,
           TimeUnit.SECONDS);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("MobFileCache enabled with cacheSize=" + mobFileMaxCacheSize +
+      LOG.info("MobFileCache enabled with cacheSize=" + mobFileMaxCacheSize +
           ", evictPeriods=" +  period + "sec, evictRemainRatio=" + evictRemainRatio);
-      }
     } else {
       LOG.info("MobFileCache disabled");
     }

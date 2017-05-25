@@ -77,10 +77,9 @@ public class TestCompactSplitThread {
     // block writes if we get to blockingStoreFiles store files
     conf.setInt("hbase.hstore.blockingStoreFiles", blockingStoreFiles);
     // Ensure no extra cleaners on by default (e.g. TimeToLiveHFileCleaner)
-    conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 3);
-    conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 4);
-    conf.setInt(CompactSplit.SPLIT_THREADS, 5);
-    conf.setInt(CompactSplit.MERGE_THREADS, 6);
+    conf.setInt(CompactSplitThread.LARGE_COMPACTION_THREADS, 3);
+    conf.setInt(CompactSplitThread.SMALL_COMPACTION_THREADS, 4);
+    conf.setInt(CompactSplitThread.SPLIT_THREADS, 5);
   }
 
   @After
@@ -115,10 +114,9 @@ public class TestCompactSplitThread {
       assertEquals(5, regionServer.compactSplitThread.getSplitThreadNum());
 
       // change bigger configurations and do online update
-      conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 4);
-      conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 5);
-      conf.setInt(CompactSplit.SPLIT_THREADS, 6);
-      conf.setInt(CompactSplit.MERGE_THREADS, 7);
+      conf.setInt(CompactSplitThread.LARGE_COMPACTION_THREADS, 4);
+      conf.setInt(CompactSplitThread.SMALL_COMPACTION_THREADS, 5);
+      conf.setInt(CompactSplitThread.SPLIT_THREADS, 6);
       try {
         regionServer.compactSplitThread.onConfigurationChange(conf);
       } catch (IllegalArgumentException iae) {
@@ -131,10 +129,9 @@ public class TestCompactSplitThread {
       assertEquals(6, regionServer.compactSplitThread.getSplitThreadNum());
 
       // change smaller configurations and do online update
-      conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 2);
-      conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 3);
-      conf.setInt(CompactSplit.SPLIT_THREADS, 4);
-      conf.setInt(CompactSplit.MERGE_THREADS, 5);
+      conf.setInt(CompactSplitThread.LARGE_COMPACTION_THREADS, 2);
+      conf.setInt(CompactSplitThread.SMALL_COMPACTION_THREADS, 3);
+      conf.setInt(CompactSplitThread.SPLIT_THREADS, 4);
       try {
         regionServer.compactSplitThread.onConfigurationChange(conf);
       } catch (IllegalArgumentException iae) {

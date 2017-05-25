@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,7 +34,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.StateMa
 /**
  * Procedure described by a series of steps.
  *
- * <p>The procedure implementor must have an enum of 'states', describing
+ * The procedure implementor must have an enum of 'states', describing
  * the various step of the procedure.
  * Once the procedure is running, the procedure-framework will call executeFromState()
  * using the 'state' provided by the user. The first call to executeFromState()
@@ -57,7 +56,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   private int stateCount = 0;
   private int[] states = null;
 
-  private List<Procedure<TEnvironment>> subProcList = null;
+  private ArrayList<Procedure> subProcList = null;
 
   protected enum Flow {
     HAS_MORE_STATE,
@@ -71,7 +70,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    *         Flow.HAS_MORE_STATE if there is another step.
    */
   protected abstract Flow executeFromState(TEnvironment env, TState state)
-  throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException;
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException;
 
   /**
    * called to perform the rollback of the specified state
@@ -126,15 +125,12 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    * Add a child procedure to execute
    * @param subProcedure the child procedure
    */
-  protected void addChildProcedure(Procedure<TEnvironment>... subProcedure) {
-    if (subProcedure == null) return;
-    final int len = subProcedure.length;
-    if (len == 0) return;
+  protected void addChildProcedure(Procedure... subProcedure) {
     if (subProcList == null) {
-      subProcList = new ArrayList<>(len);
+      subProcList = new ArrayList<>(subProcedure.length);
     }
-    for (int i = 0; i < len; ++i) {
-      Procedure<TEnvironment> proc = subProcedure[i];
+    for (int i = 0; i < subProcedure.length; ++i) {
+      Procedure proc = subProcedure[i];
       if (!proc.hasOwner()) proc.setOwner(getOwner());
       subProcList.add(proc);
     }
@@ -142,23 +138,27 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
 
   @Override
   protected Procedure[] execute(final TEnvironment env)
-  throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     updateTimestamp();
     try {
       failIfAborted();
 
       if (!hasMoreState() || isFailed()) return null;
+
       TState state = getCurrentState();
       if (stateCount == 0) {
         setNextState(getStateId(state));
       }
+
       stateFlow = executeFromState(env, state);
       if (!hasMoreState()) setNextState(EOF_STATE);
-      if (subProcList != null && !subProcList.isEmpty()) {
+
+      if (subProcList != null && subProcList.size() != 0) {
         Procedure[] subProcedures = subProcList.toArray(new Procedure[subProcList.size()]);
         subProcList = null;
         return subProcedures;
       }
+
       return (isWaiting() || isFailed() || !hasMoreState()) ? null : new Procedure[] {this};
     } finally {
       updateTimestamp();

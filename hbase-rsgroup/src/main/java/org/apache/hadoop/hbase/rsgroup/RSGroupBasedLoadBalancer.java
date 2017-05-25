@@ -318,8 +318,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   }
 
   private Map<ServerName, List<HRegionInfo>> correctAssignments(
-       Map<ServerName, List<HRegionInfo>> existingAssignments)
-  throws HBaseIOException{
+       Map<ServerName, List<HRegionInfo>> existingAssignments){
     Map<ServerName, List<HRegionInfo>> correctAssignments = new TreeMap<>();
     List<HRegionInfo> misplacedRegions = new LinkedList<>();
     correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<>());
@@ -347,11 +346,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     //TODO bulk unassign?
     //unassign misplaced regions, so that they are assigned to correct groups.
     for(HRegionInfo info: misplacedRegions) {
-      try {
-        this.masterServices.getAssignmentManager().unassign(info);
-      } catch (IOException e) {
-        throw new HBaseIOException(e);
-      }
+      this.masterServices.getAssignmentManager().unassign(info);
     }
     return correctAssignments;
   }

@@ -26,8 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface RegionStateListener {
-// TODO: Get rid of this!!!! Ain't there a better way to watch region
-// state than introduce a whole new listening mechanism? St.Ack
+
   /**
    * Process region split event.
    *
@@ -46,7 +45,9 @@ public interface RegionStateListener {
 
   /**
    * Process region merge event.
+   *
+   * @param hri An instance of HRegionInfo
    * @throws IOException
    */
-  void onRegionMerged(HRegionInfo mergedRegion) throws IOException;
+  void onRegionMerged(HRegionInfo hri) throws IOException;
 }

@@ -86,10 +86,10 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -3323,14 +3323,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public void moveRegionAndWait(HRegionInfo destRegion, ServerName destServer)
       throws InterruptedException, IOException {
     HMaster master = getMiniHBaseCluster().getMaster();
-    // TODO: Here we start the move. The move can take a while.
-    getAdmin().move(destRegion.getEncodedNameAsBytes(),
+    getHBaseAdmin().move(destRegion.getEncodedNameAsBytes(),
         Bytes.toBytes(destServer.getServerName()));
     while (true) {
       ServerName serverName = master.getAssignmentManager().getRegionStates()
           .getRegionServerOfRegion(destRegion);
       if (serverName != null && serverName.equals(destServer)) {
-        assertRegionOnServer(destRegion, serverName, 2000);
+        assertRegionOnServer(destRegion, serverName, 200);
         break;
       }
       Thread.sleep(10);
@@ -3995,7 +3994,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         if (master == null) return false;
         AssignmentManager am = master.getAssignmentManager();
         if (am == null) return false;
-        return !am.hasRegionsInTransition();
+        final RegionStates regionStates = am.getRegionStates();
+        return !regionStates.isRegionsInTransition();
       }
     };
   }

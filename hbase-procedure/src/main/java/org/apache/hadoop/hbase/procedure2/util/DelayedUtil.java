@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-// FIX namings. TODO.
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class DelayedUtil {
@@ -149,9 +148,6 @@ public final class DelayedUtil {
     }
   }
 
-  /**
-   * Has a timeout.
-   */
   public static class DelayedContainerWithTimestamp<T> extends DelayedContainer<T> {
     private long timeout;
 

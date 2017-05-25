@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertTrue;
-
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -30,7 +28,6 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -45,6 +42,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
@@ -148,7 +147,8 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
       new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
 
     // Restart the executor and execute the step twice
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+    int numberOfSteps = CloneSnapshotState.values().length;
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateTableIsEnabled(
       UTIL.getHBaseCluster().getMaster(),

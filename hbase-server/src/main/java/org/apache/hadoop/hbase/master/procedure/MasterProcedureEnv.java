@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -94,19 +93,12 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     }
   }
 
-  private final RSProcedureDispatcher remoteDispatcher;
   private final MasterProcedureScheduler procSched;
   private final MasterServices master;
 
   public MasterProcedureEnv(final MasterServices master) {
-    this(master, new RSProcedureDispatcher(master));
-  }
-
-  public MasterProcedureEnv(final MasterServices master,
-      final RSProcedureDispatcher remoteDispatcher) {
     this.master = master;
     this.procSched = new MasterProcedureScheduler(master.getConfiguration());
-    this.remoteDispatcher = remoteDispatcher;
   }
 
   public User getRequestUser() {
@@ -125,10 +117,6 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     return master.getConfiguration();
   }
 
-  public AssignmentManager getAssignmentManager() {
-    return master.getAssignmentManager();
-  }
-
   public MasterCoprocessorHost getMasterCoprocessorHost() {
     return master.getMasterCoprocessorHost();
   }
@@ -137,12 +125,7 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     return procSched;
   }
 
-  public RSProcedureDispatcher getRemoteDispatcher() {
-    return remoteDispatcher;
-  }
-
   public boolean isRunning() {
-    if (this.master == null || this.master.getMasterProcedureExecutor() == null) return false;
     return master.getMasterProcedureExecutor().isRunning();
   }
 
@@ -151,18 +134,11 @@ public class MasterProcedureEnv implements ConfigurationObserver {
   }
 
   public boolean waitInitialized(Procedure proc) {
-    return procSched.waitEvent(master.getInitializedEvent(), proc);
+    return procSched.waitEvent(((HMaster)master).getInitializedEvent(), proc);
   }
 
   public boolean waitServerCrashProcessingEnabled(Procedure proc) {
-    if (master instanceof HMaster) {
-      return procSched.waitEvent(((HMaster)master).getServerCrashProcessingEnabledEvent(), proc);
-    }
-    return false;
-  }
-
-  public boolean waitFailoverCleanup(Procedure proc) {
-    return procSched.waitEvent(master.getAssignmentManager().getFailoverCleanupEvent(), proc);
+    return procSched.waitEvent(((HMaster)master).getServerCrashProcessingEnabledEvent(), proc);
   }
 
   public void setEventReady(ProcedureEvent event, boolean isReady) {

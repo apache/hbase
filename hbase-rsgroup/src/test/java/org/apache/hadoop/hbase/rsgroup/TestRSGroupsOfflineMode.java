@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -99,7 +98,7 @@ public class TestRSGroupsOfflineMode {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Ignore @Test
+  @Test
   public void testOffline() throws Exception, InterruptedException {
     // Table should be after group table name so it gets assigned later.
     final TableName failoverTable = TableName.valueOf(name.getMethodName());

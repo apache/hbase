@@ -45,8 +45,7 @@ import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -59,7 +58,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -265,7 +263,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     checkFavoredNodeAssignments(tableName, fnm, regionStates);
   }
 
-  @Ignore @Test
+  @Test
   public void testMisplacedRegions() throws Exception {
 
     TableName tableName = TableName.valueOf("testMisplacedRegions");
@@ -295,7 +293,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     regionFNMap.put(misplacedRegion, newFavoredNodes);
     fnm.updateFavoredNodes(regionFNMap);
 
-    final RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
     final ServerName current = regionStates.getRegionServerOfRegion(misplacedRegion);
     assertNull("Misplaced region is still hosted on favored node, not expected.",
         FavoredNodesPlan.getFavoredServerPosition(fnm.getFavoredNodes(misplacedRegion), current));
@@ -333,7 +331,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     stopServersAndWaitUntilProcessed(serversToStop);
 
     TEST_UTIL.waitUntilNoRegionsInTransition();
-    final RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -349,7 +347,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     checkFavoredNodeAssignments(tableName, fnm, regionStates);
   }
 
-  @Ignore @Test
+  @Test
   public void testAllFavoredNodesDead() throws Exception {
 
     TableName tableName = TableName.valueOf("testAllFavoredNodesDead");
@@ -367,7 +365,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     // Lets kill all the RS that are favored nodes for this region.
     stopServersAndWaitUntilProcessed(currentFN);
 
-    final RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -387,8 +385,8 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(serversForNewFN, conf);
     helper.initialize();
 
-    for (RegionStateNode regionState: regionStates.getRegionsInTransition()) {
-      HRegionInfo regionInfo = regionState.getRegionInfo();
+    for (RegionState regionState : regionStates.getRegionsInTransition()) {
+      HRegionInfo regionInfo = regionState.getRegion();
       List<ServerName> newFavoredNodes = helper.generateFavoredNodes(regionInfo);
       assertNotNull(newFavoredNodes);
       assertEquals(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, newFavoredNodes.size());
@@ -410,7 +408,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     checkFavoredNodeAssignments(tableName, fnm, regionStates);
   }
 
-  @Ignore @Test
+  @Test
   public void testAllFavoredNodesDeadMasterRestarted() throws Exception {
 
     TableName tableName = TableName.valueOf("testAllFavoredNodesDeadMasterRestarted");
@@ -428,8 +426,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     // Lets kill all the RS that are favored nodes for this region.
     stopServersAndWaitUntilProcessed(currentFN);
 
-    final RegionStates regionStatesBeforeMaster =
-        master.getAssignmentManager().getRegionStates();
+    RegionStates regionStatesBeforeMaster = master.getAssignmentManager().getRegionStates();
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -441,8 +438,8 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
         regionStatesBeforeMaster.getRegionState(region).isFailedOpen());
 
     List<HRegionInfo> rit = Lists.newArrayList();
-    for (RegionStateNode regionState: regionStatesBeforeMaster.getRegionsInTransition()) {
-      HRegionInfo regionInfo = regionState.getRegionInfo();
+    for (RegionState regionState : regionStatesBeforeMaster.getRegionsInTransition()) {
+      HRegionInfo regionInfo = regionState.getRegion();
       LOG.debug("Region in transition after stopping FN's: " + regionInfo);
       rit.add(regionInfo);
       assertTrue("Region: " + regionInfo + " should be RIT",

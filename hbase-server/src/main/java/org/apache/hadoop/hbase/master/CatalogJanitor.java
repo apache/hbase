@@ -27,6 +27,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,15 +39,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.GCMergedRegionsProcedure;
-import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -54,8 +51,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A janitor for the catalog tables.  Scans the <code>hbase:meta</code> catalog
@@ -69,7 +64,6 @@ public class CatalogJanitor extends ScheduledChore {
   private final AtomicBoolean enabled = new AtomicBoolean(true);
   private final MasterServices services;
   private final Connection connection;
-  // PID of the last Procedure launched herein. Keep around for Tests.
 
   CatalogJanitor(final MasterServices services) {
     super("CatalogJanitor-" + services.getServerName().toShortString(), services,
@@ -118,13 +112,10 @@ public class CatalogJanitor extends ScheduledChore {
           && !this.services.isInMaintenanceMode()
           && am != null
           && am.isFailoverCleanupDone()
-          && !am.hasRegionsInTransition()) {
+          && am.getRegionStates().getRegionsInTransition().isEmpty()) {
         scan();
       } else {
-        LOG.warn("CatalogJanitor is disabled! Enabled=" + this.enabled.get() +
-            ", maintenanceMode=" + this.services.isInMaintenanceMode() +
-            ", am=" + am + ", failoverCleanupDone=" + (am != null && am.isFailoverCleanupDone()) +
-            ", hasRIT=" + (am != null && am.hasRegionsInTransition()));
+        LOG.warn("CatalogJanitor disabled! Not running scan.");
       }
     } catch (IOException e) {
       LOG.warn("Failed scan of catalog table", e);
@@ -176,7 +167,6 @@ public class CatalogJanitor extends ScheduledChore {
           // Another table, stop scanning
           return false;
         }
-        if (LOG.isTraceEnabled()) LOG.trace("" + info + " IS-SPLIT_PARENT=" + info.isSplitParent());
         if (info.isSplitParent()) splitParents.put(info, r);
         if (r.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER) != null) {
           mergedRegions.put(info, r);
@@ -197,6 +187,8 @@ public class CatalogJanitor extends ScheduledChore {
    * If merged region no longer holds reference to the merge regions, archive
    * merge region on hdfs and perform deleting references in hbase:meta
    * @param mergedRegion
+   * @param regionA
+   * @param regionB
    * @return true if we delete references in merged region on hbase:meta and archive
    *         the files on the file system
    * @throws IOException
@@ -215,12 +207,18 @@ public class CatalogJanitor extends ScheduledChore {
       LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
     }
     if (regionFs == null || !regionFs.hasReferences(htd)) {
-      LOG.debug("Deleting region " + regionA.getShortNameToLog() + " and "
-          + regionB.getShortNameToLog()
+      LOG.debug("Deleting region " + regionA.getRegionNameAsString() + " and "
+          + regionB.getRegionNameAsString()
           + " from fs because merged region no longer holds references");
-      ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
-      pe.submitProcedure(new GCMergedRegionsProcedure(pe.getEnvironment(),
-          mergedRegion, regionA, regionB));
+      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionA);
+      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionB);
+      MetaTableAccessor.deleteMergeQualifiers(services.getConnection(), mergedRegion);
+      services.getServerManager().removeRegion(regionA);
+      services.getServerManager().removeRegion(regionB);
+      FavoredNodesManager fnm = this.services.getFavoredNodesManager();
+      if (fnm != null) {
+        fnm.deleteFavoredNodesForRegions(Lists.newArrayList(regionA, regionB));
+      }
       return true;
     }
     return false;
@@ -229,21 +227,22 @@ public class CatalogJanitor extends ScheduledChore {
   /**
    * Run janitorial scan of catalog <code>hbase:meta</code> table looking for
    * garbage to collect.
-   * @return number of archiving jobs started.
+   * @return number of cleaned regions
    * @throws IOException
    */
   int scan() throws IOException {
-    int result = 0;
     try {
       if (!alreadyRunning.compareAndSet(false, true)) {
         LOG.debug("CatalogJanitor already running");
-        return result;
+        return 0;
       }
       Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>> scanTriple =
         getMergedRegionsAndSplitParents();
+      int count = scanTriple.getFirst();
       /**
        * clean merge regions first
        */
+      int mergeCleaned = 0;
       Map<HRegionInfo, Result> mergedRegions = scanTriple.getSecond();
       for (Map.Entry<HRegionInfo, Result> e : mergedRegions.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
@@ -256,13 +255,13 @@ public class CatalogJanitor extends ScheduledChore {
         HRegionInfo regionB = p.getSecond();
         if (regionA == null || regionB == null) {
           LOG.warn("Unexpected references regionA="
-              + (regionA == null ? "null" : regionA.getShortNameToLog())
+              + (regionA == null ? "null" : regionA.getRegionNameAsString())
               + ",regionB="
-              + (regionB == null ? "null" : regionB.getShortNameToLog())
-              + " in merged region " + e.getKey().getShortNameToLog());
+              + (regionB == null ? "null" : regionB.getRegionNameAsString())
+              + " in merged region " + e.getKey().getRegionNameAsString());
         } else {
           if (cleanMergeRegion(e.getKey(), regionA, regionB)) {
-            result++;
+            mergeCleaned++;
           }
         }
       }
@@ -272,6 +271,7 @@ public class CatalogJanitor extends ScheduledChore {
       Map<HRegionInfo, Result> splitParents = scanTriple.getThird();
 
       // Now work on our list of found parents. See if any we can clean up.
+      int splitCleaned = 0;
       // regions whose parents are still around
       HashSet<String> parentNotCleaned = new HashSet<>();
       for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
@@ -281,8 +281,8 @@ public class CatalogJanitor extends ScheduledChore {
         }
 
         if (!parentNotCleaned.contains(e.getKey().getEncodedName()) &&
-              cleanParent(e.getKey(), e.getValue())) {
-            result++;
+            cleanParent(e.getKey(), e.getValue())) {
+          splitCleaned++;
         } else {
           // We could not clean the parent, so it's daughters should not be
           // cleaned either (HBASE-6160)
@@ -292,7 +292,16 @@ public class CatalogJanitor extends ScheduledChore {
           parentNotCleaned.add(daughters.getSecond().getEncodedName());
         }
       }
-      return result;
+      if ((mergeCleaned + splitCleaned) != 0) {
+        LOG.info("Scanned " + count + " catalog row(s), gc'd " + mergeCleaned
+            + " unreferenced merged region(s) and " + splitCleaned
+            + " unreferenced parent region(s)");
+      } else if (LOG.isTraceEnabled()) {
+        LOG.trace("Scanned " + count + " catalog row(s), gc'd " + mergeCleaned
+            + " unreferenced merged region(s) and " + splitCleaned
+            + " unreferenced parent region(s)");
+      }
+      return mergeCleaned + splitCleaned;
     } finally {
       alreadyRunning.set(false);
     }
@@ -334,30 +343,34 @@ public class CatalogJanitor extends ScheduledChore {
    */
   boolean cleanParent(final HRegionInfo parent, Result rowContent)
   throws IOException {
+    boolean result = false;
     // Check whether it is a merged region and not clean reference
     // No necessary to check MERGEB_QUALIFIER because these two qualifiers will
     // be inserted/deleted together
-    if (rowContent.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER) != null) {
+    if (rowContent.getValue(HConstants.CATALOG_FAMILY,
+        HConstants.MERGEA_QUALIFIER) != null) {
       // wait cleaning merge region first
-      return false;
+      return result;
     }
     // Run checks on each daughter split.
     PairOfSameType<HRegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
     Pair<Boolean, Boolean> a = checkDaughterInFs(parent, daughters.getFirst());
     Pair<Boolean, Boolean> b = checkDaughterInFs(parent, daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {
-      String daughterA = daughters.getFirst() != null?
-          daughters.getFirst().getShortNameToLog(): "null";
-      String daughterB = daughters.getSecond() != null?
-          daughters.getSecond().getShortNameToLog(): "null";
-      LOG.debug("Deleting region " + parent.getShortNameToLog() +
-        " because daughters -- " + daughterA + ", " + daughterB +
-        " -- no longer hold references");
-      ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
-      pe.submitProcedure(new GCRegionProcedure(pe.getEnvironment(), parent));
-      return true;
+      LOG.debug("Deleting region " + parent.getRegionNameAsString() +
+        " because daughter splits no longer hold references");
+      FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
+      if (LOG.isTraceEnabled()) LOG.trace("Archiving parent region: " + parent);
+      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
+      MetaTableAccessor.deleteRegion(this.connection, parent);
+      services.getServerManager().removeRegion(parent);
+      FavoredNodesManager fnm = this.services.getFavoredNodesManager();
+      if (fnm != null) {
+        fnm.deleteFavoredNodesForRegions(Lists.newArrayList(parent));
+      }
+      result = true;
     }
-    return false;
+    return result;
   }
 
   /**

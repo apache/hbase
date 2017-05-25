@@ -1,4 +1,4 @@
- /**
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,11 +62,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
- * The base class for load balancers. It provides the the functions used to by
- * {@link org.apache.hadoop.hbase.master.assignment.AssignmentManager} to assign regions
- * in the edge cases. It doesn't provide an implementation of the
- * actual balancing algorithm.
- *
+ * The base class for load balancers. It provides functions used by
+ * {@link org.apache.hadoop.hbase.master.AssignmentManager} to assign regions in the edge cases.
+ * It doesn't provide an implementation of the actual balancing algorithm.
  */
 public abstract class BaseLoadBalancer implements LoadBalancer {
   protected static final int MIN_SERVER_BALANCE = 2;
@@ -204,15 +202,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       // Use servername and port as there can be dead servers in this list. We want everything with
       // a matching hostname and port to have the same index.
       for (ServerName sn : clusterState.keySet()) {
-        if (sn == null) {
-          LOG.warn("TODO: Enable TRACE on BaseLoadBalancer. Empty servername); " +
-              "skipping; unassigned regions?");
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("EMPTY SERVERNAME " + clusterState.toString());
-          }
-          continue;
-        }
-        if (serversToIndex.get(sn.getAddress().toString()) == null) {
+        if (serversToIndex.get(sn.getHostAndPort()) == null) {
           serversToIndex.put(sn.getHostAndPort(), numServers++);
         }
         if (!hostsToIndex.containsKey(sn.getHostname())) {
@@ -267,10 +257,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       int tableIndex = 0, regionIndex = 0, regionPerServerIndex = 0;
 
       for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
-        if (entry.getKey() == null) {
-          LOG.warn("SERVERNAME IS NULL, skipping " + entry.getValue());
-          continue;
-        }
         int serverIndex = serversToIndex.get(entry.getKey().getHostAndPort());
 
         // keep the servername if this is the first server name for this hostname
@@ -599,6 +585,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     /**
      * Return true if the placement of region on server would lower the availability
      * of the region in question
+     * @param server
+     * @param region
      * @return true or false
      */
     boolean wouldLowerAvailability(HRegionInfo regionInfo, ServerName serverName) {
@@ -911,11 +899,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           }
         }
         if (leastLoadedServerIndex != -1) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Pick the least loaded server " +
-                servers[leastLoadedServerIndex].getHostname() +
-                " with better locality for region " + regions[region].getShortNameToLog());
-          }
+          LOG.debug("Pick the least loaded server " + servers[leastLoadedServerIndex].getHostname()
+            + " with better locality for region " + regions[region]);
         }
         return leastLoadedServerIndex;
       } else {

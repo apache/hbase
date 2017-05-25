@@ -48,7 +48,8 @@ class RegionUnassigner {
       return;
     }
     unassigning = true;
-    new Thread("RegionUnassigner." + regionInfo.getEncodedName()) {
+    new Thread("Unassign-" + regionInfo) {
+
       @Override
       public void run() {
         LOG.info("Unassign " + regionInfo.getRegionNameAsString());

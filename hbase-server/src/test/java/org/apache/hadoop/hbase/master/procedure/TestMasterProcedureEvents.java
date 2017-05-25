@@ -109,7 +109,7 @@ public class TestMasterProcedureEvents {
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
 
     while (!master.isServerCrashProcessingEnabled() || !master.isInitialized() ||
-        master.getAssignmentManager().getRegionStates().hasRegionsInTransition()) {
+        master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
       Thread.sleep(25);
     }
 

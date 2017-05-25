@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -56,13 +55,12 @@ public class TestMasterMetrics {
         KeeperException, InterruptedException {
       super(conf, cp);
     }
-/*
+
     @Override
     protected void tryRegionServerReport(
         long reportStartTime, long reportEndTime) {
       // do nothing
     }
-*/
   }
 
   @BeforeClass
@@ -83,7 +81,7 @@ public class TestMasterMetrics {
     }
   }
 
-  @Ignore @Test(timeout = 300000)
+  @Test(timeout = 300000)
   public void testClusterRequests() throws Exception {
 
     // sending fake request to master to see how metric value has changed
@@ -116,7 +114,7 @@ public class TestMasterMetrics {
     master.stopMaster();
   }
 
-  @Ignore @Test
+  @Test
   public void testDefaultMasterMetrics() throws Exception {
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     metricsHelper.assertGauge( "numRegionServers", 2, masterSource);
