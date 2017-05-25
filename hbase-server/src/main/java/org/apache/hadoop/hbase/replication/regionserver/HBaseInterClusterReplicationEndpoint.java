@@ -225,6 +225,18 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return entryLists;
   }
 
+  private void reconnectToPeerCluster() {
+    HConnection connection = null;
+    try {
+      connection = HConnectionManager.createConnection(this.conf);
+    } catch (IOException ioe) {
+      LOG.warn("Failed to create connection for peer cluster", ioe);
+    }
+    if (connection != null) {
+      this.conn = connection;
+    }
+  }
+
   /**
    * Do the shipping logic
    */
@@ -255,6 +267,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
           sleepMultiplier++;
         }
         continue;
+      }
+      if (this.conn == null || this.conn.isClosed()) {
+        reconnectToPeerCluster();
       }
       try {
         int futures = 0;
