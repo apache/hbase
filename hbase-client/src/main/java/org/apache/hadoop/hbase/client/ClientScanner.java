@@ -499,6 +499,21 @@ public abstract class ClientScanner extends AbstractClientScanner {
           break;
         }
       }
+      if (cache.isEmpty() && !closed && scan.isNeedCursorResult()) {
+        if (callable.isHeartbeatMessage() && callable.getCursor() != null) {
+          // Use cursor row key from server
+          cache.add(Result.createCursorResult(callable.getCursor()));
+          break;
+        }
+        if (values.length > 0) {
+          // It is size limit exceed and we need return the last Result's row.
+          // When user setBatch and the scanner is reopened, the server may return Results that
+          // user has seen and the last Result can not be seen because the number is not enough.
+          // So the row keys of results may not be same, we must use the last one.
+          cache.add(Result.createCursorResult(new Cursor(values[values.length - 1].getRow())));
+          break;
+        }
+      }
       if (countdown <= 0) {
         // we have enough result.
         closeScannerIfExhausted(regionExhausted);

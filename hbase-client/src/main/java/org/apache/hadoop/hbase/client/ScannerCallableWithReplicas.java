@@ -302,6 +302,10 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     return currentScannerCallable != null && currentScannerCallable.isHeartbeatMessage();
   }
 
+  public Cursor getCursor() {
+    return currentScannerCallable != null ? currentScannerCallable.getCursor() : null;
+  }
+
   private void addCallsForCurrentReplica(
       ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs, RegionLocations rl) {
     RetryingRPC retryingOnReplica = new RetryingRPC(currentScannerCallable);

@@ -87,6 +87,8 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
    */
   protected boolean heartbeatMessage = false;
 
+  protected Cursor cursor;
+
   // indicate if it is a remote server call
   protected boolean isRegionServerRemote = true;
   private long nextCallSeq = 0;
@@ -148,7 +150,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       checkIfRegionServerIsRemote();
       instantiated = true;
     }
-
+    cursor = null;
     // check how often we retry.
     if (reload) {
       incRPCRetriesMetrics(scanMetrics, isRegionServerRemote);
@@ -242,7 +244,11 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       response = next();
     }
     long timestamp = System.currentTimeMillis();
-    setHeartbeatMessage(response.hasHeartbeatMessage() && response.getHeartbeatMessage());
+    boolean isHeartBeat = response.hasHeartbeatMessage() && response.getHeartbeatMessage();
+    setHeartbeatMessage(isHeartBeat);
+    if (isHeartBeat && scan.isNeedCursorResult() && response.hasCursor()) {
+      cursor = ProtobufUtil.toCursor(response.getCursor());
+    }
     Result[] rrs = ResponseConverter.getResults(getRpcControllerCellScanner(), response);
     if (logScannerActivity) {
       long now = System.currentTimeMillis();
@@ -286,6 +292,10 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
    */
   boolean isHeartbeatMessage() {
     return heartbeatMessage;
+  }
+
+  public Cursor getCursor() {
+    return cursor;
   }
 
   private void setHeartbeatMessage(boolean heartbeatMessage) {

@@ -259,13 +259,13 @@ message Scan {
   optional uint64 mvcc_read_point = 20 [default = 0];
   optional bool include_start_row = 21 [default = true];
   optional bool include_stop_row = 22 [default = false];
-
   enum ReadType {
     DEFAULT = 0;
     STREAM = 1;
     PREAD = 2;
   }
   optional ReadType readType = 23 [default = DEFAULT];
+  optional bool need_cursor_result = 24 [default = false];
 }
 
 /**
@@ -292,6 +292,14 @@ message ScanRequest {
   optional bool renew = 10 [default = false];
   // if we have returned limit_of_rows rows to client, then close the scanner.
   optional uint32 limit_of_rows = 11 [default = 0];
+}
+
+/**
+* Scan cursor to tell client where we are scanning.
+*
+ */
+message Cursor {
+  optional bytes row = 1;
 }
 
 /**
@@ -346,6 +354,10 @@ message ScanResponse {
   // make use of this mvcc_read_point when restarting a scanner to get a consistent view
   // of a row.
   optional uint64 mvcc_read_point = 11 [default = 0];
+
+  // If the Scan need cursor, return the row key we are scanning in heartbeat message.
+  // If the Scan doesn't need a cursor, don't set this field to reduce network IO.
+  optional Cursor cursor = 12;
 }
 
 /**

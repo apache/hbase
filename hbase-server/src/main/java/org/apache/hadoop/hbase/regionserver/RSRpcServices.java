@@ -380,14 +380,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private final RpcCallback closeCallBack;
     private final RpcCallback shippedCallback;
     private byte[] rowOfLastPartialResult;
+    private boolean needCursor;
 
     public RegionScannerHolder(String scannerName, RegionScanner s, Region r,
-        RpcCallback closeCallBack, RpcCallback shippedCallback) {
+        RpcCallback closeCallBack, RpcCallback shippedCallback, boolean needCursor) {
       this.scannerName = scannerName;
       this.s = s;
       this.r = r;
       this.closeCallBack = closeCallBack;
       this.shippedCallback = shippedCallback;
+      this.needCursor = needCursor;
     }
 
     public long getNextCallSeq() {
@@ -1295,8 +1297,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return lastBlock;
   }
 
-  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r)
-      throws LeaseStillHeldException {
+  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r,
+      boolean needCursor) throws LeaseStillHeldException {
     Lease lease = regionServer.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
       new ScannerListener(scannerName));
     RpcCallback shippedCallback = new RegionScannerShippedCallBack(scannerName, s, lease);
@@ -1307,7 +1309,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       closeCallback = new RegionScannerCloseCallBack(s);
     }
     RegionScannerHolder rsh =
-        new RegionScannerHolder(scannerName, s, r, closeCallback, shippedCallback);
+        new RegionScannerHolder(scannerName, s, r, closeCallback, shippedCallback, needCursor);
     RegionScannerHolder existing = scanners.putIfAbsent(scannerName, rsh);
     assert existing == null : "scannerId must be unique within regionserver's whole lifecycle!";
     return rsh;
@@ -2857,7 +2859,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     builder.setMvccReadPoint(scanner.getMvccReadPoint());
     builder.setTtl(scannerLeaseTimeoutPeriod);
     String scannerName = String.valueOf(scannerId);
-    return addScanner(scannerName, scanner, region);
+    return addScanner(scannerName, scanner, region, scan.isNeedCursorResult());
   }
 
   private void checkScanNextCallSeq(ScanRequest request, RegionScannerHolder rsh)
@@ -3054,6 +3056,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             if (moreRows) {
               // Heartbeat messages occur when the time limit has been reached.
               builder.setHeartbeatMessage(timeLimitReached);
+              if (timeLimitReached && rsh.needCursor) {
+                Cell readingCell = scannerContext.getPeekedCellInHeartbeat();
+                if (readingCell != null ) {
+                  builder.setCursor(ProtobufUtil.toCursor(readingCell));
+                }
+              }
             }
             break;
           }

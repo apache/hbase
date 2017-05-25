@@ -185,6 +185,9 @@ public class Scan extends Query {
    * Control whether to use pread at server side.
    */
   private ReadType readType = ReadType.DEFAULT;
+
+  private boolean needCursorResult = false;
+
   /**
    * Create a Scan operation across all rows.
    */
@@ -272,6 +275,7 @@ public class Scan extends Query {
     }
     this.mvccReadPoint = scan.getMvccReadPoint();
     this.limit = scan.getLimit();
+    this.needCursorResult = scan.isNeedCursorResult();
   }
 
   /**
@@ -1169,5 +1173,44 @@ public class Scan extends Query {
    */
   Scan resetMvccReadPoint() {
     return setMvccReadPoint(-1L);
+  }
+
+  /**
+   * When the server is slow or we scan a table with many deleted data or we use a sparse filter,
+   * the server will response heartbeat to prevent timeout. However the scanner will return a Result
+   * only when client can do it. So if there are many heartbeats, the blocking time on
+   * ResultScanner#next() may be very long, which is not friendly to online services.
+   *
+   * Set this to true then you can get a special Result whose #isCursor() returns true and is not
+   * contains any real data. It only tells you where the server has scanned. You can call next
+   * to continue scanning or open a new scanner with this row key as start row whenever you want.
+   *
+   * Users can get a cursor when and only when there is a response from the server but we can not
+   * return a Result to users, for example, this response is a heartbeat or there are partial cells
+   * but users do not allow partial result.
+   *
+   * Now the cursor is in row level which means the special Result will only contains a row key.
+   * {@link Result#isCursor()}
+   * {@link Result#getCursor()}
+   * {@link Cursor}
+   */
+  public Scan setNeedCursorResult(boolean needCursorResult) {
+    this.needCursorResult = needCursorResult;
+    return this;
+  }
+
+  public boolean isNeedCursorResult() {
+    return needCursorResult;
+  }
+
+  /**
+   * Create a new Scan with a cursor. It only set the position information like start row key.
+   * The others (like cfs, stop row, limit) should still be filled in by the user.
+   * {@link Result#isCursor()}
+   * {@link Result#getCursor()}
+   * {@link Cursor}
+   */
+  public static Scan createScanFromCursor(Cursor cursor) {
+    return new Scan().withStartRow(cursor.getRow());
   }
 }

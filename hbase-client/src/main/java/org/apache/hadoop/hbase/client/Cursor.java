@@ -15,20 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Bytes;
 
-@InterfaceAudience.Private
-public class ClientUtil {
+/**
+ * Scan cursor to tell client where server is scanning
+ * {@link Scan#setNeedCursorResult(boolean)}
+ * {@link Result#isCursor()}
+ * {@link Result#getCursor()}
+ */
+@InterfaceAudience.Public
+public class Cursor {
 
+  private final byte[] row;
 
-  public static boolean areScanStartRowAndStopRowEqual(byte[] startRow, byte[] stopRow) {
-    return startRow != null && startRow.length > 0 && Bytes.equals(startRow, stopRow);
+  Cursor(byte[] row) {
+    this.row = row;
   }
 
-  public static Cursor createCursor(byte[] row) {
-    return new Cursor(row);
+  public byte[] getRow() {
+    return row;
   }
 }
