@@ -25,8 +25,11 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
@@ -39,10 +42,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Testcase to make sure that we always set scanner id in ScanResponse. See HBASE-18000.
+ * Testcase to make sure that we do not close scanners if ScanRequest.numberOfRows is zero. See
+ * HBASE-18042 for more details.
  */
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestAlwaysSetScannerId {
+public class TestScanWithoutFetchingData {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -76,30 +80,52 @@ public class TestAlwaysSetScannerId {
     UTIL.shutdownMiniCluster();
   }
 
+  private void assertResult(int row, Result result) {
+    assertEquals(row, Bytes.toInt(result.getRow()));
+    assertEquals(row, Bytes.toInt(result.getValue(CF, CQ)));
+  }
+
   @Test
   public void test() throws ServiceException, IOException {
     Scan scan = new Scan();
-    ScanRequest req = RequestConverter.buildScanRequest(HRI.getRegionName(), scan, 1, false);
-    ScanResponse resp = STUB.scan(null, req);
-    assertTrue(resp.hasScannerId());
+    ScanRequest req = RequestConverter.buildScanRequest(HRI.getRegionName(), scan, 0, false);
+    HBaseRpcController hrc = new HBaseRpcControllerImpl();
+    ScanResponse resp = STUB.scan(hrc, req);
+    assertTrue(resp.getMoreResults());
+    assertTrue(resp.getMoreResultsInRegion());
+    assertEquals(0, ResponseConverter.getResults(hrc.cellScanner(), resp).length);
     long scannerId = resp.getScannerId();
     int nextCallSeq = 0;
-    // test next
+    // test normal next
     for (int i = 0; i < COUNT / 2; i++) {
       req = RequestConverter.buildScanRequest(scannerId, 1, false, nextCallSeq++, false, false, -1);
-      resp = STUB.scan(null, req);
-      assertTrue(resp.hasScannerId());
-      assertEquals(scannerId, resp.getScannerId());
+      hrc.reset();
+      resp = STUB.scan(hrc, req);
+      assertTrue(resp.getMoreResults());
+      assertTrue(resp.getMoreResultsInRegion());
+      Result[] results = ResponseConverter.getResults(hrc.cellScanner(), resp);
+      assertEquals(1, results.length);
+      assertResult(i, results[0]);
     }
-    // test renew
-    req = RequestConverter.buildScanRequest(scannerId, 0, false, nextCallSeq++, false, true, -1);
-    resp = STUB.scan(null, req);
-    assertTrue(resp.hasScannerId());
-    assertEquals(scannerId, resp.getScannerId());
-    // test close
+    // test zero next
+    req = RequestConverter.buildScanRequest(scannerId, 0, false, nextCallSeq++, false, false, -1);
+    hrc.reset();
+    resp = STUB.scan(hrc, req);
+    assertTrue(resp.getMoreResults());
+    assertTrue(resp.getMoreResultsInRegion());
+    assertEquals(0, ResponseConverter.getResults(hrc.cellScanner(), resp).length);
+    for (int i = COUNT / 2; i < COUNT; i++) {
+      req = RequestConverter.buildScanRequest(scannerId, 1, false, nextCallSeq++, false, false, -1);
+      hrc.reset();
+      resp = STUB.scan(hrc, req);
+      assertTrue(resp.getMoreResults());
+      assertEquals(i != COUNT - 1, resp.getMoreResultsInRegion());
+      Result[] results = ResponseConverter.getResults(hrc.cellScanner(), resp);
+      assertEquals(1, results.length);
+      assertResult(i, results[0]);
+    }
+    // close
     req = RequestConverter.buildScanRequest(scannerId, 0, true, false);
     resp = STUB.scan(null, req);
-    assertTrue(resp.hasScannerId());
-    assertEquals(scannerId, resp.getScannerId());
   }
 }

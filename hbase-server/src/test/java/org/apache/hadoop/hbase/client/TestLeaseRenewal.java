@@ -123,7 +123,8 @@ public class TestLeaseRenewal {
     assertTrue(rs.renewLease());
     // make sure we haven't advanced the scanner
     assertTrue(Arrays.equals(rs.next().getRow(), ROW_BYTES));
-    assertTrue(rs.renewLease());
+    // renewLease should return false now as we have read all the data already
+    assertFalse(rs.renewLease());
     // make sure scanner is exhausted now
     assertNull(rs.next());
     // renewLease should return false now
