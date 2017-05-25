@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager.SnapshotSubprocedurePool;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -95,7 +96,12 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
           LOG.debug("take snapshot without flush memstore first");
         } else {
           LOG.debug("Flush Snapshotting region " + region.toString() + " started...");
-          region.flush(true);
+          FlushResult res = region.flush(true);
+          if (res.getResult() == FlushResult.Result.CANNOT_FLUSH) {
+            // CANNOT_FLUSH may mean that a flush is already on-going
+            // we need to wait for that flush to complete
+            region.waitForFlushes();
+          }
         }
         ((HRegion)region).addRegionToSnapshot(snapshot, monitor);
         if (snapshotSkipFlush) {

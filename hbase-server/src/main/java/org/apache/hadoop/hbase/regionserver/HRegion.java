@@ -1757,6 +1757,37 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  @Override
+  public void waitForFlushes() {
+    synchronized (writestate) {
+      if (this.writestate.readOnly) {
+        // we should not wait for replayed flushed if we are read only (for example in case the
+        // region is a secondary replica).
+        return;
+      }
+      if (!writestate.flushing) return;
+      long start = System.currentTimeMillis();
+      boolean interrupted = false;
+      try {
+        while (writestate.flushing) {
+          LOG.debug("waiting for cache flush to complete for region " + this);
+          try {
+            writestate.wait();
+          } catch (InterruptedException iex) {
+            // essentially ignore and propagate the interrupt back up
+            LOG.warn("Interrupted while waiting");
+            interrupted = true;
+          }
+        }
+      } finally {
+        if (interrupted) {
+          Thread.currentThread().interrupt();
+        }
+      }
+      long duration = System.currentTimeMillis() - start;
+      LOG.debug("Waited " + duration + " ms for flush to complete");
+    }
+  }
   protected ThreadPoolExecutor getStoreOpenAndCloseThreadPool(
       final String threadNamePrefix) {
     int numStores = Math.max(1, this.htableDescriptor.getFamilies().size());

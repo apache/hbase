@@ -745,4 +745,7 @@ public interface Region extends ConfigurationObserver {
   /** Wait for all current flushes and compactions of the region to complete */
   void waitForFlushesAndCompactions();
 
+  /** Wait for all current flushes of the region to complete
+   */
+  void waitForFlushes();
 }
