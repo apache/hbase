@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
@@ -1124,6 +1125,11 @@ public final class ProtobufUtil {
     }
     if (proto.hasIncludeStopRow()) {
       includeStopRow = proto.getIncludeStopRow();
+    } else {
+      // old client without this flag, we should consider start=end as a get.
+      if (ClientUtil.areScanStartRowAndStopRowEqual(startRow, stopRow)) {
+        includeStopRow = true;
+      }
     }
     Scan scan =
         new Scan().withStartRow(startRow, includeStartRow).withStopRow(stopRow, includeStopRow);
