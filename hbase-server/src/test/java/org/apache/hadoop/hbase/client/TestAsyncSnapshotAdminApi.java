@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Assert;
@@ -35,7 +35,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
 
   String snapshotName1 = "snapshotName1";

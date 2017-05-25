@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -59,7 +59,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Class to test asynchronous region admin operations.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   public static Random RANDOM = new Random(System.currentTimeMillis());

@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZKNamespaceManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -45,7 +46,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Class to test asynchronous namespace admin operations.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
 
   private String prefix = "TestNamespace";
@@ -54,6 +55,9 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
     TEST_UTIL.startMiniCluster(1);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();

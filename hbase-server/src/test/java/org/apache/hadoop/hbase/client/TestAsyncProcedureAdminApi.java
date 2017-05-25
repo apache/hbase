@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.SimpleMasterProcedureManager;
 import org.apache.hadoop.hbase.procedure.SimpleRSProcedureManager;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -44,15 +45,15 @@ import static org.junit.Assert.assertTrue;
 /**
  * Class to test asynchronous procedure admin operations.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_PAUSE, 10);
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1000);
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 3000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
+    TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
     TEST_UTIL.getConfiguration().set(ProcedureManagerHost.MASTER_PROCEDURE_CONF_KEY,
       SimpleMasterProcedureManager.class.getName());
     TEST_UTIL.getConfiguration().set(ProcedureManagerHost.REGIONSERVER_PROCEDURE_CONF_KEY,
