@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -355,7 +356,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   }
 
   HRegionInfo createTableAndGetOneRegion(final TableName tableName)
-      throws IOException, InterruptedException {
+      throws ExecutionException, InterruptedException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5).get();
