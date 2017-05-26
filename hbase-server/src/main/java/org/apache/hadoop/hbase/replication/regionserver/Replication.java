@@ -368,9 +368,7 @@ public class Replication extends WALActionsListener.Base implements
     // get source
     List<ReplicationSourceInterface> sources = this.replicationManager.getSources();
     for (ReplicationSourceInterface source : sources) {
-      if (source instanceof ReplicationSource) {
-        sourceMetricsList.add(((ReplicationSource) source).getSourceMetrics());
-      }
+      sourceMetricsList.add(source.getSourceMetrics());
     }
 
     // get old source

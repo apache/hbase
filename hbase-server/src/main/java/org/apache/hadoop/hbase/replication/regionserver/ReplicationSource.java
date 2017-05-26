@@ -540,10 +540,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     return sb.toString();
   }
 
-  /**
-   * Get Replication Source Metrics
-   * @return sourceMetrics
-   */
   @Override
   public MetricsSource getSourceMetrics() {
     return this.metrics;
