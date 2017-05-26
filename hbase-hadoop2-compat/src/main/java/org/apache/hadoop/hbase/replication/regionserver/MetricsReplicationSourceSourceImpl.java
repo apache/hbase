@@ -171,6 +171,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override public void clear() {
     rms.removeMetric(ageOfLastShippedOpKey);
+    rms.getMetricsRegistry().getCompatibilityRegistry().removeMetric(ageOfLastShippedOpKey);
 
     rms.removeMetric(sizeOfLogQueueKey);
 

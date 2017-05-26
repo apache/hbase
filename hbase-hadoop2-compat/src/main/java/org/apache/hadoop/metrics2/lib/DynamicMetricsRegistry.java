@@ -571,5 +571,10 @@ public class DynamicMetricsRegistry {
         gauge.snapshot(builder, all);
       }
     }
+
+    public void removeMetric(String name) {
+      helper.removeObjectName(name);
+      gaugesMap.remove(name);
+    }
   }
 }

@@ -118,4 +118,11 @@ public interface ReplicationSourceInterface {
   void addHFileRefs(TableName tableName, byte[] family, List<String> files)
       throws ReplicationException;
 
+  /**
+   * Get the associated metrics.
+   *
+   * @return The metrics for this source.
+   */
+  MetricsSource getSourceMetrics();
+
 }

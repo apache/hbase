@@ -39,7 +39,6 @@ public class MetricsSource {
 
   // tracks last shipped timestamp for each wal group
   private Map<String, Long> lastTimeStamps = new HashMap<String, Long>();
-  private int lastQueueSize = 0;
   private long lastHFileRefsQueueSize = 0;
   private String id;
 
@@ -167,11 +166,12 @@ public class MetricsSource {
 
   /** Removes all metrics about this Source. */
   public void clear() {
-    singleSourceSource.clear();
+    int lastQueueSize = singleSourceSource.getSizeOfLogQueue();
     globalSourceSource.decrSizeOfLogQueue(lastQueueSize);
+    singleSourceSource.decrSizeOfLogQueue(lastQueueSize);
+    singleSourceSource.clear();
     globalSourceSource.decrSizeOfHFileRefsQueue(lastHFileRefsQueueSize);
     lastTimeStamps.clear();
-    lastQueueSize = 0;
     lastHFileRefsQueueSize = 0;
   }
 

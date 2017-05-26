@@ -439,9 +439,7 @@ public class Replication extends WALActionsListener.Base implements
     List<MetricsSource> sourceMetricsList = new ArrayList<MetricsSource>();
 
     for (ReplicationSourceInterface source : sources) {
-      if (source instanceof ReplicationSource) {
-        sourceMetricsList.add(((ReplicationSource) source).getSourceMetrics());
-      }
+      sourceMetricsList.add(source.getSourceMetrics());
     }
     // get sink
     MetricsSink sinkMetrics = this.replicationSink.getSinkMetrics();
