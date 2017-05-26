@@ -307,11 +307,8 @@ public class Scan extends Query {
   }
 
   public boolean isGetScan() {
-    return includeStartRow && includeStopRow && areStartRowAndStopRowEqual(startRow, stopRow);
-  }
-
-  private static boolean areStartRowAndStopRowEqual(byte[] startRow, byte[] stopRow) {
-    return startRow != null && startRow.length > 0 && Bytes.equals(startRow, stopRow);
+    return includeStartRow && includeStopRow
+        && ClientUtil.areScanStartRowAndStopRowEqual(this.startRow, this.stopRow);
   }
 
   /**
@@ -406,7 +403,7 @@ public class Scan extends Query {
   @Deprecated
   public Scan setStartRow(byte[] startRow) {
     withStartRow(startRow);
-    if (areStartRowAndStopRowEqual(startRow, stopRow)) {
+    if (ClientUtil.areScanStartRowAndStopRowEqual(this.startRow, this.stopRow)) {
       // for keeping the old behavior that a scan with the same start and stop row is a get scan.
       this.includeStopRow = true;
     }
@@ -466,7 +463,7 @@ public class Scan extends Query {
   @Deprecated
   public Scan setStopRow(byte[] stopRow) {
     withStopRow(stopRow);
-    if (areStartRowAndStopRowEqual(startRow, stopRow)) {
+    if (ClientUtil.areScanStartRowAndStopRowEqual(this.startRow, this.stopRow)) {
       // for keeping the old behavior that a scan with the same start and stop row is a get scan.
       this.includeStopRow = true;
     }
