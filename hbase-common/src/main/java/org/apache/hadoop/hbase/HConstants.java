@@ -1093,14 +1093,10 @@ public final class HConstants {
     "hbase.regionserver.wal.enablecompression";
 
   /** Configuration name of WAL storage policy
-   * Valid values are:
-   *  NONE: no preference in destination of block replicas
-   *  ONE_SSD: place only one block replica in SSD and the remaining in default storage
-   *  and ALL_SSD: place all block replicas on SSD
-   *
-   * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html*/
+   * Valid values are: HOT, COLD, WARM, ALL_SSD, ONE_SSD, LAZY_PERSIST
+   * See http://hadoop.apache.org/docs/r2.7.3/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html*/
   public static final String WAL_STORAGE_POLICY = "hbase.wal.storage.policy";
-  public static final String DEFAULT_WAL_STORAGE_POLICY = "NONE";
+  public static final String DEFAULT_WAL_STORAGE_POLICY = "HOT";
 
   /** Region in Transition metrics threshold time */
   public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD =
