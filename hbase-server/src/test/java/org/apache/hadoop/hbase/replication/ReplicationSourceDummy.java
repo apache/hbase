@@ -41,6 +41,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   ReplicationSourceManager manager;
   String peerClusterId;
   Path currentPath;
+  MetricsSource metrics;
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
@@ -50,11 +51,13 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
     this.manager = manager;
     this.peerClusterId = peerClusterId;
+    this.metrics = metrics;
   }
 
   @Override
   public void enqueueLog(Path log) {
     this.currentPath = log;
+    metrics.incrSizeOfLogQueue();
   }
 
   @Override
@@ -112,7 +115,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public MetricsSource getSourceMetrics() {
-    return null;
+    return metrics;
   }
 
   @Override

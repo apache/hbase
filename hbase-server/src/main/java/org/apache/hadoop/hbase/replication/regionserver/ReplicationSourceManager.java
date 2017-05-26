@@ -358,6 +358,20 @@ public class ReplicationSourceManager implements ReplicationListener {
     return this.oldsources;
   }
 
+  /**
+   * Get the normal source for a given peer
+   * @param peerId
+   * @return the normal source for the give peer if it exists, otherwise null.
+   */
+  public ReplicationSourceInterface getSource(String peerId) {
+    for (ReplicationSourceInterface source: getSources()) {
+      if (source.getPeerId().equals(peerId)) {
+        return source;
+      }
+    }
+    return null;
+  }
+
   @VisibleForTesting
   List<String> getAllQueues() {
     return replicationQueues.getAllQueues();
@@ -542,9 +556,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   public void closeQueue(ReplicationSourceInterface src) {
     LOG.info("Done with the queue " + src.getPeerClusterZnode());
-    if (src instanceof ReplicationSource) {
-      ((ReplicationSource) src).getSourceMetrics().clear();
-    }
+    src.getSourceMetrics().clear();
     this.sources.remove(src);
     deleteSource(src.getPeerClusterZnode(), true);
     this.walsById.remove(src.getPeerClusterZnode());
@@ -593,10 +605,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       }
       for (ReplicationSourceInterface toRemove : srcToRemove) {
         toRemove.terminate(terminateMessage);
-        if (toRemove instanceof ReplicationSource) {
-          ((ReplicationSource) toRemove).getSourceMetrics().clear();
-        }
-        this.sources.remove(toRemove);
+        closeQueue(toRemove);
       }
       deleteSource(id, true);
     }
