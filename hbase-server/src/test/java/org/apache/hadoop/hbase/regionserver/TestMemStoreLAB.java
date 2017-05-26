@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -61,10 +62,17 @@ public class TestMemStoreLAB {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
-        .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, globalMemStoreLimit,
-      0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+    ChunkCreator.initialize(1 * 1024, false, 50*1024000l, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
+      null);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    long globalMemStoreLimit =
+        (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()
+            * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, globalMemStoreLimit, 0.2f,
+      MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
   }
 
   /**
@@ -81,7 +89,7 @@ public class TestMemStoreLAB {
     // should be reasonable for unit test and also cover wraparound
     // behavior
     for (int i = 0; i < 100000; i++) {
-      int valSize = rand.nextInt(1000);
+      int valSize = rand.nextInt(3);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
       int size = KeyValueUtil.length(kv);
       ByteBufferKeyValue newKv = (ByteBufferKeyValue) mslab.copyCellInto(kv);
@@ -132,7 +140,7 @@ public class TestMemStoreLAB {
         private Random r = new Random();
         @Override
         public void doAnAction() throws Exception {
-          int valSize = r.nextInt(1000);
+          int valSize = r.nextInt(3);
           KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
           int size = KeyValueUtil.length(kv);
           ByteBufferKeyValue newCell = (ByteBufferKeyValue) mslab.copyCellInto(kv);
@@ -144,7 +152,7 @@ public class TestMemStoreLAB {
     }
 
     ctx.startThreads();
-    while (totalAllocated.get() < 50*1024*1024 && ctx.shouldRun()) {
+    while (totalAllocated.get() < 50*1024*1000 && ctx.shouldRun()) {
       Thread.sleep(10);
     }
     ctx.stop();
