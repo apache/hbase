@@ -29,18 +29,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.security.GeneralSecurityException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Properties;
-
-import javax.security.sasl.Sasl;
-import javax.security.sasl.SaslException;
-import javax.security.sasl.SaslServer;
 
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.commons.crypto.random.CryptoRandom;
 import org.apache.commons.crypto.random.CryptoRandomFactory;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
@@ -51,8 +47,6 @@ import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
-import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHandler;
-import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -89,6 +83,7 @@ import org.apache.htrace.TraceInfo;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
     value="VO_VOLATILE_INCREMENT",
     justification="False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
+@InterfaceAudience.Private
 abstract class ServerRpcConnection implements Closeable {
   /**  */
   protected final RpcServer rpcServer;
@@ -121,7 +116,7 @@ abstract class ServerRpcConnection implements Closeable {
   // When is this set? FindBugs wants to know! Says NP
   private ByteBuffer unwrappedDataLengthBuffer = ByteBuffer.allocate(4);
   protected boolean useSasl;
-  protected SaslServer saslServer;
+  protected HBaseSaslRpcServer saslServer;
   protected CryptoAES cryptoAES;
   protected boolean useWrap = false;
   protected boolean useCryptoAesWrap = false;
@@ -131,7 +126,6 @@ abstract class ServerRpcConnection implements Closeable {
 
   protected boolean retryImmediatelySupported = false;
 
-  private UserGroupInformation attemptingUser = null; // user name before auth
   protected User user = null;
   protected UserGroupInformation ugi = null;
 
@@ -164,13 +158,13 @@ abstract class ServerRpcConnection implements Closeable {
     return null;
   }
 
-  protected String getFatalConnectionString(final int version, final byte authByte) {
+  private String getFatalConnectionString(final int version, final byte authByte) {
     return "serverVersion=" + RpcServer.CURRENT_VERSION +
     ", clientVersion=" + version + ", authMethod=" + authByte +
     ", authSupported=" + (authMethod != null) + " from " + toString();
   }
 
-  protected UserGroupInformation getAuthorizedUgi(String authorizedId)
+  private UserGroupInformation getAuthorizedUgi(String authorizedId)
       throws IOException {
     UserGroupInformation authorizedUgi;
     if (authMethod == AuthMethod.DIGEST) {
@@ -193,7 +187,7 @@ abstract class ServerRpcConnection implements Closeable {
    * Set up cell block codecs
    * @throws FatalConnectionException
    */
-  protected void setupCellBlockCodecs(final ConnectionHeader header)
+  private void setupCellBlockCodecs(final ConnectionHeader header)
       throws FatalConnectionException {
     // TODO: Plug in other supported decoders.
     if (!header.hasCellBlockCodecClass()) return;
@@ -218,13 +212,13 @@ abstract class ServerRpcConnection implements Closeable {
    *
    * @throws FatalConnectionException
    */
-  protected void setupCryptoCipher(final ConnectionHeader header,
+  private void setupCryptoCipher(final ConnectionHeader header,
       RPCProtos.ConnectionHeaderResponse.Builder chrBuilder)
       throws FatalConnectionException {
     // If simple auth, return
     if (saslServer == null) return;
     // check if rpc encryption with Crypto AES
-    String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+    String qop = saslServer.getNegotiatedQop();
     boolean isEncryption = SaslUtil.QualityOfProtection.PRIVACY
         .getSaslQop().equalsIgnoreCase(qop);
     boolean isCryptoAesEncryption = isEncryption && this.rpcServer.conf.getBoolean(
@@ -289,7 +283,7 @@ abstract class ServerRpcConnection implements Closeable {
     return (bytes.length == 0) ? ByteString.EMPTY : ByteString.copyFrom(bytes);
   }
 
-  protected UserGroupInformation createUser(ConnectionHeader head) {
+  private UserGroupInformation createUser(ConnectionHeader head) {
     UserGroupInformation ugi = null;
 
     if (!head.hasUserInfo()) {
@@ -316,14 +310,10 @@ abstract class ServerRpcConnection implements Closeable {
     return ugi;
   }
 
-  protected void disposeSasl() {
+  protected final void disposeSasl() {
     if (saslServer != null) {
-      try {
-        saslServer.dispose();
-        saslServer = null;
-      } catch (SaslException ignored) {
-        // Ignored. This is being disposed of anyway.
-      }
+      saslServer.dispose();
+      saslServer = null;
     }
   }
 
@@ -373,45 +363,11 @@ abstract class ServerRpcConnection implements Closeable {
       byte[] replyToken;
       try {
         if (saslServer == null) {
-          switch (authMethod) {
-          case DIGEST:
-            if (this.rpcServer.secretManager == null) {
-              throw new AccessDeniedException(
-                  "Server is not configured to do DIGEST authentication.");
-            }
-            saslServer = Sasl.createSaslServer(AuthMethod.DIGEST
-                .getMechanismName(), null, SaslUtil.SASL_DEFAULT_REALM,
-                HBaseSaslRpcServer.getSaslProps(), new SaslDigestCallbackHandler(
-                    this.rpcServer.secretManager, ugi ->  attemptingUser = ugi));
-            break;
-          default:
-            UserGroupInformation current = UserGroupInformation.getCurrentUser();
-            String fullName = current.getUserName();
-            if (RpcServer.LOG.isDebugEnabled()) {
-              RpcServer.LOG.debug("Kerberos principal name is " + fullName);
-            }
-            final String names[] = SaslUtil.splitKerberosName(fullName);
-            if (names.length != 3) {
-              throw new AccessDeniedException(
-                  "Kerberos principal name does NOT have the expected "
-                      + "hostname part: " + fullName);
-            }
-            current.doAs(new PrivilegedExceptionAction<Object>() {
-              @Override
-              public Object run() throws SaslException {
-                saslServer = Sasl.createSaslServer(AuthMethod.KERBEROS
-                    .getMechanismName(), names[0], names[1],
-                    HBaseSaslRpcServer.getSaslProps(), new SaslGssCallbackHandler());
-                return null;
-              }
-            });
-          }
-          if (saslServer == null)
-            throw new AccessDeniedException(
-                "Unable to find SASL server implementation for "
-                    + authMethod.getMechanismName());
+          saslServer =
+              new HBaseSaslRpcServer(authMethod, rpcServer.saslProps, rpcServer.secretManager);
           if (RpcServer.LOG.isDebugEnabled()) {
-            RpcServer.LOG.debug("Created SASL server with mechanism = " + authMethod.getMechanismName());
+            RpcServer.LOG
+                .debug("Created SASL server with mechanism = " + authMethod.getMechanismName());
           }
         }
         if (RpcServer.LOG.isDebugEnabled()) {
@@ -435,7 +391,8 @@ abstract class ServerRpcConnection implements Closeable {
         this.rpcServer.metrics.authenticationFailure();
         String clientIP = this.toString();
         // attempting user could be null
-        RpcServer.AUDITLOG.warn(RpcServer.AUTH_FAILED_FOR + clientIP + ":" + attemptingUser);
+        RpcServer.AUDITLOG
+            .warn(RpcServer.AUTH_FAILED_FOR + clientIP + ":" + saslServer.getAttemptingUser());
         throw e;
       }
       if (replyToken != null) {
@@ -447,13 +404,12 @@ abstract class ServerRpcConnection implements Closeable {
             null);
       }
       if (saslServer.isComplete()) {
-        String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+        String qop = saslServer.getNegotiatedQop();
         useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
         ugi = getAuthorizedUgi(saslServer.getAuthorizationID());
         if (RpcServer.LOG.isDebugEnabled()) {
-          RpcServer.LOG.debug("SASL server context established. Authenticated client: "
-            + ugi + ". Negotiated QoP is "
-            + saslServer.getNegotiatedProperty(Sasl.QOP));
+          RpcServer.LOG.debug("SASL server context established. Authenticated client: " + ugi +
+              ". Negotiated QoP is " + qop);
         }
         this.rpcServer.metrics.authenticationSuccess();
         RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);

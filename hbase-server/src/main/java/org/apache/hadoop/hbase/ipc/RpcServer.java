@@ -30,8 +30,10 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -55,7 +57,8 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
+import org.apache.hadoop.hbase.security.SaslUtil;
+import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
@@ -112,6 +115,7 @@ public abstract class RpcServer implements RpcServerInterface,
   protected static final Log AUDITLOG = LogFactory.getLog("SecurityLogger."
       + Server.class.getName());
   protected SecretManager<TokenIdentifier> secretManager;
+  protected final Map<String, String> saslProps;
   protected ServiceAuthorizationManager authManager;
 
   /** This is set to Call object before Handler invokes an RPC and ybdie
@@ -307,7 +311,10 @@ public abstract class RpcServer implements RpcServerInterface,
     this.userProvider = UserProvider.instantiate(conf);
     this.isSecurityEnabled = userProvider.isHBaseSecurityEnabled();
     if (isSecurityEnabled) {
-      HBaseSaslRpcServer.init(conf);
+      saslProps = SaslUtil.initSaslProperties(conf.get("hbase.rpc.protection",
+        QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)));
+    } else {
+      saslProps = Collections.emptyMap();
     }
 
     this.scheduler = scheduler;

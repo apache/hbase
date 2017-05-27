@@ -24,6 +24,7 @@ import java.util.TreeMap;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
@@ -97,7 +98,7 @@ public class SaslUtil {
    * @param rpcProtection Value of 'hbase.rpc.protection' configuration.
    * @return Map with values for SASL properties.
    */
-  static Map<String, String> initSaslProperties(String rpcProtection) {
+  public static Map<String, String> initSaslProperties(String rpcProtection) {
     String saslQop;
     if (rpcProtection.isEmpty()) {
       saslQop = QualityOfProtection.AUTHENTICATION.getSaslQop();
@@ -121,6 +122,14 @@ public class SaslUtil {
       saslClient.dispose();
     } catch (SaslException e) {
       LOG.error("Error disposing of SASL client", e);
+    }
+  }
+
+  static void safeDispose(SaslServer saslServer) {
+    try {
+      saslServer.dispose();
+    } catch (SaslException e) {
+      LOG.error("Error disposing of SASL server", e);
     }
   }
 }
