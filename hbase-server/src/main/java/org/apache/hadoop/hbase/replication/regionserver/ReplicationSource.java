@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.Service;
@@ -42,19 +39,14 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.ClusterMarkingEntryFilter;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -66,11 +58,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReaderThread.WALEntryBatch;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -96,33 +84,30 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   // each presents a queue for one wal group
   private Map<String, PriorityBlockingQueue<Path>> queues = new HashMap<>();
   // per group queue size, keep no more than this number of logs in each wal group
-  private int queueSizePerGroup;
-  private ReplicationQueues replicationQueues;
+  protected int queueSizePerGroup;
+  protected ReplicationQueues replicationQueues;
   private ReplicationPeers replicationPeers;
 
-  private Configuration conf;
-  private ReplicationQueueInfo replicationQueueInfo;
+  protected Configuration conf;
+  protected ReplicationQueueInfo replicationQueueInfo;
   // id of the peer cluster this source replicates to
   private String peerId;
 
-  String actualPeerId;
   // The manager of all sources to which we ping back our progress
-  private ReplicationSourceManager manager;
+  protected ReplicationSourceManager manager;
   // Should we stop everything?
-  private Stoppable stopper;
+  protected Stoppable stopper;
   // How long should we sleep for each retry
   private long sleepForRetries;
-  private FileSystem fs;
+  protected FileSystem fs;
   // id of this cluster
   private UUID clusterId;
   // id of the other cluster
   private UUID peerClusterId;
   // total number of edits we replicated
   private AtomicLong totalReplicatedEdits = new AtomicLong(0);
-  // total number of edits we replicated
-  private AtomicLong totalReplicatedOperations = new AtomicLong(0);
   // The znode we currently play with
-  private String peerClusterZnode;
+  protected String peerClusterZnode;
   // Maximum number of retries before taking bold actions
   private int maxRetriesMultiplier;
   // Indicates if this particular source is running
@@ -139,7 +124,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   private ReplicationThrottler throttler;
   private long defaultBandwidth;
   private long currentBandwidth;
-  private ConcurrentHashMap<String, ReplicationSourceShipperThread> workerThreads = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<String, ReplicationSourceShipperThread> workerThreads =
+      new ConcurrentHashMap<>();
 
   private AtomicLong totalBufferUsed;
 
@@ -182,8 +168,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     this.replicationQueueInfo = new ReplicationQueueInfo(peerClusterZnode);
     // ReplicationQueueInfo parses the peerId out of the znode for us
     this.peerId = this.replicationQueueInfo.getPeerId();
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
-    this.actualPeerId = replicationQueueInfo.getPeerId();
     this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
     this.replicationEndpoint = replicationEndpoint;
 
@@ -213,15 +197,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         // new wal group observed after source startup, start a new worker thread to track it
         // notice: it's possible that log enqueued when this.running is set but worker thread
         // still not launched, so it's necessary to check workerThreads before start the worker
-        final ReplicationSourceShipperThread worker =
-            new ReplicationSourceShipperThread(logPrefix, queue, replicationQueueInfo, this);
-        ReplicationSourceShipperThread extant = workerThreads.putIfAbsent(logPrefix, worker);
-        if (extant != null) {
-          LOG.debug("Someone has beat us to start a worker thread for wal group " + logPrefix);
-        } else {
-          LOG.debug("Starting up worker for wal group " + logPrefix);
-          worker.startup();
-        }
+        tryStartNewShipperThread(logPrefix, queue);
       }
     }
     queue.put(log);
@@ -259,15 +235,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       // data
       this.replicationQueues.addHFileRefs(peerId, pairs);
       metrics.incrSizeOfHFileRefsQueue(pairs.size());
-    }
-  }
-
-  private void uninitialize() {
-    LOG.debug("Source exiting " + this.peerId);
-    metrics.clear();
-    if (replicationEndpoint.state() == Service.State.STARTING
-        || replicationEndpoint.state() == Service.State.RUNNING) {
-      replicationEndpoint.stopAndWait();
     }
   }
 
@@ -322,15 +289,98 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : queues.entrySet()) {
       String walGroupId = entry.getKey();
       PriorityBlockingQueue<Path> queue = entry.getValue();
-      final ReplicationSourceShipperThread worker =
-          new ReplicationSourceShipperThread(walGroupId, queue, replicationQueueInfo, this);
-      ReplicationSourceShipperThread extant = workerThreads.putIfAbsent(walGroupId, worker);
-      if (extant != null) {
-        LOG.debug("Someone has beat us to start a worker thread for wal group " + walGroupId);
-      } else {
-        LOG.debug("Starting up worker for wal group " + walGroupId);
-        worker.startup();
+      tryStartNewShipperThread(walGroupId, queue);
+    }
+  }
+
+  protected void tryStartNewShipperThread(String walGroupId, PriorityBlockingQueue<Path> queue) {
+    final ReplicationSourceShipperThread worker = new ReplicationSourceShipperThread(conf,
+        walGroupId, queue, this);
+    ReplicationSourceShipperThread extant = workerThreads.putIfAbsent(walGroupId, worker);
+    if (extant != null) {
+      LOG.debug("Someone has beat us to start a worker thread for wal group " + walGroupId);
+    } else {
+      LOG.debug("Starting up worker for wal group " + walGroupId);
+      worker.startup(getUncaughtExceptionHandler());
+      worker.setWALReader(startNewWALReaderThread(worker.getName(), walGroupId, queue,
+        worker.getStartPosition()));
+      workerThreads.put(walGroupId, worker);
+    }
+  }
+
+  protected ReplicationSourceWALReaderThread startNewWALReaderThread(String threadName,
+      String walGroupId, PriorityBlockingQueue<Path> queue, long startPosition) {
+    ArrayList<WALEntryFilter> filters = Lists.newArrayList(walEntryFilter,
+      new ClusterMarkingEntryFilter(clusterId, peerClusterId, replicationEndpoint));
+    ChainWALEntryFilter readerFilter = new ChainWALEntryFilter(filters);
+    ReplicationSourceWALReaderThread walReader = new ReplicationSourceWALReaderThread(manager,
+        replicationQueueInfo, queue, startPosition, fs, conf, readerFilter, metrics);
+    Threads.setDaemonThreadRunning(walReader, threadName
+        + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + peerClusterZnode,
+      getUncaughtExceptionHandler());
+    return walReader;
+  }
+
+  public Thread.UncaughtExceptionHandler getUncaughtExceptionHandler() {
+    return new Thread.UncaughtExceptionHandler() {
+      @Override
+      public void uncaughtException(final Thread t, final Throwable e) {
+        RSRpcServices.exitIfOOME(e);
+        LOG.error("Unexpected exception in " + t.getName() + " currentPath=" + getCurrentPath(), e);
+        stopper.stop("Unexpected exception in " + t.getName());
       }
+    };
+  }
+
+  @Override
+  public ReplicationEndpoint getReplicationEndpoint() {
+    return this.replicationEndpoint;
+  }
+
+  @Override
+  public ReplicationSourceManager getSourceManager() {
+    return this.manager;
+  }
+
+  @Override
+  public void tryThrottle(int batchSize) throws InterruptedException {
+    checkBandwidthChangeAndResetThrottler();
+    if (throttler.isEnabled()) {
+      long sleepTicks = throttler.getNextSleepInterval(batchSize);
+      if (sleepTicks > 0) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("To sleep " + sleepTicks + "ms for throttling control");
+        }
+        Thread.sleep(sleepTicks);
+        // reset throttler's cycle start tick when sleep for throttling occurs
+        throttler.resetStartTick();
+      }
+    }
+  }
+
+  private void checkBandwidthChangeAndResetThrottler() {
+    long peerBandwidth = getCurrentBandwidth();
+    if (peerBandwidth != currentBandwidth) {
+      currentBandwidth = peerBandwidth;
+      throttler.setBandwidth((double) currentBandwidth / 10.0);
+      LOG.info("ReplicationSource : " + peerId
+          + " bandwidth throttling changed, currentBandWidth=" + currentBandwidth);
+    }
+  }
+
+  private long getCurrentBandwidth() {
+    ReplicationPeer replicationPeer = this.replicationPeers.getConnectedPeer(peerId);
+    long peerBandwidth = replicationPeer != null ? replicationPeer.getPeerBandwidth() : 0;
+    // user can set peer bandwidth to 0 to use default bandwidth
+    return peerBandwidth != 0 ? peerBandwidth : defaultBandwidth;
+  }
+
+  private void uninitialize() {
+    LOG.debug("Source exiting " + this.peerId);
+    metrics.clear();
+    if (replicationEndpoint.state() == Service.State.STARTING
+        || replicationEndpoint.state() == Service.State.RUNNING) {
+      replicationEndpoint.stopAndWait();
     }
   }
 
@@ -358,7 +408,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
    *
    * @return true if the peer is enabled, otherwise false
    */
-  protected boolean isPeerEnabled() {
+  @Override
+  public boolean isPeerEnabled() {
     return this.replicationPeers.getStatusOfPeer(this.peerId);
   }
 
@@ -428,7 +479,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   }
 
   @Override
-  public String getPeerClusterId() {
+  public String getPeerId() {
     return this.peerId;
   }
 
@@ -441,7 +492,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     return null;
   }
 
-  private boolean isSourceActive() {
+  @Override
+  public boolean isSourceActive() {
     return !this.stopper.isStopped() && this.sourceRunning;
   }
 
@@ -492,467 +544,17 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
    * Get Replication Source Metrics
    * @return sourceMetrics
    */
+  @Override
   public MetricsSource getSourceMetrics() {
     return this.metrics;
   }
 
-  private long getCurrentBandwidth() {
-    ReplicationPeer replicationPeer = this.replicationPeers.getConnectedPeer(peerId);
-    long peerBandwidth = replicationPeer != null ? replicationPeer.getPeerBandwidth() : 0;
-    // user can set peer bandwidth to 0 to use default bandwidth
-    return peerBandwidth != 0 ? peerBandwidth : defaultBandwidth;
-  }
-
-  // This thread reads entries from a queue and ships them.
-  // Entries are placed onto the queue by ReplicationSourceWALReaderThread
-  public class ReplicationSourceShipperThread extends Thread {
-    ReplicationSourceInterface source;
-    String walGroupId;
-    PriorityBlockingQueue<Path> queue;
-    ReplicationQueueInfo replicationQueueInfo;
-    // Last position in the log that we sent to ZooKeeper
-    private long lastLoggedPosition = -1;
-    // Path of the current log
-    private volatile Path currentPath;
-    // Indicates whether this particular worker is running
-    private boolean workerRunning = true;
-    ReplicationSourceWALReaderThread entryReader;
-    // Use guava cache to set ttl for each key
-    private LoadingCache<String, Boolean> canSkipWaitingSet = CacheBuilder.newBuilder()
-        .expireAfterAccess(1, TimeUnit.DAYS).build(
-        new CacheLoader<String, Boolean>() {
-          @Override
-          public Boolean load(String key) throws Exception {
-            return false;
-          }
-        }
-    );
-
-    public ReplicationSourceShipperThread(String walGroupId,
-        PriorityBlockingQueue<Path> queue, ReplicationQueueInfo replicationQueueInfo,
-        ReplicationSourceInterface source) {
-      this.walGroupId = walGroupId;
-      this.queue = queue;
-      this.replicationQueueInfo = replicationQueueInfo;
-      this.source = source;
+  @Override
+  public void postShipEdits(List<Entry> entries, int batchSize) {
+    if (throttler.isEnabled()) {
+      throttler.addPushSize(batchSize);
     }
-
-    @Override
-    public void run() {
-      // Loop until we close down
-      while (isWorkerActive()) {
-        int sleepMultiplier = 1;
-        // Sleep until replication is enabled again
-        if (!isPeerEnabled()) {
-          if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
-            sleepMultiplier++;
-          }
-          continue;
-        }
-        while (entryReader == null) {
-          if (sleepForRetries("Replication WAL entry reader thread not initialized",
-            sleepMultiplier)) {
-            sleepMultiplier++;
-          }
-          if (sleepMultiplier == maxRetriesMultiplier) {
-            LOG.warn("Replication WAL entry reader thread not initialized");
-          }
-        }
-
-        try {
-          WALEntryBatch entryBatch = entryReader.take();
-          for (Map.Entry<String, Long> entry : entryBatch.getLastSeqIds().entrySet()) {
-            waitingUntilCanPush(entry);
-          }
-          shipEdits(entryBatch);
-          releaseBufferQuota((int) entryBatch.getHeapSize());
-          if (replicationQueueInfo.isQueueRecovered() && entryBatch.getWalEntries().isEmpty()
-              && entryBatch.getLastSeqIds().isEmpty()) {
-            LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
-                + peerClusterZnode);
-            metrics.incrCompletedRecoveryQueue();
-            setWorkerRunning(false);
-            continue;
-          }
-        } catch (InterruptedException e) {
-          LOG.trace("Interrupted while waiting for next replication entry batch", e);
-          Thread.currentThread().interrupt();
-        }
-      }
-
-      if (replicationQueueInfo.isQueueRecovered()) {
-        // use synchronize to make sure one last thread will clean the queue
-        synchronized (workerThreads) {
-          Threads.sleep(100);// wait a short while for other worker thread to fully exit
-          boolean allOtherTaskDone = true;
-          for (ReplicationSourceShipperThread worker : workerThreads.values()) {
-            if (!worker.equals(this) && worker.isAlive()) {
-              allOtherTaskDone = false;
-              break;
-            }
-          }
-          if (allOtherTaskDone) {
-            manager.closeRecoveredQueue(this.source);
-            LOG.info("Finished recovering queue " + peerClusterZnode
-                + " with the following stats: " + getStats());
-          }
-        }
-      }
-    }
-
-    private void waitingUntilCanPush(Map.Entry<String, Long> entry) {
-      String key = entry.getKey();
-      long seq = entry.getValue();
-      boolean deleteKey = false;
-      if (seq <= 0) {
-        // There is a REGION_CLOSE marker, we can not continue skipping after this entry.
-        deleteKey = true;
-        seq = -seq;
-      }
-
-      if (!canSkipWaitingSet.getUnchecked(key)) {
-        try {
-          manager.waitUntilCanBePushed(Bytes.toBytes(key), seq, actualPeerId);
-        } catch (IOException e) {
-          LOG.error("waitUntilCanBePushed fail", e);
-          stopper.stop("waitUntilCanBePushed fail");
-        } catch (InterruptedException e) {
-          LOG.warn("waitUntilCanBePushed interrupted", e);
-          Thread.currentThread().interrupt();
-        }
-        canSkipWaitingSet.put(key, true);
-      }
-      if (deleteKey) {
-        canSkipWaitingSet.invalidate(key);
-      }
-    }
-
-    private void cleanUpHFileRefs(WALEdit edit) throws IOException {
-      String peerId = peerClusterZnode;
-      if (peerId.contains("-")) {
-        // peerClusterZnode will be in the form peerId + "-" + rsZNode.
-        // A peerId will not have "-" in its name, see HBASE-11394
-        peerId = peerClusterZnode.split("-")[0];
-      }
-      List<Cell> cells = edit.getCells();
-      int totalCells = cells.size();
-      for (int i = 0; i < totalCells; i++) {
-        Cell cell = cells.get(i);
-        if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
-          BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
-          List<StoreDescriptor> stores = bld.getStoresList();
-          int totalStores = stores.size();
-          for (int j = 0; j < totalStores; j++) {
-            List<String> storeFileList = stores.get(j).getStoreFileList();
-            manager.cleanUpHFileRefs(peerId, storeFileList);
-            metrics.decrSizeOfHFileRefsQueue(storeFileList.size());
-          }
-        }
-      }
-    }
-
-    private void checkBandwidthChangeAndResetThrottler() {
-      long peerBandwidth = getCurrentBandwidth();
-      if (peerBandwidth != currentBandwidth) {
-        currentBandwidth = peerBandwidth;
-        throttler.setBandwidth((double) currentBandwidth / 10.0);
-        LOG.info("ReplicationSource : " + peerId
-            + " bandwidth throttling changed, currentBandWidth=" + currentBandwidth);
-      }
-    }
-
-    /**
-     * Do the shipping logic
-     */
-    protected void shipEdits(WALEntryBatch entryBatch) {
-      List<Entry> entries = entryBatch.getWalEntries();
-      long lastReadPosition = entryBatch.getLastWalPosition();
-      currentPath = entryBatch.getLastWalPath();
-      int sleepMultiplier = 0;
-      if (entries.isEmpty()) {
-        if (lastLoggedPosition != lastReadPosition) {
-          // Save positions to meta table before zk.
-          updateSerialRepPositions(entryBatch.getLastSeqIds());
-          updateLogPosition(lastReadPosition);
-          // if there was nothing to ship and it's not an error
-          // set "ageOfLastShippedOp" to <now> to indicate that we're current
-          metrics.setAgeOfLastShippedOp(EnvironmentEdgeManager.currentTime(), walGroupId);
-        }
-        return;
-      }
-      int currentSize = (int) entryBatch.getHeapSize();
-      while (isWorkerActive()) {
-        try {
-          checkBandwidthChangeAndResetThrottler();
-          if (throttler.isEnabled()) {
-            long sleepTicks = throttler.getNextSleepInterval(currentSize);
-            if (sleepTicks > 0) {
-              try {
-                if (LOG.isTraceEnabled()) {
-                  LOG.trace("To sleep " + sleepTicks + "ms for throttling control");
-                }
-                Thread.sleep(sleepTicks);
-              } catch (InterruptedException e) {
-                LOG.debug("Interrupted while sleeping for throttling control");
-                Thread.currentThread().interrupt();
-                // current thread might be interrupted to terminate
-                // directly go back to while() for confirm this
-                continue;
-              }
-              // reset throttler's cycle start tick when sleep for throttling occurs
-              throttler.resetStartTick();
-            }
-          }
-          // create replicateContext here, so the entries can be GC'd upon return from this call
-          // stack
-          ReplicationEndpoint.ReplicateContext replicateContext =
-              new ReplicationEndpoint.ReplicateContext();
-          replicateContext.setEntries(entries).setSize(currentSize);
-          replicateContext.setWalGroupId(walGroupId);
-
-          long startTimeNs = System.nanoTime();
-          // send the edits to the endpoint. Will block until the edits are shipped and acknowledged
-          boolean replicated = replicationEndpoint.replicate(replicateContext);
-          long endTimeNs = System.nanoTime();
-
-          if (!replicated) {
-            continue;
-          } else {
-            sleepMultiplier = Math.max(sleepMultiplier - 1, 0);
-          }
-
-          if (this.lastLoggedPosition != lastReadPosition) {
-            //Clean up hfile references
-            int size = entries.size();
-            for (int i = 0; i < size; i++) {
-              cleanUpHFileRefs(entries.get(i).getEdit());
-            }
-
-            // Save positions to meta table before zk.
-            updateSerialRepPositions(entryBatch.getLastSeqIds());
-
-            //Log and clean up WAL logs
-            updateLogPosition(lastReadPosition);
-          }
-          if (throttler.isEnabled()) {
-            throttler.addPushSize(currentSize);
-          }
-          totalReplicatedEdits.addAndGet(entries.size());
-          totalReplicatedOperations.addAndGet(entryBatch.getNbOperations());
-          // FIXME check relationship between wal group and overall
-          metrics.shipBatch(entryBatch.getNbOperations(), currentSize, entryBatch.getNbHFiles());
-          metrics.setAgeOfLastShippedOp(entries.get(entries.size() - 1).getKey().getWriteTime(),
-            walGroupId);
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Replicated " + totalReplicatedEdits + " entries in total, or "
-                + totalReplicatedOperations + " operations in "
-                + ((endTimeNs - startTimeNs) / 1000000) + " ms");
-          }
-          break;
-        } catch (Exception ex) {
-          LOG.warn(replicationEndpoint.getClass().getName() + " threw unknown exception:"
-              + org.apache.hadoop.util.StringUtils.stringifyException(ex));
-          if (sleepForRetries("ReplicationEndpoint threw exception", sleepMultiplier)) {
-            sleepMultiplier++;
-          }
-        }
-      }
-    }
-
-    private void updateSerialRepPositions(Map<String, Long> lastPositionsForSerialScope) {
-      try {
-        MetaTableAccessor.updateReplicationPositions(manager.getConnection(), actualPeerId,
-          lastPositionsForSerialScope);
-      } catch (IOException e) {
-        LOG.error("updateReplicationPositions fail", e);
-        stopper.stop("updateReplicationPositions fail");
-      }
-    }
-
-    private void updateLogPosition(long lastReadPosition) {
-      manager.logPositionAndCleanOldLogs(currentPath, peerClusterZnode, lastReadPosition,
-        this.replicationQueueInfo.isQueueRecovered(), false);
-      lastLoggedPosition = lastReadPosition;
-    }
-
-    public void startup() {
-      String n = Thread.currentThread().getName();
-      Thread.UncaughtExceptionHandler handler = new Thread.UncaughtExceptionHandler() {
-        @Override
-        public void uncaughtException(final Thread t, final Throwable e) {
-          RSRpcServices.exitIfOOME(e);
-          LOG.error("Unexpected exception in ReplicationSourceWorkerThread," + " currentPath="
-              + getCurrentPath(), e);
-          stopper.stop("Unexpected exception in ReplicationSourceWorkerThread");
-        }
-      };
-      Threads.setDaemonThreadRunning(this, n + ".replicationSource." + walGroupId + ","
-          + peerClusterZnode, handler);
-      workerThreads.put(walGroupId, this);
-
-      long startPosition = 0;
-
-      if (this.replicationQueueInfo.isQueueRecovered()) {
-        startPosition = getRecoveredQueueStartPos(startPosition);
-        int numRetries = 0;
-        while (numRetries <= maxRetriesMultiplier) {
-          try {
-            locateRecoveredPaths();
-            break;
-          } catch (IOException e) {
-            LOG.error("Error while locating recovered queue paths, attempt #" + numRetries);
-            numRetries++;
-          }
-        }
-      }
-
-      startWALReaderThread(n, handler, startPosition);
-    }
-
-    // If this is a recovered queue, the queue is already full and the first log
-    // normally has a position (unless the RS failed between 2 logs)
-    private long getRecoveredQueueStartPos(long startPosition) {
-      try {
-        startPosition =
-            (replicationQueues.getLogPosition(peerClusterZnode, this.queue.peek().getName()));
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Recovered queue started with log " + this.queue.peek() + " at position "
-              + startPosition);
-        }
-      } catch (ReplicationException e) {
-        terminate("Couldn't get the position of this recovered queue " + peerClusterZnode, e);
-      }
-      return startPosition;
-    }
-
-    // start a background thread to read and batch entries
-    private void startWALReaderThread(String threadName, Thread.UncaughtExceptionHandler handler,
-        long startPosition) {
-      ArrayList<WALEntryFilter> filters = Lists.newArrayList(walEntryFilter,
-        new ClusterMarkingEntryFilter(clusterId, peerClusterId, replicationEndpoint));
-      ChainWALEntryFilter readerFilter = new ChainWALEntryFilter(filters);
-      entryReader = new ReplicationSourceWALReaderThread(manager, replicationQueueInfo, queue,
-          startPosition, fs, conf, readerFilter, metrics);
-      Threads.setDaemonThreadRunning(entryReader, threadName
-          + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + peerClusterZnode,
-        handler);
-    }
-
-    // Loops through the recovered queue and tries to find the location of each log
-    // this is necessary because the logs may have moved before recovery was initiated
-    private void locateRecoveredPaths() throws IOException {
-      boolean hasPathChanged = false;
-      PriorityBlockingQueue<Path> newPaths =
-          new PriorityBlockingQueue<Path>(queueSizePerGroup, new LogsComparator());
-      pathsLoop: for (Path path : queue) {
-        if (fs.exists(path)) { // still in same location, don't need to do anything
-          newPaths.add(path);
-          continue;
-        }
-        // Path changed - try to find the right path.
-        hasPathChanged = true;
-        if (stopper instanceof ReplicationSyncUp.DummyServer) {
-          // In the case of disaster/recovery, HMaster may be shutdown/crashed before flush data
-          // from .logs to .oldlogs. Loop into .logs folders and check whether a match exists
-          Path newPath = getReplSyncUpPath(path);
-          newPaths.add(newPath);
-          continue;
-        } else {
-          // See if Path exists in the dead RS folder (there could be a chain of failures
-          // to look at)
-          List<String> deadRegionServers = this.replicationQueueInfo.getDeadRegionServers();
-          LOG.info("NB dead servers : " + deadRegionServers.size());
-          final Path walDir = FSUtils.getWALRootDir(conf);
-          for (String curDeadServerName : deadRegionServers) {
-            final Path deadRsDirectory =
-                new Path(walDir, AbstractFSWALProvider.getWALDirectoryName(curDeadServerName));
-            Path[] locs = new Path[] { new Path(deadRsDirectory, path.getName()), new Path(
-                deadRsDirectory.suffix(AbstractFSWALProvider.SPLITTING_EXT), path.getName()) };
-            for (Path possibleLogLocation : locs) {
-              LOG.info("Possible location " + possibleLogLocation.toUri().toString());
-              if (manager.getFs().exists(possibleLogLocation)) {
-                // We found the right new location
-                LOG.info("Log " + path + " still exists at " + possibleLogLocation);
-                newPaths.add(possibleLogLocation);
-                continue pathsLoop;
-              }
-            }
-          }
-          // didn't find a new location
-          LOG.error(
-            String.format("WAL Path %s doesn't exist and couldn't find its new location", path));
-          newPaths.add(path);
-        }
-      }
-
-      if (hasPathChanged) {
-        if (newPaths.size() != queue.size()) { // this shouldn't happen
-          LOG.error("Recovery queue size is incorrect");
-          throw new IOException("Recovery queue size error");
-        }
-        // put the correct locations in the queue
-        // since this is a recovered queue with no new incoming logs,
-        // there shouldn't be any concurrency issues
-        queue.clear();
-        for (Path path : newPaths) {
-          queue.add(path);
-        }
-      }
-    }
-
-    // N.B. the ReplicationSyncUp tool sets the manager.getWALDir to the root of the wal
-    // area rather than to the wal area for a particular region server.
-    private Path getReplSyncUpPath(Path path) throws IOException {
-      FileStatus[] rss = fs.listStatus(manager.getLogDir());
-      for (FileStatus rs : rss) {
-        Path p = rs.getPath();
-        FileStatus[] logs = fs.listStatus(p);
-        for (FileStatus log : logs) {
-          p = new Path(p, log.getPath().getName());
-          if (p.getName().equals(path.getName())) {
-            LOG.info("Log " + p.getName() + " found at " + p);
-            return p;
-          }
-        }
-      }
-      LOG.error("Didn't find path for: " + path.getName());
-      return path;
-    }
-
-    public Path getCurrentPath() {
-      return this.currentPath;
-    }
-
-    public long getCurrentPosition() {
-      return this.lastLoggedPosition;
-    }
-
-    private boolean isWorkerActive() {
-      return !stopper.isStopped() && workerRunning && !isInterrupted();
-    }
-
-    private void terminate(String reason, Exception cause) {
-      if (cause == null) {
-        LOG.info("Closing worker for wal group " + this.walGroupId + " because: " + reason);
-
-      } else {
-        LOG.error("Closing worker for wal group " + this.walGroupId
-            + " because an error occurred: " + reason, cause);
-      }
-      entryReader.interrupt();
-      Threads.shutdown(entryReader, sleepForRetries);
-      this.interrupt();
-      Threads.shutdown(this, sleepForRetries);
-      LOG.info("ReplicationSourceWorker " + this.getName() + " terminated");
-    }
-
-    public void setWorkerRunning(boolean workerRunning) {
-      entryReader.setReaderRunning(workerRunning);
-      this.workerRunning = workerRunning;
-    }
-
-    private void releaseBufferQuota(int size) {
-      totalBufferUsed.addAndGet(-size);
-    }
+    totalReplicatedEdits.addAndGet(entries.size());
+    totalBufferUsed.addAndGet(-batchSize);
   }
 }

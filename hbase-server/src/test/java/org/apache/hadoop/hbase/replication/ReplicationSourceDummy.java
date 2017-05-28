@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
  * Source that does nothing at all, helpful to test ReplicationSourceManager
@@ -82,7 +83,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public String getPeerClusterId() {
+  public String getPeerId() {
     String[] parts = peerClusterId.split("-", 2);
     return parts.length != 1 ?
         parts[0] : peerClusterId;
@@ -97,5 +98,38 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> files)
       throws ReplicationException {
     return;
+  }
+
+  @Override
+  public boolean isPeerEnabled() {
+    return true;
+  }
+
+  @Override
+  public boolean isSourceActive() {
+    return true;
+  }
+
+  @Override
+  public MetricsSource getSourceMetrics() {
+    return null;
+  }
+
+  @Override
+  public ReplicationEndpoint getReplicationEndpoint() {
+    return null;
+  }
+
+  @Override
+  public ReplicationSourceManager getSourceManager() {
+    return manager;
+  }
+
+  @Override
+  public void tryThrottle(int batchSize) throws InterruptedException {
+  }
+
+  @Override
+  public void postShipEdits(List<Entry> entries, int batchSize) {
   }
 }

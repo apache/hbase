@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
  * Interface that defines a replication source
@@ -65,10 +66,15 @@ public interface ReplicationSourceInterface {
   void enqueueLog(Path log);
 
   /**
-   * Get the current log that's replicated
-   * @return the current log
+   * Add hfile names to the queue to be replicated.
+   * @param tableName Name of the table these files belongs to
+   * @param family Name of the family these files belong to
+   * @param pairs list of pairs of { HFile location in staging dir, HFile path in region dir which
+   *          will be added in the queue for replication}
+   * @throws ReplicationException If failed to add hfile references
    */
-  Path getCurrentPath();
+  void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
+      throws ReplicationException;
 
   /**
    * Start the replication
@@ -89,6 +95,12 @@ public interface ReplicationSourceInterface {
   void terminate(String reason, Exception cause);
 
   /**
+   * Get the current log that's replicated
+   * @return the current log
+   */
+  Path getCurrentPath();
+
+  /**
    * Get the id that the source is replicating to
    *
    * @return peer cluster id
@@ -98,9 +110,9 @@ public interface ReplicationSourceInterface {
   /**
    * Get the id that the source is replicating to.
    *
-   * @return peer cluster id
+   * @return peer id
    */
-  String getPeerClusterId();
+  String getPeerId();
 
   /**
    * Get a string representation of the current statistics
@@ -110,14 +122,41 @@ public interface ReplicationSourceInterface {
   String getStats();
 
   /**
-   * Add hfile names to the queue to be replicated.
-   * @param tableName Name of the table these files belongs to
-   * @param family Name of the family these files belong to
-   * @param pairs list of pairs of { HFile location in staging dir, HFile path in region dir which
-   *          will be added in the queue for replication}
-   * @throws ReplicationException If failed to add hfile references
+   * @return peer enabled or not
    */
-  void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
-      throws ReplicationException;
+  boolean isPeerEnabled();
 
+  /**
+   * @return active or not
+   */
+  boolean isSourceActive();
+
+  /**
+   * @return metrics of this replication source
+   */
+  MetricsSource getSourceMetrics();
+
+  /**
+   * @return the replication endpoint used by this replication source
+   */
+  ReplicationEndpoint getReplicationEndpoint();
+
+  /**
+   * @return the replication source manager
+   */
+  ReplicationSourceManager getSourceManager();
+
+  /**
+   * Try to throttle when the peer config with a bandwidth
+   * @param batchSize entries size will be pushed
+   * @throws InterruptedException
+   */
+  void tryThrottle(int batchSize) throws InterruptedException;
+
+  /**
+   * Call this after the shipper thread ship some entries to peer cluster.
+   * @param entries pushed
+   * @param batchSize entries size pushed
+   */
+  void postShipEdits(List<Entry> entries, int batchSize);
 }

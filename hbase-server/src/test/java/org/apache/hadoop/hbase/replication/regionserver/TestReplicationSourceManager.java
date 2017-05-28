@@ -462,7 +462,7 @@ public abstract class TestReplicationSourceManager {
       // Make sure that the replication source was not initialized
       List<ReplicationSourceInterface> sources = manager.getSources();
       for (ReplicationSourceInterface source : sources) {
-        assertNotEquals("FakePeer", source.getPeerClusterId());
+        assertNotEquals("FakePeer", source.getPeerId());
       }
 
       // Create a replication queue for the fake peer

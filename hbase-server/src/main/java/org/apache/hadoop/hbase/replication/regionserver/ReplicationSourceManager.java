@@ -464,17 +464,8 @@ public class ReplicationSourceManager implements ReplicationListener {
       rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
       tableDescriptors = ((HRegionServer) server).getTableDescriptors();
     }
-    ReplicationSourceInterface src;
-    try {
-      @SuppressWarnings("rawtypes")
-      Class c = Class.forName(conf.get("replication.replicationsource.implementation",
-          ReplicationSource.class.getCanonicalName()));
-      src = (ReplicationSourceInterface) c.newInstance();
-    } catch (Exception e) {
-      LOG.warn("Passed replication source implementation throws errors, " +
-          "defaulting to ReplicationSource", e);
-      src = new ReplicationSource();
-    }
+
+    ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, peerId);
 
     ReplicationEndpoint replicationEndpoint = null;
     try {
@@ -575,7 +566,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     synchronized (oldsources) {
       // First close all the recovered sources for this peer
       for (ReplicationSourceInterface src : oldsources) {
-        if (id.equals(src.getPeerClusterId())) {
+        if (id.equals(src.getPeerId())) {
           oldSourcesToDelete.add(src);
         }
       }
@@ -591,7 +582,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     // synchronize on replicationPeers to avoid adding source for the to-be-removed peer
     synchronized (this.replicationPeers) {
       for (ReplicationSourceInterface src : this.sources) {
-        if (id.equals(src.getPeerClusterId())) {
+        if (id.equals(src.getPeerId())) {
           srcToRemove.add(src);
         }
       }
@@ -752,7 +743,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           // synchronized on oldsources to avoid adding recovered source for the to-be-removed peer
           // see removePeer
           synchronized (oldsources) {
-            if (!this.rp.getConnectedPeerIds().contains(src.getPeerClusterId())) {
+            if (!this.rp.getConnectedPeerIds().contains(src.getPeerId())) {
               src.terminate("Recovered queue doesn't belong to any current peer");
               closeRecoveredQueue(src);
               continue;
@@ -834,11 +825,11 @@ public class ReplicationSourceManager implements ReplicationListener {
   public String getStats() {
     StringBuffer stats = new StringBuffer();
     for (ReplicationSourceInterface source : sources) {
-      stats.append("Normal source for cluster " + source.getPeerClusterId() + ": ");
+      stats.append("Normal source for cluster " + source.getPeerId() + ": ");
       stats.append(source.getStats() + "\n");
     }
     for (ReplicationSourceInterface oldSource : oldsources) {
-      stats.append("Recovered source for cluster/machine(s) " + oldSource.getPeerClusterId()+": ");
+      stats.append("Recovered source for cluster/machine(s) " + oldSource.getPeerId()+": ");
       stats.append(oldSource.getStats()+ "\n");
     }
     return stats.toString();
