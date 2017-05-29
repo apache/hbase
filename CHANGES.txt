@@ -1,6 +1,46 @@
 HBase Change Log
 
 
+Release Notes - HBase - Version 1.2.6
+
+** Sub-task
+    * [HBASE-17925] - mvn assembly:single fails against hadoop3-alpha2
+
+** Bug
+    * [HBASE-8758] - Error in RegionCoprocessorHost class preScanner method documentation.
+    * [HBASE-16011] - TableSnapshotScanner and TableSnapshotInputFormat can produce duplicate rows
+    * [HBASE-16630] - Fragmentation in long running Bucket Cache
+    * [HBASE-17287] - Master becomes a zombie if filesystem object closes
+    * [HBASE-17352] - Fix hbase-assembly build with bash 4
+    * [HBASE-17501] - NullPointerException after Datanodes Decommissioned and Terminated
+    * [HBASE-17534] - SecureBulkLoadClient squashes DoNotRetryIOExceptions from the server
+    * [HBASE-17698] - ReplicationEndpoint choosing sinks
+    * [HBASE-17717] - Incorrect ZK ACL set for HBase superuser
+    * [HBASE-17722] - Metrics subsystem stop/start messages add a lot of useless bulk to operational logging
+    * [HBASE-17780] - BoundedByteBufferPool "At capacity" messages are not actionable
+    * [HBASE-17862] - Condition that always returns true
+    * [HBASE-17886] - Fix compatibility of ServerSideScanMetrics
+    * [HBASE-17937] - Memstore size becomes negative in case of expensive postPut/Delete Coprocessor call
+    * [HBASE-17985] - Inline package manage updates with package installation in Yetus Dockerfile
+    * [HBASE-18026] - ProtobufUtil seems to do extra array copying
+    * [HBASE-18077] - Update JUnit license to EPL from CPL
+    * [HBASE-18081] - The way we process connection preamble in SimpleRpcServer is broken
+    * [HBASE-18093] - Overloading the meaning of 'enabled' in Quota Manager to indicate either quota disabled or quota manager not ready is not good
+
+** Improvement
+    * [HBASE-15941] - HBCK repair should not unsplit healthy splitted region
+    * [HBASE-17514] - Warn when Thrift Server 1 is configured for proxy users but not the HTTP transport
+    * [HBASE-17716] - Formalize Scan Metric names
+    * [HBASE-17817] - Make Regionservers log which tables it removed coprocessors from when aborting
+    * [HBASE-17916] - Error message not clear when the permission of staging dir is not as expected
+    * [HBASE-17944] - Removed unused JDK version parsing from ClassSize.
+
+** Task
+    * [HBASE-17876] - Release 1.2.6
+    * [HBASE-17968] - Update copyright year in NOTICE file
+    * [HBASE-18096] - Limit HFileUtil visibility and add missing annotations
+
+
 Release Notes - HBase - Version 1.2.5 03/24/2017
 
 ** Sub-task
