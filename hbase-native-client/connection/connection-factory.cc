@@ -18,9 +18,12 @@
  */
 
 #include "connection/connection-factory.h"
+#include "connection/sasl-handler.h"
 
 #include <chrono>
 
+#include <glog/logging.h>
+#include <wangle/channel/Handler.h>
 #include "connection/client-dispatcher.h"
 #include "connection/pipeline.h"
 #include "connection/service.h"
@@ -31,10 +34,13 @@ using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
 ConnectionFactory::ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
-                                     std::shared_ptr<Codec> codec, nanoseconds connect_timeout)
+                                     std::shared_ptr<Codec> codec,
+                                     std::shared_ptr<Configuration> conf,
+                                     nanoseconds connect_timeout)
     : connect_timeout_(connect_timeout),
       io_pool_(io_pool),
-      pipeline_factory_(std::make_shared<RpcPipelineFactory>(codec)) {}
+      conf_(conf),
+      pipeline_factory_(std::make_shared<RpcPipelineFactory>(codec, conf)) {}
 
 std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> ConnectionFactory::MakeBootstrap() {
   auto client = std::make_shared<wangle::ClientBootstrap<SerializePipeline>>();

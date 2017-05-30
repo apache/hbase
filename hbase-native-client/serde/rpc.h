@@ -68,7 +68,7 @@ class RpcSerde {
   /**
    * Create a new connection preamble in a new IOBuf.
    */
-  std::unique_ptr<folly::IOBuf> Preamble();
+  static std::unique_ptr<folly::IOBuf> Preamble(bool secure);
 
   /**
    * Create the header protobuf object and serialize it to a new IOBuf.
@@ -119,7 +119,6 @@ class RpcSerde {
 
  private:
   /* data */
-  uint8_t auth_type_;
   std::shared_ptr<Codec> codec_;
   std::unique_ptr<pb::VersionInfo> CreateVersionInfo();
 };

@@ -52,11 +52,11 @@ fi;
 # Build the image
 # 
 # This shouldn't be needed after the development environment is a little more stable.
-docker build -t hbase_native .
+docker build -t hbase_native -f docker-files/Dockerfile .
 
 # After the image is built run the thing
-docker run -p 16050:16050/tcp \
+docker run -h="securecluster" -p 16050:16050/tcp \
          -v ${BASE_DIR}/..:/usr/src/hbase \
            -v ~/.m2:/root/.m2 \
-           -it hbase_native  /bin/bash
+         -it hbase_native /bin/bash
 popd

@@ -36,7 +36,7 @@ using hbase::ConnectionId;
 
 class MockConnectionFactory : public ConnectionFactory {
  public:
-  MockConnectionFactory() : ConnectionFactory(nullptr, nullptr) {}
+  MockConnectionFactory() : ConnectionFactory(nullptr, nullptr, nullptr) {}
   MOCK_METHOD0(MakeBootstrap, std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>());
   MOCK_METHOD3(Connect, std::shared_ptr<HBaseService>(
                             std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>,

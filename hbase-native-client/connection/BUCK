@@ -22,6 +22,7 @@ cxx_library(
     exported_headers=[
         "client-dispatcher.h",
         "client-handler.h",
+        "sasl-handler.h",
         "connection-factory.h",
         "connection-pool.h",
         "connection-id.h",
@@ -31,6 +32,7 @@ cxx_library(
         "response.h",
         "service.h",
         "rpc-client.h",
+        "sasl-util.h",
     ],
     srcs=[
         "client-dispatcher.cc",
@@ -40,6 +42,8 @@ cxx_library(
         "pipeline.cc",
         "request.cc",
         "rpc-client.cc",
+        "sasl-handler.cc",
+        "sasl-util.cc",
     ],
     deps=[
         "//if:if",
@@ -51,8 +55,16 @@ cxx_library(
         "//exceptions:exceptions",
     ],
     compiler_flags=['-Weffc++'],
-    visibility=['//core/...',],)
+    linker_flags=['-L/usr/local/lib', '-lsasl2', '-lkrb5'],
+    exported_linker_flags=['-L/usr/local/lib', '-lsasl2', '-lkrb5'],
+    visibility=[
+        '//core/...',
+    ],)
 cxx_test(
     name="connection-pool-test",
-    srcs=["connection-pool-test.cc",],
-    deps=[":connection",],)
+    srcs=[
+        "connection-pool-test.cc",
+    ],
+    deps=[
+        ":connection",
+    ],)

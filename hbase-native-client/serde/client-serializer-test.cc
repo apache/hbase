@@ -33,7 +33,7 @@ using namespace folly::io;
 
 TEST(RpcSerdeTest, PreambleIncludesHBas) {
   RpcSerde ser{nullptr};
-  auto buf = ser.Preamble();
+  auto buf = ser.Preamble(false);
   const char *p = reinterpret_cast<const char *>(buf->data());
   // Take the first for chars and make sure they are the
   // magic string
@@ -44,7 +44,7 @@ TEST(RpcSerdeTest, PreambleIncludesHBas) {
 
 TEST(RpcSerdeTest, PreambleIncludesVersion) {
   RpcSerde ser{nullptr};
-  auto buf = ser.Preamble();
+  auto buf = ser.Preamble(false);
   EXPECT_EQ(0, static_cast<const uint8_t *>(buf->data())[4]);
   EXPECT_EQ(80, static_cast<const uint8_t *>(buf->data())[5]);
 }

@@ -41,13 +41,13 @@ class UserUtil {
    * Get the username of the user owning this process. This is thread safe and
    * lockless for every invocation other than the first one.
    */
-  std::string user_name();
+  std::string user_name(bool secure = false);
 
  private:
   /**
    * Compute the username. This will block.
    */
-  void compute_user_name();
+  void compute_user_name(bool secure);
   std::once_flag once_flag_;
   std::string user_name_;
 };

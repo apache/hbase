@@ -36,11 +36,13 @@ using folly::SharedMutexWritePriority;
 using folly::SocketAddress;
 
 ConnectionPool::ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
-                               std::shared_ptr<Codec> codec, nanoseconds connect_timeout)
-    : cf_(std::make_shared<ConnectionFactory>(io_executor, codec, connect_timeout)),
+                               std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
+                               nanoseconds connect_timeout)
+    : cf_(std::make_shared<ConnectionFactory>(io_executor, codec, conf, connect_timeout)),
       clients_(),
       connections_(),
-      map_mutex_() {}
+      map_mutex_(),
+      conf_(conf) {}
 ConnectionPool::ConnectionPool(std::shared_ptr<ConnectionFactory> cf)
     : cf_(cf), clients_(), connections_(), map_mutex_() {}
 

@@ -28,7 +28,7 @@ using namespace hbase;
 
 TEST(TestUserUtil, TestGetSomething) {
   UserUtil u_util;
-  string name = u_util.user_name();
+  string name = u_util.user_name(false);
 
   // TODO shell out to whoami to check this.
   ASSERT_GT(name.length(), 0);

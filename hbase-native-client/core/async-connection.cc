@@ -44,8 +44,8 @@ void AsyncConnectionImpl::Init() {
   } else {
     LOG(WARNING) << "Not using RPC Cell Codec";
   }
-  rpc_client_ =
-      std::make_shared<hbase::RpcClient>(io_executor_, codec, connection_conf_->connect_timeout());
+  rpc_client_ = std::make_shared<hbase::RpcClient>(io_executor_, codec, conf_,
+                                                   connection_conf_->connect_timeout());
   location_cache_ =
       std::make_shared<hbase::LocationCache>(conf_, cpu_executor_, rpc_client_->connection_pool());
   caller_factory_ =

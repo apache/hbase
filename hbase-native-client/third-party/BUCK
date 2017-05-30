@@ -91,7 +91,8 @@ wangle = add_system_libs(
 genrule(
     name="gen_zk",
     out="gen_zk",
-    bash="mkdir -p $OUT  && wget http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz &&   tar zxf zookeeper-3.4.8.tar.gz &&   rm -rf zookeeper-3.4.8.tar.gz &&   cd zookeeper-3.4.8 &&   cd src/c && ./configure --prefix=$OUT &&   make &&   make install && cd $OUT && rm -rf zookeeper-3.4.8*"
+    bash=
+    "mkdir -p $OUT  && wget http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz &&   tar zxf zookeeper-3.4.8.tar.gz &&   rm -rf zookeeper-3.4.8.tar.gz &&   cd zookeeper-3.4.8 &&   cd src/c && ./configure --prefix=$OUT &&   make &&   make install && cd $OUT && rm -rf zookeeper-3.4.8*"
 )
 cxx_library(
     name='google-test',
@@ -112,4 +113,6 @@ cxx_library(
         ('googletest/googlemock', 'src/*.cc'),
     ]),
     exported_deps=dynamic_rules,
-    visibility=['PUBLIC',],)
+    visibility=[
+        'PUBLIC',
+    ],)

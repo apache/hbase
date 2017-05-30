@@ -28,6 +28,7 @@
 #include "connection/request.h"
 #include "connection/response.h"
 #include "connection/service.h"
+#include "security/user.h"
 
 using std::chrono::nanoseconds;
 
@@ -44,7 +45,8 @@ class ConnectionFactory {
    * There should only be one ConnectionFactory per client.
    */
   ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
-                    std::shared_ptr<Codec> codec, nanoseconds connect_timeout = nanoseconds(0));
+                    std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
+                    nanoseconds connect_timeout = nanoseconds(0));
 
   /** Default Destructor */
   virtual ~ConnectionFactory() = default;
@@ -65,6 +67,7 @@ class ConnectionFactory {
 
  private:
   nanoseconds connect_timeout_;
+  std::shared_ptr<Configuration> conf_;
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool_;
   std::shared_ptr<RpcPipelineFactory> pipeline_factory_;
 };
