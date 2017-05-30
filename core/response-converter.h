@@ -28,8 +28,6 @@
 #include "if/Client.pb.h"
 #include "serde/cell-scanner.h"
 
-using hbase::Request;
-using hbase::Response;
 namespace hbase {
 
 /**

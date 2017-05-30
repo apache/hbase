@@ -27,26 +27,25 @@
 #include "connection/client-handler.h"
 #include "connection/sasl-handler.h"
 
-using namespace folly;
-using namespace hbase;
-using namespace wangle;
+namespace hbase {
 
 RpcPipelineFactory::RpcPipelineFactory(std::shared_ptr<Codec> codec,
                                        std::shared_ptr<Configuration> conf)
     : user_util_(), codec_(codec), conf_(conf) {}
 
 SerializePipeline::Ptr RpcPipelineFactory::newPipeline(
-    std::shared_ptr<AsyncTransportWrapper> sock) {
-  SocketAddress addr;  // for logging
+    std::shared_ptr<folly::AsyncTransportWrapper> sock) {
+  folly::SocketAddress addr;  // for logging
   sock->getPeerAddress(&addr);
 
   auto pipeline = SerializePipeline::create();
-  pipeline->addBack(AsyncSocketHandler{sock});
-  pipeline->addBack(EventBaseHandler{});
+  pipeline->addBack(wangle::AsyncSocketHandler{sock});
+  pipeline->addBack(wangle::EventBaseHandler{});
   auto secure = security::User::IsSecurityEnabled(*conf_);
   pipeline->addBack(SaslHandler{user_util_.user_name(secure), conf_});
-  pipeline->addBack(LengthFieldBasedFrameDecoder{});
+  pipeline->addBack(wangle::LengthFieldBasedFrameDecoder{});
   pipeline->addBack(ClientHandler{user_util_.user_name(secure), codec_, addr.describe()});
   pipeline->finalize();
   return pipeline;
 }
+}  // namespace hbase

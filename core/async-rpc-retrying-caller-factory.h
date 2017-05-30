@@ -62,17 +62,17 @@ class SingleRequestCallerBuilder
     return shared_this();
   }
 
-  SharedThisPtr rpc_timeout(nanoseconds rpc_timeout_nanos) {
+  SharedThisPtr rpc_timeout(std::chrono::nanoseconds rpc_timeout_nanos) {
     rpc_timeout_nanos_ = rpc_timeout_nanos;
     return shared_this();
   }
 
-  SharedThisPtr operation_timeout(nanoseconds operation_timeout_nanos) {
+  SharedThisPtr operation_timeout(std::chrono::nanoseconds operation_timeout_nanos) {
     operation_timeout_nanos_ = operation_timeout_nanos;
     return shared_this();
   }
 
-  SharedThisPtr pause(nanoseconds pause) {
+  SharedThisPtr pause(std::chrono::nanoseconds pause) {
     pause_ = pause;
     return shared_this();
   }
@@ -119,9 +119,9 @@ class SingleRequestCallerBuilder
   std::shared_ptr<AsyncConnection> conn_;
   std::shared_ptr<folly::HHWheelTimer> retry_timer_;
   std::shared_ptr<pb::TableName> table_name_;
-  nanoseconds rpc_timeout_nanos_;
-  nanoseconds operation_timeout_nanos_;
-  nanoseconds pause_;
+  std::chrono::nanoseconds rpc_timeout_nanos_;
+  std::chrono::nanoseconds operation_timeout_nanos_;
+  std::chrono::nanoseconds pause_;
   uint32_t max_retries_;
   uint32_t start_log_errors_count_;
   std::string row_;
@@ -149,17 +149,17 @@ class BatchCallerBuilder : public std::enable_shared_from_this<BatchCallerBuilde
     return shared_this();
   }
 
-  SharedThisPtr operation_timeout(nanoseconds operation_timeout_nanos) {
+  SharedThisPtr operation_timeout(std::chrono::nanoseconds operation_timeout_nanos) {
     operation_timeout_nanos_ = operation_timeout_nanos;
     return shared_this();
   }
 
-  SharedThisPtr rpc_timeout(nanoseconds rpc_timeout_nanos) {
+  SharedThisPtr rpc_timeout(std::chrono::nanoseconds rpc_timeout_nanos) {
     rpc_timeout_nanos_ = rpc_timeout_nanos;
     return shared_this();
   }
 
-  SharedThisPtr pause(nanoseconds pause_ns) {
+  SharedThisPtr pause(std::chrono::nanoseconds pause_ns) {
     pause_ns_ = pause_ns;
     return shared_this();
   }
@@ -192,10 +192,10 @@ class BatchCallerBuilder : public std::enable_shared_from_this<BatchCallerBuilde
   std::shared_ptr<folly::HHWheelTimer> retry_timer_;
   std::shared_ptr<hbase::pb::TableName> table_name_ = nullptr;
   std::shared_ptr<std::vector<hbase::Get>> actions_ = nullptr;
-  nanoseconds pause_ns_;
+  std::chrono::nanoseconds pause_ns_;
   int32_t max_attempts_ = 0;
-  nanoseconds operation_timeout_nanos_;
-  nanoseconds rpc_timeout_nanos_;
+  std::chrono::nanoseconds operation_timeout_nanos_;
+  std::chrono::nanoseconds rpc_timeout_nanos_;
   int32_t start_log_errors_count_ = 0;
 };
 class AsyncRpcRetryingCallerFactory {

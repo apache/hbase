@@ -27,9 +27,6 @@
 #include "core/region-location.h"
 #include "core/region-request.h"
 
-using hbase::Action;
-using hbase::RegionRequest;
-
 namespace hbase {
 
 class ServerRequest {

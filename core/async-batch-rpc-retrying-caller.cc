@@ -24,25 +24,11 @@
 using folly::Future;
 using folly::Promise;
 using folly::Try;
-
-using folly::Future;
-using folly::Promise;
-using folly::Try;
-using hbase::Action;
-using hbase::LocationCache;
-using hbase::MultiResponse;
-using hbase::RegionLocation;
-using hbase::RegionRequest;
-using hbase::RequestConverter;
-using hbase::Result;
-using hbase::RpcClient;
-using hbase::ServerRequest;
 using hbase::pb::ServerName;
 using hbase::pb::TableName;
 using hbase::security::User;
 using std::chrono::nanoseconds;
 using std::chrono::milliseconds;
-using wangle::CPUThreadPoolExecutor;
 
 namespace hbase {
 

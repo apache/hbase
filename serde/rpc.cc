@@ -32,19 +32,16 @@
 #include "if/RPC.pb.h"
 #include "utils/version.h"
 
-using namespace hbase;
-
 using folly::IOBuf;
 using folly::io::RWPrivateCursor;
-using google::protobuf::Message;
 using google::protobuf::Message;
 using google::protobuf::io::ArrayInputStream;
 using google::protobuf::io::ArrayOutputStream;
 using google::protobuf::io::CodedInputStream;
 using google::protobuf::io::CodedOutputStream;
 using google::protobuf::io::ZeroCopyOutputStream;
-using std::string;
-using std::unique_ptr;
+
+namespace hbase {
 
 static const std::string PREAMBLE = "HBas";
 static const std::string INTERFACE = "ClientService";
@@ -104,7 +101,7 @@ std::unique_ptr<IOBuf> RpcSerde::Preamble(bool secure) {
   return magic;
 }
 
-unique_ptr<IOBuf> RpcSerde::Header(const string &user) {
+std::unique_ptr<IOBuf> RpcSerde::Header(const std::string &user) {
   pb::ConnectionHeader h;
 
   // TODO(eclark): Make this not a total lie.
@@ -150,8 +147,8 @@ std::unique_ptr<pb::VersionInfo> RpcSerde::CreateVersionInfo() {
   return version_info;
 }
 
-unique_ptr<IOBuf> RpcSerde::Request(const uint32_t call_id, const string &method,
-                                    const Message *msg) {
+std::unique_ptr<IOBuf> RpcSerde::Request(const uint32_t call_id, const std::string &method,
+                                         const Message *msg) {
   pb::RequestHeader rq;
   rq.set_method_name(method);
   rq.set_call_id(call_id);
@@ -173,7 +170,7 @@ std::unique_ptr<CellScanner> RpcSerde::CreateCellScanner(std::unique_ptr<folly::
   return codec_->CreateDecoder(std::move(buf), offset, length);
 }
 
-unique_ptr<IOBuf> RpcSerde::PrependLength(unique_ptr<IOBuf> msg) {
+std::unique_ptr<IOBuf> RpcSerde::PrependLength(std::unique_ptr<IOBuf> msg) {
   // Java ints are 4 long. So create a buffer that large
   auto len_buf = IOBuf::create(4);
   // Then make those bytes visible.
@@ -191,7 +188,7 @@ unique_ptr<IOBuf> RpcSerde::PrependLength(unique_ptr<IOBuf> msg) {
   return len_buf;
 }
 
-unique_ptr<IOBuf> RpcSerde::SerializeDelimited(const Message &msg) {
+std::unique_ptr<IOBuf> RpcSerde::SerializeDelimited(const Message &msg) {
   // Get the buffer size needed for just the message.
   int msg_size = msg.ByteSize();
   int buf_size = CodedOutputStream::VarintSize32(msg_size) + msg_size;
@@ -218,7 +215,8 @@ unique_ptr<IOBuf> RpcSerde::SerializeDelimited(const Message &msg) {
   return buf;
 }
 // TODO(eclark): Make this 1 copy.
-unique_ptr<IOBuf> RpcSerde::SerializeMessage(const Message &msg) {
+std::unique_ptr<IOBuf> RpcSerde::SerializeMessage(const Message &msg) {
   auto buf = IOBuf::copyBuffer(msg.SerializeAsString());
   return buf;
 }
+}  // namespace hbase

@@ -25,7 +25,8 @@
 #include <memory>
 #include <string>
 
-using hbase::RpcClient;
+using hbase::security::User;
+using std::chrono::nanoseconds;
 
 namespace hbase {
 

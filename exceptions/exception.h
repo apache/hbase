@@ -80,7 +80,8 @@ public:
       std::shared_ptr<std::vector<ThrowableWithExtraContext>> exceptions) :
         IOException(
             GetMessage(num_retries, exceptions),
-            exceptions->empty() ? folly::exception_wrapper{} : (*exceptions)[exceptions->size() - 1].cause()){
+            exceptions->empty() ? folly::exception_wrapper{}
+              : (*exceptions)[exceptions->size() - 1].cause()){
   }
   virtual ~RetriesExhaustedException() = default;
 

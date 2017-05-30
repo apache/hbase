@@ -21,7 +21,6 @@
 #include <glog/logging.h>
 #include <stdexcept>
 
-using hbase::Result;
 using hbase::pb::RegionLoadStats;
 
 namespace hbase {

@@ -66,6 +66,7 @@ using hbase::RespConverter;
 using hbase::Put;
 using hbase::TimeUtil;
 using hbase::Client;
+using hbase::security::User;
 
 using ::testing::Return;
 using ::testing::_;
@@ -350,7 +351,7 @@ void runTest(std::shared_ptr<AsyncRegionLocatorBase> region_locator, std::string
   /* call with retry to get result */
 
   auto async_caller =
-      builder->table(std::make_shared<TableName>(tn))
+      builder->table(std::make_shared<hbase::pb::TableName>(tn))
           ->row(row)
           ->rpc_timeout(conn->connection_conf()->read_rpc_timeout())
           ->operation_timeout(conn->connection_conf()->operation_timeout())

@@ -22,11 +22,13 @@
 #include "core/request-converter.h"
 #include "core/response-converter.h"
 
+using hbase::security::User;
+
 namespace hbase {
 
 template <typename RESP>
 std::shared_ptr<SingleRequestCallerBuilder<RESP>> RawAsyncTable::CreateCallerBuilder(
-    std::string row, nanoseconds rpc_timeout) {
+    std::string row, std::chrono::nanoseconds rpc_timeout) {
   return connection_->caller_factory()
       ->Single<RESP>()
       ->table(table_name_)
@@ -54,7 +56,7 @@ folly::Future<RESP> RawAsyncTable::Call(
           [resp_converter](const std::unique_ptr<PRESP>& presp) { return resp_converter(*presp); });
 }
 
-Future<std::shared_ptr<Result>> RawAsyncTable::Get(const hbase::Get& get) {
+folly::Future<std::shared_ptr<Result>> RawAsyncTable::Get(const hbase::Get& get) {
   auto caller =
       CreateCallerBuilder<std::shared_ptr<Result>>(get.row(), connection_conf_->read_rpc_timeout())
           ->action([=, &get](std::shared_ptr<hbase::HBaseRpcController> controller,
@@ -76,27 +78,28 @@ Future<std::shared_ptr<Result>> RawAsyncTable::Get(const hbase::Get& get) {
   return caller->Call().then([caller](const auto r) { return r; });
 }
 
-Future<Unit> RawAsyncTable::Put(const hbase::Put& put) {
+folly::Future<folly::Unit> RawAsyncTable::Put(const hbase::Put& put) {
   auto caller =
-      CreateCallerBuilder<Unit>(put.row(), connection_conf_->write_rpc_timeout())
-          ->action([=, &put](std::shared_ptr<hbase::HBaseRpcController> controller,
-                             std::shared_ptr<hbase::RegionLocation> loc,
-                             std::shared_ptr<hbase::RpcClient> rpc_client) -> folly::Future<Unit> {
-            return Call<hbase::Put, hbase::Request, hbase::Response, Unit>(
+      CreateCallerBuilder<folly::Unit>(put.row(), connection_conf_->write_rpc_timeout())
+          ->action([=, &put](
+                       std::shared_ptr<hbase::HBaseRpcController> controller,
+                       std::shared_ptr<hbase::RegionLocation> loc,
+                       std::shared_ptr<hbase::RpcClient> rpc_client) -> folly::Future<folly::Unit> {
+            return Call<hbase::Put, hbase::Request, hbase::Response, folly::Unit>(
                 rpc_client, controller, loc, put, &hbase::RequestConverter::ToMutateRequest,
-                [](const Response& r) -> Unit { return folly::unit; });
+                [](const Response& r) -> folly::Unit { return folly::unit; });
           })
           ->Build();
 
   return caller->Call().then([caller](const auto r) { return r; });
 }
 
-Future<std::vector<Try<std::shared_ptr<Result>>>> RawAsyncTable::Get(
+folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> RawAsyncTable::Get(
     const std::vector<hbase::Get>& gets) {
   return this->Batch(gets);
 }
 
-Future<std::vector<Try<std::shared_ptr<Result>>>> RawAsyncTable::Batch(
+folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> RawAsyncTable::Batch(
     const std::vector<hbase::Get>& gets) {
   auto caller = connection_->caller_factory()
                     ->Batch()

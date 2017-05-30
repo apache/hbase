@@ -37,9 +37,6 @@
 #include "exceptions/exception.h"
 #include "if/HBase.pb.h"
 
-using std::chrono::nanoseconds;
-using std::chrono::milliseconds;
-
 namespace hbase {
 
 template <typename T>
@@ -70,14 +67,12 @@ using Callable =
 template <typename RESP>
 class AsyncSingleRequestRpcRetryingCaller {
  public:
-  AsyncSingleRequestRpcRetryingCaller(std::shared_ptr<AsyncConnection> conn,
-                                      std::shared_ptr<folly::HHWheelTimer> retry_timer,
-                                      std::shared_ptr<hbase::pb::TableName> table_name,
-                                      const std::string& row, RegionLocateType locate_type,
-                                      Callable<RESP> callable, nanoseconds pause,
-                                      uint32_t max_retries, nanoseconds operation_timeout_nanos,
-                                      nanoseconds rpc_timeout_nanos,
-                                      uint32_t start_log_errors_count);
+  AsyncSingleRequestRpcRetryingCaller(
+      std::shared_ptr<AsyncConnection> conn, std::shared_ptr<folly::HHWheelTimer> retry_timer,
+      std::shared_ptr<hbase::pb::TableName> table_name, const std::string& row,
+      RegionLocateType locate_type, Callable<RESP> callable, std::chrono::nanoseconds pause,
+      uint32_t max_retries, std::chrono::nanoseconds operation_timeout_nanos,
+      std::chrono::nanoseconds rpc_timeout_nanos, uint32_t start_log_errors_count);
 
   virtual ~AsyncSingleRequestRpcRetryingCaller();
 
@@ -107,10 +102,10 @@ class AsyncSingleRequestRpcRetryingCaller {
   std::string row_;
   RegionLocateType locate_type_;
   Callable<RESP> callable_;
-  nanoseconds pause_;
+  std::chrono::nanoseconds pause_;
   uint32_t max_retries_;
-  nanoseconds operation_timeout_nanos_;
-  nanoseconds rpc_timeout_nanos_;
+  std::chrono::nanoseconds operation_timeout_nanos_;
+  std::chrono::nanoseconds rpc_timeout_nanos_;
   uint32_t start_log_errors_count_;
   std::shared_ptr<folly::Promise<RESP>> promise_;
   std::shared_ptr<HBaseRpcController> controller_;

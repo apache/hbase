@@ -31,14 +31,12 @@
 #include "serde/table-name.h"
 
 using hbase::pb::TableName;
-using hbase::MetaUtil;
-using hbase::Request;
-using hbase::Response;
-using hbase::RegionLocation;
 using hbase::pb::RegionInfo;
+using hbase::pb::RegionSpecifier_RegionSpecifierType;
 using hbase::pb::ScanRequest;
 using hbase::pb::ServerName;
-using hbase::pb::RegionSpecifier_RegionSpecifierType;
+
+namespace hbase {
 
 static const std::string META_REGION = "1588230740";
 static const std::string CATALOG_FAMILY = "info";
@@ -113,3 +111,4 @@ std::shared_ptr<RegionLocation> MetaUtil::CreateLocation(const Response &resp) {
   auto server_name = folly::to<ServerName>(*server_str);
   return std::make_shared<RegionLocation>(row, std::move(region_info), server_name, nullptr);
 }
+}  // namespace hbase

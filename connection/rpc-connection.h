@@ -26,9 +26,8 @@
 #include <memory>
 #include <utility>
 
-using hbase::HBaseService;
-
 namespace hbase {
+
 class RpcConnection {
  public:
   RpcConnection(std::shared_ptr<ConnectionId> connection_id,

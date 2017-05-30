@@ -25,12 +25,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-using namespace hbase;
-using namespace std;
+namespace hbase {
 
 UserUtil::UserUtil() : once_flag_{} {}
 
-string UserUtil::user_name(bool secure) {
+std::string UserUtil::user_name(bool secure) {
   std::call_once(once_flag_, [this, secure]() { compute_user_name(secure); });
   return user_name_;
 }
@@ -44,7 +43,7 @@ void UserUtil::compute_user_name(bool secure) {
 
   // make sure that we got something.
   if (passwd && passwd->pw_name) {
-    user_name_ = string{passwd->pw_name};
+    user_name_ = std::string{passwd->pw_name};
   }
   if (!secure) return;
   krb5_context ctx;
@@ -75,3 +74,4 @@ void UserUtil::compute_user_name(bool secure) {
   krb5_free_principal(ctx, princ);
   krb5_free_context(ctx);
 }
+}  // namespace hbase

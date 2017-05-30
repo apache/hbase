@@ -25,9 +25,6 @@
 
 #include "core/configuration.h"
 
-using std::chrono::nanoseconds;
-using std::chrono::milliseconds;
-
 namespace hbase {
 
 /**
@@ -57,9 +54,10 @@ class ConnectionConfiguration {
   }
 
   // Used by tests
-  ConnectionConfiguration(nanoseconds connect_timeout, nanoseconds operation_timeout,
-                          nanoseconds rpc_timeout, nanoseconds pause, uint32_t max_retries,
-                          uint32_t start_log_errors_count)
+  ConnectionConfiguration(std::chrono::nanoseconds connect_timeout,
+                          std::chrono::nanoseconds operation_timeout,
+                          std::chrono::nanoseconds rpc_timeout, std::chrono::nanoseconds pause,
+                          uint32_t max_retries, uint32_t start_log_errors_count)
       : connect_timeout_(connect_timeout),
         operation_timeout_(operation_timeout),
         meta_operation_timeout_(operation_timeout),
@@ -70,25 +68,25 @@ class ConnectionConfiguration {
         max_retries_(max_retries),
         start_log_errors_count_(start_log_errors_count) {}
 
-  nanoseconds connect_timeout() const { return connect_timeout_; }
+  std::chrono::nanoseconds connect_timeout() const { return connect_timeout_; }
 
-  nanoseconds meta_operation_timeout() const { return meta_operation_timeout_; }
+  std::chrono::nanoseconds meta_operation_timeout() const { return meta_operation_timeout_; }
 
   // timeout for a whole operation such as get, put or delete. Notice that scan will not be effected
   // by this value, see scanTimeoutNs.
-  nanoseconds operation_timeout() const { return operation_timeout_; }
+  std::chrono::nanoseconds operation_timeout() const { return operation_timeout_; }
 
   // timeout for each rpc request. Can be overridden by a more specific config, such as
   // readRpcTimeout or writeRpcTimeout.
-  nanoseconds rpc_timeout() const { return rpc_timeout_; }
+  std::chrono::nanoseconds rpc_timeout() const { return rpc_timeout_; }
 
   // timeout for each read rpc request
-  nanoseconds read_rpc_timeout() const { return read_rpc_timeout_; }
+  std::chrono::nanoseconds read_rpc_timeout() const { return read_rpc_timeout_; }
 
   // timeout for each write rpc request
-  nanoseconds write_rpc_timeout() const { return write_rpc_timeout_; }
+  std::chrono::nanoseconds write_rpc_timeout() const { return write_rpc_timeout_; }
 
-  nanoseconds pause() const { return pause_; }
+  std::chrono::nanoseconds pause() const { return pause_; }
 
   uint32_t max_retries() const { return max_retries_; }
 
@@ -97,7 +95,7 @@ class ConnectionConfiguration {
 
   // The scan timeout is used as operation timeout for every
   // operations in a scan, such as openScanner or next.
-  nanoseconds scan_timeout() const { return scan_timeout_; }
+  std::chrono::nanoseconds scan_timeout() const { return scan_timeout_; }
 
   uint32_t scanner_caching() const { return scanner_caching_; }
 
@@ -184,25 +182,25 @@ class ConnectionConfiguration {
    */
   static constexpr const uint64_t kDefaultClientScannerMaxResultsSize = 2 * 1024 * 1024;
 
-  nanoseconds connect_timeout_;
-  nanoseconds meta_operation_timeout_;
-  nanoseconds operation_timeout_;
-  nanoseconds rpc_timeout_;
-  nanoseconds read_rpc_timeout_;
-  nanoseconds write_rpc_timeout_;
-  nanoseconds pause_;
+  std::chrono::nanoseconds connect_timeout_;
+  std::chrono::nanoseconds meta_operation_timeout_;
+  std::chrono::nanoseconds operation_timeout_;
+  std::chrono::nanoseconds rpc_timeout_;
+  std::chrono::nanoseconds read_rpc_timeout_;
+  std::chrono::nanoseconds write_rpc_timeout_;
+  std::chrono::nanoseconds pause_;
   uint32_t max_retries_;
   uint32_t start_log_errors_count_;
-  nanoseconds scan_timeout_;
+  std::chrono::nanoseconds scan_timeout_;
   uint32_t scanner_caching_;
   uint64_t scanner_max_result_size_;
 
-  static nanoseconds ToNanos(const uint64_t& millis) {
-    return std::chrono::duration_cast<nanoseconds>(milliseconds(millis));
+  static std::chrono::nanoseconds ToNanos(const uint64_t& millis) {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(millis));
   }
 
-  static uint64_t ToMillis(const nanoseconds& nanos) {
-    return std::chrono::duration_cast<milliseconds>(nanos).count();
+  static uint64_t ToMillis(const std::chrono::nanoseconds& nanos) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(nanos).count();
   }
 };
 

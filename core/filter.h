@@ -29,8 +29,6 @@
 #include "if/Filter.pb.h"
 #include "if/HBase.pb.h"
 
-using google::protobuf::Message;
-
 namespace hbase {
 
 /**
@@ -59,13 +57,13 @@ namespace hbase {
  */
 class Filter {
  public:
-  Filter(std::string java_class_name, std::unique_ptr<Message> data)
+  Filter(std::string java_class_name, std::unique_ptr<google::protobuf::Message> data)
       : java_class_name_(java_class_name), data_(std::move(data)) {}
   virtual ~Filter() {}
 
   const std::string java_class_name() const { return java_class_name_; }
 
-  const Message& data() const { return *data_; }
+  const google::protobuf::Message& data() const { return *data_; }
   /**
    * Serialize the filter data to the given buffer. Does protobuf encoding by default.
    * Can be overriden if Filter does not use protobuf.
@@ -85,7 +83,7 @@ class Filter {
   }
 
  private:
-  std::unique_ptr<Message> data_;
+  std::unique_ptr<google::protobuf::Message> data_;
   std::string java_class_name_;
 };
 
@@ -94,7 +92,7 @@ class Filter {
  */
 class Comparator {
  public:
-  Comparator(std::string java_class_name, std::unique_ptr<Message> data)
+  Comparator(std::string java_class_name, std::unique_ptr<google::protobuf::Message> data)
       : java_class_name_(java_class_name), data_(std::move(data)) {}
   virtual ~Comparator() {}
 
@@ -119,7 +117,7 @@ class Comparator {
   }
 
  private:
-  std::unique_ptr<Message> data_;
+  std::unique_ptr<google::protobuf::Message> data_;
   std::string java_class_name_;
 };
 

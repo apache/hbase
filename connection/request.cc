@@ -21,7 +21,7 @@
 
 #include "if/Client.pb.h"
 
-using namespace hbase;
+namespace hbase {
 
 Request::Request(std::shared_ptr<google::protobuf::Message> req,
                  std::shared_ptr<google::protobuf::Message> resp, std::string method)
@@ -43,3 +43,4 @@ std::unique_ptr<Request> Request::multi() {
   return std::make_unique<Request>(std::make_shared<hbase::pb::MultiRequest>(),
                                    std::make_shared<hbase::pb::MultiResponse>(), "Multi");
 }
+}  // namespace hbase

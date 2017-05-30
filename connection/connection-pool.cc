@@ -21,19 +21,14 @@
 
 #include <folly/Conv.h>
 #include <folly/Logging.h>
-#include <folly/SocketAddress.h>
 #include <wangle/service/Service.h>
 
 #include <memory>
 #include <utility>
 
-using std::mutex;
-using std::unique_ptr;
-using std::shared_ptr;
-using hbase::ConnectionPool;
-using hbase::HBaseService;
-using folly::SharedMutexWritePriority;
-using folly::SocketAddress;
+using std::chrono::nanoseconds;
+
+namespace hbase {
 
 ConnectionPool::ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
                                std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
@@ -62,7 +57,7 @@ std::shared_ptr<RpcConnection> ConnectionPool::GetConnection(
 
 std::shared_ptr<RpcConnection> ConnectionPool::GetCachedConnection(
     std::shared_ptr<ConnectionId> remote_id) {
-  SharedMutexWritePriority::ReadHolder holder(map_mutex_);
+  folly::SharedMutexWritePriority::ReadHolder holder(map_mutex_);
   auto found = connections_.find(remote_id);
   if (found == connections_.end()) {
     return nullptr;
@@ -74,7 +69,7 @@ std::shared_ptr<RpcConnection> ConnectionPool::GetNewConnection(
     std::shared_ptr<ConnectionId> remote_id) {
   // Grab the upgrade lock. While we are double checking other readers can
   // continue on
-  SharedMutexWritePriority::UpgradeHolder u_holder{map_mutex_};
+  folly::SharedMutexWritePriority::UpgradeHolder u_holder{map_mutex_};
 
   // Now check if someone else created the connection before we got the lock
   // This is safe since we hold the upgrade lock.
@@ -84,7 +79,7 @@ std::shared_ptr<RpcConnection> ConnectionPool::GetNewConnection(
     return found->second;
   } else {
     // Yeah it looks a lot like there's no connection
-    SharedMutexWritePriority::WriteHolder w_holder{std::move(u_holder)};
+    folly::SharedMutexWritePriority::WriteHolder w_holder{std::move(u_holder)};
 
     // Make double sure there are not stale connections hanging around.
     connections_.erase(remote_id);
@@ -102,7 +97,7 @@ std::shared_ptr<RpcConnection> ConnectionPool::GetNewConnection(
 }
 
 void ConnectionPool::Close(std::shared_ptr<ConnectionId> remote_id) {
-  SharedMutexWritePriority::WriteHolder holder{map_mutex_};
+  folly::SharedMutexWritePriority::WriteHolder holder{map_mutex_};
   DLOG(INFO) << "Closing RPC Connection to host:" << remote_id->host()
              << ", port:" << folly::to<std::string>(remote_id->port());
 
@@ -116,7 +111,7 @@ void ConnectionPool::Close(std::shared_ptr<ConnectionId> remote_id) {
 }
 
 void ConnectionPool::Close() {
-  SharedMutexWritePriority::WriteHolder holder{map_mutex_};
+  folly::SharedMutexWritePriority::WriteHolder holder{map_mutex_};
   for (auto &item : connections_) {
     auto &con = item.second;
     con->Close();
@@ -124,3 +119,4 @@ void ConnectionPool::Close() {
   connections_.clear();
   clients_.clear();
 }
+}  // namespace hbase

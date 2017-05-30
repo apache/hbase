@@ -31,13 +31,6 @@
 #include "connection/service.h"
 #include "if/HBase.pb.h"
 
-using hbase::ConnectionId;
-using hbase::ConnectionIdEquals;
-using hbase::ConnectionIdHash;
-using hbase::RpcConnection;
-
-using std::chrono::nanoseconds;
-
 namespace hbase {
 
 /**
@@ -51,7 +44,7 @@ class ConnectionPool {
   /** Create connection pool wit default connection factory */
   ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
                  std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
-                 nanoseconds connect_timeout = nanoseconds(0));
+                 std::chrono::nanoseconds connect_timeout = std::chrono::nanoseconds(0));
 
   /**
    * Constructor that allows specifiying the connetion factory.

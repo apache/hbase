@@ -44,9 +44,9 @@ template <typename RESP>
 AsyncSingleRequestRpcRetryingCaller<RESP>::AsyncSingleRequestRpcRetryingCaller(
     std::shared_ptr<AsyncConnection> conn, std::shared_ptr<folly::HHWheelTimer> retry_timer,
     std::shared_ptr<hbase::pb::TableName> table_name, const std::string& row,
-    RegionLocateType locate_type, Callable<RESP> callable, nanoseconds pause, uint32_t max_retries,
-    nanoseconds operation_timeout_nanos, nanoseconds rpc_timeout_nanos,
-    uint32_t start_log_errors_count)
+    RegionLocateType locate_type, Callable<RESP> callable, std::chrono::nanoseconds pause,
+    uint32_t max_retries, std::chrono::nanoseconds operation_timeout_nanos,
+    std::chrono::nanoseconds rpc_timeout_nanos, uint32_t start_log_errors_count)
     : conn_(conn),
       retry_timer_(retry_timer),
       table_name_(table_name),
@@ -144,7 +144,7 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::OnError(
   conn_->retry_executor()->add([&]() {
     retry_timer_->scheduleTimeoutFn(
         [this]() { conn_->cpu_executor()->add([&]() { LocateThenCall(); }); },
-        milliseconds(TimeUtil::ToMillis(delay_ns)));
+        std::chrono::milliseconds(TimeUtil::ToMillis(delay_ns)));
   });
 }
 
@@ -212,8 +212,8 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::ResetController(
     std::shared_ptr<HBaseRpcController> controller, const int64_t& timeout_ns) {
   controller->Reset();
   if (timeout_ns >= 0) {
-    controller->set_call_timeout(
-        milliseconds(std::min(static_cast<int64_t>(INT_MAX), TimeUtil::ToMillis(timeout_ns))));
+    controller->set_call_timeout(std::chrono::milliseconds(
+        std::min(static_cast<int64_t>(INT_MAX), TimeUtil::ToMillis(timeout_ns))));
   }
 }
 

@@ -25,31 +25,29 @@
 #include <memory>
 #include <utility>
 
-using hbase::pb::ServerName;
-using hbase::security::User;
-
 namespace hbase {
+
 class ConnectionId {
  public:
   ConnectionId(const std::string &host, uint16_t port)
-      : ConnectionId(host, port, User::defaultUser(), "") {}
+      : ConnectionId(host, port, security::User::defaultUser(), "") {}
 
-  ConnectionId(const std::string &host, uint16_t port, std::shared_ptr<User> user)
+  ConnectionId(const std::string &host, uint16_t port, std::shared_ptr<security::User> user)
       : ConnectionId(host, port, user, "") {}
 
-  ConnectionId(const std::string &host, uint16_t port, std::shared_ptr<User> user,
+  ConnectionId(const std::string &host, uint16_t port, std::shared_ptr<security::User> user,
                const std::string &service_name)
       : user_(user), service_name_(service_name), host_(host), port_(port) {}
 
   virtual ~ConnectionId() = default;
 
-  std::shared_ptr<User> user() const { return user_; }
+  std::shared_ptr<security::User> user() const { return user_; }
   std::string service_name() const { return service_name_; }
   std::string host() { return host_; }
   uint16_t port() { return port_; }
 
  private:
-  std::shared_ptr<User> user_;
+  std::shared_ptr<security::User> user_;
   std::string service_name_;
   std::string host_;
   uint16_t port_;
@@ -65,7 +63,8 @@ struct ConnectionIdEquals {
   }
 
  private:
-  bool userEquals(const std::shared_ptr<User> &lhs, const std::shared_ptr<User> &rhs) const {
+  bool userEquals(const std::shared_ptr<security::User> &lhs,
+                  const std::shared_ptr<security::User> &rhs) const {
     return lhs == nullptr ? rhs == nullptr
                           : (rhs == nullptr ? false : lhs->user_name() == rhs->user_name());
   }

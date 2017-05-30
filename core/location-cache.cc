@@ -35,22 +35,11 @@
 
 #include <utility>
 
-using namespace std;
-using namespace folly;
-using hbase::RpcConnection;
-
-using wangle::ServiceFilter;
-using hbase::Request;
-using hbase::Response;
-using hbase::LocationCache;
-using hbase::RegionLocation;
-using hbase::HBaseService;
-using hbase::ConnectionPool;
-using hbase::pb::ScanResponse;
-using hbase::pb::TableName;
-using hbase::pb::ServerName;
 using hbase::pb::MetaRegionServer;
-using hbase::pb::RegionInfo;
+using hbase::pb::ServerName;
+using hbase::pb::TableName;
+
+namespace hbase {
 
 LocationCache::LocationCache(std::shared_ptr<hbase::Configuration> conf,
                              std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
@@ -74,8 +63,8 @@ LocationCache::~LocationCache() {
   LOG(INFO) << "Closed connection to ZooKeeper.";
 }
 
-Future<ServerName> LocationCache::LocateMeta() {
-  lock_guard<mutex> g(meta_lock_);
+folly::Future<ServerName> LocationCache::LocateMeta() {
+  std::lock_guard<std::mutex> g(meta_lock_);
   if (meta_promise_ == nullptr) {
     this->RefreshMetaLocation();
   }
@@ -84,19 +73,19 @@ Future<ServerName> LocationCache::LocateMeta() {
 
 void LocationCache::InvalidateMeta() {
   if (meta_promise_ != nullptr) {
-    lock_guard<mutex> g(meta_lock_);
+    std::lock_guard<std::mutex> g(meta_lock_);
     meta_promise_ = nullptr;
   }
 }
 
 /// MUST hold the meta_lock_
 void LocationCache::RefreshMetaLocation() {
-  meta_promise_ = make_unique<SharedPromise<ServerName>>();
+  meta_promise_ = std::make_unique<folly::SharedPromise<ServerName>>();
   cpu_executor_->add([&] { meta_promise_->setWith([&] { return this->ReadMetaLocation(); }); });
 }
 
 ServerName LocationCache::ReadMetaLocation() {
-  auto buf = IOBuf::create(4096);
+  auto buf = folly::IOBuf::create(4096);
   ZkDeserializer derser;
 
   // This needs to be int rather than size_t as that's what ZK expects.
@@ -107,7 +96,7 @@ ServerName LocationCache::ReadMetaLocation() {
                           reinterpret_cast<char *>(buf->writableData()), &len, nullptr);
   if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
-    throw runtime_error("Error getting meta location. Quorum: " + zk_quorum_);
+    throw std::runtime_error("Error getting meta location. Quorum: " + zk_quorum_);
   }
   buf->append(len);
 
@@ -118,8 +107,8 @@ ServerName LocationCache::ReadMetaLocation() {
   return mrs.server();
 }
 
-Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(const TableName &tn,
-                                                                      const string &row) {
+folly::Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
+    const TableName &tn, const std::string &row) {
   return this->LocateMeta()
       .via(cpu_executor_.get())
       .then([this](ServerName sn) {
@@ -150,17 +139,16 @@ Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(const Tabl
         // assertion errors
         return rl;
       })
-      .then([tn, this](shared_ptr<RegionLocation> rl) {
+      .then([tn, this](std::shared_ptr<RegionLocation> rl) {
         // now add fetched location to the cache.
         this->CacheLocation(tn, rl);
         return rl;
       });
 }
 
-Future<shared_ptr<RegionLocation>> LocationCache::LocateRegion(const hbase::pb::TableName &tn,
-                                                               const std::string &row,
-                                                               const RegionLocateType locate_type,
-                                                               const int64_t locate_ns) {
+folly::Future<std::shared_ptr<RegionLocation>> LocationCache::LocateRegion(
+    const TableName &tn, const std::string &row, const RegionLocateType locate_type,
+    const int64_t locate_ns) {
   // TODO: implement region locate type and timeout
   auto cached_loc = this->GetCachedLocation(tn, row);
   if (cached_loc != nullptr) {
@@ -171,8 +159,8 @@ Future<shared_ptr<RegionLocation>> LocationCache::LocateRegion(const hbase::pb::
 }
 
 // must hold shared lock on locations_lock_
-shared_ptr<RegionLocation> LocationCache::GetCachedLocation(const hbase::pb::TableName &tn,
-                                                            const std::string &row) {
+std::shared_ptr<RegionLocation> LocationCache::GetCachedLocation(const hbase::pb::TableName &tn,
+                                                                 const std::string &row) {
   auto t_locs = this->GetTableLocations(tn);
   std::shared_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
 
@@ -213,7 +201,7 @@ shared_ptr<RegionLocation> LocationCache::GetCachedLocation(const hbase::pb::Tab
 
 // must hold unique lock on locations_lock_
 void LocationCache::CacheLocation(const hbase::pb::TableName &tn,
-                                  const shared_ptr<RegionLocation> loc) {
+                                  const std::shared_ptr<RegionLocation> loc) {
   auto t_locs = this->GetTableLocations(tn);
   std::unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
 
@@ -228,7 +216,7 @@ bool LocationCache::IsLocationCached(const hbase::pb::TableName &tn, const std::
 
 // shared lock needed for cases when this table has been requested before;
 // in the rare case it hasn't, unique lock will be grabbed to add it to cache
-shared_ptr<hbase::PerTableLocationMap> LocationCache::GetTableLocations(
+std::shared_ptr<hbase::PerTableLocationMap> LocationCache::GetTableLocations(
     const hbase::pb::TableName &tn) {
   auto found_locs = this->GetCachedTableLocations(tn);
   if (found_locs == nullptr) {
@@ -237,9 +225,9 @@ shared_ptr<hbase::PerTableLocationMap> LocationCache::GetTableLocations(
   return found_locs;
 }
 
-shared_ptr<hbase::PerTableLocationMap> LocationCache::GetCachedTableLocations(
+std::shared_ptr<hbase::PerTableLocationMap> LocationCache::GetCachedTableLocations(
     const hbase::pb::TableName &tn) {
-  SharedMutexWritePriority::ReadHolder r_holder{locations_lock_};
+  folly::SharedMutexWritePriority::ReadHolder r_holder{locations_lock_};
 
   auto table_locs = cached_locations_.find(tn);
   if (table_locs != cached_locations_.end()) {
@@ -249,38 +237,38 @@ shared_ptr<hbase::PerTableLocationMap> LocationCache::GetCachedTableLocations(
   }
 }
 
-shared_ptr<hbase::PerTableLocationMap> LocationCache::GetNewTableLocations(
+std::shared_ptr<hbase::PerTableLocationMap> LocationCache::GetNewTableLocations(
     const hbase::pb::TableName &tn) {
   // double-check locking under upgradable lock
-  SharedMutexWritePriority::UpgradeHolder u_holder{locations_lock_};
+  folly::SharedMutexWritePriority::UpgradeHolder u_holder{locations_lock_};
 
   auto table_locs = cached_locations_.find(tn);
   if (table_locs != cached_locations_.end()) {
     return table_locs->second;
   }
-  SharedMutexWritePriority::WriteHolder w_holder{std::move(u_holder)};
+  folly::SharedMutexWritePriority::WriteHolder w_holder{std::move(u_holder)};
 
-  auto t_locs_p = make_shared<map<std::string, shared_ptr<RegionLocation>>>();
+  auto t_locs_p = std::make_shared<std::map<std::string, std::shared_ptr<RegionLocation>>>();
   cached_locations_.insert(std::make_pair(tn, t_locs_p));
   return t_locs_p;
 }
 
 // must hold unique lock on locations_lock_
 void LocationCache::ClearCache() {
-  unique_lock<SharedMutexWritePriority> lock(locations_lock_);
+  std::unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
   cached_locations_.clear();
 }
 
 // must hold unique lock on locations_lock_
 void LocationCache::ClearCachedLocations(const hbase::pb::TableName &tn) {
-  unique_lock<SharedMutexWritePriority> lock(locations_lock_);
+  std::unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
   cached_locations_.erase(tn);
 }
 
 // must hold unique lock on locations_lock_
 void LocationCache::ClearCachedLocation(const hbase::pb::TableName &tn, const std::string &row) {
   auto table_locs = this->GetTableLocations(tn);
-  unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
+  std::unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
   table_locs->erase(row);
 }
 
@@ -289,3 +277,4 @@ void LocationCache::UpdateCachedLocation(const RegionLocation &loc,
   // TODO: just clears the location for now. We can inspect RegionMovedExceptions, etc later.
   ClearCachedLocation(loc.region_info().table_name(), loc.region_info().start_key());
 }
+}  // namespace hbase
