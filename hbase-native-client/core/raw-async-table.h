@@ -33,13 +33,6 @@
 #include "core/put.h"
 #include "core/result.h"
 
-using folly::Future;
-using folly::Try;
-using folly::Unit;
-using hbase::pb::TableName;
-using std::chrono::nanoseconds;
-using std::chrono::milliseconds;
-
 namespace hbase {
 
 /**
@@ -48,26 +41,29 @@ namespace hbase {
  */
 class RawAsyncTable {
  public:
-  RawAsyncTable(std::shared_ptr<TableName> table_name, std::shared_ptr<AsyncConnection> connection)
+  RawAsyncTable(std::shared_ptr<pb::TableName> table_name,
+                std::shared_ptr<AsyncConnection> connection)
       : connection_(connection),
         connection_conf_(connection->connection_conf()),
         table_name_(table_name),
         rpc_client_(connection->rpc_client()) {}
   virtual ~RawAsyncTable() = default;
 
-  Future<std::shared_ptr<Result>> Get(const hbase::Get& get);
+  folly::Future<std::shared_ptr<Result>> Get(const hbase::Get& get);
 
-  Future<Unit> Put(const hbase::Put& put);
+  folly::Future<folly::Unit> Put(const hbase::Put& put);
   void Close() {}
 
-  Future<std::vector<Try<std::shared_ptr<Result>>>> Get(const std::vector<hbase::Get>& gets);
-  Future<std::vector<Try<std::shared_ptr<Result>>>> Batch(const std::vector<hbase::Get>& gets);
+  folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Get(
+      const std::vector<hbase::Get>& gets);
+  folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Batch(
+      const std::vector<hbase::Get>& gets);
 
  private:
   /* Data */
   std::shared_ptr<AsyncConnection> connection_;
   std::shared_ptr<ConnectionConfiguration> connection_conf_;
-  std::shared_ptr<TableName> table_name_;
+  std::shared_ptr<pb::TableName> table_name_;
   std::shared_ptr<RpcClient> rpc_client_;
 
   /* Methods */
@@ -79,7 +75,7 @@ class RawAsyncTable {
       const RespConverter<RESP, PRESP> resp_converter);
 
   template <typename RESP>
-  std::shared_ptr<SingleRequestCallerBuilder<RESP>> CreateCallerBuilder(std::string row,
-                                                                        nanoseconds rpc_timeout);
+  std::shared_ptr<SingleRequestCallerBuilder<RESP>> CreateCallerBuilder(
+      std::string row, std::chrono::nanoseconds rpc_timeout);
 };
 }  // namespace hbase

@@ -24,8 +24,8 @@
 #include <utility>
 #include "if/Client.pb.h"
 
-using hbase::Request;
 using hbase::pb::GetRequest;
+using hbase::pb::MutationProto;
 using hbase::pb::RegionAction;
 using hbase::pb::RegionSpecifier;
 using hbase::pb::RegionSpecifier_RegionSpecifierType;

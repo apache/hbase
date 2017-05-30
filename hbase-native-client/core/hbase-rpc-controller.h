@@ -22,19 +22,14 @@
 #include <chrono>
 #include <string>
 
-using google::protobuf::RpcController;
-using google::protobuf::Closure;
-
-using std::chrono::milliseconds;
-
 namespace hbase {
 
-class HBaseRpcController : public RpcController {
+class HBaseRpcController : public google::protobuf::RpcController {
  public:
   HBaseRpcController() {}
   virtual ~HBaseRpcController() = default;
 
-  void set_call_timeout(const milliseconds& call_timeout) {
+  void set_call_timeout(const std::chrono::milliseconds& call_timeout) {
     // TODO:
   }
 
@@ -50,7 +45,7 @@ class HBaseRpcController : public RpcController {
 
   bool IsCanceled() const override { return false; }
 
-  void NotifyOnCancel(Closure* callback) override {}
+  void NotifyOnCancel(google::protobuf::Closure* callback) override {}
 };
 
 } /* namespace hbase */

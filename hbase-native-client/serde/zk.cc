@@ -25,15 +25,13 @@
 
 #include <string>
 
-using hbase::ZkDeserializer;
 using std::runtime_error;
-using folly::IOBuf;
-using folly::io::Cursor;
-using google::protobuf::Message;
+
+namespace hbase {
 
 static const std::string MAGIC_STRING = "PBUF";
 
-bool ZkDeserializer::Parse(IOBuf *buf, Message *out) {
+bool ZkDeserializer::Parse(folly::IOBuf *buf, google::protobuf::Message *out) {
   // The format is like this
   // 1 byte of magic number. 255
   // 4 bytes of id length.
@@ -41,7 +39,7 @@ bool ZkDeserializer::Parse(IOBuf *buf, Message *out) {
   // 4 bytes of a magic string PBUF
   // Then the protobuf serialized without a varint header.
 
-  Cursor c{buf};
+  folly::io::Cursor c{buf};
 
   // There should be a magic number for recoverable zk
   uint8_t magic_num = c.read<uint8_t>();
@@ -76,3 +74,4 @@ bool ZkDeserializer::Parse(IOBuf *buf, Message *out) {
 
   return true;
 }
+}  // namespace hbase

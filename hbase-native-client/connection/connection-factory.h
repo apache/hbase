@@ -30,8 +30,6 @@
 #include "connection/service.h"
 #include "security/user.h"
 
-using std::chrono::nanoseconds;
-
 namespace hbase {
 
 /**
@@ -46,7 +44,7 @@ class ConnectionFactory {
    */
   ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
                     std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
-                    nanoseconds connect_timeout = nanoseconds(0));
+                    std::chrono::nanoseconds connect_timeout = std::chrono::nanoseconds(0));
 
   /** Default Destructor */
   virtual ~ConnectionFactory() = default;
@@ -66,7 +64,7 @@ class ConnectionFactory {
       const std::string &hostname, uint16_t port);
 
  private:
-  nanoseconds connect_timeout_;
+  std::chrono::nanoseconds connect_timeout_;
   std::shared_ptr<Configuration> conf_;
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool_;
   std::shared_ptr<RpcPipelineFactory> pipeline_factory_;

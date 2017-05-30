@@ -21,14 +21,13 @@
 
 #include <utility>
 
-using namespace folly;
-using namespace hbase;
-using namespace wangle;
-using folly::exception_wrapper;
+using std::unique_ptr;
+
+namespace hbase {
 
 ClientDispatcher::ClientDispatcher() : requests_(5000), current_call_id_(9) {}
 
-void ClientDispatcher::read(Context *ctx, std::unique_ptr<Response> in) {
+void ClientDispatcher::read(Context *ctx, unique_ptr<Response> in) {
   auto call_id = in->call_id();
 
   auto search = requests_.find(call_id);
@@ -44,10 +43,10 @@ void ClientDispatcher::read(Context *ctx, std::unique_ptr<Response> in) {
   }
 }
 
-Future<std::unique_ptr<Response>> ClientDispatcher::operator()(std::unique_ptr<Request> arg) {
+folly::Future<unique_ptr<Response>> ClientDispatcher::operator()(unique_ptr<Request> arg) {
   auto call_id = current_call_id_++;
   arg->set_call_id(call_id);
-  requests_.insert(call_id, Promise<std::unique_ptr<Response>>{});
+  requests_.insert(call_id, folly::Promise<unique_ptr<Response>>{});
   auto &p = requests_.find(call_id)->second;
   auto f = p.getFuture();
   p.setInterruptHandler([call_id, this](const folly::exception_wrapper &e) {
@@ -59,6 +58,9 @@ Future<std::unique_ptr<Response>> ClientDispatcher::operator()(std::unique_ptr<R
   return f;
 }
 
-Future<Unit> ClientDispatcher::close() { return ClientDispatcherBase::close(); }
+folly::Future<folly::Unit> ClientDispatcher::close() { return ClientDispatcherBase::close(); }
 
-Future<Unit> ClientDispatcher::close(Context *ctx) { return ClientDispatcherBase::close(ctx); }
+folly::Future<folly::Unit> ClientDispatcher::close(Context *ctx) {
+  return ClientDispatcherBase::close(ctx);
+}
+}  // namespace hbase

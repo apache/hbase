@@ -28,10 +28,6 @@
 #include "core/result.h"
 #include "if/Client.pb.h"
 
-using hbase::RegionResult;
-using hbase::Result;
-using hbase::pb::RegionLoadStats;
-
 namespace hbase {
 
 class MultiResponse {
@@ -62,7 +58,7 @@ class MultiResponse {
 
   const std::map<std::string, std::shared_ptr<std::exception>>& RegionExceptions() const;
 
-  void AddStatistic(const std::string& region_name, std::shared_ptr<RegionLoadStats> stat);
+  void AddStatistic(const std::string& region_name, std::shared_ptr<pb::RegionLoadStats> stat);
 
   const std::map<std::string, std::shared_ptr<RegionResult>>& RegionResults() const;
 

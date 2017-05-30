@@ -29,9 +29,8 @@
 #include "core/table.h"
 #include "serde/table-name.h"
 
-using hbase::pb::TableName;
-
 namespace hbase {
+
 class Table;
 /**
  * Client.
@@ -54,7 +53,7 @@ class Client {
    * @brief Retrieve a Table implementation for accessing a table.
    * @param - table_name
    */
-  std::unique_ptr<::hbase::Table> Table(const TableName& table_name);
+  std::unique_ptr<::hbase::Table> Table(const pb::TableName& table_name);
 
   /**
    * @brief Close the Client connection.

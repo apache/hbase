@@ -134,7 +134,7 @@ folly::Future<folly::Unit> SaslHandler::WriteSaslOutput(Context *ctx, const char
   return ctx->fireWrite(std::move(iob));
 }
 
-void SaslHandler::FinishAuth(Context *ctx, folly::IOBufQueue* bufQueue) {
+void SaslHandler::FinishAuth(Context *ctx, folly::IOBufQueue *bufQueue) {
   std::unique_ptr<folly::IOBuf> iob;
   if (!bufQueue->empty()) {
     iob = bufQueue->pop_front();
@@ -183,7 +183,7 @@ folly::Future<folly::Unit> SaslHandler::SaslInit(Context *ctx) {
   return fut;
 }
 
-void SaslHandler::ContinueSaslNegotiation(Context *ctx, folly::IOBufQueue* bufQueue) {
+void SaslHandler::ContinueSaslNegotiation(Context *ctx, folly::IOBufQueue *bufQueue) {
   const char *out;
   unsigned int outlen;
 

@@ -25,6 +25,8 @@
 #include <memory>
 #include <utility>
 
+using hbase::pb::TableName;
+
 namespace hbase {
 
 Client::Client() {

@@ -29,43 +29,32 @@
 #include <chrono>
 #include <utility>
 
-using hbase::security::User;
-using hbase::pb::ServerName;
-using hbase::Request;
-using hbase::Response;
-using hbase::ConnectionId;
-using hbase::ConnectionPool;
-using hbase::RpcConnection;
-using hbase::security::User;
-
-using google::protobuf::Message;
-using std::chrono::nanoseconds;
-
 namespace hbase {
 
 class RpcClient {
  public:
   RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor, std::shared_ptr<Codec> codec,
-            std::shared_ptr<Configuration> conf, nanoseconds connect_timeout = nanoseconds(0));
+            std::shared_ptr<Configuration> conf,
+            std::chrono::nanoseconds connect_timeout = std::chrono::nanoseconds(0));
 
   virtual ~RpcClient() { Close(); }
 
   virtual std::unique_ptr<Response> SyncCall(const std::string &host, uint16_t port,
                                              std::unique_ptr<Request> req,
-                                             std::shared_ptr<User> ticket);
+                                             std::shared_ptr<security::User> ticket);
 
   virtual std::unique_ptr<Response> SyncCall(const std::string &host, uint16_t port,
                                              std::unique_ptr<Request> req,
-                                             std::shared_ptr<User> ticket,
+                                             std::shared_ptr<security::User> ticket,
                                              const std::string &service_name);
 
-  virtual folly::Future<std::unique_ptr<Response>> AsyncCall(const std::string &host, uint16_t port,
-                                                             std::unique_ptr<Request> req,
-                                                             std::shared_ptr<User> ticket);
+  virtual folly::Future<std::unique_ptr<Response>> AsyncCall(
+      const std::string &host, uint16_t port, std::unique_ptr<Request> req,
+      std::shared_ptr<security::User> ticket);
 
   virtual folly::Future<std::unique_ptr<Response>> AsyncCall(const std::string &host, uint16_t port,
                                                              std::unique_ptr<Request> req,
-                                                             std::shared_ptr<User> ticket,
+                                                             std::shared_ptr<security::User> ticket,
                                                              const std::string &service_name);
 
   virtual void Close();

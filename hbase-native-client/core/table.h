@@ -35,9 +35,8 @@
 #include "core/result.h"
 #include "serde/table-name.h"
 
-using hbase::pb::TableName;
-
 namespace hbase {
+
 class Client;
 
 class Table {
@@ -45,7 +44,7 @@ class Table {
   /**
    * Constructors
    */
-  Table(const TableName &table_name, std::shared_ptr<AsyncConnection> async_connection);
+  Table(const pb::TableName &table_name, std::shared_ptr<AsyncConnection> async_connection);
   ~Table();
 
   /**
@@ -75,12 +74,12 @@ class Table {
   std::shared_ptr<RegionLocation> GetRegionLocation(const std::string &row);
 
  private:
-  std::shared_ptr<TableName> table_name_;
+  std::shared_ptr<pb::TableName> table_name_;
   std::shared_ptr<AsyncConnection> async_connection_;
   std::shared_ptr<hbase::Configuration> conf_;
   std::unique_ptr<RawAsyncTable> async_table_;
 
  private:
-  milliseconds operation_timeout() const;
+  std::chrono::milliseconds operation_timeout() const;
 };
 } /* namespace hbase */

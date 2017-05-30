@@ -20,6 +20,8 @@
 #include "core/multi-response.h"
 #include "core/region-result.h"
 
+using hbase::pb::RegionLoadStats;
+
 namespace hbase {
 
 MultiResponse::MultiResponse() {}

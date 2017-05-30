@@ -26,30 +26,29 @@
 #include "core/result.h"
 #include "if/Client.pb.h"
 
-using hbase::Result;
-using hbase::pb::RegionLoadStats;
-
 namespace hbase {
+
 using ResultOrExceptionTuple =
     std::tuple<std::shared_ptr<hbase::Result>, std::shared_ptr<std::exception>>;
+
 class RegionResult {
  public:
   RegionResult();
   void AddResultOrException(int32_t index, std::shared_ptr<hbase::Result> result,
                             std::shared_ptr<std::exception> exc);
 
-  void set_stat(std::shared_ptr<RegionLoadStats> stat);
+  void set_stat(std::shared_ptr<pb::RegionLoadStats> stat);
 
   int ResultOrExceptionSize() const;
 
   std::shared_ptr<ResultOrExceptionTuple> ResultOrException(int32_t index) const;
 
-  const std::shared_ptr<RegionLoadStats>& stat() const;
+  const std::shared_ptr<pb::RegionLoadStats>& stat() const;
 
   ~RegionResult();
 
  private:
   std::map<int, ResultOrExceptionTuple> result_or_excption_;
-  std::shared_ptr<RegionLoadStats> stat_;
+  std::shared_ptr<pb::RegionLoadStats> stat_;
 };
 } /* namespace hbase */

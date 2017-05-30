@@ -30,12 +30,9 @@
 #include "if/Client.pb.h"
 #include "if/RPC.pb.h"
 
-using namespace hbase;
-using namespace folly;
-using namespace wangle;
-using hbase::pb::ResponseHeader;
-using hbase::pb::GetResponse;
 using google::protobuf::Message;
+
+namespace hbase {
 
 ClientHandler::ClientHandler(std::string user_name, std::shared_ptr<Codec> codec,
                              const std::string &server)
@@ -43,15 +40,14 @@ ClientHandler::ClientHandler(std::string user_name, std::shared_ptr<Codec> codec
       serde_(codec),
       server_(server),
       once_flag_(std::make_unique<std::once_flag>()),
-      resp_msgs_(
-          make_unique<folly::AtomicHashMap<uint32_t, std::shared_ptr<google::protobuf::Message>>>(
-              5000)) {}
+      resp_msgs_(std::make_unique<folly::AtomicHashMap<uint32_t, std::shared_ptr<Message>>>(5000)) {
+}
 
-void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
+void ClientHandler::read(Context *ctx, std::unique_ptr<folly::IOBuf> buf) {
   if (LIKELY(buf != nullptr)) {
     buf->coalesce();
     auto received = std::make_unique<Response>();
-    ResponseHeader header;
+    pb::ResponseHeader header;
 
     int used_bytes = serde_.ParseDelimited(buf.get(), &header);
     VLOG(3) << "Read RPC ResponseHeader size=" << used_bytes << " call_id=" << header.call_id()
@@ -118,13 +114,13 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
       VLOG(3) << "Exception RPC ResponseHeader, call_id=" << header.call_id()
               << " exception.what=" << remote_exception->what()
               << ", do_not_retry=" << remote_exception->do_not_retry();
-      received->set_exception(::folly::exception_wrapper{*remote_exception});
+      received->set_exception(folly::exception_wrapper{*remote_exception});
     }
     ctx->fireRead(std::move(received));
   }
 }
 
-Future<Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
+folly::Future<folly::Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
   // We need to send the header once.
   // So use call_once to make sure that only one thread wins this.
   std::call_once((*once_flag_), [ctx, this]() {
@@ -142,3 +138,4 @@ Future<Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
   // Send the data down the pipeline.
   return ctx->fireWrite(serde_.Request(r->call_id(), r->method(), r->req_msg().get()));
 }
+}  // namespace hbase

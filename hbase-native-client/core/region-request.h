@@ -18,13 +18,13 @@
  */
 
 #pragma once
+
 #include <memory>
 #include <queue>
 #include <vector>
 #include "core/action.h"
 #include "core/region-location.h"
 
-using hbase::Action;
 namespace hbase {
 
 class RegionRequest {

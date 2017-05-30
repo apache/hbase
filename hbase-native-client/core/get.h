@@ -29,7 +29,6 @@
 #include "core/time-range.h"
 #include "if/Client.pb.h"
 
-using hbase::Row;
 namespace hbase {
 
 class Get : public Row, public Query {

@@ -28,10 +28,10 @@
 #include "connection/pipeline.h"
 #include "connection/service.h"
 
-using namespace folly;
-using namespace hbase;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
+
+namespace hbase {
 
 ConnectionFactory::ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
                                      std::shared_ptr<Codec> codec,
@@ -60,10 +60,11 @@ std::shared_ptr<HBaseService> ConnectionFactory::Connect(
   // much nicer.
   // TODO see about using shared promise for this.
   auto pipeline = client
-                      ->connect(SocketAddress(hostname, port, true),
+                      ->connect(folly::SocketAddress(hostname, port, true),
                                 std::chrono::duration_cast<milliseconds>(connect_timeout_))
                       .get();
   auto dispatcher = std::make_shared<ClientDispatcher>();
   dispatcher->setPipeline(pipeline);
   return dispatcher;
 }
+}  // namespace hbase
