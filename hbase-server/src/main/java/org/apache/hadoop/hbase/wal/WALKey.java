@@ -614,4 +614,29 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     }
   }
 
+  public long estimatedSerializedSizeOf() {
+    long size = encodedRegionName != null ? encodedRegionName.length : 0;
+    size += tablename != null ? tablename.toBytes().length : 0;
+    if (clusterIds != null) {
+      size += 16 * clusterIds.size();
+    }
+    if (nonceGroup != HConstants.NO_NONCE) {
+      size += Bytes.SIZEOF_LONG; // nonce group
+    }
+    if (nonce != HConstants.NO_NONCE) {
+      size += Bytes.SIZEOF_LONG; // nonce
+    }
+    if (scopes != null) {
+      for (Map.Entry<byte[], Integer> scope: scopes.entrySet()) {
+        size += scope.getKey().length;
+        size += Bytes.SIZEOF_INT;
+      }
+    }
+    size += Bytes.SIZEOF_LONG; // sequence number
+    size += Bytes.SIZEOF_LONG; // write time
+    if (origLogSeqNum > 0) {
+      size += Bytes.SIZEOF_LONG; // original sequence number
+    }
+    return size;
+  }
 }
