@@ -266,7 +266,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
   protected HBaseRPCErrorHandler errorHandler = null;
 
-  static final String MAX_REQUEST_SIZE = "hbase.ipc.max.request.size";
+  public static final String MAX_REQUEST_SIZE = "hbase.ipc.max.request.size";
   private static final RequestTooBigException REQUEST_TOO_BIG_EXCEPTION =
       new RequestTooBigException();
 
@@ -282,7 +282,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   private static final int DEFAULT_MIN_CLIENT_REQUEST_TIMEOUT = 20;
 
   /** Default value for above params */
-  private static final int DEFAULT_MAX_REQUEST_SIZE = DEFAULT_MAX_CALLQUEUE_SIZE / 4; // 256M
+  public static final int DEFAULT_MAX_REQUEST_SIZE = DEFAULT_MAX_CALLQUEUE_SIZE / 4; // 256M
   private static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
   private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 

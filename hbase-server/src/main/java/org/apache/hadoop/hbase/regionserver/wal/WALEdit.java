@@ -292,6 +292,14 @@ public class WALEdit implements Writable, HeapSize {
     return ret;
   }
 
+  public long estimatedSerializedSizeOf() {
+    long ret = 0;
+    for (Cell cell: cells) {
+      ret += CellUtil.estimatedSerializedSizeOf(cell);
+    }
+    return ret;
+  }
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
