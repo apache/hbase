@@ -26,15 +26,29 @@ cxx_library(
         "version.h",
     ],
     srcs=["bytes-util.cc", "connection-util.cc", "user-util.cc"],
-    deps=['//third-party:folly',],
+    deps=[
+        '//third-party:folly',
+    ],
     tests=[":user-util-test"],
-    visibility=['PUBLIC',],
+    linker_flags=['-L/usr/local/lib', '-lkrb5'],
+    exported_linker_flags=['-L/usr/local/lib', '-lkrb5'],
+    visibility=[
+        'PUBLIC',
+    ],
     compiler_flags=['-Weffc++'],)
 cxx_test(
     name="user-util-test",
-    srcs=["user-util-test.cc",],
-    deps=[":utils",],)
+    srcs=[
+        "user-util-test.cc",
+    ],
+    deps=[
+        ":utils",
+    ],)
 cxx_test(
     name="bytes-util-test",
-    srcs=["bytes-util-test.cc",],
-    deps=[":utils",],)
+    srcs=[
+        "bytes-util-test.cc",
+    ],
+    deps=[
+        ":utils",
+    ],)

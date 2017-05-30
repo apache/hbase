@@ -50,7 +50,8 @@ class ConnectionPool {
  public:
   /** Create connection pool wit default connection factory */
   ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
-                 std::shared_ptr<Codec> codec, nanoseconds connect_timeout = nanoseconds(0));
+                 std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
+                 nanoseconds connect_timeout = nanoseconds(0));
 
   /**
    * Constructor that allows specifiying the connetion factory.
@@ -93,6 +94,7 @@ class ConnectionPool {
       clients_;
   folly::SharedMutexWritePriority map_mutex_;
   std::shared_ptr<ConnectionFactory> cf_;
+  std::shared_ptr<Configuration> conf_;
 };
 
 }  // namespace hbase

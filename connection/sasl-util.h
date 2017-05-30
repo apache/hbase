@@ -18,29 +18,29 @@
  */
 #pragma once
 
-#include <glog/logging.h>
+#include <memory>
 #include <mutex>
 #include <string>
+
 #include "core/configuration.h"
 
-namespace hbase {
-namespace security {
-static constexpr const char* kKerberos = "kerberos";
-class User {
+class SaslUtil {
  public:
-  explicit User(const std::string& user_name) : user_name_(user_name) {}
-  virtual ~User() = default;
-
-  std::string user_name() { return user_name_; }
-
-  static std::shared_ptr<User> defaultUser() { return std::make_shared<User>("__drwho"); }
-
-  static bool IsSecurityEnabled(const Configuration& conf) {
-    return conf.Get("hbase.security.authentication", "").compare(kKerberos) == 0;
-  }
+  void InitializeSaslLib(void);
+  static std::string ParseServiceName(std::shared_ptr<hbase::Configuration> conf, bool secure);
 
  private:
-  std::string user_name_;
+  static constexpr const char *kDefaultPluginDir = "/usr/lib/sasl2";
+  // for now the sasl handler is hardcoded to work against the regionservers only. In the future, if
+  // we
+  // need the master rpc to work, we could have a map of service names to principals to use (similar
+  // to the Java implementation)
+  static constexpr const char *kServerPrincipalConfKey = "hbase.regionserver.kerberos.principal";
+
+  static int GetPluginPath(void *context, const char **path);
+  static void *MutexNew(void);
+  static int MutexLock(void *m);
+  static int MutexUnlock(void *m);
+  static void MutexDispose(void *m);
+  static std::once_flag library_inited_;
 };
-}
-}

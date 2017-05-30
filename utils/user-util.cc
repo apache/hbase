@@ -20,6 +20,7 @@
 #include "utils/user-util.h"
 
 #include <folly/Logging.h>
+#include <krb5/krb5.h>
 #include <pwd.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -27,14 +28,14 @@
 using namespace hbase;
 using namespace std;
 
-UserUtil::UserUtil() : once_flag_{}, user_name_{"drwho"} {}
+UserUtil::UserUtil() : once_flag_{} {}
 
-string UserUtil::user_name() {
-  std::call_once(once_flag_, [this]() { compute_user_name(); });
+string UserUtil::user_name(bool secure) {
+  std::call_once(once_flag_, [this, secure]() { compute_user_name(secure); });
   return user_name_;
 }
 
-void UserUtil::compute_user_name() {
+void UserUtil::compute_user_name(bool secure) {
   // According to the man page of getpwuid
   // this should never be free'd
   //
@@ -45,4 +46,32 @@ void UserUtil::compute_user_name() {
   if (passwd && passwd->pw_name) {
     user_name_ = string{passwd->pw_name};
   }
+  if (!secure) return;
+  krb5_context ctx;
+  krb5_error_code ret = krb5_init_context(&ctx);
+  if (ret != 0) {
+    throw std::runtime_error("cannot init krb ctx " + std::to_string(ret));
+  }
+  krb5_ccache ccache;
+  ret = krb5_cc_default(ctx, &ccache);
+  if (ret != 0) {
+    throw std::runtime_error("cannot get default cache " + std::to_string(ret));
+  }
+  // Here is sample principal: hbase/23a03935850c@EXAMPLE.COM
+  // There may be one (user) or two (user/host) components before the @ sign
+  krb5_principal princ;
+  ret = krb5_cc_get_principal(ctx, ccache, &princ);
+  if (ret != 0) {
+    throw std::runtime_error("cannot get default principal " + std::to_string(ret));
+  }
+  user_name_ = princ->data->data;
+  if (krb5_princ_size(ctx, princ) >= 2) {
+    user_name_ += "/";
+    user_name_ += static_cast<char *>(princ->data[1].data);
+  }
+  user_name_ += "@";
+  user_name_ += princ->realm.data;
+  VLOG(1) << "user " << user_name_;
+  krb5_free_principal(ctx, princ);
+  krb5_free_context(ctx);
 }

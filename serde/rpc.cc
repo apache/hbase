@@ -50,6 +50,7 @@ static const std::string PREAMBLE = "HBas";
 static const std::string INTERFACE = "ClientService";
 static const uint8_t RPC_VERSION = 0;
 static const uint8_t DEFAULT_AUTH_TYPE = 80;
+static const uint8_t KERBEROS_AUTH_TYPE = 81;
 
 int RpcSerde::ParseDelimited(const IOBuf *buf, Message *msg) {
   if (buf == nullptr || msg == nullptr) {
@@ -85,17 +86,21 @@ int RpcSerde::ParseDelimited(const IOBuf *buf, Message *msg) {
   return coded_stream.CurrentPosition();
 }
 
-RpcSerde::RpcSerde(std::shared_ptr<Codec> codec) : auth_type_(DEFAULT_AUTH_TYPE), codec_(codec) {}
+RpcSerde::RpcSerde(std::shared_ptr<Codec> codec) : codec_(codec) {}
 
-unique_ptr<IOBuf> RpcSerde::Preamble() {
+std::unique_ptr<IOBuf> RpcSerde::Preamble(bool secure) {
   auto magic = IOBuf::copyBuffer(PREAMBLE, 0, 2);
   magic->append(2);
   RWPrivateCursor c(magic.get());
   c.skip(4);
   // Version
   c.write(RPC_VERSION);
-  // Standard security aka Please don't lie to me.
-  c.write(auth_type_);
+  if (secure) {
+    // for now support only KERBEROS (DIGEST is not supported)
+    c.write(KERBEROS_AUTH_TYPE);
+  } else {
+    c.write(DEFAULT_AUTH_TYPE);
+  }
   return magic;
 }
 

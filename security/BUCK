@@ -19,8 +19,12 @@
 # to a single server.
 cxx_library(
     name="security",
-    exported_headers=["user.h",],
+    exported_headers=[
+        "user.h",
+    ],
     srcs=[],
     deps=["//core:conf"],
     compiler_flags=['-Weffc++'],
-    visibility=['//core/...', '//connection/...'],)
+    visibility=[
+        'PUBLIC',
+    ],)

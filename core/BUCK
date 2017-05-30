@@ -92,7 +92,9 @@ cxx_library(
         "//third-party:zookeeper_mt",
     ],
     compiler_flags=['-Weffc++', '-ggdb'],
-    visibility=['PUBLIC',],)
+    visibility=[
+        'PUBLIC',
+    ],)
 cxx_library(
     name="conf",
     exported_headers=[
@@ -105,10 +107,14 @@ cxx_library(
     ],
     deps=["//third-party:folly"],
     compiler_flags=['-Weffc++', '-ggdb'],
-    visibility=['PUBLIC',],)
+    visibility=[
+        'PUBLIC',
+    ],)
 cxx_test(
     name="location-cache-test",
-    srcs=["location-cache-test.cc",],
+    srcs=[
+        "location-cache-test.cc",
+    ],
     deps=[
         ":core",
         "//test-util:test-util",
@@ -116,12 +122,18 @@ cxx_test(
     run_test_separately=True,)
 cxx_test(
     name="cell-test",
-    srcs=["cell-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "cell-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="filter-test",
-    srcs=["filter-test.cc",],
+    srcs=[
+        "filter-test.cc",
+    ],
     deps=[
         ":core",
         "//if:if",
@@ -131,17 +143,27 @@ cxx_test(
     run_test_separately=True,)
 cxx_test(
     name="get-test",
-    srcs=["get-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "get-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="put-test",
-    srcs=["put-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "put-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="retry-test",
-    srcs=["async-rpc-retrying-test.cc",],
+    srcs=[
+        "async-rpc-retrying-test.cc",
+    ],
     deps=[
         ":core",
         "//test-util:test-util",
@@ -150,32 +172,54 @@ cxx_test(
     run_test_separately=True,)
 cxx_test(
     name="time-range-test",
-    srcs=["time-range-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "time-range-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="configuration-test",
-    srcs=["configuration-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "configuration-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="hbase-configuration-test",
-    srcs=["hbase-configuration-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "hbase-configuration-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="scan-test",
-    srcs=["scan-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "scan-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="result-test",
-    srcs=["result-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "result-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="request-converter-test",
-    srcs=["request-converter-test.cc",],
+    srcs=[
+        "request-converter-test.cc",
+    ],
     deps=[
         ":core",
         "//connection:connection",
@@ -184,7 +228,9 @@ cxx_test(
     run_test_separately=True,)
 cxx_test(
     name="client-test",
-    srcs=["client-test.cc",],
+    srcs=[
+        "client-test.cc",
+    ],
     deps=[
         ":core",
         "//if:if",
@@ -194,10 +240,16 @@ cxx_test(
     run_test_separately=True,)
 cxx_test(
     name="zk-util-test",
-    srcs=["zk-util-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "zk-util-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_binary(
     name="simple-client",
-    srcs=["simple-client.cc",],
+    srcs=[
+        "simple-client.cc",
+    ],
     deps=[":core", "//connection:connection"],)

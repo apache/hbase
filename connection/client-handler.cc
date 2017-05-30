@@ -128,11 +128,9 @@ Future<Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
   // We need to send the header once.
   // So use call_once to make sure that only one thread wins this.
   std::call_once((*once_flag_), [ctx, this]() {
-    VLOG(3) << "Writing RPC connection Preamble and Header to server: " << server_;
-    auto pre = serde_.Preamble();
+    VLOG(3) << "Writing RPC Header to server: " << server_;
     auto header = serde_.Header(user_name_);
-    pre->appendChain(std::move(header));
-    ctx->fireWrite(std::move(pre));
+    ctx->fireWrite(std::move(header));
   });
 
   VLOG(3) << "Writing RPC Request with call_id:"

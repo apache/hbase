@@ -46,7 +46,7 @@ namespace hbase {
 class RpcClient {
  public:
   RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor, std::shared_ptr<Codec> codec,
-            nanoseconds connect_timeout = nanoseconds(0));
+            std::shared_ptr<Configuration> conf, nanoseconds connect_timeout = nanoseconds(0));
 
   virtual ~RpcClient() { Close(); }
 
@@ -78,5 +78,6 @@ class RpcClient {
  private:
   std::shared_ptr<ConnectionPool> cp_;
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
+  std::shared_ptr<Configuration> conf_;
 };
 }  // namespace hbase

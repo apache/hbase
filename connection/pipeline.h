@@ -25,6 +25,7 @@
 
 #include "connection/request.h"
 #include "connection/response.h"
+#include "core/configuration.h"
 #include "serde/codec.h"
 #include "utils/user-util.h"
 
@@ -41,7 +42,7 @@ class RpcPipelineFactory : public wangle::PipelineFactory<SerializePipeline> {
   /**
    * Constructor. This will create user util.
    */
-  explicit RpcPipelineFactory(std::shared_ptr<Codec> codec);
+  explicit RpcPipelineFactory(std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf);
 
   /**
    * Create a new pipeline.
@@ -57,5 +58,6 @@ class RpcPipelineFactory : public wangle::PipelineFactory<SerializePipeline> {
  private:
   UserUtil user_util_;
   std::shared_ptr<Codec> codec_;
+  std::shared_ptr<Configuration> conf_;
 };
 }  // namespace hbase
