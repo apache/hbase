@@ -250,7 +250,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // The reference to the priority extraction function
   private final PriorityFunction priority;
 
-  private final AtomicLong scannerIdGen = new AtomicLong(0L);
+  private ScannerIdGenerator scannerIdGenerator;
   private final ConcurrentMap<String, RegionScannerHolder> scanners = new ConcurrentHashMap<>();
   // Hold the name of a closed scanner for a while. This is used to keep compatible for old clients
   // which may send next or close request to a region scanner which has already been exhausted. The
@@ -1170,6 +1170,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   void start() {
+    this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
     rpcServer.start();
   }
 
@@ -2502,7 +2503,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (region.getCoprocessorHost() != null) {
       scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
     }
-    long scannerId = this.scannerIdGen.incrementAndGet();
+    long scannerId = scannerIdGenerator.generateNewScannerId();
     builder.setScannerId(scannerId);
     builder.setTtl(scannerLeaseTimeoutPeriod);
     String scannerName = String.valueOf(scannerId);
