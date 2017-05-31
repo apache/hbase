@@ -22,6 +22,7 @@
 #include "core/cell.h"
 #include "core/client.h"
 #include "core/configuration.h"
+#include "core/delete.h"
 #include "core/get.h"
 #include "core/hbase-configuration-loader.h"
 #include "core/put.h"
@@ -115,6 +116,75 @@ TEST_F(ClientTest, DefaultConfiguration) {
   client.Close();
 }
 
+TEST_F(ClientTest, PutGetDelete) {
+  // Using TestUtil to populate test data
+  std::string tableName = "t1";
+  ClientTest::test_util->CreateTable(tableName, "d");
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>(tableName);
+  auto row = "test1";
+
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+
+  // Get connection to HBase Table
+  auto table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  // Perform Puts
+  std::string valExtra = "value for extra";
+  std::string valExt = "value for ext";
+  table->Put(Put{row}.AddColumn("d", "1", "value1"));
+  // Put two values for column "extra"
+  table->Put(Put{row}.AddColumn("d", "extra", "1st val extra"));
+  table->Put(Put{row}.AddColumn("d", "extra", valExtra));
+  table->Put(Put{row}.AddColumn("d", "ext", valExt));
+
+  // Perform the Get
+  hbase::Get get(row);
+  auto result = table->Get(get);
+
+  // Test the values, should be same as in put executed on hbase shell
+  ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
+  EXPECT_EQ("test1", result->Row());
+  EXPECT_EQ("value1", *(result->Value("d", "1")));
+  EXPECT_EQ(valExtra, *(result->Value("d", "extra")));
+  auto cell = *(result->ColumnCells("d", "extra"))[0];
+  auto tsExtra = cell.Timestamp();
+
+  // delete column "1"
+  table->Delete(hbase::Delete{row}.AddColumn("d", "1"));
+  result = table->Get(get);
+  ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
+  ASSERT_TRUE(result->Value("d", "1") == nullptr) << "Column 1 should be gone";
+  EXPECT_EQ(valExtra, *(result->Value("d", "extra")));
+
+  // delete cell from column "extra" with timestamp tsExtra
+  table->Delete(hbase::Delete{row}.AddColumn("d", "extra", tsExtra));
+  result = table->Get(get);
+  ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
+  ASSERT_TRUE(result->Value("d", "1") == nullptr) << "Column 1 should be gone";
+  ASSERT_TRUE(result->Value("d", "extra") != nullptr) << "Column extra should have value";
+  EXPECT_EQ(valExt, *(result->Value("d", "ext"))) << "Column ext should have value";
+
+  // delete all cells from "extra" column
+  table->Delete(hbase::Delete{row}.AddColumns("d", "extra"));
+  result = table->Get(get);
+  ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
+  ASSERT_TRUE(result->Value("d", "1") == nullptr) << "Column 1 should be gone";
+  ASSERT_TRUE(result->Value("d", "extra") == nullptr) << "Column extra should be gone";
+  EXPECT_EQ(valExt, *(result->Value("d", "ext"))) << "Column ext should have value";
+
+  // Delete the row and verify that subsequent Get returns nothing
+  table->Delete(hbase::Delete{row}.AddFamily("d"));
+  result = table->Get(get);
+  ASSERT_TRUE(result->IsEmpty()) << "Result should be empty.";
+
+  table->Close();
+  client.Close();
+}
+
 TEST_F(ClientTest, PutGet) {
   // Using TestUtil to populate test data
   ClientTest::test_util->CreateTable("t", "d");
@@ -147,7 +217,6 @@ TEST_F(ClientTest, PutGet) {
   table->Close();
   client.Close();
 }
-
 TEST_F(ClientTest, GetForNonExistentTable) {
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t_not_exists");

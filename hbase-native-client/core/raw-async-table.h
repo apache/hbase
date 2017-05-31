@@ -29,6 +29,7 @@
 #include "core/async-rpc-retrying-caller-factory.h"
 #include "core/async-rpc-retrying-caller.h"
 #include "core/connection-configuration.h"
+#include "core/delete.h"
 #include "core/get.h"
 #include "core/put.h"
 #include "core/result.h"
@@ -51,6 +52,7 @@ class RawAsyncTable {
 
   folly::Future<std::shared_ptr<Result>> Get(const hbase::Get& get);
 
+	folly::Future<folly::Unit> Delete(const hbase::Delete& del);
   folly::Future<folly::Unit> Put(const hbase::Put& put);
   void Close() {}
 

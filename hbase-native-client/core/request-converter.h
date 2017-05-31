@@ -25,6 +25,7 @@
 #include "connection/request.h"
 #include "core/action.h"
 #include "core/cell.h"
+#include "core/delete.h"
 #include "core/get.h"
 #include "core/mutation.h"
 #include "core/put.h"
@@ -65,6 +66,8 @@ class RequestConverter {
   static std::unique_ptr<Request> ToScanRequest(const Scan &scan, const std::string &region_name);
 
   static std::unique_ptr<Request> ToMultiRequest(const ActionsByRegion &region_requests);
+
+  static std::unique_ptr<Request> DeleteToMutateRequest(const Delete &del,const std::string &region_name);
 
   static std::unique_ptr<Request> ToMutateRequest(const Put &put, const std::string &region_name);
 
