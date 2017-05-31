@@ -35,6 +35,7 @@ module Hbase
       @connection = connection
       # Java Admin instance
       @admin = @connection.getAdmin
+      @conf = @connection.getConfiguration
     end
 
     def close
@@ -515,14 +516,15 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
-    def truncate_preserve(table_name_str)
+    def truncate_preserve(table_name_str, conf = @conf)
       puts "Truncating '#{table_name_str}' table (it may take a while):"
       table_name = TableName.valueOf(table_name_str)
       locator = @connection.getRegionLocator(table_name)
       begin
         splits = locator.getAllRegionLocations().
-            map{|i| Bytes.toString(i.getRegionInfo().getStartKey)}.
+            map{|i| Bytes.toStringBinary(i.getRegionInfo().getStartKey)}.
             delete_if{|k| k == ""}.to_java :String
+        splits = org.apache.hadoop.hbase.util.Bytes.toBinaryByteArrays(splits)
       ensure
         locator.close()
       end
@@ -533,6 +535,10 @@ module Hbase
 
       begin
         puts 'Truncating table...'
+        #just for test
+        unless conf.getBoolean("hbase.client.truncatetable.support", true)
+          raise UnsupportedMethodException.new('truncateTable')
+        end
         @admin.truncateTable(table_name, true)
       rescue => e
         # Handle the compatibility case, where the truncate method doesn't exists on the Master
@@ -548,6 +554,16 @@ module Hbase
         else
           raise e
         end
+      end
+    end
+
+    class UnsupportedMethodException < StandardError
+      def initialize(name)
+        @method_name = name
+      end
+
+      def cause
+        return org.apache.hadoop.hbase.DoNotRetryIOException.new("#@method_name is not support")
       end
     end
 

@@ -272,6 +272,23 @@ module Hbase
       output = capture_stdout { command(:truncate, @test_name) }
       assert(!output.empty?)
     end
+
+    define_test "truncate_preserve should maintain the previous region boundaries" do
+      drop_test_table(@create_test_name)
+      admin.create(@create_test_name, 'a', {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
+      splits = table(@create_test_name)._get_splits_internal()
+      command(:truncate_preserve, @create_test_name)
+      assert_equal(splits, table(@create_test_name)._get_splits_internal())
+    end
+
+    define_test "truncate_preserve should be fine when truncateTable method doesn't support" do
+      drop_test_table(@create_test_name)
+      admin.create(@create_test_name, 'a', {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
+      splits = table(@create_test_name)._get_splits_internal()
+      $TEST_CLUSTER.getConfiguration.setBoolean("hbase.client.truncatetable.support", false)
+      admin.truncate_preserve(@create_test_name, $TEST_CLUSTER.getConfiguration)
+      assert_equal(splits, table(@create_test_name)._get_splits_internal())
+    end
   end
 
   # Simple administration methods tests
