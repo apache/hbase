@@ -281,6 +281,22 @@ module Hbase
       assert(!output.empty?)
     end
 
+    #-------------------------------------------------------------------------------
+
+    define_test "truncate_preserve should empty a table" do
+      table(@test_name).put(1, "x:a", 1)
+      table(@test_name).put(2, "x:a", 2)
+      assert_equal(2, table(@test_name)._count_internal)
+      # This is hacky.  Need to get the configuration into admin instance
+      command(:truncate_preserve, @test_name)
+      assert_equal(0, table(@test_name)._count_internal)
+    end
+
+    define_test "truncate_preserve should yield log records" do
+      output = capture_stdout { command(:truncate_preserve, @test_name) }
+      assert(!output.empty?)
+    end
+
     define_test "truncate_preserve should maintain the previous region boundaries" do
       drop_test_table(@create_test_name)
       admin.create(@create_test_name, 'a', {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
