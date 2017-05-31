@@ -230,7 +230,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // The reference to the priority extraction function
   private final PriorityFunction priority;
 
-  private final AtomicLong scannerIdGen = new AtomicLong(0L);
+  private ScannerIdGenerator scannerIdGenerator;
   private final ConcurrentHashMap<String, RegionScannerHolder> scanners =
     new ConcurrentHashMap<String, RegionScannerHolder>();
 
@@ -1022,7 +1022,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   long addScanner(RegionScanner s, Region r) throws LeaseStillHeldException {
-    long scannerId = this.scannerIdGen.incrementAndGet();
+    long scannerId = this.scannerIdGenerator.generateNewScannerId();
     String scannerName = String.valueOf(scannerId);
 
     RegionScannerHolder existing =
@@ -1088,6 +1088,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   void start() {
+    this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
     rpcServer.start();
   }
 
