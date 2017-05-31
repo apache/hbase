@@ -144,7 +144,7 @@ class AsyncRpcRetryingCallerFactory {
 
   public class ScanSingleRegionCallerBuilder extends BuilderBase {
 
-    private long scannerId = -1L;
+    private Long scannerId = null;
 
     private Scan scan;
 
@@ -238,7 +238,7 @@ class AsyncRpcRetryingCallerFactory {
     }
 
     public AsyncScanSingleRegionRpcRetryingCaller build() {
-      checkArgument(scannerId >= 0, "invalid scannerId %d", scannerId);
+      checkArgument(scannerId != null, "invalid scannerId %d", scannerId);
       return new AsyncScanSingleRegionRpcRetryingCaller(retryTimer, conn,
           checkNotNull(scan, "scan is null"), scanMetrics, scannerId,
           checkNotNull(resultCache, "resultCache is null"),
