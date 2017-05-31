@@ -1964,6 +1964,51 @@ In these cases, the user may configure the system to not delete any space quota 
   </property>
 ----
 
+=== HBase Snapshots with Space Quotas
+
+One common area of unintended-filesystem-use with HBase is via HBase snapshots. Because snapshots
+exist outside of the management of HBase tables, it is not uncommon for administrators to suddenly
+realize that hundreds of gigabytes or terabytes of space is being used by HBase snapshots which were
+forgotten and never removed.
+
+link:https://issues.apache.org/jira/browse/HBASE-17748[HBASE-17748] is the umbrella JIRA issue which
+expands on the original space quota functionality to also include HBase snapshots. While this is a confusing
+subject, the implementation attempts to present this support in as reasonable and simple of a manner as
+possible for administrators. This feature does not make any changes to administrator interaction with
+space quotas, only in the internal computation of table/namespace usage. Table and namespace usage will
+automatically incorporate the size taken by a snapshot per the rules defined below.
+
+As a review, let's cover a snapshot's lifecycle: a snapshot is metadata which points to
+a list of HFiles on the filesystem. This is why creating a snapshot is a very cheap operation; no HBase
+table data is actually copied to perform a snapshot. Cloning a snapshot into a new table or restoring
+a table is a cheap operation for the same reason; the new table references the files which already exist
+on the filesystem without a copy. To include snapshots in space quotas, we need to define which table
+"owns" a file when a snapshot references the file ("owns" refers to encompassing the filesystem usage
+of that file).
+
+Consider a snapshot which was made against a table. When the snapshot refers to a file and the table no
+longer refers to that file, the "originating" table "owns" that file. When multiple snapshots refer to
+the same file and no table refers to that file, the snapshot with the lowest-sorting name (lexicographically)
+is chosen and the table which that snapshot was created from "owns" that file. HFiles are not "double-counted"
+ hen a table and one or more snapshots refer to that HFile.
+
+When a table is "rematerialized" (via `clone_snapshot` or `restore_snapshot`), a similar problem of file
+ownership arises. In this case, while the rematerialized table references a file which a snapshot also
+references, the table does not "own" the file. The table from which the snapshot was created still "owns"
+that file. When the rematerialized table is compacted or the snapshot is deleted, the rematerialized table
+will uniquely refer to a new file and "own" the usage of that file. Similarly, when a table is duplicated via a snapshot
+and `restore_snapshot`, the new table will not consume any quota size until the original table stops referring
+to the files, either due to a compaction on the original table, a compaction on the new table, or the
+original table being deleted.
+
+One new HBase shell command was added to inspect the computed sizes of each snapshot in an HBase instance.
+
+----
+hbase> list_snapshot_sizes
+SNAPSHOT                                      SIZE
+ t1.s1                                        1159108
+----
+
 [[ops.backup]]
 == HBase Backup
 
