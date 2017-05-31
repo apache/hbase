@@ -1,5 +1,5 @@
 /**
-q *
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,15 +49,13 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
+import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Matchers.argThat;
-import static org.mockito.Mockito.never;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
 @Category({MediumTests.class})
@@ -113,13 +111,73 @@ public class TestCanaryTool {
       table.put(p);
     }
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
-    Canary.RegionServerStdOutSink sink = spy(new Canary.RegionServerStdOutSink());
+    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
     Canary canary = new Canary(executor, sink);
     String[] args = { "-writeSniffing", "-t", "10000", "testTable" };
     ToolRunner.run(testingUtility.getConfiguration(), canary, args);
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
     assertEquals("verify no write error count", 0, canary.getWriteFailures().size());
     verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+  }
+
+  @Test
+  public void testReadTableTimeouts() throws Exception {
+    final TableName [] tableNames = new TableName[2];
+    tableNames[0] = TableName.valueOf("testReadTableTimeouts1");
+    tableNames[1] = TableName.valueOf("testReadTableTimeouts2");
+    // Create 2 test tables.
+    for (int j = 0; j<2; j++) {
+      Table table = testingUtility.createTable(tableNames[j], new byte[][] { FAMILY });
+      // insert some test rows
+      for (int i=0; i<1000; i++) {
+        byte[] iBytes = Bytes.toBytes(i + j);
+        Put p = new Put(iBytes);
+        p.addColumn(FAMILY, COLUMN, iBytes);
+        table.put(p);
+      }
+    }
+    ExecutorService executor = new ScheduledThreadPoolExecutor(1);
+    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
+    Canary canary = new Canary(executor, sink);
+    String configuredTimeoutStr = tableNames[0].getNameAsString() + "=" + Long.MAX_VALUE + "," +
+      tableNames[1].getNameAsString() + "=0";
+    String[] args = { "-readTableTimeouts", configuredTimeoutStr, tableNames[0].getNameAsString(), tableNames[1].getNameAsString()};
+    ToolRunner.run(testingUtility.getConfiguration(), canary, args);
+    verify(sink, times(tableNames.length)).initializeAndGetReadLatencyForTable(isA(String.class));
+    for (int i=0; i<2; i++) {
+      assertNotEquals("verify non-null read latency", null, sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
+      assertNotEquals("verify non-zero read latency", 0L, sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
+    }
+    // One table's timeout is set for 0 ms and thus, should lead to an error.
+    verify(mockAppender, times(1)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
+      @Override
+      public boolean matches(Object argument) {
+        return ((LoggingEvent) argument).getRenderedMessage().contains("exceeded the configured read timeout.");
+      }
+    }));
+    verify(mockAppender, times(2)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
+      @Override
+      public boolean matches(Object argument) {
+        return ((LoggingEvent) argument).getRenderedMessage().contains("The configured read timeout was");
+      }
+    }));
+  }
+
+  @Test
+  public void testWriteTableTimeout() throws Exception {
+    ExecutorService executor = new ScheduledThreadPoolExecutor(1);
+    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
+    Canary canary = new Canary(executor, sink);
+    String[] args = { "-writeSniffing", "-writeTableTimeout", String.valueOf(Long.MAX_VALUE)};
+    ToolRunner.run(testingUtility.getConfiguration(), canary, args);
+    assertNotEquals("verify non-null write latency", null, sink.getWriteLatency());
+    assertNotEquals("verify non-zero write latency", 0L, sink.getWriteLatency());
+    verify(mockAppender, times(1)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
+      @Override
+      public boolean matches(Object argument) {
+        return ((LoggingEvent) argument).getRenderedMessage().contains("The configured write timeout was");
+      }
+    }));
   }
 
   //no table created, so there should be no regions
@@ -160,7 +218,7 @@ public class TestCanaryTool {
       table.put(p);
     }
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
-    Canary.RegionServerStdOutSink sink = spy(new Canary.RegionServerStdOutSink());
+    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
     Canary canary = new Canary(executor, sink);
     String[] args = { "-t", "10000", "testTableRawScan" };
     org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
@@ -180,4 +238,3 @@ public class TestCanaryTool {
   }
 
 }
-
