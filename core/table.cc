@@ -57,6 +57,11 @@ void Table::Put(const hbase::Put &put) {
   future.get(operation_timeout());
 }
 
+void Table::Delete(const hbase::Delete &del) {
+  auto future = async_table_->Delete(del);
+  future.get(operation_timeout());
+}
+
 milliseconds Table::operation_timeout() const {
   return TimeUtil::ToMillis(async_connection_->connection_conf()->operation_timeout());
 }

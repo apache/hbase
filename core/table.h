@@ -61,6 +61,12 @@ class Table {
    */
   void Put(const hbase::Put &put);
 
+  /**
+   * @brief - Deletes some data in the table.
+   * @param - del Delete object to perform HBase Delete operation.
+   */
+  void Delete(const hbase::Delete &del);
+
   // TODO: Batch Puts
 
   /**

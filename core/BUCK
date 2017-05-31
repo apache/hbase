@@ -38,6 +38,7 @@ cxx_library(
         "get.h",
         "mutation.h",
         "put.h",
+        "delete.h",
         "scan.h",
         "result.h",
         "request-converter.h",
@@ -68,6 +69,7 @@ cxx_library(
         "get.cc",
         "mutation.cc",
         "put.cc",
+        "delete.cc",
         "scan.cc",
         "raw-async-table.cc",
         "result.cc",
@@ -149,6 +151,11 @@ cxx_test(
     deps=[
         ":core",
     ],
+    run_test_separately=True,)
+cxx_test(
+    name="delete-test",
+    srcs=["delete-test.cc",],
+    deps=[":core",],
     run_test_separately=True,)
 cxx_test(
     name="put-test",
