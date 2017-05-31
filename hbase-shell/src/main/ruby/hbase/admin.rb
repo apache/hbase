@@ -36,6 +36,7 @@ module Hbase
       @connection = connection
       # Java Admin instance
       @admin = @connection.getAdmin
+      @conf = connection.getConfiguration
     end
 
     def close
@@ -482,8 +483,9 @@ module Hbase
       locator = @connection.getRegionLocator(TableName.valueOf(table_name))
       begin
         splits = locator.getAllRegionLocations().
-            map{|i| Bytes.toString(i.getRegionInfo().getStartKey)}.
+            map{|i| Bytes.toStringBinary(i.getRegionInfo().getStartKey)}.
             delete_if{|k| k == ""}.to_java :String
+        splits = org.apache.hadoop.hbase.util.Bytes.toBinaryByteArrays(splits)
       ensure
         locator.close()
       end
@@ -494,6 +496,10 @@ module Hbase
 
       begin
         yield 'Truncating table...' if block_given?
+        #just for test
+        unless conf.getBoolean("hbase.client.truncatetable.support", true)
+          raise UnsupportedMethodException.new('truncateTable')
+        end
         @admin.truncateTable(org.apache.hadoop.hbase.TableName.valueOf(table_name), true)
       rescue => e
         # Handle the compatibility case, where the truncate method doesn't exists on the Master
@@ -509,6 +515,15 @@ module Hbase
         else
           raise e
         end
+      end
+    end
+
+    class UnsupportedMethodException < StandardError
+      def initialize(name)
+        @method_name = name
+      end
+      def cause
+        return org.apache.hadoop.hbase.DoNotRetryIOException.new("#@method_name is not support")
       end
     end
 
