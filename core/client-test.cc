@@ -139,6 +139,7 @@ TEST_F(ClientTest, PutGetDelete) {
   // Put two values for column "extra"
   table->Put(Put{row}.AddColumn("d", "extra", "1st val extra"));
   table->Put(Put{row}.AddColumn("d", "extra", valExtra));
+  usleep(1000);
   table->Put(Put{row}.AddColumn("d", "ext", valExt));
 
   // Perform the Get
