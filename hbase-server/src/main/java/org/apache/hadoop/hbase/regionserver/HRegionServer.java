@@ -26,6 +26,7 @@ import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -150,6 +151,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.security.Superusers;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -1945,18 +1947,32 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public void stop(final String msg) {
+    stop(msg, false);
+  }
+
+  /**
+   * Stops the regionserver.
+   * @param msg Status message
+   * @param force True if this is a regionserver abort
+   */
+  public void stop(final String msg, final boolean force) {
     if (!this.stopped) {
-      try {
-        if (this.rsHost != null) {
+      if (this.rsHost != null) {
+        // when forced via abort don't allow CPs to override
+        try {
           this.rsHost.preStop(msg);
+        } catch (IOException ioe) {
+          if (!force) {
+            LOG.warn("The region server did not stop", ioe);
+            return;
+          }
+          LOG.warn("Skipping coprocessor exception on preStop() due to forced shutdown", ioe);
         }
-        this.stopped = true;
-        LOG.info("STOPPED: " + msg);
-        // Wakes run() if it is sleeping
-        sleeper.skipSleepCycle();
-      } catch (IOException exp) {
-        LOG.warn("The region server did not stop", exp);
       }
+      this.stopped = true;
+      LOG.info("STOPPED: " + msg);
+      // Wakes run() if it is sleeping
+      sleeper.skipSleepCycle();
     }
   }
 
@@ -2123,7 +2139,7 @@ public class HRegionServer extends HasThread implements
    *          the exception that caused the abort, or null
    */
   @Override
-  public void abort(String reason, Throwable cause) {
+  public void abort(final String reason, Throwable cause) {
     String msg = "ABORTING region server " + this + ": " + reason;
     if (cause != null) {
       LOG.fatal(msg, cause);
@@ -2161,7 +2177,21 @@ public class HRegionServer extends HasThread implements
     } catch (Throwable t) {
       LOG.warn("Unable to report fatal error to master", t);
     }
-    stop(reason);
+    // shutdown should be run as the internal user
+    if (User.isHBaseSecurityEnabled(conf)) {
+      try {
+        User.runAsLoginUser(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            stop(reason, true);
+            return null;
+          }
+        });
+      } catch (IOException neverThrown) {
+      }
+    } else {
+      stop(reason, true);
+    }
   }
 
   /**
