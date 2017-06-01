@@ -166,7 +166,7 @@ public class HFileOutputFormat2
     /**
      * Mapredue job will create a temp path for outputting results. If out != null, it means that
      * the caller has set the temp working dir; If out == null, it means we need to set it here.
-     * Used by HFileOutputFormat2 and MultiHFileOutputFormat. MultiHFileOutputFormat will give us
+     * Used by HFileOutputFormat2 and MultiTableHFileOutputFormat. MultiTableHFileOutputFormat will give us
      * temp working dir at the table level and HFileOutputFormat2 has to set it here within this
      * constructor.
      */
