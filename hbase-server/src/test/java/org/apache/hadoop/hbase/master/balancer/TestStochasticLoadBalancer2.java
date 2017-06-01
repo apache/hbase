@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category({FlakeyTests.class, MediumTests.class})
@@ -66,7 +67,7 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
-  @Test (timeout = 800000)
+  @Ignore @Test (timeout = 800000)
   public void testRegionReplicasOnMidClusterHighReplication() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 4000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec

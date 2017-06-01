@@ -37,8 +37,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -118,14 +119,14 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     LinkedList<HRegionInfo> regions = new LinkedList<>();
     for (Map.Entry<HRegionInfo, ServerName> el :
         master.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
+      if (el.getValue() == null) continue;
       if (el.getValue().getAddress().equals(server)) {
         addRegion(regions, el.getKey());
       }
     }
-    for (RegionState state:
-        this.master.getAssignmentManager().getRegionStates().getRegionsInTransition()) {
-      if (state.getServerName().getAddress().equals(server)) {
-        addRegion(regions, state.getRegion());
+    for (RegionStateNode state : master.getAssignmentManager().getRegionsInTransition()) {
+      if (state.getRegionLocation().getAddress().equals(server)) {
+        addRegion(regions, state.getRegionInfo());
       }
     }
     return regions;
@@ -534,7 +535,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         LOG.info("RSGroup balance " + groupName + " starting with plan count: " + plans.size());
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
-          assignmentManager.balance(plan);
+          assignmentManager.moveAsync(plan);
         }
         LOG.info("RSGroup balance " + groupName + " completed after " +
             (System.currentTimeMillis()-startTime) + " seconds");

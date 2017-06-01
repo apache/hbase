@@ -17,37 +17,35 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import java.io.IOException;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestSplitOrMergeStatus {
 
-  private static final Log LOG = LogFactory.getLog(TestSplitOrMergeStatus.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
 
@@ -77,7 +75,7 @@ public class TestSplitOrMergeStatus {
     TEST_UTIL.loadTable(t, FAMILY, false);
 
     RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(t.getName());
-    int orignalCount = locator.getAllRegionLocations().size();
+    int originalCount = locator.getAllRegionLocations().size();
 
     Admin admin = TEST_UTIL.getAdmin();
     initSwitchStatus(admin);
@@ -85,51 +83,64 @@ public class TestSplitOrMergeStatus {
     assertEquals(results.length, 1);
     assertTrue(results[0]);
     admin.split(t.getName());
-    int count = waitOnSplitOrMerge(t).size();
-    assertTrue(orignalCount == count);
+    int count = admin.getTableRegions(tableName).size();
+    assertTrue(originalCount == count);
     results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.SPLIT);
     assertEquals(results.length, 1);
     assertFalse(results[0]);
     admin.split(t.getName());
-    count = waitOnSplitOrMerge(t).size();
-    assertTrue(orignalCount<count);
+    while ((count = admin.getTableRegions(tableName).size()) == originalCount) {
+      Threads.sleep(1);;
+    }
+    count = admin.getTableRegions(tableName).size();
+    assertTrue(originalCount < count);
     admin.close();
   }
 
 
-  @Test
+  @Ignore @Test
   public void testMergeSwitch() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Table t = TEST_UTIL.createTable(tableName, FAMILY);
     TEST_UTIL.loadTable(t, FAMILY, false);
 
-    RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(t.getName());
-
     Admin admin = TEST_UTIL.getAdmin();
+    int originalCount = admin.getTableRegions(tableName).size();
     initSwitchStatus(admin);
     admin.split(t.getName());
-    waitOnSplitOrMerge(t); //Split the table to ensure we have two regions at least.
+    int postSplitCount = -1;
+    while ((postSplitCount = admin.getTableRegions(tableName).size()) == originalCount) {
+      Threads.sleep(1);;
+    }
+    assertTrue("originalCount=" + originalCount + ", newCount=" + postSplitCount,
+        originalCount != postSplitCount);
 
-    waitForMergable(admin, tableName);
-    int orignalCount = locator.getAllRegionLocations().size();
+    // Merge switch is off so merge should NOT succeed.
     boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.MERGE);
     assertEquals(results.length, 1);
     assertTrue(results[0]);
     List<HRegionInfo> regions = admin.getTableRegions(t.getName());
     assertTrue(regions.size() > 1);
-    admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
+    Future<?> f = admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
       regions.get(1).getEncodedNameAsBytes(), true);
-    int count = waitOnSplitOrMerge(t).size();
-    assertTrue(orignalCount == count);
+    try {
+      f.get(10, TimeUnit.SECONDS);
+      fail("Should not get here.");
+    } catch (ExecutionException ee) {
+      // Expected.
+    }
+    int count = admin.getTableRegions(tableName).size();
+    assertTrue("newCount=" + postSplitCount + ", count=" + count, postSplitCount == count);
 
-    waitForMergable(admin, tableName);
     results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.MERGE);
+    regions = admin.getTableRegions(t.getName());
     assertEquals(results.length, 1);
     assertFalse(results[0]);
-    admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
+    f = admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
       regions.get(1).getEncodedNameAsBytes(), true);
-    count = waitOnSplitOrMerge(t).size();
-    assertTrue(orignalCount>count);
+    f.get(10, TimeUnit.SECONDS);
+    count = admin.getTableRegions(tableName).size();
+    assertTrue((postSplitCount / 2 /*Merge*/) == count);
     admin.close();
   }
 
@@ -156,47 +167,4 @@ public class TestSplitOrMergeStatus {
     assertTrue(admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT));
     assertTrue(admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE));
   }
-
-  private void waitForMergable(Admin admin, TableName t) throws InterruptedException, IOException {
-    // Wait for the Regions to be mergeable
-    MiniHBaseCluster miniCluster = TEST_UTIL.getMiniHBaseCluster();
-    int mergeable = 0;
-    while (mergeable < 2) {
-      Thread.sleep(100);
-      admin.majorCompact(t);
-      mergeable = 0;
-      for (JVMClusterUtil.RegionServerThread regionThread: miniCluster.getRegionServerThreads()) {
-        for (Region region: regionThread.getRegionServer().getOnlineRegions(t)) {
-          mergeable += ((HRegion)region).isMergeable() ? 1 : 0;
-        }
-      }
-    }
-  }
-
-  /*
-   * Wait on table split.  May return because we waited long enough on the split
-   * and it didn't happen.  Caller should check.
-   * @param t
-   * @return Map of table regions; caller needs to check table actually split.
-   */
-  private List<HRegionLocation> waitOnSplitOrMerge(final Table t)
-    throws IOException {
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(t.getName())) {
-      List<HRegionLocation> regions = locator.getAllRegionLocations();
-      int originalCount = regions.size();
-      for (int i = 0; i < TEST_UTIL.getConfiguration().getInt("hbase.test.retries", 10); i++) {
-        Thread.currentThread();
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-        regions = locator.getAllRegionLocations();
-        if (regions.size() !=  originalCount)
-          break;
-      }
-      return regions;
-    }
-  }
-
 }

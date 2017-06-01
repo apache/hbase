@@ -35,9 +35,7 @@ public final class VersionInfoUtil {
   }
 
   public static boolean currentClientHasMinimumVersion(int major, int minor) {
-    RpcCallContext call = RpcServer.getCurrentCall();
-    HBaseProtos.VersionInfo versionInfo = call != null ? call.getClientVersionInfo() : null;
-    return hasMinimumVersion(versionInfo, major, minor);
+    return hasMinimumVersion(getCurrentClientVersionInfo(), major, minor);
   }
 
   public static boolean hasMinimumVersion(HBaseProtos.VersionInfo versionInfo,
@@ -53,7 +51,7 @@ public final class VersionInfoUtil {
         return clientMinor >= minor;
       }
       try {
-        String[] components = versionInfo.getVersion().split("\\.");
+        final String[] components = getVersionComponents(versionInfo);
 
         int clientMajor = components.length > 0 ? Integer.parseInt(components[0]) : 0;
         if (clientMajor != major) {
@@ -67,5 +65,80 @@ public final class VersionInfoUtil {
       }
     }
     return false;
+  }
+
+  /**
+   * @return the versionInfo extracted from the current RpcCallContext
+   */
+  private static HBaseProtos.VersionInfo getCurrentClientVersionInfo() {
+    RpcCallContext call = RpcServer.getCurrentCall();
+    return call != null ? call.getClientVersionInfo() : null;
+  }
+
+  /**
+   * @return the version number extracted from the current RpcCallContext as int.
+   *         (e.g. 0x0103004 is 1.3.4)
+   */
+  public static int getCurrentClientVersionNumber() {
+    return getVersionNumber(getCurrentClientVersionInfo());
+  }
+
+
+  /**
+   * @param version
+   * @return the passed-in <code>version</code> int as a version String
+   *         (e.g. 0x0103004 is 1.3.4)
+   */
+  public static String versionNumberToString(final int version) {
+    return String.format("%d.%d.%d",
+        ((version >> 20) & 0xff),
+        ((version >> 12) & 0xff),
+        (version & 0xfff));
+  }
+
+  /**
+   * Pack the full number version in a int. by shifting each component by 8bit,
+   * except the dot release which has 12bit.
+   * Examples: (1.3.4 is 0x0103004, 2.1.0 is 0x0201000)
+   * @param versionInfo the VersionInfo object to pack
+   * @return the version number as int. (e.g. 0x0103004 is 1.3.4)
+   */
+  private static int getVersionNumber(final HBaseProtos.VersionInfo versionInfo) {
+    if (versionInfo != null) {
+      try {
+        final String[] components = getVersionComponents(versionInfo);
+        int clientMajor = components.length > 0 ? Integer.parseInt(components[0]) : 0;
+        int clientMinor = components.length > 1 ? Integer.parseInt(components[1]) : 0;
+        int clientPatch = components.length > 2 ? Integer.parseInt(components[2]) : 0;
+        return buildVersionNumber(clientMajor, clientMinor, clientPatch);
+      } catch (NumberFormatException e) {
+        int clientMajor = versionInfo.hasVersionMajor() ? versionInfo.getVersionMajor() : 0;
+        int clientMinor = versionInfo.hasVersionMinor() ? versionInfo.getVersionMinor() : 0;
+        return buildVersionNumber(clientMajor, clientMinor, 0);
+      }
+    }
+    return(0); // no version
+  }
+
+  /**
+   * Pack the full number version in a int. by shifting each component by 8bit,
+   * except the dot release which has 12bit.
+   * Examples: (1.3.4 is 0x0103004, 2.1.0 is 0x0201000)
+   * @param major version major number
+   * @param minor version minor number
+   * @param patch version patch number
+   * @return the version number as int. (e.g. 0x0103004 is 1.3.4)
+   */
+  private static int buildVersionNumber(int major, int minor, int patch) {
+    return (major << 20) | (minor << 12) | patch;
+  }
+
+  /**
+   * Returns the version components
+   * Examples: "1.2.3" returns [1, 2, 3], "4.5.6-SNAPSHOT" returns [4, 5, 6, "SNAPSHOT"]
+   * @returns the components of the version string
+   */
+  private static String[] getVersionComponents(final HBaseProtos.VersionInfo versionInfo) {
+    return versionInfo.getVersion().split("[\\.-]");
   }
 }

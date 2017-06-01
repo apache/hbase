@@ -35,7 +35,7 @@ import org.apache.zookeeper.KeeperException;
 
 public class SimpleMasterProcedureManager extends MasterProcedureManager {
 
-  public static final String SIMPLE_SIGNATURE = "simle_test";
+  public static final String SIMPLE_SIGNATURE = "simple_test";
   public static final String SIMPLE_DATA = "simple_test_data";
 
   private static final Log LOG = LogFactory.getLog(SimpleMasterProcedureManager.class);

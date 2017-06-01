@@ -357,7 +357,7 @@ public final class SnapshotProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -373,7 +373,7 @@ public final class SnapshotProtos {
         getNameBytes() {
       java.lang.Object ref = name_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         name_ = b;
@@ -407,7 +407,7 @@ public final class SnapshotProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -427,7 +427,7 @@ public final class SnapshotProtos {
         getTableBytes() {
       java.lang.Object ref = table_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         table_ = b;
@@ -499,7 +499,7 @@ public final class SnapshotProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -515,7 +515,7 @@ public final class SnapshotProtos {
         getOwnerBytes() {
       java.lang.Object ref = owner_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         owner_ = b;
@@ -1047,7 +1047,7 @@ public final class SnapshotProtos {
           getNameBytes() {
         java.lang.Object ref = name_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           name_ = b;
@@ -1135,7 +1135,7 @@ public final class SnapshotProtos {
           getTableBytes() {
         java.lang.Object ref = table_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           table_ = b;
@@ -1323,7 +1323,7 @@ public final class SnapshotProtos {
           getOwnerBytes() {
         java.lang.Object ref = owner_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           owner_ = b;
@@ -1473,7 +1473,7 @@ public final class SnapshotProtos {
        * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder> 
           getUsersAndPermissionsFieldBuilder() {
         if (usersAndPermissionsBuilder_ == null) {
           usersAndPermissionsBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -6366,7 +6366,7 @@ public final class SnapshotProtos {
 
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SnapshotDescription_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor

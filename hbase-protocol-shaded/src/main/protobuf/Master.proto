@@ -81,6 +81,21 @@ message MoveRegionRequest {
 message MoveRegionResponse {
 }
 
+ /**
+ * Dispatch merging the specified regions.
+ */
+message DispatchMergingRegionsRequest {
+  required RegionSpecifier region_a = 1;
+  required RegionSpecifier region_b = 2;
+  optional bool forcible = 3 [default = false];
+  optional uint64 nonce_group = 4 [default = 0];
+  optional uint64 nonce = 5 [default = 0];
+}
+
+message DispatchMergingRegionsResponse {
+  optional uint64 proc_id = 1;
+}
+
 /**
  * Merging the specified regions in a table.
  */
@@ -118,6 +133,17 @@ message OfflineRegionResponse {
 }
 
 /* Table-level protobufs */
+
+message SplitTableRegionRequest {
+  required RegionInfo region_info = 1;
+  required bytes split_row = 2;
+  optional uint64 nonce_group = 3 [default = 0];
+  optional uint64 nonce = 4 [default = 0];
+}
+
+message SplitTableRegionResponse {
+  optional uint64 proc_id = 1;
+}
 
 message CreateTableRequest {
   required TableSchema table_schema = 1;
@@ -340,6 +366,7 @@ message RunCatalogScanRequest {
 }
 
 message RunCatalogScanResponse {
+  // This is how many archiving tasks we started as a result of this scan.
   optional int32 scan_result = 1;
 }
 
@@ -640,6 +667,10 @@ service MasterService {
   rpc ModifyColumn(ModifyColumnRequest)
     returns(ModifyColumnResponse);
 
+ /** Master dispatch merging the regions */
+  rpc DispatchMergingRegions(DispatchMergingRegionsRequest)
+    returns(DispatchMergingRegionsResponse);
+
   /** Move the region region to the destination server. */
   rpc MoveRegion(MoveRegionRequest)
     returns(MoveRegionResponse);
@@ -669,6 +700,12 @@ service MasterService {
    */
   rpc OfflineRegion(OfflineRegionRequest)
     returns(OfflineRegionResponse);
+
+  /**
+   * Split region
+   */
+  rpc SplitRegion(SplitTableRegionRequest)
+    returns(SplitTableRegionResponse);
 
   /** Deletes a table */
   rpc DeleteTable(DeleteTableRequest)

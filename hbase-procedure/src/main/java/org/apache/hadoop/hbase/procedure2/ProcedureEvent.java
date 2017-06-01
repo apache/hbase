@@ -50,6 +50,6 @@ public class ProcedureEvent<T> {
   @Override
   public String toString() {
     return getClass().getSimpleName() + " for " + object + ", ready=" + isReady() +
-        ", suspended procedures count=" + getSuspendedProcedures().size();
+        ", " + getSuspendedProcedures();
   }
 }

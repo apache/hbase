@@ -27,11 +27,13 @@ import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 /**
  * Reruns TestMobExportSnapshot using MobExportSnapshot in secure mode.
  */
+@Ignore
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestMobSecureExportSnapshot extends TestMobExportSnapshot {
   @BeforeClass

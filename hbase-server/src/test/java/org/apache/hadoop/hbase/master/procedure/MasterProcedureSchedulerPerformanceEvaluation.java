@@ -80,7 +80,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
 
   private class RegionProcedure extends TestMasterProcedureScheduler.TestRegionProcedure {
     RegionProcedure(long procId, HRegionInfo hri) {
-      super(procId, hri.getTable(), TableOperationType.UNASSIGN, hri);
+      super(procId, hri.getTable(), TableOperationType.REGION_UNASSIGN, hri);
     }
 
     @Override

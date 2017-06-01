@@ -88,8 +88,9 @@ class NamespaceStateManager {
     if (nspdesc != null) {
       NamespaceTableAndRegionInfo currentStatus;
       currentStatus = getState(namespace);
-      if (incr > 0 &&
-          currentStatus.getRegionCount() >= TableNamespaceManager.getMaxRegions(nspdesc)) {
+      int regionCount = currentStatus.getRegionCount();
+      long maxRegionCount = TableNamespaceManager.getMaxRegions(nspdesc);
+      if (incr > 0 && regionCount >= maxRegionCount) {
         LOG.warn("The region " + Bytes.toStringBinary(regionName)
             + " cannot be created. The region count  will exceed quota on the namespace. "
             + "This may be transient, please retry later if there are any ongoing split"

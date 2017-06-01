@@ -439,6 +439,10 @@ public class MetaTableLocator {
    */
   public static void setMetaLocation(ZooKeeperWatcher zookeeper,
       ServerName serverName, int replicaId, RegionState.State state) throws KeeperException {
+    if (serverName == null) {
+      LOG.warn("Tried to set null ServerName in hbase:meta; skipping -- ServerName required");
+      return;
+    }
     LOG.info("Setting hbase:meta region location in ZooKeeper as " + serverName);
     // Make the MetaRegionServer pb and then get its bytes and save this as
     // the znode content.
@@ -448,7 +452,8 @@ public class MetaTableLocator {
       .setState(state.convert()).build();
     byte[] data = ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
     try {
-      ZKUtil.setData(zookeeper, zookeeper.znodePaths.getZNodeForReplica(replicaId), data);
+      ZKUtil.setData(zookeeper,
+          zookeeper.znodePaths.getZNodeForReplica(replicaId), data);
     } catch(KeeperException.NoNodeException nne) {
       if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
         LOG.debug("META region location doesn't exist, create it");

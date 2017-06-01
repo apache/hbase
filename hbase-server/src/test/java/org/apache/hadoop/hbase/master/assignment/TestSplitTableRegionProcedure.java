@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.master.procedure;
+package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -43,10 +44,13 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SplitTableRegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,10 +62,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestSplitTableRegionProcedure {
   private static final Log LOG = LogFactory.getLog(TestSplitTableRegionProcedure.class);
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
+      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -108,7 +115,6 @@ public class TestSplitTableRegionProcedure {
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
     for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
-      LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
   }
@@ -137,7 +143,7 @@ public class TestSplitTableRegionProcedure {
     verify(tableName, splitRowNum);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSplitTableRegionNoStoreFile() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -161,7 +167,7 @@ public class TestSplitTableRegionProcedure {
     assertTrue(UTIL.countRows(tableName) == 0);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSplitTableRegionUnevenDaughter() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -186,7 +192,7 @@ public class TestSplitTableRegionProcedure {
     verify(tableName, splitRowNum);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSplitTableRegionEmptyDaughter() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -215,7 +221,7 @@ public class TestSplitTableRegionProcedure {
     assertTrue(UTIL.countRows(daughters.get(0)) == 0 || UTIL.countRows(daughters.get(1)) == 0);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSplitTableRegionDeletedRowsDaughter() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -255,7 +261,7 @@ public class TestSplitTableRegionProcedure {
     assertTrue(UTIL.countRows(daughters.get(0)) == 0 || UTIL.countRows(daughters.get(1)) == 0);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testInvalidSplitKey() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -278,7 +284,7 @@ public class TestSplitTableRegionProcedure {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -300,16 +306,19 @@ public class TestSplitTableRegionProcedure {
 
     // Failing before SPLIT_TABLE_REGION_UPDATE_META we should trigger the
     // rollback
-    // NOTE: the 5 (number before SPLIT_TABLE_REGION_UPDATE_META step) is
+    // NOTE: the 3 (number before SPLIT_TABLE_REGION_UPDATE_META step) is
     // hardcoded, so you have to look at this test at least once when you add a new step.
-    int numberOfSteps = 5;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
-      procExec,
-      procId,
-      numberOfSteps);
+    int numberOfSteps = 3;
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    // check that we have only 1 region
+    assertEquals(1, UTIL.getHBaseAdmin().getTableRegions(tableName).size());
+    List<HRegion> daughters = UTIL.getMiniHBaseCluster().getRegions(tableName);
+    assertEquals(1, daughters.size());
+    verifyData(daughters.get(0), startRowNum, rowCount,
+    Bytes.toBytes(ColumnFamilyName1), Bytes.toBytes(ColumnFamilyName2));
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -330,8 +339,7 @@ public class TestSplitTableRegionProcedure {
       new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = SplitTableRegionState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     verify(tableName, splitRowNum);

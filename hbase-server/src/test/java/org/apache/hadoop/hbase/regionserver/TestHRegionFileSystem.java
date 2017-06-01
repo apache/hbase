@@ -107,8 +107,8 @@ public class TestHRegionFileSystem {
       // alter through setting HStore#BLOCK_STORAGE_POLICY_KEY in HColumnDescriptor
       hcdA.setValue(HStore.BLOCK_STORAGE_POLICY_KEY, "ONE_SSD");
       admin.modifyColumnFamily(TABLE_NAME, hcdA);
-      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-          .isRegionsInTransition()) {
+      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().
+          getRegionStates().hasRegionsInTransition()) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
       }
@@ -117,7 +117,7 @@ public class TestHRegionFileSystem {
       hcdB.setStoragePolicy("ALL_SSD");
       admin.modifyColumnFamily(TABLE_NAME, hcdB);
       while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-          .isRegionsInTransition()) {
+          .hasRegionsInTransition()) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
       }

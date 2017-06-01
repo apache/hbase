@@ -42,7 +42,7 @@ public class TestProcedureToString {
    */
   static class BasicProcedure extends Procedure<BasicProcedureEnv> {
     @Override
-    protected Procedure<?>[] execute(BasicProcedureEnv env)
+    protected Procedure<BasicProcedureEnv>[] execute(BasicProcedureEnv env)
         throws ProcedureYieldException, InterruptedException {
       return new Procedure [] {this};
     }
@@ -77,8 +77,6 @@ public class TestProcedureToString {
       super.toStringState(builder);
     }
   }
-
-  
 
   /**
    * Test that I can override the toString for its state value.

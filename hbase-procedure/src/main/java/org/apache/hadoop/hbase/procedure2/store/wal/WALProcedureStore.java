@@ -66,6 +66,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class WALProcedureStore extends ProcedureStoreBase {
   private static final Log LOG = LogFactory.getLog(WALProcedureStore.class);
+  public static final String LOG_PREFIX = "pv2-";
 
   public interface LeaseRecovery {
     void recoverFileLease(FileSystem fs, Path path) throws IOException;
@@ -124,6 +125,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private final Configuration conf;
   private final FileSystem fs;
   private final Path walDir;
+  private final Path walArchiveDir;
 
   private final AtomicReference<Throwable> syncException = new AtomicReference<>();
   private final AtomicBoolean loading = new AtomicBoolean(true);
@@ -185,9 +187,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   public WALProcedureStore(final Configuration conf, final FileSystem fs, final Path walDir,
       final LeaseRecovery leaseRecovery) {
+    this(conf, fs, walDir, null, leaseRecovery);
+  }
+
+  public WALProcedureStore(final Configuration conf, final FileSystem fs, final Path walDir,
+      final Path walArchiveDir, final LeaseRecovery leaseRecovery) {
     this.fs = fs;
     this.conf = conf;
     this.walDir = walDir;
+    this.walArchiveDir = walArchiveDir;
     this.leaseRecovery = leaseRecovery;
   }
 
@@ -239,6 +247,16 @@ public class WALProcedureStore extends ProcedureStoreBase {
       }
     };
     syncThread.start();
+
+    // Create archive dir up front. Rename won't work w/o it up on HDFS.
+    if (this.walArchiveDir != null && !this.fs.exists(this.walArchiveDir)) {
+      if (this.fs.mkdirs(this.walArchiveDir)) {
+        if (LOG.isDebugEnabled()) LOG.debug("Created Procedure Store WAL archive dir " +
+            this.walArchiveDir);
+      } else {
+        LOG.warn("Failed create of " + this.walArchiveDir);
+      }
+    }
   }
 
   @Override
@@ -292,9 +310,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   @Override
-  public void setRunningProcedureCount(final int count) {
-    LOG.debug("Set running procedure count=" + count + ", slots=" + slots.length);
+  public int setRunningProcedureCount(final int count) {
     this.runningProcCount = count > 0 ? Math.min(count, slots.length) : slots.length;
+    return this.runningProcCount;
   }
 
   public ProcedureStoreTracker getStoreTracker() {
@@ -343,7 +361,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Someone else created new logs. Expected maxLogId < " + flushLogId);
           }
-          logs.getLast().removeFile();
+          logs.getLast().removeFile(this.walArchiveDir);
           continue;
         }
 
@@ -955,7 +973,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     // but we should check if someone else has created new files
     if (getMaxLogId(getLogFiles()) > flushLogId) {
       LOG.warn("Someone else created new logs. Expected maxLogId < " + flushLogId);
-      logs.getLast().removeFile();
+      logs.getLast().removeFile(this.walArchiveDir);
       return false;
     }
 
@@ -1047,7 +1065,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     // We keep track of which procedures are holding the oldest WAL in 'holdingCleanupTracker'.
     // once there is nothing olding the oldest WAL we can remove it.
     while (logs.size() > 1 && holdingCleanupTracker.isEmpty()) {
-      removeLogFile(logs.getFirst());
+      removeLogFile(logs.getFirst(), walArchiveDir);
       buildHoldingCleanupTracker();
     }
 
@@ -1079,8 +1097,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private void removeAllLogs(long lastLogId) {
     if (logs.size() <= 1) return;
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Remove all state logs with ID less than " + lastLogId);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Remove all state logs with ID less than " + lastLogId);
     }
 
     boolean removed = false;
@@ -1089,7 +1107,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
       if (lastLogId < log.getLogId()) {
         break;
       }
-      removeLogFile(log);
+      removeLogFile(log, walArchiveDir);
       removed = true;
     }
 
@@ -1098,15 +1116,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  private boolean removeLogFile(final ProcedureWALFile log) {
+  private boolean removeLogFile(final ProcedureWALFile log, final Path walArchiveDir) {
     try {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Removing log=" + log);
       }
-      log.removeFile();
+      log.removeFile(walArchiveDir);
       logs.remove(log);
       if (LOG.isDebugEnabled()) {
-        LOG.info("Removed log=" + log + " activeLogs=" + logs);
+        LOG.info("Removed log=" + log + ", activeLogs=" + logs);
       }
       assert logs.size() > 0 : "expected at least one log";
     } catch (IOException e) {
@@ -1128,7 +1146,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   protected Path getLogFilePath(final long logId) throws IOException {
-    return new Path(walDir, String.format("state-%020d.log", logId));
+    return new Path(walDir, String.format(LOG_PREFIX + "%020d.log", logId));
   }
 
   private static long getLogIdFromName(final String name) {
@@ -1141,7 +1159,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     @Override
     public boolean accept(Path path) {
       String name = path.getName();
-      return name.startsWith("state-") && name.endsWith(".log");
+      return name.startsWith(LOG_PREFIX) && name.endsWith(".log");
     }
   };
 
@@ -1192,7 +1210,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         }
 
         maxLogId = Math.max(maxLogId, getLogIdFromName(logPath.getName()));
-        ProcedureWALFile log = initOldLog(logFiles[i]);
+        ProcedureWALFile log = initOldLog(logFiles[i], this.walArchiveDir);
         if (log != null) {
           this.logs.add(log);
         }
@@ -1222,21 +1240,22 @@ public class WALProcedureStore extends ProcedureStoreBase {
   /**
    * Loads given log file and it's tracker.
    */
-  private ProcedureWALFile initOldLog(final FileStatus logFile) throws IOException {
+  private ProcedureWALFile initOldLog(final FileStatus logFile, final Path walArchiveDir)
+  throws IOException {
     final ProcedureWALFile log = new ProcedureWALFile(fs, logFile);
     if (logFile.getLen() == 0) {
       LOG.warn("Remove uninitialized log: " + logFile);
-      log.removeFile();
+      log.removeFile(walArchiveDir);
       return null;
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Opening state-log: " + logFile);
+      LOG.debug("Opening Pv2 " + logFile);
     }
     try {
       log.open();
     } catch (ProcedureWALFormat.InvalidWALDataException e) {
       LOG.warn("Remove uninitialized log: " + logFile, e);
-      log.removeFile();
+      log.removeFile(walArchiveDir);
       return null;
     } catch (IOException e) {
       String msg = "Unable to read state log: " + logFile;

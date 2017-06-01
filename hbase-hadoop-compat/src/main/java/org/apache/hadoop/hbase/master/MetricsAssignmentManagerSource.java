@@ -47,6 +47,7 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_OLDEST_AGE_NAME = "ritOldestAge";
   String RIT_DURATION_NAME = "ritDuration";
   String ASSIGN_TIME_NAME = "assign";
+  String UNASSIGN_TIME_NAME = "unassign";
   String BULK_ASSIGN_TIME_NAME = "bulkAssign";
 
   String RIT_COUNT_DESC = "Current number of Regions In Transition (Gauge).";
@@ -56,9 +57,7 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_DURATION_DESC =
       "Total durations in milliseconds for all Regions in Transition (Histogram).";
 
-  void updateAssignmentTime(long time);
-
-  void updateBulkAssignTime(long time);
+  String OPERATION_COUNT_NAME = "operationCount";
 
   /**
    * Set the number of regions in transition.
@@ -82,4 +81,19 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   void setRITOldestAge(long age);
 
   void updateRitDuration(long duration);
+
+  /**
+   * Increment the count of assignment operation (assign/unassign).
+   */
+  void incrementOperationCounter();
+
+  /**
+   * Add the time took to perform the last assign operation
+   */
+  void updateAssignTime(long time);
+
+  /**
+   * Add the time took to perform the last unassign operation
+   */
+  void updateUnassignTime(long time);
 }

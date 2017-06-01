@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
@@ -379,12 +380,6 @@ public class TestReplicator extends TestReplicationBase {
       }
 
       @Override
-      public CloseRegionForSplitOrMergeResponse closeRegionForSplitOrMerge(RpcController controller,
-          CloseRegionForSplitOrMergeRequest request) throws ServiceException {
-        return delegate.closeRegionForSplitOrMerge(controller, request);
-      }
-
-      @Override
       public GetRegionLoadResponse getRegionLoad(RpcController controller,
           GetRegionLoadRequest request) throws ServiceException {
         return delegate.getRegionLoad(controller, request);
@@ -400,6 +395,20 @@ public class TestReplicator extends TestReplicationBase {
       public GetSpaceQuotaSnapshotsResponse getSpaceQuotaSnapshots(RpcController controller,
           GetSpaceQuotaSnapshotsRequest request) throws ServiceException {
         return delegate.getSpaceQuotaSnapshots(controller, request);
+      }
+
+      @Override
+      public ExecuteProceduresResponse executeProcedures(RpcController controller,
+                                                         ExecuteProceduresRequest request)
+      throws ServiceException {
+        return null;
+      }
+
+      @Override
+      public MergeRegionsResponse mergeRegions(RpcController controller,
+                                               MergeRegionsRequest request)
+      throws ServiceException {
+        return null;
       }
     }
 

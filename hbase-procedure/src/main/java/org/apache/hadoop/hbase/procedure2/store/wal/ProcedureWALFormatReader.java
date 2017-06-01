@@ -83,11 +83,11 @@ public class ProcedureWALFormatReader {
   //
   //  Fast Start: INIT/INSERT record and StackIDs
   // ---------------------------------------------
-  // We have two special record, INIT and INSERT that tracks the first time
-  // the procedure was added to the WAL. We can use that information to be able
-  // to start procedures before reaching the end of the WAL, or before reading all the WALs.
-  // but in some cases the WAL with that record can be already gone.
-  // In alternative we can use the stackIds on each procedure,
+  // We have two special records, INIT and INSERT, that track the first time
+  // the procedure was added to the WAL. We can use this information to be able
+  // to start procedures before reaching the end of the WAL, or before reading all WALs.
+  // But in some cases, the WAL with that record can be already gone.
+  // As an alternative, we can use the stackIds on each procedure,
   // to identify when a procedure is ready to start.
   // If there are gaps in the sum of the stackIds we need to read more WALs.
   //
@@ -107,16 +107,16 @@ public class ProcedureWALFormatReader {
    * Global tracker that will be used by the WALProcedureStore after load.
    * If the last WAL was closed cleanly we already have a full tracker ready to be used.
    * If the last WAL was truncated (e.g. master killed) the tracker will be empty
-   * and the 'partial' flag will be set. In this case on WAL replay we are going
+   * and the 'partial' flag will be set. In this case, on WAL replay we are going
    * to rebuild the tracker.
    */
   private final ProcedureStoreTracker tracker;
-  // private final boolean hasFastStartSupport;
+  // TODO: private final boolean hasFastStartSupport;
 
   /**
    * If tracker for a log file is partial (see {@link ProcedureStoreTracker#partial}), we
    * re-build the list of procedures updated in that WAL because we need it for log cleaning
-   * purpose. If all procedures updated in a WAL are found to be obsolete, it can be safely deleted.
+   * purposes. If all procedures updated in a WAL are found to be obsolete, it can be safely deleted.
    * (see {@link WALProcedureStore#removeInactiveLogs()}).
    * However, we don't need deleted part of a WAL's tracker for this purpose, so we don't bother
    * re-building it.
@@ -137,7 +137,7 @@ public class ProcedureWALFormatReader {
   public void read(final ProcedureWALFile log) throws IOException {
     localTracker = log.getTracker().isPartial() ? log.getTracker() : null;
     if (localTracker != null) {
-      LOG.info("Rebuilding tracker for log - " + log);
+      LOG.info("Rebuilding tracker for " + log);
     }
 
     FSDataInputStream stream = log.getStream();
@@ -146,7 +146,7 @@ public class ProcedureWALFormatReader {
       while (hasMore) {
         ProcedureWALEntry entry = ProcedureWALFormat.readEntry(stream);
         if (entry == null) {
-          LOG.warn("nothing left to decode. exiting with missing EOF");
+          LOG.warn("Nothing left to decode. Exiting with missing EOF, log=" + log);
           break;
         }
         switch (entry.getType()) {
@@ -171,7 +171,7 @@ public class ProcedureWALFormatReader {
         }
       }
     } catch (InvalidProtocolBufferException e) {
-      LOG.error("got an exception while reading the procedure WAL: " + log, e);
+      LOG.error("While reading procedure from " + log, e);
       loader.markCorruptedWAL(log, e);
     }
 
@@ -211,7 +211,7 @@ public class ProcedureWALFormatReader {
     maxProcId = Math.max(maxProcId, proc.getProcId());
     if (isRequired(proc.getProcId())) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("read " + entry.getType() + " entry " + proc.getProcId());
+        LOG.trace("Read " + entry.getType() + " entry " + proc.getProcId());
       }
       localProcedureMap.add(proc);
       if (tracker.isPartial()) {
@@ -296,7 +296,7 @@ public class ProcedureWALFormatReader {
   //      replayOrderHead = C <-> B <-> E <-> D <-> A <-> G
   //
   //  We also have a lazy grouping by "root procedure", and a list of
-  //  unlinked procedure. If after reading all the WALs we have unlinked
+  //  unlinked procedures. If after reading all the WALs we have unlinked
   //  procedures it means that we had a missing WAL or a corruption.
   //      rootHead = A <-> D <-> G
   //                 B     E
@@ -639,17 +639,17 @@ public class ProcedureWALFormatReader {
      * "ready" means that we all the information that we need in-memory.
      *
      * Example-1:
-     * We have two WALs, we start reading fronm the newest (wal-2)
+     * We have two WALs, we start reading from the newest (wal-2)
      *    wal-2 | C B |
      *    wal-1 | A B C |
      *
      * If C and B don't depend on A (A is not the parent), we can start them
-     * before reading wal-1. If B is the only one with parent A we can start C
-     * and read one more WAL before being able to start B.
+     * before reading wal-1. If B is the only one with parent A we can start C.
+     * We have to read one more WAL before being able to start B.
      *
      * How do we know with the only information in B that we are not ready.
      *  - easy case, the parent is missing from the global map
-     *  - more complex case we look at the Stack IDs
+     *  - more complex case we look at the Stack IDs.
      *
      * The Stack-IDs are added to the procedure order as incremental index
      * tracking how many times that procedure was executed, which is equivalent
@@ -664,7 +664,7 @@ public class ProcedureWALFormatReader {
      * executed before.
      * To identify when a Procedure is ready we do the sum of the stackIds of
      * the procedure and the parent. if the stackIdSum is equals to the
-     * sum of {1..maxStackId} then everything we need is avaiable.
+     * sum of {1..maxStackId} then everything we need is available.
      *
      * Example-2
      *    wal-2 | A |              A stackIds = [0, 2]
@@ -676,7 +676,7 @@ public class ProcedureWALFormatReader {
       assert !rootEntry.hasParent() : "expected root procedure, got " + rootEntry;
 
       if (rootEntry.isFinished()) {
-        // if the root procedure is finished, sub-procedures should be gone
+        // If the root procedure is finished, sub-procedures should be gone
         if (rootEntry.childHead != null) {
           LOG.error("unexpected active children for root-procedure: " + rootEntry);
           for (Entry p = rootEntry.childHead; p != null; p = p.linkNext) {

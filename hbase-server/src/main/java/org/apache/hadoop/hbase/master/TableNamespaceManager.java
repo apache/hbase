@@ -313,8 +313,9 @@ public class TableNamespaceManager {
   }
 
   private boolean isTableAssigned() {
-    return !masterServices.getAssignmentManager()
-        .getRegionStates().getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME).isEmpty();
+    // TODO: we have a better way now (wait on event)
+    return masterServices.getAssignmentManager()
+        .getRegionStates().hasTableRegionStates(TableName.NAMESPACE_TABLE_NAME);
   }
 
   public void validateTableAndRegionCount(NamespaceDescriptor desc) throws IOException {

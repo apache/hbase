@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
@@ -85,7 +86,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.*;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatResponse;
@@ -136,8 +136,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -306,7 +304,11 @@ public class MasterRpcServices extends RSRpcServices
       ClusterStatusProtos.ServerLoad sl = request.getLoad();
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
       ServerLoad oldLoad = master.getServerManager().getLoad(serverName);
-      master.getServerManager().regionServerReport(serverName, new ServerLoad(sl));
+      ServerLoad newLoad = new ServerLoad(sl);
+      master.getServerManager().regionServerReport(serverName, newLoad);
+      int version = VersionInfoUtil.getCurrentClientVersionNumber();
+      master.getAssignmentManager().reportOnlineRegions(serverName,
+        version, newLoad.getRegionsLoad().keySet());
       if (sl != null && master.metricsMaster != null) {
         // Up our metrics.
         master.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
@@ -379,25 +381,25 @@ public class MasterRpcServices extends RSRpcServices
   public AssignRegionResponse assignRegion(RpcController controller,
       AssignRegionRequest req) throws ServiceException {
     try {
-      final byte [] regionName = req.getRegion().getValue().toByteArray();
-      RegionSpecifierType type = req.getRegion().getType();
-      AssignRegionResponse arr = AssignRegionResponse.newBuilder().build();
-
       master.checkInitialized();
+
+      final RegionSpecifierType type = req.getRegion().getType();
       if (type != RegionSpecifierType.REGION_NAME) {
         LOG.warn("assignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
           + " actual: " + type);
       }
-      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-      HRegionInfo regionInfo = regionStates.getRegionInfo(regionName);
-      if (regionInfo == null) throw new UnknownRegionException(Bytes.toString(regionName));
+
+      final byte[] regionName = req.getRegion().getValue().toByteArray();
+      final HRegionInfo regionInfo = master.getAssignmentManager().getRegionInfo(regionName);
+      if (regionInfo == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
+
+      final AssignRegionResponse arr = AssignRegionResponse.newBuilder().build();
       if (master.cpHost != null) {
         if (master.cpHost.preAssign(regionInfo)) {
           return arr;
         }
       }
-      LOG.info(master.getClientIdAuditPrefix()
-        + " assign " + regionInfo.getRegionNameAsString());
+      LOG.info(master.getClientIdAuditPrefix() + " assign " + regionInfo.getRegionNameAsString());
       master.getAssignmentManager().assign(regionInfo, true);
       if (master.cpHost != null) {
         master.cpHost.postAssign(regionInfo);
@@ -407,6 +409,7 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(ioe);
     }
   }
+
 
   @Override
   public BalanceResponse balance(RpcController controller,
@@ -627,8 +630,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  public SplitTableRegionResponse splitRegion(
-      final RpcController controller,
+  public SplitTableRegionResponse splitRegion(final RpcController controller,
       final SplitTableRegionRequest request) throws ServiceException {
     try {
       long procId = master.splitRegion(
@@ -1215,24 +1217,24 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public OfflineRegionResponse offlineRegion(RpcController controller,
       OfflineRegionRequest request) throws ServiceException {
-    final byte [] regionName = request.getRegion().getValue().toByteArray();
-    RegionSpecifierType type = request.getRegion().getType();
-    if (type != RegionSpecifierType.REGION_NAME) {
-      LOG.warn("moveRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
-        + " actual: " + type);
-    }
-
     try {
       master.checkInitialized();
-      Pair<HRegionInfo, ServerName> pair =
-        MetaTableAccessor.getRegion(master.getConnection(), regionName);
-      if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
-      HRegionInfo hri = pair.getFirst();
+
+      final RegionSpecifierType type = request.getRegion().getType();
+      if (type != RegionSpecifierType.REGION_NAME) {
+        LOG.warn("moveRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
+          + " actual: " + type);
+      }
+
+      final byte[] regionName = request.getRegion().getValue().toByteArray();
+      final HRegionInfo hri = master.getAssignmentManager().getRegionInfo(regionName);
+      if (hri == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
+
       if (master.cpHost != null) {
         master.cpHost.preRegionOffline(hri);
       }
       LOG.info(master.getClientIdAuditPrefix() + " offline " + hri.getRegionNameAsString());
-      master.getAssignmentManager().regionOffline(hri);
+      master.getAssignmentManager().offlineRegion(hri);
       if (master.cpHost != null) {
         master.cpHost.postRegionOffline(hri);
       }
@@ -1417,26 +1419,7 @@ public class MasterRpcServices extends RSRpcServices
       ReportRegionStateTransitionRequest req) throws ServiceException {
     try {
       master.checkServiceStarted();
-      RegionStateTransition rt = req.getTransition(0);
-      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-      for (RegionInfo ri : rt.getRegionInfoList())  {
-        TableName tableName = ProtobufUtil.toTableName(ri.getTableName());
-        if (!(TableName.META_TABLE_NAME.equals(tableName)
-            && regionStates.getRegionState(HRegionInfo.FIRST_META_REGIONINFO) != null)
-              && !master.getAssignmentManager().isFailoverCleanupDone()) {
-          // Meta region is assigned before master finishes the
-          // failover cleanup. So no need this check for it
-          throw new PleaseHoldException("Master is rebuilding user regions");
-        }
-      }
-      ServerName sn = ProtobufUtil.toServerName(req.getServer());
-      String error = master.getAssignmentManager().onRegionTransition(sn, rt);
-      ReportRegionStateTransitionResponse.Builder rrtr =
-        ReportRegionStateTransitionResponse.newBuilder();
-      if (error != null) {
-        rrtr.setErrorMessage(error);
-      }
-      return rrtr.build();
+      return master.getAssignmentManager().reportRegionStateTransition(req);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2023,6 +2006,36 @@ public class MasterRpcServices extends RSRpcServices
       return builder.build();
     } catch (Exception e) {
       throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DispatchMergingRegionsResponse dispatchMergingRegions(RpcController controller,
+      DispatchMergingRegionsRequest request) throws ServiceException {
+    final byte[] encodedNameOfRegionA = request.getRegionA().getValue().toByteArray();
+    final byte[] encodedNameOfRegionB = request.getRegionB().getValue().toByteArray();
+    if (request.getRegionA().getType() != RegionSpecifierType.ENCODED_REGION_NAME ||
+        request.getRegionB().getType() != RegionSpecifierType.ENCODED_REGION_NAME) {
+      LOG.warn("mergeRegions specifier type: expected: " + RegionSpecifierType.ENCODED_REGION_NAME +
+          " actual: region_a=" +
+          request.getRegionA().getType() + ", region_b=" +
+          request.getRegionB().getType());
+    }
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    RegionState regionStateA = regionStates.getRegionState(Bytes.toString(encodedNameOfRegionA));
+    RegionState regionStateB = regionStates.getRegionState(Bytes.toString(encodedNameOfRegionB));
+    if (regionStateA == null || regionStateB == null) {
+      throw new ServiceException(new UnknownRegionException(
+        Bytes.toStringBinary(regionStateA == null? encodedNameOfRegionA: encodedNameOfRegionB)));
+    }
+    final HRegionInfo regionInfoA = regionStateA.getRegion();
+    final HRegionInfo regionInfoB = regionStateB.getRegion();
+    try {
+      long procId = master.dispatchMergingRegions(regionInfoA, regionInfoB, request.getForcible(),
+          request.getNonceGroup(), request.getNonce());
+      return DispatchMergingRegionsResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
   }
 }

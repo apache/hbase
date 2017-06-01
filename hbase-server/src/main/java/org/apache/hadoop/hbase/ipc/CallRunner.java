@@ -135,7 +135,14 @@ public class CallRunner {
         RpcServer.LOG.warn("Can not complete this request in time, drop it: " + call);
         return;
       } catch (Throwable e) {
-        RpcServer.LOG.debug(Thread.currentThread().getName() + ": " + call.toShortString(), e);
+        if (e instanceof ServerNotRunningYetException) {
+          // If ServerNotRunningYetException, don't spew stack trace.
+          if (RpcServer.LOG.isTraceEnabled()) {
+            RpcServer.LOG.trace(call.toShortString(), e);
+          }
+        } else {
+          RpcServer.LOG.debug(call.toShortString(), e);
+        }
         errorThrowable = e;
         error = StringUtils.stringifyException(e);
         if (e instanceof Error) {

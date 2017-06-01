@@ -96,6 +96,14 @@ public interface Region extends ConfigurationObserver {
   /** @return True if region is read only */
   boolean isReadOnly();
 
+  /** @return true if region is splittable */
+  boolean isSplittable();
+
+  /**
+   * @return true if region is mergeable
+   */
+  boolean isMergeable();
+
   /**
    * Return the list of Stores managed by this region
    * <p>Use with caution.  Exposed for use of fixup utilities.

@@ -55,6 +55,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
@@ -62,6 +63,7 @@ import org.junit.rules.TestRule;
 /**
  * Test Export Snapshot Tool
  */
+@Ignore
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestExportSnapshot {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().

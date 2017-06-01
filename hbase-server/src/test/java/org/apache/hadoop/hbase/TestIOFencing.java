@@ -296,6 +296,7 @@ public class TestIOFencing {
         LOG.info("Waiting for the region to flush " +
           compactingRegion.getRegionInfo().getRegionNameAsString());
         Thread.sleep(1000);
+        admin.flush(table.getName());
         assertTrue("Timed out waiting for the region to flush",
           System.currentTimeMillis() - startWaitTime < 30000);
       }

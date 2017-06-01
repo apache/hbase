@@ -18,15 +18,12 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
-
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -35,23 +32,23 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
+import org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapperStub;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
-import org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapperStub;
-import org.apache.hadoop.hbase.tmpl.master.AssignmentManagerStatusTmpl;
-import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * Tests for the master status page and its template.
@@ -90,7 +87,7 @@ public class TestMasterStatusServlet {
     // Fake AssignmentManager and RIT
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
     RegionStates rs = Mockito.mock(RegionStates.class);
-    Set<RegionState> regionsInTransition = new HashSet<>();
+    List<RegionState> regionsInTransition = new ArrayList<>();
     regionsInTransition.add(new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     Mockito.doReturn(rs).when(am).getRegionStates();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
@@ -156,46 +153,5 @@ public class TestMasterStatusServlet {
       .setServers(servers)
       .setDeadServers(deadServers)
       .render(new StringWriter(), master);
-  }
-
-  @Test
-  public void testAssignmentManagerTruncatedList() throws IOException {
-    AssignmentManager am = Mockito.mock(AssignmentManager.class);
-    RegionStates rs = Mockito.mock(RegionStates.class);
-
-    // Add 100 regions as in-transition
-    TreeSet<RegionState> regionsInTransition = new TreeSet<>(RegionStates.REGION_STATE_COMPARATOR);
-    for (byte i = 0; i < 100; i++) {
-      HRegionInfo hri = new HRegionInfo(FAKE_TABLE.getTableName(),
-          new byte[]{i}, new byte[]{(byte) (i+1)});
-      regionsInTransition.add(
-        new RegionState(hri, RegionState.State.CLOSING, 12345L, FAKE_HOST));
-    }
-    // Add hbase:meta in transition as well
-    regionsInTransition.add(
-        new RegionState(HRegionInfo.FIRST_META_REGIONINFO,
-                        RegionState.State.CLOSING, 123L, FAKE_HOST));
-    Mockito.doReturn(rs).when(am).getRegionStates();
-    Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
-    Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransitionOrderedByTimestamp();
-
-    // Render to a string
-    StringWriter sw = new StringWriter();
-    new AssignmentManagerStatusTmpl()
-      // NOT IMPLEMENTED!!!! .setLimit(50)
-      .render(sw, am);
-    String result = sw.toString();
-    // Should always include META
-    assertTrue(result.contains(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName()));
-
-    /* BROKEN BY  HBASE-13839 Fix AssgnmentManagerTmpl.jamon issues (coloring, content etc.) FIX!!
-    // Make sure we only see 50 of them
-    Matcher matcher = Pattern.compile("CLOSING").matcher(result);
-    int count = 0;
-    while (matcher.find()) {
-      count++;
-    }
-    assertEquals(50, count);
-    */
   }
 }

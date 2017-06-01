@@ -45,7 +45,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
  * locations for all Regions in a cluster.
  *
  * <p>This class produces plans for the
- * {@link org.apache.hadoop.hbase.master.AssignmentManager}
+ * {@link org.apache.hadoop.hbase.master.assignment.AssignmentManager}
  * to execute.
  */
 @InterfaceAudience.Private

@@ -18,7 +18,9 @@ limitations under the License.
 </%doc>
 <%import>
 org.apache.hadoop.hbase.HRegionInfo;
-org.apache.hadoop.hbase.master.AssignmentManager;
+org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+org.apache.hadoop.hbase.master.assignment.AssignmentManager.RegionInTransitionStat;
+org.apache.hadoop.hbase.master.assignment.RegionStates.RegionFailedOpen;
 org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.conf.Configuration;
 org.apache.hadoop.hbase.HBaseConfiguration;
@@ -35,28 +37,12 @@ int limit = 100;
 
 <%java SortedSet<RegionState> rit = assignmentManager
   .getRegionStates().getRegionsInTransitionOrderedByTimestamp();
-  Map<String, AtomicInteger> failedRegionTracker = assignmentManager.getFailedOpenTracker();
-   %>
+%>
 
 <%if !rit.isEmpty() %>
 <%java>
-HashSet<String> ritsOverThreshold = new HashSet<String>();
-HashSet<String> ritsTwiceThreshold = new HashSet<String>();
-// process the map to find region in transition details
-Configuration conf = HBaseConfiguration.create();
-int ritThreshold = conf.getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
-int numOfRITOverThreshold = 0;
 long currentTime = System.currentTimeMillis();
-for (RegionState rs : rit) {
-  long ritTime = currentTime - rs.getStamp();
-  if(ritTime > (ritThreshold * 2)) {
-     numOfRITOverThreshold++;
-     ritsTwiceThreshold.add(rs.getRegion().getEncodedName());
-  } else if (ritTime > ritThreshold) {
-     numOfRITOverThreshold++;
-     ritsOverThreshold.add(rs.getRegion().getEncodedName());
-  }
-}
+RegionInTransitionStat ritStat = assignmentManager.computeRegionInTransitionStat();
 
 int numOfRITs = rit.size();
 int ritsPerPage = Math.min(5, numOfRITs);
@@ -65,15 +51,15 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
     <section>
     <h2>Regions in Transition</h2>
      <p><% numOfRITs %> region(s) in transition.
-     <%if !ritsTwiceThreshold.isEmpty()  %>
+     <%if ritStat.hasRegionsTwiceOverThreshold()  %>
          <span class="label label-danger" style="font-size:100%;font-weight:normal">
-     <%elseif !ritsOverThreshold.isEmpty() %>
+     <%elseif ritStat.hasRegionsOverThreshold() %>
          <span class="label label-warning" style="font-size:100%;font-weight:normal">
      <%else>
          <span>
      </%if>
-         <% numOfRITOverThreshold %> region(s) in transition for
-             more than <% ritThreshold %> milliseconds.
+         <% ritStat.getTotalRITsOverThreshold() %> region(s) in transition for
+             more than <% ritStat.getRITThreshold() %> milliseconds.
          </span>
      </p>
      <div class="tabbable">
@@ -90,25 +76,26 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
                      <th>State</th><th>RIT time (ms)</th> <th>Retries </th></tr>
              </%if>
 
-             <%if ritsOverThreshold.contains(rs.getRegion().getEncodedName()) %>
-                     <tr class="alert alert-warning" role="alert">
-             <%elseif ritsTwiceThreshold.contains(rs.getRegion().getEncodedName()) %>
+             <%if ritStat.isRegionTwiceOverThreshold(rs.getRegion()) %>
                      <tr class="alert alert-danger" role="alert">
+             <%elseif ritStat.isRegionOverThreshold(rs.getRegion()) %>
+                     <tr class="alert alert-warning" role="alert">
             <%else>
                     <tr>
             </%if>
                         <%java>
                           String retryStatus = "0";
-                          AtomicInteger numOpenRetries = failedRegionTracker.get(
-                              rs.getRegion().getEncodedName());
-                          if (numOpenRetries != null ) {
-                            retryStatus = Integer.toString(numOpenRetries.get());
+                          RegionFailedOpen regionFailedOpen = assignmentManager
+                            .getRegionStates().getFailedOpen(rs.getRegion());
+                          if (regionFailedOpen != null) {
+                            retryStatus = Integer.toString(regionFailedOpen.getRetries());
                           } else if (rs.getState() ==  RegionState.State.FAILED_OPEN) {
-                             retryStatus = "Failed";
+                            retryStatus = "Failed";
                           }
                         </%java>
                         <td><% rs.getRegion().getEncodedName() %></td><td>
-                        <% HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(rs, conf) %></td>
+                        <% HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(rs,
+                            assignmentManager.getConfiguration()) %></td>
                         <td><% (currentTime - rs.getStamp()) %> </td>
                         <td> <% retryStatus %> </td>
                      </tr>

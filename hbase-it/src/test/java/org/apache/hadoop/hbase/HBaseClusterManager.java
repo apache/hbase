@@ -59,7 +59,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
    * 5 original command, 6 service user.
    */
   private static final String DEFAULT_TUNNEL_CMD =
-      "/usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo -u %6$s %5$s\"";
+      "timeout 30 /usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo -u %6$s %5$s\"";
   private String tunnelCmd;
 
   private static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";

@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
@@ -35,6 +36,7 @@ import org.junit.rules.TestRule;
 /**
  * Reruns TestExportSnapshot using ExportSnapshot in secure mode.
  */
+@Ignore
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestSecureExportSnapshot extends TestExportSnapshot {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().

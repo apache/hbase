@@ -19,7 +19,13 @@
 
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.collect.Multimap;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertNoErrors;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.SynchronousQueue;
@@ -35,8 +41,6 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -46,14 +50,15 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.*;
-import static org.junit.Assert.*;
+import com.google.common.collect.Multimap;
 
+@Ignore // Until after HBASE-14614 goes in.
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
   @Rule
@@ -78,8 +83,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 
-    AssignmentManager assignmentManager =
-        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    assignmentManager = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     regionStates = assignmentManager.getRegionStates();
 
     connection = (ClusterConnection) TEST_UTIL.getConnection();
@@ -108,7 +112,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
   public void testFixAssignmentsWhenMETAinTransition() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     admin.closeRegion(cluster.getServerHoldingMeta(), HRegionInfo.FIRST_META_REGIONINFO);
-    regionStates.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
+    assignmentManager.offlineRegion(HRegionInfo.FIRST_META_REGIONINFO);
     new MetaTableLocator().deleteMetaLocation(cluster.getMaster().getZooKeeper());
     assertFalse(regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
     HBaseFsck hbck = doFsck(conf, true);
@@ -393,7 +397,6 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
 
       // Mess it up by creating an overlap
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-      HMaster master = cluster.getMaster();
       HRegionInfo hriOverlap1 =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("AB"));
       TEST_UTIL.assignRegion(hriOverlap1);
@@ -439,7 +442,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       try (Table meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService)) {
         Put put = new Put(regionName);
         put.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-            Bytes.toBytes(serverName.getHostAndPort()));
+            Bytes.toBytes(serverName.getAddress().toString()));
         meta.put(put);
       }
 

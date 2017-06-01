@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -39,9 +38,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -149,19 +147,15 @@ class RegionLocationFinder {
     if (services == null) {
       return false;
     }
-    AssignmentManager am = services.getAssignmentManager();
 
+    final AssignmentManager am = services.getAssignmentManager();
     if (am == null) {
       return false;
     }
-    RegionStates regionStates = am.getRegionStates();
-    if (regionStates == null) {
-      return false;
-    }
 
-    Set<HRegionInfo> regions = regionStates.getRegionAssignments().keySet();
+    // TODO: Should this refresh all the regions or only the ones assigned?
     boolean includesUserTables = false;
-    for (final HRegionInfo hri : regions) {
+    for (final HRegionInfo hri : am.getAssignedRegions()) {
       cache.refresh(hri);
       includesUserTables = includesUserTables || !hri.isSystemTable();
     }

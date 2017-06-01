@@ -265,38 +265,31 @@ message RestoreSnapshotStateData {
   repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 7;
 }
 
-enum MergeTableRegionsState {
-  MERGE_TABLE_REGIONS_PREPARE = 1;
-  MERGE_TABLE_REGIONS_MOVE_REGION_TO_SAME_RS = 2;
-  MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION = 3;
-  MERGE_TABLE_REGIONS_SET_MERGING_TABLE_STATE = 4;
-  MERGE_TABLE_REGIONS_CLOSE_REGIONS = 5;
-  MERGE_TABLE_REGIONS_CREATE_MERGED_REGION = 6;
-  MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION = 7;
-  MERGE_TABLE_REGIONS_UPDATE_META = 8;
-  MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION = 9;
-  MERGE_TABLE_REGIONS_OPEN_MERGED_REGION = 10;
-  MERGE_TABLE_REGIONS_POST_OPERATION = 11;
+enum DispatchMergingRegionsState {
+  DISPATCH_MERGING_REGIONS_PREPARE = 1;
+  DISPATCH_MERGING_REGIONS_PRE_OPERATION = 2;
+  DISPATCH_MERGING_REGIONS_MOVE_REGION_TO_SAME_RS = 3;
+  DISPATCH_MERGING_REGIONS_DO_MERGE_IN_RS = 4;
+  DISPATCH_MERGING_REGIONS_POST_OPERATION = 5;
 }
 
-message MergeTableRegionsStateData {
+message DispatchMergingRegionsStateData {
   required UserInformation user_info = 1;
-  repeated RegionInfo region_info = 2;
-  required RegionInfo merged_region_info = 3;
-  optional bool forcible = 4 [default = false];
+  required TableName table_name = 2;
+  repeated RegionInfo region_info = 3;
+  optional bool forcible = 4;
 }
 
 enum SplitTableRegionState {
   SPLIT_TABLE_REGION_PREPARE = 1;
   SPLIT_TABLE_REGION_PRE_OPERATION = 2;
-  SPLIT_TABLE_REGION_SET_SPLITTING_TABLE_STATE = 3;
-  SPLIT_TABLE_REGION_CLOSE_PARENT_REGION = 4;
-  SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS = 5;
-  SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_PONR = 6;
-  SPLIT_TABLE_REGION_UPDATE_META = 7;
-  SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_PONR = 8;
-  SPLIT_TABLE_REGION_OPEN_CHILD_REGIONS = 9;
-  SPLIT_TABLE_REGION_POST_OPERATION = 10;
+  SPLIT_TABLE_REGION_CLOSE_PARENT_REGION = 3;
+  SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS = 4;
+  SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_PONR = 5;
+  SPLIT_TABLE_REGION_UPDATE_META = 6;
+  SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_PONR = 7;
+  SPLIT_TABLE_REGION_OPEN_CHILD_REGIONS = 8;
+  SPLIT_TABLE_REGION_POST_OPERATION = 9;
 }
 
 message SplitTableRegionStateData {
@@ -304,6 +297,29 @@ message SplitTableRegionStateData {
   required RegionInfo parent_region_info = 2;
   repeated RegionInfo child_region_info = 3;
 }
+
+enum MergeTableRegionsState {
+  MERGE_TABLE_REGIONS_PREPARE = 1;
+  MERGE_TABLE_REGIONS_PRE_OPERATION = 2;
+  MERGE_TABLE_REGIONS_MOVE_REGION_TO_SAME_RS = 3;
+  MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION = 4;
+  MERGE_TABLE_REGIONS_SET_MERGING_TABLE_STATE = 5;
+  MERGE_TABLE_REGIONS_CLOSE_REGIONS = 6;
+  MERGE_TABLE_REGIONS_CREATE_MERGED_REGION = 7;
+  MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION = 8;
+  MERGE_TABLE_REGIONS_UPDATE_META = 9;
+  MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION = 10;
+  MERGE_TABLE_REGIONS_OPEN_MERGED_REGION = 11;
+  MERGE_TABLE_REGIONS_POST_OPERATION = 12;
+}
+
+message MergeTableRegionsStateData {
+  required UserInformation user_info = 1;
+  repeated RegionInfo region_info = 2;
+  optional RegionInfo merged_region_info = 3;
+  optional bool forcible = 4 [default = false];
+}
+
 
 message ServerCrashStateData {
   required ServerName server_name = 1;
@@ -325,4 +341,62 @@ enum ServerCrashState {
   SERVER_CRASH_ASSIGN = 8;
   SERVER_CRASH_WAIT_ON_ASSIGN = 9;
   SERVER_CRASH_FINISH = 100;
+}
+
+enum RegionTransitionState {
+  REGION_TRANSITION_QUEUE = 1;
+  REGION_TRANSITION_DISPATCH = 2;
+  REGION_TRANSITION_FINISH = 3;
+}
+
+message AssignRegionStateData {
+  required RegionTransitionState transition_state = 1;
+  required RegionInfo region_info = 2;
+  optional bool force_new_plan = 3 [default = false];
+  optional ServerName target_server = 4;
+}
+
+message UnassignRegionStateData {
+  required RegionTransitionState transition_state = 1;
+  required RegionInfo region_info = 2;
+  // This is optional info; it is the servername we will
+  // subsequently assign the region too... it may be null.
+  optional ServerName destination_server = 3;
+  // This is the server currently hosting the Region, the
+  // server we will send the unassign rpc too.
+  optional ServerName hosting_server = 5;
+  optional bool force = 4 [default = false];
+}
+
+enum MoveRegionState {
+  MOVE_REGION_UNASSIGN = 1;
+  MOVE_REGION_ASSIGN = 2;
+}
+
+message MoveRegionStateData {
+  optional RegionInfo region_info = 1;
+  required ServerName source_server = 2;
+  required ServerName destination_server = 3;
+}
+
+enum GCRegionState {
+  GC_REGION_PREPARE = 1;
+  GC_REGION_ARCHIVE = 2;
+  GC_REGION_PURGE_METADATA = 3;
+}
+
+message GCRegionStateData {
+  required RegionInfo region_info = 1;
+}
+
+enum GCMergedRegionsState {
+  GC_MERGED_REGIONS_PREPARE = 1;
+  GC_MERGED_REGIONS_PURGE = 2;
+  GC_REGION_EDIT_METADATA = 3;
+}
+
+message GCMergedRegionsStateData {
+  required RegionInfo parent_a = 1;
+  required RegionInfo parent_b = 2;
+  required RegionInfo merged_child = 3;
 }

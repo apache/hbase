@@ -24,7 +24,6 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Map;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -33,6 +32,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.monitoring.LogMonitoring;
 import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -117,9 +118,8 @@ public class MasterDumpServlet extends StateDumpServlet {
       return;
     }
 
-    Set<RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
-    for (RegionState rs : regionsInTransition) {
-      String rid = rs.getRegion().getRegionNameAsString();
+    for (RegionStateNode rs : am.getRegionsInTransition()) {
+      String rid = rs.getRegionInfo().getEncodedName();
       out.println("Region " + rid + ": " + rs.toDescriptiveString());
     }
   }

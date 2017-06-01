@@ -1340,6 +1340,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.DispatchMergingRegionsResponse dispatchMergingRegions(
+          RpcController controller, MasterProtos.DispatchMergingRegionsRequest request)
+          throws ServiceException {
+        return stub.dispatchMergingRegions(controller, request);
+      }
+
+      @Override
       public MasterProtos.AssignRegionResponse assignRegion(RpcController controller,
           MasterProtos.AssignRegionRequest request) throws ServiceException {
         return stub.assignRegion(controller, request);
@@ -1355,6 +1362,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       public MasterProtos.OfflineRegionResponse offlineRegion(RpcController controller,
           MasterProtos.OfflineRegionRequest request) throws ServiceException {
         return stub.offlineRegion(controller, request);
+      }
+
+      @Override
+      public MasterProtos.SplitTableRegionResponse splitRegion(RpcController controller,
+          MasterProtos.SplitTableRegionRequest request) throws ServiceException {
+        return stub.splitRegion(controller, request);
       }
 
       @Override

@@ -1663,8 +1663,11 @@ public class MetaTableAccessor {
       Delete deleteA = makeDeleteFromRegionInfo(regionA, time);
       Delete deleteB = makeDeleteFromRegionInfo(regionB, time);
 
-      // The merged is a new region, openSeqNum = 1 is fine.
-      addLocation(putOfMerged, sn, 1, -1, mergedRegion.getReplicaId());
+      // The merged is a new region, openSeqNum = 1 is fine. ServerName may be null
+      // if crash after merge happened but before we got to here.. means in-memory
+      // locations of offlined merged, now-closed, regions is lost. Should be ok. We
+      // assign the merged region later.
+      if (sn != null) addLocation(putOfMerged, sn, 1, -1, mergedRegion.getReplicaId());
 
       // Add empty locations for region replicas of the merged region so that number of replicas can
       // be cached whenever the primary region is looked up from meta
@@ -1966,8 +1969,8 @@ public class MetaTableAccessor {
    * @param regionsInfo list of regions to be deleted from META
    * @throws IOException
    */
-  public static void deleteRegions(Connection connection,
-                                   List<HRegionInfo> regionsInfo, long ts) throws IOException {
+  public static void deleteRegions(Connection connection, List<HRegionInfo> regionsInfo, long ts)
+  throws IOException {
     List<Delete> deletes = new ArrayList<>(regionsInfo.size());
     for (HRegionInfo hri: regionsInfo) {
       Delete e = new Delete(hri.getRegionName());
@@ -2002,10 +2005,10 @@ public class MetaTableAccessor {
     }
     mutateMetaTable(connection, mutation);
     if (regionsToRemove != null && regionsToRemove.size() > 0) {
-      LOG.debug("Deleted " + regionsToRemove);
+      LOG.debug("Deleted " + HRegionInfo.getShortNameToLog(regionsToRemove));
     }
     if (regionsToAdd != null && regionsToAdd.size() > 0) {
-      LOG.debug("Added " + regionsToAdd);
+      LOG.debug("Added " + HRegionInfo.getShortNameToLog(regionsToAdd));
     }
   }
 

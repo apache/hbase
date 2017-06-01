@@ -31,13 +31,14 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HRegionLocation;
 
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -58,6 +59,7 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.*;
 import static org.junit.Assert.*;
 
+@Ignore
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
   @Rule

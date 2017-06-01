@@ -20,19 +20,19 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -90,12 +90,14 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
 import org.apache.hadoop.hbase.quotas.QuotaType;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
@@ -109,8 +111,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitOrMergeRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitOrMergeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -178,6 +178,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
@@ -1848,33 +1849,6 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A helper to close a region for split or merge
-   * using admin protocol.
-   *
-   * @param controller RPC controller
-   * @param admin Admin service
-   * @param server the RS that hosts the target region
-   * @param regionInfo the target region info
-   * @return true if the region is closed
-   * @throws IOException
-   */
-  public static boolean closeRegionForSplitOrMerge(
-      final RpcController controller,
-      final AdminService.BlockingInterface admin,
-      final ServerName server,
-      final HRegionInfo... regionInfo) throws IOException {
-    CloseRegionForSplitOrMergeRequest closeRegionForRequest =
-        ProtobufUtil.buildCloseRegionForSplitOrMergeRequest(server, regionInfo);
-    try {
-      CloseRegionForSplitOrMergeResponse response =
-          admin.closeRegionForSplitOrMerge(controller, closeRegionForRequest);
-      return ResponseConverter.isClosed(response);
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
-  /**
    * A helper to warmup a region given a region name
    * using admin protocol
    *
@@ -2023,6 +1997,46 @@ public final class ProtobufUtil {
       admin.splitRegion(controller, request);
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to merge regions using admin protocol. Send request to
+   * regionserver.
+   * @param admin
+   * @param region_a
+   * @param region_b
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          two adjacent regions
+   * @param user effective user
+   * @throws IOException
+   */
+  public static void mergeRegions(final RpcController controller,
+      final AdminService.BlockingInterface admin,
+      final HRegionInfo region_a, final HRegionInfo region_b,
+      final boolean forcible, final User user) throws IOException {
+    final MergeRegionsRequest request = ProtobufUtil.buildMergeRegionsRequest(
+        region_a.getRegionName(), region_b.getRegionName(),forcible);
+    if (user != null) {
+      try {
+        user.runAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            admin.mergeRegions(controller, request);
+            return null;
+          }
+        });
+      } catch (InterruptedException ie) {
+        InterruptedIOException iioe = new InterruptedIOException();
+        iioe.initCause(ie);
+        throw iioe;
+      }
+    } else {
+      try {
+        admin.mergeRegions(controller, request);
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      }
     }
   }
 
@@ -3109,8 +3123,8 @@ public final class ProtobufUtil {
       backupMasters.add(ProtobufUtil.toServerName(sn));
     }
 
-    Set<RegionState> rit = null;
-    rit = new HashSet<>(proto.getRegionsInTransitionList().size());
+    List<RegionState> rit =
+      new ArrayList<>(proto.getRegionsInTransitionList().size());
     for (RegionInTransition region : proto.getRegionsInTransitionList()) {
       RegionState value = RegionState.convert(region.getRegionState());
       rit.add(value);
@@ -3269,26 +3283,6 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Create a CloseRegionForSplitOrMergeRequest for given regions
-   *
-   * @param server the RS server that hosts the region
-   * @param regionsToClose the info of the regions to close
-   * @return a CloseRegionForSplitRequest
-   */
-  public static CloseRegionForSplitOrMergeRequest buildCloseRegionForSplitOrMergeRequest(
-      final ServerName server,
-      final HRegionInfo... regionsToClose) {
-    CloseRegionForSplitOrMergeRequest.Builder builder =
-        CloseRegionForSplitOrMergeRequest.newBuilder();
-    for(int i = 0; i < regionsToClose.length; i++) {
-        RegionSpecifier regionToClose = RequestConverter.buildRegionSpecifier(
-          RegionSpecifierType.REGION_NAME, regionsToClose[i].getRegionName());
-        builder.addRegion(regionToClose);
-    }
-    return builder.build();
-  }
-
-  /**
     * Create a CloseRegionRequest for a given encoded region name
     *
     * @param encodedRegionName the name of the region to close
@@ -3336,6 +3330,28 @@ public final class ProtobufUtil {
     }
     return builder.build();
   }
+
+   /**
+    * Create a MergeRegionsRequest for the given regions
+    * @param regionA name of region a
+    * @param regionB name of region b
+    * @param forcible true if it is a compulsory merge
+    * @return a MergeRegionsRequest
+    */
+   public static MergeRegionsRequest buildMergeRegionsRequest(
+       final byte[] regionA, final byte[] regionB, final boolean forcible) {
+     MergeRegionsRequest.Builder builder = MergeRegionsRequest.newBuilder();
+     RegionSpecifier regionASpecifier = RequestConverter.buildRegionSpecifier(
+         RegionSpecifierType.REGION_NAME, regionA);
+     RegionSpecifier regionBSpecifier = RequestConverter.buildRegionSpecifier(
+         RegionSpecifierType.REGION_NAME, regionB);
+     builder.setRegionA(regionASpecifier);
+     builder.setRegionB(regionBSpecifier);
+     builder.setForcible(forcible);
+     // send the master's wall clock time as well, so that the RS can refer to it
+     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
+     return builder.build();
+   }
 
   /**
    * Get a ServerName from the passed in data bytes.

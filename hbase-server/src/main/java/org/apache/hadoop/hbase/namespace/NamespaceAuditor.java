@@ -126,14 +126,14 @@ public class NamespaceAuditor {
     }
   }
 
-  public void updateQuotaForRegionMerge(HRegionInfo hri) throws IOException {
+  public void updateQuotaForRegionMerge(HRegionInfo mergedRegion) throws IOException {
     if (!stateManager.isInitialized()) {
       throw new IOException(
           "Merge operation is being performed even before namespace auditor is initialized.");
-    } else if (!stateManager
-        .checkAndUpdateNamespaceRegionCount(hri.getTable(), hri.getRegionName(), -1)) {
-      throw new QuotaExceededException("Region split not possible for :" + hri.getEncodedName()
-          + " as quota limits are exceeded ");
+    } else if (!stateManager.checkAndUpdateNamespaceRegionCount(mergedRegion.getTable(),
+        mergedRegion.getRegionName(), -1)) {
+      throw new QuotaExceededException("Region merge not possible for :" +
+        mergedRegion.getEncodedName() + " as quota limits are exceeded ");
     }
   }
 

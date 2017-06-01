@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -416,17 +415,7 @@ public class RestoreSnapshotProcedure
     try {
       Connection conn = env.getMasterServices().getConnection();
 
-      // 1. Forces all the RegionStates to be offline
-      //
-      // The AssignmentManager keeps all the region states around
-      // with no possibility to remove them, until the master is restarted.
-      // This means that a region marked as SPLIT before the restore will never be assigned again.
-      // To avoid having all states around all the regions are switched to the OFFLINE state,
-      // which is the same state that the regions will be after a delete table.
-      forceRegionsOffline(env, regionsToAdd);
-      forceRegionsOffline(env, regionsToRestore);
-      forceRegionsOffline(env, regionsToRemove);
-
+      // 1. Prepare to restore
       getMonitorStatus().setStatus("Preparing to restore each region");
 
       // 2. Applies changes to hbase:meta
@@ -492,20 +481,6 @@ public class RestoreSnapshotProcedure
       // restore acl of snapshot to table.
       RestoreSnapshotHelper.restoreSnapshotAcl(snapshot, TableName.valueOf(snapshot.getTable()),
         env.getMasterServices().getConfiguration());
-    }
-  }
-
-  /**
-   * Make sure that region states of the region list is in OFFLINE state.
-   * @param env MasterProcedureEnv
-   * @param hris region info list
-   **/
-  private void forceRegionsOffline(final MasterProcedureEnv env, final List<HRegionInfo> hris) {
-    RegionStates states = env.getMasterServices().getAssignmentManager().getRegionStates();
-    if (hris != null) {
-      for (HRegionInfo hri: hris) {
-        states.regionOffline(hri);
-      }
     }
   }
 

@@ -19,7 +19,10 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.regionserver.HRegion.warmupHRegion;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,21 +32,20 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.experimental.categories.Category;
-import org.junit.BeforeClass;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Run tests that use the HBase clients; {@link org.apache.hadoop.hbase.client.HTable}.
@@ -158,6 +160,8 @@ public class TestWarmupRegion {
      for (int i = 0; i < 10; i++) {
        HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(serverid);
        byte [] destName = Bytes.toBytes(rs.getServerName().toString());
+       assertTrue(destName != null);
+       LOG.info("i=" + i );
        TEST_UTIL.getMiniHBaseCluster().getMaster().move(info.getEncodedNameAsBytes(), destName);
        serverid = (serverid + 1) % 2;
      }

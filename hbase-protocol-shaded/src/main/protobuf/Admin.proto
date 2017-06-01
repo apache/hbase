@@ -39,6 +39,10 @@ message GetRegionInfoResponse {
   required RegionInfo region_info = 1;
   optional CompactionState compaction_state = 2;
   optional bool isRecovering = 3;
+  // True if region is splittable, false otherwise.
+  optional bool splittable = 4;
+  // True if region is mergeable, false otherwise.
+  optional bool mergeable = 5;
 
   enum CompactionState {
     NONE = 0;
@@ -116,18 +120,6 @@ message CloseRegionRequest {
 }
 
 message CloseRegionResponse {
-  required bool closed = 1;
-}
-
-/**
- * Closes the specified region(s) for
- * split or merge
- */
-message CloseRegionForSplitOrMergeRequest {
-  repeated RegionSpecifier region = 1;
-}
-
-message CloseRegionForSplitOrMergeResponse {
   required bool closed = 1;
 }
 
@@ -268,6 +260,32 @@ message ClearCompactionQueuesRequest {
 message ClearCompactionQueuesResponse {
 }
 
+message ExecuteProceduresRequest {
+  repeated OpenRegionRequest open_region = 1;
+  repeated CloseRegionRequest close_region = 2;
+}
+
+message ExecuteProceduresResponse {
+  repeated OpenRegionResponse open_region = 1;
+  repeated CloseRegionResponse close_region = 2;
+}
+
+/**
+ * Merges the specified regions.
+ * <p>
+ * This method currently closes the regions and then merges them
+ */
+message MergeRegionsRequest {
+  required RegionSpecifier region_a = 1;
+  required RegionSpecifier region_b = 2;
+  optional bool forcible = 3 [default = false];
+  // wall clock time from master
+  optional uint64 master_system_time = 4;
+}
+
+message MergeRegionsResponse {
+}
+
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -286,9 +304,6 @@ service AdminService {
 
   rpc CloseRegion(CloseRegionRequest)
     returns(CloseRegionResponse);
-
-  rpc CloseRegionForSplitOrMerge(CloseRegionForSplitOrMergeRequest)
-    returns(CloseRegionForSplitOrMergeResponse);
 
   rpc FlushRegion(FlushRegionRequest)
     returns(FlushRegionResponse);
@@ -329,4 +344,10 @@ service AdminService {
   /** Fetches the RegionServer's view of space quotas */
   rpc GetSpaceQuotaSnapshots(GetSpaceQuotaSnapshotsRequest)
     returns(GetSpaceQuotaSnapshotsResponse);
+
+  rpc ExecuteProcedures(ExecuteProceduresRequest)
+    returns(ExecuteProceduresResponse);
+
+  rpc MergeRegions(MergeRegionsRequest)
+    returns(MergeRegionsResponse);
 }

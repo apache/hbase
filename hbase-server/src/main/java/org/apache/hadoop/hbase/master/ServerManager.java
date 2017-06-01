@@ -57,12 +57,10 @@ import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -76,7 +74,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -314,7 +311,8 @@ public class ServerManager {
     }
   }
 
-  void regionServerReport(ServerName sn,
+  @VisibleForTesting
+  public void regionServerReport(ServerName sn,
       ServerLoad sl) throws YouAreDeadException {
     checkIsDead(sn, "REPORT");
     if (null == this.onlineServers.replace(sn, sl)) {
@@ -614,12 +612,7 @@ public class ServerManager {
       return;
     }
 
-    boolean carryingMeta = master.getAssignmentManager().isCarryingMeta(serverName);
-    ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
-    procExec.submitProcedure(new ServerCrashProcedure(
-      procExec.getEnvironment(), serverName, true, carryingMeta));
-    LOG.debug("Added=" + serverName +
-      " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
+    master.getAssignmentManager().submitServerCrash(serverName, true);
 
     // Tell our listeners that a server was removed
     if (!this.listeners.isEmpty()) {
@@ -627,6 +620,37 @@ public class ServerManager {
         listener.serverRemoved(serverName);
       }
     }
+  }
+
+  /**
+   * Sends an MERGE REGIONS RPC to the specified server to merge the specified
+   * regions.
+   * <p>
+   * A region server could reject the close request because it either does not
+   * have the specified region.
+   * @param server server to merge regions
+   * @param region_a region to merge
+   * @param region_b region to merge
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          two adjacent regions
+   * @throws IOException
+   */
+  public void sendRegionsMerge(ServerName server, HRegionInfo region_a,
+      HRegionInfo region_b, boolean forcible, final User user) throws IOException {
+    if (server == null)
+      throw new NullPointerException("Passed server is null");
+    if (region_a == null || region_b == null)
+      throw new NullPointerException("Passed region is null");
+    AdminService.BlockingInterface admin = getRsAdmin(server);
+    if (admin == null) {
+      throw new IOException("Attempting to send MERGE REGIONS RPC to server "
+          + server.toString() + " for region "
+          + region_a.getRegionNameAsString() + ","
+          + region_b.getRegionNameAsString()
+          + " failed because no RPC connection found to this server");
+    }
+    HBaseRpcController controller = newRpcController();
+    ProtobufUtil.mergeRegions(controller, admin, region_a, region_b, forcible, user);
   }
 
   @VisibleForTesting
@@ -660,9 +684,7 @@ public class ServerManager {
     }
 
     this.deadservers.add(serverName);
-    ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
-    procExec.submitProcedure(new ServerCrashProcedure(
-      procExec.getEnvironment(), serverName, shouldSplitWal, false));
+    master.getAssignmentManager().submitServerCrash(serverName, shouldSplitWal);
   }
 
   /**
@@ -748,9 +770,8 @@ public class ServerManager {
       throw new IOException("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
     }
-    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server,
-      region, favoredNodes,
-      (RecoveryMode.LOG_REPLAY == this.master.getMasterWalManager().getLogRecoveryMode()));
+    OpenRegionRequest request =
+        RequestConverter.buildOpenRegionRequest(server, region, favoredNodes, false);
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningState(response);
@@ -832,8 +853,8 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
     }
 
-    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server, regionOpenInfos,
-      (RecoveryMode.LOG_REPLAY == this.master.getMasterWalManager().getLogRecoveryMode()));
+    OpenRegionRequest request =
+        RequestConverter.buildOpenRegionRequest(server, regionOpenInfos, false);
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningStateList(response);
@@ -874,30 +895,6 @@ public class ServerManager {
   public boolean sendRegionClose(ServerName server,
       HRegionInfo region) throws IOException {
     return sendRegionClose(server, region, null);
-  }
-
-  /**
-   * Sends an CLOSE RPC to the specified server to close the specified region for SPLIT.
-   * <p>
-   * A region server could reject the close request because it either does not
-   * have the specified region or the region is being split.
-   * @param server server to close a region
-   * @param regionToClose the info of the region(s) to close
-   * @throws IOException
-   */
-  public boolean sendRegionCloseForSplitOrMerge(
-      final ServerName server,
-      final HRegionInfo... regionToClose) throws IOException {
-    if (server == null) {
-      throw new NullPointerException("Passed server is null");
-    }
-    AdminService.BlockingInterface admin = getRsAdmin(server);
-    if (admin == null) {
-      throw new IOException("Attempting to send CLOSE For Split or Merge RPC to server " +
-        server.toString() + " failed because no RPC connection found to this server.");
-    }
-    HBaseRpcController controller = newRpcController();
-    return ProtobufUtil.closeRegionForSplitOrMerge(controller, admin, server, regionToClose);
   }
 
   /**
@@ -990,7 +987,7 @@ public class ServerManager {
     * @throws IOException
     * @throws RetriesExhaustedException wrapping a ConnectException if failed
     */
-  private AdminService.BlockingInterface getRsAdmin(final ServerName sn)
+  public AdminService.BlockingInterface getRsAdmin(final ServerName sn)
   throws IOException {
     AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
     if (admin == null) {

@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   private static final Log LOG = LogFactory.getLog(AbstractProcedureScheduler.class);
-  private final ReentrantLock schedLock = new ReentrantLock();
-  private final Condition schedWaitCond = schedLock.newCondition();
+  private final ReentrantLock schedulerLock = new ReentrantLock();
+  private final Condition schedWaitCond = schedulerLock.newCondition();
   private boolean running = false;
 
   // TODO: metrics
@@ -88,14 +88,14 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   protected void push(final Procedure procedure, final boolean addFront, final boolean notify) {
-    schedLock.lock();
+    schedLock();
     try {
       enqueue(procedure, addFront);
       if (notify) {
         schedWaitCond.signal();
       }
     } finally {
-      schedLock.unlock();
+      schedUnlock();
     }
   }
 
@@ -219,11 +219,11 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
 
   @Override
   public void suspendEvent(final ProcedureEvent event) {
-    final boolean isTraceEnabled = LOG.isTraceEnabled();
+    final boolean traceEnabled = LOG.isTraceEnabled();
     synchronized (event) {
       event.setReady(false);
-      if (isTraceEnabled) {
-        LOG.trace("Suspend event " + event);
+      if (traceEnabled) {
+        LOG.trace("Suspend " + event);
       }
     }
   }
@@ -235,18 +235,29 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
 
   @Override
   public void wakeEvents(final int count, final ProcedureEvent... events) {
-    final boolean isTraceEnabled = LOG.isTraceEnabled();
+    final boolean traceEnabled = LOG.isTraceEnabled();
     schedLock();
     try {
       int waitingCount = 0;
       for (int i = 0; i < count; ++i) {
         final ProcedureEvent event = events[i];
         synchronized (event) {
-          event.setReady(true);
-          if (isTraceEnabled) {
-            LOG.trace("Wake event " + event);
+          if (!event.isReady()) {
+            // Only set ready if we were not ready; i.e. suspended. Otherwise, we double-wake
+            // on this event and down in wakeWaitingProcedures, we double decrement this
+            // finish which messes up child procedure accounting.
+            event.setReady(true);
+            if (traceEnabled) {
+              LOG.trace("Unsuspend " + event);
+            }
+            waitingCount += wakeWaitingProcedures(event.getSuspendedProcedures());
+          } else {
+            ProcedureDeque q = event.getSuspendedProcedures();
+            if (q != null && !q.isEmpty()) {
+              LOG.warn("Q is not empty! size=" + q.size() + "; PROCESSING...");
+              waitingCount += wakeWaitingProcedures(event.getSuspendedProcedures());
+            }
           }
-          waitingCount += wakeWaitingProcedures(event.getSuspendedProcedures());
         }
       }
       wakePollIfNeeded(waitingCount);
@@ -275,6 +286,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   protected void wakeProcedure(final Procedure procedure) {
+    if (LOG.isTraceEnabled()) LOG.trace("Wake " + procedure);
     push(procedure, /* addFront= */ true, /* notify= */false);
   }
 
@@ -282,11 +294,11 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   //  Internal helpers
   // ==========================================================================
   protected void schedLock() {
-    schedLock.lock();
+    schedulerLock.lock();
   }
 
   protected void schedUnlock() {
-    schedLock.unlock();
+    schedulerLock.unlock();
   }
 
   protected void wakePollIfNeeded(final int waitingCount) {

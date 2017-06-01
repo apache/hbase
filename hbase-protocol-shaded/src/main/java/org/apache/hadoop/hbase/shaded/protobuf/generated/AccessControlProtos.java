@@ -1024,7 +1024,7 @@ public final class AccessControlProtos {
        * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GlobalPermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GlobalPermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GlobalPermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GlobalPermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder> 
           getGlobalPermissionFieldBuilder() {
         if (globalPermissionBuilder_ == null) {
           globalPermissionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -1142,7 +1142,7 @@ public final class AccessControlProtos {
        * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder> 
           getNamespacePermissionFieldBuilder() {
         if (namespacePermissionBuilder_ == null) {
           namespacePermissionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -1260,7 +1260,7 @@ public final class AccessControlProtos {
        * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder> 
           getTablePermissionFieldBuilder() {
         if (tablePermissionBuilder_ == null) {
           tablePermissionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -2074,7 +2074,7 @@ public final class AccessControlProtos {
        * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -4130,7 +4130,7 @@ public final class AccessControlProtos {
        * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
           getPermissionFieldBuilder() {
         if (permissionBuilder_ == null) {
           permissionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -4198,7 +4198,7 @@ public final class AccessControlProtos {
     /**
      * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions>
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> 
         getUserPermissionsList();
     /**
      * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
@@ -4211,7 +4211,7 @@ public final class AccessControlProtos {
     /**
      * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
         getUserPermissionsOrBuilderList();
     /**
      * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
@@ -4319,7 +4319,7 @@ public final class AccessControlProtos {
       /**
        * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
-      java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission>
+      java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission> 
           getPermissionsList();
       /**
        * <code>repeated .hbase.pb.Permission permissions = 2;</code>
@@ -4332,7 +4332,7 @@ public final class AccessControlProtos {
       /**
        * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
-      java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder>
+      java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
           getPermissionsOrBuilderList();
       /**
        * <code>repeated .hbase.pb.Permission permissions = 2;</code>
@@ -4452,7 +4452,7 @@ public final class AccessControlProtos {
       /**
        * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
           getPermissionsOrBuilderList() {
         return permissions_;
       }
@@ -4790,7 +4790,7 @@ public final class AccessControlProtos {
                 permissionsBuilder_ = null;
                 permissions_ = other.permissions_;
                 bitField0_ = (bitField0_ & ~0x00000002);
-                permissionsBuilder_ =
+                permissionsBuilder_ = 
                   org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                      getPermissionsFieldBuilder() : null;
               } else {
@@ -5064,7 +5064,7 @@ public final class AccessControlProtos {
         /**
          * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
-        public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder>
+        public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
              getPermissionsOrBuilderList() {
           if (permissionsBuilder_ != null) {
             return permissionsBuilder_.getMessageOrBuilderList();
@@ -5090,12 +5090,12 @@ public final class AccessControlProtos {
         /**
          * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
-        public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder>
+        public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder> 
              getPermissionsBuilderList() {
           return getPermissionsFieldBuilder().getBuilderList();
         }
         private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-            org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder>
+            org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
             getPermissionsFieldBuilder() {
           if (permissionsBuilder_ == null) {
             permissionsBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -5168,7 +5168,7 @@ public final class AccessControlProtos {
     /**
      * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
         getUserPermissionsOrBuilderList() {
       return userPermissions_;
     }
@@ -5480,7 +5480,7 @@ public final class AccessControlProtos {
               userPermissionsBuilder_ = null;
               userPermissions_ = other.userPermissions_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              userPermissionsBuilder_ =
+              userPermissionsBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getUserPermissionsFieldBuilder() : null;
             } else {
@@ -5716,7 +5716,7 @@ public final class AccessControlProtos {
       /**
        * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
            getUserPermissionsOrBuilderList() {
         if (userPermissionsBuilder_ != null) {
           return userPermissionsBuilder_.getMessageOrBuilderList();
@@ -5742,12 +5742,12 @@ public final class AccessControlProtos {
       /**
        * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder>
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder> 
            getUserPermissionsBuilderList() {
         return getUserPermissionsFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
           getUserPermissionsFieldBuilder() {
         if (userPermissionsBuilder_ == null) {
           userPermissionsBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -6396,7 +6396,7 @@ public final class AccessControlProtos {
        * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
           getUserPermissionFieldBuilder() {
         if (userPermissionBuilder_ == null) {
           userPermissionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -7393,7 +7393,7 @@ public final class AccessControlProtos {
        * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
           getUserPermissionFieldBuilder() {
         if (userPermissionBuilder_ == null) {
           userPermissionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -8507,7 +8507,7 @@ public final class AccessControlProtos {
        * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -8610,7 +8610,7 @@ public final class AccessControlProtos {
     /**
      * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission>
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission> 
         getUserPermissionList();
     /**
      * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
@@ -8623,7 +8623,7 @@ public final class AccessControlProtos {
     /**
      * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
         getUserPermissionOrBuilderList();
     /**
      * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
@@ -8721,7 +8721,7 @@ public final class AccessControlProtos {
     /**
      * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
         getUserPermissionOrBuilderList() {
       return userPermission_;
     }
@@ -9028,7 +9028,7 @@ public final class AccessControlProtos {
               userPermissionBuilder_ = null;
               userPermission_ = other.userPermission_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              userPermissionBuilder_ =
+              userPermissionBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getUserPermissionFieldBuilder() : null;
             } else {
@@ -9264,7 +9264,7 @@ public final class AccessControlProtos {
       /**
        * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
            getUserPermissionOrBuilderList() {
         if (userPermissionBuilder_ != null) {
           return userPermissionBuilder_.getMessageOrBuilderList();
@@ -9290,12 +9290,12 @@ public final class AccessControlProtos {
       /**
        * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission.Builder>
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission.Builder> 
            getUserPermissionBuilderList() {
         return getUserPermissionFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
           getUserPermissionFieldBuilder() {
         if (userPermissionBuilder_ == null) {
           userPermissionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -9364,7 +9364,7 @@ public final class AccessControlProtos {
     /**
      * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission>
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission> 
         getPermissionList();
     /**
      * <code>repeated .hbase.pb.Permission permission = 1;</code>
@@ -9377,7 +9377,7 @@ public final class AccessControlProtos {
     /**
      * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
         getPermissionOrBuilderList();
     /**
      * <code>repeated .hbase.pb.Permission permission = 1;</code>
@@ -9475,7 +9475,7 @@ public final class AccessControlProtos {
     /**
      * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
         getPermissionOrBuilderList() {
       return permission_;
     }
@@ -9782,7 +9782,7 @@ public final class AccessControlProtos {
               permissionBuilder_ = null;
               permission_ = other.permission_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              permissionBuilder_ =
+              permissionBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getPermissionFieldBuilder() : null;
             } else {
@@ -10018,7 +10018,7 @@ public final class AccessControlProtos {
       /**
        * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
            getPermissionOrBuilderList() {
         if (permissionBuilder_ != null) {
           return permissionBuilder_.getMessageOrBuilderList();
@@ -10044,12 +10044,12 @@ public final class AccessControlProtos {
       /**
        * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder>
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder> 
            getPermissionBuilderList() {
         return getPermissionFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
           getPermissionFieldBuilder() {
         if (permissionBuilder_ == null) {
           permissionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -10931,77 +10931,77 @@ public final class AccessControlProtos {
 
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_Permission_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_Permission_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_TablePermission_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_TablePermission_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_NamespacePermission_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_NamespacePermission_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GlobalPermission_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GlobalPermission_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_UserPermission_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_UserPermission_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_UsersAndPermissions_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_UsersAndPermissions_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_UsersAndPermissions_UserPermissions_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_UsersAndPermissions_UserPermissions_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GrantRequest_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GrantRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GrantResponse_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GrantResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RevokeRequest_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RevokeRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RevokeResponse_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RevokeResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetUserPermissionsRequest_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetUserPermissionsRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetUserPermissionsResponse_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetUserPermissionsResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_CheckPermissionsRequest_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_CheckPermissionsRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_CheckPermissionsResponse_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_CheckPermissionsResponse_fieldAccessorTable;
 

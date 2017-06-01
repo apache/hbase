@@ -677,6 +677,8 @@ public class TestFromClientSide3 {
             });
           fail("This cp should fail because the target lock is blocked by previous put");
         } catch (Throwable ex) {
+          // TODO!!!! Is this right? It catches everything including the above fail
+          // if it happens (which it seems too....)
         }
       });
       cpService.shutdown();

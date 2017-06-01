@@ -55,10 +55,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -304,6 +301,7 @@ public class TestRegionReplicas {
     }
   }
 
+  @Ignore
   @Test(timeout = 300000)
   public void testFlushAndCompactionsInPrimary() throws Exception {
 

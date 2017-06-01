@@ -61,7 +61,7 @@ public class DeadServer {
   /**
    * Whether a dead server is being processed currently.
    */
-  private boolean processing = false;
+  private volatile boolean processing = false;
 
   /**
    * A dead server that comes back alive has a different start code. The new start code should be
@@ -123,14 +123,14 @@ public class DeadServer {
    * @param sn ServerName for the dead server.
    */
   public synchronized void notifyServer(ServerName sn) {
-    if (LOG.isDebugEnabled()) { LOG.debug("Started processing " + sn); }
+    if (LOG.isTraceEnabled()) { LOG.trace("Started processing " + sn); }
     processing = true;
     numProcessing++;
   }
 
   public synchronized void finish(ServerName sn) {
     numProcessing--;
-    if (LOG.isDebugEnabled()) LOG.debug("Finished " + sn + "; numProcessing=" + numProcessing);
+    if (LOG.isTraceEnabled()) LOG.trace("Finished " + sn + "; numProcessing=" + numProcessing);
 
     assert numProcessing >= 0: "Number of dead servers in processing should always be non-negative";
 

@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -106,7 +105,10 @@ public class DeleteColumnFamilyProcedure
         setNextState(DeleteColumnFamilyState.DELETE_COLUMN_FAMILY_REOPEN_ALL_REGIONS);
         break;
       case DELETE_COLUMN_FAMILY_REOPEN_ALL_REGIONS:
-        reOpenAllRegionsIfTableIsOnline(env);
+        if (env.getAssignmentManager().isTableEnabled(getTableName())) {
+          addChildProcedure(env.getAssignmentManager()
+            .createReopenProcedures(getRegionInfoList(env)));
+        }
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
@@ -292,7 +294,8 @@ public class DeleteColumnFamilyProcedure
     env.getMasterServices().getTableDescriptors().add(unmodifiedHTableDescriptor);
 
     // Make sure regions are opened after table descriptor is updated.
-    reOpenAllRegionsIfTableIsOnline(env);
+    //reOpenAllRegionsIfTableIsOnline(env);
+    // TODO: NUKE ROLLBACK!!!!
   }
 
   /**
@@ -313,25 +316,6 @@ public class DeleteColumnFamilyProcedure
   private void postDelete(final MasterProcedureEnv env, final DeleteColumnFamilyState state)
       throws IOException, InterruptedException {
     runCoprocessorAction(env, state);
-  }
-
-  /**
-   * Last action from the procedure - executed when online schema change is supported.
-   * @param env MasterProcedureEnv
-   * @throws IOException
-   */
-  private void reOpenAllRegionsIfTableIsOnline(final MasterProcedureEnv env) throws IOException {
-    // This operation only run when the table is enabled.
-    if (!env.getMasterServices().getTableStateManager()
-        .isTableState(getTableName(), TableState.State.ENABLED)) {
-      return;
-    }
-
-    if (MasterDDLOperationHelper.reOpenAllRegions(env, getTableName(), getRegionInfoList(env))) {
-      LOG.info("Completed delete column family operation on table " + getTableName());
-    } else {
-      LOG.warn("Error on reopening the regions on table " + getTableName());
-    }
   }
 
   /**
@@ -376,7 +360,8 @@ public class DeleteColumnFamilyProcedure
 
   private List<HRegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {
     if (regionInfoList == null) {
-      regionInfoList = ProcedureSyncWait.getRegionsFromMeta(env, getTableName());
+      regionInfoList = env.getAssignmentManager().getRegionStates()
+          .getRegionsOfTable(getTableName());
     }
     return regionInfoList;
   }

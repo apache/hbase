@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -107,10 +106,12 @@ public class CreateTableProcedure
           setNextState(CreateTableState.CREATE_TABLE_ASSIGN_REGIONS);
           break;
         case CREATE_TABLE_ASSIGN_REGIONS:
-          assignRegions(env, getTableName(), newRegions);
+          setEnablingState(env, getTableName());
+          addChildProcedure(env.getAssignmentManager().createAssignProcedures(newRegions));
           setNextState(CreateTableState.CREATE_TABLE_UPDATE_DESC_CACHE);
           break;
         case CREATE_TABLE_UPDATE_DESC_CACHE:
+          setEnabledState(env, getTableName());
           updateTableDescCache(env, getTableName());
           setNextState(CreateTableState.CREATE_TABLE_POST_OPERATION);
           break;
@@ -333,21 +334,21 @@ public class CreateTableProcedure
   protected static List<HRegionInfo> addTableToMeta(final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor,
       final List<HRegionInfo> regions) throws IOException {
-    if (regions != null && regions.size() > 0) {
-      ProcedureSyncWait.waitMetaRegions(env);
+    assert (regions != null && regions.size() > 0) : "expected at least 1 region, got " + regions;
 
-      // Add regions to META
-      addRegionsToMeta(env, hTableDescriptor, regions);
-      // Add replicas if needed
-      List<HRegionInfo> newRegions = addReplicas(env, hTableDescriptor, regions);
+    ProcedureSyncWait.waitMetaRegions(env);
 
-      // Setup replication for region replicas if needed
-      if (hTableDescriptor.getRegionReplication() > 1) {
-        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
-      }
-      return newRegions;
+    // Add replicas if needed
+    List<HRegionInfo> newRegions = addReplicas(env, hTableDescriptor, regions);
+
+    // Add regions to META
+    addRegionsToMeta(env, hTableDescriptor, newRegions);
+
+    // Setup replication for region replicas if needed
+    if (hTableDescriptor.getRegionReplication() > 1) {
+      ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
     }
-    return regions;
+    return newRegions;
   }
 
   /**
@@ -374,18 +375,16 @@ public class CreateTableProcedure
     return hRegionInfos;
   }
 
-  protected static void assignRegions(final MasterProcedureEnv env,
-      final TableName tableName, final List<HRegionInfo> regions) throws IOException {
-    ProcedureSyncWait.waitRegionServers(env);
 
+  protected static void setEnablingState(final MasterProcedureEnv env, final TableName tableName)
+      throws IOException {
     // Mark the table as Enabling
     env.getMasterServices().getTableStateManager()
       .setTableState(tableName, TableState.State.ENABLING);
+  }
 
-    // Trigger immediate assignment of the regions in round-robin fashion
-    final AssignmentManager assignmentManager = env.getMasterServices().getAssignmentManager();
-    ModifyRegionUtils.assignRegions(assignmentManager, regions);
-
+  protected static void setEnabledState(final MasterProcedureEnv env, final TableName tableName)
+      throws IOException {
     // Enable table
     env.getMasterServices().getTableStateManager()
       .setTableState(tableName, TableState.State.ENABLED);

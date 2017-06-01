@@ -52,9 +52,8 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   @Override
   public void toStringClassDetails(final StringBuilder sb) {
     sb.append(getClass().getSimpleName());
-    sb.append(" (namespace=");
+    sb.append(", namespace=");
     sb.append(getNamespaceName());
-    sb.append(")");
   }
 
   @Override

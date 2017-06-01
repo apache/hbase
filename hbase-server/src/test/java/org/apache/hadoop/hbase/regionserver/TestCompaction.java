@@ -294,7 +294,7 @@ public class TestCompaction {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
     Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
-    CompactSplitThread thread = new CompactSplitThread(mockServer);
+    CompactSplit thread = new CompactSplit(mockServer);
     Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
 
     // setup a region/store with some files
@@ -318,7 +318,7 @@ public class TestCompaction {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
     Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
-    CompactSplitThread thread = new CompactSplitThread(mockServer);
+    CompactSplit thread = new CompactSplit(mockServer);
     Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
 
     // setup a region/store with some files
@@ -357,7 +357,7 @@ public class TestCompaction {
 
   /**
    * HBASE-7947: Regression test to ensure adding to the correct list in the
-   * {@link CompactSplitThread}
+   * {@link CompactSplit}
    * @throws Exception on failure
    */
   @Test
@@ -365,7 +365,7 @@ public class TestCompaction {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
     Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
-    CompactSplitThread thread = new CompactSplitThread(mockServer);
+    CompactSplit thread = new CompactSplit(mockServer);
     Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
 
     // setup a region/store with some files
@@ -548,7 +548,7 @@ public class TestCompaction {
     when(mockServer.isStopped()).thenReturn(false);
     when(mockServer.getConfiguration()).thenReturn(conf);
     when(mockServer.getChoreService()).thenReturn(new ChoreService("test"));
-    CompactSplitThread cst = new CompactSplitThread(mockServer);
+    CompactSplit cst = new CompactSplit(mockServer);
     when(mockServer.getCompactSplitThread()).thenReturn(cst);
     //prevent large compaction thread pool stealing job from small compaction queue.
     cst.shutdownLongCompactions();

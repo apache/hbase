@@ -76,7 +76,7 @@ public class TestMasterProcedureWalLease {
   @Before
   public void setup() throws Exception {
     setupConf(UTIL.getConfiguration());
-    UTIL.startMiniCluster(2, 1);
+    UTIL.startMiniCluster(2, 2);
   }
 
   @After

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -40,8 +42,12 @@ import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
-  @Rule
-  public TestName name = new TestName();
+  private static final Log LOG = LogFactory.getLog(TestCreateTableProcedure.class);
+
+  private static final String F1 = "f1";
+  private static final String F2 = "f2";
+
+  @Rule public TestName name = new TestName();
 
   @Test(timeout=60000)
   public void testSimpleCreate() throws Exception {
@@ -61,9 +67,8 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   private void testSimpleCreate(final TableName tableName, byte[][] splitKeys) throws Exception {
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
-    MasterProcedureTestingUtility.validateTableCreation(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
+      getMasterProcedureExecutor(), tableName, splitKeys, F1, F2);
+    MasterProcedureTestingUtility.validateTableCreation(getMaster(), tableName, regions, F1, F2);
   }
 
   @Test(timeout=60000)
@@ -126,25 +131,21 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     // Restart the executor and execute the step twice
-    // NOTE: the 6 (number of CreateTableState steps) is hardcoded,
-    //       so you have to look at this test at least once when you add a new step.
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, 6);
-
-    MasterProcedureTestingUtility.validateTableCreation(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+    MasterProcedureTestingUtility.validateTableCreation(getMaster(), tableName, regions, F1, F2);
   }
 
   @Test(timeout=90000)
   public void testRollbackAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    testRollbackAndDoubleExecution(MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2"));
+    testRollbackAndDoubleExecution(MasterProcedureTestingUtility.createHTD(tableName, F1, F2));
   }
 
   @Test(timeout=90000)
   public void testRollbackAndDoubleExecutionOnMobTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
-    htd.getFamily(Bytes.toBytes("f1")).setMobEnabled(true);
+    HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1, F2);
+    htd.getFamily(Bytes.toBytes(F1)).setMobEnabled(true);
     testRollbackAndDoubleExecution(htd);
   }
 
@@ -166,11 +167,24 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     TableName tableName = htd.getTableName();
-    MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName);
+    MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
 
     // are we able to create the table after a rollback?
     resetProcExecutorTestingKillFlag();
     testSimpleCreate(tableName, splitKeys);
+  }
+
+  @Test
+  public void testMRegions() throws Exception {
+    final byte[][] splitKeys = new byte[500][];
+    for (int i = 0; i < splitKeys.length; ++i) {
+      splitKeys[i] = Bytes.toBytes(String.format("%08d", i));
+    }
+
+    final HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(
+      TableName.valueOf("TestMRegions"), F1, F2);
+    UTIL.getHBaseAdmin().createTableAsync(htd, splitKeys)
+      .get(10, java.util.concurrent.TimeUnit.HOURS);
+    LOG.info("TABLE CREATED");
   }
 }

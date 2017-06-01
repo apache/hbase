@@ -232,7 +232,8 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  protected Procedure<?>[] execute(final MasterProcedureEnv env) throws ProcedureSuspendedException {
+  protected Procedure<MasterProcedureEnv>[] execute(final MasterProcedureEnv env)
+  throws ProcedureSuspendedException {
     // Local master locks don't store any state, so on recovery, simply finish this procedure
     // immediately.
     if (recoveredMasterLock) return null;

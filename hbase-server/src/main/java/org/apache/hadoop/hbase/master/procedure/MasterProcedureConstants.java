@@ -29,7 +29,7 @@ public final class MasterProcedureConstants {
 
   /** Number of threads used by the procedure executor */
   public static final String MASTER_PROCEDURE_THREADS = "hbase.master.procedure.threads";
-  public static final int DEFAULT_MIN_MASTER_PROCEDURE_THREADS = 4;
+  public static final int DEFAULT_MIN_MASTER_PROCEDURE_THREADS = 16;
 
   /**
    * Procedure replay sanity check. In case a WAL is missing or unreadable we

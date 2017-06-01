@@ -26,11 +26,13 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test Export Snapshot Tool
  */
+@Ignore
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestMobExportSnapshot extends TestExportSnapshot {
 

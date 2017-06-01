@@ -469,6 +469,10 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     }
   }
 
+  public synchronized List<ServerName> getFavoredNodes(HRegionInfo regionInfo) {
+    return this.fnm.getFavoredNodes(regionInfo);
+  }
+
   /*
    * Generate Favored Nodes for daughters during region split.
    *
@@ -709,7 +713,12 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
             // No favored nodes, lets unassign.
             LOG.warn("Region not on favored nodes, unassign. Region: " + hri
               + " current: " + current + " favored nodes: " + favoredNodes);
-            this.services.getAssignmentManager().unassign(hri);
+            try {
+              this.services.getAssignmentManager().unassign(hri);
+            } catch (IOException e) {
+              LOG.warn("Failed unassign", e);
+              continue;
+            }
             RegionPlan rp = new RegionPlan(hri, null, null);
             regionPlans.add(rp);
             misplacedRegions++;

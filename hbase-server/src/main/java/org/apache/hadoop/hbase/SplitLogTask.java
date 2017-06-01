@@ -46,6 +46,10 @@ public class SplitLogTask {
   }
 
   public static class Owned extends SplitLogTask {
+    public Owned(final ServerName originServer) {
+      this(originServer, ZooKeeperProtos.SplitLogTask.RecoveryMode.LOG_SPLITTING);
+    }
+ 
     public Owned(final ServerName originServer, final RecoveryMode mode) {
       super(originServer, ZooKeeperProtos.SplitLogTask.State.OWNED, mode);
     }
