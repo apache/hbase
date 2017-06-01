@@ -27,6 +27,7 @@ import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -106,9 +107,11 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
+import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -133,6 +136,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.security.Superusers;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.*;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -2060,19 +2064,34 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public void stop(final String msg) {
+    stop(msg, false, RpcServer.getRequestUser());
+  }
+
+  /**
+   * Stops the regionserver.
+   * @param msg Status message
+   * @param force True if this is a regionserver abort
+   * @param user The user executing the stop request, or null if no user is associated
+   */
+  public void stop(final String msg, final boolean force, final User user) {
     if (!this.stopped) {
       LOG.info("***** STOPPING region server '" + this + "' *****");
-      try {
-        if (this.rsHost != null) {
-          this.rsHost.preStop(msg);
+      if (this.rsHost != null) {
+        // when forced via abort don't allow CPs to override
+        try {
+          this.rsHost.preStop(msg, user);
+        } catch (IOException ioe) {
+          if (!force) {
+            LOG.warn("The region server did not stop", ioe);
+            return;
+          }
+          LOG.warn("Skipping coprocessor exception on preStop() due to forced shutdown", ioe);
         }
-        this.stopped = true;
-        LOG.info("STOPPED: " + msg);
-        // Wakes run() if it is sleeping
-        sleeper.skipSleepCycle();
-      } catch (IOException exp) {
-        LOG.warn("The region server did not stop", exp);
       }
+      this.stopped = true;
+      LOG.info("STOPPED: " + msg);
+      // Wakes run() if it is sleeping
+      sleeper.skipSleepCycle();
     }
   }
 
@@ -2321,7 +2340,8 @@ public class HRegionServer extends HasThread implements
     } catch (Throwable t) {
       LOG.warn("Unable to report fatal error to master", t);
     }
-    stop(reason);
+    // shutdown should be run as the internal user
+    stop(reason, true, null);
   }
 
   /**

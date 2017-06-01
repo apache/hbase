@@ -80,10 +80,10 @@ public class RegionServerCoprocessorHost extends
       sequence, conf, this.rsServices);
   }
 
-  public void preStop(String message) throws IOException {
+  public void preStop(String message, User user) throws IOException {
     // While stopping the region server all coprocessors method should be executed first then the
     // coprocessor should be cleaned up.
-    execShutdown(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execShutdown(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
