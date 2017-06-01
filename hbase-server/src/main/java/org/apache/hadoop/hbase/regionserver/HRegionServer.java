@@ -2200,15 +2200,16 @@ public class HRegionServer extends HasThread implements
         ReportRegionStateTransitionResponse response =
           rss.reportRegionStateTransition(null, request);
         if (response.hasErrorMessage()) {
-          LOG.info("Failed transition " + hris[0]
-            + " to " + code + ": " + response.getErrorMessage());
+          LOG.info("TRANSITION FAILED " + request + ": " + response.getErrorMessage());
+          // NOTE: Return mid-method!!!
           return false;
         }
         // Log if we had to retry else don't log unless TRACE. We want to
         // know if were successful after an attempt showed in logs as failed.
         if (tries > 0 || LOG.isTraceEnabled()) {
-          LOG.trace("TRANSITION REPORTED " + request);
+          LOG.info("TRANSITION REPORTED " + request);
         }
+        // NOTE: Return mid-method!!!
         return true;
       } catch (ServiceException se) {
         IOException ioe = ProtobufUtil.getRemoteException(se);
@@ -2216,11 +2217,11 @@ public class HRegionServer extends HasThread implements
             ioe instanceof PleaseHoldException;
         if (pause) {
           // Do backoff else we flood the Master with requests.
-          pauseTime = ConnectionUtils.getPauseTime(pauseTime, tries);
+          pauseTime = ConnectionUtils.getPauseTime(INIT_PAUSE_TIME_MS, tries);
         } else {
           pauseTime = INIT_PAUSE_TIME_MS; // Reset.
         }
-        LOG.info("Failed report of region transition " +
+        LOG.info("Failed report transition " +
           TextFormat.shortDebugString(request) + "; retry (#" + tries + ")" +
             (pause?
                 " after " + pauseTime + "ms delay (Master is coming online...).":
@@ -2233,9 +2234,7 @@ public class HRegionServer extends HasThread implements
         }
       }
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("TRANSITION NOT REPORTED " + request);
-    }
+    LOG.info("TRANSITION NOT REPORTED " + request);
     return false;
   }
 
