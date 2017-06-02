@@ -245,6 +245,14 @@ module Hbase
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
     end
 
+    define_test "create should work when attributes value 'false' is not enclosed in single quotation marks" do
+      drop_test_table(@create_test_name)
+      command(:create, @create_test_name,{NAME => 'a', BLOCKCACHE => false}, {COMPACTION_ENABLED => false})
+      assert_equal(['a:'], table(@create_test_name).get_all_columns.sort)
+      assert_match(/BLOCKCACHE/, admin.describe(@create_test_name))
+      assert_match(/COMPACTION_ENABLED/, admin.describe(@create_test_name))
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "describe should fail for non-existent tables" do
