@@ -138,8 +138,8 @@ TEST_F(ClientTest, PutGetDelete) {
   table->Put(Put{row}.AddColumn("d", "1", "value1"));
   // Put two values for column "extra"
   table->Put(Put{row}.AddColumn("d", "extra", "1st val extra"));
-  table->Put(Put{row}.AddColumn("d", "extra", valExtra));
   usleep(1000);
+  table->Put(Put{row}.AddColumn("d", "extra", valExtra));
   table->Put(Put{row}.AddColumn("d", "ext", valExt));
 
   // Perform the Get
@@ -153,6 +153,7 @@ TEST_F(ClientTest, PutGetDelete) {
   EXPECT_EQ(valExtra, *(result->Value("d", "extra")));
   auto cell = *(result->ColumnCells("d", "extra"))[0];
   auto tsExtra = cell.Timestamp();
+  auto tsExt = (*(result->ColumnCells("d", "ext"))[0]).Timestamp();
 
   // delete column "1"
   table->Delete(hbase::Delete{row}.AddColumn("d", "1"));
