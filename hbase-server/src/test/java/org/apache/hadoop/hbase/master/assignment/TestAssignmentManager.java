@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
@@ -115,6 +116,14 @@ public class TestAssignmentManager {
   // Simple executor to run some simple tasks.
   private ScheduledExecutorService executor;
 
+  private ProcedureMetrics assignProcMetrics;
+  private ProcedureMetrics unassignProcMetrics;
+
+  private long assignSubmittedCount = 0;
+  private long assignFailedCount = 0;
+  private long unassignSubmittedCount = 0;
+  private long unassignFailedCount = 0;
+
   private void setupConfiguration(Configuration conf) throws Exception {
     FSUtils.setRootDir(conf, UTIL.getDataTestDir());
     conf.setBoolean(WALProcedureStore.USE_HSYNC_CONF_KEY, false);
@@ -133,6 +142,8 @@ public class TestAssignmentManager {
     rsDispatcher = new MockRSProcedureDispatcher(master);
     master.start(NSERVERS, rsDispatcher);
     am = master.getAssignmentManager();
+    assignProcMetrics = am.getAssignmentManagerMetrics().getAssignProcMetrics();
+    unassignProcMetrics = am.getAssignmentManagerMetrics().getUnassignProcMetrics();
     setUpMeta();
   }
 
@@ -182,7 +193,14 @@ public class TestAssignmentManager {
 
   @Test
   public void testAssignWithGoodExec() throws Exception {
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     testAssign(new GoodRsExecutor());
+
+    assertEquals(assignSubmittedCount + NREGIONS,
+        assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -227,11 +245,19 @@ public class TestAssignmentManager {
     final TableName tableName = TableName.valueOf(this.name.getMethodName());
     final HRegionInfo hri = createRegionInfo(tableName, 1);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20, 3));
     waitOnFuture(submitProcedure(am.createAssignProcedure(hri, false)));
 
     rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20, 3));
     waitOnFuture(submitProcedure(am.createUnassignProcedure(hri, null, false)));
+
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+    assertEquals(unassignSubmittedCount + 1, unassignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -243,6 +269,9 @@ public class TestAssignmentManager {
   private void testRetriesExhaustedFailure(final TableName tableName,
       final MockRSExecutor executor) throws Exception {
     final HRegionInfo hri = createRegionInfo(tableName, 1);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
 
     // Test Assign operation failure
     rsDispatcher.setMockRsExecutor(executor);
@@ -264,20 +293,40 @@ public class TestAssignmentManager {
     // Test Unassign operation failure
     rsDispatcher.setMockRsExecutor(executor);
     waitOnFuture(submitProcedure(am.createUnassignProcedure(hri, null, false)));
+
+    assertEquals(assignSubmittedCount + 2, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount + 1, assignProcMetrics.getFailedCounter().getCount());
+    assertEquals(unassignSubmittedCount + 1, unassignProcMetrics.getSubmittedCounter().getCount());
+
+    // TODO: We supposed to have 1 failed assign, 1 successful assign and a failed unassign
+    // operation. But ProcV2 framework marks aborted unassign operation as success. Fix it!
+    assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
     */
   }
 
 
   @Test
   public void testIOExceptionOnAssignment() throws Exception {
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     testFailedOpen(TableName.valueOf("testExceptionOnAssignment"),
       new FaultyRsExecutor(new IOException("test fault")));
+
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount + 1, assignProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
   public void testDoNotRetryExceptionOnAssignment() throws Exception {
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     testFailedOpen(TableName.valueOf("testDoNotRetryExceptionOnAssignment"),
       new FaultyRsExecutor(new DoNotRetryIOException("test do not retry fault")));
+
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount + 1, assignProcMetrics.getFailedCounter().getCount());
   }
 
   private void testFailedOpen(final TableName tableName,
@@ -325,6 +374,9 @@ public class TestAssignmentManager {
     final TableName tableName = TableName.valueOf("testAssignAnAssignedRegion");
     final HRegionInfo hri = createRegionInfo(tableName, 1);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
 
     final Future<byte[]> futureA = submitProcedure(am.createAssignProcedure(hri, false));
@@ -339,12 +391,21 @@ public class TestAssignmentManager {
     waitOnFuture(futureB);
     am.getRegionStates().isRegionInState(hri, State.OPEN);
     // TODO: What else can we do to ensure just a noop.
+
+    // TODO: Though second assign is noop, it's considered success, can noop be handled in a
+    // better way?
+    assertEquals(assignSubmittedCount + 2, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+
   }
 
   @Test
   public void testUnassignAnUnassignedRegion() throws Exception {
     final TableName tableName = TableName.valueOf("testUnassignAnUnassignedRegion");
     final HRegionInfo hri = createRegionInfo(tableName, 1);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
 
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
 
@@ -365,6 +426,13 @@ public class TestAssignmentManager {
     // Ensure we are still CLOSED.
     am.getRegionStates().isRegionInState(hri, State.CLOSED);
     // TODO: What else can we do to ensure just a noop.
+
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+    // TODO: Though second unassign is noop, it's considered success, can noop be handled in a
+    // better way?
+    assertEquals(unassignSubmittedCount + 2, unassignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
   }
 
   private Future<byte[]> submitProcedure(final Procedure proc) {
@@ -746,5 +814,12 @@ public class TestAssignmentManager {
       return CloseRegionResponse.newBuilder().setClosed(true).build();
     }*/
     
+  }
+
+  private void collectAssignmentManagerMetrics() {
+    assignSubmittedCount = assignProcMetrics.getSubmittedCounter().getCount();
+    assignFailedCount = assignProcMetrics.getFailedCounter().getCount();
+    unassignSubmittedCount = unassignProcMetrics.getSubmittedCounter().getCount();
+    unassignFailedCount = unassignProcMetrics.getFailedCounter().getCount();
   }
 }

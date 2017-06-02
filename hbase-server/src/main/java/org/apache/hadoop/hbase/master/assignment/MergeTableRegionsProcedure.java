@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -65,7 +66,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.lmax.disruptor.YieldingWaitStrategy;
 
 /**
  * The procedure to Merge a region in a table.
@@ -428,6 +428,11 @@ public class MergeTableRegionsProcedure
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.REGION_MERGE;
+  }
+
+  @Override
+  protected ProcedureMetrics getProcedureMetrics(MasterProcedureEnv env) {
+    return env.getAssignmentManager().getAssignmentManagerMetrics().getMergeProcMetrics();
   }
 
   /**

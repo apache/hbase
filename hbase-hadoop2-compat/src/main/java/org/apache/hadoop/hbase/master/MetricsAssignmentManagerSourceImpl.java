@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.hadoop.hbase.metrics.OperationMetrics;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
@@ -35,8 +36,11 @@ public class MetricsAssignmentManagerSourceImpl
   private MetricHistogram ritDurationHisto;
 
   private MutableFastCounter operationCounter;
-  private MetricHistogram assignTimeHisto;
-  private MetricHistogram unassignTimeHisto;
+
+  private OperationMetrics assignMetrics;
+  private OperationMetrics unassignMetrics;
+  private OperationMetrics splitMetrics;
+  private OperationMetrics mergeMetrics;
 
   public MetricsAssignmentManagerSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
@@ -53,10 +57,18 @@ public class MetricsAssignmentManagerSourceImpl
     ritCountOverThresholdGauge = metricsRegistry.newGauge(RIT_COUNT_OVER_THRESHOLD_NAME,
         RIT_COUNT_OVER_THRESHOLD_DESC,0l);
     ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, RIT_OLDEST_AGE_DESC, 0l);
-    assignTimeHisto = metricsRegistry.newTimeHistogram(ASSIGN_TIME_NAME);
-    unassignTimeHisto = metricsRegistry.newTimeHistogram(UNASSIGN_TIME_NAME);
     ritDurationHisto = metricsRegistry.newTimeHistogram(RIT_DURATION_NAME, RIT_DURATION_DESC);
     operationCounter = metricsRegistry.getCounter(OPERATION_COUNT_NAME, 0l);
+
+    /**
+     * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is
+     * moving away from using Hadoop's metric2 to having independent HBase specific Metrics. Use
+     * {@link BaseSourceImpl#registry} to register the new metrics.
+     */
+    assignMetrics = new OperationMetrics(registry, ASSIGN_METRIC_PREFIX);
+    unassignMetrics = new OperationMetrics(registry, UNASSIGN_METRIC_PREFIX);
+    splitMetrics = new OperationMetrics(registry, SPLIT_METRIC_PREFIX);
+    mergeMetrics = new OperationMetrics(registry, MERGE_METRIC_PREFIX);
   }
 
   @Override
@@ -80,17 +92,27 @@ public class MetricsAssignmentManagerSourceImpl
   }
 
   @Override
-  public void updateAssignTime(final long time) {
-    assignTimeHisto.add(time);
-  }
-
-  @Override
-  public void updateUnassignTime(final long time) {
-    unassignTimeHisto.add(time);
-  }
-
-  @Override
   public void updateRitDuration(long duration) {
     ritDurationHisto.add(duration);
+  }
+
+  @Override
+  public OperationMetrics getAssignMetrics() {
+    return assignMetrics;
+  }
+
+  @Override
+  public OperationMetrics getUnassignMetrics() {
+    return unassignMetrics;
+  }
+
+  @Override
+  public OperationMetrics getSplitMetrics() {
+    return splitMetrics;
+  }
+
+  @Override
+  public OperationMetrics getMergeMetrics() {
+    return mergeMetrics;
   }
 }

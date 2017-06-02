@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -48,6 +49,10 @@ public class TestServerCrashProcedure {
 
   private HBaseTestingUtility util;
 
+  private ProcedureMetrics serverCrashProcMetrics;
+  private long serverCrashSubmittedCount = 0;
+  private long serverCrashFailedCount = 0;
+
   private void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.set("hbase.balancer.tablesOnMaster", "none");
@@ -61,6 +66,8 @@ public class TestServerCrashProcedure {
     this.util.startMiniCluster(3);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
       this.util.getHBaseCluster().getMaster().getMasterProcedureExecutor(), false);
+    serverCrashProcMetrics = this.util.getHBaseCluster().getMaster().getMasterMetrics()
+        .getServerCrashProcMetrics();
   }
 
   @After
@@ -140,5 +147,10 @@ public class TestServerCrashProcedure {
     } finally {
       t.close();
     }
+  }
+
+  private void collectMasterMetrics() {
+    serverCrashSubmittedCount = serverCrashProcMetrics.getSubmittedCounter().getCount();
+    serverCrashFailedCount = serverCrashProcMetrics.getFailedCounter().getCount();
   }
 }

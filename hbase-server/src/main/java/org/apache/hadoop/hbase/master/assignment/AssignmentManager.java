@@ -1370,10 +1370,6 @@ public class AssignmentManager implements ServerListener {
         regionNode.getRegionLocation(), regionNode.getLastHost(), regionNode.getOpenSeqNum(),
         regionNode.getProcedure().getProcId());
       sendRegionOpenedNotification(hri, regionNode.getRegionLocation());
-      // update assignment metrics
-      if (regionNode.getProcedure() != null) {
-        metrics.updateAssignTime(regionNode.getProcedure().elapsedTime());
-      }
     }
   }
 
@@ -1411,10 +1407,6 @@ public class AssignmentManager implements ServerListener {
         regionNode.getRegionLocation()/*null*/, regionNode.getLastHost(),
         HConstants.NO_SEQNUM, regionNode.getProcedure().getProcId());
       sendRegionClosedNotification(hri);
-      // Update assignment metrics
-      if (regionNode.getProcedure() != null) {
-        metrics.updateUnassignTime(regionNode.getProcedure().elapsedTime());
-      }
     }
   }
 

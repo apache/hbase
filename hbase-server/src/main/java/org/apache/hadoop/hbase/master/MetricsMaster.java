@@ -23,6 +23,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.metrics.Counter;
+import org.apache.hadoop.hbase.metrics.Histogram;
+import org.apache.hadoop.hbase.metrics.OperationMetrics;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 
 /**
  * This class is for maintaining the various master statistics
@@ -39,12 +43,16 @@ public class MetricsMaster {
   private MetricsMasterProcSource masterProcSource;
   private MetricsMasterQuotaSource masterQuotaSource;
 
+  private ProcedureMetrics serverCrashProcMetrics;
+
   public MetricsMaster(MetricsMasterWrapper masterWrapper) {
     masterSource = CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class).create(masterWrapper);
     masterProcSource =
             CompatibilitySingletonFactory.getInstance(MetricsMasterProcSourceFactory.class).create(masterWrapper);
     masterQuotaSource =
             CompatibilitySingletonFactory.getInstance(MetricsMasterQuotaSourceFactory.class).create(masterWrapper);
+
+    serverCrashProcMetrics = convertToProcedureMetrics(masterSource.getServerCrashMetrics());
   }
 
   // for unit-test usage
@@ -111,5 +119,41 @@ public class MetricsMaster {
    */
   public void incrementQuotaObserverTime(final long executionTime) {
     masterQuotaSource.incrementSpaceQuotaObserverChoreTime(executionTime);
+  }
+
+  /**
+   * @return Set of metrics for assign procedure
+   */
+  public ProcedureMetrics getServerCrashProcMetrics() {
+    return serverCrashProcMetrics;
+  }
+
+  /**
+   * This is utility function that converts {@link OperationMetrics} to {@link ProcedureMetrics}.
+   *
+   * NOTE: Procedure framework in hbase-procedure module accesses metrics common to most procedures
+   * through {@link ProcedureMetrics} interface. Metrics source classes in hbase-hadoop-compat
+   * module provides similar interface {@link OperationMetrics} that contains metrics common to
+   * most operations. As both hbase-procedure and hbase-hadoop-compat are lower level modules used
+   * by hbase-server (this) module and there is no dependency between them, this method does the
+   * required conversion.
+   */
+  public static ProcedureMetrics convertToProcedureMetrics(final OperationMetrics metrics) {
+    return new ProcedureMetrics() {
+      @Override
+      public Counter getSubmittedCounter() {
+        return metrics.getSubmittedCounter();
+      }
+
+      @Override
+      public Histogram getTimeHisto() {
+        return metrics.getTimeHisto();
+      }
+
+      @Override
+      public Counter getFailedCounter() {
+        return metrics.getFailedCounter();
+      }
+    };
   }
 }

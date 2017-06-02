@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.hadoop.hbase.metrics.OperationMetrics;
 
 /**
  * Interface that classes that expose metrics about the master will implement.
@@ -75,6 +76,7 @@ public interface MetricsMasterSource extends BaseSource {
   String SPLIT_PLAN_COUNT_DESC = "Number of Region Split Plans executed";
   String MERGE_PLAN_COUNT_DESC = "Number of Region Merge Plans executed";
 
+  String SERVER_CRASH_METRIC_PREFIX = "serverCrash";
 
   /**
    * Increment the number of requests the cluster has seen.
@@ -83,7 +85,8 @@ public interface MetricsMasterSource extends BaseSource {
    */
   void incRequests(final long inc);
 
-
-
-
+  /**
+   * @return {@link OperationMetrics} containing common metrics for server crash operation
+   */
+  OperationMetrics getServerCrashMetrics();
 }

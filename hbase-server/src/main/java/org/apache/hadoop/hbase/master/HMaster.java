@@ -648,7 +648,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     return MasterDumpServlet.class;
   }
 
-  MetricsMaster getMasterMetrics() {
+  @Override
+  public MetricsMaster getMasterMetrics() {
     return metricsMaster;
   }
 

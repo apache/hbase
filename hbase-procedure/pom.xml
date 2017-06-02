@@ -86,6 +86,10 @@
       <groupId>commons-logging</groupId>
       <artifactId>commons-logging</artifactId>
     </dependency>
+      <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-metrics-api</artifactId>
+      </dependency>
   </dependencies>
 
   <profiles>

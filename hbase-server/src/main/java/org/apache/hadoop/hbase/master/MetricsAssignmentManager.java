@@ -19,13 +19,26 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
+
+import static org.apache.hadoop.hbase.master.MetricsMaster.convertToProcedureMetrics;
 
 public class MetricsAssignmentManager {
   private final MetricsAssignmentManagerSource assignmentManagerSource;
 
+  private final ProcedureMetrics assignProcMetrics;
+  private final ProcedureMetrics unassignProcMetrics;
+  private final ProcedureMetrics splitProcMetrics;
+  private final ProcedureMetrics mergeProcMetrics;
+
   public MetricsAssignmentManager() {
     assignmentManagerSource = CompatibilitySingletonFactory.getInstance(
         MetricsAssignmentManagerSource.class);
+
+    assignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getAssignMetrics());
+    unassignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getUnassignMetrics());
+    splitProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getSplitMetrics());
+    mergeProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getMergeMetrics());
   }
 
   public MetricsAssignmentManagerSource getMetricsProcSource() {
@@ -66,6 +79,7 @@ public class MetricsAssignmentManager {
   }
 
   /*
+   * TODO: Remove. This may not be required as assign and unassign operations are tracked separately
    * Increment the count of assignment operation (assign/unassign).
    */
   public void incrementOperationCounter() {
@@ -73,18 +87,30 @@ public class MetricsAssignmentManager {
   }
 
   /**
-   * Add the time took to perform the last assign operation
-   * @param time
+   * @return Set of common metrics for assign procedure
    */
-  public void updateAssignTime(final long time) {
-    assignmentManagerSource.updateAssignTime(time);
+  public ProcedureMetrics getAssignProcMetrics() {
+    return assignProcMetrics;
   }
 
   /**
-   * Add the time took to perform the last unassign operation
-   * @param time
+   * @return Set of common metrics for unassign procedure
    */
-  public void updateUnassignTime(final long time) {
-    assignmentManagerSource.updateUnassignTime(time);
+  public ProcedureMetrics getUnassignProcMetrics() {
+    return unassignProcMetrics;
+  }
+
+  /**
+   * @return Set of common metrics for split procedure
+   */
+  public ProcedureMetrics getSplitProcMetrics() {
+    return splitProcMetrics;
+  }
+
+  /**
+   * @return Set of common metrics for merge procedure
+   */
+  public ProcedureMetrics getMergeProcMetrics() {
+    return mergeProcMetrics;
   }
 }

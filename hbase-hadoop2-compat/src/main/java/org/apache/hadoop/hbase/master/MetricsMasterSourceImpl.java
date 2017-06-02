@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
+import org.apache.hadoop.hbase.metrics.OperationMetrics;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
@@ -36,6 +37,8 @@ public class MetricsMasterSourceImpl
 
   private final MetricsMasterWrapper masterWrapper;
   private MutableFastCounter clusterRequestsCounter;
+
+  private OperationMetrics serverCrashMetrics;
 
   public MetricsMasterSourceImpl(MetricsMasterWrapper masterWrapper) {
     this(METRICS_NAME,
@@ -59,6 +62,13 @@ public class MetricsMasterSourceImpl
   public void init() {
     super.init();
     clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0l);
+
+    /**
+     * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is
+     * moving away from using Hadoop's metric2 to having independent HBase specific Metrics. Use
+     * {@link BaseSourceImpl#registry} to register the new metrics.
+     */
+    serverCrashMetrics = new OperationMetrics(registry, SERVER_CRASH_METRIC_PREFIX);
   }
 
   @Override
@@ -105,4 +115,8 @@ public class MetricsMasterSourceImpl
     metricsRegistry.snapshot(metricsRecordBuilder, all);
   }
 
+  @Override
+  public OperationMetrics getServerCrashMetrics() {
+    return serverCrashMetrics;
+  }
 }

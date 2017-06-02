@@ -30,6 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.metrics.Counter;
+import org.apache.hadoop.hbase.metrics.Histogram;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.security.User;
@@ -288,25 +290,67 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   }
 
   /**
-   * This function will be called just when procedure is submitted for execution. Override this
-   * method to update the metrics at the beginning of the procedure
+   * Override this method to provide procedure specific counters for submitted count, failed
+   * count and time histogram.
+   * @param env The environment passed to the procedure executor
+   * @return Container object for procedure related metric
    */
-  protected void updateMetricsOnSubmit(final TEnvironment env) {}
+  protected ProcedureMetrics getProcedureMetrics(final TEnvironment env) {
+    return null;
+  }
+
+  /**
+   * This function will be called just when procedure is submitted for execution. Override this
+   * method to update the metrics at the beginning of the procedure. The default implementation
+   * updates submitted counter if {@link #getProcedureMetrics(Object)} returns non-null
+   * {@link ProcedureMetrics}.
+   */
+  protected void updateMetricsOnSubmit(final TEnvironment env) {
+    ProcedureMetrics metrics = getProcedureMetrics(env);
+    if (metrics == null) {
+      return;
+    }
+
+    Counter submittedCounter = metrics.getSubmittedCounter();
+    if (submittedCounter != null) {
+      submittedCounter.increment();
+    }
+  }
 
   /**
    * This function will be called just after procedure execution is finished. Override this method
-   * to update metrics at the end of the procedure
+   * to update metrics at the end of the procedure. If {@link #getProcedureMetrics(Object)}
+   * returns non-null {@link ProcedureMetrics}, the default implementation adds runtime of a
+   * procedure to a time histogram for successfully completed procedures. Increments failed
+   * counter for failed procedures.
    *
    * TODO: As any of the sub-procedures on failure rolls back all procedures in the stack,
    * including successfully finished siblings, this function may get called twice in certain
    * cases for certain procedures. Explore further if this can be called once.
    *
-   * @param env
-   * @param runtime - Runtime of the procedure in milliseconds
-   * @param success - true if procedure is completed successfully
+   * @param env The environment passed to the procedure executor
+   * @param runtime Runtime of the procedure in milliseconds
+   * @param success true if procedure is completed successfully
    */
   protected void updateMetricsOnFinish(final TEnvironment env, final long runtime,
-                                       boolean success) {}
+                                       boolean success) {
+    ProcedureMetrics metrics = getProcedureMetrics(env);
+    if (metrics == null) {
+      return;
+    }
+
+    if (success) {
+      Histogram timeHisto = metrics.getTimeHisto();
+      if (timeHisto != null) {
+        timeHisto.update(runtime);
+      }
+    } else {
+      Counter failedCounter = metrics.getFailedCounter();
+      if (failedCounter != null) {
+        failedCounter.increment();
+      }
+    }
+  }
 
   @Override
   public String toString() {

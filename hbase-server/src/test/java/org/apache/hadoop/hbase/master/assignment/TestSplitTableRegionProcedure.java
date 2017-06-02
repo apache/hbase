@@ -45,10 +45,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -77,6 +77,19 @@ public class TestSplitTableRegionProcedure {
 
   private static final int startRowNum = 11;
   private static final int rowCount = 60;
+
+  private AssignmentManager am;
+
+  private ProcedureMetrics splitProcMetrics;
+  private ProcedureMetrics assignProcMetrics;
+  private ProcedureMetrics unassignProcMetrics;
+
+  private long splitSubmittedCount = 0;
+  private long splitFailedCount = 0;
+  private long assignSubmittedCount = 0;
+  private long assignFailedCount = 0;
+  private long unassignSubmittedCount = 0;
+  private long unassignFailedCount = 0;
 
   @Rule
   public TestName name = new TestName();
@@ -109,6 +122,10 @@ public class TestSplitTableRegionProcedure {
     UTIL.getAdmin().setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
+    am = UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    splitProcMetrics = am.getAssignmentManagerMetrics().getSplitProcMetrics();
+    assignProcMetrics = am.getAssignmentManagerMetrics().getAssignProcMetrics();
+    unassignProcMetrics = am.getAssignmentManagerMetrics().getUnassignProcMetrics();
   }
 
   @After
@@ -133,6 +150,9 @@ public class TestSplitTableRegionProcedure {
     assertTrue("not able to find a splittable region", regions != null);
     assertTrue("not able to find a splittable region", regions.length == 1);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     // Split region of the table
     long procId = procExec.submitProcedure(
       new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
@@ -141,7 +161,14 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     verify(tableName, splitRowNum);
-  }
+
+    assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(splitFailedCount, splitProcMetrics.getFailedCounter().getCount());
+    assertEquals(assignSubmittedCount + 2, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+    assertEquals(unassignSubmittedCount + 1, unassignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
+}
 
   @Test
   public void testSplitTableRegionNoStoreFile() throws Exception {
@@ -156,6 +183,9 @@ public class TestSplitTableRegionProcedure {
     assertTrue("not able to find a splittable region", regions != null);
     assertTrue("not able to find a splittable region", regions.length == 1);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     // Split region of the table
     long procId = procExec.submitProcedure(
       new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
@@ -165,6 +195,9 @@ public class TestSplitTableRegionProcedure {
 
     assertTrue(UTIL.getMiniHBaseCluster().getRegions(tableName).size() == 2);
     assertTrue(UTIL.countRows(tableName) == 0);
+
+    assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(splitFailedCount, splitProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -182,6 +215,9 @@ public class TestSplitTableRegionProcedure {
     assertTrue("not able to find a splittable region", regions != null);
     assertTrue("not able to find a splittable region", regions.length == 1);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     // Split region of the table
     long procId = procExec.submitProcedure(
       new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
@@ -190,6 +226,9 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     verify(tableName, splitRowNum);
+
+    assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(splitFailedCount, splitProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -207,6 +246,9 @@ public class TestSplitTableRegionProcedure {
     assertTrue("not able to find a splittable region", regions != null);
     assertTrue("not able to find a splittable region", regions.length == 1);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     // Split region of the table
     long procId = procExec.submitProcedure(
       new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
@@ -219,6 +261,10 @@ public class TestSplitTableRegionProcedure {
     assertTrue(daughters.size() == 2);
     assertTrue(UTIL.countRows(tableName) == rowCount);
     assertTrue(UTIL.countRows(daughters.get(0)) == 0 || UTIL.countRows(daughters.get(1)) == 0);
+
+    assertEquals(splitSubmittedCount + 1,
+        splitProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(splitFailedCount, splitProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -236,6 +282,9 @@ public class TestSplitTableRegionProcedure {
 
     assertTrue("not able to find a splittable region", regions != null);
     assertTrue("not able to find a splittable region", regions.length == 1);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
 
     // Split region of the table
     long procId = procExec.submitProcedure(
@@ -259,6 +308,9 @@ public class TestSplitTableRegionProcedure {
     final int currentRowCount = splitRowNum - startRowNum;
     assertTrue(UTIL.countRows(tableName) == currentRowCount);
     assertTrue(UTIL.countRows(daughters.get(0)) == 0 || UTIL.countRows(daughters.get(1)) == 0);
+
+    assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(splitFailedCount, splitProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -273,6 +325,9 @@ public class TestSplitTableRegionProcedure {
     assertTrue("not able to find a splittable region", regions != null);
     assertTrue("not able to find a splittable region", regions.length == 1);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     // Split region of the table with null split key
     try {
       long procId1 = procExec.submitProcedure(
@@ -282,6 +337,9 @@ public class TestSplitTableRegionProcedure {
     } catch (DoNotRetryIOException e) {
       LOG.debug("Expected Split procedure construction failure: " + e.getMessage());
     }
+
+    assertEquals(splitSubmittedCount, splitProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(splitFailedCount, splitProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -300,6 +358,9 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     // Split region of the table
     long procId = procExec.submitProcedure(
       new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
@@ -316,6 +377,9 @@ public class TestSplitTableRegionProcedure {
     assertEquals(1, daughters.size());
     verifyData(daughters.get(0), startRowNum, rowCount,
     Bytes.toBytes(ColumnFamilyName1), Bytes.toBytes(ColumnFamilyName2));
+
+    assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(splitFailedCount + 1, splitProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -334,6 +398,9 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     // Split region of the table
     long procId = procExec.submitProcedure(
       new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
@@ -343,6 +410,9 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     verify(tableName, splitRowNum);
+
+    assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(splitFailedCount, splitProcMetrics.getFailedCounter().getCount());
   }
 
   private void insertData(final TableName tableName) throws IOException, InterruptedException {
@@ -424,5 +494,14 @@ public class TestSplitTableRegionProcedure {
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+  }
+
+  private void collectAssignmentManagerMetrics() {
+    splitSubmittedCount = splitProcMetrics.getSubmittedCounter().getCount();
+    splitFailedCount = splitProcMetrics.getFailedCounter().getCount();
+    assignSubmittedCount = assignProcMetrics.getSubmittedCounter().getCount();
+    assignFailedCount = assignProcMetrics.getFailedCounter().getCount();
+    unassignSubmittedCount = unassignProcMetrics.getSubmittedCounter().getCount();
+    unassignFailedCount = unassignProcMetrics.getFailedCounter().getCount();
   }
 }

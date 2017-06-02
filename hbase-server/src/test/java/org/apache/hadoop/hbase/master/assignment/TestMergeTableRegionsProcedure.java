@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -69,6 +70,17 @@ public class TestMergeTableRegionsProcedure {
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
   final static Configuration conf = UTIL.getConfiguration();
   private static Admin admin;
+
+  private AssignmentManager am;
+  private ProcedureMetrics mergeProcMetrics;
+  private ProcedureMetrics assignProcMetrics;
+  private ProcedureMetrics unassignProcMetrics;
+  private long mergeSubmittedCount = 0;
+  private long mergeFailedCount = 0;
+  private long assignSubmittedCount = 0;
+  private long assignFailedCount = 0;
+  private long unassignSubmittedCount = 0;
+  private long unassignFailedCount = 0;
 
   private static void setupConf(Configuration conf) {
     // Reduce the maximum attempts to speed up the test
@@ -105,6 +117,10 @@ public class TestMergeTableRegionsProcedure {
     // Turn off the meta scanner so it don't remove parent on us.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
     resetProcExecutorTestingKillFlag();
+    am = UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    mergeProcMetrics = am.getAssignmentManagerMetrics().getMergeProcMetrics();
+    assignProcMetrics = am.getAssignmentManagerMetrics().getAssignProcMetrics();
+    unassignProcMetrics = am.getAssignmentManagerMetrics().getUnassignProcMetrics();
   }
 
   @After
@@ -135,12 +151,24 @@ public class TestMergeTableRegionsProcedure {
     HRegionInfo[] regionsToMerge = new HRegionInfo[2];
     regionsToMerge[0] = tableRegions.get(0);
     regionsToMerge[1] = tableRegions.get(1);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     MergeTableRegionsProcedure proc =
         new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true);
     long procId = procExec.submitProcedure(proc);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     assertRegionCount(tableName, initialRegionCount - 1);
+
+    assertEquals(mergeSubmittedCount + 1, mergeProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(mergeFailedCount, mergeProcMetrics.getFailedCounter().getCount());
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+    assertEquals(unassignSubmittedCount + 2, unassignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
+
     Pair<HRegionInfo, HRegionInfo> pair =
       MetaTableAccessor.getRegionsFromMergeQualifier(UTIL.getConnection(),
         proc.getMergedRegion().getRegionName());
@@ -175,6 +203,9 @@ public class TestMergeTableRegionsProcedure {
     regionsToMerge2[0] = tableRegions.get(2);
     regionsToMerge2[1] = tableRegions.get(3);
 
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
     long procId1 = procExec.submitProcedure(new MergeTableRegionsProcedure(
       procExec.getEnvironment(), regionsToMerge1, true));
     long procId2 = procExec.submitProcedure(new MergeTableRegionsProcedure(
@@ -184,6 +215,13 @@ public class TestMergeTableRegionsProcedure {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
     assertRegionCount(tableName, initialRegionCount - 2);
+
+    assertEquals(mergeSubmittedCount + 2, mergeProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(mergeFailedCount, mergeProcMetrics.getFailedCounter().getCount());
+    assertEquals(assignSubmittedCount + 2, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+    assertEquals(unassignSubmittedCount + 4, unassignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -256,5 +294,15 @@ public class TestMergeTableRegionsProcedure {
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+  }
+
+  private void collectAssignmentManagerMetrics() {
+    mergeSubmittedCount = mergeProcMetrics.getSubmittedCounter().getCount();
+    mergeFailedCount = mergeProcMetrics.getFailedCounter().getCount();
+
+    assignSubmittedCount = assignProcMetrics.getSubmittedCounter().getCount();
+    assignFailedCount = assignProcMetrics.getFailedCounter().getCount();
+    unassignSubmittedCount = unassignProcMetrics.getSubmittedCounter().getCount();
+    unassignFailedCount = unassignProcMetrics.getFailedCounter().getCount();
   }
 }

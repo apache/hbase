@@ -134,6 +134,11 @@ public interface MasterServices extends Server {
   public ProcedureEvent getInitializedEvent();
 
   /**
+   * @return Master's instance of {@link MetricsMaster}
+   */
+  MetricsMaster getMasterMetrics();
+
+  /**
    * Check table is modifiable; i.e. exists and is offline.
    * @param tableName Name of table to check.
    * @throws TableNotDisabledException

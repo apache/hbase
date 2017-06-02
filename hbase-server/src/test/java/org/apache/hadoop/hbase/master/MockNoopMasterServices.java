@@ -54,6 +54,7 @@ import com.google.protobuf.Service;
 
 public class MockNoopMasterServices implements MasterServices, Server {
   private final Configuration conf;
+  private final MetricsMaster metricsMaster;
 
   public MockNoopMasterServices() {
     this(null);
@@ -61,6 +62,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
 
   public MockNoopMasterServices(final Configuration conf) {
     this.conf = conf;
+    this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(null));
   }
 
   @Override
@@ -131,6 +133,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   @Override
   public ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return null;
+  }
+
+  @Override
+  public MetricsMaster getMasterMetrics() {
+    return metricsMaster;
   }
 
   @Override

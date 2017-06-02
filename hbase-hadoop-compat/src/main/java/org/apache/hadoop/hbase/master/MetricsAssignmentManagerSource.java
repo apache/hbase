@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.hadoop.hbase.metrics.OperationMetrics;
 
 public interface MetricsAssignmentManagerSource extends BaseSource {
 
@@ -42,13 +43,11 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
    */
   String METRICS_DESCRIPTION = "Metrics about HBase master assignment manager.";
 
+  // RIT metrics
   String RIT_COUNT_NAME = "ritCount";
   String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
   String RIT_OLDEST_AGE_NAME = "ritOldestAge";
   String RIT_DURATION_NAME = "ritDuration";
-  String ASSIGN_TIME_NAME = "assign";
-  String UNASSIGN_TIME_NAME = "unassign";
-  String BULK_ASSIGN_TIME_NAME = "bulkAssign";
 
   String RIT_COUNT_DESC = "Current number of Regions In Transition (Gauge).";
   String RIT_COUNT_OVER_THRESHOLD_DESC =
@@ -56,6 +55,11 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_OLDEST_AGE_DESC = "Timestamp in milliseconds of the oldest Region In Transition (Gauge).";
   String RIT_DURATION_DESC =
       "Total durations in milliseconds for all Regions in Transition (Histogram).";
+
+  String ASSIGN_METRIC_PREFIX = "assign";
+  String UNASSIGN_METRIC_PREFIX = "unassign";
+  String SPLIT_METRIC_PREFIX = "split";
+  String MERGE_METRIC_PREFIX = "merge";
 
   String OPERATION_COUNT_NAME = "operationCount";
 
@@ -83,17 +87,28 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   void updateRitDuration(long duration);
 
   /**
-   * Increment the count of assignment operation (assign/unassign).
+   * TODO: Remove. This may not be needed now as assign and unassign counts are tracked separately
+   * Increment the count of operations (assign/unassign).
    */
   void incrementOperationCounter();
 
   /**
-   * Add the time took to perform the last assign operation
+   * @return {@link OperationMetrics} containing common metrics for assign operation
    */
-  void updateAssignTime(long time);
+  OperationMetrics getAssignMetrics();
 
   /**
-   * Add the time took to perform the last unassign operation
+   * @return {@link OperationMetrics} containing common metrics for unassign operation
    */
-  void updateUnassignTime(long time);
+  OperationMetrics getUnassignMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for split operation
+   */
+  OperationMetrics getSplitMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for merge operation
+   */
+  OperationMetrics getMergeMetrics();
 }
