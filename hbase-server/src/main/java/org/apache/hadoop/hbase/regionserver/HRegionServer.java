@@ -2240,7 +2240,8 @@ public class HRegionServer extends HasThread implements
    * @return Return the object that implements the replication
    * source service.
    */
-  ReplicationSourceService getReplicationSourceService() {
+  @VisibleForTesting
+  public ReplicationSourceService getReplicationSourceService() {
     return replicationSourceHandler;
   }
 
