@@ -170,9 +170,36 @@ public class RpcRetryingCallerWithReadReplicas {
       throws DoNotRetryIOException, InterruptedIOException, RetriesExhaustedException {
     boolean isTargetReplicaSpecified = (get.getReplicaId() >= 0);
 
-    RegionLocations rl = getRegionLocations(true, (isTargetReplicaSpecified ? get.getReplicaId()
-        : RegionReplicaUtil.DEFAULT_REPLICA_ID), cConnection, tableName, get.getRow());
-   final ResultBoundedCompletionService<Result> cs =
+    RegionLocations rl = null;
+    boolean skipPrimary = false;
+    try {
+      rl = getRegionLocations(true,
+        (isTargetReplicaSpecified ? get.getReplicaId() : RegionReplicaUtil.DEFAULT_REPLICA_ID),
+        cConnection, tableName, get.getRow());
+    } catch (RetriesExhaustedException | DoNotRetryIOException e) {
+      // When there is no specific replica id specified. It just needs to load all replicas.
+      if (isTargetReplicaSpecified) {
+        throw e;
+      } else {
+        // We cannot get the primary replica location, it is possible that the region
+        // server hosting meta is down, it needs to proceed to try cached replicas.
+        if (cConnection instanceof ConnectionImplementation) {
+          rl = ((ConnectionImplementation)cConnection).getCachedLocation(tableName, get.getRow());
+          if (rl == null) {
+            // No cached locations
+            throw e;
+          }
+
+          // Primary replica location is not known, skip primary replica
+          skipPrimary = true;
+        } else {
+          // For completeness
+          throw e;
+        }
+      }
+    }
+
+    final ResultBoundedCompletionService<Result> cs =
         new ResultBoundedCompletionService<>(this.rpcRetryingCallerFactory, pool, rl.size());
     int startIndex = 0;
     int endIndex = rl.size();
@@ -181,25 +208,30 @@ public class RpcRetryingCallerWithReadReplicas {
       addCallsForReplica(cs, rl, get.getReplicaId(), get.getReplicaId());
       endIndex = 1;
     } else {
-      addCallsForReplica(cs, rl, 0, 0);
-      try {
-        // wait for the timeout to see whether the primary responds back
-        Future<Result> f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
-        if (f != null) {
-          return f.get(); //great we got a response
-        }
-      } catch (ExecutionException e) {
-        // We ignore the ExecutionException and continue with the secondary replicas
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Primary replica returns " + e.getCause());
-        }
+      if (!skipPrimary) {
+        addCallsForReplica(cs, rl, 0, 0);
+        try {
+          // wait for the timeout to see whether the primary responds back
+          Future<Result> f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
+          if (f != null) {
+            return f.get(); //great we got a response
+          }
+        } catch (ExecutionException e) {
+          // We ignore the ExecutionException and continue with the secondary replicas
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Primary replica returns " + e.getCause());
+          }
 
-        // Skip the result from the primary as we know that there is something wrong
-        startIndex = 1;
-      } catch (CancellationException e) {
-        throw new InterruptedIOException();
-      } catch (InterruptedException e) {
-        throw new InterruptedIOException();
+          // Skip the result from the primary as we know that there is something wrong
+          startIndex = 1;
+        } catch (CancellationException e) {
+          throw new InterruptedIOException();
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException();
+        }
+      } else {
+        // Since primary replica is skipped, the endIndex needs to be adjusted accordingly
+        endIndex --;
       }
 
       // submit call for the all of the secondaries at once
@@ -288,10 +320,10 @@ public class RpcRetryingCallerWithReadReplicas {
     } catch (DoNotRetryIOException | InterruptedIOException | RetriesExhaustedException e) {
       throw e;
     } catch (IOException e) {
-      throw new RetriesExhaustedException("Can't get the location", e);
+      throw new RetriesExhaustedException("Can't get the location for replica " + replicaId, e);
     }
     if (rl == null) {
-      throw new RetriesExhaustedException("Can't get the locations");
+      throw new RetriesExhaustedException("Can't get the location for replica " + replicaId);
     }
 
     return rl;

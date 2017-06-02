@@ -313,6 +313,40 @@ public class MetaCache {
   }
 
   /**
+   * Delete a cached location with specific replicaId.
+   * @param tableName tableName
+   * @param row row key
+   * @param replicaId region replica id
+   */
+  public void clearCache(final TableName tableName, final byte [] row, int replicaId) {
+    ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
+
+    RegionLocations regionLocations = getCachedLocation(tableName, row);
+    if (regionLocations != null) {
+      HRegionLocation toBeRemoved = regionLocations.getRegionLocation(replicaId);
+      if (toBeRemoved != null) {
+        RegionLocations updatedLocations = regionLocations.remove(replicaId);
+        byte[] startKey = regionLocations.getRegionLocation().getRegionInfo().getStartKey();
+        boolean removed;
+        if (updatedLocations.isEmpty()) {
+          removed = tableLocations.remove(startKey, regionLocations);
+        } else {
+          removed = tableLocations.replace(startKey, regionLocations, updatedLocations);
+        }
+
+        if (removed) {
+          if (metrics != null) {
+            metrics.incrMetaCacheNumClearRegion();
+          }
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Removed " + toBeRemoved + " from cache");
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Delete a cached location for a table, row and server
    */
   public void clearCache(final TableName tableName, final byte [] row, ServerName serverName) {
