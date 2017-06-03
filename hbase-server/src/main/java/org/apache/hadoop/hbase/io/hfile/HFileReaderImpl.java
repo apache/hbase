@@ -1395,7 +1395,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         // Cache Miss, please load.
       }
 
-      HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset, blockSize, true).
+      HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset, blockSize, true, false).
           unpack(hfileContext, fsBlockReader);
 
       // Cache the block
@@ -1483,7 +1483,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         }
         // Load block from filesystem.
         HFileBlock hfileBlock =
-            fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread);
+            fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread, !isCompaction);
         validateBlockType(hfileBlock, expectedBlockType);
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();

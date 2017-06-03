@@ -18,6 +18,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.MetricsIOSource;
+import org.apache.hadoop.hbase.io.MetricsIOSourceImpl;
+import org.apache.hadoop.hbase.io.MetricsIOWrapper;
 
 /**
  * Factory to create MetricsRegionServerSource when given a  MetricsRegionServerWrapper
@@ -74,5 +77,9 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   @Override
   public MetricsTableSource createTable(String table, MetricsTableWrapperAggregate wrapper) {
     return new MetricsTableSourceImpl(table, getTableAggregate(), wrapper);
+  }
+
+  public MetricsIOSource createIO(MetricsIOWrapper wrapper) {
+    return new MetricsIOSourceImpl(wrapper);
   }
 }

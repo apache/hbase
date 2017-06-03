@@ -219,7 +219,9 @@ public class HFileWriterImpl implements HFile.Writer {
   throws IOException {
     trailer.setFileInfoOffset(outputStream.getPos());
     finishFileInfo();
+    long startTime = System.currentTimeMillis();
     fileInfo.write(out);
+    HFile.updateWriteLatency(System.currentTimeMillis() - startTime);
   }
 
   /**
@@ -827,7 +829,9 @@ public class HFileWriterImpl implements HFile.Writer {
     trailer.setEntryCount(entryCount);
     trailer.setCompressionCodec(hFileContext.getCompression());
 
+    long startTime = System.currentTimeMillis();
     trailer.serialize(outputStream);
+    HFile.updateWriteLatency(System.currentTimeMillis() - startTime);
 
     if (closeOutputStream) {
       outputStream.close();
