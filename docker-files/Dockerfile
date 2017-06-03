@@ -32,7 +32,8 @@ RUN wget ftp://ftp.cyrusimap.org/cyrus-sasl/cyrus-sasl-2.1.26.tar.gz ; \
     make install ;\
     cp /usr/local/lib/sasl2/* /usr/lib/sasl2/
 
-RUN apt-get install -y vim maven inetutils-ping python-pip doxygen graphviz clang-format && \
+RUN apt-get install -y vim maven inetutils-ping python-pip doxygen graphviz clang-format \
+        valgrind && \
       pip install yapf && \
       apt-get -qq clean && \
       apt-get -y -qq autoremove && \
