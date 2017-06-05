@@ -61,7 +61,8 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     python-pip \
     rsync \
     snappy \
-    zlib1g-dev
+    zlib1g-dev \
+    openjdk-7-jdk
 
 #######
 # Oracle Java
@@ -74,9 +75,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y software-
 RUN add-apt-repository -y ppa:webupd8team/java
 
 # Auto-accept the Oracle JDK license
-RUN echo oracle-java7-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
 RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
-RUN apt-get -q update && apt-get -q install -y oracle-java7-installer
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y oracle-java8-installer
 
 ####
