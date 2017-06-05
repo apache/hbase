@@ -95,9 +95,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private final long maxRowSize;
   private final long cellsPerHeartbeatCheck;
 
-  // Collects all the KVHeap that are eagerly getting closed during the
-  // course of a scan
-  private final List<KeyValueHeap> heapsForDelayedClose = new ArrayList<>();
+  // 1) Collects all the KVHeap that are eagerly getting closed during the
+  //    course of a scan
+  // 2) Collects the unused memstore scanners. If we close the memstore scanners
+  //    before sending data to client, the chunk may be reclaimed by other
+  //    updates and the data will be corrupt.
+  private final List<KeyValueScanner> scannersForDelayedClose = new ArrayList<>();
 
   /**
    * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not
@@ -485,23 +488,20 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     close(true);
   }
 
-  private void close(boolean withHeapClose) {
+  private void close(boolean withDelayedScannersClose) {
     if (this.closing) {
       return;
     }
-    if (withHeapClose) {
+    if (withDelayedScannersClose) {
       this.closing = true;
     }
     // Under test, we dont have a this.store
     if (this.store != null) {
       this.store.deleteChangedReaderObserver(this);
     }
-    if (withHeapClose) {
+    if (withDelayedScannersClose) {
+      clearAndClose(scannersForDelayedClose);
       clearAndClose(memStoreScannersAfterFlush);
-      for (KeyValueHeap h : this.heapsForDelayedClose) {
-        h.close();
-      }
-      this.heapsForDelayedClose.clear();
       if (this.heap != null) {
         this.heap.close();
         this.currentScanners.clear();
@@ -509,7 +509,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       }
     } else {
       if (this.heap != null) {
-        this.heapsForDelayedClose.add(this.heap);
+        this.scannersForDelayedClose.add(this.heap);
         this.currentScanners.clear();
         this.heap = null;
       }
@@ -879,7 +879,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // remove the older memstore scanner
     for (int i = currentScanners.size() - 1; i >=0; i--) {
       if (!currentScanners.get(i).isFileScanner()) {
-        currentScanners.remove(i).close();
+        scannersForDelayedClose.add(currentScanners.remove(i));
       } else {
         // we add the memstore scanner to the end of currentScanners
         break;
@@ -1121,8 +1121,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
     matcher.beforeShipped();
     // There wont be further fetch of Cells from these scanners. Just close.
-    this.heapsForDelayedClose.forEach(KeyValueHeap::close);
-    this.heapsForDelayedClose.clear();
+    clearAndClose(scannersForDelayedClose);
     if (this.heap != null) {
       this.heap.shipped();
       // When switching from pread to stream, we will open a new scanner for each store file, but

@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -44,6 +45,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -193,7 +195,7 @@ public class TestStore {
     } else {
       htd.addFamily(hcd);
     }
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, MemStoreLABImpl.CHUNK_SIZE_DEFAULT, 1, 0, null);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
@@ -1155,6 +1157,62 @@ public class TestStore {
     }
   }
 
+  @Test
+  public void testReclaimChunkWhenScaning() throws IOException {
+    init("testReclaimChunkWhenScaning");
+    long ts = EnvironmentEdgeManager.currentTime();
+    long seqId = 100;
+    byte[] value = Bytes.toBytes("value");
+    // older data whihc shouldn't be "seen" by client
+    store.add(createCell(qf1, ts, seqId, value), null);
+    store.add(createCell(qf2, ts, seqId, value), null);
+    store.add(createCell(qf3, ts, seqId, value), null);
+    TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    quals.add(qf1);
+    quals.add(qf2);
+    quals.add(qf3);
+    try (InternalScanner scanner = (InternalScanner) store.getScanner(
+        new Scan(new Get(row)), quals, seqId)) {
+      List<Cell> results = new MyList<>(size -> {
+        switch (size) {
+          // 1) we get the first cell (qf1)
+          // 2) flush the data to have StoreScanner update inner scanners
+          // 3) the chunk will be reclaimed after updaing
+          case 1:
+            try {
+              flushStore(store, id++);
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+            break;
+          // 1) we get the second cell (qf2)
+          // 2) add some cell to fill some byte into the chunk (we have only one chunk)
+          case 2:
+            try {
+              byte[] newValue = Bytes.toBytes("newValue");
+              // older data whihc shouldn't be "seen" by client
+              store.add(createCell(qf1, ts + 1, seqId + 1, newValue), null);
+              store.add(createCell(qf2, ts + 1, seqId + 1, newValue), null);
+              store.add(createCell(qf3, ts + 1, seqId + 1, newValue), null);
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+            break;
+          default:
+            break;
+        }
+      });
+      scanner.next(results);
+      assertEquals(3, results.size());
+      for (Cell c : results) {
+        byte[] actualValue = CellUtil.cloneValue(c);
+        assertTrue("expected:" + Bytes.toStringBinary(value)
+          + ", actual:" + Bytes.toStringBinary(actualValue)
+          , Bytes.equals(actualValue, value));
+      }
+    }
+  }
+
   private MyStore initMyStore(String methodName, Configuration conf, MyScannerHook hook) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
     HColumnDescriptor hcd = new HColumnDescriptor(family);
@@ -1221,5 +1279,83 @@ public class TestStore {
         snapshotLatch.countDown();
       }
     }
+  }
+  private static class MyList<T> implements List<T> {
+    private final List<T> delegatee = new ArrayList<>();
+    private final Consumer<Integer> hookAtAdd;
+    MyList(final Consumer<Integer> hookAtAdd) {
+      this.hookAtAdd = hookAtAdd;
+    }
+    @Override
+    public int size() {return delegatee.size();}
+
+    @Override
+    public boolean isEmpty() {return delegatee.isEmpty();}
+
+    @Override
+    public boolean contains(Object o) {return delegatee.contains(o);}
+
+    @Override
+    public Iterator<T> iterator() {return delegatee.iterator();}
+
+    @Override
+    public Object[] toArray() {return delegatee.toArray();}
+
+    @Override
+    public <T> T[] toArray(T[] a) {return delegatee.toArray(a);}
+
+    @Override
+    public boolean add(T e) {
+      hookAtAdd.accept(size());
+      return delegatee.add(e);
+    }
+
+    @Override
+    public boolean remove(Object o) {return delegatee.remove(o);}
+
+    @Override
+    public boolean containsAll(Collection<?> c) {return delegatee.containsAll(c);}
+
+    @Override
+    public boolean addAll(Collection<? extends T> c) {return delegatee.addAll(c);}
+
+    @Override
+    public boolean addAll(int index, Collection<? extends T> c) {return delegatee.addAll(index, c);}
+
+    @Override
+    public boolean removeAll(Collection<?> c) {return delegatee.removeAll(c);}
+
+    @Override
+    public boolean retainAll(Collection<?> c) {return delegatee.retainAll(c);}
+
+    @Override
+    public void clear() {delegatee.clear();}
+
+    @Override
+    public T get(int index) {return delegatee.get(index);}
+
+    @Override
+    public T set(int index, T element) {return delegatee.set(index, element);}
+
+    @Override
+    public void add(int index, T element) {delegatee.add(index, element);}
+
+    @Override
+    public T remove(int index) {return delegatee.remove(index);}
+
+    @Override
+    public int indexOf(Object o) {return delegatee.indexOf(o);}
+
+    @Override
+    public int lastIndexOf(Object o) {return delegatee.lastIndexOf(o);}
+
+    @Override
+    public ListIterator<T> listIterator() {return delegatee.listIterator();}
+
+    @Override
+    public ListIterator<T> listIterator(int index) {return delegatee.listIterator(index);}
+
+    @Override
+    public List<T> subList(int fromIndex, int toIndex) {return delegatee.subList(fromIndex, toIndex);}
   }
 }
