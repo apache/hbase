@@ -36,6 +36,7 @@ cxx_library(
         # Once meta lookup works
         "meta-utils.h",
         "get.h",
+        "increment.h",
         "mutation.h",
         "put.h",
         "delete.h",
@@ -66,6 +67,7 @@ cxx_library(
         "keyvalue-codec.cc",
         "location-cache.cc",
         "meta-utils.cc",
+        "increment.cc",
         "get.cc",
         "mutation.cc",
         "put.cc",
@@ -156,6 +158,15 @@ cxx_test(
     name="delete-test",
     srcs=["delete-test.cc",],
     deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
+    name="increment-test",
+    srcs=[
+        "increment-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="put-test",

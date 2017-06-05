@@ -24,12 +24,14 @@
 #include "core/configuration.h"
 #include "core/delete.h"
 #include "core/get.h"
+#include "core/increment.h"
 #include "core/hbase-configuration-loader.h"
 #include "core/put.h"
 #include "core/result.h"
 #include "core/table.h"
 #include "serde/table-name.h"
 #include "test-util/test-util.h"
+#include "utils/bytes-util.h"
 
 using hbase::Cell;
 using hbase::Configuration;
@@ -185,6 +187,34 @@ TEST_F(ClientTest, PutGetDelete) {
 
   table->Close();
   client.Close();
+}
+
+TEST_F(ClientTest, Increment) {
+  // Using TestUtil to populate test data
+  ClientTest::test_util->CreateTable("t", "d");
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>("t");
+  auto row = "test1";
+
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+
+  // Get connection to HBase Table
+  auto table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  int64_t incr1 = 1235;
+  auto result = table->Increment(hbase::Increment{row}.AddColumn("d", "1", incr1));
+  EXPECT_EQ(row, result->Row());
+
+  long l = hbase::BytesUtil::ToInt64(*(result->Value("d", "1")));
+  EXPECT_EQ(incr1, l);
+
+  int64_t incr2 = -2;
+  result = table->Increment(hbase::Increment{row}.AddColumn("d", "1", incr2));
+
+  EXPECT_EQ(row, result->Row());
+  EXPECT_EQ(incr1+incr2, hbase::BytesUtil::ToInt64(*(result->Value("d", "1"))));
 }
 
 TEST_F(ClientTest, PutGet) {

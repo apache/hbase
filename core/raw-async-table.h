@@ -31,6 +31,7 @@
 #include "core/connection-configuration.h"
 #include "core/delete.h"
 #include "core/get.h"
+#include "core/increment.h"
 #include "core/put.h"
 #include "core/result.h"
 
@@ -53,6 +54,7 @@ class RawAsyncTable {
   folly::Future<std::shared_ptr<Result>> Get(const hbase::Get& get);
 
 	folly::Future<folly::Unit> Delete(const hbase::Delete& del);
+	folly::Future<std::shared_ptr<hbase::Result>> Increment(const hbase::Increment& increment);
   folly::Future<folly::Unit> Put(const hbase::Put& put);
   void Close() {}
 

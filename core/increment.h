@@ -19,30 +19,39 @@
 
 #pragma once
 
+#include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
+#include <vector>
+#include "core/cell.h"
+#include "core/mutation.h"
 
 namespace hbase {
 
-class BytesUtil {
- private:
-  static const constexpr char kHexChars[] = "0123456789ABCDEF";
-
+class Increment : public Mutation {
  public:
-  static std::string ToStringBinary(const std::string& b) { return ToStringBinary(b, 0, b.size()); }
   /**
-    * Write a printable representation of a byte array. Non-printable
-    * characters are hex escaped in the format \\x%02X, eg:
-    * \x00 \x05 etc
-    *
-    * @param b array to write out
-    * @param off offset to start at
-    * @param len length to write
-    * @return string output
-    */
-  static std::string ToStringBinary(const std::string& b, size_t off, size_t len);
+   * Constructors
+   */
+  explicit Increment(const std::string& row) : Mutation(row) {}
+  Increment(const Increment& cincrement) : Mutation(cincrement) {}
+  Increment& operator=(const Increment& cincrement) {
+    Mutation::operator=(cincrement);
+    return *this;
+  }
 
-  static std::string ToString(int64_t amt);
-  static long ToInt64(std::string str);
+  ~Increment() = default;
+
+  /**
+   *  @brief Increment the column from the specific family with the specified qualifier
+   * by the specified amount.
+   *  @param family family name
+   *  @param qualifier column qualifier
+   *  @param amount amount to increment by
+   */
+  Increment& AddColumn(const std::string& family, const std::string& qualifier, int64_t amount);
+  Increment& Add(std::unique_ptr<Cell> cell);
 };
-} /* namespace hbase */
+
+}  // namespace hbase

@@ -47,6 +47,8 @@ class ResponseConverter {
    */
   static std::shared_ptr<hbase::Result> FromGetResponse(const Response& resp);
 
+  static std::shared_ptr<hbase::Result> FromMutateResponse(const Response& resp);
+
   static std::vector<std::shared_ptr<Result>> FromScanResponse(const Response& resp);
 
   static std::unique_ptr<hbase::MultiResponse> GetResults(std::shared_ptr<Request> req,

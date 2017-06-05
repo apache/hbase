@@ -27,6 +27,7 @@
 #include "core/cell.h"
 #include "core/delete.h"
 #include "core/get.h"
+#include "core/increment.h"
 #include "core/mutation.h"
 #include "core/put.h"
 #include "core/region-request.h"
@@ -70,6 +71,9 @@ class RequestConverter {
   static std::unique_ptr<Request> DeleteToMutateRequest(const Delete &del,const std::string &region_name);
 
   static std::unique_ptr<Request> ToMutateRequest(const Put &put, const std::string &region_name);
+
+  static std::unique_ptr<Request> IncrementToMutateRequest(const Increment &incr,
+          const std::string &region_name);
 
   static std::unique_ptr<pb::MutationProto> ToMutation(const MutationType type,
                                                        const Mutation &mutation,

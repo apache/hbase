@@ -29,6 +29,7 @@
 #include "exceptions/exception.h"
 
 using hbase::pb::GetResponse;
+using hbase::pb::MutateResponse;
 using hbase::pb::ScanResponse;
 using hbase::pb::RegionLoadStats;
 
@@ -44,6 +45,12 @@ std::shared_ptr<Result> ResponseConverter::FromGetResponse(const Response& resp)
   auto get_resp = std::static_pointer_cast<GetResponse>(resp.resp_msg());
   VLOG(3) << "FromGetResponse:" << get_resp->ShortDebugString();
   return ToResult(get_resp->result(), resp.cell_scanner());
+}
+
+std::shared_ptr<Result> ResponseConverter::FromMutateResponse(const Response& resp) {
+  auto mutate_resp = std::static_pointer_cast<MutateResponse>(resp.resp_msg());
+  hbase::pb::Result result = mutate_resp->result();
+  return ToResult(mutate_resp->result(), resp.cell_scanner());
 }
 
 std::shared_ptr<Result> ResponseConverter::ToResult(

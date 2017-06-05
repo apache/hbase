@@ -77,6 +77,20 @@ folly::Future<std::shared_ptr<Result>> RawAsyncTable::Get(const hbase::Get& get)
   // ensure  that the lifecycle of the Caller object is longer than the retry lambdas.
   return caller->Call().then([caller](const auto r) { return r; });
 }
+folly::Future<std::shared_ptr<Result>> RawAsyncTable::Increment(const hbase::Increment& incr) {
+  auto caller =
+      CreateCallerBuilder<std::shared_ptr<Result>>(incr.row(), connection_conf_->write_rpc_timeout())
+          ->action([=, &incr](std::shared_ptr<hbase::HBaseRpcController> controller,
+                             std::shared_ptr<hbase::RegionLocation> loc,
+                             std::shared_ptr<hbase::RpcClient> rpc_client) -> folly::Future<std::shared_ptr<Result>> {
+            return Call<hbase::Increment, hbase::Request, hbase::Response, std::shared_ptr<Result>>(
+                rpc_client, controller, loc, incr, &hbase::RequestConverter::IncrementToMutateRequest,
+                &hbase::ResponseConverter::FromMutateResponse);
+          })
+          ->Build();
+
+  return caller->Call().then([caller](const auto r) { return r; });
+}
 
 folly::Future<folly::Unit> RawAsyncTable::Put(const hbase::Put& put) {
   auto caller =

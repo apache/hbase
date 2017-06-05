@@ -67,6 +67,11 @@ class Table {
    */
   void Delete(const hbase::Delete &del);
 
+  /**
+   * @brief - Increments some data in the table.
+   * @param - increment Increment object to perform HBase Increment operation.
+   */
+  std::shared_ptr<hbase::Result> Increment(const hbase::Increment &increment);
   // TODO: Batch Puts
 
   /**

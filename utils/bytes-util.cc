@@ -21,12 +21,48 @@
 
 #include <memory>
 #include <string>
+#include<bits/stdc++.h>
+#include <boost/predef.h>
 
 #include <glog/logging.h>
 
 namespace hbase {
 
 constexpr char BytesUtil::kHexChars[];
+
+std::string BytesUtil::ToString(int64_t val) {
+    std::string res;
+#if BOOST_ENDIAN_BIG_BYTE || BOOST_ENDIAN_BIG_WORD
+    for (int i = 7; i > 0; i--) {
+      res += (int8_t) (val & 0xffu);
+      val = val >> 8;
+    }
+    res += (int8_t) val;
+#else
+    int64_t mask = 0xff00000000000000u;
+    for (int i = 56; i >= 1; i -= 8) {
+        auto num = ((val & mask) >> i);
+        res += num;
+        mask = mask >> 8;
+    }
+    res += (val & 0xff);
+#endif
+    return res;
+}
+
+int64_t BytesUtil::ToInt64(std::string str) {
+    if (str.length() < 8) {
+      throw std::runtime_error("There are not enough bytes. Expected: 8, actual: " + str.length());
+    }
+    const unsigned char *bytes = reinterpret_cast<unsigned char *>(const_cast<char*>(str.c_str()));
+    int64_t l = 0;
+    for(int i = 0; i < 8; i++) {
+      l <<= 8;
+      l ^= bytes[i];
+    }
+    return l;
+
+}
 
 std::string BytesUtil::ToStringBinary(const std::string& b, size_t off, size_t len) {
   std::string result;
