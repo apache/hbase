@@ -58,7 +58,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
       throws IOException {
     this.compactionPolicy = new DateTieredCompactionPolicy(conf, store);
     this.storeFileManager =
-        new DefaultStoreFileManager(kvComparator, StoreFile.Comparators.SEQ_ID_MAX_TIMESTAMP, conf,
+        new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID_MAX_TIMESTAMP, conf,
             compactionPolicy.getConf());
     this.storeFlusher = new DefaultStoreFlusher(conf, store);
     this.compactor = new DateTieredCompactor(conf, store);

@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.DateTieredMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 
@@ -47,7 +47,7 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
   private boolean needEmptyFile(CompactionRequest request) {
     // if we are going to compact the last N files, then we need to emit an empty file to retain the
     // maxSeqId if we haven't written out anything.
-    return StoreFile.getMaxSequenceIdInList(request.getFiles()) == store.getMaxSequenceId();
+    return StoreUtils.getMaxSequenceIdInList(request.getFiles()) == store.getMaxSequenceId();
   }
 
   public List<Path> compact(final CompactionRequest request, final List<Long> lowerBoundaries,

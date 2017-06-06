@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -61,7 +61,7 @@ public class TestMobFile extends TestCase {
     MobTestUtil.writeStoreFile(writer, caseName);
 
     MobFile mobFile =
-        new MobFile(new StoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true));
+        new MobFile(new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true));
     byte[] family = Bytes.toBytes(caseName);
     byte[] qualify = Bytes.toBytes(caseName);
 
@@ -113,7 +113,7 @@ public class TestMobFile extends TestCase {
     MobTestUtil.writeStoreFile(writer, getName());
 
     MobFile mobFile =
-        new MobFile(new StoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true));
+        new MobFile(new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true));
     assertNotNull(mobFile.getScanner());
     assertTrue(mobFile.getScanner() instanceof StoreFileScanner);
   }

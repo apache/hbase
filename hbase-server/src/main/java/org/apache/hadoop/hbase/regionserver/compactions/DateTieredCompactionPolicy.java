@@ -18,17 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.PeekingIterator;
-import com.google.common.math.LongMath;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.OptionalLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,6 +38,12 @@ import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.PeekingIterator;
+import com.google.common.math.LongMath;
 
 /**
  * HBASE-15181 This is a simple implementation of date-based tiered compaction similar to
@@ -135,24 +136,24 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     boolean[] filesInWindow = new boolean[boundaries.size()];
 
     for (StoreFile file: filesToCompact) {
-      Long minTimestamp = file.getMinimumTimestamp();
-      long oldest = (minTimestamp == null) ? Long.MIN_VALUE : now - minTimestamp.longValue();
+      OptionalLong minTimestamp = file.getMinimumTimestamp();
+      long oldest = minTimestamp.isPresent() ? now - minTimestamp.getAsLong() : Long.MIN_VALUE;
       if (cfTTL != Long.MAX_VALUE && oldest >= cfTTL) {
         LOG.debug("Major compaction triggered on store " + this
           + "; for TTL maintenance");
         return true;
       }
-      if (!file.isMajorCompaction() || file.isBulkLoadResult()) {
+      if (!file.isMajorCompactionResult() || file.isBulkLoadResult()) {
         LOG.debug("Major compaction triggered on store " + this
           + ", because there are new files and time since last major compaction "
           + (now - lowTimestamp) + "ms");
         return true;
       }
 
-      int lowerWindowIndex = Collections.binarySearch(boundaries,
-        minTimestamp == null ? (Long)Long.MAX_VALUE : minTimestamp);
-      int upperWindowIndex = Collections.binarySearch(boundaries,
-        file.getMaximumTimestamp() == null ? (Long)Long.MAX_VALUE : file.getMaximumTimestamp());
+      int lowerWindowIndex =
+          Collections.binarySearch(boundaries, minTimestamp.orElse(Long.MAX_VALUE));
+      int upperWindowIndex =
+          Collections.binarySearch(boundaries, file.getMaximumTimestamp().orElse(Long.MAX_VALUE));
       // Handle boundary conditions and negative values of binarySearch
       lowerWindowIndex = (lowerWindowIndex < 0) ? Math.abs(lowerWindowIndex + 2) : lowerWindowIndex;
       upperWindowIndex = (upperWindowIndex < 0) ? Math.abs(upperWindowIndex + 2) : upperWindowIndex;
@@ -220,8 +221,8 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     for (StoreFile storeFile : candidateSelection) {
       // if there is out-of-order data,
       // we put them in the same window as the last file in increasing order
-      maxTimestampSeen = Math.max(maxTimestampSeen,
-        storeFile.getMaximumTimestamp() == null? Long.MIN_VALUE : storeFile.getMaximumTimestamp());
+      maxTimestampSeen =
+          Math.max(maxTimestampSeen, storeFile.getMaximumTimestamp().orElse(Long.MIN_VALUE));
       storefileMaxTimestampPairs.add(new Pair<>(storeFile, maxTimestampSeen));
     }
     Collections.reverse(storefileMaxTimestampPairs);
@@ -288,23 +289,18 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   }
 
   /**
-   * Return a list of boundaries for multiple compaction output
-   *   in ascending order.
+   * Return a list of boundaries for multiple compaction output in ascending order.
    */
   private List<Long> getCompactBoundariesForMajor(Collection<StoreFile> filesToCompact, long now) {
-    long minTimestamp = Long.MAX_VALUE;
-    for (StoreFile file : filesToCompact) {
-      minTimestamp =
-        Math.min(minTimestamp,
-          file.getMinimumTimestamp() == null ? Long.MAX_VALUE : file.getMinimumTimestamp());
-    }
+    long minTimestamp =
+        filesToCompact.stream().mapToLong(f -> f.getMinimumTimestamp().orElse(Long.MAX_VALUE)).min()
+            .orElse(Long.MAX_VALUE);
 
     List<Long> boundaries = new ArrayList<>();
 
     // Add startMillis of all windows between now and min timestamp
-    for (CompactionWindow window = getIncomingWindow(now);
-        window.compareToTimestamp(minTimestamp) > 0;
-        window = window.nextEarlierWindow()) {
+    for (CompactionWindow window = getIncomingWindow(now); window
+        .compareToTimestamp(minTimestamp) > 0; window = window.nextEarlierWindow()) {
       boundaries.add(window.startMillis());
     }
     boundaries.add(Long.MIN_VALUE);

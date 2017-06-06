@@ -69,7 +69,7 @@ public class DefaultStoreEngine extends StoreEngine<
     createCompactionPolicy(conf, store);
     createStoreFlusher(conf, store);
     storeFileManager =
-        new DefaultStoreFileManager(kvComparator, StoreFile.Comparators.SEQ_ID, conf,
+        new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
             compactionPolicy.getConf());
   }
 

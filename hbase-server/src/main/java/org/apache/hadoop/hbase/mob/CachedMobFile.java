@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 
 /**
@@ -46,7 +47,7 @@ public class CachedMobFile extends MobFile implements Comparable<CachedMobFile> 
       CacheConfig cacheConf) throws IOException {
     // XXX: primaryReplica is only used for constructing the key of block cache so it is not a
     // critical problem if we pass the wrong value, so here we always pass true. Need to fix later.
-    StoreFile sf = new StoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
+    StoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
     return new CachedMobFile(sf);
   }
 

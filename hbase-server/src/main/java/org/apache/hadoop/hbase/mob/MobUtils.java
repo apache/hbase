@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.C
 import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -334,7 +335,7 @@ public final class MobUtils {
             LOG.debug(fileName + " is an expired file");
           }
           filesToClean
-              .add(new StoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true));
+              .add(new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true));
         }
       } catch (Exception e) {
         LOG.error("Cannot parse the fileName " + fileName, e);
@@ -722,7 +723,7 @@ public final class MobUtils {
       CacheConfig cacheConfig, boolean primaryReplica) throws IOException {
     StoreFile storeFile = null;
     try {
-      storeFile = new StoreFile(fs, path, conf, cacheConfig, BloomType.NONE, primaryReplica);
+      storeFile = new HStoreFile(fs, path, conf, cacheConfig, BloomType.NONE, primaryReplica);
       storeFile.initReader();
     } catch (IOException e) {
       LOG.error("Failed to open mob file[" + path + "], keep it in temp directory.", e);

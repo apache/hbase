@@ -59,7 +59,7 @@ public class EncodedSeekPerformanceTest {
     List<Cell> allKeyValues = new ArrayList<>();
 
     // read all of the key values
-    StoreFile storeFile = new StoreFile(testingUtility.getTestFileSystem(),
+    StoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(),
         path, configuration, cacheConf, BloomType.NONE, true);
     storeFile.initReader();
     StoreFileReader reader = storeFile.getReader();
@@ -89,7 +89,7 @@ public class EncodedSeekPerformanceTest {
   private void runTest(Path path, DataBlockEncoding blockEncoding,
       List<Cell> seeks) throws IOException {
     // read all of the key values
-    StoreFile storeFile = new StoreFile(testingUtility.getTestFileSystem(),
+    StoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(),
       path, configuration, cacheConf, BloomType.NONE, true);
     storeFile.initReader();
     long totalSize = 0;

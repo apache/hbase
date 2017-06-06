@@ -18,19 +18,20 @@
 
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.google.common.base.Objects;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
-import com.google.common.base.Objects;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.util.StringUtils;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Base class of objects that can create mock store files with a given size.

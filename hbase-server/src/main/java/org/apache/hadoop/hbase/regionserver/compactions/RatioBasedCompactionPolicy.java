@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.OptionalLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -79,9 +80,9 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
       if (filesToCompact.size() == 1) {
         // Single file
         StoreFile sf = filesToCompact.iterator().next();
-        Long minTimestamp = sf.getMinimumTimestamp();
-        long oldest = (minTimestamp == null) ? Long.MIN_VALUE : now - minTimestamp.longValue();
-        if (sf.isMajorCompaction() && (cfTTL == Long.MAX_VALUE || oldest < cfTTL)) {
+        OptionalLong minTimestamp = sf.getMinimumTimestamp();
+        long oldest = minTimestamp.isPresent() ? now - minTimestamp.getAsLong() : Long.MIN_VALUE;
+        if (sf.isMajorCompactionResult() && (cfTTL == Long.MAX_VALUE || oldest < cfTTL)) {
           float blockLocalityIndex =
             sf.getHDFSBlockDistribution().getBlockLocalityIndex(
             RSRpcServices.getHostname(comConf.conf, false));

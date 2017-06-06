@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -203,13 +204,13 @@ public class TestCompactedHFilesDischarger {
     int usedReaderCount = 0;
     int unusedReaderCount = 0;
     for (StoreFile file : storefiles) {
-      if (file.getRefCount() == 3) {
+      if (((HStoreFile) file).getRefCount() == 3) {
         usedReaderCount++;
       }
     }
     compactedfiles = ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
     for(StoreFile file : compactedfiles) {
-      assertEquals("Refcount should be 3", 0, file.getRefCount());
+      assertEquals("Refcount should be 3", 0, ((HStoreFile) file).getRefCount());
       unusedReaderCount++;
     }
     // Though there are files we are not using them for reads
@@ -274,14 +275,14 @@ public class TestCompactedHFilesDischarger {
     int usedReaderCount = 0;
     int unusedReaderCount = 0;
     for (StoreFile file : storefiles) {
-      if (file.getRefCount() == 0) {
+      if (((HStoreFile) file).getRefCount() == 0) {
         unusedReaderCount++;
       }
     }
     compactedfiles =
         ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
     for(StoreFile file : compactedfiles) {
-      assertEquals("Refcount should be 3", 3, file.getRefCount());
+      assertEquals("Refcount should be 3", 3, ((HStoreFile) file).getRefCount());
       usedReaderCount++;
     }
     // The newly compacted file will not be used by any scanner
@@ -307,13 +308,13 @@ public class TestCompactedHFilesDischarger {
     usedReaderCount = 0;
     unusedReaderCount = 0;
     for (StoreFile file : storefiles) {
-      if (file.getRefCount() == 3) {
+      if (((HStoreFile) file).getRefCount() == 3) {
         usedReaderCount++;
       }
     }
     compactedfiles = ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
     for(StoreFile file : compactedfiles) {
-      assertEquals("Refcount should be 0", 0, file.getRefCount());
+      assertEquals("Refcount should be 0", 0, ((HStoreFile) file).getRefCount());
       unusedReaderCount++;
     }
     // Though there are files we are not using them for reads

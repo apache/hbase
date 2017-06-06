@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -179,20 +180,20 @@ public class TestStripeStoreFileManager {
 
     // If there are no stripes, should pick midpoint from the biggest file in L0.
     MockStoreFile sf5 = createFile(5, 0);
-    sf5.splitPoint = new byte[1];
+    sf5.splitPoint = new byte[] { 1 };
     manager.insertNewFiles(al(sf5));
     manager.insertNewFiles(al(createFile(1, 0)));
-    assertEquals(sf5.splitPoint, manager.getSplitPoint());
+    assertArrayEquals(sf5.splitPoint, manager.getSplitPoint());
 
     // Same if there's one stripe but the biggest file is still in L0.
     manager.addCompactionResults(al(), al(createFile(2, 0, OPEN_KEY, OPEN_KEY)));
-    assertEquals(sf5.splitPoint, manager.getSplitPoint());
+    assertArrayEquals(sf5.splitPoint, manager.getSplitPoint());
 
     // If the biggest file is in the stripe, should get from it.
     MockStoreFile sf6 = createFile(6, 0, OPEN_KEY, OPEN_KEY);
-    sf6.splitPoint = new byte[1];
+    sf6.splitPoint = new byte[] { 2 };
     manager.addCompactionResults(al(), al(sf6));
-    assertEquals(sf6.splitPoint, manager.getSplitPoint());
+    assertArrayEquals(sf6.splitPoint, manager.getSplitPoint());
   }
 
   @Test
@@ -572,7 +573,7 @@ public class TestStripeStoreFileManager {
   private static MockStoreFile createFile(
       long size, long seqNum, byte[] startKey, byte[] endKey) throws Exception {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Path testFilePath = StoreFile.getUniqueFile(fs, CFDIR);
+    Path testFilePath = StoreFileWriter.getUniqueFile(fs, CFDIR);
     fs.create(testFilePath).close();
     MockStoreFile sf = new MockStoreFile(TEST_UTIL, testFilePath, size, 0, false, seqNum);
     if (startKey != null) {

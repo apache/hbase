@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -172,10 +173,13 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public final byte[] getSplitPoint() throws IOException {
-    if (this.storefiles.isEmpty()) {
+    List<StoreFile> storefiles = this.storefiles;
+    if (storefiles.isEmpty()) {
       return null;
     }
-    return StoreUtils.getLargestFile(this.storefiles).getFileSplitPoint(this.kvComparator);
+    Optional<StoreFile> largestFile = StoreUtils.getLargestFile(storefiles);
+    return largestFile.isPresent()
+        ? StoreUtils.getFileSplitPoint(largestFile.get(), kvComparator).orElse(null) : null;
   }
 
   @Override

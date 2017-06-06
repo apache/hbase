@@ -19,11 +19,14 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -31,7 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /** A mock used so our tests don't deal with actual StoreFiles */
-public class MockStoreFile extends StoreFile {
+public class MockStoreFile extends HStoreFile {
   long length = 0;
   boolean isRef = false;
   long ageInDisk;
@@ -65,17 +68,12 @@ public class MockStoreFile extends StoreFile {
   }
 
   @Override
-  byte[] getFileSplitPoint(CellComparator comparator) throws IOException {
-    return this.splitPoint;
-  }
-
-  @Override
   public long getMaxSequenceId() {
     return sequenceid;
   }
 
   @Override
-  public boolean isMajorCompaction() {
+  public boolean isMajorCompactionResult() {
     return isMajor;
   }
 
@@ -110,14 +108,14 @@ public class MockStoreFile extends StoreFile {
     this.entryCount = entryCount;
   }
 
-  public Long getMinimumTimestamp() {
-    return (timeRangeTracker == null) ?
-      null : timeRangeTracker.getMin();
+  public OptionalLong getMinimumTimestamp() {
+    return timeRangeTracker == null ? OptionalLong.empty()
+        : OptionalLong.of(timeRangeTracker.getMin());
   }
 
-  public Long getMaximumTimestamp() {
-    return (timeRangeTracker == null) ?
-      null : timeRangeTracker.getMax();
+  public OptionalLong getMaximumTimestamp() {
+    return timeRangeTracker == null ? OptionalLong.empty()
+        : OptionalLong.of(timeRangeTracker.getMax());
   }
 
   @Override
@@ -184,6 +182,39 @@ public class MockStoreFile extends StoreFile {
       public void close(boolean evictOnClose) throws IOException {
         // no-op
       }
+
+      @Override
+      public Cell getLastKey() {
+        if (splitPoint != null) {
+          return CellUtil.createCell(Arrays.copyOf(splitPoint, splitPoint.length + 1));
+        } else {
+          return null;
+        }
+      }
+
+      @Override
+      public Cell midkey() throws IOException {
+        if (splitPoint != null) {
+          return CellUtil.createCell(splitPoint);
+        } else {
+          return null;
+        }
+      }
+
+      @Override
+      public Cell getFirstKey() {
+        if (splitPoint != null) {
+          return CellUtil.createCell(Arrays.copyOf(splitPoint, splitPoint.length - 1));
+        } else {
+          return null;
+        }
+      }
     };
+  }
+
+  @Override
+  public OptionalLong getBulkLoadTimestamp() {
+    // we always return false for isBulkLoadResult so we do not have a bulk load timestamp
+    return OptionalLong.empty();
   }
 }

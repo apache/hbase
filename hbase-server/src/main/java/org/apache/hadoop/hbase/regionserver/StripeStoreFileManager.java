@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -216,7 +216,12 @@ public class StripeStoreFileManager
     return original;
   }
 
-  @Override
+  private byte[] getSplitPoint(Collection<StoreFile> sfs) throws IOException {
+    Optional<StoreFile> largestFile = StoreUtils.getLargestFile(sfs);
+    return largestFile.isPresent()
+        ? StoreUtils.getFileSplitPoint(largestFile.get(), cellComparator).orElse(null) : null;
+  }
+
   /**
    * Override of getSplitPoint that determines the split point as the boundary between two
    * stripes, unless it causes significant imbalance between split sides' sizes. In that
@@ -224,6 +229,7 @@ public class StripeStoreFileManager
    * minimize imbalance.
    * @return The split point, or null if no split is possible.
    */
+  @Override
   public byte[] getSplitPoint() throws IOException {
     if (this.getStorefileCount() == 0) return null;
     if (state.stripeFiles.size() <= 1) {
@@ -271,16 +277,14 @@ public class StripeStoreFileManager
     LOG.debug("Splitting the stripe - ratio w/o split " + ratio + ", ratio with split "
         + newRatio + " configured ratio " + config.getMaxSplitImbalance());
     // Ok, we may get better ratio, get it.
-    return StoreUtils.getLargestFile(state.stripeFiles.get(
-        isRightLarger ? rightIndex : leftIndex)).getFileSplitPoint(this.cellComparator);
+    return getSplitPoint(state.stripeFiles.get(isRightLarger ? rightIndex : leftIndex));
   }
 
   private byte[] getSplitPointFromAllFiles() throws IOException {
     ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<>();
     sfs.addSublist(state.level0Files);
     sfs.addAllSublists(state.stripeFiles);
-    if (sfs.isEmpty()) return null;
-    return StoreUtils.getLargestFile(sfs).getFileSplitPoint(this.cellComparator);
+    return getSplitPoint(sfs);
   }
 
   private double getMidStripeSplitRatio(long smallerSize, long largerSize, long lastLargerSize) {
@@ -639,7 +643,7 @@ public class StripeStoreFileManager
     // we will store the file in reverse order by seqNum from the outset.
     for (int insertBefore = 0; ; ++insertBefore) {
       if (insertBefore == stripe.size()
-          || (StoreFile.Comparators.SEQ_ID.compare(sf, stripe.get(insertBefore)) >= 0)) {
+          || (StoreFileComparators.SEQ_ID.compare(sf, stripe.get(insertBefore)) >= 0)) {
         stripe.add(insertBefore, sf);
         break;
       }
@@ -1071,6 +1075,6 @@ public class StripeStoreFileManager
 
   @Override
   public Comparator<StoreFile> getStoreFileComparator() {
-    return StoreFile.Comparators.SEQ_ID;
+    return StoreFileComparators.SEQ_ID;
   }
 }

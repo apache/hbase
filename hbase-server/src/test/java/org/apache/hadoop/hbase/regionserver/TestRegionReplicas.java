@@ -225,7 +225,7 @@ public class TestRegionReplicas {
   }
 
   @Test(timeout = 300000)
-  public void testRefreshStoreFiles() throws Exception {
+  public void testRefresStoreFiles() throws Exception {
     // enable store file refreshing
     final int refreshPeriod = 2000; // 2 sec
     HTU.getConfiguration().setInt("hbase.hstore.compactionThreshold", 100);

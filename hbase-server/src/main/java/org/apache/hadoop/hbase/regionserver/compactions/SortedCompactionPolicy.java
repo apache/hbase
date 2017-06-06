@@ -10,15 +10,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -28,6 +24,11 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 
 /**
  * An abstract compaction policy that select files on seq id order.
@@ -118,30 +119,31 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
    * @param filesToCompact
    * @return When to run next major compaction
    */
-  public long getNextMajorCompactTime(final Collection<StoreFile> filesToCompact) {
+  public long getNextMajorCompactTime(Collection<StoreFile> filesToCompact) {
     // default = 24hrs
-    long ret = comConf.getMajorCompactionPeriod();
-    if (ret > 0) {
-      // default = 20% = +/- 4.8 hrs
-      double jitterPct = comConf.getMajorCompactionJitter();
-      if (jitterPct > 0) {
-        long jitter = Math.round(ret * jitterPct);
-        // deterministic jitter avoids a major compaction storm on restart
-        Integer seed = StoreUtils.getDeterministicRandomSeed(filesToCompact);
-        if (seed != null) {
-          // Synchronized to ensure one user of random instance at a time.
-          double rnd = -1;
-          synchronized (this) {
-            this.random.setSeed(seed);
-            rnd = this.random.nextDouble();
-          }
-          ret += jitter - Math.round(2L * jitter * rnd);
-        } else {
-          ret = 0; // If seed is null, then no storefiles == no major compaction
-        }
-      }
+    long period = comConf.getMajorCompactionPeriod();
+    if (period <= 0) {
+      return period;
     }
-    return ret;
+    // default = 20% = +/- 4.8 hrs
+    double jitterPct = comConf.getMajorCompactionJitter();
+    if (jitterPct <= 0) {
+      return period;
+    }
+    // deterministic jitter avoids a major compaction storm on restart
+    OptionalInt seed = StoreUtils.getDeterministicRandomSeed(filesToCompact);
+    if (seed.isPresent()) {
+      // Synchronized to ensure one user of random instance at a time.
+      double rnd;
+      synchronized (this) {
+        this.random.setSeed(seed.getAsInt());
+        rnd = this.random.nextDouble();
+      }
+      long jitter = Math.round(period * jitterPct);
+      return period + jitter - Math.round(2L * jitter * rnd);
+    } else {
+      return 0L;
+    }
   }
 
   /**

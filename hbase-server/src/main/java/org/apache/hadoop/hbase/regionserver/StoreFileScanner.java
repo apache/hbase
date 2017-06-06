@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.fs.Path;
@@ -120,13 +121,20 @@ public class StoreFileScanner implements KeyValueScanner {
   public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
       boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean canUseDrop,
       ScanQueryMatcher matcher, long readPt) throws IOException {
+    if (files.isEmpty()) {
+      return Collections.emptyList();
+    }
     List<StoreFileScanner> scanners = new ArrayList<>(files.size());
-    List<StoreFile> sortedFiles = new ArrayList<>(files);
-    Collections.sort(sortedFiles, StoreFile.Comparators.SEQ_ID);
     boolean canOptimizeForNonNullColumn = matcher != null ? !matcher.hasNullColumnInQuery() : false;
-    for (int i = 0, n = sortedFiles.size(); i < n; i++) {
-      StoreFile sf = sortedFiles.get(i);
-      sf.initReader();
+    PriorityQueue<StoreFile> sortedFiles =
+        new PriorityQueue<>(files.size(), StoreFileComparators.SEQ_ID);
+    for (StoreFile file : files) {
+      // The sort function needs metadata so we need to open reader first before sorting the list.
+      file.initReader();
+      sortedFiles.add(file);
+    }
+    for (int i = 0, n = files.size(); i < n; i++) {
+      StoreFile sf = sortedFiles.remove();
       StoreFileScanner scanner;
       if (usePread) {
         scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn);
@@ -147,7 +155,7 @@ public class StoreFileScanner implements KeyValueScanner {
       boolean canUseDropBehind, long readPt) throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<>(files.size());
     List<StoreFile> sortedFiles = new ArrayList<>(files);
-    Collections.sort(sortedFiles, StoreFile.Comparators.SEQ_ID);
+    Collections.sort(sortedFiles, StoreFileComparators.SEQ_ID);
     boolean succ = false;
     try {
       for (int i = 0, n = sortedFiles.size(); i < n; i++) {

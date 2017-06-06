@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -78,8 +79,8 @@ import static org.mockito.Mockito.when;
  * Test HStoreFile
  */
 @Category({RegionServerTests.class, SmallTests.class})
-public class TestStoreFile extends HBaseTestCase {
-  private static final Log LOG = LogFactory.getLog(TestStoreFile.class);
+public class TestHStoreFile extends HBaseTestCase {
+  private static final Log LOG = LogFactory.getLog(TestHStoreFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private CacheConfig cacheConf =  new CacheConfig(TEST_UTIL.getConfiguration());
   private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile").toString();
@@ -117,7 +118,7 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
 
     Path sfPath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
-    StoreFile sf = new StoreFile(this.fs, sfPath, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile sf = new HStoreFile(this.fs, sfPath, conf, cacheConf, BloomType.NONE, true);
     checkHalfHFile(regionFs, sf);
   }
 
@@ -169,7 +170,7 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
 
     Path hsfPath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
-    StoreFile hsf = new StoreFile(this.fs, hsfPath, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile hsf = new HStoreFile(this.fs, hsfPath, conf, cacheConf, BloomType.NONE, true);
     hsf.initReader();
     StoreFileReader reader = hsf.getReader();
     // Split on a row, not in middle of row.  Midkey returned by reader
@@ -184,7 +185,7 @@ public class TestStoreFile extends HBaseTestCase {
     // Make a reference
     HRegionInfo splitHri = new HRegionInfo(hri.getTable(), null, midRow);
     Path refPath = splitStoreFile(regionFs, splitHri, TEST_FAMILY, hsf, midRow, true);
-    StoreFile refHsf = new StoreFile(this.fs, refPath, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile refHsf = new HStoreFile(this.fs, refPath, conf, cacheConf, BloomType.NONE, true);
     refHsf.initReader();
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
@@ -242,8 +243,8 @@ public class TestStoreFile extends HBaseTestCase {
 
     // Try to open store file from link
     StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath);
-    StoreFile hsf =
-        new StoreFile(this.fs, storeFileInfo, testConf, cacheConf, BloomType.NONE, true);
+    HStoreFile hsf =
+        new HStoreFile(this.fs, storeFileInfo, testConf, cacheConf, BloomType.NONE, true);
     assertTrue(storeFileInfo.isLink());
     hsf.initReader();
 
@@ -296,7 +297,7 @@ public class TestStoreFile extends HBaseTestCase {
     // <root>/clone/splitB/<cf>/<reftohfilelink>
     HRegionInfo splitHriA = new HRegionInfo(hri.getTable(), null, SPLITKEY);
     HRegionInfo splitHriB = new HRegionInfo(hri.getTable(), SPLITKEY, null);
-    StoreFile f = new StoreFile(fs, linkFilePath, testConf, cacheConf, BloomType.NONE, true);
+    HStoreFile f = new HStoreFile(fs, linkFilePath, testConf, cacheConf, BloomType.NONE, true);
     f.initReader();
     Path pathA = splitStoreFile(cloneRegionFs, splitHriA, TEST_FAMILY, f, SPLITKEY, true); // top
     Path pathB = splitStoreFile(cloneRegionFs, splitHriB, TEST_FAMILY, f, SPLITKEY, false);// bottom
@@ -308,7 +309,7 @@ public class TestStoreFile extends HBaseTestCase {
     // reference to a hfile link.  This code in StoreFile that handles this case.
 
     // Try to open store file from link
-    StoreFile hsfA = new StoreFile(this.fs, pathA, testConf, cacheConf, BloomType.NONE, true);
+    HStoreFile hsfA = new HStoreFile(this.fs, pathA, testConf, cacheConf, BloomType.NONE, true);
     hsfA.initReader();
 
     // Now confirm that I can read from the ref to link
@@ -321,7 +322,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertTrue(count > 0); // read some rows here
 
     // Try to open store file from link
-    StoreFile hsfB = new StoreFile(this.fs, pathB, testConf, cacheConf, BloomType.NONE, true);
+    HStoreFile hsfB = new HStoreFile(this.fs, pathB, testConf, cacheConf, BloomType.NONE, true);
     hsfB.initReader();
 
     // Now confirm that I can read from the ref to link
@@ -338,7 +339,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
   }
 
-  private void checkHalfHFile(final HRegionFileSystem regionFs, final StoreFile f)
+  private void checkHalfHFile(final HRegionFileSystem regionFs, final HStoreFile f)
       throws IOException {
     f.initReader();
     Cell midkey = f.getReader().midkey();
@@ -353,10 +354,10 @@ public class TestStoreFile extends HBaseTestCase {
         midRow, null);
     Path bottomPath = splitStoreFile(regionFs, bottomHri, TEST_FAMILY, f, midRow, false);
     // Make readers on top and bottom.
-    StoreFile topF = new StoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile topF = new HStoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE, true);
     topF.initReader();
     StoreFileReader top = topF.getReader();
-    StoreFile bottomF = new StoreFile(this.fs, bottomPath, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile bottomF = new HStoreFile(this.fs, bottomPath, conf, cacheConf, BloomType.NONE, true);
     bottomF.initReader();
     StoreFileReader bottom = bottomF.getReader();
     ByteBuffer previous = null;
@@ -416,7 +417,7 @@ public class TestStoreFile extends HBaseTestCase {
 
       assertNull(bottomPath);
 
-      topF = new StoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE, true);
+      topF = new HStoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE, true);
       topF.initReader();
       top = topF.getReader();
       // Now read from the top.
@@ -456,7 +457,7 @@ public class TestStoreFile extends HBaseTestCase {
       bottomPath = splitStoreFile(regionFs, bottomHri, TEST_FAMILY, f, badmidkey, false);
       assertNull(topPath);
 
-      bottomF = new StoreFile(this.fs, bottomPath, conf, cacheConf, BloomType.NONE, true);
+      bottomF = new HStoreFile(this.fs, bottomPath, conf, cacheConf, BloomType.NONE, true);
       bottomF.initReader();
       bottom = bottomF.getReader();
       first = true;
@@ -754,7 +755,7 @@ public class TestStoreFile extends HBaseTestCase {
 
   @Test
   public void testSeqIdComparator() {
-    assertOrdering(StoreFile.Comparators.SEQ_ID, mockStoreFile(true, 100, 1000, -1, "/foo/123"),
+    assertOrdering(StoreFileComparators.SEQ_ID, mockStoreFile(true, 100, 1000, -1, "/foo/123"),
         mockStoreFile(true, 100, 1000, -1, "/foo/124"),
         mockStoreFile(true, 99, 1000, -1, "/foo/126"),
         mockStoreFile(true, 98, 2000, -1, "/foo/126"), mockStoreFile(false, 3453, -1, 1, "/foo/1"),
@@ -766,8 +767,8 @@ public class TestStoreFile extends HBaseTestCase {
    * Assert that the given comparator orders the given storefiles in the
    * same way that they're passed.
    */
-  private void assertOrdering(Comparator<StoreFile> comparator, StoreFile ... sfs) {
-    ArrayList<StoreFile> sorted = Lists.newArrayList(sfs);
+  private void assertOrdering(Comparator<? super HStoreFile> comparator, HStoreFile ... sfs) {
+    ArrayList<HStoreFile> sorted = Lists.newArrayList(sfs);
     Collections.shuffle(sorted);
     Collections.sort(sorted, comparator);
     LOG.debug("sfs: " + Joiner.on(",").join(sfs));
@@ -778,19 +779,19 @@ public class TestStoreFile extends HBaseTestCase {
   /**
    * Create a mock StoreFile with the given attributes.
    */
-  private StoreFile mockStoreFile(boolean bulkLoad,
+  private HStoreFile mockStoreFile(boolean bulkLoad,
                                   long size,
                                   long bulkTimestamp,
                                   long seqId,
                                   String path) {
-    StoreFile mock = Mockito.mock(StoreFile.class);
+    HStoreFile mock = Mockito.mock(HStoreFile.class);
     StoreFileReader reader = Mockito.mock(StoreFileReader.class);
 
     Mockito.doReturn(size).when(reader).length();
 
     Mockito.doReturn(reader).when(mock).getReader();
     Mockito.doReturn(bulkLoad).when(mock).isBulkLoadResult();
-    Mockito.doReturn(bulkTimestamp).when(mock).getBulkLoadTimestamp();
+    Mockito.doReturn(OptionalLong.of(bulkTimestamp)).when(mock).getBulkLoadTimestamp();
     Mockito.doReturn(seqId).when(mock).getMaxSequenceId();
     Mockito.doReturn(new Path(path)).when(mock).getPath();
     String name = "mock storefile, bulkLoad=" + bulkLoad +
@@ -855,7 +856,7 @@ public class TestStoreFile extends HBaseTestCase {
     writer.appendMetadata(0, false);
     writer.close();
 
-    StoreFile hsf = new StoreFile(this.fs, writer.getPath(), conf, cacheConf,
+    HStoreFile hsf = new HStoreFile(this.fs, writer.getPath(), conf, cacheConf,
       BloomType.NONE, true);
     Store store = mock(Store.class);
     HColumnDescriptor hcd = mock(HColumnDescriptor.class);
@@ -913,7 +914,7 @@ public class TestStoreFile extends HBaseTestCase {
     CacheConfig cacheConf = new CacheConfig(conf);
     Path pathCowOff = new Path(baseDir, "123456789");
     StoreFileWriter writer = writeStoreFile(conf, cacheConf, pathCowOff, 3);
-    StoreFile hsf = new StoreFile(this.fs, writer.getPath(), conf, cacheConf,
+    HStoreFile hsf = new HStoreFile(this.fs, writer.getPath(), conf, cacheConf,
       BloomType.NONE, true);
     LOG.debug(hsf.getPath().toString());
 
@@ -936,7 +937,7 @@ public class TestStoreFile extends HBaseTestCase {
     cacheConf = new CacheConfig(conf);
     Path pathCowOn = new Path(baseDir, "123456788");
     writer = writeStoreFile(conf, cacheConf, pathCowOn, 3);
-    hsf = new StoreFile(this.fs, writer.getPath(), conf, cacheConf,
+    hsf = new HStoreFile(this.fs, writer.getPath(), conf, cacheConf,
       BloomType.NONE, true);
 
     // Read this file, we should see 3 hits
@@ -953,13 +954,13 @@ public class TestStoreFile extends HBaseTestCase {
     reader.close(cacheConf.shouldEvictOnClose());
 
     // Let's read back the two files to ensure the blocks exactly match
-    hsf = new StoreFile(this.fs, pathCowOff, conf, cacheConf, BloomType.NONE, true);
+    hsf = new HStoreFile(this.fs, pathCowOff, conf, cacheConf, BloomType.NONE, true);
     hsf.initReader();
     StoreFileReader readerOne = hsf.getReader();
     readerOne.loadFileInfo();
     StoreFileScanner scannerOne = getStoreFileScanner(readerOne, true, true);
     scannerOne.seek(KeyValue.LOWESTKEY);
-    hsf = new StoreFile(this.fs, pathCowOn, conf, cacheConf, BloomType.NONE, true);
+    hsf = new HStoreFile(this.fs, pathCowOn, conf, cacheConf, BloomType.NONE, true);
     hsf.initReader();
     StoreFileReader readerTwo = hsf.getReader();
     readerTwo.loadFileInfo();
@@ -992,7 +993,7 @@ public class TestStoreFile extends HBaseTestCase {
     // Let's close the first file with evict on close turned on
     conf.setBoolean("hbase.rs.evictblocksonclose", true);
     cacheConf = new CacheConfig(conf);
-    hsf = new StoreFile(this.fs, pathCowOff, conf, cacheConf, BloomType.NONE, true);
+    hsf = new HStoreFile(this.fs, pathCowOff, conf, cacheConf, BloomType.NONE, true);
     hsf.initReader();
     reader = hsf.getReader();
     reader.close(cacheConf.shouldEvictOnClose());
@@ -1006,7 +1007,7 @@ public class TestStoreFile extends HBaseTestCase {
     // Let's close the second file with evict on close turned off
     conf.setBoolean("hbase.rs.evictblocksonclose", false);
     cacheConf = new CacheConfig(conf);
-    hsf = new StoreFile(this.fs, pathCowOn, conf, cacheConf, BloomType.NONE, true);
+    hsf = new HStoreFile(this.fs, pathCowOn, conf, cacheConf, BloomType.NONE, true);
     hsf.initReader();
     reader = hsf.getReader();
     reader.close(cacheConf.shouldEvictOnClose());
@@ -1018,7 +1019,7 @@ public class TestStoreFile extends HBaseTestCase {
   }
 
   private Path splitStoreFile(final HRegionFileSystem regionFs, final HRegionInfo hri,
-      final String family, final StoreFile sf, final byte[] splitKey, boolean isTopRef)
+      final String family, final HStoreFile sf, final byte[] splitKey, boolean isTopRef)
       throws IOException {
     FileSystem fs = regionFs.getFileSystem();
     Path path = regionFs.splitStoreFile(hri, family, sf, splitKey, isTopRef, null);
@@ -1093,8 +1094,8 @@ public class TestStoreFile extends HBaseTestCase {
             .build();
     writer.close();
 
-    StoreFile storeFile =
-        new StoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true);
+    HStoreFile storeFile =
+        new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true);
     storeFile.initReader();
     StoreFileReader reader = storeFile.getReader();
 
@@ -1103,4 +1104,3 @@ public class TestStoreFile extends HBaseTestCase {
     assertEquals(dataBlockEncoderAlgo.getNameInBytes(), value);
   }
 }
-

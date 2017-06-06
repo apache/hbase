@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.OptionalLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -108,6 +109,7 @@ public class TestStripeStoreEngine {
       .thenReturn(StripeStoreFileManager.INVALID_KEY);
     when(sf.getReader()).thenReturn(mock(StoreFileReader.class));
     when(sf.getPath()).thenReturn(new Path("moo"));
+    when(sf.getBulkLoadTimestamp()).thenReturn(OptionalLong.empty());
     return sf;
   }
 

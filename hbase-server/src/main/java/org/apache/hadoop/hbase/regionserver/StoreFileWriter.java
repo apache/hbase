@@ -18,8 +18,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.base.Preconditions;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,7 +36,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -42,12 +44,9 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.RowBloomContext;
 import org.apache.hadoop.hbase.util.RowColBloomContext;
 import org.apache.hadoop.io.WritableUtils;
-
-import com.google.common.base.Preconditions;
 
 /**
  * A StoreFile writer.  Use this to read/write HBase Store Files. It is package
@@ -359,6 +358,18 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     return writer;
   }
 
+  /**
+   * @param fs
+   * @param dir Directory to create file in.
+   * @return random filename inside passed <code>dir</code>
+   */
+  static Path getUniqueFile(final FileSystem fs, final Path dir) throws IOException {
+    if (!fs.getFileStatus(dir).isDirectory()) {
+      throw new IOException("Expecting " + dir.toString() + " to be a directory");
+    }
+    return new Path(dir, UUID.randomUUID().toString().replaceAll("-", ""));
+  }
+
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ICAST_INTEGER_MULTIPLY_CAST_TO_LONG",
       justification="Will not overflow")
   public static class Builder {
@@ -496,7 +507,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       FSUtils.setStoragePolicy(this.fs, dir, policyName);
 
       if (filePath == null) {
-        filePath = StoreFile.getUniqueFile(fs, dir);
+        filePath = getUniqueFile(fs, dir);
         if (!BloomFilterFactory.isGeneralBloomEnabled(conf)) {
           bloomType = BloomType.NONE;
         }

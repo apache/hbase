@@ -36,7 +36,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -74,6 +73,7 @@ import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.C
 import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartitionId;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
@@ -86,6 +86,8 @@ import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * An implementation of {@link MobCompactor} that compacts the mob files in partitions.
@@ -335,7 +337,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       for (CompactionDelPartition delPartition : request.getDelPartitions()) {
         for (Path newDelPath : delPartition.listDelFiles()) {
           StoreFile sf =
-              new StoreFile(fs, newDelPath, conf, compactionCacheConfig, BloomType.NONE, true);
+              new HStoreFile(fs, newDelPath, conf, compactionCacheConfig, BloomType.NONE, true);
           // pre-create reader of a del file to avoid race condition when opening the reader in each
           // partition.
           sf.initReader();
@@ -551,7 +553,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       // add the selected mob files and del files into filesToCompact
       List<StoreFile> filesToCompact = new ArrayList<>();
       for (int i = offset; i < batch + offset; i++) {
-        StoreFile sf = new StoreFile(fs, files.get(i).getPath(), conf, compactionCacheConfig,
+        StoreFile sf = new HStoreFile(fs, files.get(i).getPath(), conf, compactionCacheConfig,
             BloomType.NONE, true);
         filesToCompact.add(sf);
       }
@@ -733,7 +735,7 @@ public class PartitionedMobCompactor extends MobCompactor {
         continue;
       }
       for (int i = offset; i < batch + offset; i++) {
-        batchedDelFiles.add(new StoreFile(fs, delFilePaths.get(i), conf, compactionCacheConfig,
+        batchedDelFiles.add(new HStoreFile(fs, delFilePaths.get(i), conf, compactionCacheConfig,
           BloomType.NONE, true));
       }
       // compact the del files in a batch.

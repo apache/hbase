@@ -1456,7 +1456,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * time-sensitive thread.
    *
    * @return Vector of all the storage files that the HRegion's component
-   * HStores make use of.  It's a list of all HStoreFile objects. Returns empty
+   * HStores make use of.  It's a list of all StoreFile objects. Returns empty
    * vector if already closed and null if judged that it should not close.
    *
    * @throws IOException e
@@ -1497,7 +1497,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *
    * @param abort true if server is aborting (only during testing)
    * @return Vector of all the storage files that the HRegion's component
-   * HStores make use of.  It's a list of HStoreFile objects.  Can be null if
+   * HStores make use of.  It's a list of StoreFile objects.  Can be null if
    * we are not to close at this time or we are already closed.
    *
    * @throws IOException e
@@ -4204,7 +4204,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Set<StoreFile> fakeStoreFiles = new HashSet<>(files.size());
       for (Path file: files) {
         fakeStoreFiles.add(
-          new StoreFile(getRegionFileSystem().getFileSystem(), file, this.conf, null, null, true));
+          new HStoreFile(getRegionFileSystem().getFileSystem(), file, this.conf, null, null, true));
       }
       getRegionFileSystem().removeStoreFiles(fakeFamilyName, fakeStoreFiles);
     } else {

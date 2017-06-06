@@ -20,7 +20,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Optional;
+import java.util.OptionalInt;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -28,14 +35,14 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class StoreUtils {
+
+  private static final Log LOG = LogFactory.getLog(StoreUtils.class);
+
   /**
    * Creates a deterministic hash code for store file collection.
    */
-  public static Integer getDeterministicRandomSeed(final Collection<StoreFile> files) {
-    if (files != null && !files.isEmpty()) {
-      return files.iterator().next().getPath().getName().hashCode();
-    }
-    return null;
+  public static OptionalInt getDeterministicRandomSeed(Collection<StoreFile> files) {
+    return files.stream().mapToInt(f -> f.getPath().getName().hashCode()).findFirst();
   }
 
   /**
@@ -70,18 +77,73 @@ public class StoreUtils {
    * @param candidates The files to choose from.
    * @return The largest file; null if no file has a reader.
    */
-  static StoreFile getLargestFile(final Collection<StoreFile> candidates) {
-    long maxSize = -1L;
-    StoreFile largestSf = null;
-    for (StoreFile sf : candidates) {
-      StoreFileReader r = sf.getReader();
-      if (r == null) continue;
-      long size = r.length();
-      if (size > maxSize) {
-        maxSize = size;
-        largestSf = sf;
+  static Optional<StoreFile> getLargestFile(Collection<StoreFile> candidates) {
+    return candidates.stream().filter(f -> f.getReader() != null)
+        .max((f1, f2) -> Long.compare(f1.getReader().length(), f2.getReader().length()));
+  }
+
+  /**
+   * Return the largest memstoreTS found across all storefiles in the given list. Store files that
+   * were created by a mapreduce bulk load are ignored, as they do not correspond to any specific
+   * put operation, and thus do not have a memstoreTS associated with them.
+   * @return 0 if no non-bulk-load files are provided or, this is Store that does not yet have any
+   *         store files.
+   */
+  public static long getMaxMemstoreTSInList(Collection<StoreFile> sfs) {
+    long max = 0;
+    for (StoreFile sf : sfs) {
+      if (!sf.isBulkLoadResult()) {
+        max = Math.max(max, sf.getMaxMemstoreTS());
       }
     }
-    return largestSf;
+    return max;
+  }
+
+  /**
+   * Return the highest sequence ID found across all storefiles in
+   * the given list.
+   * @param sfs
+   * @return 0 if no non-bulk-load files are provided or, this is Store that
+   * does not yet have any store files.
+   */
+  public static long getMaxSequenceIdInList(Collection<StoreFile> sfs) {
+    long max = 0;
+    for (StoreFile sf : sfs) {
+      max = Math.max(max, sf.getMaxSequenceId());
+    }
+    return max;
+  }
+
+  /**
+   * Gets the approximate mid-point of the given file that is optimal for use in splitting it.
+   * @param file the store file
+   * @param comparator Comparator used to compare KVs.
+   * @return The split point row, or null if splitting is not possible, or reader is null.
+   */
+  static Optional<byte[]> getFileSplitPoint(StoreFile file, CellComparator comparator)
+      throws IOException {
+    StoreFileReader reader = file.getReader();
+    if (reader == null) {
+      LOG.warn("Storefile " + file + " Reader is null; cannot get split point");
+      return Optional.empty();
+    }
+    // Get first, last, and mid keys. Midkey is the key that starts block
+    // in middle of hfile. Has column and timestamp. Need to return just
+    // the row we want to split on as midkey.
+    Cell midkey = reader.midkey();
+    if (midkey != null) {
+      Cell firstKey = reader.getFirstKey();
+      Cell lastKey = reader.getLastKey();
+      // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
+      if (comparator.compareRows(midkey, firstKey) == 0 ||
+          comparator.compareRows(midkey, lastKey) == 0) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("cannot split because midkey is the same as first or last row");
+        }
+        return Optional.empty();
+      }
+      return Optional.of(CellUtil.cloneRow(midkey));
+    }
+    return Optional.empty();
   }
 }

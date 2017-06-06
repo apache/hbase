@@ -18,24 +18,19 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+
+import com.google.common.base.Preconditions;
 
 /**
  * This class holds all logical details necessary to run a compaction.
@@ -43,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.LimitedPrivate({ "coprocessor" })
 @InterfaceStability.Evolving
 public class CompactionRequest implements Comparable<CompactionRequest> {
-  private static final Log LOG = LogFactory.getLog(CompactionRequest.class);
+
   // was this compaction promoted to an off-peak
   private boolean isOffPeak = false;
   private enum DisplayCompactionType { MINOR, ALL_FILES, MAJOR }
@@ -207,27 +202,15 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
 
   @Override
   public String toString() {
-    String fsList = Joiner.on(", ").join(
-        Collections2.transform(Collections2.filter(
-            this.getFiles(),
-            new Predicate<StoreFile>() {
-              @Override
-              public boolean apply(StoreFile sf) {
-                return sf.getReader() != null;
-              }
-          }), new Function<StoreFile, String>() {
-            @Override
-            public String apply(StoreFile sf) {
-              return StringUtils.humanReadableInt(
-                (sf.getReader() == null) ? 0 : sf.getReader().length());
-            }
-          }));
+    String fsList = filesToCompact.stream().filter(f -> f.getReader() != null)
+        .map(f -> TraditionalBinaryPrefix.long2String(f.getReader().length(), "", 1))
+        .collect(Collectors.joining(", "));
 
-    return "regionName=" + regionName + ", storeName=" + storeName +
-      ", fileCount=" + this.getFiles().size() +
-      ", fileSize=" + StringUtils.humanReadableInt(totalSize) +
-        ((fsList.isEmpty()) ? "" : " (" + fsList + ")") +
-      ", priority=" + priority + ", time=" + timeInNanos;
+    return "regionName=" + regionName + ", storeName=" + storeName + ", fileCount=" +
+        this.getFiles().size() + ", fileSize=" +
+        TraditionalBinaryPrefix.long2String(totalSize, "", 1) +
+        ((fsList.isEmpty()) ? "" : " (" + fsList + ")") + ", priority=" + priority + ", time=" +
+        timeInNanos;
   }
 
   /**
