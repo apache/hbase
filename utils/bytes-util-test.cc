@@ -46,7 +46,8 @@ TEST(TestBytesUtil, TestToStringBinary) {
 
   EXPECT_EQ("foo_\\x00\\xFF_bar",
             BytesUtil::ToStringBinary("foo_" + std::string{zero} + std::string{max} + "_bar"));
-
+}
+TEST(TestBytesUtil, TestToStringToInt64) {
   int64_t num = 761235;
   EXPECT_EQ(num, BytesUtil::ToInt64(BytesUtil::ToString(num)));
 
