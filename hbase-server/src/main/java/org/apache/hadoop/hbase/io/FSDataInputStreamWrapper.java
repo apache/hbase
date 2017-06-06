@@ -19,8 +19,13 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +41,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class FSDataInputStreamWrapper implements Closeable {
+  private static final Log LOG = LogFactory.getLog(FSDataInputStreamWrapper.class);
+
   private final HFileSystem hfs;
   private final Path path;
   private final FileLink link;
@@ -79,6 +86,11 @@ public class FSDataInputStreamWrapper implements Closeable {
   // In the case of a checksum failure, do these many succeeding
   // reads without hbase checksum verification.
   private volatile int hbaseChecksumOffCount = -1;
+
+  private Boolean instanceOfCanUnbuffer = null;
+  // Using reflection to get org.apache.hadoop.fs.CanUnbuffer#unbuffer method to avoid compilation
+  // errors against Hadoop pre 2.6.4 and 2.7.1 versions.
+  private Method unbuffer = null;
 
   public FSDataInputStreamWrapper(FileSystem fs, Path path) throws IOException {
     this(fs, path, false, -1L);
@@ -231,5 +243,62 @@ public class FSDataInputStreamWrapper implements Closeable {
 
   public HFileSystem getHfs() {
     return this.hfs;
+  }
+
+  /**
+   * This will free sockets and file descriptors held by the stream only when the stream implements
+   * org.apache.hadoop.fs.CanUnbuffer. NOT THREAD SAFE. Must be called only when all the clients
+   * using this stream to read the blocks have finished reading. If by chance the stream is
+   * unbuffered and there are clients still holding this stream for read then on next client read
+   * request a new socket will be opened by Datanode without client knowing about it and will serve
+   * its read request. Note: If this socket is idle for some time then the DataNode will close the
+   * socket and the socket will move into CLOSE_WAIT state and on the next client request on this
+   * stream, the current socket will be closed and a new socket will be opened to serve the
+   * requests.
+   */
+  @SuppressWarnings({ "rawtypes" })
+  public void unbuffer() {
+    FSDataInputStream stream = this.getStream(this.shouldUseHBaseChecksum());
+    if (stream != null) {
+      InputStream wrappedStream = stream.getWrappedStream();
+      // CanUnbuffer interface was added as part of HDFS-7694 and the fix is available in Hadoop
+      // 2.6.4+ and 2.7.1+ versions only so check whether the stream object implements the
+      // CanUnbuffer interface or not and based on that call the unbuffer api.
+      final Class<? extends InputStream> streamClass = wrappedStream.getClass();
+      if (this.instanceOfCanUnbuffer == null) {
+        // To ensure we compute whether the stream is instance of CanUnbuffer only once.
+        this.instanceOfCanUnbuffer = false;
+        Class<?>[] streamInterfaces = streamClass.getInterfaces();
+        for (Class c : streamInterfaces) {
+          if (c.getCanonicalName().toString().equals("org.apache.hadoop.fs.CanUnbuffer")) {
+            try {
+              this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
+            } catch (NoSuchMethodException | SecurityException e) {
+              LOG.warn("Failed to find 'unbuffer' method in class " + streamClass
+                  + " . So there may be a TCP socket connection "
+                  + "left open in CLOSE_WAIT state.",
+                e);
+              return;
+            }
+            this.instanceOfCanUnbuffer = true;
+            break;
+          }
+        }
+      }
+      if (this.instanceOfCanUnbuffer) {
+        try {
+          this.unbuffer.invoke(wrappedStream);
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+          LOG.warn("Failed to invoke 'unbuffer' method in class " + streamClass
+              + " . So there may be a TCP socket connection left open in CLOSE_WAIT state.",
+            e);
+        }
+      } else {
+        LOG.warn("Failed to find 'unbuffer' method in class " + streamClass
+            + " . So there may be a TCP socket connection "
+            + "left open in CLOSE_WAIT state. For more details check "
+            + "https://issues.apache.org/jira/browse/HBASE-9393");
+      }
+    }
   }
 }

@@ -588,6 +588,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     @Override
     public void close() {
+      if (!pread) {
+        // For seek + pread stream socket should be closed when the scanner is closed. HBASE-9393
+        reader.unbufferStream();
+      }
       this.returnBlocks(true);
     }
 
@@ -1857,5 +1861,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
   public int getMajorVersion() {
     return 3;
+  }
+
+  @Override
+  public void unbufferStream() {
+    fsBlockReader.unbufferStream();
   }
 }

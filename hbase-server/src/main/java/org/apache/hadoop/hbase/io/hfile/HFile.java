@@ -499,6 +499,12 @@ public class HFile {
 
     @VisibleForTesting
     boolean prefetchComplete();
+
+    /**
+     * To close the stream's socket. Note: This can be concurrently called from multiple threads and
+     * implementation should take care of thread safety.
+     */
+    void unbufferStream();
   }
 
   /**
@@ -516,7 +522,7 @@ public class HFile {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
       justification="Intentional")
-  private static Reader pickReaderVersion(Path path, FSDataInputStreamWrapper fsdis, long size,
+  private static Reader openReader(Path path, FSDataInputStreamWrapper fsdis, long size,
       CacheConfig cacheConf, HFileSystem hfs, boolean primaryReplicaReader, Configuration conf)
       throws IOException {
     FixedFileTrailer trailer = null;
@@ -537,10 +543,15 @@ public class HFile {
     } catch (Throwable t) {
       IOUtils.closeQuietly(fsdis);
       throw new CorruptHFileException("Problem reading HFile Trailer from file " + path, t);
+    } finally {
+      fsdis.unbuffer();
     }
   }
 
   /**
+   * The sockets and the file descriptors held by the method parameter
+   * {@code FSDataInputStreamWrapper} passed will be freed after its usage so caller needs to ensure
+   * that no other threads have access to the same passed reference.
    * @param fs A file system
    * @param path Path to HFile
    * @param fsdis a stream of path's file
@@ -565,7 +576,7 @@ public class HFile {
     } else {
       hfs = (HFileSystem) fs;
     }
-    return pickReaderVersion(path, fsdis, size, cacheConf, hfs, primaryReplicaReader, conf);
+    return openReader(path, fsdis, size, cacheConf, hfs, primaryReplicaReader, conf);
   }
 
   /**
@@ -597,18 +608,21 @@ public class HFile {
       boolean primaryReplicaReader, Configuration conf) throws IOException {
     Preconditions.checkNotNull(cacheConf, "Cannot create Reader with null CacheConf");
     FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
-    return pickReaderVersion(path, stream, fs.getFileStatus(path).getLen(), cacheConf,
+    return openReader(path, stream, fs.getFileStatus(path).getLen(), cacheConf,
       stream.getHfs(), primaryReplicaReader, conf);
   }
 
   /**
-   * This factory method is used only by unit tests
+   * This factory method is used only by unit tests. <br/>
+   * The sockets and the file descriptors held by the method parameter
+   * {@code FSDataInputStreamWrapper} passed will be freed after its usage so caller needs to ensure
+   * that no other threads have access to the same passed reference.
    */
   @VisibleForTesting
   static Reader createReaderFromStream(Path path, FSDataInputStream fsdis, long size,
       CacheConfig cacheConf, Configuration conf) throws IOException {
     FSDataInputStreamWrapper wrapper = new FSDataInputStreamWrapper(fsdis);
-    return pickReaderVersion(path, wrapper, size, cacheConf, null, true, conf);
+    return openReader(path, wrapper, size, cacheConf, null, true, conf);
   }
 
   /**

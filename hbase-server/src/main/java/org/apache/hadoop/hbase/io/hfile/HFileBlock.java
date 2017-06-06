@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1391,6 +1393,12 @@ public class HFileBlock implements Cacheable {
 
     void setIncludesMemstoreTS(boolean includesMemstoreTS);
     void setDataBlockEncoder(HFileDataBlockEncoder encoder);
+
+    /**
+     * To close the stream's socket. Note: This can be concurrently called from multiple threads and
+     * implementation should take care of thread safety.
+     */
+    void unbufferStream();
   }
 
   /**
@@ -1448,6 +1456,8 @@ public class HFileBlock implements Cacheable {
     private HFileContext fileContext;
     // Cache the fileName
     private String pathName;
+
+    private final Lock streamLock = new ReentrantLock();
 
     FSReaderImpl(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
         HFileContext fileContext) throws IOException {
@@ -1845,6 +1855,19 @@ public class HFileBlock implements Cacheable {
     @Override
     public void closeStreams() throws IOException {
       streamWrapper.close();
+    }
+
+    @Override
+    public void unbufferStream() {
+      // To handle concurrent reads, ensure that no other client is accessing the streams while we
+      // unbuffer it.
+      if (streamLock.tryLock()) {
+        try {
+          this.streamWrapper.unbuffer();
+        } finally {
+          streamLock.unlock();
+        }
+      }
     }
 
     @Override
