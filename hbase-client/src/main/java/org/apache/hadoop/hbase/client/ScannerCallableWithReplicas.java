@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
@@ -142,10 +143,25 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     //2. We should close the "losing" scanners (scanners other than the ones we hear back
     //   from first)
     //
-    RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(true,
-        RegionReplicaUtil.DEFAULT_REPLICA_ID, cConnection, tableName,
-        currentScannerCallable.getRow());
-
+    RegionLocations rl = null;
+    try {
+      rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(true,
+          RegionReplicaUtil.DEFAULT_REPLICA_ID, cConnection, tableName,
+          currentScannerCallable.getRow());
+    } catch (RetriesExhaustedException | DoNotRetryIOException e) {
+      // We cannot get the primary replica region location, it is possible that the region server
+      // hosting meta table is down, it needs to proceed to try cached replicas directly.
+      if (cConnection instanceof ConnectionManager.HConnectionImplementation) {
+        rl = ((ConnectionManager.HConnectionImplementation) cConnection)
+            .getCachedLocation(tableName, currentScannerCallable.getRow());
+        if (rl == null) {
+          throw e;
+        }
+      } else {
+        // For completeness
+        throw e;
+      }
+    }
     // allocate a boundedcompletion pool of some multiple of number of replicas.
     // We want to accomodate some RPCs for redundant replica scans (but are still in progress)
     ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs =

@@ -1296,7 +1296,8 @@ class ConnectionManager {
         } else {
           // If we are not supposed to be using the cache, delete any existing cached location
           // so it won't interfere.
-          metaCache.clearCache(tableName, row);
+          // We are only supposed to clean the cache for the specific replicaId
+          metaCache.clearCache(tableName, row, replicaId);
         }
 
         // Query the meta region

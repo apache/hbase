@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
@@ -157,13 +159,40 @@ public class TestReplicaWithCluster {
 
       return null;
     }
+
+    @Override
+    public void postGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
+        final byte [] row, final byte [] family, final Result result)
+        throws IOException {
+
+    }
   }
 
   /**
    * This copro is used to slow down the primary meta region scan a bit
    */
-  public static class RegionServerHostingPrimayMetaRegionSlowCopro extends BaseRegionObserver {
+  public static class RegionServerHostingPrimayMetaRegionSlowOrStopCopro extends BaseRegionObserver {
     static boolean slowDownPrimaryMetaScan = false;
+    static boolean throwException = false;
+
+    @Override
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Get get, final List<Cell> results) throws IOException {
+
+      int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
+
+      // Fail for the primary replica, but not for meta
+      if (throwException) {
+        if (!e.getEnvironment().getRegion().getRegionInfo().isMetaRegion() && (replicaId == 0)) {
+          LOG.info("Get, throw Region Server Stopped Exceptoin for region " + e.getEnvironment()
+              .getRegion().getRegionInfo());
+          throw new RegionServerStoppedException("Server " +
+              e.getEnvironment().getRegionServerServices().getServerName() + " not running");
+        }
+      } else {
+        LOG.info("Get, We're replica region " + replicaId);
+      }
+    }
 
     @Override
     public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
@@ -172,20 +201,33 @@ public class TestReplicaWithCluster {
       int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
 
       // Slow down with the primary meta region scan
-      if (slowDownPrimaryMetaScan && (e.getEnvironment().getRegion().getRegionInfo().isMetaRegion()
-          && (replicaId == 0))) {
-        LOG.info("Scan with primary meta region, slow down a bit");
-        try {
-          Thread.sleep(META_SCAN_TIMEOUT_IN_MILLISEC - 50);
-        } catch (InterruptedException ie) {
-          // Ingore
+      if (e.getEnvironment().getRegion().getRegionInfo().isMetaRegion() && (replicaId == 0)) {
+        if (slowDownPrimaryMetaScan) {
+          LOG.info("Scan with primary meta region, slow down a bit");
+          try {
+            Thread.sleep(META_SCAN_TIMEOUT_IN_MILLISEC - 50);
+          } catch (InterruptedException ie) {
+            // Ingore
+          }
         }
 
+        // Fail for the primary replica
+        if (throwException) {
+          LOG.info("Scan, throw Region Server Stopped Exceptoin for replica " + e.getEnvironment()
+              .getRegion().getRegionInfo());
+
+          throw new RegionServerStoppedException("Server " +
+              e.getEnvironment().getRegionServerServices().getServerName() + " not running");
+        } else {
+          LOG.info("Scan, We're replica region " + replicaId);
+        }
+      } else {
+        LOG.info("Scan, We're replica region " + replicaId);
       }
+
       return null;
     }
   }
-
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -213,7 +255,7 @@ public class TestReplicaWithCluster {
 
     // Set system coprocessor so it can be applied to meta regions
     HTU.getConfiguration().set("hbase.coprocessor.region.classes",
-        RegionServerHostingPrimayMetaRegionSlowCopro.class.getName());
+        RegionServerHostingPrimayMetaRegionSlowOrStopCopro.class.getName());
 
     HTU.getConfiguration().setInt(HConstants.HBASE_CLIENT_MEAT_REPLICA_SCAN_TIMEOUT,
         META_SCAN_TIMEOUT_IN_MILLISEC * 1000);
@@ -632,16 +674,117 @@ public class TestReplicaWithCluster {
 
       HTU.createTable(hdt, new byte[][] { f }, null);
 
-      RegionServerHostingPrimayMetaRegionSlowCopro.slowDownPrimaryMetaScan = true;
+      RegionServerHostingPrimayMetaRegionSlowOrStopCopro.slowDownPrimaryMetaScan = true;
 
       // Get user table location, always get it from the primary meta replica
       RegionLocations url = ((ClusterConnection) HTU.getConnection())
           .locateRegion(hdt.getTableName(), row, false, false);
 
     } finally {
-      RegionServerHostingPrimayMetaRegionSlowCopro.slowDownPrimaryMetaScan = false;
+      RegionServerHostingPrimayMetaRegionSlowOrStopCopro.slowDownPrimaryMetaScan = false;
       ((ConnectionManager.HConnectionImplementation) HTU.getHBaseAdmin().getConnection()).
           setUseMetaReplicas(false);
+      HTU.getHBaseAdmin().setBalancerRunning(true, true);
+      HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+      HTU.deleteTable(hdt.getTableName());
+    }
+  }
+
+
+  // This test is to simulate the case that the meta region and the primary user region
+  // are down, hbase client is able to access user replica regions and return stale data.
+  // Meta replica is enabled to show the case that the meta replica region could be out of sync
+  // with the primary meta region.
+  @Test
+  public void testReplicaGetWithPrimaryAndMetaDown() throws IOException, InterruptedException {
+    HTU.getHBaseAdmin().setBalancerRunning(false, true);
+
+    ((ConnectionManager.HConnectionImplementation)HTU.getHBaseAdmin().getConnection()).
+        setUseMetaReplicas(true);
+
+    // Create table then get the single region for our new table.
+    HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaGetWithPrimaryAndMetaDown");
+    hdt.setRegionReplication(2);
+    try {
+
+      Table table = HTU.createTable(hdt, new byte[][] { f }, null);
+
+      // Get Meta location
+      RegionLocations mrl = ((ClusterConnection) HTU.getConnection())
+          .locateRegion(TableName.META_TABLE_NAME,
+              HConstants.EMPTY_START_ROW, false, false);
+
+      // Get user table location
+      RegionLocations url = ((ClusterConnection) HTU.getConnection())
+          .locateRegion(hdt.getTableName(), row, false, false);
+
+      // Make sure that user primary region is co-hosted with the meta region
+      if (!url.getDefaultRegionLocation().getServerName().equals(
+          mrl.getDefaultRegionLocation().getServerName())) {
+        HTU.moveRegionAndWait(url.getDefaultRegionLocation().getRegionInfo(),
+            mrl.getDefaultRegionLocation().getServerName());
+      }
+
+      // Make sure that the user replica region is not hosted by the same region server with
+      // primary
+      if (url.getRegionLocation(1).getServerName().equals(mrl.getDefaultRegionLocation()
+          .getServerName())) {
+        HTU.moveRegionAndWait(url.getRegionLocation(1).getRegionInfo(),
+            url.getDefaultRegionLocation().getServerName());
+      }
+
+      // Wait until the meta table is updated with new location info
+      while (true) {
+        mrl = ((ClusterConnection) HTU.getConnection())
+            .locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, false);
+
+        // Get user table location
+        url = ((ClusterConnection) HTU.getConnection())
+            .locateRegion(hdt.getTableName(), row, false, true);
+
+        LOG.info("meta locations " + mrl);
+        LOG.info("table locations " + url);
+        ServerName a = url.getDefaultRegionLocation().getServerName();
+        ServerName b = mrl.getDefaultRegionLocation().getServerName();
+        if(a.equals(b)) {
+          break;
+        } else {
+          LOG.info("Waiting for new region info to be updated in meta table");
+          Thread.sleep(100);
+        }
+      }
+
+      Put p = new Put(row);
+      p.addColumn(f, row, row);
+      table.put(p);
+
+      // Flush so it can be picked by the replica refresher thread
+      HTU.flush(table.getName());
+
+      // Sleep for some time until data is picked up by replicas
+      try {
+        Thread.sleep(2 * REFRESH_PERIOD);
+      } catch (InterruptedException e1) {
+        LOG.error(e1);
+      }
+
+      // Simulating the RS down
+      RegionServerHostingPrimayMetaRegionSlowOrStopCopro.throwException = true;
+
+      // The first Get is supposed to succeed
+      Get g = new Get(row);
+      g.setConsistency(Consistency.TIMELINE);
+      Result r = table.get(g);
+      Assert.assertTrue(r.isStale());
+
+      // The second Get will succeed as well
+      r = table.get(g);
+      Assert.assertTrue(r.isStale());
+
+    } finally {
+      ((ConnectionManager.HConnectionImplementation)HTU.getHBaseAdmin().getConnection()).
+          setUseMetaReplicas(false);
+      RegionServerHostingPrimayMetaRegionSlowOrStopCopro.throwException = false;
       HTU.getHBaseAdmin().setBalancerRunning(true, true);
       HTU.getHBaseAdmin().disableTable(hdt.getTableName());
       HTU.deleteTable(hdt.getTableName());
