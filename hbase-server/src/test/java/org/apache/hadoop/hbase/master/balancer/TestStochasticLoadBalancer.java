@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
+import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.ServerLocalityCostFunction;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -59,6 +60,65 @@ import org.junit.experimental.categories.Category;
 public class TestStochasticLoadBalancer extends BalancerTestBase {
   public static final String REGION_KEY = "testRegion";
   private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer.class);
+
+  // Mapping of locality test -> expected locality
+  private float[] expectedLocalities = {1.0f, 0.0f, 0.50f, 0.25f, 1.0f};
+
+  /**
+   * Data set for testLocalityCost:
+   * [test][0][0] = mapping of server to number of regions it hosts
+   * [test][region + 1][0] = server that region is hosted on
+   * [test][region + 1][server + 1] = locality for region on server
+   */
+
+  private int[][][] clusterRegionLocationMocks = new int[][][]{
+
+      // Test 1: each region is entirely on server that hosts it
+      new int[][]{
+          new int[]{2, 1, 1},
+          new int[]{2, 0, 0, 100},   // region 0 is hosted and entirely local on server 2
+          new int[]{0, 100, 0, 0},   // region 1 is hosted and entirely on server 0
+          new int[]{0, 100, 0, 0},   // region 2 is hosted and entirely on server 0
+          new int[]{1, 0, 100, 0},   // region 1 is hosted and entirely on server 1
+      },
+
+      // Test 2: each region is 0% local on the server that hosts it
+      new int[][]{
+          new int[]{1, 2, 1},
+          new int[]{0, 0, 0, 100},   // region 0 is hosted and entirely local on server 2
+          new int[]{1, 100, 0, 0},   // region 1 is hosted and entirely on server 0
+          new int[]{1, 100, 0, 0},   // region 2 is hosted and entirely on server 0
+          new int[]{2, 0, 100, 0},   // region 1 is hosted and entirely on server 1
+      },
+
+      // Test 3: each region is 25% local on the server that hosts it (and 50% locality is possible)
+      new int[][]{
+          new int[]{1, 2, 1},
+          new int[]{0, 25, 0, 50},   // region 0 is hosted and entirely local on server 2
+          new int[]{1, 50, 25, 0},   // region 1 is hosted and entirely on server 0
+          new int[]{1, 50, 25, 0},   // region 2 is hosted and entirely on server 0
+          new int[]{2, 0, 50, 25},   // region 1 is hosted and entirely on server 1
+      },
+
+      // Test 4: each region is 25% local on the server that hosts it (and 100% locality is possible)
+      new int[][]{
+          new int[]{1, 2, 1},
+          new int[]{0, 25, 0, 100},   // region 0 is hosted and entirely local on server 2
+          new int[]{1, 100, 25, 0},   // region 1 is hosted and entirely on server 0
+          new int[]{1, 100, 25, 0},   // region 2 is hosted and entirely on server 0
+          new int[]{2, 0, 100, 25},   // region 1 is hosted and entirely on server 1
+      },
+
+      // Test 5: each region is 75% local on the server that hosts it (and 75% locality is possible everywhere)
+      new int[][]{
+          new int[]{1, 2, 1},
+          new int[]{0, 75, 75, 75},   // region 0 is hosted and entirely local on server 2
+          new int[]{1, 75, 75, 75},   // region 1 is hosted and entirely on server 0
+          new int[]{1, 75, 75, 75},   // region 2 is hosted and entirely on server 0
+          new int[]{2, 75, 75, 75},   // region 1 is hosted and entirely on server 1
+      },
+  };
+
 
   @Test
   public void testKeepRegionLoad() throws Exception {
@@ -144,14 +204,15 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     MockNoopMasterServices master = new MockNoopMasterServices();
     StochasticLoadBalancer.CostFunction
-        costFunction = new StochasticLoadBalancer.LocalityCostFunction(conf, master);
+        costFunction = new ServerLocalityCostFunction(conf, master);
 
-    for (int[][] clusterRegionLocations : clusterRegionLocationMocks) {
+    for (int test = 0; test < clusterRegionLocationMocks.length; test++) {
+      int[][] clusterRegionLocations = clusterRegionLocationMocks[test];
       MockCluster cluster = new MockCluster(clusterRegionLocations);
       costFunction.init(cluster);
       double cost = costFunction.cost();
-
-      assertEquals(0.5f, cost, 0.001);
+      double expected = 1 - expectedLocalities[test];
+      assertEquals(expected, cost, 0.001);
     }
   }
 
@@ -585,6 +646,41 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     RackManager rm = new ForTestRackManager(numRacks);
 
     testWithCluster(serverMap, rm, false, true);
+  }
+
+  // This mock allows us to test the LocalityCostFunction
+  private class MockCluster extends BaseLoadBalancer.Cluster {
+
+    private int[][] localities = null;   // [region][server] = percent of blocks
+
+    public MockCluster(int[][] regions) {
+
+      // regions[0] is an array where index = serverIndex an value = number of regions
+      super(mockClusterServers(regions[0], 1), null, null, null);
+
+      localities = new int[regions.length - 1][];
+      for (int i = 1; i < regions.length; i++) {
+        int regionIndex = i - 1;
+        localities[regionIndex] = new int[regions[i].length - 1];
+        regionIndexToServerIndex[regionIndex] = regions[i][0];
+        for (int j = 1; j < regions[i].length; j++) {
+          int serverIndex = j - 1;
+          localities[regionIndex][serverIndex] = regions[i][j] > 100 ? regions[i][j] % 100 : regions[i][j];
+        }
+      }
+    }
+
+    @Override
+    float getLocalityOfRegion(int region, int server) {
+      // convert the locality percentage to a fraction
+      return localities[region][server] / 100.0f;
+    }
+
+    @Override
+    public int getRegionSizeMB(int region) {
+      return 1;
+    }
+
   }
 
 }
