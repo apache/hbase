@@ -371,7 +371,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
-          blockSize, true).unpack(hfileContext, fsBlockReader);
+          blockSize, true, false).unpack(hfileContext, fsBlockReader);
 
       // Cache the block
       if (cacheBlock) {
@@ -452,7 +452,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         }
         // Load block from filesystem.
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize,
-            pread);
+            pread, !isCompaction);
         validateBlockType(hfileBlock, expectedBlockType);
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();

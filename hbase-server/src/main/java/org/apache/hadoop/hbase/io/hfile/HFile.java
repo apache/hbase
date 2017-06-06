@@ -52,6 +52,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.MetricsIO;
+import org.apache.hadoop.hbase.io.MetricsIOWrapperImpl;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -185,14 +187,37 @@ public class HFile {
   // For tests. Gets incremented when we read a block whether from HDFS or from Cache.
   public static final Counter DATABLOCK_READ_COUNT = new Counter();
 
+  /** Static instance for the metrics so that HFileReaders access the same instance */
+  static final MetricsIO metrics = new MetricsIO(new MetricsIOWrapperImpl());
+
   /**
    * Number of checksum verification failures. It also
    * clears the counter.
    */
-  public static final long getChecksumFailuresCount() {
+  public static final long getAndResetChecksumFailuresCount() {
     long count = CHECKSUM_FAILURES.get();
     CHECKSUM_FAILURES.set(0);
     return count;
+  }
+
+  /**
+   * Number of checksum verification failures.
+   */
+  public static final long getChecksumFailuresCount() {
+    long count = CHECKSUM_FAILURES.get();
+    return count;
+  }
+
+  public static final void updateReadLatency(long latencyMillis, boolean pread) {
+    if (pread) {
+      metrics.updateFsPreadTime(latencyMillis);
+    } else {
+      metrics.updateFsReadTime(latencyMillis);
+    }
+  }
+
+  public static final void updateWriteLatency(long latencyMillis) {
+    metrics.updateFsWriteTime(latencyMillis);
   }
 
   /** API required to write an {@link HFile} */

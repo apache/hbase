@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.io.MetricsIOSource;
+import org.apache.hadoop.hbase.io.MetricsIOWrapper;
+
 /**
  * Interface of a factory to create Metrics Sources used inside of regionservers.
  */
@@ -54,4 +57,11 @@ public interface MetricsRegionServerSourceFactory {
    * @return A metrics table aggregate source
    */
   MetricsTableAggregateSource getTableAggregate();
+
+  /**
+   * Create a MetricsIOSource from a MetricsIOWrapper.
+   *
+   * @return A metrics IO source
+   */
+  MetricsIOSource createIO(MetricsIOWrapper wrapper);
 }
