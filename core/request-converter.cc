@@ -53,19 +53,11 @@ std::unique_ptr<Request> RequestConverter::ToGetRequest(const Get &get,
   return pb_req;
 }
 
-std::unique_ptr<Request> RequestConverter::ToScanRequest(const Scan &scan,
-                                                         const std::string &region_name) {
-  auto pb_req = Request::scan();
-
-  auto pb_msg = std::static_pointer_cast<ScanRequest>(pb_req->req_msg());
-
-  RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
-
-  auto pb_scan = pb_msg->mutable_scan();
+std::unique_ptr<hbase::pb::Scan> RequestConverter::ToScan(const Scan &scan) {
+  auto pb_scan = std::make_unique<hbase::pb::Scan>();
   pb_scan->set_max_versions(scan.MaxVersions());
   pb_scan->set_cache_blocks(scan.CacheBlocks());
   pb_scan->set_reversed(scan.IsReversed());
-  pb_scan->set_small(scan.IsSmall());
   pb_scan->set_caching(scan.Caching());
   pb_scan->set_start_row(scan.StartRow());
   pb_scan->set_stop_row(scan.StopRow());
@@ -94,12 +86,78 @@ std::unique_ptr<Request> RequestConverter::ToScanRequest(const Scan &scan,
     pb_scan->set_allocated_filter(Filter::ToProto(*(scan.filter())).release());
   }
 
-  // TODO We will change this later.
+  return std::move(pb_scan);
+}
+
+std::unique_ptr<Request> RequestConverter::ToScanRequest(const Scan &scan,
+                                                         const std::string &region_name) {
+  auto pb_req = Request::scan();
+  auto pb_msg = std::static_pointer_cast<ScanRequest>(pb_req->req_msg());
+
+  RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
+
+  pb_msg->set_allocated_scan(ToScan(scan).release());
+
+  SetCommonScanRequestFields(pb_msg, false);
+
+  return pb_req;
+}
+
+std::unique_ptr<Request> RequestConverter::ToScanRequest(const Scan &scan,
+                                                         const std::string &region_name,
+                                                         int32_t num_rows, bool close_scanner) {
+  auto pb_req = Request::scan();
+  auto pb_msg = std::static_pointer_cast<ScanRequest>(pb_req->req_msg());
+
+  RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
+
+  pb_msg->set_allocated_scan(ToScan(scan).release());
+
+  pb_msg->set_number_of_rows(num_rows);
+  pb_msg->set_close_scanner(close_scanner);
+
+  SetCommonScanRequestFields(pb_msg, false);
+
+  return pb_req;
+}
+
+std::unique_ptr<Request> RequestConverter::ToScanRequest(int64_t scanner_id, int32_t num_rows,
+                                                         bool close_scanner) {
+  auto pb_req = Request::scan();
+  auto pb_msg = std::static_pointer_cast<ScanRequest>(pb_req->req_msg());
+
+  pb_msg->set_number_of_rows(num_rows);
+  pb_msg->set_close_scanner(close_scanner);
+  pb_msg->set_scanner_id(scanner_id);
+
+  SetCommonScanRequestFields(pb_msg, false);
+
+  return pb_req;
+}
+
+std::unique_ptr<Request> RequestConverter::ToScanRequest(int64_t scanner_id, int32_t num_rows,
+                                                         bool close_scanner,
+                                                         int64_t next_call_seq_id, bool renew) {
+  auto pb_req = Request::scan();
+  auto pb_msg = std::static_pointer_cast<ScanRequest>(pb_req->req_msg());
+
+  pb_msg->set_number_of_rows(num_rows);
+  pb_msg->set_close_scanner(close_scanner);
+  pb_msg->set_scanner_id(scanner_id);
+  pb_msg->set_next_call_seq(next_call_seq_id);
+
+  SetCommonScanRequestFields(pb_msg, renew);
+  return pb_req;
+}
+
+void RequestConverter::SetCommonScanRequestFields(std::shared_ptr<hbase::pb::ScanRequest> pb_msg,
+                                                  bool renew) {
+  // TODO We will change these later when we implement partial results and heartbeats, etc
   pb_msg->set_client_handles_partials(false);
   pb_msg->set_client_handles_heartbeats(false);
   pb_msg->set_track_scan_metrics(false);
-
-  return pb_req;
+  pb_msg->set_renew(renew);
+  // TODO: set scan limit
 }
 
 std::unique_ptr<Request> RequestConverter::ToMultiRequest(
@@ -123,7 +181,6 @@ std::unique_ptr<Request> RequestConverter::ToMultiRequest(
     }
   }
 
-  VLOG(3) << "Multi Req:-" << pb_req->req_msg()->ShortDebugString();
   return pb_req;
 }
 
@@ -190,13 +247,13 @@ std::unique_ptr<MutationProto> RequestConverter::ToMutation(const MutationType t
 
 DeleteType RequestConverter::ToDeleteType(const CellType type) {
   switch (type) {
-    case DELETE:
+    case CellType::DELETE:
       return pb::MutationProto_DeleteType_DELETE_ONE_VERSION;
-    case DELETE_COLUMN:
+    case CellType::DELETE_COLUMN:
       return pb::MutationProto_DeleteType_DELETE_MULTIPLE_VERSIONS;
-    case DELETE_FAMILY:
+    case CellType::DELETE_FAMILY:
       return pb::MutationProto_DeleteType_DELETE_FAMILY;
-    case DELETE_FAMILY_VERSION:
+    case CellType::DELETE_FAMILY_VERSION:
       return pb::MutationProto_DeleteType_DELETE_FAMILY_VERSION;
     default:
       throw std::runtime_error("Unknown delete type: " + folly::to<std::string>(type));
@@ -216,12 +273,11 @@ std::unique_ptr<Request> RequestConverter::ToMutateRequest(const Put &put,
   pb_msg->set_allocated_mutation(
       ToMutation(MutationType::MutationProto_MutationType_PUT, put, -1).release());
 
-  VLOG(3) << "Req is " << pb_req->req_msg()->ShortDebugString();
   return pb_req;
 }
 
 std::unique_ptr<Request> RequestConverter::DeleteToMutateRequest(const Delete &del,
-                                                           const std::string &region_name) {
+                                                                 const std::string &region_name) {
   auto pb_req = Request::mutate();
   auto pb_msg = std::static_pointer_cast<hbase::pb::MutateRequest>(pb_req->req_msg());
   RequestConverter::SetRegion(region_name, pb_msg->mutable_region());

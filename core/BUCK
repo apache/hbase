@@ -19,10 +19,12 @@
 cxx_library(
     name="core",
     exported_headers=[
+        "async-client-scanner.h",
         "async-connection.h",
         "async-region-locator.h",
         "async-rpc-retrying-caller-factory.h",
         "async-rpc-retrying-caller.h",
+        "async-table-result-scanner.h",
         "client.h",
         "cell.h",
         "hbase-macros.h",
@@ -42,10 +44,14 @@ cxx_library(
         "delete.h",
         "scan.h",
         "result.h",
+        "result-scanner.h",
         "request-converter.h",
         "response-converter.h",
         "table.h",
+        "async-scan-rpc-retrying-caller.h",
         "raw-async-table.h",
+        "raw-scan-result-consumer.h",
+        "scan-result-cache.h",
         "hbase-rpc-controller.h",
         "time-range.h",
         "zk-util.h",
@@ -58,9 +64,12 @@ cxx_library(
         "async-batch-rpc-retrying-caller.h",
     ],
     srcs=[
+        "async-client-scanner.cc",
         "async-connection.cc",
         "async-rpc-retrying-caller-factory.cc",
         "async-rpc-retrying-caller.cc",
+        "async-scan-rpc-retrying-caller.cc",
+        "async-table-result-scanner.cc",
         "cell.cc",
         "client.cc",
         "hbase-rpc-controller.cc",
@@ -73,6 +82,7 @@ cxx_library(
         "put.cc",
         "delete.cc",
         "scan.cc",
+        "scan-result-cache.cc",
         "raw-async-table.cc",
         "result.cc",
         "request-converter.cc",
@@ -109,7 +119,7 @@ cxx_library(
         "configuration.cc",
         "hbase-configuration-loader.cc",
     ],
-    deps=["//third-party:folly"],
+    deps=["//utils:utils", "//third-party:folly"],
     compiler_flags=['-Weffc++', '-ggdb'],
     visibility=[
         'PUBLIC',
@@ -156,8 +166,12 @@ cxx_test(
     run_test_separately=True,)
 cxx_test(
     name="delete-test",
-    srcs=["delete-test.cc",],
-    deps=[":core",],
+    srcs=[
+        "delete-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="increment-test",
@@ -248,6 +262,27 @@ cxx_test(
     name="client-test",
     srcs=[
         "client-test.cc",
+    ],
+    deps=[
+        ":core",
+        "//if:if",
+        "//serde:serde",
+        "//test-util:test-util",
+    ],
+    run_test_separately=True,)
+cxx_test(
+    name="scan-result-cache-test",
+    srcs=[
+        "scan-result-cache-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
+    run_test_separately=True,)
+cxx_test(
+    name="scanner-test",
+    srcs=[
+        "scanner-test.cc",
     ],
     deps=[
         ":core",

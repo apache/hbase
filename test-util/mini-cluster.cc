@@ -119,6 +119,9 @@ void MiniCluster::Setup() {
         env_->GetMethodID(testing_util_class_, "createTable",
                           "(Lorg/apache/hadoop/hbase/TableName;Ljava/lang/String;)Lorg/"
                           "apache/hadoop/hbase/client/Table;");
+    create_table_families_mid_ = env_->GetMethodID(testing_util_class_, "createTable",
+                                                   "(Lorg/apache/hadoop/hbase/TableName;[[B)Lorg/"
+                                                   "apache/hadoop/hbase/client/Table;");
     create_table_with_split_mid_ = env_->GetMethodID(
         testing_util_class_, "createTable",
         "(Lorg/apache/hadoop/hbase/TableName;[[B[[B)Lorg/apache/hadoop/hbase/client/Table;");
@@ -198,20 +201,45 @@ jobject MiniCluster::CreateTable(const std::string &table, const std::string &fa
   return table_obj;
 }
 
+jobject MiniCluster::CreateTable(const std::string &table,
+                                 const std::vector<std::string> &families) {
+  jstring table_name_str = env_->NewStringUTF(table.c_str());
+  jobject table_name =
+      env_->CallStaticObjectMethod(table_name_class_, tbl_name_value_of_mid_, table_name_str);
+  jclass array_element_type = env_->FindClass("[B");
+  jobjectArray family_array = env_->NewObjectArray(families.size(), array_element_type, nullptr);
+  int i = 0;
+  for (auto family : families) {
+    env_->SetObjectArrayElement(family_array, i++, StrToByteChar(family));
+  }
+  jobject table_obj =
+      env_->CallObjectMethod(htu_, create_table_families_mid_, table_name, family_array);
+  return table_obj;
+}
+
 jobject MiniCluster::CreateTable(const std::string &table, const std::string &family,
+                                 const std::vector<std::string> &keys) {
+  std::vector<std::string> families{};
+  families.push_back(std::string{family});
+  return CreateTable(table, families, keys);
+}
+
+jobject MiniCluster::CreateTable(const std::string &table, const std::vector<std::string> &families,
                                  const std::vector<std::string> &keys) {
   jstring table_name_str = env_->NewStringUTF(table.c_str());
   jobject table_name =
       env_->CallStaticObjectMethod(table_name_class_, tbl_name_value_of_mid_, table_name_str);
   jclass array_element_type = env_->FindClass("[B");
 
-  jobjectArray family_array = env_->NewObjectArray(1, array_element_type, env_->NewByteArray(1));
-  env_->SetObjectArrayElement(family_array, 0, StrToByteChar(family));
-
-  jobjectArray key_array =
-      env_->NewObjectArray(keys.size(), array_element_type, env_->NewByteArray(1));
-
   int i = 0;
+  jobjectArray family_array = env_->NewObjectArray(families.size(), array_element_type, nullptr);
+  for (auto family : families) {
+    env_->SetObjectArrayElement(family_array, i++, StrToByteChar(family));
+  }
+
+  jobjectArray key_array = env_->NewObjectArray(keys.size(), array_element_type, nullptr);
+
+  i = 0;
   for (auto key : keys) {
     env_->SetObjectArrayElement(key_array, i++, StrToByteChar(key));
   }

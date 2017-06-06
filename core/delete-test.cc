@@ -19,8 +19,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "core/mutation.h"
 #include "core/delete.h"
+#include "core/mutation.h"
 #include "utils/time-util.h"
 
 using hbase::Delete;

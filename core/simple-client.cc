@@ -30,6 +30,7 @@
 #include "core/client.h"
 #include "core/get.h"
 #include "core/put.h"
+#include "core/scan.h"
 #include "core/table.h"
 #include "serde/server-name.h"
 #include "serde/table-name.h"
@@ -38,6 +39,7 @@
 using hbase::Client;
 using hbase::Configuration;
 using hbase::Get;
+using hbase::Scan;
 using hbase::Put;
 using hbase::Table;
 using hbase::pb::TableName;
@@ -48,6 +50,10 @@ DEFINE_string(table, "test_table", "What table to do the reads or writes");
 DEFINE_string(row, "row_", "row prefix");
 DEFINE_string(zookeeper, "localhost:2181", "What zk quorum to talk to");
 DEFINE_uint64(num_rows, 10000, "How many rows to write and read");
+DEFINE_bool(puts, true, "Whether to perform puts");
+DEFINE_bool(gets, true, "Whether to perform gets");
+DEFINE_bool(multigets, true, "Whether to perform multi-gets");
+DEFINE_bool(scans, true, "Whether to perform scans");
 DEFINE_bool(display_results, false, "Whether to display the Results from Gets");
 DEFINE_int32(threads, 6, "How many cpu threads");
 
@@ -86,41 +92,72 @@ int main(int argc, char *argv[]) {
   auto start_ns = TimeUtil::GetNowNanos();
 
   // Do the Put requests
-  for (uint64_t i = 0; i < num_puts; i++) {
-    table->Put(*MakePut(Row(FLAGS_row, i)));
-  }
+  if (FLAGS_puts) {
+    LOG(INFO) << "Sending put requests";
+    for (uint64_t i = 0; i < num_puts; i++) {
+      table->Put(*MakePut(Row(FLAGS_row, i)));
+    }
 
-  LOG(INFO) << "Successfully sent  " << num_puts << " Put requests in "
-            << TimeUtil::ElapsedMillis(start_ns) << " ms.";
+    LOG(INFO) << "Successfully sent  " << num_puts << " Put requests in "
+              << TimeUtil::ElapsedMillis(start_ns) << " ms.";
+  }
 
   // Do the Get requests
-  start_ns = TimeUtil::GetNowNanos();
-  for (uint64_t i = 0; i < num_puts; i++) {
-    auto result = table->Get(Get{Row(FLAGS_row, i)});
-    if (FLAGS_display_results) {
-      LOG(INFO) << result->DebugString();
+  if (FLAGS_gets) {
+    LOG(INFO) << "Sending get requests";
+    start_ns = TimeUtil::GetNowNanos();
+    for (uint64_t i = 0; i < num_puts; i++) {
+      auto result = table->Get(Get{Row(FLAGS_row, i)});
+      if (FLAGS_display_results) {
+        LOG(INFO) << result->DebugString();
+      }
     }
-  }
 
-  LOG(INFO) << "Successfully sent  " << num_puts << " Get requests in "
-            << TimeUtil::ElapsedMillis(start_ns) << " ms.";
+    LOG(INFO) << "Successfully sent  " << num_puts << " Get requests in "
+              << TimeUtil::ElapsedMillis(start_ns) << " ms.";
+  }
 
   // Do the Multi-Gets
-  std::vector<hbase::Get> gets;
-  for (uint64_t i = 0; i < num_puts; ++i) {
-    hbase::Get get(Row(FLAGS_row, i));
-    gets.push_back(get);
+  if (FLAGS_multigets) {
+    std::vector<hbase::Get> gets;
+    for (uint64_t i = 0; i < num_puts; ++i) {
+      hbase::Get get(Row(FLAGS_row, i));
+      gets.push_back(get);
+    }
+
+    LOG(INFO) << "Sending multi-get requests";
+    start_ns = TimeUtil::GetNowNanos();
+    auto results = table->Get(gets);
+
+    if (FLAGS_display_results) {
+      for (const auto &result : results) LOG(INFO) << result->DebugString();
+    }
+
+    LOG(INFO) << "Successfully sent  " << gets.size() << " Multi-Get requests in "
+              << TimeUtil::ElapsedMillis(start_ns) << " ms.";
   }
 
-  start_ns = TimeUtil::GetNowNanos();
-  auto results = table->Get(gets);
+  // Do the Scan
+  if (FLAGS_scans) {
+    LOG(INFO) << "Starting scanner";
+    start_ns = TimeUtil::GetNowNanos();
+    Scan scan{};
+    auto scanner = table->Scan(scan);
 
-  if (FLAGS_display_results) {
-    for (const auto &result : results) LOG(INFO) << result->DebugString();
+    uint64_t i = 0;
+    auto r = scanner->Next();
+    while (r != nullptr) {
+      if (FLAGS_display_results) {
+        LOG(INFO) << r->DebugString();
+      }
+      r = scanner->Next();
+      i++;
+    }
+
+    LOG(INFO) << "Successfully iterated over  " << i << " Scan results in "
+              << TimeUtil::ElapsedMillis(start_ns) << " ms.";
+    scanner->Close();
   }
-
-  LOG(INFO) << "Successfully sent  " << gets.size() << " Multi-Get requests in "
-            << TimeUtil::ElapsedMillis(start_ns) << " ms.";
 
   table->Close();
   client->Close();

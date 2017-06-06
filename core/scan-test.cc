@@ -17,13 +17,13 @@
  *
  */
 
-#include "core/scan.h"
-
+#include <gtest/gtest.h>
 #include <limits>
 
-#include <gtest/gtest.h>
+#include "core/scan.h"
 
-using namespace hbase;
+using hbase::Get;
+using hbase::Scan;
 
 void CheckFamilies(Scan &scan) {
   EXPECT_EQ(false, scan.HasFamilies());
@@ -74,7 +74,7 @@ void CheckFamilies(Scan &scan) {
   EXPECT_EQ(it, scan.FamilyMap().end());
 }
 
-void CheckFamiliesAfterCopy(Scan &scan) {
+void CheckFamiliesAfterCopy(const Scan &scan) {
   EXPECT_EQ(true, scan.HasFamilies());
   EXPECT_EQ(3, scan.FamilyMap().size());
   int i = 1;
@@ -115,11 +115,6 @@ void ScanMethods(Scan &scan) {
 
   scan.SetStopRow(stop_row);
   EXPECT_EQ(stop_row, scan.StopRow());
-
-  scan.SetSmall(true);
-  EXPECT_EQ(true, scan.IsSmall());
-  scan.SetSmall(false);
-  EXPECT_EQ(false, scan.IsSmall());
 
   scan.SetCaching(3);
   EXPECT_EQ(3, scan.Caching());

@@ -161,23 +161,23 @@ TEST_F(ClientTest, PutGetDelete) {
   table->Delete(hbase::Delete{row}.AddColumn("d", "1"));
   result = table->Get(get);
   ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
-  ASSERT_TRUE(result->Value("d", "1") == nullptr) << "Column 1 should be gone";
+  ASSERT_FALSE(result->Value("d", "1")) << "Column 1 should be gone";
   EXPECT_EQ(valExtra, *(result->Value("d", "extra")));
 
   // delete cell from column "extra" with timestamp tsExtra
   table->Delete(hbase::Delete{row}.AddColumn("d", "extra", tsExtra));
   result = table->Get(get);
   ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
-  ASSERT_TRUE(result->Value("d", "1") == nullptr) << "Column 1 should be gone";
-  ASSERT_TRUE(result->Value("d", "extra") != nullptr) << "Column extra should have value";
+  ASSERT_FALSE(result->Value("d", "1")) << "Column 1 should be gone";
+  ASSERT_TRUE(result->Value("d", "extra")) << "Column extra should have value";
   EXPECT_EQ(valExt, *(result->Value("d", "ext"))) << "Column ext should have value";
 
   // delete all cells from "extra" column
   table->Delete(hbase::Delete{row}.AddColumns("d", "extra"));
   result = table->Get(get);
   ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
-  ASSERT_TRUE(result->Value("d", "1") == nullptr) << "Column 1 should be gone";
-  ASSERT_TRUE(result->Value("d", "extra") == nullptr) << "Column extra should be gone";
+  ASSERT_FALSE(result->Value("d", "1")) << "Column 1 should be gone";
+  ASSERT_FALSE(result->Value("d", "extra")) << "Column extra should be gone";
   EXPECT_EQ(valExt, *(result->Value("d", "ext"))) << "Column ext should have value";
 
   // Delete the row and verify that subsequent Get returns nothing
@@ -249,6 +249,7 @@ TEST_F(ClientTest, PutGet) {
   table->Close();
   client.Close();
 }
+
 TEST_F(ClientTest, GetForNonExistentTable) {
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t_not_exists");
@@ -377,7 +378,7 @@ TEST_F(ClientTest, MultiGets) {
     ASSERT_TRUE(!results[i]->IsEmpty()) << "Result for Get " << gets[i].row()
                                         << " must not be empty";
     EXPECT_EQ("test" + std::to_string(i), results[i]->Row());
-    EXPECT_EQ("value" + std::to_string(i), *results[i]->Value("d", std::to_string(i)).get());
+    EXPECT_EQ("value" + std::to_string(i), results[i]->Value("d", std::to_string(i)).value());
   }
   // We are inserting test2 twice so the below test should pass
   ASSERT_TRUE(!results[i]->IsEmpty()) << "Result for Get " << gets[i].row() << " must not be empty";

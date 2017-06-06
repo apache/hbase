@@ -111,7 +111,7 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::OnError(
     Consumer<exception_wrapper> update_cached_location) {
   ThrowableWithExtraContext twec(error, TimeUtil::GetNowNanos());
   exceptions_->push_back(twec);
-  if (!ShouldRetry(error) || tries_ >= max_retries_) {
+  if (!ExceptionUtil::ShouldRetry(error) || tries_ >= max_retries_) {
     CompleteExceptionally();
     return;
   }
@@ -146,14 +146,6 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::OnError(
         [this]() { conn_->cpu_executor()->add([&]() { LocateThenCall(); }); },
         std::chrono::milliseconds(TimeUtil::ToMillis(delay_ns)));
   });
-}
-
-template <typename RESP>
-bool AsyncSingleRequestRpcRetryingCaller<RESP>::ShouldRetry(const exception_wrapper& error) {
-  bool do_not_retry = false;
-  error.with_exception(
-      [&](const RemoteException& remote_ex) { do_not_retry &= remote_ex.do_not_retry(); });
-  return !do_not_retry;
 }
 
 template <typename RESP>
@@ -220,6 +212,8 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::ResetController(
 // explicit instantiations for the linker. Otherwise, you have to #include the .cc file for the
 // templetized
 // class definitions.
+class OpenScannerResponse;
 template class AsyncSingleRequestRpcRetryingCaller<std::shared_ptr<hbase::Result>>;
 template class AsyncSingleRequestRpcRetryingCaller<folly::Unit>;
+template class AsyncSingleRequestRpcRetryingCaller<std::shared_ptr<OpenScannerResponse>>;
 } /* namespace hbase */

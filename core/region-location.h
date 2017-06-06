@@ -26,7 +26,7 @@
 
 namespace hbase {
 
-enum RegionLocateType { kBefore, kCurrent, kAfter };
+enum class RegionLocateType { kBefore, kCurrent, kAfter };
 
 /**
  * @brief class to hold where a region is located.

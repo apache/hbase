@@ -92,19 +92,12 @@ std::shared_ptr<RegionLocation> MetaUtil::CreateLocation(const Response &resp) {
     throw std::runtime_error("Was expecting exactly 1 result in meta scan response, got:" +
                              std::to_string(results.size()));
   }
-
   auto result = *results[0];
-  // VLOG(1) << "Creating RegionLocation from received Response " << *result; TODO
 
-  std::shared_ptr<std::string> region_info_str = result.Value(CATALOG_FAMILY, REGION_INFO_COLUMN);
-  std::shared_ptr<std::string> server_str = result.Value(CATALOG_FAMILY, SERVER_COLUMN);
-
-  if (region_info_str == nullptr) {
-    throw std::runtime_error("regioninfo column null for location");
-  }
-  if (server_str == nullptr) {
-    throw std::runtime_error("server column null for location");
-  }
+  auto region_info_str = result.Value(CATALOG_FAMILY, REGION_INFO_COLUMN);
+  auto server_str = result.Value(CATALOG_FAMILY, SERVER_COLUMN);
+  CHECK(region_info_str);
+  CHECK(server_str);
 
   auto row = result.Row();
   auto region_info = folly::to<RegionInfo>(*region_info_str);

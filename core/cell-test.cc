@@ -169,3 +169,27 @@ TEST(CellTest, CellDebugString) {
   LOG(INFO) << cell2.DebugString();
   EXPECT_EQ("row/column/42/DELETE/vlen=5/seqid=0", cell2.DebugString());
 }
+
+TEST(CellTest, CellEstimatedSize) {
+  CellType cell_type = CellType::PUT;
+  int64_t timestamp = std::numeric_limits<int64_t>::max();
+
+  Cell empty{"a", "a", "", timestamp, "", cell_type};
+  Cell cell1{"aa", "a", "", timestamp, "", cell_type};
+  Cell cell2{"a", "aa", "", timestamp, "", cell_type};
+  Cell cell3{"a", "a", "a", timestamp, "", cell_type};
+  Cell cell4{"a", "a", "", timestamp, "a", cell_type};
+  Cell cell5{"a", "a", "", timestamp, "a", CellType::DELETE};
+  Cell cell6{"aaaaaa", "a", "", timestamp, "a", cell_type};
+
+  LOG(INFO) << empty.EstimatedSize();
+  LOG(INFO) << cell1.EstimatedSize();
+
+  EXPECT_TRUE(empty.EstimatedSize() > sizeof(Cell));
+  EXPECT_TRUE(cell1.EstimatedSize() > empty.EstimatedSize());
+  EXPECT_EQ(cell1.EstimatedSize(), cell2.EstimatedSize());
+  EXPECT_EQ(cell2.EstimatedSize(), cell3.EstimatedSize());
+  EXPECT_EQ(cell3.EstimatedSize(), cell4.EstimatedSize());
+  EXPECT_EQ(cell4.EstimatedSize(), cell5.EstimatedSize());
+  EXPECT_TRUE(cell6.EstimatedSize() > cell1.EstimatedSize());
+}

@@ -119,16 +119,6 @@ class Scan : public Query {
   const std::string &StopRow() const;
 
   /**
-   * @brief Set whether this scan is a small scan.
-   */
-  void SetSmall(bool small);
-
-  /**
-   * @brief Returns if the scan is a small scan.
-   */
-  bool IsSmall() const;
-
-  /**
    * @brief Set the number of rows for caching that will be passed to scanners.
    * Higher caching values will enable faster scanners but will use more memory.
    * @param caching - the number of rows for caching.
@@ -258,12 +248,11 @@ class Scan : public Query {
   std::string start_row_ = "";
   std::string stop_row_ = "";
   uint32_t max_versions_ = 1;
-  int caching_ = -1;
+  int32_t caching_ = -1;
   int64_t max_result_size_ = -1;
   bool cache_blocks_ = true;
   bool load_column_families_on_demand_ = false;
   bool reversed_ = false;
-  bool small_ = false;
   bool allow_partial_results_ = false;
   hbase::pb::Consistency consistency_ = hbase::pb::Consistency::STRONG;
   std::unique_ptr<TimeRange> tr_ = std::make_unique<TimeRange>();

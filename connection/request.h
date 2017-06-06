@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include <folly/Conv.h>
 #include <google/protobuf/message.h>
 
 #include <cstdint>
@@ -63,6 +64,11 @@ class Request {
   /** Get the method name. This is used to the the receiving rpc server what
    * method type to decode. */
   std::string method() { return method_; }
+
+  std::string DebugString() {
+    return "call_id:" + folly::to<std::string>(call_id_) + ", req_msg:" +
+           req_msg_->ShortDebugString() + ", method:" + method_;
+  }
 
  private:
   uint32_t call_id_;

@@ -47,6 +47,7 @@ TEST(TestBytesUtil, TestToStringBinary) {
   EXPECT_EQ("foo_\\x00\\xFF_bar",
             BytesUtil::ToStringBinary("foo_" + std::string{zero} + std::string{max} + "_bar"));
 }
+
 TEST(TestBytesUtil, TestToStringToInt64) {
   int64_t num = 761235;
   EXPECT_EQ(num, BytesUtil::ToInt64(BytesUtil::ToString(num)));
@@ -56,4 +57,14 @@ TEST(TestBytesUtil, TestToStringToInt64) {
 
   num = 0;
   EXPECT_EQ(num, BytesUtil::ToInt64(BytesUtil::ToString(num)));
+}
+
+TEST(TestBytesUtil, TestCreateClosestRowAfter) {
+  std::string empty{""};
+  EXPECT_EQ(BytesUtil::CreateClosestRowAfter(empty), std::string{'\0'});
+
+  std::string foo{"foo"};
+  EXPECT_EQ(BytesUtil::CreateClosestRowAfter(foo), std::string{"foo"} + '\0');
+
+  EXPECT_EQ("f\\x00", BytesUtil::ToStringBinary(BytesUtil::CreateClosestRowAfter("f")));
 }

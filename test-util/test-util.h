@@ -59,7 +59,10 @@ class TestUtil {
 
   void StopMiniCluster();
   void CreateTable(const std::string &table, const std::string &family);
+  void CreateTable(const std::string &table, const std::vector<std::string> &families);
   void CreateTable(const std::string &table, const std::string &family,
+                   const std::vector<std::string> &keys);
+  void CreateTable(const std::string &table, const std::vector<std::string> &families,
                    const std::vector<std::string> &keys);
 
   void StartStandAloneInstance();

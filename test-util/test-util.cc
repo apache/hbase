@@ -65,9 +65,18 @@ void TestUtil::CreateTable(const std::string &table, const std::string &family) 
   mini_->CreateTable(table, family);
 }
 
+void TestUtil::CreateTable(const std::string &table, const std::vector<std::string> &families) {
+  mini_->CreateTable(table, families);
+}
+
 void TestUtil::CreateTable(const std::string &table, const std::string &family,
                            const std::vector<std::string> &keys) {
   mini_->CreateTable(table, family, keys);
+}
+
+void TestUtil::CreateTable(const std::string &table, const std::vector<std::string> &families,
+                           const std::vector<std::string> &keys) {
+  mini_->CreateTable(table, families, keys);
 }
 
 void TestUtil::StartStandAloneInstance() {

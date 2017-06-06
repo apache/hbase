@@ -18,9 +18,9 @@
  */
 #pragma once
 
+#include <jni.h>
 #include <string>
 #include <vector>
-#include "jni.h"
 
 namespace hbase {
 
@@ -29,7 +29,10 @@ class MiniCluster {
   jobject StartCluster(int32_t num_region_servers);
   void StopCluster();
   jobject CreateTable(const std::string &table, const std::string &family);
+  jobject CreateTable(const std::string &table, const std::vector<std::string> &families);
   jobject CreateTable(const std::string &table, const std::string &family,
+                      const std::vector<std::string> &keys);
+  jobject CreateTable(const std::string &table, const std::vector<std::string> &families,
                       const std::vector<std::string> &keys);
   jobject StopRegionServer(int idx);
 
@@ -51,6 +54,7 @@ class MiniCluster {
   jmethodID set_conf_mid_;
   jmethodID tbl_name_value_of_mid_;
   jmethodID create_table_mid_;
+  jmethodID create_table_families_mid_;
   jmethodID create_table_with_split_mid_;
   jmethodID put_mid_;
   jmethodID put_ctor_;

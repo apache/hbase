@@ -18,16 +18,18 @@
  */
 #pragma once
 
+#include <google/protobuf/service.h>
+
+#include <chrono>
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "connection/connection-id.h"
 #include "connection/connection-pool.h"
 #include "connection/request.h"
 #include "connection/response.h"
 #include "security/user.h"
-
-#include <google/protobuf/service.h>
-
-#include <chrono>
-#include <utility>
 
 namespace hbase {
 

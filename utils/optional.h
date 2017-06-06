@@ -19,36 +19,14 @@
 
 #pragma once
 
-#include <memory>
-
-#include "core/filter.h"
+#include <experimental/optional>
 
 namespace hbase {
 
 /**
- * Base class for read RPC calls (Get / Scan).
+ * An optional value that may or may not be present.
  */
-class Query {
- public:
-  Query() = default;
-  Query(const Query &query) {
-    // filter can be a custom subclass of Filter, so we do not do a deep copy here.
-    filter_ = query.filter_;
-  }
+template <class T>
+using optional = std::experimental::optional<T>;
 
-  Query &operator=(const Query &query) {
-    filter_ = query.filter_;
-    return *this;
-  }
-
-  virtual ~Query() {}
-
-  void SetFilter(std::shared_ptr<Filter> filter) { filter_ = filter; }
-
-  const std::shared_ptr<Filter> filter() const { return filter_; }
-
- protected:
-  std::shared_ptr<Filter> filter_ = nullptr;
-};
-
-}  // namespace hbase
+} /* namespace hbase */

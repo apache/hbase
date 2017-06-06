@@ -54,7 +54,7 @@ std::shared_ptr<Result> ResponseConverter::FromMutateResponse(const Response& re
 }
 
 std::shared_ptr<Result> ResponseConverter::ToResult(
-    const hbase::pb::Result& result, const std::unique_ptr<CellScanner>& cell_scanner) {
+    const hbase::pb::Result& result, const std::shared_ptr<CellScanner> cell_scanner) {
   std::vector<std::shared_ptr<Cell>> vcells;
   for (auto cell : result.cell()) {
     std::shared_ptr<Cell> pcell =
@@ -82,34 +82,38 @@ std::shared_ptr<Result> ResponseConverter::ToResult(
 
 std::vector<std::shared_ptr<Result>> ResponseConverter::FromScanResponse(const Response& resp) {
   auto scan_resp = std::static_pointer_cast<ScanResponse>(resp.resp_msg());
-  VLOG(3) << "FromScanResponse:" << scan_resp->ShortDebugString();
-  int num_results = resp.cell_scanner() != nullptr ? scan_resp->cells_per_result_size()
-                                                   : scan_resp->results_size();
+  return FromScanResponse(scan_resp, resp.cell_scanner());
+}
+
+std::vector<std::shared_ptr<Result>> ResponseConverter::FromScanResponse(
+    const std::shared_ptr<ScanResponse> scan_resp, std::shared_ptr<CellScanner> cell_scanner) {
+  VLOG(3) << "FromScanResponse:" << scan_resp->ShortDebugString()
+          << " cell_scanner:" << (cell_scanner == nullptr);
+  int num_results =
+      cell_scanner != nullptr ? scan_resp->cells_per_result_size() : scan_resp->results_size();
 
   std::vector<std::shared_ptr<Result>> results{static_cast<size_t>(num_results)};
   for (int i = 0; i < num_results; i++) {
-    if (resp.cell_scanner() != nullptr) {
+    if (cell_scanner != nullptr) {
       // Cells are out in cellblocks.  Group them up again as Results.  How many to read at a
       // time will be found in getCellsLength -- length here is how many Cells in the i'th Result
       int num_cells = scan_resp->cells_per_result(i);
 
       std::vector<std::shared_ptr<Cell>> vcells;
-      while (resp.cell_scanner()->Advance()) {
-        vcells.push_back(resp.cell_scanner()->Current());
-      }
-      // TODO: check associated cell count?
-
-      if (vcells.size() != num_cells) {
-        std::string msg = "Results sent from server=" + std::to_string(num_results) +
-                          ". But only got " + std::to_string(i) +
-                          " results completely at client. Resetting the scanner to scan again.";
-        LOG(ERROR) << msg;
-        throw std::runtime_error(msg);
+      for (int j = 0; j < num_cells; j++) {
+        if (!cell_scanner->Advance()) {
+          std::string msg = "Results sent from server=" + std::to_string(num_results) +
+                            ". But only got " + std::to_string(i) +
+                            " results completely at client. Resetting the scanner to scan again.";
+          LOG(ERROR) << msg;
+          throw std::runtime_error(msg);
+        }
+        vcells.push_back(cell_scanner->Current());
       }
       // TODO: handle partial results per Result by checking partial_flag_per_result
       results[i] = std::make_shared<Result>(vcells, false, scan_resp->stale(), false);
     } else {
-      results[i] = ToResult(scan_resp->results(i), resp.cell_scanner());
+      results[i] = ToResult(scan_resp->results(i), cell_scanner);
     }
   }
 

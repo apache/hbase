@@ -28,7 +28,7 @@ Get::~Get() {}
 
 Get::Get(const std::string &row) : Row(row) {}
 
-Get::Get(const Get &get) {
+Get::Get(const Get &get) : Query(get) {
   row_ = get.row_;
   max_versions_ = get.max_versions_;
   cache_blocks_ = get.cache_blocks_;
@@ -39,6 +39,7 @@ Get::Get(const Get &get) {
 }
 
 Get &Get::operator=(const Get &get) {
+  Query::operator=(get);
   row_ = get.row_;
   max_versions_ = get.max_versions_;
   cache_blocks_ = get.cache_blocks_;

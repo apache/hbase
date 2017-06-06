@@ -32,6 +32,7 @@
 #include "core/location-cache.h"
 #include "core/put.h"
 #include "core/raw-async-table.h"
+#include "core/result-scanner.h"
 #include "core/result.h"
 #include "serde/table-name.h"
 
@@ -74,6 +75,8 @@ class Table {
   std::shared_ptr<hbase::Result> Increment(const hbase::Increment &increment);
   // TODO: Batch Puts
 
+  std::shared_ptr<ResultScanner> Scan(const hbase::Scan &scan);
+
   /**
    * @brief - Close the client connection.
    */
@@ -92,5 +95,7 @@ class Table {
 
  private:
   std::chrono::milliseconds operation_timeout() const;
+
+  int64_t ResultSize2CacheSize(int64_t max_results_size) const;
 };
 } /* namespace hbase */

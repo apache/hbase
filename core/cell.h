@@ -24,7 +24,7 @@
 
 namespace hbase {
 
-enum CellType {
+enum class CellType {
   MINIMUM = 0,
   PUT = 4,
   DELETE = 8,
@@ -49,6 +49,9 @@ class Cell {
   CellType Type() const;
   int64_t SequenceId() const;
   std::string DebugString() const;
+  /** Returns estimated size of the Cell object including deep heap space usage
+    * of its data. Notice that this is a very rough estimate. */
+  size_t EstimatedSize() const;
 
  private:
   std::string row_;
