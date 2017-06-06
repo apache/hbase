@@ -277,6 +277,16 @@ public final class TagUtil {
     // tag-handling).
     if (tags == null) {
       tags = new ArrayList<>(1);
+    } else {
+      // Remove existing TTL tags if any
+      Iterator<Tag> tagsItr = tags.iterator();
+      while (tagsItr.hasNext()) {
+        Tag tag = tagsItr.next();
+        if (tag.getType() == TagType.TTL_TAG_TYPE) {
+          tagsItr.remove();
+          break;
+        }
+      }
     }
     tags.add(new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
     return tags;
