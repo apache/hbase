@@ -8155,7 +8155,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // If we are making the array in here, given we are the last thing checked, we'll be only thing
     // in the array so set its size to '1' (I saw this being done in earlier version of
     // tag-handling).
-    if (tags == null) tags = new ArrayList<Tag>(1);
+    if (tags == null) {
+      tags = new ArrayList<Tag>(1);
+    } else {
+      // Remove existing TTL tags if any
+      Iterator<Tag> tagsItr = tags.iterator();
+      while (tagsItr.hasNext()) {
+        Tag tag = tagsItr.next();
+        if (tag.getType() == TagType.TTL_TAG_TYPE) {
+          tagsItr.remove();
+          break;
+        }
+      }
+    }
     tags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
     return tags;
   }
