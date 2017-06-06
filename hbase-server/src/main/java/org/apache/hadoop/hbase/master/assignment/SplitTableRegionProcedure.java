@@ -25,10 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -408,7 +405,6 @@ public class SplitTableRegionProcedure
   /**
    * Action before splitting region in a table.
    * @param env MasterProcedureEnv
-   * @param state the procedure state
    * @throws IOException
    * @throws InterruptedException
    */
@@ -484,12 +480,10 @@ public class SplitTableRegionProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private Pair<Integer, Integer> splitStoreFiles(
-      final MasterProcedureEnv env,
+  private Pair<Integer, Integer> splitStoreFiles(final MasterProcedureEnv env,
       final HRegionFileSystem regionFs) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Configuration conf = env.getMasterConfiguration();
-
     // The following code sets up a thread pool executor with as many slots as
     // there's files to split. It then fires up everything, waits for
     // completion and finally checks for any exception
@@ -498,10 +492,29 @@ public class SplitTableRegionProcedure
     // Nothing to unroll here if failure -- re-run createSplitsDir will
     // clean this up.
     int nbFiles = 0;
+    final Map<String, Collection<StoreFileInfo>> files =
+      new HashMap<String, Collection<StoreFileInfo>>(regionFs.getFamilies().size());
     for (String family: regionFs.getFamilies()) {
-      final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
-      if (storeFiles != null) {
-        nbFiles += storeFiles.size();
+      Collection<StoreFileInfo> sfis = regionFs.getStoreFiles(family);
+      if (sfis == null) continue;
+      Collection<StoreFileInfo> filteredSfis = null;
+      for (StoreFileInfo sfi: sfis) {
+        // Filter. There is a lag cleaning up compacted reference files. They get cleared
+        // after a delay in case outstanding Scanners still have references. Because of this,
+        // the listing of the Store content may have straggler reference files. Skip these.
+        // It should be safe to skip references at this point because we checked above with
+        // the region if it thinks it is splittable and if we are here, it thinks it is
+        // splitable.
+        if (sfi.isReference()) {
+          LOG.info("Skipping split of " + sfi + "; presuming ready for archiving.");
+          continue;
+        }
+        if (filteredSfis == null) {
+          filteredSfis = new ArrayList<StoreFileInfo>(sfis.size());
+          files.put(family, filteredSfis);
+        }
+        filteredSfis.add(sfi);
+        nbFiles++;
       }
     }
     if (nbFiles == 0) {
@@ -513,17 +526,18 @@ public class SplitTableRegionProcedure
       conf.getInt(HConstants.REGION_SPLIT_THREADS_MAX,
         conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT)),
       nbFiles);
-    LOG.info("pid=" + getProcId() + " preparing to split " + nbFiles + " storefiles for region " +
-      getParentRegion().getShortNameToLog() + " using " + maxThreads + " threads");
+    LOG.info("pid=" + getProcId() + " splitting " + nbFiles + " storefiles, region=" +
+      getParentRegion().getShortNameToLog() + ", threads=" + maxThreads);
     final ExecutorService threadPool = Executors.newFixedThreadPool(
       maxThreads, Threads.getNamedThreadFactory("StoreFileSplitter-%1$d"));
     final List<Future<Pair<Path,Path>>> futures = new ArrayList<Future<Pair<Path,Path>>>(nbFiles);
 
     // Split each store file.
     final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
-    for (String family: regionFs.getFamilies()) {
-      final ColumnFamilyDescriptor hcd = htd.getColumnFamily(family.getBytes());
-      final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
+    for (Map.Entry<String, Collection<StoreFileInfo>>e: files.entrySet()) {
+      byte [] familyName = Bytes.toBytes(e.getKey());
+      final HColumnDescriptor hcd = htd.getFamily(familyName);
+      final Collection<StoreFileInfo> storeFiles = e.getValue();
       if (storeFiles != null && storeFiles.size() > 0) {
         final CacheConfig cacheConf = new CacheConfig(conf, hcd);
         for (StoreFileInfo storeFileInfo: storeFiles) {
@@ -570,8 +584,10 @@ public class SplitTableRegionProcedure
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("pid=" + getProcId() + " split storefiles for region " + getParentRegion().getShortNameToLog() +
-          " Daughter A: " + daughterA + " storefiles, Daughter B: " + daughterB + " storefiles.");
+      LOG.debug("pid=" + getProcId() + " split storefiles for region " +
+        getParentRegion().getShortNameToLog() +
+          " Daughter A: " + daughterA + " storefiles, Daughter B: " +
+          daughterB + " storefiles.");
     }
     return new Pair<Integer, Integer>(daughterA, daughterB);
   }

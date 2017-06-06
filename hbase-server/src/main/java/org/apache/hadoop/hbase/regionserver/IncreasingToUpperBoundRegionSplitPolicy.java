@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 
 /**
  * Split size is the number of regions that are on this server that all are
@@ -84,9 +85,10 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
       // Mark if any store is big enough
       long size = store.getSize();
       if (size > sizeToCheck) {
-        LOG.debug("ShouldSplit because " + store.getColumnFamilyName() + " size=" + size
-                  + ", sizeToCheck=" + sizeToCheck + ", regionsWithCommonTable="
-                  + tableRegionsCount);
+        LOG.debug("ShouldSplit because " + store.getColumnFamilyName() +
+          " size=" + StringUtils.humanSize(size) +
+          ", sizeToCheck=" + StringUtils.humanSize(sizeToCheck) +
+          ", regionsWithCommonTable=" + tableRegionsCount);
         foundABigStore = true;
       }
     }

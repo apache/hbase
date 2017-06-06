@@ -1443,7 +1443,7 @@ public class HStore implements Store {
     StringBuilder message = new StringBuilder(
       "Completed" + (cr.isMajor() ? " major" : "") + " compaction of "
       + cr.getFiles().size() + (cr.isAllFiles() ? " (all)" : "") + " file(s) in "
-      + this + " of " + this.getRegionInfo().getRegionNameAsString() + " into ");
+      + this + " of " + this.getRegionInfo().getShortNameToLog() + " into ");
     if (sfs.isEmpty()) {
       message.append("none, ");
     } else {

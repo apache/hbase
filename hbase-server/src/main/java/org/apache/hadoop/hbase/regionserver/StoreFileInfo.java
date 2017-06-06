@@ -451,8 +451,8 @@ public class StoreFileInfo {
     // Tabledir is up two directories from where Reference was written.
     Path tableDir = p.getParent().getParent().getParent();
     String nameStrippedOfSuffix = m.group(1);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("reference '" + p + "' to region=" + otherRegion
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("reference '" + p + "' to region=" + otherRegion
         + " hfile=" + nameStrippedOfSuffix);
     }
 

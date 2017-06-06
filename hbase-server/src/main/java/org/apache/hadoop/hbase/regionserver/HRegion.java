@@ -1393,7 +1393,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public boolean isSplittable() {
     boolean result = isAvailable() && !hasReferences();
-    LOG.info("ASKED IF SPLITTABLE " + result, new Throwable("LOGGING"));
+    LOG.info("ASKED IF SPLITTABLE " + result + " " + getRegionInfo().getShortNameToLog(),
+      new Throwable("LOGGING: REMOVE"));
+    // REMOVE BELOW!!!!
+    LOG.info("DEBUG LIST ALL FILES");
+    for (Store store: this.stores.values()) {
+      LOG.info("store " + store.getColumnFamilyName());
+      for (StoreFile sf: store.getStorefiles()) {
+        LOG.info(sf.toStringDetailed());
+      }
+    }
     return result;
   }
 
