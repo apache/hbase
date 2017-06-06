@@ -2807,8 +2807,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     HRegionInfo hri = rsh.s.getRegionInfo();
     // Yes, should be the same instance
     if (regionServer.getOnlineRegion(hri.getRegionName()) != rsh.r) {
-      String msg = "Region was re-opened after the scanner" + scannerName + " was created: "
-          + hri.getRegionNameAsString();
+      String msg = "Region has changed on the scanner " + scannerName + ": regionName="
+          + hri.getRegionName() + ", scannerRegionName=" + rsh.r;
       LOG.warn(msg + ", closing...");
       scanners.remove(scannerName);
       try {
