@@ -83,6 +83,11 @@ std::shared_ptr<hbase::Result> Table::Increment(const hbase::Increment &incremen
   return context.get(operation_timeout());
 }
 
+std::shared_ptr<hbase::Result> Table::Append(const hbase::Append &append) {
+  auto context = async_table_->Append(append);
+  return context.get(operation_timeout());
+}
+
 milliseconds Table::operation_timeout() const {
   return TimeUtil::ToMillis(async_connection_->connection_conf()->operation_timeout());
 }

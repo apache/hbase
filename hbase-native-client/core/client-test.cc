@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 
+#include "core/append.h"
 #include "core/cell.h"
 #include "core/client.h"
 #include "core/configuration.h"
@@ -116,6 +117,35 @@ TEST_F(ClientTest, DefaultConfiguration) {
   // Create Configuration
   hbase::Client client;
   client.Close();
+}
+
+TEST_F(ClientTest, Append) {
+  // Using TestUtil to populate test data
+  ClientTest::test_util->CreateTable("t", "d");
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>("t");
+  auto row = "test1";
+
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+
+  // Get connection to HBase Table
+  auto table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  std::string val1 = "a";
+  auto result = table->Append(hbase::Append{row}.Add("d", "1", val1));
+
+  ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
+  EXPECT_EQ(row, result->Row());
+  EXPECT_EQ(val1, *(result->Value("d", "1")));
+
+  std::string val2 = "b";
+  result = table->Append(hbase::Append{row}.Add("d", "1", val2));
+
+  ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
+  EXPECT_EQ(row, result->Row());
+  EXPECT_EQ("ab", *(result->Value("d", "1")));
 }
 
 TEST_F(ClientTest, PutGetDelete) {

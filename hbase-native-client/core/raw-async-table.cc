@@ -124,6 +124,20 @@ folly::Future<folly::Unit> RawAsyncTable::Delete(const hbase::Delete& del) {
   return caller->Call().then([caller](const auto r) { return r; });
 }
 
+folly::Future<std::shared_ptr<Result>> RawAsyncTable::Append(const hbase::Append& append) {
+  auto caller =
+      CreateCallerBuilder<std::shared_ptr<Result>>(append.row(), connection_conf_->write_rpc_timeout())
+          ->action([=, &append](std::shared_ptr<hbase::HBaseRpcController> controller,
+                             std::shared_ptr<hbase::RegionLocation> loc,
+                             std::shared_ptr<hbase::RpcClient> rpc_client) -> folly::Future<std::shared_ptr<Result>> {
+            return Call<hbase::Append, hbase::Request, hbase::Response, std::shared_ptr<Result>>(
+                rpc_client, controller, loc, append, &hbase::RequestConverter::AppendToMutateRequest,
+                &hbase::ResponseConverter::FromMutateResponse);
+          })
+          ->Build();
+
+  return caller->Call().then([caller](const auto r) { return r; });
+}
 folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> RawAsyncTable::Get(
     const std::vector<hbase::Get>& gets) {
   return this->Batch(gets);

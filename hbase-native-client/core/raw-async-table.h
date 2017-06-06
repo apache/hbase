@@ -61,6 +61,8 @@ class RawAsyncTable {
 
   folly::Future<folly::Unit> Delete(const hbase::Delete& del);
 
+  folly::Future<std::shared_ptr<hbase::Result>> Append(const hbase::Append& append);
+
   folly::Future<std::shared_ptr<hbase::Result>> Increment(const hbase::Increment& increment);
 
   folly::Future<folly::Unit> Put(const hbase::Put& put);

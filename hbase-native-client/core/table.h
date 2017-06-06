@@ -73,6 +73,12 @@ class Table {
    * @param - increment Increment object to perform HBase Increment operation.
    */
   std::shared_ptr<hbase::Result> Increment(const hbase::Increment &increment);
+
+  /**
+   * @brief - Appends some data in the table.
+   * @param - append Append object to perform HBase Append operation.
+   */
+  std::shared_ptr<hbase::Result> Append(const hbase::Append &append);
   // TODO: Batch Puts
 
   std::shared_ptr<ResultScanner> Scan(const hbase::Scan &scan);

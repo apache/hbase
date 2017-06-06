@@ -43,6 +43,7 @@ cxx_library(
         "put.h",
         "delete.h",
         "scan.h",
+        "append.h",
         "result.h",
         "result-scanner.h",
         "request-converter.h",
@@ -82,6 +83,7 @@ cxx_library(
         "put.cc",
         "delete.cc",
         "scan.cc",
+        "append.cc",
         "scan-result-cache.cc",
         "raw-async-table.cc",
         "result.cc",
@@ -186,6 +188,15 @@ cxx_test(
     name="put-test",
     srcs=[
         "put-test.cc",
+    ],
+    deps=[
+        ":core",
+    ],
+    run_test_separately=True,)
+cxx_test(
+    name="append-test",
+    srcs=[
+        "append-test.cc",
     ],
     deps=[
         ":core",
