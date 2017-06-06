@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.Consistency;
+import org.apache.hadoop.hbase.client.Cursor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -1058,6 +1059,9 @@ public final class ProtobufUtil {
     if (scan.getReadType() != Scan.ReadType.DEFAULT) {
       scanBuilder.setReadType(toReadType(scan.getReadType()));
     }
+    if (scan.isNeedCursorResult()) {
+      scanBuilder.setNeedCursorResult(true);
+    }
     return scanBuilder.build();
   }
 
@@ -1167,7 +1171,26 @@ public final class ProtobufUtil {
     } else if (proto.hasReadType()) {
       scan.setReadType(toReadType(proto.getReadType()));
     }
+    if (proto.getNeedCursorResult()) {
+      scan.setNeedCursorResult(true);
+    }
     return scan;
+  }
+
+  public static ClientProtos.Cursor toCursor(Cursor cursor) {
+    ClientProtos.Cursor.Builder builder = ClientProtos.Cursor.newBuilder();
+    ClientProtos.Cursor.newBuilder().setRow(ByteString.copyFrom(cursor.getRow()));
+    return builder.build();
+  }
+
+  public static ClientProtos.Cursor toCursor(Cell cell) {
+    return ClientProtos.Cursor.newBuilder()
+        .setRow(ByteString.copyFrom(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()))
+        .build();
+  }
+
+  public static Cursor toCursor(ClientProtos.Cursor cursor) {
+    return ClientUtil.createCursor(cursor.getRow().toByteArray());
   }
 
   /**

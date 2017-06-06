@@ -107,6 +107,8 @@ public class Result implements CellScannable, CellScanner {
 
   private final boolean readonly;
 
+  private Cursor cursor = null;
+
   /**
    * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #rawCells()}.
    * Use this to represent no results if <code>null</code> won't do or in old 'mapred' as oppposed to 'mapreduce' package
@@ -186,6 +188,15 @@ public class Result implements CellScannable, CellScanner {
       return new Result(null, exists, stale, mayHaveMoreCellsInRow);
     }
     return new Result(cells, null, stale, mayHaveMoreCellsInRow);
+  }
+
+  public static Result createCursorResult(Cursor cursor) {
+    return new Result(cursor);
+  }
+
+  private Result(Cursor cursor) {
+    this.cursor = cursor;
+    this.readonly = false;
   }
 
   /** Private ctor. Use {@link #create(Cell[])}. */
@@ -1029,5 +1040,39 @@ public class Result implements CellScannable, CellScanner {
     if (readonly == true) {
       throw new UnsupportedOperationException("Attempting to modify readonly EMPTY_RESULT!");
     }
+  }
+
+  /**
+   * Return true if this Result is a cursor to tell users where the server has scanned.
+   * In this Result the only meaningful method is {@link #getCursor()}.
+   *
+   * {@code
+   *  while (r = scanner.next() && r != null) {
+   *    if(r.isCursor()){
+   *    // scanning is not end, it is a cursor, save its row key and close scanner if you want, or
+   *    // just continue the loop to call next().
+   *    } else {
+   *    // just like before
+   *    }
+   *  }
+   *  // scanning is end
+   *
+   * }
+   * {@link Scan#setNeedCursorResult(boolean)}
+   * {@link Cursor}
+   * {@link #getCursor()}
+   */
+  public boolean isCursor() {
+    return cursor != null ;
+  }
+
+  /**
+   * Return the cursor if this Result is a cursor result.
+   * {@link Scan#setNeedCursorResult(boolean)}
+   * {@link Cursor}
+   * {@link #isCursor()}
+   */
+  public Cursor getCursor(){
+    return cursor;
   }
 }
