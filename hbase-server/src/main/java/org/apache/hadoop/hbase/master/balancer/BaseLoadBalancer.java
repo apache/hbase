@@ -158,6 +158,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     Map<ServerName, List<HRegionInfo>> clusterState;
 
     protected final RackManager rackManager;
+    // Maps region -> rackIndex -> locality of region on rack
+    private float[][] rackLocalities;
+    // Maps localityType -> region -> [server|rack]Index with highest locality
+    private int[][] regionsToMostLocalEntities;
 
     protected Cluster(
         Map<ServerName, List<HRegionInfo>> clusterState,
@@ -462,6 +466,126 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
                   : serversToIndex.get(loc.get(i).getHostAndPort()));
         }
       }
+    }
+
+    /**
+     * Returns true iff a given server has less regions than the balanced amount
+     */
+    public boolean serverHasTooFewRegions(int server) {
+      int minLoad = this.numRegions / numServers;
+      int numRegions = getNumRegions(server);
+      return numRegions < minLoad;
+    }
+
+    /**
+     * Retrieves and lazily initializes a field storing the locality of
+     * every region/server combination
+     */
+    public float[][] getOrComputeRackLocalities() {
+      if (rackLocalities == null || regionsToMostLocalEntities == null) {
+        computeCachedLocalities();
+      }
+      return rackLocalities;
+    }
+
+    /**
+     * Lazily initializes and retrieves a mapping of region -> server for which region has
+     * the highest the locality
+     */
+    public int[] getOrComputeRegionsToMostLocalEntities(LocalityType type) {
+      if (rackLocalities == null || regionsToMostLocalEntities == null) {
+        computeCachedLocalities();
+      }
+      return regionsToMostLocalEntities[type.ordinal()];
+    }
+
+    /**
+     * Looks up locality from cache of localities. Will create cache if it does
+     * not already exist.
+     */
+    public float getOrComputeLocality(int region, int entity, LocalityType type) {
+      switch (type) {
+        case SERVER:
+          return getLocalityOfRegion(region, entity);
+        case RACK:
+          return getOrComputeRackLocalities()[region][entity];
+        default:
+          throw new IllegalArgumentException("Unsupported LocalityType: " + type);
+      }
+    }
+
+    /**
+     * Returns locality weighted by region size in MB. Will create locality cache
+     * if it does not already exist.
+     */
+    public double getOrComputeWeightedLocality(int region, int server, LocalityType type) {
+      return getRegionSizeMB(region) * getOrComputeLocality(region, server, type);
+    }
+
+    /**
+     * Returns the size in MB from the most recent RegionLoad for region
+     */
+    public int getRegionSizeMB(int region) {
+      Deque<RegionLoad> load = regionLoads[region];
+      // This means regions have no actual data on disk
+      if (load == null) {
+        return 0;
+      }
+      return regionLoads[region].getLast().getStorefileSizeMB();
+    }
+
+    /**
+     * Computes and caches the locality for each region/rack combinations,
+     * as well as storing a mapping of region -> server and region -> rack such that server
+     * and rack have the highest locality for region
+     */
+    private void computeCachedLocalities() {
+      rackLocalities = new float[numRegions][numServers];
+      regionsToMostLocalEntities = new int[LocalityType.values().length][numRegions];
+
+      // Compute localities and find most local server per region
+      for (int region = 0; region < numRegions; region++) {
+        int serverWithBestLocality = 0;
+        float bestLocalityForRegion = 0;
+        for (int server = 0; server < numServers; server++) {
+          // Aggregate per-rack locality
+          float locality = getLocalityOfRegion(region, server);
+          int rack = serverIndexToRackIndex[server];
+          int numServersInRack = serversPerRack[rack].length;
+          rackLocalities[region][rack] += locality / numServersInRack;
+
+          if (locality > bestLocalityForRegion) {
+            serverWithBestLocality = server;
+            bestLocalityForRegion = locality;
+          }
+        }
+        regionsToMostLocalEntities[LocalityType.SERVER.ordinal()][region] = serverWithBestLocality;
+
+        // Find most local rack per region
+        int rackWithBestLocality = 0;
+        float bestRackLocalityForRegion = 0.0f;
+        for (int rack = 0; rack < numRacks; rack++) {
+          float rackLocality = rackLocalities[region][rack];
+          if (rackLocality > bestRackLocalityForRegion) {
+            bestRackLocalityForRegion = rackLocality;
+            rackWithBestLocality = rack;
+          }
+        }
+        regionsToMostLocalEntities[LocalityType.RACK.ordinal()][region] = rackWithBestLocality;
+      }
+
+    }
+
+    /**
+     * Maps region index to rack index
+     */
+    public int getRackForRegion(int region) {
+      return serverIndexToRackIndex[regionIndexToServerIndex[region]];
+    }
+
+    enum LocalityType {
+      SERVER,
+      RACK
     }
 
     /** An action to move or swap a region */

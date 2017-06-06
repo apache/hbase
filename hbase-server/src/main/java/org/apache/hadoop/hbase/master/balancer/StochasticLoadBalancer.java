@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -45,10 +47,13 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRegionAction;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.LocalityType;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
+import com.google.common.base.Optional;
 
 /**
  * <p>This is a best effort load balancer. Given a Cost function F(C) =&gt; x It will
@@ -134,7 +139,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   // Keep locality based picker and cost function to alert them
   // when new services are offered
   private LocalityBasedCandidateGenerator localityCandidateGenerator;
-  private LocalityCostFunction localityCost;
+  private ServerLocalityCostFunction localityCost;
+  private RackLocalityCostFunction rackLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
   private boolean isByTable = false;
@@ -171,7 +177,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (localityCandidateGenerator == null) {
       localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
     }
-    localityCost = new LocalityCostFunction(conf, services);
+    localityCost = new ServerLocalityCostFunction(conf, services);
+    rackLocalityCost = new RackLocalityCostFunction(conf, services);
 
     if (candidateGenerators == null) {
       candidateGenerators = new CandidateGenerator[] {
@@ -197,6 +204,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       new PrimaryRegionCountSkewCostFunction(conf),
       new MoveCostFunction(conf),
       localityCost,
+      rackLocalityCost,
       new TableSkewCostFunction(conf),
       regionReplicaHostCostFunction,
       regionReplicaRackCostFunction,
@@ -249,8 +257,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   public synchronized void setMasterServices(MasterServices masterServices) {
     super.setMasterServices(masterServices);
     this.localityCost.setServices(masterServices);
+    this.rackLocalityCost.setServices(masterServices);
     this.localityCandidateGenerator.setServices(masterServices);
-
   }
 
   @Override
@@ -333,7 +341,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Allow turning this feature off if the locality cost is not going to
     // be used in any computations.
     RegionLocationFinder finder = null;
-    if (this.localityCost != null && this.localityCost.getMultiplier() > 0) {
+    if (this.localityCost != null && this.localityCost.getMultiplier() > 0
+        || this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0) {
       finder = this.regionFinder;
     }
 
@@ -692,6 +701,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return Cluster.NullAction;
       }
     }
+
+    /**
+     * Returns a random iteration order of indexes of an array with size length
+     */
+    protected List<Integer> getRandomIterationOrder(int length) {
+      ArrayList<Integer> order = new ArrayList<>(length);
+      for (int i = 0; i < length; i++) {
+        order.add(i);
+      }
+      Collections.shuffle(order);
+      return order;
+    }
   }
 
   static class RandomCandidateGenerator extends CandidateGenerator {
@@ -763,39 +784,55 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return pickRandomRegions(cluster, thisServer, otherServer);
       }
 
-      int thisServer = pickRandomServer(cluster);
-      int thisRegion;
-      if (thisServer == -1) {
-        LOG.warn("Could not pick lowest locality region server");
-        return Cluster.NullAction;
-      } else {
-      // Pick lowest locality region on this server
-        thisRegion = pickLowestLocalityRegionOnServer(cluster, thisServer);
+      // Randomly iterate through regions until you find one that is not on ideal host
+      for (int region : getRandomIterationOrder(cluster.numRegions)) {
+        int currentServer = cluster.regionIndexToServerIndex[region];
+        if (currentServer != cluster.getOrComputeRegionsToMostLocalEntities(LocalityType.SERVER)[region]) {
+          Optional<Action> potential = tryMoveOrSwap(
+              cluster,
+              currentServer,
+              region,
+              cluster.getOrComputeRegionsToMostLocalEntities(LocalityType.SERVER)[region]
+          );
+          if (potential.isPresent()) {
+            return potential.get();
+          }
+        }
       }
-
-      if (thisRegion == -1) {
-        return Cluster.NullAction;
-      }
-
-      // Pick the least loaded server with good locality for the region
-      int otherServer = cluster.getLeastLoadedTopServerForRegion(thisRegion, thisServer);
-
-      if (otherServer == -1) {
-        return Cluster.NullAction;
-      }
-
-      // Let the candidate region be moved to its highest locality server.
-      int otherRegion = -1;
-
-      return getAction(thisServer, thisRegion, otherServer, otherRegion);
+      return Cluster.NullAction;
     }
 
-    private int pickLowestLocalityServer(Cluster cluster) {
-      return cluster.getLowestLocalityRegionServer();
+    /**
+     * Try to generate a move/swap fromRegion between fromServer and toServer such that locality is improved.
+     * Returns empty optional if no move can be found
+     */
+    private Optional<Action> tryMoveOrSwap(Cluster cluster,
+                                           int fromServer,
+                                           int fromRegion,
+                                           int toServer) {
+      // Try move first. We know apriori fromRegion has the highest locality on toServer
+      if (cluster.serverHasTooFewRegions(toServer)) {
+        return Optional.of(getAction(fromServer, fromRegion, toServer, -1));
+      }
+
+      // Compare locality gain/loss from swapping fromRegion with regions on toServer
+      double fromRegionLocalityDelta =
+          getWeightedLocality(cluster, fromRegion, toServer) - getWeightedLocality(cluster, fromRegion, fromServer);
+      for (int toRegionIndex : getRandomIterationOrder(cluster.regionsPerServer[toServer].length)) {
+        int toRegion = cluster.regionsPerServer[toServer][toRegionIndex];
+        double toRegionLocalityDelta =
+            getWeightedLocality(cluster, toRegion, fromServer) - getWeightedLocality(cluster, toRegion, toServer);
+        // If locality would remain neutral or improve, attempt the swap
+        if (fromRegionLocalityDelta + toRegionLocalityDelta >= 0) {
+          return Optional.of(getAction(fromServer, fromRegion, toServer, toRegion));
+        }
+      }
+
+      return Optional.absent();
     }
 
-    private int pickLowestLocalityRegionOnServer(Cluster cluster, int server) {
-      return cluster.getLowestLocalityRegionOnServer(server);
+    private double getWeightedLocality(Cluster cluster, int region, int server) {
+      return cluster.getOrComputeWeightedLocality(region, server, LocalityType.SERVER);
     }
 
     void setServices(MasterServices services) {
@@ -1194,59 +1231,124 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Compute a cost of a potential cluster configuration based upon where
    * {@link org.apache.hadoop.hbase.regionserver.StoreFile}s are located.
    */
-  static class LocalityCostFunction extends CostFunction {
+  static abstract class LocalityBasedCostFunction extends CostFunction {
 
-    private static final String LOCALITY_COST_KEY = "hbase.master.balancer.stochastic.localityCost";
-    private static final float DEFAULT_LOCALITY_COST = 25;
+    private final LocalityType type;
+
+    private double bestLocality; // best case locality across cluster weighted by local data size
+    private double locality; // current locality across cluster weighted by local data size
 
     private MasterServices services;
 
-    LocalityCostFunction(Configuration conf, MasterServices srv) {
+    LocalityBasedCostFunction(Configuration conf,
+                              MasterServices srv,
+                              LocalityType type,
+                              String localityCostKey,
+                              float defaultLocalityCost) {
       super(conf);
-      this.setMultiplier(conf.getFloat(LOCALITY_COST_KEY, DEFAULT_LOCALITY_COST));
+      this.type = type;
+      this.setMultiplier(conf.getFloat(localityCostKey, defaultLocalityCost));
       this.services = srv;
+      this.locality = 0.0;
+      this.bestLocality = 0.0;
     }
 
-    void setServices(MasterServices srvc) {
+    /**
+     * Maps region to the current entity (server or rack) on which it is stored
+     */
+    abstract int regionIndexToEntityIndex(int region);
+
+    public void setServices(MasterServices srvc) {
       this.services = srvc;
     }
 
     @Override
-    double cost() {
-      double max = 0;
-      double cost = 0;
+    void init(Cluster cluster) {
+      super.init(cluster);
+      locality = 0.0;
+      bestLocality = 0.0;
 
-      // If there's no master so there's no way anything else works.
+      // If no master, no computation will work, so assume 0 cost
       if (this.services == null) {
-        return cost;
+        return;
       }
 
-      for (int i = 0; i < cluster.regionLocations.length; i++) {
-        max += 1;
-        int serverIndex = cluster.regionIndexToServerIndex[i];
-        int[] regionLocations = cluster.regionLocations[i];
-
-        // If we can't find where the data is getTopBlock returns null.
-        // so count that as being the best possible.
-        if (regionLocations == null) {
-          continue;
-        }
-
-        int index = -1;
-        for (int j = 0; j < regionLocations.length; j++) {
-          if (regionLocations[j] >= 0 && regionLocations[j] == serverIndex) {
-            index = j;
-            break;
-          }
-        }
-
-        if (index < 0) {
-          cost += 1;
-        } else {
-          cost += (1 - cluster.getLocalityOfRegion(i, serverIndex));
-        }
+      for (int region = 0; region < cluster.numRegions; region++) {
+        locality += getWeightedLocality(region, regionIndexToEntityIndex(region));
+        bestLocality += getWeightedLocality(region, getMostLocalEntityForRegion(region));
       }
-      return scale(0, max, cost);
+
+      // We normalize locality to be a score between 0 and 1.0 representing how good it
+      // is compared to how good it could be
+      locality /= bestLocality;
+    }
+
+    @Override
+    protected void regionMoved(int region, int oldServer, int newServer) {
+      int oldEntity = type == LocalityType.SERVER ? oldServer : cluster.serverIndexToRackIndex[oldServer];
+      int newEntity = type == LocalityType.SERVER ? newServer : cluster.serverIndexToRackIndex[newServer];
+      if (this.services == null) {
+        return;
+      }
+      double localityDelta = getWeightedLocality(region, newEntity) - getWeightedLocality(region, oldEntity);
+      double normalizedDelta = localityDelta / bestLocality;
+      locality += normalizedDelta;
+    }
+
+    @Override
+    double cost() {
+      return 1 - locality;
+    }
+
+    private int getMostLocalEntityForRegion(int region) {
+      return cluster.getOrComputeRegionsToMostLocalEntities(type)[region];
+    }
+
+    private double getWeightedLocality(int region, int entity) {
+      return cluster.getOrComputeWeightedLocality(region, entity, type);
+    }
+
+  }
+
+  static class ServerLocalityCostFunction extends LocalityBasedCostFunction {
+
+    private static final String LOCALITY_COST_KEY = "hbase.master.balancer.stochastic.localityCost";
+    private static final float DEFAULT_LOCALITY_COST = 25;
+
+    ServerLocalityCostFunction(Configuration conf, MasterServices srv) {
+      super(
+          conf,
+          srv,
+          LocalityType.SERVER,
+          LOCALITY_COST_KEY,
+          DEFAULT_LOCALITY_COST
+      );
+    }
+
+    @Override
+    int regionIndexToEntityIndex(int region) {
+      return cluster.regionIndexToServerIndex[region];
+    }
+  }
+
+  static class RackLocalityCostFunction extends LocalityBasedCostFunction {
+
+    private static final String RACK_LOCALITY_COST_KEY = "hbase.master.balancer.stochastic.rackLocalityCost";
+    private static final float DEFAULT_RACK_LOCALITY_COST = 15;
+
+    public RackLocalityCostFunction(Configuration conf, MasterServices services) {
+      super(
+          conf,
+          services,
+          LocalityType.RACK,
+          RACK_LOCALITY_COST_KEY,
+          DEFAULT_RACK_LOCALITY_COST
+      );
+    }
+
+    @Override
+    int regionIndexToEntityIndex(int region) {
+      return cluster.getRackForRegion(region);
     }
   }
 
