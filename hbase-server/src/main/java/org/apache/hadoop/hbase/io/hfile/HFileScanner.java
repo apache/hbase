@@ -161,4 +161,9 @@ public interface HFileScanner {
    * @return the next key in the index (the key to seek to the next block)
    */
   Cell getNextIndexedKey();
+
+  /**
+   * Close the stream socket to handle RS CLOSE_WAIT. HBASE-9393
+   */
+  void close();
 }
