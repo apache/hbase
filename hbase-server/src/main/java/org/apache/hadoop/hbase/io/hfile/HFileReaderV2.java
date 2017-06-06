@@ -1395,4 +1395,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
   boolean prefetchComplete() {
     return PrefetchExecutor.isCompleted(path);
   }
+
+  @Override
+  public void unbufferStream() {
+    fsBlockReader.unbufferStream();
+  }
 }
