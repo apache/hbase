@@ -92,6 +92,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final long cellsPerHeartbeatCheck;
 
   /**
+   * If we close the memstore scanners before sending data to client, the chunk may be reclaimed
+   * by other updates and the data will be corrupt.
+   */
+  private final List<KeyValueScanner> scannersForDelayedClose = new ArrayList<>();
+  /**
    * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not
    * KVs skipped via seeking to next row/column. TODO: estimate them?
    */
@@ -455,6 +460,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   public void close() {
     if (this.closing) return;
     this.closing = true;
+    clearAndClose(scannersForDelayedClose);
     clearAndClose(memStoreScannersAfterFlush);
     // Under test, we dont have a this.store
     if (this.store != null)
@@ -878,7 +884,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // remove the older memstore scanner
     for (int i = 0; i < currentScanners.size(); i++) {
       if (!currentScanners.get(i).isFileScanner()) {
-        currentScanners.remove(i).close();
+        scannersForDelayedClose.add(currentScanners.remove(i));
         break;
       }
     }
