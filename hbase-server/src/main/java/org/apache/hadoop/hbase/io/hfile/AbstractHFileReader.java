@@ -332,6 +332,14 @@ public abstract class AbstractHFileReader
     public HFile.Reader getReader() {
       return reader;
     }
+
+    @Override
+    public void close() {
+      if (!pread) {
+        // For seek + pread stream socket should be closed when the scanner is closed. HBASE-9393
+        reader.unbufferStream();
+      }
+    }
   }
 
   /** For testing */

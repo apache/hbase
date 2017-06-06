@@ -1347,6 +1347,12 @@ public class HFileBlock implements Cacheable {
 
     /** Get the default decoder for blocks from this file. */
     HFileBlockDecodingContext getDefaultBlockDecodingContext();
+
+    /**
+     * To close the stream's socket. Note: This can be concurrently called from multiple threads and
+     * implementation should take care of thread safety.
+     */
+    void unbufferStream();
   }
 
   /**
@@ -1365,7 +1371,7 @@ public class HFileBlock implements Cacheable {
     /** The filesystem used to access data */
     protected HFileSystem hfs;
 
-    private final Lock streamLock = new ReentrantLock();
+    protected final Lock streamLock = new ReentrantLock();
 
     /** The default buffer size for our buffered streams */
     public static final int DEFAULT_BUFFER_SIZE = 1 << 20;
@@ -1792,6 +1798,19 @@ public class HFileBlock implements Cacheable {
     @Override
     public void closeStreams() throws IOException {
       streamWrapper.close();
+    }
+
+    @Override
+    public void unbufferStream() {
+      // To handle concurrent reads, ensure that no other client is accessing the streams while we
+      // unbuffer it.
+      if (streamLock.tryLock()) {
+        try {
+          this.streamWrapper.unbuffer();
+        } finally {
+          streamLock.unlock();
+        }
+      }
     }
 
     @Override

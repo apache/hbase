@@ -258,6 +258,7 @@ public class StoreFileScanner implements KeyValueScanner {
       this.reader.decrementRefCount();
     }
     closed = true;
+    this.hfs.close();
   }
 
   /**
