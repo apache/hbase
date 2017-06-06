@@ -83,7 +83,6 @@ TEST(RequestConverter, ToScan) {
   scan.SetReversed(true);
   scan.SetStartRow(start_row);
   scan.SetStopRow(stop_row);
-  scan.SetSmall(true);
   scan.SetCaching(3);
   scan.SetConsistency(hbase::pb::Consistency::TIMELINE);
   scan.SetCacheBlocks(true);
@@ -105,7 +104,7 @@ TEST(RequestConverter, ToScan) {
   EXPECT_TRUE(msg->scan().reversed());
   EXPECT_EQ(msg->scan().start_row(), start_row);
   EXPECT_EQ(msg->scan().stop_row(), stop_row);
-  EXPECT_TRUE(msg->scan().small());
+  EXPECT_FALSE(msg->scan().small());
   EXPECT_EQ(msg->scan().caching(), 3);
   EXPECT_EQ(msg->scan().consistency(), hbase::pb::Consistency::TIMELINE);
   EXPECT_TRUE(msg->scan().cache_blocks());

@@ -17,6 +17,7 @@
  *
  */
 
+#include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <limits>
 #include <memory>
@@ -71,7 +72,7 @@ void PopulateCells(std::vector<std::shared_ptr<Cell> > &cells) {
       }
       default: {
         cells.push_back(std::make_shared<Cell>(
-            row, family, column, std::numeric_limits<long>::max(), value, CellType::PUT));
+            row, family, column, std::numeric_limits<int64_t>::max(), value, CellType::PUT));
       }
     }
   }
@@ -255,7 +256,7 @@ TEST(Result, FilledResult) {
             break;
           }
           default: {
-            EXPECT_EQ(std::numeric_limits<long>::max(), version_map.first);
+            EXPECT_EQ(std::numeric_limits<int64_t>::max(), version_map.first);
             EXPECT_EQ(value, version_map.second);
           }
         }
@@ -296,4 +297,25 @@ TEST(Result, FilledResult) {
     EXPECT_EQ("column-9", qual_val_map.first);
     EXPECT_EQ("value-9", qual_val_map.second);
   }
+}
+
+TEST(Result, ResultEstimatedSize) {
+  CellType cell_type = CellType::PUT;
+  int64_t timestamp = std::numeric_limits<int64_t>::max();
+  std::vector<std::shared_ptr<Cell> > cells;
+  Result empty(cells, true, false, false);
+
+  EXPECT_EQ(empty.EstimatedSize(), sizeof(Result));
+
+  cells.push_back(std::make_shared<Cell>("a", "a", "", timestamp, "", cell_type));
+  Result result1(cells, true, false, false);
+  EXPECT_TRUE(result1.EstimatedSize() > empty.EstimatedSize());
+
+  cells.push_back(std::make_shared<Cell>("a", "a", "", timestamp, "", cell_type));
+  Result result2(cells, true, false, false);
+  EXPECT_TRUE(result2.EstimatedSize() > result1.EstimatedSize());
+
+  LOG(INFO) << empty.EstimatedSize();
+  LOG(INFO) << result1.EstimatedSize();
+  LOG(INFO) << result2.EstimatedSize();
 }

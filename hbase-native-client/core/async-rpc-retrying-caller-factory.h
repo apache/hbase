@@ -28,7 +28,13 @@
 #include "connection/rpc-client.h"
 #include "core/async-batch-rpc-retrying-caller.h"
 #include "core/async-rpc-retrying-caller.h"
+#include "core/async-scan-rpc-retrying-caller.h"
+#include "core/raw-scan-result-consumer.h"
+#include "core/region-location.h"
 #include "core/row.h"
+#include "core/scan-result-cache.h"
+#include "core/scan.h"
+
 #include "if/Client.pb.h"
 #include "if/HBase.pb.h"
 
@@ -54,8 +60,8 @@ class SingleRequestCallerBuilder
 
   virtual ~SingleRequestCallerBuilder() = default;
 
-  typedef SingleRequestCallerBuilder<RESP> GenenericThisType;
-  typedef std::shared_ptr<GenenericThisType> SharedThisPtr;
+  typedef SingleRequestCallerBuilder<RESP> GenericThisType;
+  typedef std::shared_ptr<GenericThisType> SharedThisPtr;
 
   SharedThisPtr table(std::shared_ptr<pb::TableName> table_name) {
     table_name_ = table_name;
@@ -112,7 +118,7 @@ class SingleRequestCallerBuilder
 
  private:
   SharedThisPtr shared_this() {
-    return std::enable_shared_from_this<GenenericThisType>::shared_from_this();
+    return std::enable_shared_from_this<GenericThisType>::shared_from_this();
   }
 
  private:
@@ -198,6 +204,114 @@ class BatchCallerBuilder : public std::enable_shared_from_this<BatchCallerBuilde
   std::chrono::nanoseconds rpc_timeout_nanos_;
   int32_t start_log_errors_count_ = 0;
 };
+
+class ScanCallerBuilder : public std::enable_shared_from_this<ScanCallerBuilder> {
+ public:
+  explicit ScanCallerBuilder(std::shared_ptr<AsyncConnection> conn,
+                             std::shared_ptr<folly::HHWheelTimer> retry_timer)
+      : conn_(conn),
+        retry_timer_(retry_timer),
+        rpc_timeout_nanos_(conn->connection_conf()->rpc_timeout()),
+        pause_(conn->connection_conf()->pause()),
+        scan_timeout_nanos_(conn->connection_conf()->scan_timeout()),
+        max_retries_(conn->connection_conf()->max_retries()),
+        start_log_errors_count_(conn->connection_conf()->start_log_errors_count()),
+        scanner_id_(-1) {}
+
+  virtual ~ScanCallerBuilder() = default;
+
+  typedef ScanCallerBuilder GenericThisType;
+  typedef std::shared_ptr<ScanCallerBuilder> SharedThisPtr;
+
+  SharedThisPtr rpc_client(std::shared_ptr<hbase::RpcClient> rpc_client) {
+    rpc_client_ = rpc_client;
+    return shared_this();
+  }
+
+  SharedThisPtr rpc_timeout(nanoseconds rpc_timeout_nanos) {
+    rpc_timeout_nanos_ = rpc_timeout_nanos;
+    return shared_this();
+  }
+
+  SharedThisPtr scan_timeout(nanoseconds scan_timeout_nanos) {
+    scan_timeout_nanos_ = scan_timeout_nanos;
+    return shared_this();
+  }
+
+  SharedThisPtr scanner_lease_timeout(nanoseconds scanner_lease_timeout_nanos) {
+    scanner_lease_timeout_nanos_ = scanner_lease_timeout_nanos;
+    return shared_this();
+  }
+
+  SharedThisPtr pause(nanoseconds pause) {
+    pause_ = pause;
+    return shared_this();
+  }
+
+  SharedThisPtr max_retries(uint32_t max_retries) {
+    max_retries_ = max_retries;
+    return shared_this();
+  }
+
+  SharedThisPtr start_log_errors_count(uint32_t start_log_errors_count) {
+    start_log_errors_count_ = start_log_errors_count;
+    return shared_this();
+  }
+
+  SharedThisPtr region_location(std::shared_ptr<RegionLocation> region_location) {
+    region_location_ = region_location;
+    return shared_this();
+  }
+
+  SharedThisPtr scanner_id(int64_t scanner_id) {
+    scanner_id_ = scanner_id;
+    return shared_this();
+  }
+
+  SharedThisPtr scan(std::shared_ptr<Scan> scan) {
+    scan_ = scan;
+    return shared_this();
+  }
+
+  SharedThisPtr results_cache(std::shared_ptr<ScanResultCache> results_cache) {
+    results_cache_ = results_cache;
+    return shared_this();
+  }
+
+  SharedThisPtr consumer(std::shared_ptr<RawScanResultConsumer> consumer) {
+    consumer_ = consumer;
+    return shared_this();
+  }
+
+  std::shared_ptr<AsyncScanRpcRetryingCaller> Build() {
+    return std::make_shared<AsyncScanRpcRetryingCaller>(
+        conn_, retry_timer_, rpc_client_, scan_, scanner_id_, results_cache_, consumer_,
+        region_location_, scanner_lease_timeout_nanos_, pause_, max_retries_, scan_timeout_nanos_,
+        rpc_timeout_nanos_, start_log_errors_count_);
+  }
+
+ private:
+  SharedThisPtr shared_this() {
+    return std::enable_shared_from_this<GenericThisType>::shared_from_this();
+  }
+
+ private:
+  std::shared_ptr<AsyncConnection> conn_;
+  std::shared_ptr<folly::HHWheelTimer> retry_timer_;
+  std::shared_ptr<hbase::RpcClient> rpc_client_;
+  std::shared_ptr<Scan> scan_;
+  nanoseconds rpc_timeout_nanos_;
+  nanoseconds scan_timeout_nanos_;
+  nanoseconds scanner_lease_timeout_nanos_;
+  nanoseconds pause_;
+  uint32_t max_retries_;
+  uint32_t start_log_errors_count_;
+  std::shared_ptr<RegionLocation> region_location_;
+  int64_t scanner_id_;
+  std::shared_ptr<RawScanResultConsumer> consumer_;
+  std::shared_ptr<ScanResultCache> results_cache_;
+};  // end of ScanCallerBuilder
+
 class AsyncRpcRetryingCallerFactory {
  private:
   std::shared_ptr<AsyncConnection> conn_;
@@ -217,6 +331,10 @@ class AsyncRpcRetryingCallerFactory {
 
   std::shared_ptr<BatchCallerBuilder> Batch() {
     return std::make_shared<BatchCallerBuilder>(conn_, retry_timer_);
+  }
+
+  std::shared_ptr<ScanCallerBuilder> Scan() {
+    return std::make_shared<ScanCallerBuilder>(conn_, retry_timer_);
   }
 };
 

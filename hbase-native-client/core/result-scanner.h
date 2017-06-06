@@ -19,36 +19,29 @@
 
 #pragma once
 
+#include <functional>
+#include <iterator>
+#include <map>
 #include <memory>
+#include <string>
+#include <vector>
 
-#include "core/filter.h"
+#include "core/cell.h"
+#include "core/result.h"
 
 namespace hbase {
 
 /**
- * Base class for read RPC calls (Get / Scan).
+ * Interface for client-side scanning. Use Table to obtain instances.
  */
-class Query {
+class ResultScanner {
+  // TODO: should we implement forward iterators?
+
  public:
-  Query() = default;
-  Query(const Query &query) {
-    // filter can be a custom subclass of Filter, so we do not do a deep copy here.
-    filter_ = query.filter_;
-  }
+  virtual ~ResultScanner() {}
 
-  Query &operator=(const Query &query) {
-    filter_ = query.filter_;
-    return *this;
-  }
+  virtual void Close() = 0;
 
-  virtual ~Query() {}
-
-  void SetFilter(std::shared_ptr<Filter> filter) { filter_ = filter; }
-
-  const std::shared_ptr<Filter> filter() const { return filter_; }
-
- protected:
-  std::shared_ptr<Filter> filter_ = nullptr;
+  virtual std::shared_ptr<Result> Next() = 0;
 };
-
-}  // namespace hbase
+} /* namespace hbase */

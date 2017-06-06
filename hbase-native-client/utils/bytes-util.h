@@ -42,7 +42,27 @@ class BytesUtil {
     */
   static std::string ToStringBinary(const std::string& b, size_t off, size_t len);
 
-  static std::string ToString(int64_t amt);
-  static long ToInt64(std::string str);
+  static std::string ToString(int64_t value);
+
+  static int64_t ToInt64(std::string str);
+
+  static bool IsEmptyStartRow(const std::string& row) { return row == ""; }
+
+  static bool IsEmptyStopRow(const std::string& row) { return row == ""; }
+
+  static int32_t CompareTo(const std::string& a, const std::string& b) {
+    if (a < b) {
+      return -1;
+    }
+    if (a == b) {
+      return 0;
+    }
+    return 1;
+  }
+
+  /**
+   * Create the closest row after the specified row
+   */
+  static std::string CreateClosestRowAfter(std::string row) { return row.append(1, '\0'); }
 };
 } /* namespace hbase */

@@ -38,7 +38,7 @@ Scan::Scan(const std::string &start_row, const std::string &stop_row)
   CheckRow(stop_row_);
 }
 
-Scan::Scan(const Scan &scan) {
+Scan::Scan(const Scan &scan) : Query(scan) {
   start_row_ = scan.start_row_;
   stop_row_ = scan.stop_row_;
   max_versions_ = scan.max_versions_;
@@ -47,7 +47,6 @@ Scan::Scan(const Scan &scan) {
   cache_blocks_ = scan.cache_blocks_;
   load_column_families_on_demand_ = scan.load_column_families_on_demand_;
   reversed_ = scan.reversed_;
-  small_ = scan.small_;
   allow_partial_results_ = scan.allow_partial_results_;
   consistency_ = scan.consistency_;
   tr_.reset(new TimeRange(scan.tr_->MinTimeStamp(), scan.tr_->MaxTimeStamp()));
@@ -55,6 +54,7 @@ Scan::Scan(const Scan &scan) {
 }
 
 Scan &Scan::operator=(const Scan &scan) {
+  Query::operator=(scan);
   start_row_ = scan.start_row_;
   stop_row_ = scan.stop_row_;
   max_versions_ = scan.max_versions_;
@@ -63,7 +63,6 @@ Scan &Scan::operator=(const Scan &scan) {
   cache_blocks_ = scan.cache_blocks_;
   load_column_families_on_demand_ = scan.load_column_families_on_demand_;
   reversed_ = scan.reversed_;
-  small_ = scan.small_;
   allow_partial_results_ = scan.allow_partial_results_;
   consistency_ = scan.consistency_;
   tr_.reset(new TimeRange(scan.tr_->MinTimeStamp(), scan.tr_->MaxTimeStamp()));
@@ -109,23 +108,13 @@ void Scan::SetReversed(bool reversed) { reversed_ = reversed; }
 
 bool Scan::IsReversed() const { return reversed_; }
 
-void Scan::SetStartRow(const std::string &start_row) {
-  CheckRow(start_row);
-  start_row_ = start_row;
-}
+void Scan::SetStartRow(const std::string &start_row) { start_row_ = start_row; }
 
 const std::string &Scan::StartRow() const { return start_row_; }
 
-void Scan::SetStopRow(const std::string &stop_row) {
-  CheckRow(stop_row);
-  stop_row_ = stop_row;
-}
+void Scan::SetStopRow(const std::string &stop_row) { stop_row_ = stop_row; }
 
 const std::string &Scan::StopRow() const { return stop_row_; }
-
-void Scan::SetSmall(bool small) { small_ = small; }
-
-bool Scan::IsSmall() const { return small_; }
 
 void Scan::SetCaching(int caching) { caching_ = caching; }
 

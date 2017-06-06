@@ -39,7 +39,7 @@ class ResponseConverter {
   ~ResponseConverter();
 
   static std::shared_ptr<Result> ToResult(const hbase::pb::Result& result,
-                                          const std::unique_ptr<CellScanner>& cell_scanner);
+                                          const std::shared_ptr<CellScanner> cell_scanner);
 
   /**
    * @brief Returns a Result object created by PB Message in passed Response object.
@@ -50,6 +50,9 @@ class ResponseConverter {
   static std::shared_ptr<hbase::Result> FromMutateResponse(const Response& resp);
 
   static std::vector<std::shared_ptr<Result>> FromScanResponse(const Response& resp);
+
+  static std::vector<std::shared_ptr<Result>> FromScanResponse(
+      const std::shared_ptr<pb::ScanResponse> resp, std::shared_ptr<CellScanner> cell_scanner);
 
   static std::unique_ptr<hbase::MultiResponse> GetResults(std::shared_ptr<Request> req,
                                                           const Response& resp);

@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <google/protobuf/service.h>
 #include <chrono>
 #include <string>
@@ -37,6 +38,10 @@ class HBaseRpcController : public google::protobuf::RpcController {
 
   bool Failed() const override { return false; }
 
+  folly::exception_wrapper exception() { return exception_; }
+
+  void set_exception(const folly::exception_wrapper& exception) { exception_ = exception; }
+
   std::string ErrorText() const override { return ""; }
 
   void StartCancel() override {}
@@ -46,6 +51,9 @@ class HBaseRpcController : public google::protobuf::RpcController {
   bool IsCanceled() const override { return false; }
 
   void NotifyOnCancel(google::protobuf::Closure* callback) override {}
+
+ private:
+  folly::exception_wrapper exception_;
 };
 
 } /* namespace hbase */

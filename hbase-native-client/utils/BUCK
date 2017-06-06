@@ -20,6 +20,7 @@ cxx_library(
     exported_headers=[
         "bytes-util.h",
         "connection-util.h",
+        "optional.h",
         "sys-util.h",
         "time-util.h",
         "user-util.h",

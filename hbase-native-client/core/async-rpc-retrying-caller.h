@@ -84,8 +84,6 @@ class AsyncSingleRequestRpcRetryingCaller {
   void OnError(const folly::exception_wrapper& error, Supplier<std::string> err_msg,
                Consumer<folly::exception_wrapper> update_cached_location);
 
-  bool ShouldRetry(const folly::exception_wrapper& error);
-
   void Call(const RegionLocation& loc);
 
   void CompleteExceptionally();

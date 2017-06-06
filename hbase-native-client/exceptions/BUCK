@@ -17,8 +17,12 @@
 
 cxx_library(
     name="exceptions",
-    exported_headers=["exception.h",],
+    exported_headers=[
+        "exception.h",
+    ],
     srcs=[],
-    deps=["//third-party:folly",],
+    deps=[
+        "//third-party:folly",
+    ],
     compiler_flags=['-Weffc++'],
-    visibility=['//core/...','//connection//...'],)
+    visibility=['//core/...', '//connection//...'],)

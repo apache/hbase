@@ -47,14 +47,14 @@ Delete& Delete::AddColumn(const std::string& family, const std::string& qualifie
  *  @param timestamp version timestamp
  */
 Delete& Delete::AddColumn(const std::string& family, const std::string& qualifier,
-        int64_t timestamp) {
+                          int64_t timestamp) {
   if (timestamp < 0) {
     throw std::runtime_error("Timestamp cannot be negative. ts=" +
                              folly::to<std::string>(timestamp));
   }
 
-  return Add(std::make_unique<Cell>(row_, family, qualifier, timestamp, "",
-          hbase::CellType::DELETE));
+  return Add(
+      std::make_unique<Cell>(row_, family, qualifier, timestamp, "", hbase::CellType::DELETE));
 }
 /**
  * Delete all versions of the specified column.
@@ -62,7 +62,7 @@ Delete& Delete::AddColumn(const std::string& family, const std::string& qualifie
  * @param qualifier column qualifier
  */
 Delete& Delete::AddColumns(const std::string& family, const std::string& qualifier) {
-    return AddColumns(family, qualifier, timestamp_);
+  return AddColumns(family, qualifier, timestamp_);
 }
 /**
  * Delete all versions of the specified column with a timestamp less than
@@ -72,14 +72,14 @@ Delete& Delete::AddColumns(const std::string& family, const std::string& qualifi
  * @param timestamp maximum version timestamp
  */
 Delete& Delete::AddColumns(const std::string& family, const std::string& qualifier,
-        int64_t timestamp) {
-    if (timestamp < 0) {
-      throw std::runtime_error("Timestamp cannot be negative. ts=" +
-                               folly::to<std::string>(timestamp));
-    }
+                           int64_t timestamp) {
+  if (timestamp < 0) {
+    throw std::runtime_error("Timestamp cannot be negative. ts=" +
+                             folly::to<std::string>(timestamp));
+  }
 
-    return Add(std::make_unique<Cell>(row_, family, qualifier, timestamp, "",
-            hbase::CellType::DELETE_COLUMN));
+  return Add(std::make_unique<Cell>(row_, family, qualifier, timestamp, "",
+                                    hbase::CellType::DELETE_COLUMN));
 }
 /**
  * Delete all versions of all columns of the specified family.
@@ -88,9 +88,7 @@ Delete& Delete::AddColumns(const std::string& family, const std::string& qualifi
  * specified family.
  * @param family family name
  */
-Delete& Delete::AddFamily(const std::string& family) {
-    return AddFamily(family, timestamp_);
-}
+Delete& Delete::AddFamily(const std::string& family) { return AddFamily(family, timestamp_); }
 
 /**
  * Delete all columns of the specified family with a timestamp less than
@@ -102,14 +100,14 @@ Delete& Delete::AddFamily(const std::string& family) {
  * @param timestamp maximum version timestamp
  */
 Delete& Delete::AddFamily(const std::string& family, int64_t timestamp) {
-    const auto &it = family_map_.find(family);
-    if (family_map_.end() != it) {
-        it->second.clear();
-    } else {
-        family_map_[family];
-    }
-    return Add(std::make_unique<Cell>(row_, family, "", timestamp, "",
-            hbase::CellType::DELETE_FAMILY));
+  const auto& it = family_map_.find(family);
+  if (family_map_.end() != it) {
+    it->second.clear();
+  } else {
+    family_map_[family];
+  }
+  return Add(
+      std::make_unique<Cell>(row_, family, "", timestamp, "", hbase::CellType::DELETE_FAMILY));
 }
 /**
  * Delete all columns of the specified family with a timestamp equal to
@@ -118,8 +116,8 @@ Delete& Delete::AddFamily(const std::string& family, int64_t timestamp) {
  * @param timestamp version timestamp
  */
 Delete& Delete::AddFamilyVersion(const std::string& family, int64_t timestamp) {
-    return Add(std::make_unique<Cell>(row_, family, "", timestamp, "",
-            hbase::CellType::DELETE_FAMILY_VERSION));
+  return Add(std::make_unique<Cell>(row_, family, "", timestamp, "",
+                                    hbase::CellType::DELETE_FAMILY_VERSION));
 }
 Delete& Delete::Add(std::unique_ptr<Cell> cell) {
   if (cell->Row() != row_) {

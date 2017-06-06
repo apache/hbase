@@ -18,11 +18,13 @@
  */
 #pragma once
 
+#include <folly/Conv.h>
+#include <folly/ExceptionWrapper.h>
+
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <utility>
-
-#include <folly/ExceptionWrapper.h>
 
 #include "serde/cell-scanner.h"
 
@@ -66,20 +68,26 @@ class Response {
     resp_msg_ = std::move(response);
   }
 
-  void set_cell_scanner(std::unique_ptr<CellScanner> cell_scanner) {
-    cell_scanner_ = std::move(cell_scanner);
-  }
+  void set_cell_scanner(std::shared_ptr<CellScanner> cell_scanner) { cell_scanner_ = cell_scanner; }
 
-  const std::unique_ptr<CellScanner>& cell_scanner() const { return cell_scanner_; }
+  const std::shared_ptr<CellScanner> cell_scanner() const { return cell_scanner_; }
 
   folly::exception_wrapper exception() { return exception_; }
 
   void set_exception(folly::exception_wrapper value) { exception_ = value; }
 
+  std::string DebugString() const {
+    std::string s{"call_id:"};
+    s += folly::to<std::string>(call_id_);
+    s += ", resp_msg:";
+    s += resp_msg_->ShortDebugString();
+    return s;
+  }
+
  private:
   uint32_t call_id_;
   std::shared_ptr<google::protobuf::Message> resp_msg_;
-  std::unique_ptr<CellScanner> cell_scanner_;
+  std::shared_ptr<CellScanner> cell_scanner_;
   folly::exception_wrapper exception_;
 };
 }  // namespace hbase

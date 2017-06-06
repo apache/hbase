@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "core/async-connection.h"
+#include "core/async-table-result-scanner.h"
 #include "core/request-converter.h"
 #include "core/response-converter.h"
 #include "if/Client.pb.h"
@@ -50,6 +51,21 @@ Table::~Table() {}
 std::shared_ptr<hbase::Result> Table::Get(const hbase::Get &get) {
   auto context = async_table_->Get(get);
   return context.get(operation_timeout());
+}
+
+std::shared_ptr<ResultScanner> Table::Scan(const hbase::Scan &scan) {
+  auto max_cache_size = ResultSize2CacheSize(
+      scan.MaxResultSize() > 0 ? scan.MaxResultSize()
+                               : async_connection_->connection_conf()->scanner_max_result_size());
+  auto scanner = std::make_shared<AsyncTableResultScanner>(max_cache_size);
+  async_table_->Scan(scan, scanner);
+  return scanner;
+}
+
+int64_t Table::ResultSize2CacheSize(int64_t max_results_size) const {
+  // * 2 if possible
+  return max_results_size > (std::numeric_limits<int64_t>::max() / 2) ? max_results_size
+                                                                      : max_results_size * 2;
 }
 
 void Table::Put(const hbase::Put &put) {

@@ -94,21 +94,30 @@ std::string Cell::DebugString() const {
 
 const char *Cell::TypeToString(CellType type) {
   switch (type) {
-    case MINIMUM:
+    case CellType::MINIMUM:
       return "MINIMUM";
-    case PUT:
+    case CellType::PUT:
       return "PUT";
-    case DELETE:
+    case CellType::DELETE:
       return "DELETE";
-    case DELETE_COLUMN:
+    case CellType::DELETE_COLUMN:
       return "DELETE_COLUMN";
-    case DELETE_FAMILY:
+    case CellType::DELETE_FAMILY:
       return "DELETE_FAMILY";
-    case MAXIMUM:
+    case CellType::MAXIMUM:
       return "MAXIMUM";
     default:
       return "UNKNOWN";
   }
+}
+
+size_t Cell::EstimatedSize() const {
+  size_t s = sizeof(Cell);
+  s += row_.capacity();
+  s += family_.capacity();
+  s += qualifier_.capacity();
+  s += value_.capacity();
+  return s;
 }
 
 } /* namespace hbase */

@@ -25,13 +25,7 @@ Result::~Result() {}
 
 Result::Result(const std::vector<std::shared_ptr<Cell> > &cells, bool exists, bool stale,
                bool partial)
-    : exists_(exists), stale_(stale), partial_(partial) {
-  for (const auto &cell : cells) {
-    cells_.push_back(cell);
-    // We create the map when cells are added. unlike java where map is created
-    // when result.getMap() is called
-    result_map_[cell->Family()][cell->Qualifier()][cell->Timestamp()] = cell->Value();
-  }
+    : exists_(exists), stale_(stale), partial_(partial), cells_(cells) {
   row_ = (cells_.size() == 0 ? "" : cells_[0]->Row());
 }
 
@@ -43,10 +37,10 @@ Result::Result(const Result &result) {
   if (!result.cells_.empty()) {
     for (const auto &cell : result.cells_) {
       cells_.push_back(cell);
-      result_map_[cell->Family()][cell->Qualifier()][cell->Timestamp()] = cell->Value();
     }
   }
 }
+
 const std::vector<std::shared_ptr<Cell> > &Result::Cells() const { return cells_; }
 
 std::vector<std::shared_ptr<Cell> > Result::ColumnCells(const std::string &family,
@@ -74,13 +68,12 @@ const std::shared_ptr<Cell> Result::ColumnLatestCell(const std::string &family,
   return nullptr;
 }
 
-std::shared_ptr<std::string> Result::Value(const std::string &family,
-                                           const std::string &qualifier) const {
+optional<std::string> Result::Value(const std::string &family, const std::string &qualifier) const {
   std::shared_ptr<Cell> latest_cell(ColumnLatestCell(family, qualifier));
   if (latest_cell.get()) {
-    return std::make_shared<std::string>(latest_cell->Value());
+    return optional<std::string>(latest_cell->Value());
   }
-  return nullptr;
+  return optional<std::string>();
 }
 
 bool Result::IsEmpty() const { return cells_.empty(); }
@@ -89,24 +82,33 @@ const std::string &Result::Row() const { return row_; }
 
 int Result::Size() const { return cells_.size(); }
 
-const ResultMap &Result::Map() const { return result_map_; }
+ResultMap Result::Map() const {
+  ResultMap result_map;
+  for (const auto &cell : cells_) {
+    result_map[cell->Family()][cell->Qualifier()][cell->Timestamp()] = cell->Value();
+  }
+  return result_map;
+}
 
-const std::map<std::string, std::string> Result::FamilyMap(const std::string &family) const {
+std::map<std::string, std::string> Result::FamilyMap(const std::string &family) const {
   std::map<std::string, std::string> family_map;
   if (!IsEmpty()) {
-    for (auto itr = result_map_.begin(); itr != result_map_.end(); ++itr) {
-      if (family == itr->first) {
-        for (auto qitr = itr->second.begin(); qitr != itr->second.end(); ++qitr) {
-          for (auto vitr = qitr->second.begin(); vitr != qitr->second.end(); ++vitr) {
-            // We break after inserting the first value. Result.java takes only
-            // the first value
-            family_map[qitr->first] = vitr->second;
-            break;
-          }
-        }
+    auto result_map = Map();
+    auto itr = result_map.find(family);
+    if (itr == result_map.end()) {
+      return family_map;
+    }
+
+    for (auto qitr = itr->second.begin(); qitr != itr->second.end(); ++qitr) {
+      for (auto vitr = qitr->second.begin(); vitr != qitr->second.end(); ++vitr) {
+        // We break after inserting the first value. Result.java takes only
+        // the first value
+        family_map[qitr->first] = vitr->second;
+        break;
       }
     }
   }
+
   return family_map;
 }
 
@@ -129,6 +131,16 @@ std::string Result::DebugString() const {
   ret += "}";
 
   return ret;
+}
+
+size_t Result::EstimatedSize() const {
+  size_t s = sizeof(Result);
+  s += row_.capacity();
+  for (const auto c : cells_) {
+    s += sizeof(std::shared_ptr<Cell>);
+    s + c->EstimatedSize();
+  }
+  return s;
 }
 
 } /* namespace hbase */

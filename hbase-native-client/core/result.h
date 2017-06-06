@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "core/cell.h"
+#include "utils/optional.h"
 
 namespace hbase {
 
@@ -79,7 +80,7 @@ class Result {
    * @param family - column family
    * @param qualifier - column qualifier
    */
-  std::shared_ptr<std::string> Value(const std::string &family, const std::string &qualifier) const;
+  optional<std::string> Value(const std::string &family, const std::string &qualifier) const;
 
   /**
    * @brief Returns if the underlying Cell vector is empty or not
@@ -104,16 +105,26 @@ class Result {
    * All other map returning methods make use of this map internally
    * The Map is created when the Result instance is created
    */
-  const ResultMap &Map() const;
+  ResultMap Map() const;
 
   /**
    * @brief Map of qualifiers to values.
    * Returns a Map of the form: Map<qualifier,value>
    * @param family - column family to get
    */
-  const std::map<std::string, std::string> FamilyMap(const std::string &family) const;
+  std::map<std::string, std::string> FamilyMap(const std::string &family) const;
 
   std::string DebugString() const;
+
+  bool Exists() const { return exists_; }
+
+  bool Stale() const { return stale_; }
+
+  bool Partial() const { return partial_; }
+
+  /** Returns estimated size of the Result object including deep heap space usage
+   * of its Cells and data. Notice that this is a very rough estimate. */
+  size_t EstimatedSize() const;
 
  private:
   bool exists_ = false;
@@ -121,6 +132,5 @@ class Result {
   bool partial_ = false;
   std::string row_ = "";
   std::vector<std::shared_ptr<Cell> > cells_;
-  ResultMap result_map_;
 };
 } /* namespace hbase */

@@ -66,9 +66,20 @@ class RequestConverter {
    */
   static std::unique_ptr<Request> ToScanRequest(const Scan &scan, const std::string &region_name);
 
+  static std::unique_ptr<Request> ToScanRequest(const Scan &scan, const std::string &region_name,
+                                                int32_t num_rows, bool close_scanner);
+
+  static std::unique_ptr<Request> ToScanRequest(int64_t scanner_id, int32_t num_rows,
+                                                bool close_scanner);
+
+  static std::unique_ptr<Request> ToScanRequest(int64_t scanner_id, int32_t num_rows,
+                                                bool close_scanner, int64_t next_call_seq_id,
+                                                bool renew);
+
   static std::unique_ptr<Request> ToMultiRequest(const ActionsByRegion &region_requests);
 
-  static std::unique_ptr<Request> DeleteToMutateRequest(const Delete &del,const std::string &region_name);
+  static std::unique_ptr<Request> DeleteToMutateRequest(const Delete &del,
+                                                        const std::string &region_name);
 
   static std::unique_ptr<Request> ToMutateRequest(const Put &put, const std::string &region_name);
 
@@ -91,8 +102,10 @@ class RequestConverter {
    */
   static void SetRegion(const std::string &region_name, pb::RegionSpecifier *region_specifier);
   static std::unique_ptr<hbase::pb::Get> ToGet(const Get &get);
+  static std::unique_ptr<hbase::pb::Scan> ToScan(const Scan &scan);
   static DeleteType ToDeleteType(const CellType type);
   static bool IsDelete(const CellType type);
+  static void SetCommonScanRequestFields(std::shared_ptr<hbase::pb::ScanRequest>, bool renew);
 };
 
 } /* namespace hbase */

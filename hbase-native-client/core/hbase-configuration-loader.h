@@ -24,14 +24,11 @@
 #include <vector>
 
 #include <boost/optional.hpp>
-#include <experimental/optional>
 
 #include "core/configuration.h"
+#include "utils/optional.h"
 
 namespace hbase {
-
-template <class T>
-using optional = std::experimental::optional<T>;
 
 class HBaseConfigurationLoader {
  public:

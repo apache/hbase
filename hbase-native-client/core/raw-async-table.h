@@ -24,7 +24,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+
 #include "core/async-batch-rpc-retrying-caller.h"
+#include "core/async-client-scanner.h"
 #include "core/async-connection.h"
 #include "core/async-rpc-retrying-caller-factory.h"
 #include "core/async-rpc-retrying-caller.h"
@@ -34,6 +36,7 @@
 #include "core/increment.h"
 #include "core/put.h"
 #include "core/result.h"
+#include "core/scan.h"
 
 namespace hbase {
 
@@ -48,14 +51,22 @@ class RawAsyncTable {
       : connection_(connection),
         connection_conf_(connection->connection_conf()),
         table_name_(table_name),
-        rpc_client_(connection->rpc_client()) {}
+        rpc_client_(connection->rpc_client()) {
+    default_scanner_caching_ = connection_conf_->scanner_caching();
+    default_scanner_max_result_size_ = connection_conf_->scanner_max_result_size();
+  }
   virtual ~RawAsyncTable() = default;
 
   folly::Future<std::shared_ptr<Result>> Get(const hbase::Get& get);
 
-	folly::Future<folly::Unit> Delete(const hbase::Delete& del);
-	folly::Future<std::shared_ptr<hbase::Result>> Increment(const hbase::Increment& increment);
+  folly::Future<folly::Unit> Delete(const hbase::Delete& del);
+
+  folly::Future<std::shared_ptr<hbase::Result>> Increment(const hbase::Increment& increment);
+
   folly::Future<folly::Unit> Put(const hbase::Put& put);
+
+  void Scan(const hbase::Scan& scan, std::shared_ptr<RawScanResultConsumer> consumer);
+
   void Close() {}
 
   folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Get(
@@ -69,6 +80,8 @@ class RawAsyncTable {
   std::shared_ptr<ConnectionConfiguration> connection_conf_;
   std::shared_ptr<pb::TableName> table_name_;
   std::shared_ptr<RpcClient> rpc_client_;
+  int32_t default_scanner_caching_;
+  int64_t default_scanner_max_result_size_;
 
   /* Methods */
   template <typename REQ, typename PREQ, typename PRESP, typename RESP>
@@ -81,5 +94,7 @@ class RawAsyncTable {
   template <typename RESP>
   std::shared_ptr<SingleRequestCallerBuilder<RESP>> CreateCallerBuilder(
       std::string row, std::chrono::nanoseconds rpc_timeout);
+
+  std::shared_ptr<hbase::Scan> SetDefaultScanConfig(const hbase::Scan& scan);
 };
 }  // namespace hbase

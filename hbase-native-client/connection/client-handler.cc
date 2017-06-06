@@ -87,7 +87,7 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<folly::IOBuf> buf) {
 
       if (cell_block_length > 0) {
         auto cell_scanner = serde_.CreateCellScanner(std::move(buf), used_bytes, cell_block_length);
-        received->set_cell_scanner(std::move(cell_scanner));
+        received->set_cell_scanner(std::shared_ptr<CellScanner>{cell_scanner.release()});
       }
 
       received->set_resp_msg(resp_msg);
@@ -129,8 +129,7 @@ folly::Future<folly::Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Re
     ctx->fireWrite(std::move(header));
   });
 
-  VLOG(3) << "Writing RPC Request with call_id:"
-          << r->call_id();  // TODO: more logging for RPC Header
+  VLOG(3) << "Writing RPC Request:" << r->DebugString();
 
   // Now store the call id to response.
   resp_msgs_->insert(r->call_id(), r->resp_msg());

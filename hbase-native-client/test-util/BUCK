@@ -16,33 +16,37 @@
 # limitations under the License.
 import os
 
-cxx_library(name="test-util",
-  exported_headers=[
-    "test-util.h","mini-cluster.h"
-  ],
-  srcs=["test-util.cc","mini-cluster.cc"],
-  deps=[
-    "//third-party:folly",
-    "//core:core",
+cxx_library(
+    name="test-util",
+    exported_headers=["test-util.h", "mini-cluster.h"],
+    srcs=["test-util.cc", "mini-cluster.cc"],
+    deps=[
+        "//third-party:folly",
+        "//core:core",
     ],
-    preprocessor_flags= [
-    '-I' + os.environ['JAVA_HOME'] + '/include',
-    '-I' + os.environ['JAVA_HOME'] + '/include/darwin',
-    '-I' + os.environ['JAVA_HOME'] + '/include/linux'],
-    exported_preprocessor_flags= [
-    '-I' + os.environ['JAVA_HOME'] + '/include',
-    '-I' + os.environ['JAVA_HOME'] + '/include/darwin',
-    '-I' + os.environ['JAVA_HOME'] + '/include/linux'],
-    compiler_flags = [
-    '-I' + os.environ['JAVA_HOME'] + '/include',
-    '-I' + os.environ['JAVA_HOME'] + '/include/darwin',
-    '-I' + os.environ['JAVA_HOME'] + '/include/linux', '-ggdb'],
-    linker_flags = ['-ljvm',
-    '-L' + os.environ['JAVA_HOME'] + '/jre/lib/amd64/server', '-ggdb'],
-    exported_linker_flags = ['-ljvm',
-    '-L' + os.environ['JAVA_HOME'] + '/jre/lib/amd64/server',
-    '-Wl,-rpath=' + os.environ['JAVA_HOME'] + '/jre/lib/amd64/server'],
-              visibility=[
-                'PUBLIC',
-            ],
-    )
+    preprocessor_flags=[
+        '-I' + os.environ['JAVA_HOME'] + '/include',
+        '-I' + os.environ['JAVA_HOME'] + '/include/darwin',
+        '-I' + os.environ['JAVA_HOME'] + '/include/linux'
+    ],
+    exported_preprocessor_flags=[
+        '-I' + os.environ['JAVA_HOME'] + '/include',
+        '-I' + os.environ['JAVA_HOME'] + '/include/darwin',
+        '-I' + os.environ['JAVA_HOME'] + '/include/linux'
+    ],
+    compiler_flags=[
+        '-I' + os.environ['JAVA_HOME'] + '/include',
+        '-I' + os.environ['JAVA_HOME'] + '/include/darwin',
+        '-I' + os.environ['JAVA_HOME'] + '/include/linux', '-ggdb'
+    ],
+    linker_flags=[
+        '-ljvm', '-L' + os.environ['JAVA_HOME'] + '/jre/lib/amd64/server',
+        '-ggdb'
+    ],
+    exported_linker_flags=[
+        '-ljvm', '-L' + os.environ['JAVA_HOME'] + '/jre/lib/amd64/server',
+        '-Wl,-rpath=' + os.environ['JAVA_HOME'] + '/jre/lib/amd64/server'
+    ],
+    visibility=[
+        'PUBLIC',
+    ],)

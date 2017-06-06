@@ -22,8 +22,6 @@
 #include <folly/Logging.h>
 #include <unistd.h>
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
-#include <memory>
-#include <string>
 
 using hbase::security::User;
 using std::chrono::nanoseconds;
