@@ -25,6 +25,7 @@
 #include "connection/request.h"
 #include "core/action.h"
 #include "core/cell.h"
+#include "core/append.h"
 #include "core/delete.h"
 #include "core/get.h"
 #include "core/increment.h"
@@ -90,6 +91,8 @@ class RequestConverter {
                                                        const Mutation &mutation,
                                                        const int64_t nonce);
 
+  static std::unique_ptr<Request> AppendToMutateRequest(const Append &append,
+          const std::string &region_name);
  private:
   // Constructor not required. We have all static methods to create PB requests.
   RequestConverter();
