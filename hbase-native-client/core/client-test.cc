@@ -191,10 +191,10 @@ TEST_F(ClientTest, PutGetDelete) {
 
 TEST_F(ClientTest, Increment) {
   // Using TestUtil to populate test data
-  ClientTest::test_util->CreateTable("t", "d");
+  ClientTest::test_util->CreateTable("t1", "d");
 
   // Create TableName and Row to be fetched from HBase
-  auto tn = folly::to<hbase::pb::TableName>("t");
+  auto tn = folly::to<hbase::pb::TableName>("t1");
   auto row = "test1";
 
   // Create a client
