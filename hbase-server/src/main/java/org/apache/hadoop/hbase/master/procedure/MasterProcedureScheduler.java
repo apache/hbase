@@ -121,7 +121,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   /**
    * Table priority is used when scheduling procedures from {@link #tableRunQueue}. A TableQueue
    * with priority 2 will get its procedures scheduled at twice the rate as compared to
-   * TableQueue with priority 1.
+   * TableQueue with priority 1. This should be enough to ensure system/meta get assigned out
+   * before user-space tables. HBASE-18109 is where we conclude what is here is good enough.
+   * Lets open new issue if we find it not enough.
    */
   private static class TablePriorities {
     final int metaTablePriority;
