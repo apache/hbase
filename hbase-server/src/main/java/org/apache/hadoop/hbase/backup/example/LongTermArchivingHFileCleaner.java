@@ -72,7 +72,7 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
       LOG.debug("Archiver says to [" + (ret ? "delete" : "keep") + "] files for table:" + tableName);
       return ret;
     } catch (IOException e) {
-      LOG.error("Failed to lookup status of:" + fStat.getPath() + ", keeping it just incase.", e);
+      LOG.error("Failed to lookup status of:" + file + ", keeping it just incase.", e);
       return false;
     }
   }
