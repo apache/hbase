@@ -626,11 +626,11 @@
                     </execution>
                 </executions>
             </plugin>
-      <!-- purposefully have jsr 305 exclusion only warn in this module -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
         <executions>
+          <!-- purposefully have jsr 305 exclusion only warn in this module -->
           <execution>
             <id>banned-jsr305</id>
             <goals>
@@ -638,6 +638,16 @@
             </goals>
             <configuration>
               <fail>false</fail>
+            </configuration>
+          </execution>
+          <!-- scala is ok in the spark modules -->
+          <execution>
+            <id>banned-scala</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <skip>true</skip>
             </configuration>
           </execution>
         </executions>
