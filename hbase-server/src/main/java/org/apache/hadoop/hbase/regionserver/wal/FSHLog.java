@@ -351,6 +351,9 @@ public class FSHLog implements WAL {
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
 
+  // Last time to check low replication on hlog's pipeline
+  private volatile long lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
+
 
   /**
    * WAL Comparator; it compares the timestamp (log filenum), present in the log file name.
@@ -1299,7 +1302,7 @@ public class FSHLog implements WAL {
   /**
    * Schedule a log roll if needed.
    */
-  void checkLogRoll() {
+  public void checkLogRoll() {
     // Will return immediately if we are in the middle of a WAL log roll currently.
     if (!rollWriterLock.tryLock()) return;
     boolean lowReplication;
@@ -1322,6 +1325,7 @@ public class FSHLog implements WAL {
    */
   private boolean checkLowReplication() {
     boolean logRollNeeded = false;
+    this.lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
     // if the number of replicas in HDFS has fallen below the configured
     // value, then roll logs.
     try {
@@ -2055,5 +2059,13 @@ public class FSHLog implements WAL {
       }
     }
     return new DatanodeInfo[0];
+  }
+
+  /**
+   *
+   * @return last time on checking low replication
+   */
+  public long getLastTimeCheckLowReplication() {
+    return this.lastTimeCheckLowReplication;
   }
 }
