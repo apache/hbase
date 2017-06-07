@@ -1169,7 +1169,7 @@ public class AssignmentManager implements ServerListener {
 
     // assign offline regions
     st = System.currentTimeMillis();
-    for (HRegionInfo regionInfo: regionsToAssign) {
+    for (HRegionInfo regionInfo: getOrderedRegions(regionsToAssign)) {
       master.getMasterProcedureExecutor().submitProcedure(
         createAssignProcedure(regionInfo, false));
     }
@@ -1275,6 +1275,27 @@ public class AssignmentManager implements ServerListener {
       if (!regionState.isOpened()) ritCount++;
     }
     return new Pair<Integer, Integer>(ritCount, states.size());
+  }
+
+  /**
+   * Used when assign regions, this method will put system regions in
+   * front of user regions
+   * @param regions
+   * @return A list of regions with system regions at front
+   */
+  public List<HRegionInfo> getOrderedRegions(
+      final List<HRegionInfo> regions) {
+    if (regions == null) return Collections.emptyList();
+
+    List<HRegionInfo> systemList = new ArrayList<>();
+    List<HRegionInfo> userList = new ArrayList<>();
+    for (HRegionInfo hri : regions) {
+      if (hri.isSystemTable()) systemList.add(hri);
+      else userList.add(hri);
+    }
+    // Append userList to systemList
+    systemList.addAll(userList);
+    return systemList;
   }
 
   // ============================================================================================

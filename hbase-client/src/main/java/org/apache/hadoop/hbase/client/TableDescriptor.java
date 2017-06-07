@@ -161,6 +161,9 @@ public interface TableDescriptor {
    */
   long getMemStoreFlushSize();
 
+  // TODO: Currently this is used RPC scheduling only. Make it more generic than this; allow it
+  // to also be priority when scheduling procedures that pertain to this table scheduling first
+  // those tables with the highest priority (From Yi Liang over on HBASE-18109).
   int getPriority();
 
   /**

@@ -186,8 +186,9 @@ implements ServerProcedureInterface {
               "; cycles=" + this.cycles);
           }
           handleRIT(env, regionsOnCrashedServer);
-          addChildProcedure(env.getAssignmentManager().
-              createAssignProcedures(regionsOnCrashedServer, true));
+          AssignmentManager am = env.getAssignmentManager();
+          addChildProcedure(am.
+              createAssignProcedures(am.getOrderedRegions(regionsOnCrashedServer), true));
         }
         setNextState(ServerCrashState.SERVER_CRASH_FINISH);
         break;
