@@ -970,6 +970,38 @@
               </rules>
             </configuration>
           </execution>
+          <execution>
+            <id>banned-scala</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.scala-lang:scala-library</exclude>
+                  </excludes>
+                  <message>We don't allow Scala outside of the hbase-spark module, see HBASE-13992.</message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-hbase-spark</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.apache.hbase:hbase-spark</exclude>
+                  </excludes>
+                  <message>We don't allow other modules to depend on hbase-spark, see HBASE-13992.</message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <!-- parent-module only plugins -->
