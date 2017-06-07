@@ -94,8 +94,13 @@ public class CompactingMemStore extends AbstractMemStore {
     this.store = store;
     this.regionServices = regionServices;
     this.pipeline = new CompactionPipeline(getRegionServices());
-    this.compactor = new MemStoreCompactor(this, compactionPolicy);
+    this.compactor = createMemStoreCompactor(compactionPolicy);
     initInmemoryFlushSize(conf);
+  }
+
+  @VisibleForTesting
+  protected MemStoreCompactor createMemStoreCompactor(MemoryCompactionPolicy compactionPolicy) {
+    return new MemStoreCompactor(this, compactionPolicy);
   }
 
   private void initInmemoryFlushSize(Configuration conf) {
@@ -410,7 +415,8 @@ public class CompactingMemStore extends AbstractMemStore {
     return getRegionServices().getInMemoryCompactionPool();
   }
 
-  private boolean shouldFlushInMemory() {
+  @VisibleForTesting
+  protected boolean shouldFlushInMemory() {
     if (this.active.keySize() > inmemoryFlushSize) { // size above flush threshold
       if (inWalReplay) {  // when replaying edits from WAL there is no need in in-memory flush
         return false;     // regardless the size
@@ -430,7 +436,6 @@ public class CompactingMemStore extends AbstractMemStore {
   private void stopCompaction() {
     if (inMemoryFlushInProgress.get()) {
       compactor.stop();
-      inMemoryFlushInProgress.set(false);
     }
   }
 
