@@ -542,9 +542,9 @@ public class ReplicationSource extends Thread
           terminate("Couldn't get the position of this recovered queue " + peerClusterZnode, e);
         }
       }
+      int sleepMultiplier = 1;
       // Loop until we close down
       while (isWorkerActive()) {
-        int sleepMultiplier = 1;
         // Sleep until replication is enabled again
         if (!isPeerEnabled()) {
           if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
@@ -622,7 +622,7 @@ public class ReplicationSource extends Thread
 
             if (considerDumping &&
                 sleepMultiplier == maxRetriesMultiplier &&
-                processEndOfFile()) {
+                processEndOfFile(false)) {
               continue;
             }
           }
@@ -749,7 +749,7 @@ public class ReplicationSource extends Thread
       }
       // If we didn't get anything and the queue has an object, it means we
       // hit the end of the file for sure
-      return seenEntries == 0 && processEndOfFile();
+      return seenEntries == 0 && processEndOfFile(false);
     }
 
     /**
@@ -930,11 +930,12 @@ public class ReplicationSource extends Thread
           // which throws a NPE if we open a file before any data node has the most recent block
           // Just sleep and retry. Will require re-reading compressed WALs for compressionContext.
           LOG.warn("Got NPE opening reader, will retry.");
-        } else if (sleepMultiplier >= maxRetriesMultiplier) {
+        } else if (sleepMultiplier >= maxRetriesMultiplier
+            && conf.getBoolean("replication.source.eof.autorecovery", false)) {
           // TODO Need a better way to determine if a file is really gone but
           // TODO without scanning all logs dir
           LOG.warn("Waited too long for this file, considering dumping");
-          return !processEndOfFile();
+          return !processEndOfFile(true);
         }
       }
       return true;
@@ -1100,7 +1101,7 @@ public class ReplicationSource extends Thread
      */
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DE_MIGHT_IGNORE",
         justification = "Yeah, this is how it works")
-    protected boolean processEndOfFile() {
+    protected boolean processEndOfFile(boolean dumpOnlyIfZeroLength) {
       // We presume this means the file we're reading is closed.
       if (this.queue.size() != 0) {
         // -1 means the wal wasn't closed cleanly.
@@ -1134,6 +1135,9 @@ public class ReplicationSource extends Thread
         if (LOG.isTraceEnabled()) {
           LOG.trace("Reached the end of log " + this.currentPath + ", stats: " + getStats()
               + ", and the length of the file is " + (stat == null ? "N/A" : stat.getLen()));
+        }
+        if (dumpOnlyIfZeroLength && stat.getLen() != 0) {
+          return false;
         }
         this.currentPath = null;
         this.repLogReader.finishCurrentFile();
