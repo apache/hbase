@@ -784,6 +784,7 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.protobuf.generated.ClientProtos.class, // hbase-protocol
       org.apache.hadoop.hbase.client.Put.class,                      // hbase-client
       org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
+      org.apache.hadoop.hbase.mapreduce.JobUtil.class,               // hbase-hadoop2-compat
       org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-server
       prefixTreeCodecClass, //  hbase-prefix-tree (if null will be skipped)
       // pull necessary dependencies
