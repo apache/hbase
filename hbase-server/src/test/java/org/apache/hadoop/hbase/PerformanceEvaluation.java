@@ -124,6 +124,8 @@ import com.codahale.metrics.UniformReservoir;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class PerformanceEvaluation extends Configured implements Tool {
+  static final String RANDOM_SEEK_SCAN = "randomSeekScan";
+  static final String RANDOM_READ = "randomRead";
   private static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
   private static final ObjectMapper MAPPER = new ObjectMapper();
   static {
@@ -151,9 +153,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
 
   static {
-    addCommandDescriptor(RandomReadTest.class, "randomRead",
+    addCommandDescriptor(RandomReadTest.class, RANDOM_READ,
       "Run random read test");
-    addCommandDescriptor(RandomSeekScanTest.class, "randomSeekScan",
+    addCommandDescriptor(RandomSeekScanTest.class, RANDOM_SEEK_SCAN,
       "Run random seek and scan 100 test");
     addCommandDescriptor(RandomScanWithRange10Test.class, "scanRange10",
       "Run random seek scan with both start and stop row (max 10 rows)");
@@ -1769,7 +1771,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static byte [] getRandomRow(final Random random, final int totalRows) {
-    return format(random.nextInt(Integer.MAX_VALUE) % totalRows);
+    return format(generateRandomRow(random, totalRows));
+  }
+
+  static int generateRandomRow(final Random random, final int totalRows) {
+    return random.nextInt(Integer.MAX_VALUE) % totalRows;
   }
 
   static RunResult runOneClient(final Class<? extends Test> cmd, Configuration conf, Connection con,
@@ -1872,9 +1878,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println("Table Creation / Write Tests:");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
     System.err.println(" rows            Rows each client runs. Default: "
-        + DEFAULT_OPTS.getPerClientRunRows());
-    System.err.println(" size            Total size in GiB. Mutually exclusive with --rows. " +
-      "Default: 1.0.");
+        + DEFAULT_OPTS.getPerClientRunRows()
+        + ".  In case of randomReads and randomSeekScans this could"
+        + " be specified along with --size to specify the number of rows to be scanned within"
+        + " the total range specified by the size.");
+    System.err.println(
+      " size            Total size in GiB. Mutually exclusive with --rows for writes and scans"
+          + ". But for randomReads and randomSeekScans when you use size with --rows you could"
+          + " use size to specify the end range and --rows"
+          + " specifies the number of rows within that range. " + "Default: 1.0.");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
     System.err.println(" flushCommits    Used to determine if the test should flush the table. " +
       "Default: false");
@@ -2193,11 +2205,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
         } catch (NoSuchElementException | NumberFormatException e) {
           throw new IllegalArgumentException("Command " + cmd + " does not have threads number", e);
         }
-        if (opts.size != DEFAULT_OPTS.size &&
-            opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
-          throw new IllegalArgumentException(rows + " and " + size +
-            " are mutually exclusive options");
-        }
         opts = calculateRowsAndSize(opts);
         break;
       } else {
@@ -2214,7 +2221,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   static TestOptions calculateRowsAndSize(final TestOptions opts) {
     int rowsPerGB = getRowsPerGB(opts);
-    if (opts.size != DEFAULT_OPTS.size) {
+    if ((opts.getCmdName() != null
+        && (opts.getCmdName().equals(RANDOM_READ) || opts.getCmdName().equals(RANDOM_SEEK_SCAN)))
+        && opts.size != DEFAULT_OPTS.size
+        && opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
+      opts.totalRows = (int) opts.size * rowsPerGB;
+    } else if (opts.size != DEFAULT_OPTS.size) {
       // total size in GB specified
       opts.totalRows = (int) opts.size * rowsPerGB;
       opts.perClientRunRows = opts.totalRows / opts.numClientThreads;
