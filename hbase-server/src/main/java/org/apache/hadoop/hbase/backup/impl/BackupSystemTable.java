@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -145,6 +146,8 @@ public final class BackupSystemTable implements Closeable {
 
   private final static String BULK_LOAD_PREFIX = "bulk:";
   private final static byte[] BULK_LOAD_PREFIX_BYTES = BULK_LOAD_PREFIX.getBytes();
+  private final static byte[] DELETE_OP_ROW = "delete_op_row".getBytes();
+
   final static byte[] TBL_COL = Bytes.toBytes("tbl");
   final static byte[] FAM_COL = Bytes.toBytes("fam");
   final static byte[] PATH_COL = Bytes.toBytes("path");
@@ -1602,6 +1605,69 @@ public final class BackupSystemTable implements Closeable {
     return puts;
   }
 
+  public static void snapshot(Connection conn) throws IOException {
+
+    try (Admin admin = conn.getAdmin();){
+      Configuration conf = conn.getConfiguration();
+      admin.snapshot(BackupSystemTable.getSnapshotName(conf),
+        BackupSystemTable.getTableName(conf));
+    }
+  }
+
+  public static void restoreFromSnapshot(Connection conn)
+      throws IOException {
+
+    Configuration conf = conn.getConfiguration();
+    LOG.debug("Restoring " + BackupSystemTable.getTableNameAsString(conf) +
+        " from snapshot");
+    try (Admin admin = conn.getAdmin();) {
+      String snapshotName = BackupSystemTable.getSnapshotName(conf);
+      if (snapshotExists(admin, snapshotName)) {
+        admin.disableTable(BackupSystemTable.getTableName(conf));
+        admin.restoreSnapshot(snapshotName);
+        admin.enableTable(BackupSystemTable.getTableName(conf));
+        LOG.debug("Done restoring backup system table");
+      } else {
+        // Snapshot does not exists, i.e completeBackup failed after
+        // deleting backup system table snapshot
+        // In this case we log WARN and proceed
+        LOG.warn("Could not restore backup system table. Snapshot " + snapshotName+
+          " does not exists.");
+      }
+    }
+  }
+
+  protected static boolean snapshotExists(Admin admin, String snapshotName) throws IOException {
+
+    List<SnapshotDescription> list = admin.listSnapshots();
+    for (SnapshotDescription desc: list) {
+      if (desc.getName().equals(snapshotName)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static boolean snapshotExists (Connection conn) throws IOException {
+    return snapshotExists(conn.getAdmin(), getSnapshotName(conn.getConfiguration()));
+  }
+
+  public static void deleteSnapshot(Connection conn)
+      throws IOException {
+
+    Configuration conf = conn.getConfiguration();
+    LOG.debug("Deleting " + BackupSystemTable.getSnapshotName(conf) +
+        " from the system");
+    try (Admin admin = conn.getAdmin();) {
+      String snapshotName = BackupSystemTable.getSnapshotName(conf);
+      if (snapshotExists(admin, snapshotName)) {
+        admin.deleteSnapshot(snapshotName);
+        LOG.debug("Done deleting backup system table snapshot");
+      } else {
+        LOG.error("Snapshot "+snapshotName+" does not exists");
+      }
+    }
+  }
   /*
    * Creates Put's for bulk load resulting from running LoadIncrementalHFiles
    */
@@ -1626,6 +1692,7 @@ public final class BackupSystemTable implements Closeable {
     }
     return puts;
   }
+
   public static List<Delete> createDeleteForOrigBulkLoad(List<TableName> lst) {
     List<Delete> lstDels = new ArrayList<>();
     for (TableName table : lst) {
@@ -1634,6 +1701,68 @@ public final class BackupSystemTable implements Closeable {
       lstDels.add(del);
     }
     return lstDels;
+  }
+
+  private Put createPutForDeleteOperation(String[] backupIdList) {
+
+    byte[] value = Bytes.toBytes(StringUtils.join(backupIdList, ","));
+    Put put = new Put(DELETE_OP_ROW);
+    put.addColumn(META_FAMILY, FAM_COL, value);
+    return put;
+  }
+
+  private Delete createDeleteForBackupDeleteOperation() {
+
+    Delete delete = new Delete(DELETE_OP_ROW);
+    delete.addFamily(META_FAMILY);
+    return delete;
+  }
+
+  private Get createGetForDeleteOperation() {
+
+    Get get = new Get(DELETE_OP_ROW);
+    get.addFamily(META_FAMILY);
+    return get;
+  }
+
+
+  public void startDeleteOperation(String[] backupIdList) throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Start delete operation for backups: " + StringUtils.join(backupIdList));
+    }
+    Put put = createPutForDeleteOperation(backupIdList);
+    try (Table table = connection.getTable(tableName)) {
+      table.put(put);
+    }
+  }
+
+  public void finishDeleteOperation() throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Finsih delete operation for backup ids ");
+    }
+    Delete delete = createDeleteForBackupDeleteOperation();
+    try (Table table = connection.getTable(tableName)) {
+      table.delete(delete);
+    }
+  }
+
+  public String[] getListOfBackupIdsFromDeleteOperation() throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Get delete operation for backup ids ");
+    }
+    Get get = createGetForDeleteOperation();
+    try (Table table = connection.getTable(tableName)) {
+      Result res = table.get(get);
+      if (res.isEmpty()) {
+        return null;
+      }
+      Cell cell = res.listCells().get(0);
+      byte[] val = CellUtil.cloneValue(cell);
+      if (val.length == 0) {
+        return null;
+      }
+      return new String(val).split(",");
+    }
   }
 
   static Scan createScanForOrigBulkLoadedFiles(TableName table) throws IOException {

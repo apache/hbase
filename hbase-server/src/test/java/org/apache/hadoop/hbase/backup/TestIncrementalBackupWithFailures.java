@@ -69,7 +69,7 @@ public class TestIncrementalBackupWithFailures extends TestBackupBase {
 
   // implement all test cases in 1 test since incremental backup/restore has dependencies
   @Test
-  public void TestIncBackupRestore() throws Exception {
+  public void testIncBackupRestore() throws Exception {
 
     int ADD_ROWS = 99;
     // #1 - create full backup for all tables

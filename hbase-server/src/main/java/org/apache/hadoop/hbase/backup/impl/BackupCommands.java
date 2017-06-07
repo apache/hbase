@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupAdmin;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRequest;
@@ -148,6 +149,18 @@ public final class BackupCommands  {
           }
         }
       }
+      if (requiresConsistentState()) {
+        // Check failed delete
+        try (BackupSystemTable table = new BackupSystemTable(conn);) {
+          String[] ids = table.getListOfBackupIdsFromDeleteOperation();
+
+          if(ids !=null && ids.length > 0) {
+            System.err.println("Found failed backup delete coommand. ");
+            System.err.println("Backup system recovery is required.");
+            throw new IOException("Failed backup delete found, aborted command execution");
+          }
+        }
+      }
     }
 
     public void finish() throws IOException {
@@ -163,6 +176,15 @@ public final class BackupCommands  {
      * @return true if no active sessions are in progress
      */
     protected boolean requiresNoActiveSession() {
+      return false;
+    }
+    /**
+     * Command requires consistent state of a backup system
+     * Backup system may become inconsistent because of an abnormal
+     * termination of a backup session or delete command
+     * @return true, if yes
+     */
+    protected boolean requiresConsistentState() {
       return false;
     }
   }
@@ -220,6 +242,11 @@ public final class BackupCommands  {
 
     @Override
     protected boolean requiresNoActiveSession() {
+      return true;
+    }
+
+    @Override
+    protected boolean requiresConsistentState() {
       return true;
     }
 
@@ -556,7 +583,9 @@ public final class BackupCommands  {
         List<BackupInfo> list = sysTable.getBackupInfos(BackupState.RUNNING);
         if (list.size() == 0) {
           // No failed sessions found
-          System.out.println("REPAIR status: no failed sessions found.");
+          System.out.println("REPAIR status: no failed sessions found."
+          +" Checking failed delete backup operation ...");
+          repairFailedBackupDeletionIfAny(conn, sysTable);
           return;
         }
         backupInfo = list.get(0);
@@ -581,6 +610,29 @@ public final class BackupCommands  {
         System.out.println("REPAIR status: finished repair failed session:\n "+ backupInfo);
 
       }
+    }
+
+    private void repairFailedBackupDeletionIfAny(Connection conn, BackupSystemTable sysTable)
+        throws IOException
+    {
+      String[] backupIds = sysTable.getListOfBackupIdsFromDeleteOperation();
+      if (backupIds == null ||backupIds.length == 0) {
+        System.out.println("No failed backup delete operation found");
+        // Delete backup table snapshot if exists
+        BackupSystemTable.deleteSnapshot(conn);
+        return;
+      }
+      System.out.println("Found failed delete operation for: " + StringUtils.join(backupIds));
+      System.out.println("Running delete again ...");
+      // Restore table from snapshot
+      BackupSystemTable.restoreFromSnapshot(conn);
+      // Finish previous failed session
+      sysTable.finishBackupSession();
+      try(BackupAdmin admin = new BackupAdminImpl(conn);) {
+        admin.deleteBackups(backupIds);
+      }
+      System.out.println("Delete operation finished OK: "+ StringUtils.join(backupIds));
+
     }
 
     @Override

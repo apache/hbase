@@ -54,7 +54,7 @@ public class TestIncrementalBackupDeleteTable extends TestBackupBase {
 
   // implement all test cases in 1 test since incremental backup/restore has dependencies
   @Test
-  public void TestIncBackupDeleteTable() throws Exception {
+  public void testIncBackupDeleteTable() throws Exception {
     // #1 - create full backup for all tables
     LOG.info("create full backup image for all tables");
 

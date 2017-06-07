@@ -42,6 +42,12 @@ public class TestRemoteBackup extends TestBackupBase {
 
   private static final Log LOG = LogFactory.getLog(TestRemoteBackup.class);
 
+  @Override
+  public void setUp () throws Exception {
+    useSecondCluster = true;
+    super.setUp();
+  }
+
   /**
    * Verify that a remote full backup is created on a single table with data correctly.
    * @throws Exception

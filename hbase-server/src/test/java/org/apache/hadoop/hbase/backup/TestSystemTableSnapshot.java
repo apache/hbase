@@ -32,11 +32,10 @@ public class TestSystemTableSnapshot extends TestBackupBase {
   private static final Log LOG = LogFactory.getLog(TestSystemTableSnapshot.class);
 
   /**
-   * Verify that a single table is restored to a new table
+   * Verify backup system table snapshot
    * @throws Exception
    */
-  //@Test - Disabled until we get resolution on system table snapshots
-
+ // @Test
   public void _testBackupRestoreSystemTable() throws Exception {
 
     LOG.info("test snapshot system table");

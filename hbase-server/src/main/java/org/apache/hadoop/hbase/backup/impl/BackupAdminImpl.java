@@ -97,21 +97,81 @@ public class BackupAdminImpl implements BackupAdmin {
     int totalDeleted = 0;
     Map<String, HashSet<TableName>> allTablesMap = new HashMap<String, HashSet<TableName>>();
 
+    boolean deleteSessionStarted = false;
+    boolean snapshotDone = false;
     try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
-      for (int i = 0; i < backupIds.length; i++) {
-        BackupInfo info = sysTable.readBackupInfo(backupIds[i]);
-        if (info != null) {
-          String rootDir = info.getBackupRootDir();
-          HashSet<TableName> allTables = allTablesMap.get(rootDir);
-          if (allTables == null) {
-            allTables = new HashSet<TableName>();
-            allTablesMap.put(rootDir, allTables);
+
+      // Step 1: Make sure there is no active session
+      // is running by using startBackupSession API
+      // If there is an active session in progress, exception will be thrown
+      try {
+        sysTable.startBackupSession();
+        deleteSessionStarted = true;
+      } catch (IOException e) {
+        LOG.warn("You can not run delete command while active backup session is in progress. \n"
+            + "If there is no active backup session running, run backup repair utility to restore \n"
+            +"backup system integrity.");
+        return -1;
+      }
+
+      // Step 2: Make sure there is no failed session
+      List<BackupInfo> list = sysTable.getBackupInfos(BackupState.RUNNING);
+      if (list.size() != 0) {
+        // ailed sessions found
+        LOG.warn("Failed backup session found. Run backup repair tool first.");
+        return -1;
+      }
+
+      // Step 3: Record delete session
+      sysTable.startDeleteOperation(backupIds);
+      // Step 4: Snapshot backup system table
+      if (!BackupSystemTable.snapshotExists(conn)) {
+          BackupSystemTable.snapshot(conn);
+      } else {
+        LOG.warn("Backup system table snapshot exists");
+      }
+      snapshotDone = true;
+      try {
+        for (int i = 0; i < backupIds.length; i++) {
+          BackupInfo info = sysTable.readBackupInfo(backupIds[i]);
+          if (info != null) {
+            String rootDir = info.getBackupRootDir();
+            HashSet<TableName> allTables = allTablesMap.get(rootDir);
+            if (allTables == null) {
+              allTables = new HashSet<TableName>();
+              allTablesMap.put(rootDir, allTables);
+            }
+            allTables.addAll(info.getTableNames());
+            totalDeleted += deleteBackup(backupIds[i], sysTable);
           }
-          allTables.addAll(info.getTableNames());
-          totalDeleted += deleteBackup(backupIds[i], sysTable);
+        }
+        finalizeDelete(allTablesMap, sysTable);
+        // Finish
+        sysTable.finishDeleteOperation();
+        // delete snapshot
+        BackupSystemTable.deleteSnapshot(conn);
+      } catch (IOException e) {
+        // Fail delete operation
+        // Step 1
+        if (snapshotDone) {
+          if(BackupSystemTable.snapshotExists(conn)) {
+            BackupSystemTable.restoreFromSnapshot(conn);
+            // delete snapshot
+            BackupSystemTable.deleteSnapshot(conn);
+            // We still have record with unfinished delete operation
+            LOG.error("Delete operation failed, please run backup repair utility to restore "+
+                       "backup system integrity", e);
+            throw e;
+          } else {
+            LOG.warn("Delete operation succeeded, there were some errors: ", e);
+          }
+        }
+
+      } finally {
+        if (deleteSessionStarted) {
+          sysTable.finishBackupSession();
         }
       }
-      finalizeDelete(allTablesMap, sysTable);
     }
     return totalDeleted;
   }
@@ -169,6 +229,7 @@ public class BackupAdminImpl implements BackupAdmin {
     int totalDeleted = 0;
     if (backupInfo != null) {
       LOG.info("Deleting backup " + backupInfo.getBackupId() + " ...");
+      // Step 1: clean up data for backup session (idempotent)
       BackupUtils.cleanupBackupData(backupInfo, conn.getConfiguration());
       // List of tables in this backup;
       List<TableName> tables = backupInfo.getTableNames();
@@ -179,7 +240,7 @@ public class BackupAdminImpl implements BackupAdmin {
           continue;
         }
         // else
-        List<BackupInfo> affectedBackups = getAffectedBackupInfos(backupInfo, tn, sysTable);
+        List<BackupInfo> affectedBackups = getAffectedBackupSessions(backupInfo, tn, sysTable);
         for (BackupInfo info : affectedBackups) {
           if (info.equals(backupInfo)) {
             continue;
@@ -189,7 +250,7 @@ public class BackupAdminImpl implements BackupAdmin {
       }
       Map<byte[], String> map = sysTable.readBulkLoadedFiles(backupId);
       FileSystem fs = FileSystem.get(conn.getConfiguration());
-      boolean succ = true;
+      boolean success = true;
       int numDeleted = 0;
       for (String f : map.values()) {
         Path p = new Path(f);
@@ -198,20 +259,20 @@ public class BackupAdminImpl implements BackupAdmin {
           if (!fs.delete(p)) {
             if (fs.exists(p)) {
               LOG.warn(f + " was not deleted");
-              succ = false;
+              success = false;
             }
           } else {
             numDeleted++;
           }
         } catch (IOException ioe) {
           LOG.warn(f + " was not deleted", ioe);
-          succ = false;
+          success = false;
         }
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug(numDeleted + " bulk loaded files out of " + map.size() + " were deleted");
       }
-      if (succ) {
+      if (success) {
         sysTable.deleteBulkLoadedFiles(map);
       }
 
@@ -236,17 +297,18 @@ public class BackupAdminImpl implements BackupAdmin {
         LOG.debug("Delete backup info " + info.getBackupId());
 
         sysTable.deleteBackupInfo(info.getBackupId());
+        // Idempotent operation
         BackupUtils.cleanupBackupData(info, conn.getConfiguration());
       } else {
         info.setTables(tables);
         sysTable.updateBackupInfo(info);
-        // Now, clean up directory for table
+        // Now, clean up directory for table (idempotent)
         cleanupBackupDir(info, tn, conn.getConfiguration());
       }
     }
   }
 
-  private List<BackupInfo> getAffectedBackupInfos(BackupInfo backupInfo, TableName tn,
+  private List<BackupInfo> getAffectedBackupSessions(BackupInfo backupInfo, TableName tn,
       BackupSystemTable table) throws IOException {
     LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn);
     long ts = backupInfo.getStartTs();

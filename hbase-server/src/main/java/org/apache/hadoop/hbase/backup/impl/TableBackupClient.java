@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -109,7 +108,7 @@ public abstract class TableBackupClient {
   protected void beginBackup(BackupManager backupManager, BackupInfo backupInfo)
       throws IOException {
 
-    snapshotBackupTable();
+    BackupSystemTable.snapshot(conn);
     backupManager.setBackupInfo(backupInfo);
     // set the start timestamp of the overall backup
     long startTs = EnvironmentEdgeManager.currentTime();
@@ -269,69 +268,15 @@ public abstract class TableBackupClient {
        deleteSnapshots(conn, backupInfo, conf);
        cleanupExportSnapshotLog(conf);
      }
-     restoreBackupTable(conn, conf);
-     deleteBackupTableSnapshot(conn, conf);
+     BackupSystemTable.restoreFromSnapshot(conn);
+     BackupSystemTable.deleteSnapshot(conn);
      // clean up the uncompleted data at target directory if the ongoing backup has already entered
      // the copy phase
      // For incremental backup, DistCp logs will be cleaned with the targetDir.
      cleanupTargetDir(backupInfo, conf);
   }
 
-  protected void snapshotBackupTable() throws IOException {
 
-    try (Admin admin = conn.getAdmin();){
-      admin.snapshot(BackupSystemTable.getSnapshotName(conf),
-        BackupSystemTable.getTableName(conf));
-    }
-  }
-
-  protected static void restoreBackupTable(Connection conn, Configuration conf)
-      throws IOException {
-
-    LOG.debug("Restoring " + BackupSystemTable.getTableNameAsString(conf) +
-        " from snapshot");
-    try (Admin admin = conn.getAdmin();) {
-      String snapshotName = BackupSystemTable.getSnapshotName(conf);
-      if (snapshotExists(admin, snapshotName)) {
-        admin.disableTable(BackupSystemTable.getTableName(conf));
-        admin.restoreSnapshot(snapshotName);
-        admin.enableTable(BackupSystemTable.getTableName(conf));
-        LOG.debug("Done restoring backup system table");
-      } else {
-        // Snapshot does not exists, i.e completeBackup failed after
-        // deleting backup system table snapshot
-        // In this case we log WARN and proceed
-        LOG.error("Could not restore backup system table. Snapshot " + snapshotName+
-          " does not exists.");
-      }
-    }
-  }
-
-  protected static boolean snapshotExists(Admin admin, String snapshotName) throws IOException {
-
-    List<SnapshotDescription> list = admin.listSnapshots();
-    for (SnapshotDescription desc: list) {
-      if (desc.getName().equals(snapshotName)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  protected static void deleteBackupTableSnapshot(Connection conn, Configuration conf)
-      throws IOException {
-    LOG.debug("Deleting " + BackupSystemTable.getSnapshotName(conf) +
-        " from the system");
-    try (Admin admin = conn.getAdmin();) {
-      String snapshotName = BackupSystemTable.getSnapshotName(conf);
-      if (snapshotExists(admin, snapshotName)) {
-        admin.deleteSnapshot(snapshotName);
-        LOG.debug("Done deleting backup system table snapshot");
-      } else {
-        LOG.error("Snapshot "+snapshotName+" does not exists");
-      }
-    }
-  }
 
   /**
    * Add manifest for the current backup. The manifest is stored within the table backup directory.
@@ -457,7 +402,7 @@ public abstract class TableBackupClient {
     } else if (type == BackupType.INCREMENTAL) {
       cleanupDistCpLog(backupInfo, conf);
     }
-    deleteBackupTableSnapshot(conn, conf);
+    BackupSystemTable.deleteSnapshot(conn);
     backupManager.updateBackupInfo(backupInfo);
 
     // Finish active session

@@ -66,9 +66,8 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.Before;
 
 /**
  * This class is only a base for other integration-level backup tests. Do not add tests here.
@@ -79,11 +78,11 @@ public class TestBackupBase {
 
   private static final Log LOG = LogFactory.getLog(TestBackupBase.class);
 
-  protected static Configuration conf1;
+  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static HBaseTestingUtility TEST_UTIL2;
+  protected static Configuration conf1 = TEST_UTIL.getConfiguration();
   protected static Configuration conf2;
 
-  protected static HBaseTestingUtility TEST_UTIL;
-  protected static HBaseTestingUtility TEST_UTIL2;
   protected static TableName table1 = TableName.valueOf("table1");
   protected static HTableDescriptor table1Desc;
   protected static TableName table2 = TableName.valueOf("table2");
@@ -105,6 +104,9 @@ public class TestBackupBase {
   protected static boolean secure = false;
 
   protected static boolean autoRestoreOnFailure = true;
+  protected static boolean setupIsDone = false;
+  protected static boolean useSecondCluster = false;
+
 
   static class IncrementalTableBackupClientForTest extends IncrementalTableBackupClient
   {
@@ -281,10 +283,11 @@ public class TestBackupBase {
   /**
    * @throws java.lang.Exception
    */
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
-    conf1 = TEST_UTIL.getConfiguration();
+  @Before
+  public void setUp() throws Exception {
+    if (setupIsDone) {
+      return;
+    }
     if (secure) {
       // set the always on security provider
       UserProvider.setUserProviderForTesting(TEST_UTIL.getConfiguration(),
@@ -301,24 +304,27 @@ public class TestBackupBase {
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     // Set MultiWAL (with 2 default WAL files per RS)
     conf1.set(WALFactory.WAL_PROVIDER, provider);
-    TEST_UTIL.startMiniZKCluster();
-    MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
-
-    conf2 = HBaseConfiguration.create(conf1);
-    conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
-    TEST_UTIL2 = new HBaseTestingUtility(conf2);
-    TEST_UTIL2.setZkCluster(miniZK);
     TEST_UTIL.startMiniCluster();
-    TEST_UTIL2.startMiniCluster();
+
+    if (useSecondCluster) {
+      conf2 = HBaseConfiguration.create(conf1);
+      conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
+      TEST_UTIL2 = new HBaseTestingUtility(conf2);
+      TEST_UTIL2.setZkCluster(TEST_UTIL.getZkCluster());
+      TEST_UTIL2.startMiniCluster();
+    }
     conf1 = TEST_UTIL.getConfiguration();
 
     TEST_UTIL.startMiniMapReduceCluster();
     BACKUP_ROOT_DIR = TEST_UTIL.getConfiguration().get("fs.defaultFS") + "/backupUT";
     LOG.info("ROOTDIR " + BACKUP_ROOT_DIR);
-    BACKUP_REMOTE_ROOT_DIR = TEST_UTIL2.getConfiguration().get("fs.defaultFS") + "/backupUT";
-    LOG.info("REMOTE ROOTDIR " + BACKUP_REMOTE_ROOT_DIR);
+    if (useSecondCluster) {
+      BACKUP_REMOTE_ROOT_DIR = TEST_UTIL2.getConfiguration().get("fs.defaultFS") + "/backupUT";
+      LOG.info("REMOTE ROOTDIR " + BACKUP_REMOTE_ROOT_DIR);
+    }
     createTables();
     populateFromMasterConfig(TEST_UTIL.getHBaseCluster().getMaster().getConfiguration(), conf1);
+    setupIsDone = true;
   }
 
   private static void populateFromMasterConfig(Configuration masterConf, Configuration conf) {
@@ -333,10 +339,15 @@ public class TestBackupBase {
    * @throws java.lang.Exception
    */
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getHBaseAdmin());
+  public static void tearDown() throws Exception {
+    try{
+      SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getHBaseAdmin());
+    } catch (Exception e) {
+    }
     SnapshotTestingUtils.deleteArchiveDirectory(TEST_UTIL);
-    TEST_UTIL2.shutdownMiniCluster();
+    if (useSecondCluster) {
+      TEST_UTIL2.shutdownMiniCluster();
+    }
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.shutdownMiniMapReduceCluster();
   }

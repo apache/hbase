@@ -27,6 +27,13 @@ public class TestRemoteRestore extends TestBackupBase {
 
   private static final Log LOG = LogFactory.getLog(TestRemoteRestore.class);
 
+  @Override
+  public void setUp () throws Exception {
+    useSecondCluster = true;
+    super.setUp();
+  }
+
+
   /**
    * Verify that a remote restore on a single table is successful.
    * @throws Exception
