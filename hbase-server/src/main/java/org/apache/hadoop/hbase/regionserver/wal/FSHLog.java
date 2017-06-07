@@ -47,11 +47,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.*;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -152,6 +148,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   private final int closeErrorsTolerated;
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
+
+  // Last time to check low replication on hlog's pipeline
+  private volatile long lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
+
 
   /**
    * Exception handler to pass the disruptor ringbuffer. Same as native implementation only it logs
@@ -629,7 +629,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   /**
    * Schedule a log roll if needed.
    */
-  void checkLogRoll() {
+  public void checkLogRoll() {
     // Will return immediately if we are in the middle of a WAL log roll currently.
     if (!rollWriterLock.tryLock()) {
       return;
@@ -650,6 +650,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    */
   private boolean checkLowReplication() {
     boolean logRollNeeded = false;
+    this.lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
     // if the number of replicas in HDFS has fallen below the configured
     // value, then roll logs.
     try {
@@ -1185,5 +1186,13 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       }
     }
     return new DatanodeInfo[0];
+  }
+
+  /**
+   *
+   * @return last time on checking low replication
+   */
+  public long getLastTimeCheckLowReplication() {
+    return this.lastTimeCheckLowReplication;
   }
 }

@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -61,6 +62,8 @@ public class LogRoller extends HasThread implements Closeable {
   // Period to roll log.
   private final long rollperiod;
   private final int threadWakeFrequency;
+  // The interval to check low replication on hlog's pipeline
+  private long checkLowReplicationInterval;
 
   private volatile boolean running = true;
 
@@ -99,6 +102,8 @@ public class LogRoller extends HasThread implements Closeable {
       getLong("hbase.regionserver.logroll.period", 3600000);
     this.threadWakeFrequency = this.server.getConfiguration().
       getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.checkLowReplicationInterval = this.server.getConfiguration().getLong(
+        "hbase.regionserver.hlog.check.lowreplication.interval", 30 * 1000);
   }
 
   @Override
@@ -110,10 +115,32 @@ public class LogRoller extends HasThread implements Closeable {
     super.interrupt();
   }
 
+  /**
+   * we need to check low replication in period, see HBASE-18132
+   */
+  void checkLowReplication(long now) {
+    try {
+      for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+        WAL wal = entry.getKey();
+        boolean neeRollAlready = entry.getValue();
+        if(wal instanceof FSHLog && !neeRollAlready) {
+          FSHLog hlog = (FSHLog)wal;
+          if ((now - hlog.getLastTimeCheckLowReplication())
+              > this.checkLowReplicationInterval) {
+            hlog.checkLogRoll();
+          }
+        }
+      }
+    } catch (Throwable e) {
+      LOG.warn("Failed checking low replication", e);
+    }
+  }
+
   @Override
   public void run() {
     while (running) {
       long now = System.currentTimeMillis();
+      checkLowReplication(now);
       boolean periodic = false;
       if (!rollLog.get()) {
         periodic = (now - this.lastrolltime) > this.rollperiod;
