@@ -27,6 +27,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.NoSuchElementException;
 import java.util.Queue;
+import java.util.Random;
 import java.util.LinkedList;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -116,6 +117,37 @@ public class TestPerformanceEvaluation {
     opts.valueRandom = true;
     opts = PerformanceEvaluation.calculateRowsAndSize(opts);
     assertEquals(defaultPerClientRunRows * 2, opts.getPerClientRunRows());
+  }
+
+  @Test
+  public void testRandomReadCalculation() {
+    TestOptions opts = new PerformanceEvaluation.TestOptions();
+    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
+    int rows = opts.getPerClientRunRows();
+    // Default row count
+    final int defaultPerClientRunRows = 1024 * 1024;
+    assertEquals(defaultPerClientRunRows, rows);
+    // If size is 2G, then twice the row count.
+    opts.setSize(2.0f);
+    opts.setPerClientRunRows(1000);
+    opts.setCmdName(PerformanceEvaluation.RANDOM_READ);
+    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
+    assertEquals(1000, opts.getPerClientRunRows());
+    // If two clients, then they get half the rows each.
+    opts.setNumClientThreads(2);
+    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
+    assertEquals(1000, opts.getPerClientRunRows());
+    Random random = new Random();
+    // assuming we will get one before this loop expires
+    boolean foundValue = false;
+    for (int i = 0; i < 10000000; i++) {
+      int randomRow = PerformanceEvaluation.generateRandomRow(random, opts.totalRows);
+      if (randomRow > 1000) {
+        foundValue = true;
+        break;
+      }
+    }
+    assertTrue("We need to get a value more than 1000", foundValue);
   }
 
   @Test
