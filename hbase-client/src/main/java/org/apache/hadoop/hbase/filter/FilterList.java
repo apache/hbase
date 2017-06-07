@@ -27,6 +27,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -144,7 +145,7 @@ final public class FilterList extends FilterBase {
 
   public void initPrevListForMustPassOne(int size) {
     if (operator == Operator.MUST_PASS_ONE) {
-      if (this.prevCellList == null) {
+      if (this.prevFilterRCList == null) {
         prevFilterRCList = new ArrayList<>(Collections.nCopies(size, null));
       }
       if (this.prevCellList == null) {
@@ -403,7 +404,14 @@ final public class FilterList extends FilterBase {
         ReturnCode localRC = filter.filterKeyValue(c);
         // Update previous cell and return code we encountered.
         prevFilterRCList.set(i, localRC);
-        prevCellList.set(i, c);
+        if (c == null || localRC == ReturnCode.INCLUDE || localRC == ReturnCode.SKIP) {
+          // If previous return code is INCLUDE or SKIP, we should always pass the next cell to the
+          // corresponding sub-filter(need not test shouldPassCurrentCellToFilter() method), So we
+          // need not save current cell to prevCellList for saving heap memory.
+          prevCellList.set(i, null);
+        } else {
+          prevCellList.set(i, KeyValueUtil.toNewKeyCell(c));
+        }
 
         if (localRC != ReturnCode.SEEK_NEXT_USING_HINT) {
           seenNonHintReturnCode = true;
