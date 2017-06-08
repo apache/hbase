@@ -15,65 +15,65 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-/** Tests the HColumnDescriptor with appropriate arguments */
 @Category({MiscTests.class, SmallTests.class})
-@Deprecated
-public class TestHColumnDescriptor {
+public class TestColumnFamilyDescriptorBuilder {
   @Test
-  public void testPb() throws DeserializationException {
-    HColumnDescriptor hcd = new HColumnDescriptor(
-        new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+  public void testBuilder() throws DeserializationException {
+    ColumnFamilyDescriptorBuilder builder
+      = ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
             .setInMemory(true)
             .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
             .setBloomFilterType(BloomType.NONE)
-            .setCacheDataInL1(true));
+            .setCacheDataInL1(true);
     final int v = 123;
-    hcd.setBlocksize(v);
-    hcd.setTimeToLive(v);
-    hcd.setBlockCacheEnabled(!HColumnDescriptor.DEFAULT_BLOCKCACHE);
-    hcd.setValue("a", "b");
-    hcd.setMaxVersions(v);
-    assertEquals(v, hcd.getMaxVersions());
-    hcd.setMinVersions(v);
-    assertEquals(v, hcd.getMinVersions());
-    hcd.setKeepDeletedCells(KeepDeletedCells.TRUE);
-    hcd.setInMemory(!HColumnDescriptor.DEFAULT_IN_MEMORY);
-    boolean inmemory = hcd.isInMemory();
-    hcd.setScope(v);
-    hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
-    hcd.setBloomFilterType(BloomType.ROW);
-    hcd.setCompressionType(Algorithm.SNAPPY);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(1000L);
-    hcd.setDFSReplication((short) v);
+    builder.setBlocksize(v);
+    builder.setTimeToLive(v);
+    builder.setBlockCacheEnabled(!HColumnDescriptor.DEFAULT_BLOCKCACHE);
+    builder.setValue(Bytes.toBytes("a"), Bytes.toBytes("b"));
+    builder.setMaxVersions(v);
+    assertEquals(v, builder.build().getMaxVersions());
+    builder.setMinVersions(v);
+    assertEquals(v, builder.build().getMinVersions());
+    builder.setKeepDeletedCells(KeepDeletedCells.TRUE);
+    builder.setInMemory(!HColumnDescriptor.DEFAULT_IN_MEMORY);
+    boolean inmemory = builder.build().isInMemory();
+    builder.setScope(v);
+    builder.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
+    builder.setBloomFilterType(BloomType.ROW);
+    builder.setCompressionType(Algorithm.SNAPPY);
+    builder.setMobEnabled(true);
+    builder.setMobThreshold(1000L);
+    builder.setDFSReplication((short) v);
 
-    byte [] bytes = hcd.toByteArray();
-    HColumnDescriptor deserializedHcd = HColumnDescriptor.parseFrom(bytes);
+    ColumnFamilyDescriptor hcd = builder.build();
+    byte [] bytes = ColumnFamilyDescriptorBuilder.toByteArray(hcd);
+    ColumnFamilyDescriptor deserializedHcd = ColumnFamilyDescriptorBuilder.parseFrom(bytes);
     assertTrue(hcd.equals(deserializedHcd));
     assertEquals(v, hcd.getBlocksize());
     assertEquals(v, hcd.getTimeToLive());
-    assertEquals(v, hcd.getScope());
-    assertEquals(hcd.getValue("a"), deserializedHcd.getValue("a"));
+    assertTrue(Bytes.equals(hcd.getValue(Bytes.toBytes("a")), deserializedHcd.getValue(Bytes.toBytes("a"))));
     assertEquals(hcd.getMaxVersions(), deserializedHcd.getMaxVersions());
     assertEquals(hcd.getMinVersions(), deserializedHcd.getMinVersions());
     assertEquals(hcd.getKeepDeletedCells(), deserializedHcd.getKeepDeletedCells());
@@ -92,7 +92,7 @@ public class TestHColumnDescriptor {
   public void testHColumnDescriptorShouldThrowIAEWhenFamiliyNameEmpty()
       throws Exception {
     try {
-      new HColumnDescriptor("".getBytes());
+      ColumnFamilyDescriptorBuilder.newBuilder("".getBytes()).build();
     } catch (IllegalArgumentException e) {
       assertEquals("Column Family name can not be empty", e.getLocalizedMessage());
     }
@@ -102,14 +102,15 @@ public class TestHColumnDescriptor {
    * Test that we add and remove strings from configuration properly.
    */
   @Test
-  public void testAddGetRemoveConfiguration() throws Exception {
-    HColumnDescriptor desc = new HColumnDescriptor("foo");
+  public void testAddGetRemoveConfiguration() {
+    ColumnFamilyDescriptorBuilder builder
+      = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
     String key = "Some";
     String value = "value";
-    desc.setConfiguration(key, value);
-    assertEquals(value, desc.getConfigurationValue(key));
-    desc.removeConfiguration(key);
-    assertEquals(null, desc.getConfigurationValue(key));
+    builder.setConfiguration(key, value);
+    assertEquals(value, builder.build().getConfigurationValue(key));
+    builder.removeConfiguration(key);
+    assertEquals(null, builder.build().getConfigurationValue(key));
   }
 
   @Test
@@ -144,40 +145,41 @@ public class TestHColumnDescriptor {
      * This test ensures that all methods starting with "set" returns the declaring object
      */
 
-    BuilderStyleTest.assertClassesAreBuilderStyle(HColumnDescriptor.class);
+    BuilderStyleTest.assertClassesAreBuilderStyle(ColumnFamilyDescriptorBuilder.class);
   }
 
   @Test
   public void testSetTimeToLive() throws HBaseException {
     String ttl;
-    HColumnDescriptor desc = new HColumnDescriptor("foo");
+    ColumnFamilyDescriptorBuilder builder
+      = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
 
     ttl = "50000";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(50000, desc.getTimeToLive());
+    builder.setTimeToLive(ttl);
+    Assert.assertEquals(50000, builder.build().getTimeToLive());
 
     ttl = "50000 seconds";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(50000, desc.getTimeToLive());
+    builder.setTimeToLive(ttl);
+    Assert.assertEquals(50000, builder.build().getTimeToLive());
 
     ttl = "";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(0, desc.getTimeToLive());
+    builder.setTimeToLive(ttl);
+    Assert.assertEquals(0, builder.build().getTimeToLive());
 
     ttl = "FOREVER";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(HConstants.FOREVER, desc.getTimeToLive());
+    builder.setTimeToLive(ttl);
+    Assert.assertEquals(HConstants.FOREVER, builder.build().getTimeToLive());
 
     ttl = "1 HOUR 10 minutes 1 second";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(4201, desc.getTimeToLive());
+    builder.setTimeToLive(ttl);
+    Assert.assertEquals(4201, builder.build().getTimeToLive());
 
     ttl = "500 Days 23 HOURS";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(43282800, desc.getTimeToLive());
+    builder.setTimeToLive(ttl);
+    Assert.assertEquals(43282800, builder.build().getTimeToLive());
 
     ttl = "43282800 SECONDS (500 Days 23 hours)";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(43282800, desc.getTimeToLive());
+    builder.setTimeToLive(ttl);
+    Assert.assertEquals(43282800, builder.build().getTimeToLive());
   }
 }

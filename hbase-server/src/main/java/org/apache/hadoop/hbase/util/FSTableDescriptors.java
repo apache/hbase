@@ -130,7 +130,7 @@ public class FSTableDescriptors implements TableDescriptors {
   public static HTableDescriptor createMetaTableDescriptor(final Configuration conf)
       throws IOException {
     return new HTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
-          .addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+          .addColumnFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY)
             .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
                     HConstants.DEFAULT_HBASE_META_VERSIONS))
             .setInMemory(true)
@@ -142,7 +142,7 @@ public class FSTableDescriptors implements TableDescriptors {
             // Enable cache of data blocks in L1 if more than one caching tier deployed:
             // e.g. if using CombinedBlockCache (BucketCache).
             .setCacheDataInL1(true))
-          .addFamily(new HColumnDescriptor(HConstants.REPLICATION_BARRIER_FAMILY)
+          .addColumnFamily(new HColumnDescriptor(HConstants.REPLICATION_BARRIER_FAMILY)
             .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
                     HConstants.DEFAULT_HBASE_META_VERSIONS))
             .setInMemory(true)
@@ -154,7 +154,7 @@ public class FSTableDescriptors implements TableDescriptors {
             // Enable cache of data blocks in L1 if more than one caching tier deployed:
             // e.g. if using CombinedBlockCache (BucketCache).
             .setCacheDataInL1(true))
-          .addFamily(new HColumnDescriptor(HConstants.REPLICATION_POSITION_FAMILY)
+          .addColumnFamily(new HColumnDescriptor(HConstants.REPLICATION_POSITION_FAMILY)
             .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
                     HConstants.DEFAULT_HBASE_META_VERSIONS))
             .setInMemory(true)
@@ -166,7 +166,7 @@ public class FSTableDescriptors implements TableDescriptors {
             // Enable cache of data blocks in L1 if more than one caching tier deployed:
             // e.g. if using CombinedBlockCache (BucketCache).
             .setCacheDataInL1(true))
-          .addFamily(new HColumnDescriptor(HConstants.REPLICATION_META_FAMILY)
+          .addColumnFamily(new HColumnDescriptor(HConstants.REPLICATION_META_FAMILY)
             .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
                     HConstants.DEFAULT_HBASE_META_VERSIONS))
             .setInMemory(true)
@@ -178,7 +178,7 @@ public class FSTableDescriptors implements TableDescriptors {
             // Enable cache of data blocks in L1 if more than one caching tier deployed:
             // e.g. if using CombinedBlockCache (BucketCache).
             .setCacheDataInL1(true))
-          .addFamily(new HColumnDescriptor(HConstants.TABLE_FAMILY)
+          .addColumnFamily(new HColumnDescriptor(HConstants.TABLE_FAMILY)
             // Ten is arbitrary number.  Keep versions to help debugging.
             .setMaxVersions(10)
             .setInMemory(true)

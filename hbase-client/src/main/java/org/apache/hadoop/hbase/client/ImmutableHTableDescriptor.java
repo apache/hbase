@@ -18,11 +18,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDescriptor;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Read-only table descriptor.
@@ -31,49 +31,28 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 public class ImmutableHTableDescriptor extends HTableDescriptor {
 
+  @Override
+  protected HColumnDescriptor toHColumnDescriptor(ColumnFamilyDescriptor desc) {
+    if (desc == null) {
+      return null;
+    } else if (desc instanceof ModifyableColumnFamilyDescriptor) {
+      return new ImmutableHColumnDescriptor((ModifyableColumnFamilyDescriptor) desc);
+    } else if (desc instanceof HColumnDescriptor) {
+      return new ImmutableHColumnDescriptor((HColumnDescriptor) desc);
+    } else {
+      return new ImmutableHColumnDescriptor(new ModifyableColumnFamilyDescriptor(desc));
+    }
+  }
   /*
    * Create an unmodifyable copy of an HTableDescriptor
    * @param desc
    */
   public ImmutableHTableDescriptor(final HTableDescriptor desc) {
-    super(new UnmodifyableTableDescriptor(desc));
+    super(desc, false);
   }
 
-  @Deprecated // deprecated for hbase 2.0, remove for hbase 3.0. see HTableDescriptor.
-  private static class UnmodifyableTableDescriptor extends ModifyableTableDescriptor {
-
-    UnmodifyableTableDescriptor(final TableDescriptor desc) {
-      super(desc);
-    }
-
-    @Override
-    protected ModifyableTableDescriptor setFamily(HColumnDescriptor family) {
-      throw new UnsupportedOperationException("HTableDescriptor is read-only");
-    }
-
-    @Override
-    public HColumnDescriptor removeFamily(final byte[] column) {
-      throw new UnsupportedOperationException("HTableDescriptor is read-only");
-    }
-
-    @Override
-    public ModifyableTableDescriptor setValue(final Bytes key, final Bytes value) {
-      throw new UnsupportedOperationException("HTableDescriptor is read-only");
-    }
-
-    @Override
-    public void remove(Bytes key) {
-      throw new UnsupportedOperationException("HTableDescriptor is read-only");
-    }
-
-    @Override
-    public ModifyableTableDescriptor setConfiguration(String key, String value) {
-      throw new UnsupportedOperationException("HTableDescriptor is read-only");
-    }
-
-    @Override
-    public void removeConfiguration(final String key) {
-      throw new UnsupportedOperationException("HTableDescriptor is read-only");
-    }
+  @Override
+  protected ModifyableTableDescriptor getDelegateeForModification() {
+    throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 }

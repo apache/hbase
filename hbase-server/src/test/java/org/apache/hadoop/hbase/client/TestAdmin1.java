@@ -526,7 +526,7 @@ public class TestAdmin1 {
       expectedException = true;
     }
     assertFalse(expectedException);
-    HTableDescriptor modifiedHtd = this.admin.getTableDescriptor(tableName);
+    HTableDescriptor modifiedHtd = new HTableDescriptor(this.admin.getTableDescriptor(tableName));
     assertFalse(htd.equals(modifiedHtd));
     assertTrue(copy.equals(modifiedHtd));
     assertEquals(newFlushSize, modifiedHtd.getMemStoreFlushSize());

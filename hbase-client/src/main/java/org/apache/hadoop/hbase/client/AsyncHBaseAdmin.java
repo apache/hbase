@@ -40,10 +40,10 @@ import com.google.common.annotations.VisibleForTesting;
 
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
+import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -645,7 +645,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> addColumnFamily(TableName tableName, HColumnDescriptor columnFamily) {
+  public CompletableFuture<Void> addColumnFamily(TableName tableName, ColumnFamilyDescriptor columnFamily) {
     return this.<AddColumnRequest, AddColumnResponse> procedureCall(
       RequestConverter.buildAddColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
         ng.newNonce()), (s, c, req, done) -> s.addColumn(c, req, done), (resp) -> resp.getProcId(),
@@ -662,7 +662,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> modifyColumnFamily(TableName tableName,
-      HColumnDescriptor columnFamily) {
+      ColumnFamilyDescriptor columnFamily) {
     return this.<ModifyColumnRequest, ModifyColumnResponse> procedureCall(
       RequestConverter.buildModifyColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
         ng.newNonce()), (s, c, req, done) -> s.modifyColumn(c, req, done),
@@ -1679,7 +1679,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
           Arrays.asList(tables).forEach(
             table -> {
               Map<String, Integer> cfs = new HashMap<>();
-              Arrays.asList(table.getColumnFamilies()).stream()
+              Stream.of(table.getColumnFamilies())
                   .filter(column -> column.getScope() != HConstants.REPLICATION_SCOPE_LOCAL)
                   .forEach(column -> {
                     cfs.put(column.getNameAsString(), column.getScope());

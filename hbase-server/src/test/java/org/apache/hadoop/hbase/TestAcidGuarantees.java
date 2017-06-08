@@ -101,7 +101,7 @@ public class TestAcidGuarantees implements Tool {
     }
 
     if (useMob) {
-      HTableDescriptor htd = util.getAdmin().getTableDescriptor(TABLE_NAME);
+      HTableDescriptor htd = new HTableDescriptor(util.getAdmin().getTableDescriptor(TABLE_NAME));
       HColumnDescriptor hcd =  htd.getColumnFamilies()[0];
       // force mob enabled such that all data is mob data
       hcd.setMobEnabled(true);

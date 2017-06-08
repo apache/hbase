@@ -18,11 +18,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -36,15 +38,34 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 public interface TableDescriptor {
 
-  /**
-   * Returns an array all the {@link HColumnDescriptor} of the column families
-   * of the table.
-   *
-   * @return Array of all the HColumnDescriptors of the current table
-   *
-   * @see #getFamilies()
-   */
-  HColumnDescriptor[] getColumnFamilies();
+  @InterfaceAudience.Private
+  static final Comparator<TableDescriptor> COMPARATOR
+    = (TableDescriptor lhs, TableDescriptor rhs) -> {
+      int result = lhs.getTableName().compareTo(rhs.getTableName());
+      if (result != 0) {
+        return result;
+      }
+      Collection<ColumnFamilyDescriptor> lhsFamilies = Arrays.asList(lhs.getColumnFamilies());
+      Collection<ColumnFamilyDescriptor> rhsFamilies = Arrays.asList(rhs.getColumnFamilies());
+      result = Integer.compare(lhsFamilies.size(), rhsFamilies.size());
+      if (result != 0) {
+        return result;
+      }
+
+      for (Iterator<ColumnFamilyDescriptor> it = lhsFamilies.iterator(),
+              it2 = rhsFamilies.iterator(); it.hasNext();) {
+        result = ColumnFamilyDescriptor.COMPARATOR.compare(it.next(), it2.next());
+        if (result != 0) {
+          return result;
+        }
+      }
+      // punt on comparison for ordering, just calculate difference
+      result = Integer.compare(lhs.getValues().hashCode(), rhs.getValues().hashCode());
+      if (result != 0) {
+        return result;
+      }
+      return Integer.compare(lhs.getConfiguration().hashCode(), rhs.getConfiguration().hashCode());
+  };
 
   /**
    * Returns the count of the column families of the table.
@@ -85,33 +106,33 @@ public interface TableDescriptor {
   Durability getDurability();
 
   /**
-   * Returns an unmodifiable collection of all the {@link HColumnDescriptor} of
+   * Returns an unmodifiable collection of all the {@link ColumnFamilyDescriptor} of
    * all the column families of the table.
    *
-   * @return Immutable collection of {@link HColumnDescriptor} of all the column
+   * @return An array of {@link ColumnFamilyDescriptor} of all the column
    * families.
    */
-  Collection<HColumnDescriptor> getFamilies();
+  ColumnFamilyDescriptor[] getColumnFamilies();
 
   /**
    * Returns all the column family names of the current table. The map of
-   * TableDescriptor contains mapping of family name to HColumnDescriptors.
+   * TableDescriptor contains mapping of family name to ColumnDescriptor.
    * This returns all the keys of the family map which represents the column
    * family names of the table.
    *
    * @return Immutable sorted set of the keys of the families.
    */
-  Set<byte[]> getFamiliesKeys();
+  Set<byte[]> getColumnFamilyNames();
 
   /**
-   * Returns the HColumnDescriptor for a specific column family with name as
+   * Returns the ColumnDescriptor for a specific column family with name as
    * specified by the parameter column.
    *
-   * @param column Column family name
+   * @param name Column family name
    * @return Column descriptor for the passed family name or the family on
    * passed in column.
    */
-  HColumnDescriptor getFamily(final byte[] column);
+  ColumnFamilyDescriptor getColumnFamily(final byte[] name);
 
   /**
    * This gets the class associated with the flush policy which determines the
@@ -168,10 +189,18 @@ public interface TableDescriptor {
   String getOwnerString();
 
   /**
-   * Getter for accessing the metadata associated with the key
+   * Getter for accessing the metadata associated with the key.
    *
    * @param key The key.
-   * @return The value.
+   * @return A clone value. Null if no mapping for the key
+   */
+  Bytes getValue(Bytes key);
+
+  /**
+   * Getter for accessing the metadata associated with the key.
+   *
+   * @param key The key.
+   * @return A clone value. Null if no mapping for the key
    */
   byte[] getValue(byte[] key);
 
@@ -192,10 +221,10 @@ public interface TableDescriptor {
   /**
    * Checks to see if this table contains the given column family
    *
-   * @param familyName Family name or column name.
+   * @param name Family name or column name.
    * @return true if the table contains the specified family name
    */
-  boolean hasFamily(final byte[] familyName);
+  boolean hasColumnFamily(final byte[] name);
 
   /**
    * @return true if the read-replicas memstore replication is enabled.

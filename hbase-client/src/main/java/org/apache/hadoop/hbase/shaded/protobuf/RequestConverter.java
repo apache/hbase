@@ -25,7 +25,6 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -1031,7 +1031,7 @@ public final class RequestConverter {
    */
   public static AddColumnRequest buildAddColumnRequest(
       final TableName tableName,
-      final HColumnDescriptor column,
+      final ColumnFamilyDescriptor column,
       final long nonceGroup,
       final long nonce) {
     AddColumnRequest.Builder builder = AddColumnRequest.newBuilder();
@@ -1071,7 +1071,7 @@ public final class RequestConverter {
    */
   public static ModifyColumnRequest buildModifyColumnRequest(
       final TableName tableName,
-      final HColumnDescriptor column,
+      final ColumnFamilyDescriptor column,
       final long nonceGroup,
       final long nonce) {
     ModifyColumnRequest.Builder builder = ModifyColumnRequest.newBuilder();

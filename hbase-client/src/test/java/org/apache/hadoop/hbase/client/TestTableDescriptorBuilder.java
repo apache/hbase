@@ -28,7 +28,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -109,7 +108,7 @@ public class TestTableDescriptorBuilder {
           .build();
 
     byte [] bytes = TableDescriptorBuilder.toByteArray(htd);
-    TableDescriptor deserializedHtd = TableDescriptorBuilder.newBuilder(bytes).build();
+    TableDescriptor deserializedHtd = TableDescriptorBuilder.parseFrom(bytes);
     assertEquals(htd, deserializedHtd);
     assertEquals(v, deserializedHtd.getMaxFileSize());
     assertTrue(deserializedHtd.isReadOnly());
@@ -195,7 +194,7 @@ public class TestTableDescriptorBuilder {
             .build();
     assertTrue(Bytes.equals(value, desc.getValue(key)));
     desc = TableDescriptorBuilder.newBuilder(desc)
-            .remove(key)
+            .removeValue(key)
             .build();
     assertTrue(desc.getValue(key) == null);
   }
@@ -299,24 +298,26 @@ public class TestTableDescriptorBuilder {
   @Test
   public void testModifyFamily() {
     byte[] familyName = Bytes.toBytes("cf");
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(1000);
-    hcd.setDFSReplication((short) 3);
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
+            .setBlocksize(1000)
+            .setDFSReplication((short) 3)
+            .build();
     TableDescriptor htd
       = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-              .addFamily(hcd)
+              .addColumnFamily(hcd)
               .build();
 
-    assertEquals(1000, htd.getFamily(familyName).getBlocksize());
-    assertEquals(3, htd.getFamily(familyName).getDFSReplication());
-    hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(2000);
-    hcd.setDFSReplication((short) 1);
+    assertEquals(1000, htd.getColumnFamily(familyName).getBlocksize());
+    assertEquals(3, htd.getColumnFamily(familyName).getDFSReplication());
+    hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
+            .setBlocksize(2000)
+            .setDFSReplication((short) 1)
+            .build();
     htd = TableDescriptorBuilder.newBuilder(htd)
-              .modifyFamily(hcd)
+              .modifyColumnFamily(hcd)
               .build();
-    assertEquals(2000, htd.getFamily(familyName).getBlocksize());
-    assertEquals(1, htd.getFamily(familyName).getDFSReplication());
+    assertEquals(2000, htd.getColumnFamily(familyName).getBlocksize());
+    assertEquals(1, htd.getColumnFamily(familyName).getDFSReplication());
   }
 
   @Test(expected=IllegalArgumentException.class)
@@ -325,23 +326,25 @@ public class TestTableDescriptorBuilder {
     HColumnDescriptor hcd = new HColumnDescriptor(familyName);
     TableDescriptor htd = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .modifyFamily(hcd)
+            .modifyColumnFamily(hcd)
             .build();
   }
 
   @Test(expected=IllegalArgumentException.class)
   public void testAddDuplicateFamilies() {
     byte[] familyName = Bytes.toBytes("cf");
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(1000);
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .addFamily(hcd)
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
+            .setBlocksize(1000)
             .build();
-    assertEquals(1000, htd.getFamily(familyName).getBlocksize());
-    hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(2000);
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+            .addColumnFamily(hcd)
+            .build();
+    assertEquals(1000, htd.getColumnFamily(familyName).getBlocksize());
+    hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
+            .setBlocksize(2000)
+            .build();
     // add duplicate column
-    TableDescriptorBuilder.newBuilder(htd).addFamily(hcd).build();
+    TableDescriptorBuilder.newBuilder(htd).addColumnFamily(hcd).build();
   }
 
   @Test
@@ -358,18 +361,18 @@ public class TestTableDescriptorBuilder {
     hcdWithScope.setScope(HConstants.REPLICATION_SCOPE_SERIAL);
     HColumnDescriptor hcdWithoutScope = new HColumnDescriptor(Bytes.toBytes("cf1"));
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .addFamily(hcdWithoutScope)
+            .addColumnFamily(hcdWithoutScope)
             .build();
     assertFalse(htd.hasSerialReplicationScope());
 
     htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .addFamily(hcdWithScope)
+            .addColumnFamily(hcdWithScope)
             .build();
     assertTrue(htd.hasSerialReplicationScope());
 
     htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .addFamily(hcdWithScope)
-            .addFamily(hcdWithoutScope)
+            .addColumnFamily(hcdWithScope)
+            .addColumnFamily(hcdWithoutScope)
             .build();
     assertTrue(htd.hasSerialReplicationScope());
   }

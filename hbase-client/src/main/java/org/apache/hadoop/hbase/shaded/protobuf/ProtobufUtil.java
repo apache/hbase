@@ -63,6 +63,8 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ClientUtil;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Cursor;
@@ -2924,7 +2926,7 @@ public final class ProtobufUtil {
    * @param hcd the HColummnDescriptor
    * @return Convert this instance to a the pb column family type
    */
-  public static ColumnFamilySchema convertToColumnFamilySchema(HColumnDescriptor hcd) {
+  public static ColumnFamilySchema convertToColumnFamilySchema(ColumnFamilyDescriptor hcd) {
     ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
     builder.setName(UnsafeByteOperations.unsafeWrap(hcd.getName()));
     for (Map.Entry<Bytes, Bytes> e : hcd.getValues().entrySet()) {
@@ -2947,6 +2949,7 @@ public final class ProtobufUtil {
    * @param cfs the ColumnFamilySchema
    * @return An {@link HColumnDescriptor} made from the passed in <code>cfs</code>
    */
+  @Deprecated
   public static HColumnDescriptor convertToHColumnDesc(final ColumnFamilySchema cfs) {
     // Use the empty constructor so we preserve the initial values set on construction for things
     // like maxVersion.  Otherwise, we pick up wrong values on deserialization which makes for
@@ -2959,6 +2962,22 @@ public final class ProtobufUtil {
       hcd.setConfiguration(a.getName(), a.getValue());
     }
     return hcd;
+  }
+
+  /**
+   * Converts a ColumnFamilySchema to HColumnDescriptor
+   * @param cfs the ColumnFamilySchema
+   * @return An {@link HColumnDescriptor} made from the passed in <code>cfs</code>
+   */
+  public static ColumnFamilyDescriptor convertToColumnDesc(final ColumnFamilySchema cfs) {
+    // Use the empty constructor so we preserve the initial values set on construction for things
+    // like maxVersion.  Otherwise, we pick up wrong values on deserialization which makes for
+    // unrelated-looking test failures that are hard to trace back to here.
+    ColumnFamilyDescriptorBuilder builder
+      = ColumnFamilyDescriptorBuilder.newBuilder(cfs.getName().toByteArray());
+    cfs.getAttributesList().forEach(a -> builder.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray()));
+    cfs.getConfigurationList().forEach(a -> builder.setConfiguration(a.getName(), a.getValue()));
+    return builder.build();
   }
 
   /**
@@ -2975,7 +2994,7 @@ public final class ProtobufUtil {
       aBuilder.setSecond(UnsafeByteOperations.unsafeWrap(e.getValue().get()));
       builder.addAttributes(aBuilder.build());
     }
-    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       builder.addColumnFamilies(convertToColumnFamilySchema(hcd));
     }
     for (Map.Entry<String, String> e : htd.getConfiguration().entrySet()) {
@@ -3024,8 +3043,8 @@ public final class ProtobufUtil {
       = TableDescriptorBuilder.newBuilder(ProtobufUtil.toTableName(ts.getTableName()));
     ts.getColumnFamiliesList()
       .stream()
-      .map(ProtobufUtil::convertToHColumnDesc)
-      .forEach(builder::addFamily);
+      .map(ProtobufUtil::convertToColumnDesc)
+      .forEach(builder::addColumnFamily);
     ts.getAttributesList()
       .forEach(a -> builder.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray()));
     ts.getConfigurationList()
