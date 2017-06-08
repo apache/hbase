@@ -2833,7 +2833,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @see org.apache.hadoop.hbase.master.HMasterCommandLine
    */
   public static void main(String [] args) {
-    LOG.info("STARTING service '" + HMaster.class.getSimpleName());
+    LOG.info("STARTING service " + HMaster.class.getSimpleName());
     VersionInfo.logVersion();
     new HMasterCommandLine(HMaster.class).doMain(args);
   }
