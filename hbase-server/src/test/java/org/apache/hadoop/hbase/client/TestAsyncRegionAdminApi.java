@@ -417,6 +417,25 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   }
 
   @Test
+  public void testGetRegionByStateOfTable() throws Exception {
+    final TableName tableName = TableName.valueOf("testGetRegionByStateOfTable");
+    try {
+      HRegionInfo hri = createTableAndGetOneRegion(tableName);
+
+      RegionStates regionStates =
+          TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+      assertTrue(regionStates.getRegionByStateOfTable(tableName)
+              .get(RegionState.State.OPEN)
+              .contains(hri));
+      assertFalse(regionStates.getRegionByStateOfTable(TableName.valueOf("I_am_the_phantom"))
+              .get(RegionState.State.OPEN)
+              .contains(hri));
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
   public void testMoveRegion() throws Exception {
     final TableName tableName = TableName.valueOf("testMoveRegion");
     try {

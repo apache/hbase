@@ -686,7 +686,9 @@ public class RegionStates {
     }
 
     for (RegionStateNode node: regionsMap.values()) {
-      tableRegions.get(node.getState()).add(node.getRegionInfo());
+      if (node.getTable().equals(tableName)) {
+        tableRegions.get(node.getState()).add(node.getRegionInfo());
+      }
     }
     return tableRegions;
   }
