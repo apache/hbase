@@ -158,6 +158,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>allan163</id>
+      <name>Allan Yang</name>
+      <email>allan163@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>appy</id>
       <name>Apekshit Sharma</name>
       <email>appy@apache.org</email>
