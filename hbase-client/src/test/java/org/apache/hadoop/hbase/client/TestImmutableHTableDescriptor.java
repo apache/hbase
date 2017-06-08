@@ -72,15 +72,36 @@ public class TestImmutableHTableDescriptor {
 
   @Test
   public void testImmutable() {
-    ImmutableHTableDescriptor htd = new ImmutableHTableDescriptor(
-      new HTableDescriptor(TableName.valueOf(name.getMethodName())));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    ImmutableHTableDescriptor immutableHtd = new ImmutableHTableDescriptor(htd);
     TEST_FUNCTION.forEach(f -> {
       try {
-        f.accept(htd);
+        f.accept(immutableHtd);
         fail("ImmutableHTableDescriptor can't be modified!!!");
       } catch (UnsupportedOperationException e) {
       }
     });
+  }
+
+  @Test
+  public void testImmutableHColumnDescriptor() {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    htd.addFamily(new HColumnDescriptor(Bytes.toBytes("family")));
+    ImmutableHTableDescriptor immutableHtd = new ImmutableHTableDescriptor(htd);
+    for (HColumnDescriptor hcd : immutableHtd.getColumnFamilies()) {
+      assertReadOnly(hcd);
+    }
+    for (HColumnDescriptor hcd : immutableHtd.getFamilies()) {
+      assertReadOnly(hcd);
+    }
+  }
+
+  private void assertReadOnly(HColumnDescriptor hcd) {
+    try {
+      hcd.setBlocksize(10);
+      fail("ImmutableHColumnDescriptor can't be modified!!!");
+    } catch (UnsupportedOperationException e) {
+    }
   }
 
   @Test

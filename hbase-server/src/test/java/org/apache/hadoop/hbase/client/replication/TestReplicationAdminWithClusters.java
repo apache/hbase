@@ -104,7 +104,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test(timeout = 300000)
   public void testEnableReplicationWhenReplicationNotEnabled() throws Exception {
-    HTableDescriptor table = admin1.getTableDescriptor(tableName);
+    HTableDescriptor table = new HTableDescriptor(admin1.getTableDescriptor(tableName));
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       fam.setScope(HConstants.REPLICATION_SCOPE_LOCAL);
     }

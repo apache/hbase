@@ -725,7 +725,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       admin.modifyColumnFamily(tableName, cfDescriptor).join();
 
       TableDescriptor htd = admin.getTableDescriptor(tableName).get();
-      HColumnDescriptor hcfd = htd.getFamily(FAMILY_0);
+      ColumnFamilyDescriptor hcfd = htd.getColumnFamily(FAMILY_0);
       assertTrue(hcfd.getBlocksize() == newBlockSize);
     } finally {
       admin.deleteTable(tableName).join();

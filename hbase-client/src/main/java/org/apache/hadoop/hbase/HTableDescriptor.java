@@ -20,10 +20,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -34,6 +35,8 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDesc
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
 
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
@@ -67,7 +70,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE;
   public static final int DEFAULT_REGION_REPLICATION = TableDescriptorBuilder.DEFAULT_REGION_REPLICATION;
   public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION = TableDescriptorBuilder.DEFAULT_REGION_MEMSTORE_REPLICATION;
-  private final ModifyableTableDescriptor delegatee;
+  protected final ModifyableTableDescriptor delegatee;
 
   /**
    * Construct a table descriptor specifying a TableName object
@@ -75,7 +78,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-174">HADOOP-1581 HBASE: (HBASE-174) Un-openable tablename bug</a>
    */
   public HTableDescriptor(final TableName name) {
-    this(name, Collections.EMPTY_LIST, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
+    this(new ModifyableTableDescriptor(name));
   }
 
   /**
@@ -86,7 +89,16 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param desc The descriptor.
    */
   public HTableDescriptor(final HTableDescriptor desc) {
-    this(desc.getTableName(), desc.getFamilies(), desc.getValues(), desc.getConfiguration());
+    this(desc, true);
+  }
+
+  protected HTableDescriptor(final HTableDescriptor desc, boolean deepClone) {
+    this(deepClone ? new ModifyableTableDescriptor(desc.getTableName(), desc)
+      : desc.delegatee);
+  }
+
+  public HTableDescriptor(final TableDescriptor desc) {
+    this(new ModifyableTableDescriptor(desc.getTableName(), desc));
   }
 
   /**
@@ -99,16 +111,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param desc The descriptor.
    */
   public HTableDescriptor(final TableName name, final HTableDescriptor desc) {
-    this(name, desc.getFamilies(), desc.getValues(), desc.getConfiguration());
-  }
-
-  public HTableDescriptor(final TableDescriptor desc) {
-    this(desc.getTableName(), desc.getFamilies(), desc.getValues(), desc.getConfiguration());
-  }
-
-  private HTableDescriptor(final TableName name, final Collection<HColumnDescriptor> families,
-      Map<Bytes, Bytes> values, Map<String, String> configuration) {
-    this(new ModifyableTableDescriptor(name, families, values, configuration));
+    this(new ModifyableTableDescriptor(name, desc));
   }
 
   protected HTableDescriptor(ModifyableTableDescriptor delegatee) {
@@ -152,19 +155,9 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param key The key.
    * @return The value.
    */
-  @Override
-  public byte[] getValue(byte[] key) {
-    return delegatee.getValue(key);
-  }
-
-  /**
-   * Getter for accessing the metadata associated with the key
-   *
-   * @param key The key.
-   * @return The value.
-   */
   public String getValue(String key) {
-    return delegatee.getValue(key);
+    byte[] value = getValue(Bytes.toBytes(key));
+    return value == null ? null : Bytes.toString(value);
   }
 
   /**
@@ -182,7 +175,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param value The value. If null, removes the setting.
    */
   public HTableDescriptor setValue(byte[] key, byte[] value) {
-    delegatee.setValue(key, value);
+    getDelegateeForModification().setValue(key, value);
     return this;
   }
 
@@ -193,7 +186,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param value The value. If null, removes the setting.
    */
   public HTableDescriptor setValue(final Bytes key, final Bytes value) {
-    delegatee.setValue(key, value);
+    getDelegateeForModification().setValue(key, value);
     return this;
   }
 
@@ -204,7 +197,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param value The value. If null, removes the setting.
    */
   public HTableDescriptor setValue(String key, String value) {
-    delegatee.setValue(key, value);
+    getDelegateeForModification().setValue(Bytes.toBytes(key), Bytes.toBytes(value));
     return this;
   }
 
@@ -215,7 +208,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * parameters.
    */
   public void remove(final String key) {
-    delegatee.remove(key);
+    getDelegateeForModification().removeValue(Bytes.toBytes(key));
   }
 
   /**
@@ -225,7 +218,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * parameters.
    */
   public void remove(Bytes key) {
-    delegatee.remove(key);
+    getDelegateeForModification().removeValue(key);
   }
 
   /**
@@ -235,7 +228,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * parameters.
    */
   public void remove(final byte [] key) {
-    delegatee.remove(key);
+    getDelegateeForModification().removeValue(key);
   }
 
   /**
@@ -258,7 +251,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * only.
    */
   public HTableDescriptor setReadOnly(final boolean readOnly) {
-    delegatee.setReadOnly(readOnly);
+    getDelegateeForModification().setReadOnly(readOnly);
     return this;
   }
 
@@ -279,7 +272,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param isEnable True if enable compaction.
    */
   public HTableDescriptor setCompactionEnabled(final boolean isEnable) {
-    delegatee.setCompactionEnabled(isEnable);
+    getDelegateeForModification().setCompactionEnabled(isEnable);
     return this;
   }
 
@@ -300,7 +293,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param isEnable True if enable normalization.
    */
   public HTableDescriptor setNormalizationEnabled(final boolean isEnable) {
-    delegatee.setNormalizationEnabled(isEnable);
+    getDelegateeForModification().setNormalizationEnabled(isEnable);
     return this;
   }
 
@@ -309,7 +302,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param durability enum value
    */
   public HTableDescriptor setDurability(Durability durability) {
-    delegatee.setDurability(durability);
+    getDelegateeForModification().setDurability(durability);
     return this;
   }
 
@@ -348,7 +341,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param clazz the class name
    */
   public HTableDescriptor setRegionSplitPolicyClassName(String clazz) {
-    delegatee.setRegionSplitPolicyClassName(clazz);
+    getDelegateeForModification().setRegionSplitPolicyClassName(clazz);
     return this;
   }
 
@@ -395,7 +388,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * before a split is triggered.
    */
   public HTableDescriptor setMaxFileSize(long maxFileSize) {
-    delegatee.setMaxFileSize(maxFileSize);
+    getDelegateeForModification().setMaxFileSize(maxFileSize);
     return this;
   }
 
@@ -418,7 +411,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param memstoreFlushSize memory cache flush size for each hregion
    */
   public HTableDescriptor setMemStoreFlushSize(long memstoreFlushSize) {
-    delegatee.setMemStoreFlushSize(memstoreFlushSize);
+    getDelegateeForModification().setMemStoreFlushSize(memstoreFlushSize);
     return this;
   }
 
@@ -429,7 +422,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param clazz the class name
    */
   public HTableDescriptor setFlushPolicyClassName(String clazz) {
-    delegatee.setFlushPolicyClassName(clazz);
+    getDelegateeForModification().setFlushPolicyClassName(clazz);
     return this;
   }
 
@@ -451,7 +444,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param family HColumnDescriptor of family to add.
    */
   public HTableDescriptor addFamily(final HColumnDescriptor family) {
-    delegatee.addFamily(family);
+    getDelegateeForModification().addColumnFamily(family);
     return this;
   }
 
@@ -461,7 +454,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @return this (for chained invocation)
    */
   public HTableDescriptor modifyFamily(final HColumnDescriptor family) {
-    delegatee.modifyFamily(family);
+    getDelegateeForModification().modifyColumnFamily(family);
     return this;
   }
 
@@ -470,9 +463,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param familyName Family name or column name.
    * @return true if the table contains the specified family name
    */
-  @Override
   public boolean hasFamily(final byte [] familyName) {
-    return delegatee.hasFamily(familyName);
+    return delegatee.hasColumnFamily(familyName);
   }
 
   /**
@@ -548,13 +540,15 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   /**
    * Returns an unmodifiable collection of all the {@link HColumnDescriptor}
    * of all the column families of the table.
-   *
+   * @deprecated Use {@link #getColumnFamilies}.
    * @return Immutable collection of {@link HColumnDescriptor} of all the
    * column families.
    */
-  @Override
+  @Deprecated
   public Collection<HColumnDescriptor> getFamilies() {
-    return delegatee.getFamilies();
+    return Stream.of(delegatee.getColumnFamilies())
+            .map(this::toHColumnDescriptor)
+            .collect(Collectors.toList());
   }
 
   /**
@@ -578,7 +572,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param regionReplication the replication factor per region
    */
   public HTableDescriptor setRegionReplication(int regionReplication) {
-    delegatee.setRegionReplication(regionReplication);
+    getDelegateeForModification().setRegionReplication(regionReplication);
     return this;
   }
 
@@ -600,12 +594,12 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    *                                  data only when the primary flushes the memstore.
    */
   public HTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
-    delegatee.setRegionMemstoreReplication(memstoreReplication);
+    getDelegateeForModification().setRegionMemstoreReplication(memstoreReplication);
     return this;
   }
 
   public HTableDescriptor setPriority(int priority) {
-    delegatee.setPriority(priority);
+    getDelegateeForModification().setPriority(priority);
     return this;
   }
 
@@ -619,12 +613,11 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * HTableDescriptor contains mapping of family name to HColumnDescriptors.
    * This returns all the keys of the family map which represents the column
    * family names of the table.
-   *
    * @return Immutable sorted set of the keys of the families.
+   * @deprecated Use {@link #getColumnFamilyNames()}.
    */
-  @Override
   public Set<byte[]> getFamiliesKeys() {
-    return delegatee.getFamiliesKeys();
+    return delegatee.getColumnFamilyNames();
   }
 
   /**
@@ -645,23 +638,25 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    *
    * @see #getFamilies()
    */
+  @Deprecated
   @Override
   public HColumnDescriptor[] getColumnFamilies() {
-    return delegatee.getColumnFamilies();
+    return Stream.of(delegatee.getColumnFamilies())
+            .map(this::toHColumnDescriptor)
+            .toArray(size -> new HColumnDescriptor[size]);
   }
-
 
   /**
    * Returns the HColumnDescriptor for a specific column family with name as
    * specified by the parameter column.
-   *
    * @param column Column family name
    * @return Column descriptor for the passed family name or the family on
    * passed in column.
+   * @deprecated Use {@link #getColumnFamily(byte[])}.
    */
-  @Override
-  public HColumnDescriptor getFamily(final byte [] column) {
-    return delegatee.getFamily(column);
+  @Deprecated
+  public HColumnDescriptor getFamily(final byte[] column) {
+    return toHColumnDescriptor(delegatee.getColumnFamily(column));
   }
 
 
@@ -674,7 +669,24 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * passed in column.
    */
   public HColumnDescriptor removeFamily(final byte [] column) {
-    return delegatee.removeFamily(column);
+    return toHColumnDescriptor(getDelegateeForModification().removeColumnFamily(column));
+  }
+
+  /**
+   * Return a HColumnDescriptor for user to keep the compatibility as much as possible.
+   * @param desc read-only ColumnFamilyDescriptor
+   * @return The older implementation of ColumnFamilyDescriptor
+   */
+  protected HColumnDescriptor toHColumnDescriptor(ColumnFamilyDescriptor desc) {
+    if (desc == null) {
+      return null;
+    } else if (desc instanceof ModifyableColumnFamilyDescriptor) {
+      return new HColumnDescriptor((ModifyableColumnFamilyDescriptor) desc);
+    } else if (desc instanceof HColumnDescriptor) {
+      return (HColumnDescriptor) desc;
+    } else {
+      return new HColumnDescriptor(new ModifyableColumnFamilyDescriptor(desc));
+    }
   }
 
   /**
@@ -688,7 +700,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @throws IOException
    */
   public HTableDescriptor addCoprocessor(String className) throws IOException {
-    delegatee.addCoprocessor(className);
+    getDelegateeForModification().addCoprocessor(className);
     return this;
   }
 
@@ -709,7 +721,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public HTableDescriptor addCoprocessor(String className, Path jarFilePath,
                              int priority, final Map<String, String> kvs)
   throws IOException {
-    delegatee.addCoprocessor(className, jarFilePath, priority, kvs);
+    getDelegateeForModification().addCoprocessor(className, jarFilePath, priority, kvs);
     return this;
   }
 
@@ -725,7 +737,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @throws IOException
    */
   public HTableDescriptor addCoprocessorWithSpec(final String specStr) throws IOException {
-    delegatee.addCoprocessorWithSpec(specStr);
+    getDelegateeForModification().addCoprocessorWithSpec(specStr);
     return this;
   }
 
@@ -755,7 +767,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param className Class name of the co-processor
    */
   public void removeCoprocessor(String className) {
-    delegatee.removeCoprocessor(className);
+    getDelegateeForModification().removeCoprocessor(className);
   }
 
   public final static String NAMESPACE_FAMILY_INFO = TableDescriptorBuilder.NAMESPACE_FAMILY_INFO;
@@ -768,14 +780,14 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   @Deprecated
   public HTableDescriptor setOwner(User owner) {
-    delegatee.setOwner(owner);
+    getDelegateeForModification().setOwner(owner);
     return this;
   }
 
   // used by admin.rb:alter(table_name,*args) to update owner.
   @Deprecated
   public HTableDescriptor setOwnerString(String ownerString) {
-    delegatee.setOwnerString(ownerString);
+    getDelegateeForModification().setOwnerString(ownerString);
     return this;
   }
 
@@ -790,7 +802,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @see #parseFrom(byte[])
    */
   public byte[] toByteArray() {
-    return delegatee.toByteArray();
+    return TableDescriptorBuilder.toByteArray(delegatee);
   }
 
   /**
@@ -802,7 +814,12 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    */
   public static HTableDescriptor parseFrom(final byte [] bytes)
   throws DeserializationException, IOException {
-    return new HTableDescriptor(ModifyableTableDescriptor.parseFrom(bytes));
+    TableDescriptor desc = TableDescriptorBuilder.parseFrom(bytes);
+    if (desc instanceof ModifyableTableDescriptor) {
+      return new HTableDescriptor((ModifyableTableDescriptor) desc);
+    } else {
+      return new HTableDescriptor(desc);
+    }
   }
 
   /**
@@ -827,7 +844,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param value String value. If null, removes the setting.
    */
   public HTableDescriptor setConfiguration(String key, String value) {
-    delegatee.setConfiguration(key, value);
+    getDelegateeForModification().setConfiguration(key, value);
     return this;
   }
 
@@ -835,6 +852,35 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * Remove a config setting represented by the key from the map
    */
   public void removeConfiguration(final String key) {
-    delegatee.removeConfiguration(key);
+    getDelegateeForModification().removeConfiguration(key);
+  }
+
+  @Override
+  public Bytes getValue(Bytes key) {
+    return delegatee.getValue(key);
+  }
+
+  @Override
+  public byte[] getValue(byte[] key) {
+    return delegatee.getValue(key);
+  }
+
+  @Override
+  public Set<byte[]> getColumnFamilyNames() {
+    return delegatee.getColumnFamilyNames();
+  }
+
+  @Override
+  public boolean hasColumnFamily(byte[] name) {
+    return delegatee.hasColumnFamily(name);
+  }
+
+  @Override
+  public ColumnFamilyDescriptor getColumnFamily(byte[] name) {
+    return delegatee.getColumnFamily(name);
+  }
+
+  protected ModifyableTableDescriptor getDelegateeForModification() {
+    return delegatee;
   }
 }

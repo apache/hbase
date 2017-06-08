@@ -21,14 +21,14 @@ import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+
 
 /**
  * Stores all of the cache objects and configuration for a single HFile.
@@ -232,7 +233,7 @@ public class CacheConfig {
    * @param conf hbase configuration
    * @param family column family configuration
    */
-  public CacheConfig(Configuration conf, HColumnDescriptor family) {
+  public CacheConfig(Configuration conf, ColumnFamilyDescriptor family) {
     this(CacheConfig.instantiateBlockCache(conf),
         conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ)
            && family.isBlockCacheEnabled(),
@@ -250,8 +251,8 @@ public class CacheConfig {
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY,
             DEFAULT_PREFETCH_ON_OPEN) || family.isPrefetchBlocksOnOpen(),
-        conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
-            HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1(),
+        conf.getBoolean(ColumnFamilyDescriptorBuilder.CACHE_DATA_IN_L1,
+            ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1(),
         conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
     LOG.info("Created cacheConfig for " + family.getNameAsString() + ": " + this);
@@ -260,8 +261,8 @@ public class CacheConfig {
   /**
    * Create a cache configuration using the specified configuration object and
    * defaults for family level settings. Only use if no column family context. Prefer
-   * {@link CacheConfig#CacheConfig(Configuration, HColumnDescriptor)}
-   * @see #CacheConfig(Configuration, HColumnDescriptor)
+   * {@link CacheConfig#CacheConfig(Configuration, ColumnFamilyDescriptor)}
+   * @see #CacheConfig(Configuration, ColumnFamilyDescriptor)
    * @param conf hbase configuration
    */
   public CacheConfig(Configuration conf) {
@@ -275,8 +276,8 @@ public class CacheConfig {
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE),
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN),
-        conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
-          HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1),
+        conf.getBoolean(ColumnFamilyDescriptorBuilder.CACHE_DATA_IN_L1,
+          ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_IN_L1),
         conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
     LOG.info("Created cacheConfig: " + this);

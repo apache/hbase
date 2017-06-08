@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -521,7 +522,7 @@ public class SplitTableRegionProcedure
     // Split each store file.
     final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     for (String family: regionFs.getFamilies()) {
-      final HColumnDescriptor hcd = htd.getFamily(family.getBytes());
+      final ColumnFamilyDescriptor hcd = htd.getColumnFamily(family.getBytes());
       final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
       if (storeFiles != null && storeFiles.size() > 0) {
         final CacheConfig cacheConf = new CacheConfig(conf, hcd);

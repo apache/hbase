@@ -43,6 +43,7 @@ import org.junit.rules.TestName;
  * Test setting values in the descriptor
  */
 @Category({MiscTests.class, SmallTests.class})
+@Deprecated
 public class TestHTableDescriptor {
   private static final Log LOG = LogFactory.getLog(TestHTableDescriptor.class);
 

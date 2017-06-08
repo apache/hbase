@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,13 +32,12 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
+import java.util.stream.Stream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -49,12 +48,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Public
 public class TableDescriptorBuilder {
-
-  private static final Log LOG = LogFactory.getLog(TableDescriptorBuilder.class);
-
+  public static final Log LOG = LogFactory.getLog(TableDescriptorBuilder.class);
   @InterfaceAudience.Private
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
-
+  private static final Bytes SPLIT_POLICY_KEY = new Bytes(Bytes.toBytes(SPLIT_POLICY));
   /**
    * Used by HBase Shell interface to access this metadata
    * attribute which denotes the maximum size of the store file after which a
@@ -101,7 +98,7 @@ public class TableDescriptorBuilder {
 
   @InterfaceAudience.Private
   public static final String FLUSH_POLICY = "FLUSH_POLICY";
-
+  private static final Bytes FLUSH_POLICY_KEY = new Bytes(Bytes.toBytes(FLUSH_POLICY));
   /**
    * Used by rest interface to access this metadata attribute
    * which denotes if it is a catalog table, either <code> hbase:meta </code>.
@@ -162,17 +159,6 @@ public class TableDescriptorBuilder {
    */
   private static final int DEFAULT_PRIORITY = HConstants.NORMAL_QOS;
 
-  /*
-     *  The below are ugly but better than creating them each time till we
-     *  replace booleans being saved as Strings with plain booleans.  Need a
-     *  migration script to do this.  TODO.
-   */
-  private static final Bytes FALSE
-          = new Bytes(Bytes.toBytes(Boolean.FALSE.toString()));
-
-  private static final Bytes TRUE
-          = new Bytes(Bytes.toBytes(Boolean.TRUE.toString()));
-
   /**
    * Constant that denotes whether the table is READONLY by default and is false
    */
@@ -228,7 +214,7 @@ public class TableDescriptorBuilder {
    */
   public static final TableDescriptor NAMESPACE_TABLEDESC
     = TableDescriptorBuilder.newBuilder(TableName.NAMESPACE_TABLE_NAME)
-                            .addFamily(new HColumnDescriptor(NAMESPACE_FAMILY_INFO)
+                            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(NAMESPACE_FAMILY_INFO_BYTES)
                               // Ten is arbitrary number.  Keep versions to help debugging.
                               .setMaxVersions(10)
                               .setInMemory(true)
@@ -236,8 +222,9 @@ public class TableDescriptorBuilder {
                               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                               // Enable cache of data blocks in L1 if more than one caching tier deployed:
                               // e.g. if using CombinedBlockCache (BucketCache).
-                              .setCacheDataInL1(true))
-                            .doBuild();
+                              .setCacheDataInL1(true)
+                              .build())
+                            .build();
   private final ModifyableTableDescriptor desc;
 
   /**
@@ -248,10 +235,6 @@ public class TableDescriptorBuilder {
     if (desc instanceof ModifyableTableDescriptor) {
       return ((ModifyableTableDescriptor) desc).toByteArray();
     }
-    // TODO: remove this if the HTableDescriptor is removed
-    if (desc instanceof HTableDescriptor) {
-      return ((HTableDescriptor) desc).toByteArray();
-    }
     return new ModifyableTableDescriptor(desc).toByteArray();
   }
 
@@ -261,12 +244,16 @@ public class TableDescriptorBuilder {
    * @return This instance serialized with pb with pb magic prefix
    * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
    */
-  public static TableDescriptorBuilder newBuilder(byte[] pbBytes) throws DeserializationException {
-    return new TableDescriptorBuilder(ModifyableTableDescriptor.parseFrom(pbBytes));
+  public static TableDescriptor parseFrom(byte[] pbBytes) throws DeserializationException {
+    return ModifyableTableDescriptor.parseFrom(pbBytes);
   }
 
   public static TableDescriptorBuilder newBuilder(final TableName name) {
     return new TableDescriptorBuilder(name);
+  }
+
+  public static TableDescriptor copy(TableDescriptor desc) throws DeserializationException {
+    return new ModifyableTableDescriptor(desc);
   }
 
   /**
@@ -301,23 +288,23 @@ public class TableDescriptorBuilder {
     return this;
   }
 
-  public TableDescriptorBuilder addFamily(final HColumnDescriptor family) {
-    desc.addFamily(family);
+  public TableDescriptorBuilder addColumnFamily(final ColumnFamilyDescriptor family) {
+    desc.addColumnFamily(family);
     return this;
   }
 
-  public TableDescriptorBuilder modifyFamily(final HColumnDescriptor family) {
-    desc.modifyFamily(family);
+  public TableDescriptorBuilder modifyColumnFamily(final ColumnFamilyDescriptor family) {
+    desc.modifyColumnFamily(family);
     return this;
   }
 
-  public TableDescriptorBuilder remove(Bytes key) {
-    desc.remove(key);
+  public TableDescriptorBuilder removeValue(Bytes key) {
+    desc.removeValue(key);
     return this;
   }
 
-  public TableDescriptorBuilder remove(byte[] key) {
-    desc.remove(key);
+  public TableDescriptorBuilder removeValue(byte[] key) {
+    desc.removeValue(key);
     return this;
   }
 
@@ -326,8 +313,8 @@ public class TableDescriptorBuilder {
     return this;
   }
 
-  public TableDescriptorBuilder removeFamily(final byte[] column) {
-    desc.removeFamily(column);
+  public TableDescriptorBuilder removeColumnFamily(final byte[] name) {
+    desc.removeColumnFamily(name);
     return this;
   }
 
@@ -418,13 +405,7 @@ public class TableDescriptorBuilder {
     return this;
   }
 
-  // TODO: replaced the HTableDescriptor by TableDescriptor
-  public HTableDescriptor build() {
-    return new HTableDescriptor(desc);
-  }
-
-  // TODO: remove this in HBase 3.0.0.
-  private TableDescriptor doBuild() {
+  public TableDescriptor build() {
     return new ModifyableTableDescriptor(desc);
   }
 
@@ -452,21 +433,24 @@ public class TableDescriptorBuilder {
     private final Map<String, String> configuration = new HashMap<>();
 
     /**
-     * Maps column family name to the respective HColumnDescriptors
+     * Maps column family name to the respective FamilyDescriptors
      */
-    private final Map<byte[], HColumnDescriptor> families
+    private final Map<byte[], ColumnFamilyDescriptor> families
             = new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
     /**
      * Construct a table descriptor specifying a TableName object
      *
      * @param name Table name.
-     * @see
-     * <a href="https://issues.apache.org/jira/browse/HBASE-174">HADOOP-1581
-     * HBASE: (HBASE-174) Un-openable tablename bug</a>
+     * TODO: make this private after removing the HTableDescriptor
      */
-    private ModifyableTableDescriptor(final TableName name) {
+    @InterfaceAudience.Private
+    public ModifyableTableDescriptor(final TableName name) {
       this(name, Collections.EMPTY_LIST, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
+    }
+
+    private ModifyableTableDescriptor(final TableDescriptor desc) {
+      this(desc.getTableName(), Arrays.asList(desc.getColumnFamilies()), desc.getValues(), desc.getConfiguration());
     }
 
     /**
@@ -474,33 +458,24 @@ public class TableDescriptorBuilder {
      * parameter.
      * <p>
      * Makes a deep copy of the supplied descriptor.
-     * TODO: make this private after removing the HTableDescriptor
+     * @param name The new name
      * @param desc The descriptor.
+     * TODO: make this private after removing the HTableDescriptor
      */
     @InterfaceAudience.Private
-    protected ModifyableTableDescriptor(final TableDescriptor desc) {
-      this(desc.getTableName(), desc.getFamilies(), desc.getValues(), desc.getConfiguration());
+    @Deprecated // only used by HTableDescriptor. remove this method if HTD is removed
+    public ModifyableTableDescriptor(final TableName name, final TableDescriptor desc) {
+      this(name, Arrays.asList(desc.getColumnFamilies()), desc.getValues(), desc.getConfiguration());
     }
 
-    // TODO: make this private after removing the HTableDescriptor
-    @InterfaceAudience.Private
-    public ModifyableTableDescriptor(final TableName name, final Collection<HColumnDescriptor> families,
+    private ModifyableTableDescriptor(final TableName name, final Collection<ColumnFamilyDescriptor> families,
             Map<Bytes, Bytes> values, Map<String, String> configuration) {
       this.name = name;
-      families.forEach(c -> this.families.put(c.getName(), new HColumnDescriptor(c)));
-      values.forEach(this.values::put);
-      configuration.forEach(this.configuration::put);
-      setMetaFlags(name);
-    }
-
-    /*
-     * Set meta flags on this table.
-     * IS_META_KEY is set if its a hbase:meta table
-     * Called by constructors.
-     * @param name
-     */
-    private void setMetaFlags(final TableName name) {
-      values.put(IS_META_KEY, name.equals(TableName.META_TABLE_NAME) ? TRUE : FALSE);
+      families.forEach(c -> this.families.put(c.getName(), ColumnFamilyDescriptorBuilder.copy(c)));
+      this.values.putAll(values);
+      this.configuration.putAll(configuration);
+      this.values.put(IS_META_KEY,
+        new Bytes(Bytes.toBytes(Boolean.toString(name.equals(TableName.META_TABLE_NAME)))));
     }
 
     /**
@@ -510,16 +485,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public boolean isMetaRegion() {
-      return isSomething(IS_META_KEY, false);
-    }
-
-    private boolean isSomething(final Bytes key,
-            final boolean valueIfNull) {
-      byte[] value = getValue(key);
-      if (value != null) {
-        return Boolean.valueOf(Bytes.toString(value));
-      }
-      return valueIfNull;
+      return getOrDefault(IS_META_KEY, Boolean::valueOf, false);
     }
 
     /**
@@ -532,39 +498,24 @@ public class TableDescriptorBuilder {
       return isMetaRegion();
     }
 
-    /**
-     * Getter for accessing the metadata associated with the key
-     *
-     * @param key The key.
-     * @return The value.
-     * @see #values
-     */
+    @Override
+    public Bytes getValue(Bytes key) {
+      return values.get(key);
+    }
+
     @Override
     public byte[] getValue(byte[] key) {
-      return getValue(new Bytes(key));
+      Bytes value = values.get(new Bytes(key));
+      return value == null ? null : value.get();
     }
 
-    private byte[] getValue(final Bytes key) {
-      Bytes ibw = values.get(key);
-      if (ibw == null) {
-        return null;
-      }
-      return ibw.get();
-    }
-
-    /**
-     * Getter for accessing the metadata associated with the key
-     *
-     * @param key The key.
-     * @return The value.
-     * @see #values
-     */
-    public String getValue(String key) {
-      byte[] value = getValue(Bytes.toBytes(key));
+    private <T> T getOrDefault(Bytes key, Function<String, T> function, T defaultValue) {
+      Bytes value = values.get(key);
       if (value == null) {
-        return null;
+        return defaultValue;
+      } else {
+        return function.apply(Bytes.toString(value.get(), value.getOffset(), value.getLength()));
       }
-      return Bytes.toString(value);
     }
 
     /**
@@ -609,24 +560,11 @@ public class TableDescriptorBuilder {
      */
     public ModifyableTableDescriptor setValue(final Bytes key, final Bytes value) {
       if (value == null) {
-        remove(key);
+        values.remove(key);
       } else {
         values.put(key, value);
       }
       return this;
-    }
-
-    /**
-     * Setter for storing metadata as a (key, value) pair in {@link #values} map
-     *
-     * @param key The key.
-     * @param value The value. If null, removes the setting.
-     * @return the modifyable TD
-     * @see #values
-     */
-    public ModifyableTableDescriptor setValue(String key, String value) {
-      return setValue(toBytesOrNull(key, Bytes::toBytes),
-              toBytesOrNull(value, Bytes::toBytes));
     }
 
     private static <T> Bytes toBytesOrNull(T t, Function<T, byte[]> f) {
@@ -642,9 +580,10 @@ public class TableDescriptorBuilder {
      *
      * @param key Key whose key and value we're to remove from TableDescriptor
      * parameters.
+     * @return the modifyable TD
      */
-    public void remove(final String key) {
-      remove(new Bytes(Bytes.toBytes(key)));
+    public ModifyableTableDescriptor removeValue(Bytes key) {
+      return setValue(key, (Bytes) null);
     }
 
     /**
@@ -652,19 +591,10 @@ public class TableDescriptorBuilder {
      *
      * @param key Key whose key and value we're to remove from TableDescriptor
      * parameters.
+     * @return the modifyable TD
      */
-    public void remove(Bytes key) {
-      values.remove(key);
-    }
-
-    /**
-     * Remove metadata represented by the key from the {@link #values} map
-     *
-     * @param key Key whose key and value we're to remove from TableDescriptor
-     * parameters.
-     */
-    public void remove(final byte[] key) {
-      remove(new Bytes(key));
+    public ModifyableTableDescriptor removeValue(final byte[] key) {
+      return removeValue(new Bytes(key));
     }
 
     /**
@@ -676,7 +606,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public boolean isReadOnly() {
-      return isSomething(READONLY_KEY, DEFAULT_READONLY);
+      return getOrDefault(READONLY_KEY, Boolean::valueOf, DEFAULT_READONLY);
     }
 
     /**
@@ -690,7 +620,7 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setReadOnly(final boolean readOnly) {
-      return setValue(READONLY_KEY, readOnly ? TRUE : FALSE);
+      return setValue(READONLY_KEY, Boolean.toString(readOnly));
     }
 
     /**
@@ -701,7 +631,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public boolean isCompactionEnabled() {
-      return isSomething(COMPACTION_ENABLED_KEY, DEFAULT_COMPACTION_ENABLED);
+      return getOrDefault(COMPACTION_ENABLED_KEY, Boolean::valueOf, DEFAULT_COMPACTION_ENABLED);
     }
 
     /**
@@ -711,7 +641,7 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setCompactionEnabled(final boolean isEnable) {
-      return setValue(COMPACTION_ENABLED_KEY, isEnable ? TRUE : FALSE);
+      return setValue(COMPACTION_ENABLED_KEY, Boolean.toString(isEnable));
     }
 
     /**
@@ -722,7 +652,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public boolean isNormalizationEnabled() {
-      return isSomething(NORMALIZATION_ENABLED_KEY, DEFAULT_NORMALIZATION_ENABLED);
+      return getOrDefault(NORMALIZATION_ENABLED_KEY, Boolean::valueOf, DEFAULT_NORMALIZATION_ENABLED);
     }
 
     /**
@@ -732,7 +662,7 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setNormalizationEnabled(final boolean isEnable) {
-      return setValue(NORMALIZATION_ENABLED_KEY, isEnable ? TRUE : FALSE);
+      return setValue(NORMALIZATION_ENABLED_KEY, Boolean.toString(isEnable));
     }
 
     /**
@@ -753,18 +683,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public Durability getDurability() {
-      byte[] durabilityValue = getValue(DURABILITY_KEY);
-      if (durabilityValue == null) {
-        return DEFAULT_DURABLITY;
-      } else {
-        try {
-          return Durability.valueOf(Bytes.toString(durabilityValue));
-        } catch (IllegalArgumentException ex) {
-          LOG.warn("Received " + ex + " because Durability value for TableDescriptor"
-                  + " is not known. Durability:" + Bytes.toString(durabilityValue));
-          return DEFAULT_DURABLITY;
-        }
-      }
+      return getOrDefault(DURABILITY_KEY, Durability::valueOf, DEFAULT_DURABLITY);
     }
 
     /**
@@ -786,7 +705,7 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setRegionSplitPolicyClassName(String clazz) {
-      return setValue(SPLIT_POLICY, clazz);
+      return setValue(SPLIT_POLICY_KEY, clazz);
     }
 
     /**
@@ -799,7 +718,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public String getRegionSplitPolicyClassName() {
-      return getValue(SPLIT_POLICY);
+      return getOrDefault(SPLIT_POLICY_KEY, Function.identity(), null);
     }
 
     /**
@@ -813,11 +732,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public long getMaxFileSize() {
-      byte[] value = getValue(MAX_FILESIZE_KEY);
-      if (value != null) {
-        return Long.parseLong(Bytes.toString(value));
-      }
-      return -1;
+      return getOrDefault(MAX_FILESIZE_KEY, Long::valueOf, (long) -1);
     }
 
     /**
@@ -850,11 +765,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public long getMemStoreFlushSize() {
-      byte[] value = getValue(MEMSTORE_FLUSHSIZE_KEY);
-      if (value != null) {
-        return Long.parseLong(Bytes.toString(value));
-      }
-      return -1;
+      return getOrDefault(MEMSTORE_FLUSHSIZE_KEY, Long::valueOf, (long) -1);
     }
 
     /**
@@ -879,7 +790,7 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setFlushPolicyClassName(String clazz) {
-      return setValue(FLUSH_POLICY, clazz);
+      return setValue(FLUSH_POLICY_KEY, clazz);
     }
 
     /**
@@ -892,46 +803,45 @@ public class TableDescriptorBuilder {
      */
     @Override
     public String getFlushPolicyClassName() {
-      return getValue(FLUSH_POLICY);
+      return getOrDefault(FLUSH_POLICY_KEY, Function.identity(), null);
     }
 
     /**
      * Adds a column family. For the updating purpose please use
-     * {@link #modifyFamily(HColumnDescriptor)} instead.
+     * {@link #modifyColumnFamily(ColumnFamilyDescriptor)} instead.
      *
-     * @param family HColumnDescriptor of family to add.
+     * @param family to add.
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor addFamily(final HColumnDescriptor family) {
+    public ModifyableTableDescriptor addColumnFamily(final ColumnFamilyDescriptor family) {
       if (family.getName() == null || family.getName().length <= 0) {
         throw new IllegalArgumentException("Family name cannot be null or empty");
       }
-      if (hasFamily(family.getName())) {
+      if (hasColumnFamily(family.getName())) {
         throw new IllegalArgumentException("Family '"
                 + family.getNameAsString() + "' already exists so cannot be added");
       }
-      return setFamily(family);
+      return putColumnFamily(family);
     }
 
     /**
      * Modifies the existing column family.
      *
-     * @param family HColumnDescriptor of family to update
+     * @param family to update
      * @return this (for chained invocation)
      */
-    public ModifyableTableDescriptor modifyFamily(final HColumnDescriptor family) {
+    public ModifyableTableDescriptor modifyColumnFamily(final ColumnFamilyDescriptor family) {
       if (family.getName() == null || family.getName().length <= 0) {
         throw new IllegalArgumentException("Family name cannot be null or empty");
       }
-      if (!hasFamily(family.getName())) {
+      if (!hasColumnFamily(family.getName())) {
         throw new IllegalArgumentException("Column family '" + family.getNameAsString()
                 + "' does not exist");
       }
-      return setFamily(family);
+      return putColumnFamily(family);
     }
 
-    // TODO: make this private after removing the UnmodifyableTableDescriptor
-    protected ModifyableTableDescriptor setFamily(HColumnDescriptor family) {
+    private ModifyableTableDescriptor putColumnFamily(ColumnFamilyDescriptor family) {
       families.put(family.getName(), family);
       return this;
     }
@@ -943,7 +853,7 @@ public class TableDescriptorBuilder {
      * @return true if the table contains the specified family name
      */
     @Override
-    public boolean hasFamily(final byte[] familyName) {
+    public boolean hasColumnFamily(final byte[] familyName) {
       return families.containsKey(familyName);
     }
 
@@ -1085,6 +995,7 @@ public class TableDescriptorBuilder {
      * parameter. Checks if the obj passed is an instance of ModifyableTableDescriptor,
      * if yes then the contents of the descriptors are compared.
      *
+     * @param obj The object to compare
      * @return true if the contents of the the two descriptors exactly match
      *
      * @see java.lang.Object#equals(java.lang.Object)
@@ -1104,13 +1015,13 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * @see java.lang.Object#hashCode()
+     * @return hash code
      */
     @Override
     public int hashCode() {
       int result = this.name.hashCode();
       if (this.families.size() > 0) {
-        for (HColumnDescriptor e : this.families.values()) {
+        for (ColumnFamilyDescriptor e : this.families.values()) {
           result ^= e.hashCode();
         }
       }
@@ -1131,52 +1042,12 @@ public class TableDescriptorBuilder {
      */
     @Override
     public int compareTo(final ModifyableTableDescriptor other) {
-      int result = this.name.compareTo(other.name);
-      if (result == 0) {
-        result = families.size() - other.families.size();
-      }
-      if (result == 0 && families.size() != other.families.size()) {
-        result = Integer.valueOf(families.size()).compareTo(other.families.size());
-      }
-      if (result == 0) {
-        for (Iterator<HColumnDescriptor> it = families.values().iterator(),
-                it2 = other.families.values().iterator(); it.hasNext();) {
-          result = it.next().compareTo(it2.next());
-          if (result != 0) {
-            break;
-          }
-        }
-      }
-      if (result == 0) {
-        // punt on comparison for ordering, just calculate difference
-        result = this.values.hashCode() - other.values.hashCode();
-        if (result < 0) {
-          result = -1;
-        } else if (result > 0) {
-          result = 1;
-        }
-      }
-      if (result == 0) {
-        result = this.configuration.hashCode() - other.configuration.hashCode();
-        if (result < 0) {
-          result = -1;
-        } else if (result > 0) {
-          result = 1;
-        }
-      }
-      return result;
+      return TableDescriptor.COMPARATOR.compare(this, other);
     }
 
-    /**
-     * Returns an unmodifiable collection of all the {@link HColumnDescriptor}
-     * of all the column families of the table.
-     *
-     * @return Immutable collection of {@link HColumnDescriptor} of all the
-     * column families.
-     */
     @Override
-    public Collection<HColumnDescriptor> getFamilies() {
-      return Collections.unmodifiableCollection(this.families.values());
+    public ColumnFamilyDescriptor[] getColumnFamilies() {
+      return families.values().toArray(new ColumnFamilyDescriptor[families.size()]);
     }
 
     /**
@@ -1185,8 +1056,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public boolean hasSerialReplicationScope() {
-      return getFamilies()
-              .stream()
+      return Stream.of(getColumnFamilies())
               .anyMatch(column -> column.getScope() == HConstants.REPLICATION_SCOPE_SERIAL);
     }
 
@@ -1195,15 +1065,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public int getRegionReplication() {
-      return getIntValue(REGION_REPLICATION_KEY, DEFAULT_REGION_REPLICATION);
-    }
-
-    private int getIntValue(Bytes key, int defaultVal) {
-      byte[] val = getValue(key);
-      if (val == null || val.length == 0) {
-        return defaultVal;
-      }
-      return Integer.parseInt(Bytes.toString(val));
+      return getOrDefault(REGION_REPLICATION_KEY, Integer::valueOf, DEFAULT_REGION_REPLICATION);
     }
 
     /**
@@ -1213,8 +1075,7 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setRegionReplication(int regionReplication) {
-      return setValue(REGION_REPLICATION_KEY,
-              new Bytes(Bytes.toBytes(Integer.toString(regionReplication))));
+      return setValue(REGION_REPLICATION_KEY, Integer.toString(regionReplication));
     }
 
     /**
@@ -1222,7 +1083,7 @@ public class TableDescriptorBuilder {
      */
     @Override
     public boolean hasRegionMemstoreReplication() {
-      return isSomething(REGION_MEMSTORE_REPLICATION_KEY, DEFAULT_REGION_MEMSTORE_REPLICATION);
+      return getOrDefault(REGION_MEMSTORE_REPLICATION_KEY, Boolean::valueOf, DEFAULT_REGION_MEMSTORE_REPLICATION);
     }
 
     /**
@@ -1236,7 +1097,7 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
-      setValue(REGION_MEMSTORE_REPLICATION_KEY, memstoreReplication ? TRUE : FALSE);
+      setValue(REGION_MEMSTORE_REPLICATION_KEY, Boolean.toString(memstoreReplication));
       // If the memstore replication is setup, we do not have to wait for observing a flush event
       // from primary before starting to serve reads, because gaps from replication is not applicable
       return setConfiguration(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY,
@@ -1249,48 +1110,24 @@ public class TableDescriptorBuilder {
 
     @Override
     public int getPriority() {
-      return getIntValue(PRIORITY_KEY, DEFAULT_PRIORITY);
+      return getOrDefault(PRIORITY_KEY, Integer::valueOf, DEFAULT_PRIORITY);
     }
 
     /**
      * Returns all the column family names of the current table. The map of
-     * TableDescriptor contains mapping of family name to HColumnDescriptors.
+     * TableDescriptor contains mapping of family name to ColumnFamilyDescriptor.
      * This returns all the keys of the family map which represents the column
      * family names of the table.
      *
      * @return Immutable sorted set of the keys of the families.
      */
     @Override
-    public Set<byte[]> getFamiliesKeys() {
+    public Set<byte[]> getColumnFamilyNames() {
       return Collections.unmodifiableSet(this.families.keySet());
     }
 
     /**
-     * Returns the count of the column families of the table.
-     *
-     * @return Count of column families of the table
-     */
-    @Override
-    public int getColumnFamilyCount() {
-      return families.size();
-    }
-
-    /**
-     * Returns an array all the {@link HColumnDescriptor} of the column families
-     * of the table.
-     *
-     * @return Array of all the HColumnDescriptors of the current table
-     *
-     * @see #getFamilies()
-     */
-    @Override
-    public HColumnDescriptor[] getColumnFamilies() {
-      Collection<HColumnDescriptor> hColumnDescriptors = getFamilies();
-      return hColumnDescriptors.toArray(new HColumnDescriptor[hColumnDescriptors.size()]);
-    }
-
-    /**
-     * Returns the HColumnDescriptor for a specific column family with name as
+     * Returns the ColumnFamilyDescriptor for a specific column family with name as
      * specified by the parameter column.
      *
      * @param column Column family name
@@ -1298,19 +1135,19 @@ public class TableDescriptorBuilder {
      * passed in column.
      */
     @Override
-    public HColumnDescriptor getFamily(final byte[] column) {
+    public ColumnFamilyDescriptor getColumnFamily(final byte[] column) {
       return this.families.get(column);
     }
 
     /**
-     * Removes the HColumnDescriptor with name specified by the parameter column
+     * Removes the ColumnFamilyDescriptor with name specified by the parameter column
      * from the table descriptor
      *
      * @param column Name of the column family to be removed.
      * @return Column descriptor for the passed family name or the family on
      * passed in column.
      */
-    public HColumnDescriptor removeFamily(final byte[] column) {
+    public ColumnFamilyDescriptor removeColumnFamily(final byte[] column) {
       return this.families.remove(column);
     }
 
@@ -1523,7 +1360,7 @@ public class TableDescriptorBuilder {
       }
       // if we found a match, remove it
       if (match != null) {
-        remove(match);
+        ModifyableTableDescriptor.this.removeValue(match);
       }
     }
 
@@ -1535,27 +1372,22 @@ public class TableDescriptorBuilder {
     // used by admin.rb:alter(table_name,*args) to update owner.
     @Deprecated
     public ModifyableTableDescriptor setOwnerString(String ownerString) {
-      if (ownerString != null) {
-        setValue(OWNER_KEY, ownerString);
-      } else {
-        remove(OWNER_KEY);
-      }
-      return this;
+      return setValue(OWNER_KEY, ownerString);
     }
 
     @Override
     @Deprecated
     public String getOwnerString() {
-      if (getValue(OWNER_KEY) != null) {
-        return Bytes.toString(getValue(OWNER_KEY));
-      }
       // Note that every table should have an owner (i.e. should have OWNER_KEY set).
       // hbase:meta should return system user as owner, not null (see
       // MasterFileSystem.java:bootstrap()).
-      return null;
+      return getOrDefault(OWNER_KEY, Function.identity(), null);
     }
 
-    public byte[] toByteArray() {
+    /**
+     * @return the bytes in pb format
+     */
+    private byte[] toByteArray() {
       return ProtobufUtil.prependPBMagic(ProtobufUtil.convertToTableSchema(this).toByteArray());
     }
 
@@ -1567,7 +1399,7 @@ public class TableDescriptorBuilder {
      * @throws DeserializationException
      * @see #toByteArray()
      */
-    public static TableDescriptor parseFrom(final byte[] bytes)
+    private static TableDescriptor parseFrom(final byte[] bytes)
             throws DeserializationException {
       if (!ProtobufUtil.isPBMagicPrefix(bytes)) {
         throw new DeserializationException("Expected PB encoded ModifyableTableDescriptor");
@@ -1609,7 +1441,7 @@ public class TableDescriptorBuilder {
      */
     public ModifyableTableDescriptor setConfiguration(String key, String value) {
       if (value == null) {
-        removeConfiguration(key);
+        configuration.remove(key);
       } else {
         configuration.put(key, value);
       }
@@ -1620,9 +1452,15 @@ public class TableDescriptorBuilder {
      * Remove a config setting represented by the key from the
      * {@link #configuration} map
      * @param key Config key.
+     * @return the modifyable TD
      */
-    public void removeConfiguration(final String key) {
-      configuration.remove(key);
+    public ModifyableTableDescriptor removeConfiguration(final String key) {
+      return setConfiguration(key, null);
+    }
+
+    @Override
+    public int getColumnFamilyCount() {
+      return families.size();
     }
   }
 

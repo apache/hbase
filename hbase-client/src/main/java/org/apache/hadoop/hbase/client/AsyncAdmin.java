@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -270,7 +269,7 @@ public interface AsyncAdmin {
    * @param columnFamily column family descriptor of column family to be added
    */
   CompletableFuture<Void> addColumnFamily(final TableName tableName,
-      final HColumnDescriptor columnFamily);
+      final ColumnFamilyDescriptor columnFamily);
 
   /**
    * Delete a column family from a table.
@@ -285,7 +284,7 @@ public interface AsyncAdmin {
    * @param columnFamily new column family descriptor to use
    */
   CompletableFuture<Void> modifyColumnFamily(final TableName tableName,
-      final HColumnDescriptor columnFamily);
+      final ColumnFamilyDescriptor columnFamily);
 
   /**
    * Create a new namespace.

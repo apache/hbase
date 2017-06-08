@@ -29,7 +29,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -4166,7 +4165,7 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    */
   private void setTableRep(final TableName tableName, boolean enableRep) throws IOException {
-    HTableDescriptor htd = getTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(getTableDescriptor(tableName));
     ReplicationState currentReplicationState = getTableReplicationState(htd);
     if (enableRep && currentReplicationState != ReplicationState.ENABLED
         || !enableRep && currentReplicationState != ReplicationState.DISABLED) {
