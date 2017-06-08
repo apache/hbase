@@ -24,8 +24,8 @@
 #include <vector>
 #include "connection/request.h"
 #include "core/action.h"
-#include "core/cell.h"
 #include "core/append.h"
+#include "core/cell.h"
 #include "core/delete.h"
 #include "core/get.h"
 #include "core/increment.h"
@@ -85,14 +85,15 @@ class RequestConverter {
   static std::unique_ptr<Request> ToMutateRequest(const Put &put, const std::string &region_name);
 
   static std::unique_ptr<Request> IncrementToMutateRequest(const Increment &incr,
-          const std::string &region_name);
+                                                           const std::string &region_name);
 
   static std::unique_ptr<pb::MutationProto> ToMutation(const MutationType type,
                                                        const Mutation &mutation,
                                                        const int64_t nonce);
 
   static std::unique_ptr<Request> AppendToMutateRequest(const Append &append,
-          const std::string &region_name);
+                                                        const std::string &region_name);
+
  private:
   // Constructor not required. We have all static methods to create PB requests.
   RequestConverter();

@@ -288,29 +288,29 @@ std::unique_ptr<Request> RequestConverter::DeleteToMutateRequest(const Delete &d
   VLOG(3) << "Req is " << pb_req->req_msg()->ShortDebugString();
   return pb_req;
 }
-std::unique_ptr<Request> RequestConverter::IncrementToMutateRequest(const Increment &incr,
-        const std::string &region_name) {
-    auto pb_req = Request::mutate();
-    auto pb_msg = std::static_pointer_cast<hbase::pb::MutateRequest>(pb_req->req_msg());
-    RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
+std::unique_ptr<Request> RequestConverter::IncrementToMutateRequest(
+    const Increment &incr, const std::string &region_name) {
+  auto pb_req = Request::mutate();
+  auto pb_msg = std::static_pointer_cast<hbase::pb::MutateRequest>(pb_req->req_msg());
+  RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
 
-    pb_msg->set_allocated_mutation(
-        ToMutation(MutationType::MutationProto_MutationType_INCREMENT, incr, -1).release());
+  pb_msg->set_allocated_mutation(
+      ToMutation(MutationType::MutationProto_MutationType_INCREMENT, incr, -1).release());
 
-    VLOG(3) << "Req is " << pb_req->req_msg()->ShortDebugString();
-    return pb_req;
+  VLOG(3) << "Req is " << pb_req->req_msg()->ShortDebugString();
+  return pb_req;
 }
 
 std::unique_ptr<Request> RequestConverter::AppendToMutateRequest(const Append &append,
-        const std::string &region_name) {
-    auto pb_req = Request::mutate();
-    auto pb_msg = std::static_pointer_cast<hbase::pb::MutateRequest>(pb_req->req_msg());
-    RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
+                                                                 const std::string &region_name) {
+  auto pb_req = Request::mutate();
+  auto pb_msg = std::static_pointer_cast<hbase::pb::MutateRequest>(pb_req->req_msg());
+  RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
 
-    pb_msg->set_allocated_mutation(
-        ToMutation(MutationType::MutationProto_MutationType_APPEND, append, -1).release());
+  pb_msg->set_allocated_mutation(
+      ToMutation(MutationType::MutationProto_MutationType_APPEND, append, -1).release());
 
-    VLOG(3) << "Req is " << pb_req->req_msg()->ShortDebugString();
-    return pb_req;
+  VLOG(3) << "Req is " << pb_req->req_msg()->ShortDebugString();
+  return pb_req;
 }
 } /* namespace hbase */

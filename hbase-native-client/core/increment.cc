@@ -38,10 +38,9 @@ namespace hbase {
  *  @param amount amount to increment by
  */
 Increment& Increment::AddColumn(const std::string& family, const std::string& qualifier,
-        int64_t amount) {
-  family_map_[family].push_back(std::move(
-            std::make_unique<Cell>(row_, family, qualifier, timestamp_, BytesUtil::ToString(amount),
-            hbase::CellType::PUT)));
+                                int64_t amount) {
+  family_map_[family].push_back(std::move(std::make_unique<Cell>(
+      row_, family, qualifier, timestamp_, BytesUtil::ToString(amount), hbase::CellType::PUT)));
   return *this;
 }
 Increment& Increment::Add(std::unique_ptr<Cell> cell) {
