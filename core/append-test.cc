@@ -19,8 +19,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "core/mutation.h"
 #include "core/append.h"
+#include "core/mutation.h"
 #include "utils/time-util.h"
 
 using hbase::Append;
@@ -103,4 +103,3 @@ TEST(Append, Add) {
   EXPECT_EQ(2, append.FamilyMap().size());
   EXPECT_EQ(1, append.FamilyMap().at("family-2").size());
 }
-

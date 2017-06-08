@@ -25,8 +25,8 @@
 #include "core/configuration.h"
 #include "core/delete.h"
 #include "core/get.h"
-#include "core/increment.h"
 #include "core/hbase-configuration-loader.h"
+#include "core/increment.h"
 #include "core/put.h"
 #include "core/result.h"
 #include "core/table.h"
@@ -244,7 +244,7 @@ TEST_F(ClientTest, Increment) {
   result = table->Increment(hbase::Increment{row}.AddColumn("d", "1", incr2));
 
   EXPECT_EQ(row, result->Row());
-  EXPECT_EQ(incr1+incr2, hbase::BytesUtil::ToInt64(*(result->Value("d", "1"))));
+  EXPECT_EQ(incr1 + incr2, hbase::BytesUtil::ToInt64(*(result->Value("d", "1"))));
 }
 
 TEST_F(ClientTest, PutGet) {

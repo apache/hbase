@@ -35,10 +35,9 @@ namespace hbase {
  *  @param value value to append
  */
 Append& Append::Add(const std::string& family, const std::string& qualifier,
-        const std::string& value) {
+                    const std::string& value) {
   family_map_[family].push_back(std::move(
-            std::make_unique<Cell>(row_, family, qualifier, timestamp_, value,
-            hbase::CellType::PUT)));
+      std::make_unique<Cell>(row_, family, qualifier, timestamp_, value, hbase::CellType::PUT)));
   return *this;
 }
 Append& Append::Add(std::unique_ptr<Cell> cell) {

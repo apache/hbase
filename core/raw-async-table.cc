@@ -79,12 +79,15 @@ folly::Future<std::shared_ptr<Result>> RawAsyncTable::Get(const hbase::Get& get)
 }
 folly::Future<std::shared_ptr<Result>> RawAsyncTable::Increment(const hbase::Increment& incr) {
   auto caller =
-      CreateCallerBuilder<std::shared_ptr<Result>>(incr.row(), connection_conf_->write_rpc_timeout())
+      CreateCallerBuilder<std::shared_ptr<Result>>(incr.row(),
+                                                   connection_conf_->write_rpc_timeout())
           ->action([=, &incr](std::shared_ptr<hbase::HBaseRpcController> controller,
-                             std::shared_ptr<hbase::RegionLocation> loc,
-                             std::shared_ptr<hbase::RpcClient> rpc_client) -> folly::Future<std::shared_ptr<Result>> {
+                              std::shared_ptr<hbase::RegionLocation> loc,
+                              std::shared_ptr<hbase::RpcClient>
+                                  rpc_client) -> folly::Future<std::shared_ptr<Result>> {
             return Call<hbase::Increment, hbase::Request, hbase::Response, std::shared_ptr<Result>>(
-                rpc_client, controller, loc, incr, &hbase::RequestConverter::IncrementToMutateRequest,
+                rpc_client, controller, loc, incr,
+                &hbase::RequestConverter::IncrementToMutateRequest,
                 &hbase::ResponseConverter::FromMutateResponse);
           })
           ->Build();
@@ -126,12 +129,15 @@ folly::Future<folly::Unit> RawAsyncTable::Delete(const hbase::Delete& del) {
 
 folly::Future<std::shared_ptr<Result>> RawAsyncTable::Append(const hbase::Append& append) {
   auto caller =
-      CreateCallerBuilder<std::shared_ptr<Result>>(append.row(), connection_conf_->write_rpc_timeout())
+      CreateCallerBuilder<std::shared_ptr<Result>>(append.row(),
+                                                   connection_conf_->write_rpc_timeout())
           ->action([=, &append](std::shared_ptr<hbase::HBaseRpcController> controller,
-                             std::shared_ptr<hbase::RegionLocation> loc,
-                             std::shared_ptr<hbase::RpcClient> rpc_client) -> folly::Future<std::shared_ptr<Result>> {
+                                std::shared_ptr<hbase::RegionLocation> loc,
+                                std::shared_ptr<hbase::RpcClient>
+                                    rpc_client) -> folly::Future<std::shared_ptr<Result>> {
             return Call<hbase::Append, hbase::Request, hbase::Response, std::shared_ptr<Result>>(
-                rpc_client, controller, loc, append, &hbase::RequestConverter::AppendToMutateRequest,
+                rpc_client, controller, loc, append,
+                &hbase::RequestConverter::AppendToMutateRequest,
                 &hbase::ResponseConverter::FromMutateResponse);
           })
           ->Build();
