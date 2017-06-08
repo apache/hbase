@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.6
+Release Notes - HBase - Version 1.2.6 06/04/2017
 
 ** Sub-task
     * [HBASE-17925] - mvn assembly:single fails against hadoop3-alpha2
