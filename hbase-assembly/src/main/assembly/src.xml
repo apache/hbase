@@ -43,6 +43,8 @@
         <include>org.apache.hbase:hbase-hadoop2-compat</include>
         <include>org.apache.hbase:hbase-hadoop-compat</include>
         <include>org.apache.hbase:hbase-it</include>
+        <include>org.apache.hbase:hbase-metrics</include>
+        <include>org.apache.hbase:hbase-metrics-api</include>
         <include>org.apache.hbase:hbase-prefix-tree</include>
         <include>org.apache.hbase:hbase-procedure</include>
         <include>org.apache.hbase:hbase-protocol-shaded</include>
