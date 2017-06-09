@@ -57,12 +57,12 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReaderThread.WALEntryBatch;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+
 
 /**
  * Class that handles the source of a replication stream.
@@ -448,7 +448,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     this.sourceRunning = false;
     Collection<ReplicationSourceShipperThread> workers = workerThreads.values();
     for (ReplicationSourceShipperThread worker : workers) {
-      worker.setWorkerRunning(false);
+      worker.stopWorker();
       worker.entryReader.interrupt();
       worker.interrupt();
     }
