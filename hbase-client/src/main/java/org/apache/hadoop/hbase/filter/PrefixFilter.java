@@ -127,7 +127,7 @@ public class PrefixFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o Other filter
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
