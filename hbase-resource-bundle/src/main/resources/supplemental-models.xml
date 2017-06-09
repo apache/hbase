@@ -2272,6 +2272,19 @@ Copyright 2005 Sun Microsystems, Inc. and portions Copyright Apache Software Fou
   </supplement>
   <supplement>
     <project>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>jsr311-api</artifactId>
+      <licenses>
+        <license>
+          <name>Common Development and Distribution License (CDDL) v1.0</name>
+          <url>http://www.opensource.org/licenses/cddl1.php</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
       <groupId>org.jamon</groupId>
       <artifactId>jamon-runtime</artifactId>
       <name>Jamon runtime support classes</name>
