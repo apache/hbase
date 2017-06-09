@@ -871,7 +871,7 @@ public class FSHLog implements WAL {
       for (Map.Entry<byte[], Long> e: regionsSequenceNums.entrySet()) {
         ConcurrentMap<byte[], Long> m =
             this.oldestUnflushedStoreSequenceIds.get(e.getKey());
-        if (m == null) {
+        if (m == null || m.isEmpty()) {
           continue;
         }
         long unFlushedVal = Collections.min(m.values());
