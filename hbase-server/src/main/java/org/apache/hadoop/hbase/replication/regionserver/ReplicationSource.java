@@ -143,6 +143,13 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   private ConcurrentHashMap<String, ReplicationSourceShipperThread> workerThreads =
       new ConcurrentHashMap<String, ReplicationSourceShipperThread>();
 
+  // Hold the state of a replication worker thread
+  public enum WorkerState {
+    RUNNING,
+    STOPPED,
+    FINISHED  // The worker is done processing a recovered queue
+  }
+
   private AtomicLong totalBufferUsed;
 
   /**
@@ -399,7 +406,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     this.sourceRunning = false;
     Collection<ReplicationSourceShipperThread> workers = workerThreads.values();
     for (ReplicationSourceShipperThread worker : workers) {
-      worker.setWorkerRunning(false);
+      worker.setWorkerState(WorkerState.STOPPED);
       worker.entryReader.interrupt();
       worker.interrupt();
     }
@@ -513,8 +520,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     private long lastLoggedPosition = -1;
     // Path of the current log
     private volatile Path currentPath;
-    // Indicates whether this particular worker is running
-    private boolean workerRunning = true;
+    // Current state of the worker thread
+    private WorkerState state;
     ReplicationSourceWALReaderThread entryReader;
     // Use guava cache to set ttl for each key
     private LoadingCache<String, Boolean> canSkipWaitingSet = CacheBuilder.newBuilder()
@@ -538,6 +545,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
 
     @Override
     public void run() {
+      setWorkerState(WorkerState.RUNNING);
       // Loop until we close down
       while (isWorkerActive()) {
         int sleepMultiplier = 1;
@@ -570,7 +578,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
             LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
                 + peerClusterZnode);
             metrics.incrCompletedRecoveryQueue();
-            setWorkerRunning(false);
+            setWorkerState(WorkerState.FINISHED);
             continue;
           }
         } catch (InterruptedException e) {
@@ -579,13 +587,13 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         }
       }
 
-      if (replicationQueueInfo.isQueueRecovered()) {
+      if (replicationQueueInfo.isQueueRecovered() && getWorkerState() == WorkerState.FINISHED) {
         // use synchronize to make sure one last thread will clean the queue
         synchronized (workerThreads) {
           Threads.sleep(100);// wait a short while for other worker thread to fully exit
           boolean allOtherTaskDone = true;
           for (ReplicationSourceShipperThread worker : workerThreads.values()) {
-            if (!worker.equals(this) && worker.isAlive()) {
+            if (!worker.equals(this) && worker.getWorkerState() != WorkerState.FINISHED) {
               allOtherTaskDone = false;
               break;
             }
@@ -596,6 +604,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
                 + " with the following stats: " + getStats());
           }
         }
+      }
+      // If the worker exits run loop without finishing it's task, mark it as stopped.
+      if (state != WorkerState.FINISHED) {
+        setWorkerState(WorkerState.STOPPED);
       }
     }
 
@@ -927,7 +939,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     private boolean isWorkerActive() {
-      return !stopper.isStopped() && workerRunning && !isInterrupted();
+      return !stopper.isStopped() && state == WorkerState.RUNNING && !isInterrupted();
     }
 
     private void terminate(String reason, Exception cause) {
@@ -940,14 +952,29 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       }
       entryReader.interrupt();
       Threads.shutdown(entryReader, sleepForRetries);
+      setWorkerState(WorkerState.STOPPED);
       this.interrupt();
       Threads.shutdown(this, sleepForRetries);
       LOG.info("ReplicationSourceWorker " + this.getName() + " terminated");
     }
 
-    public void setWorkerRunning(boolean workerRunning) {
-      entryReader.setReaderRunning(workerRunning);
-      this.workerRunning = workerRunning;
+    /**
+     * Set the worker state
+     * @param state
+     */
+    public void setWorkerState(WorkerState state) {
+      this.state = state;
+      if (entryReader != null) {
+        entryReader.setReaderRunning(state == WorkerState.RUNNING);
+      }
+    }
+
+    /**
+     * Get the current state of this worker.
+     * @return WorkerState
+     */
+    public WorkerState getWorkerState() {
+      return state;
     }
 
     private void releaseBufferQuota(int size) {
