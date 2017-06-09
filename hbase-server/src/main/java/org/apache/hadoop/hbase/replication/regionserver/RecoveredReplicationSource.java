@@ -160,14 +160,14 @@ public class RecoveredReplicationSource extends ReplicationSource {
     // use synchronize to make sure one last thread will clean the queue
     synchronized (workerThreads) {
       Threads.sleep(100);// wait a short while for other worker thread to fully exit
-      boolean allOtherTaskDone = true;
+      boolean allTasksDone = true;
       for (ReplicationSourceShipperThread worker : workerThreads.values()) {
-        if (worker.isActive()) {
-          allOtherTaskDone = false;
+        if (!worker.isFinished()) {
+          allTasksDone = false;
           break;
         }
       }
-      if (allOtherTaskDone) {
+      if (allTasksDone) {
         manager.closeRecoveredQueue(this);
         LOG.info("Finished recovering queue " + peerClusterZnode + " with the following stats: "
             + getStats());

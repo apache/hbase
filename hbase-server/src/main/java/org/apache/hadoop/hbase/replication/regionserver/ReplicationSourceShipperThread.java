@@ -54,6 +54,13 @@ import com.google.common.cache.LoadingCache;
 public class ReplicationSourceShipperThread extends Thread {
   private static final Log LOG = LogFactory.getLog(ReplicationSourceShipperThread.class);
 
+  // Hold the state of a replication worker thread
+  public enum WorkerState {
+    RUNNING,
+    STOPPED,
+    FINISHED,  // The worker is done processing a recovered queue
+  }
+
   protected final Configuration conf;
   protected final String walGroupId;
   protected final PriorityBlockingQueue<Path> queue;
@@ -63,8 +70,8 @@ public class ReplicationSourceShipperThread extends Thread {
   protected long lastLoggedPosition = -1;
   // Path of the current log
   protected volatile Path currentPath;
-  // Indicates whether this particular worker is running
-  private boolean workerRunning = true;
+  // Current state of the worker thread
+  private WorkerState state;
   protected ReplicationSourceWALReaderThread entryReader;
 
   // How long should we sleep for each retry
@@ -97,6 +104,7 @@ public class ReplicationSourceShipperThread extends Thread {
 
   @Override
   public void run() {
+    setWorkerState(WorkerState.RUNNING);
     // Loop until we close down
     while (isActive()) {
       int sleepMultiplier = 1;
@@ -125,6 +133,10 @@ public class ReplicationSourceShipperThread extends Thread {
         LOG.trace("Interrupted while waiting for next replication entry batch", e);
         Thread.currentThread().interrupt();
       }
+    }
+    // If the worker exits run loop without finishing its task, mark it as stopped.
+    if (state != WorkerState.FINISHED) {
+      setWorkerState(WorkerState.STOPPED);
     }
   }
 
@@ -307,12 +319,23 @@ public class ReplicationSourceShipperThread extends Thread {
   }
 
   protected boolean isActive() {
-    return source.isSourceActive() && workerRunning && !isInterrupted();
+    return source.isSourceActive() && state == WorkerState.RUNNING && !isInterrupted();
   }
 
-  public void setWorkerRunning(boolean workerRunning) {
-    entryReader.setReaderRunning(workerRunning);
-    this.workerRunning = workerRunning;
+  public void setWorkerState(WorkerState state) {
+    this.state = state;
+  }
+
+  public WorkerState getWorkerState() {
+    return state;
+  }
+
+  public void stopWorker() {
+    setWorkerState(WorkerState.STOPPED);
+  }
+
+  public boolean isFinished() {
+    return state == WorkerState.FINISHED;
   }
 
   /**

@@ -51,6 +51,7 @@ public class RecoveredReplicationSourceShipperThread extends ReplicationSourceSh
 
   @Override
   public void run() {
+    setWorkerState(WorkerState.RUNNING);
     // Loop until we close down
     while (isActive()) {
       int sleepMultiplier = 1;
@@ -77,7 +78,7 @@ public class RecoveredReplicationSourceShipperThread extends ReplicationSourceSh
           LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
               + source.getPeerClusterZnode());
           source.getSourceMetrics().incrCompletedRecoveryQueue();
-          setWorkerRunning(false);
+          setWorkerState(WorkerState.FINISHED);
           continue;
         }
       } catch (InterruptedException e) {
@@ -85,8 +86,11 @@ public class RecoveredReplicationSourceShipperThread extends ReplicationSourceSh
         Thread.currentThread().interrupt();
       }
     }
-
     source.tryFinish();
+    // If the worker exits run loop without finishing its task, mark it as stopped.
+    if (!isFinished()) {
+      setWorkerState(WorkerState.STOPPED);
+    }
   }
 
   @Override
