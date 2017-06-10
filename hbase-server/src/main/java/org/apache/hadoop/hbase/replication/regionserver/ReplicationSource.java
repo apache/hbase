@@ -138,6 +138,12 @@ public class ReplicationSource extends Thread
   private AtomicInteger logQueueSize = new AtomicInteger(0);
   private ConcurrentHashMap<String, ReplicationSourceWorkerThread> workerThreads =
       new ConcurrentHashMap<String, ReplicationSourceWorkerThread>();
+  // Hold the state of a replication worker thread
+  public enum WorkerState {
+    RUNNING,
+    STOPPED,
+    FINISHED  // The worker is done processing a recovered queue
+  }
 
   /**
    * Instantiation method used by region servers
@@ -362,7 +368,7 @@ public class ReplicationSource extends Thread
     this.sourceRunning = false;
     Collection<ReplicationSourceWorkerThread> workers = workerThreads.values();
     for (ReplicationSourceWorkerThread worker : workers) {
-      worker.setWorkerRunning(false);
+      worker.setWorkerState(WorkerState.STOPPED);
       worker.interrupt();
     }
     ListenableFuture<Service.State> future = null;
@@ -477,8 +483,8 @@ public class ReplicationSource extends Thread
     private int currentNbOperations = 0;
     // Current size of data we need to replicate
     private int currentSize = 0;
-    // Indicates whether this particular worker is running
-    private boolean workerRunning = true;
+    // Current state of the worker thread
+    private WorkerState state;
 
     public ReplicationSourceWorkerThread(String walGroupId, PriorityBlockingQueue<Path> queue,
         ReplicationQueueInfo replicationQueueInfo, ReplicationSource source) {
@@ -491,6 +497,7 @@ public class ReplicationSource extends Thread
 
     @Override
     public void run() {
+      setWorkerState(WorkerState.RUNNING);
       // If this is recovered, the queue is already full and the first log
       // normally has a position (unless the RS failed between 2 logs)
       if (this.replicationQueueInfo.isQueueRecovered()) {
@@ -623,13 +630,13 @@ public class ReplicationSource extends Thread
         sleepMultiplier = 1;
         shipEdits(currentWALisBeingWrittenTo, entries);
       }
-      if (replicationQueueInfo.isQueueRecovered()) {
+      if (replicationQueueInfo.isQueueRecovered() && getWorkerState() == WorkerState.FINISHED) {
         // use synchronize to make sure one last thread will clean the queue
         synchronized (workerThreads) {
           Threads.sleep(100);// wait a short while for other worker thread to fully exit
           boolean allOtherTaskDone = true;
           for (ReplicationSourceWorkerThread worker : workerThreads.values()) {
-            if (!worker.equals(this) && worker.isAlive()) {
+            if (!worker.equals(this) && worker.getWorkerState() != WorkerState.FINISHED) {
               allOtherTaskDone = false;
               break;
             }
@@ -640,6 +647,10 @@ public class ReplicationSource extends Thread
                 + " with the following stats: " + getStats());
           }
         }
+      }
+      // If the worker exits run loop without finishing it's task, mark it as stopped.
+      if (state != WorkerState.FINISHED) {
+        setWorkerState(WorkerState.STOPPED);
       }
     }
 
@@ -1023,7 +1034,7 @@ public class ReplicationSource extends Thread
         LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
             + peerClusterZnode);
         metrics.incrCompletedRecoveryQueue();
-        workerRunning = false;
+        setWorkerState(WorkerState.FINISHED);
         return true;
       }
       return false;
@@ -1054,7 +1065,7 @@ public class ReplicationSource extends Thread
     }
 
     private boolean isWorkerActive() {
-      return !stopper.isStopped() && workerRunning && !isInterrupted();
+      return !stopper.isStopped() && state == WorkerState.RUNNING && !isInterrupted();
     }
 
     private void terminate(String reason, Exception cause) {
@@ -1065,13 +1076,26 @@ public class ReplicationSource extends Thread
         LOG.error("Closing worker for wal group " + this.walGroupId
             + " because an error occurred: " + reason, cause);
       }
+      setWorkerState(WorkerState.STOPPED);
       this.interrupt();
       Threads.shutdown(this, sleepForRetries);
       LOG.info("ReplicationSourceWorker " + this.getName() + " terminated");
     }
 
-    public void setWorkerRunning(boolean workerRunning) {
-      this.workerRunning = workerRunning;
+    /**
+     * Set the worker state
+     * @param state
+     */
+    public void setWorkerState(WorkerState state) {
+      this.state = state;
+    }
+
+    /**
+     * Get the current state of this worker.
+     * @return WorkerState
+     */
+    public WorkerState getWorkerState() {
+      return state;
     }
   }
 }
