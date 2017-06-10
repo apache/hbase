@@ -63,6 +63,23 @@ class Table {
   void Put(const hbase::Put &put);
 
   /**
+   * Atomically checks if a row/family/qualifier value matches the expected
+   * value. If it does, it adds the put.  If the passed value is null, the check
+   * is for the lack of column (ie: non-existance)
+   *
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param value the expected value
+   * @param put data to put if check succeeds
+   * @param compare_op comparison operator to use
+   * @throws IOException e
+   * @return true if the new put was executed, false otherwise
+   */
+  bool CheckAndPut(const std::string &row, const std::string &family, const std::string &qualifier,
+                   const std::string &value, const hbase::Put &put,
+                   const pb::CompareType &compare_op = pb::CompareType::EQUAL);
+  /**
    * @brief - Deletes some data in the table.
    * @param - del Delete object to perform HBase Delete operation.
    */

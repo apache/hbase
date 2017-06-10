@@ -216,4 +216,5 @@ class OpenScannerResponse;
 template class AsyncSingleRequestRpcRetryingCaller<std::shared_ptr<hbase::Result>>;
 template class AsyncSingleRequestRpcRetryingCaller<folly::Unit>;
 template class AsyncSingleRequestRpcRetryingCaller<std::shared_ptr<OpenScannerResponse>>;
+template class AsyncSingleRequestRpcRetryingCaller<bool>;
 } /* namespace hbase */

@@ -53,6 +53,11 @@ std::shared_ptr<Result> ResponseConverter::FromMutateResponse(const Response& re
   return ToResult(mutate_resp->result(), resp.cell_scanner());
 }
 
+bool ResponseConverter::BoolFromMutateResponse(const Response& resp) {
+  auto mutate_resp = std::static_pointer_cast<MutateResponse>(resp.resp_msg());
+  return mutate_resp->processed();
+}
+
 std::shared_ptr<Result> ResponseConverter::ToResult(
     const hbase::pb::Result& result, const std::shared_ptr<CellScanner> cell_scanner) {
   std::vector<std::shared_ptr<Cell>> vcells;
