@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -57,6 +58,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -65,6 +68,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
@@ -976,5 +980,81 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       job.getCounters().findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
     assertEquals(NB_ROWS_IN_BATCH,
       job.getCounters().findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
+  }
+
+  @Test
+  public void testEmptyWALRecovery() throws Exception {
+    final int numRs = utility1.getHBaseCluster().getRegionServerThreads().size();
+
+    // for each RS, create an empty wal with same walGroupId
+    final List<Path> emptyWalPaths = new ArrayList<>();
+    long ts = System.currentTimeMillis();
+    for (int i = 0; i < numRs; i++) {
+      HRegionInfo regionInfo =
+          utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
+      WAL wal = utility1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
+      Path currentWalPath = AbstractFSWALProvider.getCurrentFileName(wal);
+      String walGroupId = AbstractFSWALProvider.getWALPrefixFromWALName(currentWalPath.getName());
+      Path emptyWalPath = new Path(utility1.getDataTestDir(), walGroupId + "." + ts);
+      utility1.getTestFileSystem().create(emptyWalPath).close();
+      emptyWalPaths.add(emptyWalPath);
+    }
+
+    // inject our empty wal into the replication queue
+    for (int i = 0; i < numRs; i++) {
+      Replication replicationService =
+          (Replication) utility1.getHBaseCluster().getRegionServer(i).getReplicationSourceService();
+      replicationService.preLogRoll(null, emptyWalPaths.get(i));
+      replicationService.postLogRoll(null, emptyWalPaths.get(i));
+    }
+
+    // wait for ReplicationSource to start reading from our empty wal
+    waitForLogAdvance(numRs, emptyWalPaths, false);
+
+    // roll the original wal, which enqueues a new wal behind our empty wal
+    for (int i = 0; i < numRs; i++) {
+      HRegionInfo regionInfo =
+          utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
+      WAL wal = utility1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
+      wal.rollWriter(true);
+    }
+
+    // ReplicationSource should advance past the empty wal, or else the test will fail
+    waitForLogAdvance(numRs, emptyWalPaths, true);
+
+    // we're now writing to the new wal
+    // if everything works, the source should've stopped reading from the empty wal, and start
+    // replicating from the new wal
+    testSimplePutDelete();
+  }
+
+  /**
+   * Waits for the ReplicationSource to start reading from the given paths
+   * @param numRs number of regionservers
+   * @param emptyWalPaths path for each regionserver
+   * @param invert if true, waits until ReplicationSource is NOT reading from the given paths
+   */
+  private void waitForLogAdvance(final int numRs, final List<Path> emptyWalPaths,
+      final boolean invert) throws Exception {
+    Waiter.waitFor(conf1, 10000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        for (int i = 0; i < numRs; i++) {
+          Replication replicationService = (Replication) utility1.getHBaseCluster()
+              .getRegionServer(i).getReplicationSourceService();
+          for (ReplicationSourceInterface rsi : replicationService.getReplicationManager()
+              .getSources()) {
+            ReplicationSource source = (ReplicationSource) rsi;
+            if (!invert && !emptyWalPaths.get(i).equals(source.getCurrentPath())) {
+              return false;
+            }
+            if (invert && emptyWalPaths.get(i).equals(source.getCurrentPath())) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+    });
   }
 }

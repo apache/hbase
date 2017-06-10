@@ -303,7 +303,7 @@ public class ReplicationSourceShipperThread extends Thread {
   }
 
   public Path getCurrentPath() {
-    return this.currentPath;
+    return this.entryReader.getCurrentPath();
   }
 
   public long getCurrentPosition() {

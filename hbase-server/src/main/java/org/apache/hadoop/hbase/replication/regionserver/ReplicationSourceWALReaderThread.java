@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -189,6 +190,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
           sleepMultiplier++;
         } else {
           LOG.error("Failed to read stream of replication entries", e);
+          handleEofException(e);
         }
         Threads.sleep(sleepForRetries * sleepMultiplier);
       } catch (InterruptedException e) {
@@ -196,6 +198,34 @@ public class ReplicationSourceWALReaderThread extends Thread {
         Thread.currentThread().interrupt();
       }
     }
+  }
+
+  // if we get an EOF due to a zero-length log, and there are other logs in queue
+  // (highly likely we've closed the current log), we've hit the max retries, and autorecovery is
+  // enabled, then dump the log
+  private void handleEofException(Exception e) {
+    if (e.getCause() instanceof EOFException && logQueue.size() > 1
+        && conf.getBoolean("replication.source.eof.autorecovery", false)) {
+      try {
+        if (fs.getFileStatus(logQueue.peek()).getLen() == 0) {
+          LOG.warn("Forcing removal of 0 length log in queue: " + logQueue.peek());
+          logQueue.remove();
+          currentPosition = 0;
+        }
+      } catch (IOException ioe) {
+        LOG.warn("Couldn't get file length information about log " + logQueue.peek());
+      }
+    }
+  }
+
+  public Path getCurrentPath() {
+    // if we've read some WAL entries, get the Path we read from
+    WALEntryBatch batchQueueHead = entryBatchQueue.peek();
+    if (batchQueueHead != null) {
+      return batchQueueHead.lastWalPath;
+    }
+    // otherwise, we must be currently reading from the head of the log queue
+    return logQueue.peek();
   }
 
   //returns false if we've already exceeded the global quota
