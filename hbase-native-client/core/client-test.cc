@@ -247,6 +247,35 @@ TEST_F(ClientTest, Increment) {
   EXPECT_EQ(incr1 + incr2, hbase::BytesUtil::ToInt64(*(result->Value("d", "1"))));
 }
 
+TEST_F(ClientTest, CheckAndPut) {
+  // Using TestUtil to populate test data
+  ClientTest::test_util->CreateTable("check", "d");
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>("check");
+  auto row = "test1";
+
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+
+  // Get connection to HBase Table
+  auto table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  // Perform Puts
+  table->Put(Put{row}.AddColumn("d", "1", "value1"));
+  auto result = table->CheckAndPut(row, "d", "1", "value1", Put{row}.AddColumn("d", "1", "value2"));
+  ASSERT_TRUE(result) << "CheckAndPut didn't replace value";
+
+  result = table->CheckAndPut(row, "d", "1", "value1", Put{row}.AddColumn("d", "1", "value3"));
+
+  // Perform the Get
+  hbase::Get get(row);
+  auto result1 = table->Get(get);
+  EXPECT_EQ("value2", *(result1->Value("d", "1")));
+  ASSERT_FALSE(result) << "CheckAndPut shouldn't replace value";
+}
+
 TEST_F(ClientTest, PutGet) {
   // Using TestUtil to populate test data
   ClientTest::test_util->CreateTable("t", "d");

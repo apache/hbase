@@ -49,6 +49,8 @@ class ResponseConverter {
 
   static std::shared_ptr<hbase::Result> FromMutateResponse(const Response& resp);
 
+  static bool BoolFromMutateResponse(const Response& resp);
+
   static std::vector<std::shared_ptr<Result>> FromScanResponse(const Response& resp);
 
   static std::vector<std::shared_ptr<Result>> FromScanResponse(

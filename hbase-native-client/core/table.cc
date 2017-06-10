@@ -73,6 +73,13 @@ void Table::Put(const hbase::Put &put) {
   future.get(operation_timeout());
 }
 
+bool Table::CheckAndPut(const std::string &row, const std::string &family,
+                        const std::string &qualifier, const std::string &value,
+                        const hbase::Put &put, const pb::CompareType &compare_op) {
+  auto context = async_table_->CheckAndPut(row, family, qualifier, value, put, compare_op);
+  return context.get(operation_timeout());
+}
+
 void Table::Delete(const hbase::Delete &del) {
   auto future = async_table_->Delete(del);
   future.get(operation_timeout());

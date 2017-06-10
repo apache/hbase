@@ -111,6 +111,32 @@ folly::Future<folly::Unit> RawAsyncTable::Put(const hbase::Put& put) {
   return caller->Call().then([caller](const auto r) { return r; });
 }
 
+folly::Future<bool> RawAsyncTable::CheckAndPut(const std::string& row, const std::string& family,
+                                               const std::string& qualifier,
+                                               const std::string& value, const hbase::Put& put,
+                                               const pb::CompareType& compare_op) {
+  auto caller =
+      CreateCallerBuilder<bool>(row, connection_conf_->write_rpc_timeout())
+          ->action([=, &put](std::shared_ptr<hbase::HBaseRpcController> controller,
+                             std::shared_ptr<hbase::RegionLocation> loc,
+                             std::shared_ptr<hbase::RpcClient> rpc_client) -> folly::Future<bool> {
+            return Call<hbase::Put, hbase::Request, hbase::Response, bool>(
+                rpc_client, controller, loc, put,
+                // request conversion
+                [=, &put](const hbase::Put& put,
+                          const std::string& region_name) -> std::unique_ptr<Request> {
+                  auto checkReq = RequestConverter::CheckAndPutToMutateRequest(
+                      row, family, qualifier, value, compare_op, put, region_name);
+                  return checkReq;
+                },
+                // response conversion
+                &ResponseConverter::BoolFromMutateResponse);
+          })
+          ->Build();
+
+  return caller->Call().then([caller](const auto r) { return r; });
+}
+
 folly::Future<folly::Unit> RawAsyncTable::Delete(const hbase::Delete& del) {
   auto caller =
       CreateCallerBuilder<folly::Unit>(del.row(), connection_conf_->write_rpc_timeout())
