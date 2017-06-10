@@ -559,6 +559,6 @@ public class Import {
       }
     }
 
-    System.exit(job.waitForCompletion(true) ? 0 : 1);
+    System.exit(isJobSuccessful ? 0 : 1);
   }
 }
