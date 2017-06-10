@@ -931,7 +931,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     public Path getCurrentPath() {
-      return this.currentPath;
+      return this.entryReader.getCurrentPath();
     }
 
     public long getCurrentPosition() {
