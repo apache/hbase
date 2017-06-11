@@ -44,6 +44,9 @@ How can I find examples of NoSQL/HBase?::
 What is the history of HBase?::
   See <<hbase.history,hbase.history>>.
 
+Why are the cells above 10MB not recommended for HBase?::
+  Large cells don't fit well into HBase's approach to buffering data. First, the large cells bypass the MemStoreLAB when they are written. Then, they cannot be cached in the L2 block cache during read operations. Instead, HBase has to allocate on-heap memory for them each time. This can have a significant impact on the garbage collector within the RegionServer process.
+
 === Upgrading
 How do I upgrade Maven-managed projects from HBase 0.94 to HBase 0.96+?::
   In HBase 0.96, the project moved to a modular structure. Adjust your project's dependencies to rely upon the `hbase-client` module or another module as appropriate, rather than a single JAR. You can model your Maven dependency after one of the following, depending on your targeted version of HBase. See Section 3.5, “Upgrading from 0.94.x to 0.96.x” or Section 3.3, “Upgrading from 0.96.x to 0.98.x” for more information.
