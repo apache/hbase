@@ -1,6 +1,67 @@
 HBase Change Log
 
 
+
+Release Notes - HBase - Version 1.1.11 06/10/2017
+
+
+
+
+
+
+
+
+** Bug
+    * [HBASE-16011] - TableSnapshotScanner and TableSnapshotInputFormat can produce duplicate rows
+    * [HBASE-17352] - Fix hbase-assembly build with bash 4
+    * [HBASE-17534] - SecureBulkLoadClient squashes DoNotRetryIOExceptions from the server
+    * [HBASE-17862] - Condition that always returns true
+    * [HBASE-17937] - Memstore size becomes negative in case of expensive postPut/Delete Coprocessor call
+    * [HBASE-17985] - Inline package manage updates with package installation in Yetus Dockerfile
+    * [HBASE-18026] - ProtobufUtil seems to do extra array copying
+    * [HBASE-18066] - Get with closest_row_before on "hbase:meta" can return empty Cell during region merge/split
+    * [HBASE-18077] - Update JUnit license to EPL from CPL
+    * [HBASE-18081] - The way we process connection preamble in SimpleRpcServer is broken
+    * [HBASE-18093] - Overloading the meaning of 'enabled' in Quota Manager to indicate either quota disabled or quota manager not ready is not good
+    * [HBASE-18122] - Scanner id should include ServerName of region server
+    * [HBASE-18159] - Use OpenJDK7 instead of Oracle JDK7 in pre commit docker file
+    * [HBASE-18168] - NoSuchElementException when rolling the log
+
+
+
+
+
+** Improvement
+    * [HBASE-17514] - Warn when Thrift Server 1 is configured for proxy users but not the HTTP transport
+    * [HBASE-17817] - Make Regionservers log which tables it removed coprocessors from when aborting
+    * [HBASE-17944] - Removed unused JDK version parsing from ClassSize.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** Task
+    * [HBASE-17968] - Update copyright year in NOTICE file
+
+
+
+
+
+
 Release Notes - HBase - Version 1.1.10 04/18/2017
 
 ** Sub-task
