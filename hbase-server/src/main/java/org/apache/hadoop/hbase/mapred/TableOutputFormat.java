@@ -70,10 +70,15 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     }
 
     public void close(Reporter reporter) throws IOException {
-      this.m_mutator.close();
-      if (connection != null) {
-        connection.close();
-        connection = null;
+      try {
+        if (this.m_mutator != null) {
+          this.m_mutator.close();
+        }
+      } finally {
+        if (connection != null) {
+          connection.close();
+          connection = null;
+        }
       }
     }
 

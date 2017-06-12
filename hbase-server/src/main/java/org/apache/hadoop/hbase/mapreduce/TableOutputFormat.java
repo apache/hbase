@@ -118,10 +118,16 @@ implements Configurable {
      * @see RecordWriter#close(TaskAttemptContext)
      */
     @Override
-    public void close(TaskAttemptContext context)
-    throws IOException {
-      mutator.close();
-      connection.close();
+    public void close(TaskAttemptContext context) throws IOException {
+      try {
+        if (mutator != null) {
+          mutator.close();
+        }
+      } finally {
+        if (connection != null) {
+          connection.close();
+        }
+      }
     }
 
     /**
