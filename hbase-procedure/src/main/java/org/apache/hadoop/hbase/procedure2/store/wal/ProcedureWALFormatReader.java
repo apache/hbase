@@ -483,7 +483,7 @@ public class ProcedureWALFormatReader {
      */
     private static boolean isIncreasing(ProcedureProtos.Procedure current,
         ProcedureProtos.Procedure candidate) {
-      boolean increasing = current.getStackIdCount() < candidate.getStackIdCount() &&
+      boolean increasing = current.getStackIdCount() <= candidate.getStackIdCount() &&
         current.getLastUpdate() <= candidate.getLastUpdate();
       if (!increasing) {
         LOG.warn("NOT INCREASING! current=" + current + ", candidate=" + candidate);
