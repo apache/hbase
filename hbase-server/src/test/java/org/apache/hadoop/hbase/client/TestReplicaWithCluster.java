@@ -253,7 +253,7 @@ public class TestReplicaWithCluster {
     HTU.getConfiguration().set("hbase.coprocessor.region.classes",
         RegionServerHostingPrimayMetaRegionSlowOrStopCopro.class.getName());
 
-    HTU.getConfiguration().setInt(HConstants.HBASE_CLIENT_MEAT_REPLICA_SCAN_TIMEOUT,
+    HTU.getConfiguration().setInt(HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
         META_SCAN_TIMEOUT_IN_MILLISEC * 1000);
 
     HTU.startMiniCluster(NB_SERVERS);
