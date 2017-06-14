@@ -308,11 +308,11 @@ public final class HConstants {
   public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = 1200000;
 
   /** Parameter name for HBase client meta replica scan call timeout. */
-  public static final String HBASE_CLIENT_MEAT_REPLICA_SCAN_TIMEOUT =
+  public static final String HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT =
       "hbase.client.meta.replica.scan.timeout";
 
   /** Default HBase client meta replica scan call timeout, 1 second */
-  public static final int HBASE_CLIENT_MEAT_REPLICA_SCAN_TIMEOUT_DEFAULT = 1000000;
+  public static final int HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT = 1000000;
 
   /** Used to construct the name of the log directory for a region server */
   public static final String HREGION_LOGDIR_NAME = "WALs";
