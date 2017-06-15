@@ -61,7 +61,7 @@ public class RSProcedureDispatcher
       "hbase.regionserver.rpc.startup.waittime";
   private static final int DEFAULT_RS_RPC_STARTUP_WAIT_TIME = 60000;
 
-  private static final int RS_VERSION_WITH_EXEC_PROCS = 0x0201000; // 2.1
+  private static final int RS_VERSION_WITH_EXEC_PROCS = 0x0200000; // 2.0
 
   protected final MasterServices master;
   protected final long rsStartupWaitTime;
@@ -259,6 +259,9 @@ public class RSProcedureDispatcher
       final MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
 
       request = ExecuteProceduresRequest.newBuilder();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Building request with operations count=" + operations.size());
+      }
       splitAndResolveOperation(getServerName(), operations, this);
 
       try {
