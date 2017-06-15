@@ -557,8 +557,6 @@
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
-      <!-- Overriden to get some SPNEGO classes only in newer version -->
-      <version>4.5.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
