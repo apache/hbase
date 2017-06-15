@@ -253,8 +253,16 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Clock getRegionServerClock(ClockType clockType) {
+  public Clock getClock(ClockType clockType) {
     return Clock.getDummyClockOfGivenClockType(clockType);
+  }
+
+  @Override
+  public long updateClock(long timestamp) {
+    if (TimestampType.HYBRID.isLikelyOfType(timestamp)) {
+      return new Clock.HLC().update(timestamp);
+    }
+    return new Clock.SystemMonotonic().update(timestamp);
   }
 
   @Override

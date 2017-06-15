@@ -4539,6 +4539,31 @@ public final class AdminProtos {
      * <code>optional uint64 master_system_time = 5;</code>
      */
     long getMasterSystemTime();
+
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    boolean hasNodeTime();
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime();
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.OpenRegionRequest}
@@ -4602,6 +4627,19 @@ public final class AdminProtos {
             case 40: {
               bitField0_ |= 0x00000002;
               masterSystemTime_ = input.readUInt64();
+              break;
+            }
+            case 50: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000004) == 0x00000004)) {
+                subBuilder = nodeTime_.toBuilder();
+              }
+              nodeTime_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(nodeTime_);
+                nodeTime_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000004;
               break;
             }
           }
@@ -5890,6 +5928,39 @@ public final class AdminProtos {
       return masterSystemTime_;
     }
 
+    public static final int NODETIME_FIELD_NUMBER = 6;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_;
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    public boolean hasNodeTime() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
+      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    }
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
+      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -5917,6 +5988,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeUInt64(5, masterSystemTime_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeMessage(6, getNodeTime());
+      }
       unknownFields.writeTo(output);
     }
 
@@ -5936,6 +6010,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeUInt64Size(5, masterSystemTime_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, getNodeTime());
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -5966,6 +6044,11 @@ public final class AdminProtos {
         result = result && (getMasterSystemTime()
             == other.getMasterSystemTime());
       }
+      result = result && (hasNodeTime() == other.hasNodeTime());
+      if (hasNodeTime()) {
+        result = result && getNodeTime()
+            .equals(other.getNodeTime());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -5990,6 +6073,10 @@ public final class AdminProtos {
         hash = (37 * hash) + MASTER_SYSTEM_TIME_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
             getMasterSystemTime());
+      }
+      if (hasNodeTime()) {
+        hash = (37 * hash) + NODETIME_FIELD_NUMBER;
+        hash = (53 * hash) + getNodeTime().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -6106,6 +6193,7 @@ public final class AdminProtos {
         if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
           getOpenInfoFieldBuilder();
+          getNodeTimeFieldBuilder();
         }
       }
       public Builder clear() {
@@ -6120,6 +6208,12 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         masterSystemTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000004);
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = null;
+        } else {
+          nodeTimeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -6161,6 +6255,14 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.masterSystemTime_ = masterSystemTime_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        if (nodeTimeBuilder_ == null) {
+          result.nodeTime_ = nodeTime_;
+        } else {
+          result.nodeTime_ = nodeTimeBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -6234,6 +6336,9 @@ public final class AdminProtos {
         }
         if (other.hasMasterSystemTime()) {
           setMasterSystemTime(other.getMasterSystemTime());
+        }
+        if (other.hasNodeTime()) {
+          mergeNodeTime(other.getNodeTime());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -6603,6 +6708,160 @@ public final class AdminProtos {
         onChanged();
         return this;
       }
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimeBuilder_;
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public boolean hasNodeTime() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
+        if (nodeTimeBuilder_ == null) {
+          return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+        } else {
+          return nodeTimeBuilder_.getMessage();
+        }
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public Builder setNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          nodeTime_ = value;
+          onChanged();
+        } else {
+          nodeTimeBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public Builder setNodeTime(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = builderForValue.build();
+          onChanged();
+        } else {
+          nodeTimeBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public Builder mergeNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimeBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+              nodeTime_ != null &&
+              nodeTime_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance()) {
+            nodeTime_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.newBuilder(nodeTime_).mergeFrom(value).buildPartial();
+          } else {
+            nodeTime_ = value;
+          }
+          onChanged();
+        } else {
+          nodeTimeBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public Builder clearNodeTime() {
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = null;
+          onChanged();
+        } else {
+          nodeTimeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimeBuilder() {
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return getNodeTimeFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
+        if (nodeTimeBuilder_ != null) {
+          return nodeTimeBuilder_.getMessageOrBuilder();
+        } else {
+          return nodeTime_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+        }
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+          getNodeTimeFieldBuilder() {
+        if (nodeTimeBuilder_ == null) {
+          nodeTimeBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder>(
+                  getNodeTime(),
+                  getParentForChildren(),
+                  isClean());
+          nodeTime_ = null;
+        }
+        return nodeTimeBuilder_;
+      }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
@@ -6668,6 +6927,31 @@ public final class AdminProtos {
      * <code>repeated .hbase.pb.OpenRegionResponse.RegionOpeningState opening_state = 1;</code>
      */
     org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState getOpeningState(int index);
+
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    boolean hasNodeTime();
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime();
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.OpenRegionResponse}
@@ -6743,6 +7027,19 @@ public final class AdminProtos {
                 }
               }
               input.popLimit(oldLimit);
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = nodeTime_.toBuilder();
+              }
+              nodeTime_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(nodeTime_);
+                nodeTime_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
               break;
             }
           }
@@ -6871,6 +7168,7 @@ public final class AdminProtos {
       // @@protoc_insertion_point(enum_scope:hbase.pb.OpenRegionResponse.RegionOpeningState)
     }
 
+    private int bitField0_;
     public static final int OPENING_STATE_FIELD_NUMBER = 1;
     private java.util.List<java.lang.Integer> openingState_;
     private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.ListAdapter.Converter<
@@ -6902,6 +7200,39 @@ public final class AdminProtos {
       return openingState_converter_.convert(openingState_.get(index));
     }
 
+    public static final int NODETIME_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_;
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    public boolean hasNodeTime() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
+      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    }
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
+      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -6916,6 +7247,9 @@ public final class AdminProtos {
                         throws java.io.IOException {
       for (int i = 0; i < openingState_.size(); i++) {
         output.writeEnum(1, openingState_.get(i));
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(2, getNodeTime());
       }
       unknownFields.writeTo(output);
     }
@@ -6933,6 +7267,10 @@ public final class AdminProtos {
         }
         size += dataSize;
         size += 1 * openingState_.size();
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, getNodeTime());
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -6952,6 +7290,11 @@ public final class AdminProtos {
 
       boolean result = true;
       result = result && openingState_.equals(other.openingState_);
+      result = result && (hasNodeTime() == other.hasNodeTime());
+      if (hasNodeTime()) {
+        result = result && getNodeTime()
+            .equals(other.getNodeTime());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -6966,6 +7309,10 @@ public final class AdminProtos {
       if (getOpeningStateCount() > 0) {
         hash = (37 * hash) + OPENING_STATE_FIELD_NUMBER;
         hash = (53 * hash) + openingState_.hashCode();
+      }
+      if (hasNodeTime()) {
+        hash = (37 * hash) + NODETIME_FIELD_NUMBER;
+        hash = (53 * hash) + getNodeTime().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -7081,12 +7428,19 @@ public final class AdminProtos {
       private void maybeForceBuilderInitialization() {
         if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
+          getNodeTimeFieldBuilder();
         }
       }
       public Builder clear() {
         super.clear();
         openingState_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = null;
+        } else {
+          nodeTimeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -7110,11 +7464,21 @@ public final class AdminProtos {
       public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse buildPartial() {
         org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse result = new org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse(this);
         int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           openingState_ = java.util.Collections.unmodifiableList(openingState_);
           bitField0_ = (bitField0_ & ~0x00000001);
         }
         result.openingState_ = openingState_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (nodeTimeBuilder_ == null) {
+          result.nodeTime_ = nodeTime_;
+        } else {
+          result.nodeTime_ = nodeTimeBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -7165,6 +7529,9 @@ public final class AdminProtos {
             openingState_.addAll(other.openingState_);
           }
           onChanged();
+        }
+        if (other.hasNodeTime()) {
+          mergeNodeTime(other.getNodeTime());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -7266,6 +7633,160 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
+      }
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimeBuilder_;
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public boolean hasNodeTime() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
+        if (nodeTimeBuilder_ == null) {
+          return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+        } else {
+          return nodeTimeBuilder_.getMessage();
+        }
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public Builder setNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          nodeTime_ = value;
+          onChanged();
+        } else {
+          nodeTimeBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public Builder setNodeTime(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = builderForValue.build();
+          onChanged();
+        } else {
+          nodeTimeBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public Builder mergeNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimeBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              nodeTime_ != null &&
+              nodeTime_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance()) {
+            nodeTime_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.newBuilder(nodeTime_).mergeFrom(value).buildPartial();
+          } else {
+            nodeTime_ = value;
+          }
+          onChanged();
+        } else {
+          nodeTimeBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public Builder clearNodeTime() {
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = null;
+          onChanged();
+        } else {
+          nodeTimeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimeBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getNodeTimeFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
+        if (nodeTimeBuilder_ != null) {
+          return nodeTimeBuilder_.getMessageOrBuilder();
+        } else {
+          return nodeTime_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+        }
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+          getNodeTimeFieldBuilder() {
+        if (nodeTimeBuilder_ == null) {
+          nodeTimeBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder>(
+                  getNodeTime(),
+                  getParentForChildren(),
+                  isClean());
+          nodeTime_ = null;
+        }
+        return nodeTimeBuilder_;
       }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -8345,6 +8866,31 @@ public final class AdminProtos {
      * <code>optional uint64 serverStartCode = 5;</code>
      */
     long getServerStartCode();
+
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    boolean hasNodeTime();
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime();
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder();
   }
   /**
    * <pre>
@@ -8436,6 +8982,19 @@ public final class AdminProtos {
             case 40: {
               bitField0_ |= 0x00000010;
               serverStartCode_ = input.readUInt64();
+              break;
+            }
+            case 50: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000020) == 0x00000020)) {
+                subBuilder = nodeTime_.toBuilder();
+              }
+              nodeTime_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(nodeTime_);
+                nodeTime_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000020;
               break;
             }
           }
@@ -8558,6 +9117,39 @@ public final class AdminProtos {
       return serverStartCode_;
     }
 
+    public static final int NODETIME_FIELD_NUMBER = 6;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_;
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    public boolean hasNodeTime() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
+      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    }
+    /**
+     * <pre>
+     * physical or hybrid timestamp from master clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
+      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -8599,6 +9191,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeUInt64(5, serverStartCode_);
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeMessage(6, getNodeTime());
+      }
       unknownFields.writeTo(output);
     }
 
@@ -8626,6 +9221,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeUInt64Size(5, serverStartCode_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, getNodeTime());
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -8669,6 +9268,11 @@ public final class AdminProtos {
         result = result && (getServerStartCode()
             == other.getServerStartCode());
       }
+      result = result && (hasNodeTime() == other.hasNodeTime());
+      if (hasNodeTime()) {
+        result = result && getNodeTime()
+            .equals(other.getNodeTime());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -8701,6 +9305,10 @@ public final class AdminProtos {
         hash = (37 * hash) + SERVERSTARTCODE_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
             getServerStartCode());
+      }
+      if (hasNodeTime()) {
+        hash = (37 * hash) + NODETIME_FIELD_NUMBER;
+        hash = (53 * hash) + getNodeTime().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -8824,6 +9432,7 @@ public final class AdminProtos {
                 .alwaysUseFieldBuilders) {
           getRegionFieldBuilder();
           getDestinationServerFieldBuilder();
+          getNodeTimeFieldBuilder();
         }
       }
       public Builder clear() {
@@ -8846,6 +9455,12 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000008);
         serverStartCode_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000010);
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = null;
+        } else {
+          nodeTimeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -8898,6 +9513,14 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000010;
         }
         result.serverStartCode_ = serverStartCode_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        if (nodeTimeBuilder_ == null) {
+          result.nodeTime_ = nodeTime_;
+        } else {
+          result.nodeTime_ = nodeTimeBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8954,6 +9577,9 @@ public final class AdminProtos {
         }
         if (other.hasServerStartCode()) {
           setServerStartCode(other.getServerStartCode());
+        }
+        if (other.hasNodeTime()) {
+          mergeNodeTime(other.getNodeTime());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -9341,6 +9967,160 @@ public final class AdminProtos {
         onChanged();
         return this;
       }
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimeBuilder_;
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public boolean hasNodeTime() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
+        if (nodeTimeBuilder_ == null) {
+          return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+        } else {
+          return nodeTimeBuilder_.getMessage();
+        }
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public Builder setNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          nodeTime_ = value;
+          onChanged();
+        } else {
+          nodeTimeBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000020;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public Builder setNodeTime(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = builderForValue.build();
+          onChanged();
+        } else {
+          nodeTimeBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000020;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public Builder mergeNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimeBuilder_ == null) {
+          if (((bitField0_ & 0x00000020) == 0x00000020) &&
+              nodeTime_ != null &&
+              nodeTime_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance()) {
+            nodeTime_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.newBuilder(nodeTime_).mergeFrom(value).buildPartial();
+          } else {
+            nodeTime_ = value;
+          }
+          onChanged();
+        } else {
+          nodeTimeBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000020;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public Builder clearNodeTime() {
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = null;
+          onChanged();
+        } else {
+          nodeTimeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000020);
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimeBuilder() {
+        bitField0_ |= 0x00000020;
+        onChanged();
+        return getNodeTimeFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
+        if (nodeTimeBuilder_ != null) {
+          return nodeTimeBuilder_.getMessageOrBuilder();
+        } else {
+          return nodeTime_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+        }
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from master clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+          getNodeTimeFieldBuilder() {
+        if (nodeTimeBuilder_ == null) {
+          nodeTimeBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder>(
+                  getNodeTime(),
+                  getParentForChildren(),
+                  isClean());
+          nodeTime_ = null;
+        }
+        return nodeTimeBuilder_;
+      }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
@@ -9402,6 +10182,31 @@ public final class AdminProtos {
      * <code>required bool closed = 1;</code>
      */
     boolean getClosed();
+
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    boolean hasNodeTime();
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime();
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.CloseRegionResponse}
@@ -9451,6 +10256,19 @@ public final class AdminProtos {
               closed_ = input.readBool();
               break;
             }
+            case 18: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = nodeTime_.toBuilder();
+              }
+              nodeTime_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(nodeTime_);
+                nodeTime_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
           }
         }
       } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
@@ -9491,6 +10309,39 @@ public final class AdminProtos {
       return closed_;
     }
 
+    public static final int NODETIME_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_;
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    public boolean hasNodeTime() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
+      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    }
+    /**
+     * <pre>
+     * physical or hybrid timestamp from region server clock
+     * </pre>
+     *
+     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
+      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -9510,6 +10361,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeBool(1, closed_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, getNodeTime());
+      }
       unknownFields.writeTo(output);
     }
 
@@ -9521,6 +10375,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeBoolSize(1, closed_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, getNodeTime());
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -9544,6 +10402,11 @@ public final class AdminProtos {
         result = result && (getClosed()
             == other.getClosed());
       }
+      result = result && (hasNodeTime() == other.hasNodeTime());
+      if (hasNodeTime()) {
+        result = result && getNodeTime()
+            .equals(other.getNodeTime());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -9559,6 +10422,10 @@ public final class AdminProtos {
         hash = (37 * hash) + CLOSED_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
             getClosed());
+      }
+      if (hasNodeTime()) {
+        hash = (37 * hash) + NODETIME_FIELD_NUMBER;
+        hash = (53 * hash) + getNodeTime().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -9674,12 +10541,19 @@ public final class AdminProtos {
       private void maybeForceBuilderInitialization() {
         if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
+          getNodeTimeFieldBuilder();
         }
       }
       public Builder clear() {
         super.clear();
         closed_ = false;
         bitField0_ = (bitField0_ & ~0x00000001);
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = null;
+        } else {
+          nodeTimeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -9708,6 +10582,14 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000001;
         }
         result.closed_ = closed_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (nodeTimeBuilder_ == null) {
+          result.nodeTime_ = nodeTime_;
+        } else {
+          result.nodeTime_ = nodeTimeBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -9752,6 +10634,9 @@ public final class AdminProtos {
         if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse.getDefaultInstance()) return this;
         if (other.hasClosed()) {
           setClosed(other.getClosed());
+        }
+        if (other.hasNodeTime()) {
+          mergeNodeTime(other.getNodeTime());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -9814,6 +10699,160 @@ public final class AdminProtos {
         closed_ = false;
         onChanged();
         return this;
+      }
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimeBuilder_;
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public boolean hasNodeTime() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
+        if (nodeTimeBuilder_ == null) {
+          return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+        } else {
+          return nodeTimeBuilder_.getMessage();
+        }
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public Builder setNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          nodeTime_ = value;
+          onChanged();
+        } else {
+          nodeTimeBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public Builder setNodeTime(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = builderForValue.build();
+          onChanged();
+        } else {
+          nodeTimeBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public Builder mergeNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimeBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              nodeTime_ != null &&
+              nodeTime_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance()) {
+            nodeTime_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.newBuilder(nodeTime_).mergeFrom(value).buildPartial();
+          } else {
+            nodeTime_ = value;
+          }
+          onChanged();
+        } else {
+          nodeTimeBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public Builder clearNodeTime() {
+        if (nodeTimeBuilder_ == null) {
+          nodeTime_ = null;
+          onChanged();
+        } else {
+          nodeTimeBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimeBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getNodeTimeFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
+        if (nodeTimeBuilder_ != null) {
+          return nodeTimeBuilder_.getMessageOrBuilder();
+        } else {
+          return nodeTime_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+        }
+      }
+      /**
+       * <pre>
+       * physical or hybrid timestamp from region server clock
+       * </pre>
+       *
+       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+          getNodeTimeFieldBuilder() {
+        if (nodeTimeBuilder_ == null) {
+          nodeTimeBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder>(
+                  getNodeTime(),
+                  getParentForChildren(),
+                  isClean());
+          nodeTime_ = null;
+        }
+        return nodeTimeBuilder_;
       }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -30447,125 +31486,129 @@ public final class AdminProtos {
       "ponse\022\022\n\nstore_file\030\001 \003(\t\"\030\n\026GetOnlineRe" +
       "gionRequest\"D\n\027GetOnlineRegionResponse\022)" +
       "\n\013region_info\030\001 \003(\0132\024.hbase.pb.RegionInf" +
-      "o\"\263\002\n\021OpenRegionRequest\022=\n\topen_info\030\001 \003" +
+      "o\"\331\002\n\021OpenRegionRequest\022=\n\topen_info\030\001 \003" +
       "(\0132*.hbase.pb.OpenRegionRequest.RegionOp",
       "enInfo\022\027\n\017serverStartCode\030\002 \001(\004\022\032\n\022maste" +
-      "r_system_time\030\005 \001(\004\032\251\001\n\016RegionOpenInfo\022$" +
-      "\n\006region\030\001 \002(\0132\024.hbase.pb.RegionInfo\022\037\n\027" +
-      "version_of_offline_node\030\002 \001(\r\022+\n\rfavored" +
-      "_nodes\030\003 \003(\0132\024.hbase.pb.ServerName\022#\n\033op" +
-      "enForDistributedLogReplay\030\004 \001(\010\"\246\001\n\022Open" +
-      "RegionResponse\022F\n\ropening_state\030\001 \003(\0162/." +
-      "hbase.pb.OpenRegionResponse.RegionOpenin" +
-      "gState\"H\n\022RegionOpeningState\022\n\n\006OPENED\020\000" +
-      "\022\022\n\016ALREADY_OPENED\020\001\022\022\n\016FAILED_OPENING\020\002",
-      "\"?\n\023WarmupRegionRequest\022(\n\nregionInfo\030\001 " +
-      "\002(\0132\024.hbase.pb.RegionInfo\"\026\n\024WarmupRegio" +
-      "nResponse\"\313\001\n\022CloseRegionRequest\022)\n\006regi" +
-      "on\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\037\n\027v" +
-      "ersion_of_closing_node\030\002 \001(\r\022\036\n\020transiti" +
-      "on_in_ZK\030\003 \001(\010:\004true\0220\n\022destination_serv" +
-      "er\030\004 \001(\0132\024.hbase.pb.ServerName\022\027\n\017server" +
-      "StartCode\030\005 \001(\004\"%\n\023CloseRegionResponse\022\016" +
-      "\n\006closed\030\001 \002(\010\"y\n\022FlushRegionRequest\022)\n\006" +
-      "region\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022",
-      "\030\n\020if_older_than_ts\030\002 \001(\004\022\036\n\026write_flush" +
-      "_wal_marker\030\003 \001(\010\"_\n\023FlushRegionResponse" +
-      "\022\027\n\017last_flush_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001" +
-      "(\010\022\036\n\026wrote_flush_wal_marker\030\003 \001(\010\"T\n\022Sp" +
-      "litRegionRequest\022)\n\006region\030\001 \002(\0132\031.hbase" +
-      ".pb.RegionSpecifier\022\023\n\013split_point\030\002 \001(\014" +
-      "\"\025\n\023SplitRegionResponse\"`\n\024CompactRegion" +
-      "Request\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Regio" +
-      "nSpecifier\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(" +
-      "\014\"\027\n\025CompactRegionResponse\"\315\001\n\031UpdateFav",
-      "oredNodesRequest\022I\n\013update_info\030\001 \003(\01324." +
-      "hbase.pb.UpdateFavoredNodesRequest.Regio" +
-      "nUpdateInfo\032e\n\020RegionUpdateInfo\022$\n\006regio" +
-      "n\030\001 \002(\0132\024.hbase.pb.RegionInfo\022+\n\rfavored" +
-      "_nodes\030\002 \003(\0132\024.hbase.pb.ServerName\".\n\032Up" +
-      "dateFavoredNodesResponse\022\020\n\010response\030\001 \001" +
-      "(\r\"a\n\010WALEntry\022\035\n\003key\030\001 \002(\0132\020.hbase.pb.W" +
-      "ALKey\022\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025associ" +
-      "ated_cell_count\030\003 \001(\005\"\242\001\n\030ReplicateWALEn" +
-      "tryRequest\022!\n\005entry\030\001 \003(\0132\022.hbase.pb.WAL",
-      "Entry\022\034\n\024replicationClusterId\030\002 \001(\t\022\"\n\032s" +
-      "ourceBaseNamespaceDirPath\030\003 \001(\t\022!\n\031sourc" +
-      "eHFileArchiveDirPath\030\004 \001(\t\"\033\n\031ReplicateW" +
-      "ALEntryResponse\"\026\n\024RollWALWriterRequest\"" +
-      "0\n\025RollWALWriterResponse\022\027\n\017region_to_fl" +
-      "ush\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reason" +
-      "\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServe" +
-      "rInfoRequest\"K\n\nServerInfo\022)\n\013server_nam" +
-      "e\030\001 \002(\0132\024.hbase.pb.ServerName\022\022\n\nwebui_p" +
-      "ort\030\002 \001(\r\"B\n\025GetServerInfoResponse\022)\n\013se",
-      "rver_info\030\001 \002(\0132\024.hbase.pb.ServerInfo\"\034\n" +
-      "\032UpdateConfigurationRequest\"\035\n\033UpdateCon" +
-      "figurationResponse\"?\n\024GetRegionLoadReque" +
-      "st\022\'\n\ntable_name\030\001 \001(\0132\023.hbase.pb.TableN" +
-      "ame\"C\n\025GetRegionLoadResponse\022*\n\014region_l" +
-      "oads\030\001 \003(\0132\024.hbase.pb.RegionLoad\"2\n\034Clea" +
-      "rCompactionQueuesRequest\022\022\n\nqueue_name\030\001" +
-      " \003(\t\"\037\n\035ClearCompactionQueuesResponse\"\200\001" +
-      "\n\030ExecuteProceduresRequest\0220\n\013open_regio" +
-      "n\030\001 \003(\0132\033.hbase.pb.OpenRegionRequest\0222\n\014",
-      "close_region\030\002 \003(\0132\034.hbase.pb.CloseRegio" +
-      "nRequest\"\203\001\n\031ExecuteProceduresResponse\0221" +
-      "\n\013open_region\030\001 \003(\0132\034.hbase.pb.OpenRegio" +
-      "nResponse\0223\n\014close_region\030\002 \003(\0132\035.hbase." +
-      "pb.CloseRegionResponse\"\244\001\n\023MergeRegionsR" +
-      "equest\022+\n\010region_a\030\001 \002(\0132\031.hbase.pb.Regi" +
-      "onSpecifier\022+\n\010region_b\030\002 \002(\0132\031.hbase.pb" +
-      ".RegionSpecifier\022\027\n\010forcible\030\003 \001(\010:\005fals" +
-      "e\022\032\n\022master_system_time\030\004 \001(\004\"\026\n\024MergeRe" +
-      "gionsResponse2\216\016\n\014AdminService\022P\n\rGetReg",
-      "ionInfo\022\036.hbase.pb.GetRegionInfoRequest\032" +
-      "\037.hbase.pb.GetRegionInfoResponse\022M\n\014GetS" +
-      "toreFile\022\035.hbase.pb.GetStoreFileRequest\032" +
-      "\036.hbase.pb.GetStoreFileResponse\022V\n\017GetOn" +
-      "lineRegion\022 .hbase.pb.GetOnlineRegionReq" +
-      "uest\032!.hbase.pb.GetOnlineRegionResponse\022" +
-      "G\n\nOpenRegion\022\033.hbase.pb.OpenRegionReque" +
-      "st\032\034.hbase.pb.OpenRegionResponse\022M\n\014Warm" +
-      "upRegion\022\035.hbase.pb.WarmupRegionRequest\032" +
-      "\036.hbase.pb.WarmupRegionResponse\022J\n\013Close",
-      "Region\022\034.hbase.pb.CloseRegionRequest\032\035.h" +
-      "base.pb.CloseRegionResponse\022J\n\013FlushRegi" +
-      "on\022\034.hbase.pb.FlushRegionRequest\032\035.hbase" +
-      ".pb.FlushRegionResponse\022J\n\013SplitRegion\022\034" +
-      ".hbase.pb.SplitRegionRequest\032\035.hbase.pb." +
-      "SplitRegionResponse\022P\n\rCompactRegion\022\036.h" +
-      "base.pb.CompactRegionRequest\032\037.hbase.pb." +
-      "CompactRegionResponse\022\\\n\021ReplicateWALEnt" +
-      "ry\022\".hbase.pb.ReplicateWALEntryRequest\032#" +
-      ".hbase.pb.ReplicateWALEntryResponse\022Q\n\006R",
-      "eplay\022\".hbase.pb.ReplicateWALEntryReques" +
-      "t\032#.hbase.pb.ReplicateWALEntryResponse\022P" +
-      "\n\rRollWALWriter\022\036.hbase.pb.RollWALWriter" +
-      "Request\032\037.hbase.pb.RollWALWriterResponse" +
-      "\022P\n\rGetServerInfo\022\036.hbase.pb.GetServerIn" +
-      "foRequest\032\037.hbase.pb.GetServerInfoRespon" +
-      "se\022G\n\nStopServer\022\033.hbase.pb.StopServerRe" +
-      "quest\032\034.hbase.pb.StopServerResponse\022_\n\022U" +
-      "pdateFavoredNodes\022#.hbase.pb.UpdateFavor" +
-      "edNodesRequest\032$.hbase.pb.UpdateFavoredN",
-      "odesResponse\022b\n\023UpdateConfiguration\022$.hb" +
-      "ase.pb.UpdateConfigurationRequest\032%.hbas" +
-      "e.pb.UpdateConfigurationResponse\022P\n\rGetR" +
-      "egionLoad\022\036.hbase.pb.GetRegionLoadReques" +
-      "t\032\037.hbase.pb.GetRegionLoadResponse\022h\n\025Cl" +
-      "earCompactionQueues\022&.hbase.pb.ClearComp" +
-      "actionQueuesRequest\032\'.hbase.pb.ClearComp" +
-      "actionQueuesResponse\022k\n\026GetSpaceQuotaSna" +
-      "pshots\022\'.hbase.pb.GetSpaceQuotaSnapshots" +
-      "Request\032(.hbase.pb.GetSpaceQuotaSnapshot",
-      "sResponse\022\\\n\021ExecuteProcedures\022\".hbase.p" +
-      "b.ExecuteProceduresRequest\032#.hbase.pb.Ex" +
-      "ecuteProceduresResponse\022M\n\014MergeRegions\022" +
-      "\035.hbase.pb.MergeRegionsRequest\032\036.hbase.p" +
-      "b.MergeRegionsResponseBH\n1org.apache.had" +
-      "oop.hbase.shaded.protobuf.generatedB\013Adm" +
-      "inProtosH\001\210\001\001\240\001\001"
+      "r_system_time\030\005 \001(\004\022$\n\010nodeTime\030\006 \001(\0132\022." +
+      "hbase.pb.NodeTime\032\251\001\n\016RegionOpenInfo\022$\n\006" +
+      "region\030\001 \002(\0132\024.hbase.pb.RegionInfo\022\037\n\027ve" +
+      "rsion_of_offline_node\030\002 \001(\r\022+\n\rfavored_n" +
+      "odes\030\003 \003(\0132\024.hbase.pb.ServerName\022#\n\033open" +
+      "ForDistributedLogReplay\030\004 \001(\010\"\314\001\n\022OpenRe" +
+      "gionResponse\022F\n\ropening_state\030\001 \003(\0162/.hb" +
+      "ase.pb.OpenRegionResponse.RegionOpeningS" +
+      "tate\022$\n\010nodeTime\030\002 \001(\0132\022.hbase.pb.NodeTi",
+      "me\"H\n\022RegionOpeningState\022\n\n\006OPENED\020\000\022\022\n\016" +
+      "ALREADY_OPENED\020\001\022\022\n\016FAILED_OPENING\020\002\"?\n\023" +
+      "WarmupRegionRequest\022(\n\nregionInfo\030\001 \002(\0132" +
+      "\024.hbase.pb.RegionInfo\"\026\n\024WarmupRegionRes" +
+      "ponse\"\361\001\n\022CloseRegionRequest\022)\n\006region\030\001" +
+      " \002(\0132\031.hbase.pb.RegionSpecifier\022\037\n\027versi" +
+      "on_of_closing_node\030\002 \001(\r\022\036\n\020transition_i" +
+      "n_ZK\030\003 \001(\010:\004true\0220\n\022destination_server\030\004" +
+      " \001(\0132\024.hbase.pb.ServerName\022\027\n\017serverStar" +
+      "tCode\030\005 \001(\004\022$\n\010nodeTime\030\006 \001(\0132\022.hbase.pb",
+      ".NodeTime\"K\n\023CloseRegionResponse\022\016\n\006clos" +
+      "ed\030\001 \002(\010\022$\n\010nodeTime\030\002 \001(\0132\022.hbase.pb.No" +
+      "deTime\"y\n\022FlushRegionRequest\022)\n\006region\030\001" +
+      " \002(\0132\031.hbase.pb.RegionSpecifier\022\030\n\020if_ol" +
+      "der_than_ts\030\002 \001(\004\022\036\n\026write_flush_wal_mar" +
+      "ker\030\003 \001(\010\"_\n\023FlushRegionResponse\022\027\n\017last" +
+      "_flush_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\022\036\n\026wr" +
+      "ote_flush_wal_marker\030\003 \001(\010\"T\n\022SplitRegio" +
+      "nRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Regi" +
+      "onSpecifier\022\023\n\013split_point\030\002 \001(\014\"\025\n\023Spli",
+      "tRegionResponse\"`\n\024CompactRegionRequest\022" +
+      ")\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifi" +
+      "er\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(\014\"\027\n\025Com" +
+      "pactRegionResponse\"\315\001\n\031UpdateFavoredNode" +
+      "sRequest\022I\n\013update_info\030\001 \003(\01324.hbase.pb" +
+      ".UpdateFavoredNodesRequest.RegionUpdateI" +
+      "nfo\032e\n\020RegionUpdateInfo\022$\n\006region\030\001 \002(\0132" +
+      "\024.hbase.pb.RegionInfo\022+\n\rfavored_nodes\030\002" +
+      " \003(\0132\024.hbase.pb.ServerName\".\n\032UpdateFavo" +
+      "redNodesResponse\022\020\n\010response\030\001 \001(\r\"a\n\010WA",
+      "LEntry\022\035\n\003key\030\001 \002(\0132\020.hbase.pb.WALKey\022\027\n" +
+      "\017key_value_bytes\030\002 \003(\014\022\035\n\025associated_cel" +
+      "l_count\030\003 \001(\005\"\242\001\n\030ReplicateWALEntryReque" +
+      "st\022!\n\005entry\030\001 \003(\0132\022.hbase.pb.WALEntry\022\034\n" +
+      "\024replicationClusterId\030\002 \001(\t\022\"\n\032sourceBas" +
+      "eNamespaceDirPath\030\003 \001(\t\022!\n\031sourceHFileAr" +
+      "chiveDirPath\030\004 \001(\t\"\033\n\031ReplicateWALEntryR" +
+      "esponse\"\026\n\024RollWALWriterRequest\"0\n\025RollW" +
+      "ALWriterResponse\022\027\n\017region_to_flush\030\001 \003(" +
+      "\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 \002(\t\"\024",
+      "\n\022StopServerResponse\"\026\n\024GetServerInfoReq" +
+      "uest\"K\n\nServerInfo\022)\n\013server_name\030\001 \002(\0132" +
+      "\024.hbase.pb.ServerName\022\022\n\nwebui_port\030\002 \001(" +
+      "\r\"B\n\025GetServerInfoResponse\022)\n\013server_inf" +
+      "o\030\001 \002(\0132\024.hbase.pb.ServerInfo\"\034\n\032UpdateC" +
+      "onfigurationRequest\"\035\n\033UpdateConfigurati" +
+      "onResponse\"?\n\024GetRegionLoadRequest\022\'\n\nta" +
+      "ble_name\030\001 \001(\0132\023.hbase.pb.TableName\"C\n\025G" +
+      "etRegionLoadResponse\022*\n\014region_loads\030\001 \003" +
+      "(\0132\024.hbase.pb.RegionLoad\"2\n\034ClearCompact",
+      "ionQueuesRequest\022\022\n\nqueue_name\030\001 \003(\t\"\037\n\035" +
+      "ClearCompactionQueuesResponse\"\200\001\n\030Execut" +
+      "eProceduresRequest\0220\n\013open_region\030\001 \003(\0132" +
+      "\033.hbase.pb.OpenRegionRequest\0222\n\014close_re" +
+      "gion\030\002 \003(\0132\034.hbase.pb.CloseRegionRequest" +
+      "\"\203\001\n\031ExecuteProceduresResponse\0221\n\013open_r" +
+      "egion\030\001 \003(\0132\034.hbase.pb.OpenRegionRespons" +
+      "e\0223\n\014close_region\030\002 \003(\0132\035.hbase.pb.Close" +
+      "RegionResponse\"\244\001\n\023MergeRegionsRequest\022+" +
+      "\n\010region_a\030\001 \002(\0132\031.hbase.pb.RegionSpecif",
+      "ier\022+\n\010region_b\030\002 \002(\0132\031.hbase.pb.RegionS" +
+      "pecifier\022\027\n\010forcible\030\003 \001(\010:\005false\022\032\n\022mas" +
+      "ter_system_time\030\004 \001(\004\"\026\n\024MergeRegionsRes" +
+      "ponse2\216\016\n\014AdminService\022P\n\rGetRegionInfo\022" +
+      "\036.hbase.pb.GetRegionInfoRequest\032\037.hbase." +
+      "pb.GetRegionInfoResponse\022M\n\014GetStoreFile" +
+      "\022\035.hbase.pb.GetStoreFileRequest\032\036.hbase." +
+      "pb.GetStoreFileResponse\022V\n\017GetOnlineRegi" +
+      "on\022 .hbase.pb.GetOnlineRegionRequest\032!.h" +
+      "base.pb.GetOnlineRegionResponse\022G\n\nOpenR",
+      "egion\022\033.hbase.pb.OpenRegionRequest\032\034.hba" +
+      "se.pb.OpenRegionResponse\022M\n\014WarmupRegion" +
+      "\022\035.hbase.pb.WarmupRegionRequest\032\036.hbase." +
+      "pb.WarmupRegionResponse\022J\n\013CloseRegion\022\034" +
+      ".hbase.pb.CloseRegionRequest\032\035.hbase.pb." +
+      "CloseRegionResponse\022J\n\013FlushRegion\022\034.hba" +
+      "se.pb.FlushRegionRequest\032\035.hbase.pb.Flus" +
+      "hRegionResponse\022J\n\013SplitRegion\022\034.hbase.p" +
+      "b.SplitRegionRequest\032\035.hbase.pb.SplitReg" +
+      "ionResponse\022P\n\rCompactRegion\022\036.hbase.pb.",
+      "CompactRegionRequest\032\037.hbase.pb.CompactR" +
+      "egionResponse\022\\\n\021ReplicateWALEntry\022\".hba" +
+      "se.pb.ReplicateWALEntryRequest\032#.hbase.p" +
+      "b.ReplicateWALEntryResponse\022Q\n\006Replay\022\"." +
+      "hbase.pb.ReplicateWALEntryRequest\032#.hbas" +
+      "e.pb.ReplicateWALEntryResponse\022P\n\rRollWA" +
+      "LWriter\022\036.hbase.pb.RollWALWriterRequest\032" +
+      "\037.hbase.pb.RollWALWriterResponse\022P\n\rGetS" +
+      "erverInfo\022\036.hbase.pb.GetServerInfoReques" +
+      "t\032\037.hbase.pb.GetServerInfoResponse\022G\n\nSt",
+      "opServer\022\033.hbase.pb.StopServerRequest\032\034." +
+      "hbase.pb.StopServerResponse\022_\n\022UpdateFav" +
+      "oredNodes\022#.hbase.pb.UpdateFavoredNodesR" +
+      "equest\032$.hbase.pb.UpdateFavoredNodesResp" +
+      "onse\022b\n\023UpdateConfiguration\022$.hbase.pb.U" +
+      "pdateConfigurationRequest\032%.hbase.pb.Upd" +
+      "ateConfigurationResponse\022P\n\rGetRegionLoa" +
+      "d\022\036.hbase.pb.GetRegionLoadRequest\032\037.hbas" +
+      "e.pb.GetRegionLoadResponse\022h\n\025ClearCompa" +
+      "ctionQueues\022&.hbase.pb.ClearCompactionQu",
+      "euesRequest\032\'.hbase.pb.ClearCompactionQu" +
+      "euesResponse\022k\n\026GetSpaceQuotaSnapshots\022\'" +
+      ".hbase.pb.GetSpaceQuotaSnapshotsRequest\032" +
+      "(.hbase.pb.GetSpaceQuotaSnapshotsRespons" +
+      "e\022\\\n\021ExecuteProcedures\022\".hbase.pb.Execut" +
+      "eProceduresRequest\032#.hbase.pb.ExecutePro" +
+      "ceduresResponse\022M\n\014MergeRegions\022\035.hbase." +
+      "pb.MergeRegionsRequest\032\036.hbase.pb.MergeR" +
+      "egionsResponseBH\n1org.apache.hadoop.hbas" +
+      "e.shaded.protobuf.generatedB\013AdminProtos",
+      "H\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -30624,7 +31667,7 @@ public final class AdminProtos {
     internal_static_hbase_pb_OpenRegionRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_OpenRegionRequest_descriptor,
-        new java.lang.String[] { "OpenInfo", "ServerStartCode", "MasterSystemTime", });
+        new java.lang.String[] { "OpenInfo", "ServerStartCode", "MasterSystemTime", "NodeTime", });
     internal_static_hbase_pb_OpenRegionRequest_RegionOpenInfo_descriptor =
       internal_static_hbase_pb_OpenRegionRequest_descriptor.getNestedTypes().get(0);
     internal_static_hbase_pb_OpenRegionRequest_RegionOpenInfo_fieldAccessorTable = new
@@ -30636,7 +31679,7 @@ public final class AdminProtos {
     internal_static_hbase_pb_OpenRegionResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_OpenRegionResponse_descriptor,
-        new java.lang.String[] { "OpeningState", });
+        new java.lang.String[] { "OpeningState", "NodeTime", });
     internal_static_hbase_pb_WarmupRegionRequest_descriptor =
       getDescriptor().getMessageTypes().get(8);
     internal_static_hbase_pb_WarmupRegionRequest_fieldAccessorTable = new
@@ -30654,13 +31697,13 @@ public final class AdminProtos {
     internal_static_hbase_pb_CloseRegionRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_CloseRegionRequest_descriptor,
-        new java.lang.String[] { "Region", "VersionOfClosingNode", "TransitionInZK", "DestinationServer", "ServerStartCode", });
+        new java.lang.String[] { "Region", "VersionOfClosingNode", "TransitionInZK", "DestinationServer", "ServerStartCode", "NodeTime", });
     internal_static_hbase_pb_CloseRegionResponse_descriptor =
       getDescriptor().getMessageTypes().get(11);
     internal_static_hbase_pb_CloseRegionResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_CloseRegionResponse_descriptor,
-        new java.lang.String[] { "Closed", });
+        new java.lang.String[] { "Closed", "NodeTime", });
     internal_static_hbase_pb_FlushRegionRequest_descriptor =
       getDescriptor().getMessageTypes().get(12);
     internal_static_hbase_pb_FlushRegionRequest_fieldAccessorTable = new

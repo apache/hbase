@@ -216,7 +216,7 @@ public class TestMasterNoCluster {
         // Fake a successful close.
         Mockito.doReturn(true).when(spy).
           sendRegionClose((ServerName)Mockito.any(), (HRegionInfo)Mockito.any(),
-            (ServerName)Mockito.any());
+            (ServerName)Mockito.any(), (Long)Mockito.any());
         return spy;
       }
 

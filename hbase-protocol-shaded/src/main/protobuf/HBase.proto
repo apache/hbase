@@ -235,3 +235,11 @@ message RegionServerInfo {
   optional int32 infoPort = 1;
   optional VersionInfo version_info = 2;
 }
+
+/**
+ * Used to send timestamp of node. The timestamp can be interpreted as either a physical or hybrid
+ * timestamp using TimestampType.
+ */
+message NodeTime {
+  optional uint64 time = 1;
+}

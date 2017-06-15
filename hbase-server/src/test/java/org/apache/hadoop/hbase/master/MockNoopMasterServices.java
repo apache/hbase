@@ -22,6 +22,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -84,6 +86,12 @@ public class MockNoopMasterServices implements MasterServices, Server {
   public long createSystemTable(final HTableDescriptor hTableDescriptor) throws IOException {
     return -1;
   }
+
+  @Override
+  public Clock getClock(ClockType clockType) { return null; };
+
+  @Override
+  public long updateClock(long timestamp) { return 0; }
 
   @Override
   public AssignmentManager getAssignmentManager() {

@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -336,9 +337,9 @@ public class HRegionServer extends HasThread implements
   // Region server contains instances of all three clock clocks. Regions have a set
   // clock type so depending on the clock type needed by a region, the appropriate
   // one can be accessed.
-  final protected Clock hybridLogicalClock;
-  final protected Clock systemMonotonicClock;
-  final protected Clock systemClock;
+  protected Clock hybridLogicalClock;
+  protected Clock systemMonotonicClock;
+  protected Clock systemClock;
 
   ConcurrentMap<String, Integer> rowlocks = new ConcurrentHashMap<>();
 
@@ -2087,14 +2088,46 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public Clock getRegionServerClock(ClockType clockType) {
-    if (clockType.equals(ClockType.HLC)){
-      return this.hybridLogicalClock;
-    } else if (clockType.equals(ClockType.SYSTEM_MONOTONIC)) {
-      return this.systemMonotonicClock;
-    } else {
-      return this.systemClock;
+  public Clock getClock(ClockType clockType) {
+    switch (clockType) {
+      case HLC:
+        return this.hybridLogicalClock;
+      case SYSTEM_MONOTONIC:
+        return this.systemMonotonicClock;
+      case SYSTEM:
+        return this.systemClock;
+      default:
+        throw new IllegalArgumentException("Wrong clock type: " + clockType.toString());
     }
+  }
+
+  /**
+   * Only for the purpose of testing
+   * @param clock
+   */
+  @VisibleForTesting
+  public void setClock(Clock clock) {
+    switch (clock.getClockType()) {
+      case HLC:
+        this.hybridLogicalClock = clock;
+        break;
+      case SYSTEM_MONOTONIC:
+        this.systemMonotonicClock = clock;
+        break;
+      case SYSTEM:
+        this.systemClock = clock;
+        break;
+      default:
+        throw new IllegalArgumentException("Wrong clock type: " + clock.getClockType().toString());
+    }
+  }
+
+  @Override
+  public long updateClock(long timestamp) {
+    if (TimestampType.HYBRID.isLikelyOfType(timestamp)) {
+      return this.hybridLogicalClock.update(timestamp);
+    }
+    return this.systemMonotonicClock.update(timestamp);
   }
 
   @Override

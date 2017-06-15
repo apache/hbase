@@ -365,6 +365,12 @@ public interface Clock {
       this.physicalTime = physicalTime;
     }
 
+    @VisibleForTesting
+    synchronized long getLogicalTime() { return logicalTime; }
+
+    @VisibleForTesting
+    synchronized long getPhysicalTime() { return physicalTime; }
+
     @Override
     public TimestampType getTimestampType() { return timestampType; }
 

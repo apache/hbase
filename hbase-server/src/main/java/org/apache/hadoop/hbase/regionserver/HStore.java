@@ -92,7 +92,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
-import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -479,6 +478,10 @@ public class HStore implements Store {
   @Override
   public long getMaxMemstoreTS() {
     return StoreUtils.getMaxMemstoreTSInList(this.getStorefiles());
+  }
+
+  public long getMaxTimestamp() {
+    return StoreUtils.getMaxTimestampInList(this.getStorefiles());
   }
 
   /**

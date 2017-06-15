@@ -30,9 +30,12 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
@@ -266,6 +269,16 @@ public class RSProcedureDispatcher
 
       try {
         final ExecuteProceduresResponse response = sendRequest(getServerName(), request.build());
+        for (OpenRegionResponse orr : response.getOpenRegionList()) {
+          if (orr.hasNodeTime()) {
+            env.getMasterServices().updateClock(orr.getNodeTime().getTime());
+          }
+        }
+        for (CloseRegionResponse crr : response.getCloseRegionList()) {
+          if (crr.hasNodeTime()) {
+            env.getMasterServices().updateClock(crr.getNodeTime().getTime());
+          }
+        }
         remoteCallCompleted(env, response);
       } catch (IOException e) {
         e = unwrapException(e);
@@ -286,7 +299,7 @@ public class RSProcedureDispatcher
     public void dispatchCloseRequests(final MasterProcedureEnv env,
         final List<RegionCloseOperation> operations) {
       for (RegionCloseOperation op: operations) {
-        request.addCloseRegion(op.buildCloseRegionRequest(getServerName()));
+        request.addCloseRegion(op.buildCloseRegionRequest(env, getServerName()));
       }
     }
 
@@ -325,6 +338,14 @@ public class RSProcedureDispatcher
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
     builder.setServerStartCode(serverName.getStartcode());
     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
+
+    // Set master clock time for send event
+    // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta table,
+    // but in the future we would intend to sync both HLC and system monotonic clocks
+    Clock clock = env.getMasterServices()
+        .getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE);
+    builder.setNodeTime(HBaseProtos.NodeTime.newBuilder().setTime(clock.now()));
+
     for (RegionOpenOperation op: operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
     }
@@ -347,6 +368,10 @@ public class RSProcedureDispatcher
 
       try {
         OpenRegionResponse response = sendRequest(getServerName(), request);
+        if (response.hasNodeTime()) {
+          // Update master clock upon receiving open region response from region server
+          env.getMasterServices().updateClock(response.getNodeTime().getTime());
+        }
         remoteCallCompleted(env, response);
       } catch (IOException e) {
         e = unwrapException(e);
@@ -397,9 +422,17 @@ public class RSProcedureDispatcher
     @Override
     public Void call() {
       final MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
-      final CloseRegionRequest request = operation.buildCloseRegionRequest(getServerName());
+      final CloseRegionRequest request = operation.buildCloseRegionRequest(env, getServerName());
       try {
         CloseRegionResponse response = sendRequest(getServerName(), request);
+        if (response.hasNodeTime()) {
+          // Update master clock upon receiving close region response from region server
+          // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta
+          // table, but in the future we would intend to sync both HLC and system monotonic clocks
+          Clock clock = env.getMasterServices()
+              .getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE);
+          clock.update(response.getNodeTime().getTime());
+        }
         remoteCallCompleted(env, response);
       } catch (IOException e) {
         e = unwrapException(e);
@@ -536,9 +569,14 @@ public class RSProcedureDispatcher
       return closed;
     }
 
-    public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName) {
+    public CloseRegionRequest buildCloseRegionRequest(final MasterProcedureEnv env,
+        final ServerName serverName) {
+      // Set master clock time for send event
+      // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta table,
+      // but in the future we would intend to sync both HLC and system monotonic clocks
+      Clock clock = env.getMasterServices().getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE);
       return ProtobufUtil.buildCloseRegionRequest(serverName,
-        getRegionInfo().getRegionName(), getDestinationServer());
+        getRegionInfo().getRegionName(), getDestinationServer(), clock.now());
     }
   }
 }

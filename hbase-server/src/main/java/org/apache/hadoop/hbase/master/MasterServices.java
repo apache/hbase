@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -57,6 +59,18 @@ import com.google.protobuf.Service;
  */
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
+  /**
+   * @param clockType The clock type
+   * @return Master's instance of {@link Clock}
+   */
+  Clock getClock(ClockType clockType);
+
+  /**
+   * @param timestamp The timestamp
+   * @return The current physical or hybrid time of the clock after it is updated
+   */
+  long updateClock(long timestamp);
+
   /**
    * @return the underlying snapshot manager
    */

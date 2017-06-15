@@ -92,7 +92,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -387,7 +386,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public Clock getClock() {
     if (this.clock == null) {
-      return this.getRegionServerServices().getRegionServerClock(
+      return this.getRegionServerServices().getClock(
           getTableDescriptor().getClockType());
     }
     return this.clock;
@@ -798,7 +797,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         ? DEFAULT_DURABILITY
         : htd.getDurability();
     if (rsServices != null) {
-      this.clock = rsServices.getRegionServerClock(htd.getClockType());
+      this.clock = rsServices.getClock(htd.getClockType());
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
       // TODO: revisit if coprocessors should load in other cases
@@ -1012,6 +1011,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     long maxSeqId = -1;
     // initialized to -1 so that we pick up MemstoreTS from column families
     long maxMemstoreTS = -1;
+    // Largest timestamp found across all stores
+    long maxTimestamp = 0;
 
     if (htableDescriptor.getColumnFamilyCount() != 0) {
       // initialize the thread pool for opening stores in parallel.
@@ -1050,8 +1051,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (maxStoreMemstoreTS > maxMemstoreTS) {
             maxMemstoreTS = maxStoreMemstoreTS;
           }
+          maxTimestamp = Math.max(maxTimestamp, store.getMaxTimestamp());
         }
         allStoresOpened = true;
+        clock.update(maxTimestamp);
         if(hasSloppyStores) {
           htableDescriptor = TableDescriptorBuilder.newBuilder(htableDescriptor)
                   .setFlushPolicyClassName(FlushNonSloppyStoresFirstPolicy.class.getName())

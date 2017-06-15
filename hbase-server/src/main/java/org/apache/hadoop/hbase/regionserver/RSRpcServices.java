@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -200,6 +201,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
@@ -225,8 +227,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implements the regionserver RPC services.
@@ -1514,6 +1514,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
 
+      if (request.hasNodeTime()) {
+        this.regionServer.updateClock(request.getNodeTime().getTime());
+      }
+
       requestCount.increment();
       if (sn == null) {
         LOG.info("Close " + encodedRegionName + " without moving");
@@ -1521,7 +1525,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         LOG.info("Close " + encodedRegionName + ", moving to " + sn);
       }
       boolean closed = regionServer.closeRegion(encodedRegionName, false, sn);
-      CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder().setClosed(closed);
+      // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta table,
+      // but in the future we would intend to sync both HLC and system monotonic clocks
+      long regionServerClockTime = this.regionServer
+          .getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE).now();
+
+      CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder()
+          .setClosed(closed)
+          .setNodeTime(HBaseProtos.NodeTime.newBuilder().setTime(regionServerClockTime));
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -1896,6 +1907,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
 
+    // Update region server clock on receive event
+    if (request.hasNodeTime()) {
+      this.regionServer.updateClock(request.getNodeTime().getTime());
+    }
+
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
       HTableDescriptor htd;
@@ -1947,7 +1963,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             // Check if current region open is for distributedLogReplay. This check is to support
             // rolling restart/upgrade where we want to Master/RS see same configuration
             if (!regionOpenInfo.hasOpenForDistributedLogReplay()
-                  || regionOpenInfo.getOpenForDistributedLogReplay()) {
+                || regionOpenInfo.getOpenForDistributedLogReplay()) {
               regionServer.recoveringRegions.put(region.getEncodedName(), null);
             } else {
               // Remove stale recovery region from ZK when we open region not for recovering which
@@ -1978,10 +1994,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             }
             if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
               regionServer.service.submit(new OpenPriorityRegionHandler(
-                regionServer, regionServer, region, htd, masterSystemTime));
+                  regionServer, regionServer, region, htd, masterSystemTime));
             } else {
               regionServer.service.submit(new OpenRegionHandler(
-                regionServer, regionServer, region, htd, masterSystemTime));
+                  regionServer, regionServer, region, htd, masterSystemTime));
             }
           }
         }
@@ -2000,6 +2016,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
     }
+
+    // Set clock for send event
+    // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta table,
+    // but in the future we would intend to sync both HLC and system monotonic clocks
+    Clock clock = this.regionServer.getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE);
+    builder.setNodeTime(HBaseProtos.NodeTime.newBuilder().setTime(clock.now()));
+
     return builder.build();
   }
 

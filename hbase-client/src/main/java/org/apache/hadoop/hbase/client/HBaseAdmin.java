@@ -1181,7 +1181,7 @@ public class HBaseAdmin implements Admin {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // Close the region without updating zk state.
     CloseRegionRequest request =
-      ProtobufUtil.buildCloseRegionRequest(sn, encodedRegionName);
+      ProtobufUtil.buildCloseRegionRequest(sn, encodedRegionName, null);
     // TODO: There is no timeout on this controller. Set one!
     HBaseRpcController controller = this.rpcControllerFactory.newController();
     try {

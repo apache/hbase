@@ -53,6 +53,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -573,6 +575,25 @@ public class HMaster extends HRegionServer implements MasterServices {
       throw new IOException("Failed to start redirecting jetty server", e);
     }
     return connector.getLocalPort();
+  }
+
+  @Override
+  public Clock getClock(ClockType clockType) {
+    return super.getClock(clockType);
+  }
+
+  @Override
+  public long updateClock(long timestamp) {
+    return super.updateClock(timestamp);
+  }
+
+  /**
+   * Only for the purpose of testing
+   * @param clock
+   */
+  @VisibleForTesting
+  public void setClock(Clock clock) {
+    super.setClock(clock);
   }
 
   @Override

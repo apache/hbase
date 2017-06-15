@@ -173,7 +173,7 @@ public class TestHRegionReplayEvents {
     when(rss.getServerName()).thenReturn(ServerName.valueOf("foo", 1, 1));
     when(rss.getConfiguration()).thenReturn(CONF);
     when(rss.getRegionServerAccounting()).thenReturn(new RegionServerAccounting(CONF));
-    when(rss.getRegionServerClock((ClockType)any())).thenReturn(new Clock.System());
+    when(rss.getClock((ClockType)any())).thenReturn(new Clock.System());
     String string = org.apache.hadoop.hbase.executor.EventType.RS_COMPACTED_FILES_DISCHARGER
         .toString();
     ExecutorService es = new ExecutorService(string);

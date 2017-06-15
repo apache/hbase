@@ -1860,10 +1860,10 @@ public final class ProtobufUtil {
   public static boolean closeRegion(final RpcController controller,
       final AdminService.BlockingInterface admin,
       final ServerName server, final byte[] regionName,
-      final ServerName destinationServer) throws IOException {
+      final ServerName destinationServer, Long masterClockTime) throws IOException {
     CloseRegionRequest closeRegionRequest =
       ProtobufUtil.buildCloseRegionRequest(server,
-        regionName, destinationServer);
+        regionName, destinationServer, masterClockTime);
     try {
       CloseRegionResponse response = admin.closeRegion(controller, closeRegionRequest);
       return ResponseConverter.isClosed(response);
@@ -1903,7 +1903,7 @@ public final class ProtobufUtil {
       final AdminService.BlockingInterface admin, ServerName server, final HRegionInfo region)
           throws IOException {
     OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(server, region, null, null);
+      RequestConverter.buildOpenRegionRequest(server, region, null, null, null);
     try {
       admin.openRegion(controller, request);
     } catch (ServiceException se) {
@@ -3316,11 +3316,11 @@ public final class ProtobufUtil {
     */
    public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
        final byte[] regionName) {
-     return ProtobufUtil.buildCloseRegionRequest(server, regionName, null);
+     return ProtobufUtil.buildCloseRegionRequest(server, regionName, null, null);
    }
 
   public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
-    final byte[] regionName, ServerName destinationServer) {
+    final byte[] regionName, ServerName destinationServer, Long masterClockTime) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
     RegionSpecifier region = RequestConverter.buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
@@ -3330,6 +3330,9 @@ public final class ProtobufUtil {
     }
     if (server != null) {
       builder.setServerStartCode(server.getStartcode());
+    }
+    if (masterClockTime != null) {
+      builder.setNodeTime(HBaseProtos.NodeTime.newBuilder().setTime(masterClockTime));
     }
     return builder.build();
   }
@@ -3341,7 +3344,8 @@ public final class ProtobufUtil {
     * @return a CloseRegionRequest
     */
    public static CloseRegionRequest
-       buildCloseRegionRequest(ServerName server, final String encodedRegionName) {
+       buildCloseRegionRequest(ServerName server, final String encodedRegionName,
+       Long masterClockTime) {
      CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
      RegionSpecifier region = RequestConverter.buildRegionSpecifier(
        RegionSpecifierType.ENCODED_REGION_NAME,
@@ -3349,6 +3353,9 @@ public final class ProtobufUtil {
      builder.setRegion(region);
      if (server != null) {
        builder.setServerStartCode(server.getStartcode());
+     }
+     if (masterClockTime != null) {
+       builder.setNodeTime(HBaseProtos.NodeTime.newBuilder().setTime(masterClockTime));
      }
      return builder.build();
    }

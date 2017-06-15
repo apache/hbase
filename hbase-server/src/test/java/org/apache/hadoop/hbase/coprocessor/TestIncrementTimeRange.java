@@ -110,6 +110,8 @@ public class TestIncrementTimeRange {
     // test that depends on an evironment edge that is manually moved forward.
     util.getConfiguration().setInt(RemoteProcedureDispatcher.DISPATCH_DELAY_CONF_KEY, 0);
     util.startMiniCluster();
+    // Ensure that current system time is set when clock updates during region open
+    mee.setValue(EnvironmentEdgeManager.currentTime());
     EnvironmentEdgeManager.injectEdge(mee);
   }
 

@@ -22636,7 +22636,7 @@ public final class ClientProtos {
        * </pre>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Cursor, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Cursor.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CursorOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Cursor, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Cursor.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CursorOrBuilder> 
           getCursorFieldBuilder() {
         if (cursorBuilder_ == null) {
           cursorBuilder_ = new com.google.protobuf.SingleFieldBuilder<

@@ -238,7 +238,7 @@ public class TestReplicasClient {
     } catch (Exception e){}
     // first version is '0'
     AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
-      getRS().getServerName(), hri, null, null);
+      getRS().getServerName(), hri, null, null, null);
     AdminProtos.OpenRegionResponse responseOpen = getRS().getRSRpcServices().openRegion(null, orr);
     Assert.assertEquals(responseOpen.getOpeningStateCount(), 1);
     Assert.assertEquals(responseOpen.getOpeningState(0),
@@ -248,7 +248,7 @@ public class TestReplicasClient {
 
   private void closeRegion(HRegionInfo hri) throws Exception {
     AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
-      getRS().getServerName(), hri.getEncodedName());
+      getRS().getServerName(), hri.getEncodedName(), null);
     AdminProtos.CloseRegionResponse responseClose = getRS()
         .getRSRpcServices().closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());

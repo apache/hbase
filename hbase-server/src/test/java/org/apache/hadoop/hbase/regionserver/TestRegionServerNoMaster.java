@@ -153,7 +153,7 @@ public class TestRegionServerNoMaster {
   public static void openRegion(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
       throws Exception {
     AdminProtos.OpenRegionRequest orr =
-      RequestConverter.buildOpenRegionRequest(rs.getServerName(), hri, null, null);
+      RequestConverter.buildOpenRegionRequest(rs.getServerName(), hri, null, null, null);
     AdminProtos.OpenRegionResponse responseOpen = rs.rpcServices.openRegion(null, orr);
 
     Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
@@ -176,7 +176,7 @@ public class TestRegionServerNoMaster {
   public static void closeRegion(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
       throws Exception {
     AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
-      rs.getServerName(), hri.getEncodedName());
+      rs.getServerName(), hri.getEncodedName(), null);
     AdminProtos.CloseRegionResponse responseClose = rs.rpcServices.closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
     checkRegionIsClosed(HTU, rs, hri);
@@ -220,7 +220,7 @@ public class TestRegionServerNoMaster {
   public void testMultipleCloseFromMaster() throws Exception {
     for (int i = 0; i < 10; i++) {
       AdminProtos.CloseRegionRequest crr =
-          ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName, null);
+          ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName);
       try {
         AdminProtos.CloseRegionResponse responseClose = getRS().rpcServices.closeRegion(null, crr);
         Assert.assertTrue("request " + i + " failed",
@@ -295,7 +295,7 @@ public class TestRegionServerNoMaster {
     closeRegionNoZK();
     try {
       AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
-        earlierServerName, hri, null, null);
+        earlierServerName, hri, null, null, null);
       getRS().getRSRpcServices().openRegion(null, orr);
       Assert.fail("The openRegion should have been rejected");
     } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException se) {
