@@ -244,6 +244,33 @@ For additional information on write durability, review the link:/acid-semantics.
 
 For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch%28java.util.List%29[batch] methods on Table.
 
+[[async.client]]
+=== Asynchronous Client ===
+
+It is a new API introduced in HBase 2.0 which aims to provide the ability to access HBase asynchronously.
+
+You can obtain an `AsyncConnection` from `ConnectionFactory`, and then get a asynchronous table instance from it to access HBase. When done, close the `AsyncConnection` instance(usually when your program exits).
+
+For the asynchronous table, most methods have the same meaning with the old `Table` interface, expect that the return value is wrapped with a CompletableFuture usually. We do not have any buffer here so there is no close method for asynchronous table, you do not need to close it. And it is thread safe.
+
+There are several differences for scan:
+
+* There is still a `getScanner` method which returns a `ResultScanner`. You can use it in the old way and it works like the old `ClientAsyncPrefetchScanner`.
+* There is a `scanAll` method which will return all the results at once. It aims to provide a simpler way for small scans which you want to get the whole results at once usually.
+* The Observer Pattern. There is a scan method which accepts a `ScanResultConsumer` as a parameter. It will pass the results to the consumer.
+
+Notice that there are two types of asynchronous table, one is `AsyncTable` and the other is `RawAsyncTable`.
+
+For `AsyncTable`, you need to provide a thread pool when getting it. The callbacks registered to the returned CompletableFuture will be executed in that thread pool. It is designed for normal users. You are free to do anything in the callbacks.
+
+For `RawAsyncTable`, all the callbacks are executed inside the framework thread so it is not allowed to do time consuming works in the callbacks otherwise you may block the framework thread and cause very bad performance impact. It is designed for advanced users who want to write high performance code. You can see the `org.apache.hadoop.hbase.client.example.HttpProxyExample` to see how to write fully asynchronous code with `RawAsyncTable`. And coprocessor related methods are only in `RawAsyncTable`.
+
+.On `AsyncAdmin`
+[WARNING]
+====
+`AsyncAdmin` is still under development and marked as IA.Private. Use it with caution as we may change the API without any announcement.
+====
+
 [[client.external]]
 === External Clients
 
