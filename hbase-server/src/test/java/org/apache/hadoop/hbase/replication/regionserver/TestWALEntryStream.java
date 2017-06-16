@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReaderThread.WALEntryBatch;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader.WALEntryBatch;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -348,8 +348,11 @@ public class TestWALEntryStream {
     // start up a batcher
     ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
-    ReplicationSourceWALReaderThread batcher = new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(),walQueue, 0,
-        fs, conf, getDummyFilter(), new MetricsSource("1"));
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    when(source.getSourceManager()).thenReturn(mockSourceManager);
+    when(source.getSourceMetrics()).thenReturn(new MetricsSource("1"));
+    ReplicationSourceWALReader batcher = new ReplicationSourceWALReader(fs, conf,
+        walQueue, 0, getDummyFilter(), source);
     Path walPath = walQueue.peek();
     batcher.start();
     WALEntryBatch entryBatch = batcher.take();

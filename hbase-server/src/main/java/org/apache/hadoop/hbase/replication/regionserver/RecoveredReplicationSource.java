@@ -61,20 +61,31 @@ public class RecoveredReplicationSource extends ReplicationSource {
   }
 
   @Override
-  protected void tryStartNewShipperThread(String walGroupId, PriorityBlockingQueue<Path> queue) {
-    final RecoveredReplicationSourceShipperThread worker =
-        new RecoveredReplicationSourceShipperThread(conf, walGroupId, queue, this,
+  protected void tryStartNewShipper(String walGroupId, PriorityBlockingQueue<Path> queue) {
+    final RecoveredReplicationSourceShipper worker =
+        new RecoveredReplicationSourceShipper(conf, walGroupId, queue, this,
             this.replicationQueues);
-    ReplicationSourceShipperThread extant = workerThreads.putIfAbsent(walGroupId, worker);
+    ReplicationSourceShipper extant = workerThreads.putIfAbsent(walGroupId, worker);
     if (extant != null) {
       LOG.debug("Someone has beat us to start a worker thread for wal group " + walGroupId);
     } else {
       LOG.debug("Starting up worker for wal group " + walGroupId);
       worker.startup(getUncaughtExceptionHandler());
       worker.setWALReader(
-        startNewWALReaderThread(worker.getName(), walGroupId, queue, worker.getStartPosition()));
+        startNewWALReader(worker.getName(), walGroupId, queue, worker.getStartPosition()));
       workerThreads.put(walGroupId, worker);
     }
+  }
+
+  @Override
+  protected ReplicationSourceWALReader startNewWALReader(String threadName,
+      String walGroupId, PriorityBlockingQueue<Path> queue, long startPosition) {
+    ReplicationSourceWALReader walReader = new RecoveredReplicationSourceWALReader(fs,
+        conf, queue, startPosition, walEntryFilter, this);
+    Threads.setDaemonThreadRunning(walReader, threadName
+        + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + peerClusterZnode,
+      getUncaughtExceptionHandler());
+    return walReader;
   }
 
   public void locateRecoveredPaths(PriorityBlockingQueue<Path> queue) throws IOException {
@@ -161,7 +172,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
     synchronized (workerThreads) {
       Threads.sleep(100);// wait a short while for other worker thread to fully exit
       boolean allTasksDone = true;
-      for (ReplicationSourceShipperThread worker : workerThreads.values()) {
+      for (ReplicationSourceShipper worker : workerThreads.values()) {
         if (!worker.isFinished()) {
           allTasksDone = false;
           break;

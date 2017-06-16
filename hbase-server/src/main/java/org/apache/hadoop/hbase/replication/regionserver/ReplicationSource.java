@@ -119,12 +119,12 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   // ReplicationEndpoint which will handle the actual replication
   private ReplicationEndpoint replicationEndpoint;
   // A filter (or a chain of filters) for the WAL entries.
-  private WALEntryFilter walEntryFilter;
+  protected WALEntryFilter walEntryFilter;
   // throttler
   private ReplicationThrottler throttler;
   private long defaultBandwidth;
   private long currentBandwidth;
-  protected final ConcurrentHashMap<String, ReplicationSourceShipperThread> workerThreads =
+  protected final ConcurrentHashMap<String, ReplicationSourceShipper> workerThreads =
       new ConcurrentHashMap<>();
 
   private AtomicLong totalBufferUsed;
@@ -197,7 +197,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         // new wal group observed after source startup, start a new worker thread to track it
         // notice: it's possible that log enqueued when this.running is set but worker thread
         // still not launched, so it's necessary to check workerThreads before start the worker
-        tryStartNewShipperThread(logPrefix, queue);
+        tryStartNewShipper(logPrefix, queue);
       }
     }
     queue.put(log);
@@ -255,15 +255,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       throw new RuntimeException(ex);
     }
 
-    // get the WALEntryFilter from ReplicationEndpoint and add it to default filters
-    ArrayList<WALEntryFilter> filters = Lists.newArrayList(
-      (WALEntryFilter)new SystemTableWALEntryFilter());
-    WALEntryFilter filterFromEndpoint = this.replicationEndpoint.getWALEntryfilter();
-    if (filterFromEndpoint != null) {
-      filters.add(filterFromEndpoint);
-    }
-    this.walEntryFilter = new ChainWALEntryFilter(filters);
-
     int sleepMultiplier = 1;
     // delay this until we are in an asynchronous thread
     while (this.isSourceActive() && this.peerClusterId == null) {
@@ -285,40 +276,50 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       return;
     }
     LOG.info("Replicating " + clusterId + " -> " + peerClusterId);
+
+    initializeWALEntryFilter();
     // start workers
     for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : queues.entrySet()) {
       String walGroupId = entry.getKey();
       PriorityBlockingQueue<Path> queue = entry.getValue();
-      tryStartNewShipperThread(walGroupId, queue);
+      tryStartNewShipper(walGroupId, queue);
     }
   }
 
-  protected void tryStartNewShipperThread(String walGroupId, PriorityBlockingQueue<Path> queue) {
-    final ReplicationSourceShipperThread worker = new ReplicationSourceShipperThread(conf,
+  private void initializeWALEntryFilter() {
+    // get the WALEntryFilter from ReplicationEndpoint and add it to default filters
+    ArrayList<WALEntryFilter> filters = Lists.newArrayList(
+      (WALEntryFilter)new SystemTableWALEntryFilter());
+    WALEntryFilter filterFromEndpoint = this.replicationEndpoint.getWALEntryfilter();
+    if (filterFromEndpoint != null) {
+      filters.add(filterFromEndpoint);
+    }
+    filters.add(new ClusterMarkingEntryFilter(clusterId, peerClusterId, replicationEndpoint));
+    this.walEntryFilter = new ChainWALEntryFilter(filters);
+  }
+
+  protected void tryStartNewShipper(String walGroupId, PriorityBlockingQueue<Path> queue) {
+    final ReplicationSourceShipper worker = new ReplicationSourceShipper(conf,
         walGroupId, queue, this);
-    ReplicationSourceShipperThread extant = workerThreads.putIfAbsent(walGroupId, worker);
+    ReplicationSourceShipper extant = workerThreads.putIfAbsent(walGroupId, worker);
     if (extant != null) {
       LOG.debug("Someone has beat us to start a worker thread for wal group " + walGroupId);
     } else {
       LOG.debug("Starting up worker for wal group " + walGroupId);
       worker.startup(getUncaughtExceptionHandler());
-      worker.setWALReader(startNewWALReaderThread(worker.getName(), walGroupId, queue,
+      worker.setWALReader(startNewWALReader(worker.getName(), walGroupId, queue,
         worker.getStartPosition()));
       workerThreads.put(walGroupId, worker);
     }
   }
 
-  protected ReplicationSourceWALReaderThread startNewWALReaderThread(String threadName,
-      String walGroupId, PriorityBlockingQueue<Path> queue, long startPosition) {
-    ArrayList<WALEntryFilter> filters = Lists.newArrayList(walEntryFilter,
-      new ClusterMarkingEntryFilter(clusterId, peerClusterId, replicationEndpoint));
-    ChainWALEntryFilter readerFilter = new ChainWALEntryFilter(filters);
-    ReplicationSourceWALReaderThread walReader = new ReplicationSourceWALReaderThread(manager,
-        replicationQueueInfo, queue, startPosition, fs, conf, readerFilter, metrics);
-    Threads.setDaemonThreadRunning(walReader, threadName
-        + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + peerClusterZnode,
+  protected ReplicationSourceWALReader startNewWALReader(String threadName, String walGroupId,
+      PriorityBlockingQueue<Path> queue, long startPosition) {
+    ReplicationSourceWALReader walReader =
+        new ReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter, this);
+    return (ReplicationSourceWALReader) Threads.setDaemonThreadRunning(walReader,
+      threadName + ".replicationSource.wal-reader." + walGroupId + "," + peerClusterZnode,
       getUncaughtExceptionHandler());
-    return walReader;
   }
 
   public Thread.UncaughtExceptionHandler getUncaughtExceptionHandler() {
@@ -446,8 +447,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           + " because an error occurred: " + reason, cause);
     }
     this.sourceRunning = false;
-    Collection<ReplicationSourceShipperThread> workers = workerThreads.values();
-    for (ReplicationSourceShipperThread worker : workers) {
+    Collection<ReplicationSourceShipper> workers = workerThreads.values();
+    for (ReplicationSourceShipper worker : workers) {
       worker.stopWorker();
       worker.entryReader.interrupt();
       worker.interrupt();
@@ -457,7 +458,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       future = this.replicationEndpoint.stop();
     }
     if (join) {
-      for (ReplicationSourceShipperThread worker : workers) {
+      for (ReplicationSourceShipper worker : workers) {
         Threads.shutdown(worker, this.sleepForRetries);
         LOG.info("ReplicationSourceWorker " + worker.getName() + " terminated");
       }
@@ -486,7 +487,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   @Override
   public Path getCurrentPath() {
     // only for testing
-    for (ReplicationSourceShipperThread worker : workerThreads.values()) {
+    for (ReplicationSourceShipper worker : workerThreads.values()) {
       if (worker.getCurrentPath() != null) return worker.getCurrentPath();
     }
     return null;
@@ -524,9 +525,9 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     StringBuilder sb = new StringBuilder();
     sb.append("Total replicated edits: ").append(totalReplicatedEdits)
         .append(", current progress: \n");
-    for (Map.Entry<String, ReplicationSourceShipperThread> entry : workerThreads.entrySet()) {
+    for (Map.Entry<String, ReplicationSourceShipper> entry : workerThreads.entrySet()) {
       String walGroupId = entry.getKey();
-      ReplicationSourceShipperThread worker = entry.getValue();
+      ReplicationSourceShipper worker = entry.getValue();
       long position = worker.getCurrentPosition();
       Path currentPath = worker.getCurrentPath();
       sb.append("walGroup [").append(walGroupId).append("]: ");
