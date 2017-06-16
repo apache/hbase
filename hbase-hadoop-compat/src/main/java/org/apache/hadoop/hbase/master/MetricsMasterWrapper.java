@@ -125,5 +125,8 @@ public interface MetricsMasterWrapper {
   /**
    * Get the time in Millis when the master finished initializing/becoming the active master
    */
+  /**
+   * Get the time in Millis when the master finished initializing/becoming the active master
+   */
   long getMasterInitializationTime();
 }
