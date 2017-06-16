@@ -279,6 +279,11 @@
       <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core</artifactId>
     </dependency>
+    <!-- transitive coalescing -->
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+    </dependency>
   </dependencies>
 
   <profiles>
