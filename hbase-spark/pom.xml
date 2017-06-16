@@ -41,8 +41,6 @@
         <scala.version>2.10.4</scala.version>
         <scala.binary.version>2.10</scala.binary.version>
         <top.dir>${project.basedir}/..</top.dir>
-        <avro.version>1.7.6</avro.version>
-        <avro.mapred.classifier></avro.mapred.classifier>
     </properties>
 
     <dependencies>
@@ -526,7 +524,6 @@
         <dependency>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro</artifactId>
-          <version>${avro.version}</version>
         </dependency>
     </dependencies>
 

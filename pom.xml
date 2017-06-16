@@ -1250,6 +1250,7 @@
     <compat.module>hbase-hadoop2-compat</compat.module>
     <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
     <!-- end HBASE-15925 default hadoop compatibility values -->
+    <avro.version>1.7.7</avro.version>
     <commons-cli.version>1.4</commons-cli.version>
     <commons-codec.version>1.9</commons-codec.version>
     <!-- pretty outdated -->
@@ -1569,6 +1570,12 @@
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>${log4j.version}</version>
+      </dependency>
+      <!-- Avro dependencies we mostly get transitively, manual version coallescing -->
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro</artifactId>
+        <version>${avro.version}</version>
       </dependency>
       <!--This is not used by hbase directly.  Used by thrift,
           dropwizard and zk.-->
