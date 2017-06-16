@@ -121,4 +121,9 @@ public interface MetricsMasterWrapper {
    * Get the number of region merge plans executed.
    */
   long getMergePlanCount();
+
+  /**
+   * Get the time in Millis when the master finished initializing/becoming the active master
+   */
+  long getMasterInitializationTime();
 }
