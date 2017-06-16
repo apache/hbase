@@ -545,6 +545,7 @@ public class HRegionServer extends HasThread implements
    */
   public HRegionServer(Configuration conf, CoordinatedStateManager csm) throws IOException {
     super("RegionServer");  // thread name
+    this.startcode = System.currentTimeMillis();
     this.fsOk = true;
     this.conf = conf;
     // initialize netty event loop group at the very beginning as we may use it to start rpc server,
@@ -590,7 +591,6 @@ public class HRegionServer extends HasThread implements
     this.stopped = false;
 
     rpcServices = createRpcServices();
-    this.startcode = System.currentTimeMillis();
     if (this instanceof HMaster) {
       useThisHostnameInstead = conf.get(MASTER_HOSTNAME_KEY);
     } else {

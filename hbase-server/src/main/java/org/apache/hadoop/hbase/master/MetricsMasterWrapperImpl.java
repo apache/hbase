@@ -59,6 +59,11 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   }
 
   @Override
+  public long getMasterInitializationTime() {
+    return master.getMasterFinishedInitializationTime();
+  }
+
+  @Override
   public String getClusterId() {
     return master.getClusterId();
   }

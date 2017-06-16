@@ -371,6 +371,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Time stamps for when a hmaster became active
   private long masterActiveTime;
 
+  // Time stamp for when HMaster finishes becoming Active Master
+  private long masterFinishedInitializationTime;
+
   //should we check the compression codec type at master side, default true, HBASE-6370
   private final boolean masterCheckCompression;
 
@@ -875,6 +878,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     status.markComplete("Initialization successful");
     LOG.info(String.format("Master has completed initialization %.3fsec",
        (System.currentTimeMillis() - masterActiveTime) / 1000.0f));
+    this.masterFinishedInitializationTime = System.currentTimeMillis();
     configurationManager.registerObserver(this.balancer);
     configurationManager.registerObserver(this.hfileCleaner);
 
@@ -2511,6 +2515,13 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public long getMasterActiveTime() {
     return masterActiveTime;
+  }
+
+  /**
+   * @return timestamp in millis when HMaster finished becoming the active master
+   */
+  public long getMasterFinishedInitializationTime() {
+    return masterFinishedInitializationTime;
   }
 
   public int getNumWALFiles() {
