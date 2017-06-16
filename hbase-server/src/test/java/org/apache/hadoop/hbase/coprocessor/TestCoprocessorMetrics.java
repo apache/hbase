@@ -472,7 +472,7 @@ public class TestCoprocessorMetrics {
       // close one of the regions
       try (RegionLocator locator = connection.getRegionLocator(tableName)) {
         HRegionLocation loc = locator.getRegionLocation(foo);
-        admin.closeRegion(loc.getServerName(), loc.getRegionInfo());
+        admin.unassign(loc.getRegionInfo().getEncodedNameAsBytes(), true);
 
         HRegionServer server = UTIL.getMiniHBaseCluster().getRegionServer(loc.getServerName());
         UTIL.waitFor(30000,
