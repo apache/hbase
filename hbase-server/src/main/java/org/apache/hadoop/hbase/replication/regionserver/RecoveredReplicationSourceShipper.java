@@ -28,20 +28,20 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReaderThread.WALEntryBatch;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader.WALEntryBatch;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
  *  Used by a {@link RecoveredReplicationSource}.
  */
 @InterfaceAudience.Private
-public class RecoveredReplicationSourceShipperThread extends ReplicationSourceShipperThread {
+public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper {
 
-  private static final Log LOG = LogFactory.getLog(RecoveredReplicationSourceShipperThread.class);
+  private static final Log LOG = LogFactory.getLog(RecoveredReplicationSourceShipper.class);
   protected final RecoveredReplicationSource source;
   private final ReplicationQueues replicationQueues;
 
-  public RecoveredReplicationSourceShipperThread(Configuration conf, String walGroupId,
+  public RecoveredReplicationSourceShipper(Configuration conf, String walGroupId,
       PriorityBlockingQueue<Path> queue, RecoveredReplicationSource source,
       ReplicationQueues replicationQueues) {
     super(conf, walGroupId, queue, source);

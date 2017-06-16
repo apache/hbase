@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReaderThread.WALEntryBatch;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader.WALEntryBatch;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,8 +51,8 @@ import com.google.common.cache.LoadingCache;
  * ReplicationSourceWALReaderThread
  */
 @InterfaceAudience.Private
-public class ReplicationSourceShipperThread extends Thread {
-  private static final Log LOG = LogFactory.getLog(ReplicationSourceShipperThread.class);
+public class ReplicationSourceShipper extends Thread {
+  private static final Log LOG = LogFactory.getLog(ReplicationSourceShipper.class);
 
   // Hold the state of a replication worker thread
   public enum WorkerState {
@@ -72,7 +72,7 @@ public class ReplicationSourceShipperThread extends Thread {
   protected volatile Path currentPath;
   // Current state of the worker thread
   private WorkerState state;
-  protected ReplicationSourceWALReaderThread entryReader;
+  protected ReplicationSourceWALReader entryReader;
 
   // How long should we sleep for each retry
   protected final long sleepForRetries;
@@ -90,7 +90,7 @@ public class ReplicationSourceShipperThread extends Thread {
       }
   );
 
-  public ReplicationSourceShipperThread(Configuration conf, String walGroupId,
+  public ReplicationSourceShipper(Configuration conf, String walGroupId,
       PriorityBlockingQueue<Path> queue, ReplicationSourceInterface source) {
     this.conf = conf;
     this.walGroupId = walGroupId;
@@ -310,7 +310,7 @@ public class ReplicationSourceShipperThread extends Thread {
     return this.lastLoggedPosition;
   }
 
-  public void setWALReader(ReplicationSourceWALReaderThread entryReader) {
+  public void setWALReader(ReplicationSourceWALReader entryReader) {
     this.entryReader = entryReader;
   }
 
