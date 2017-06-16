@@ -92,6 +92,8 @@ public class MetricsMasterSourceImpl
               MASTER_ACTIVE_TIME_DESC), masterWrapper.getActiveTime())
           .addGauge(Interns.info(MASTER_START_TIME_NAME,
               MASTER_START_TIME_DESC), masterWrapper.getStartTime())
+          .addGauge(Interns.info(MASTER_FINISHED_INITIALIZATION_TIME_NAME, MASTER_FINISHED_INITIALIZATION_TIME_DESC),
+              masterWrapper.getMasterInitializationTime())
           .addGauge(Interns.info(AVERAGE_LOAD_NAME, AVERAGE_LOAD_DESC),
               masterWrapper.getAverageLoad())
           .tag(Interns.info(LIVE_REGION_SERVERS_NAME, LIVE_REGION_SERVERS_DESC),

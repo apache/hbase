@@ -134,4 +134,9 @@ public interface MetricsMasterWrapper {
    * Gets the space usage and limit for each namespace.
    */
   Map<String,Entry<Long,Long>> getNamespaceSpaceUtilization();
+
+  /**
+   * Get the time in Millis when the master finished initializing/becoming the active master
+   */
+  long getMasterInitializationTime();
 }
