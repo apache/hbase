@@ -93,7 +93,7 @@ std::vector<std::shared_ptr<Result>> ResponseConverter::FromScanResponse(const R
 std::vector<std::shared_ptr<Result>> ResponseConverter::FromScanResponse(
     const std::shared_ptr<ScanResponse> scan_resp, std::shared_ptr<CellScanner> cell_scanner) {
   VLOG(3) << "FromScanResponse:" << scan_resp->ShortDebugString()
-          << " cell_scanner:" << (cell_scanner == nullptr);
+          << " cell_scanner:" << (cell_scanner != nullptr);
   int num_results =
       cell_scanner != nullptr ? scan_resp->cells_per_result_size() : scan_resp->results_size();
 

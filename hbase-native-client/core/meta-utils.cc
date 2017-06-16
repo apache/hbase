@@ -21,10 +21,13 @@
 
 #include <folly/Conv.h>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include "connection/request.h"
 #include "connection/response.h"
 #include "core/response-converter.h"
+#include "exceptions/exception.h"
 #include "if/Client.pb.h"
 #include "serde/region-info.h"
 #include "serde/server-name.h"
@@ -38,10 +41,17 @@ using hbase::pb::ServerName;
 
 namespace hbase {
 
-static const std::string META_REGION = "1588230740";
-static const std::string CATALOG_FAMILY = "info";
-static const std::string REGION_INFO_COLUMN = "regioninfo";
-static const std::string SERVER_COLUMN = "server";
+MetaUtil::MetaUtil() {
+  meta_region_info_.set_start_key("");
+  meta_region_info_.set_end_key("");
+  meta_region_info_.set_offline(false);
+  meta_region_info_.set_split(false);
+  meta_region_info_.set_replica_id(0);
+  meta_region_info_.set_split(false);
+  meta_region_info_.set_region_id(1);
+  meta_region_info_.mutable_table_name()->set_namespace_(MetaUtil::kSystemNamespace);
+  meta_region_info_.mutable_table_name()->set_qualifier(MetaUtil::kMetaTableQualifier);
+}
 
 std::string MetaUtil::RegionLookupRowkey(const TableName &tn, const std::string &row) const {
   return folly::to<std::string>(tn, ",", row, ",", "999999999999999999");
@@ -56,7 +66,7 @@ std::unique_ptr<Request> MetaUtil::MetaRequest(const TableName tn, const std::st
 
   // Set the region this scan goes to
   auto region = msg->mutable_region();
-  region->set_value(META_REGION);
+  region->set_value(MetaUtil::kMetaRegion);
   region->set_type(
       RegionSpecifier_RegionSpecifierType::RegionSpecifier_RegionSpecifierType_ENCODED_REGION_NAME);
 
@@ -78,30 +88,38 @@ std::unique_ptr<Request> MetaUtil::MetaRequest(const TableName tn, const std::st
 
   // Set the columns that we need
   auto info_col = scan->add_column();
-  info_col->set_family("info");
-  info_col->add_qualifier("server");
-  info_col->add_qualifier("regioninfo");
+  info_col->set_family(MetaUtil::kCatalogFamily);
+  info_col->add_qualifier(MetaUtil::kServerColumn);
+  info_col->add_qualifier(MetaUtil::kRegionInfoColumn);
 
   scan->set_start_row(RegionLookupRowkey(tn, row));
   return request;
 }
 
-std::shared_ptr<RegionLocation> MetaUtil::CreateLocation(const Response &resp) {
+std::shared_ptr<RegionLocation> MetaUtil::CreateLocation(const Response &resp,
+                                                         const TableName &tn) {
   std::vector<std::shared_ptr<Result>> results = ResponseConverter::FromScanResponse(resp);
+  if (results.size() == 0) {
+    throw TableNotFoundException(folly::to<std::string>(tn));
+  }
   if (results.size() != 1) {
     throw std::runtime_error("Was expecting exactly 1 result in meta scan response, got:" +
                              std::to_string(results.size()));
   }
   auto result = *results[0];
 
-  auto region_info_str = result.Value(CATALOG_FAMILY, REGION_INFO_COLUMN);
-  auto server_str = result.Value(CATALOG_FAMILY, SERVER_COLUMN);
+  auto region_info_str = result.Value(MetaUtil::kCatalogFamily, MetaUtil::kRegionInfoColumn);
+  auto server_str = result.Value(MetaUtil::kCatalogFamily, MetaUtil::kServerColumn);
   CHECK(region_info_str);
   CHECK(server_str);
 
   auto row = result.Row();
   auto region_info = folly::to<RegionInfo>(*region_info_str);
   auto server_name = folly::to<ServerName>(*server_str);
-  return std::make_shared<RegionLocation>(row, std::move(region_info), server_name, nullptr);
+  return std::make_shared<RegionLocation>(row, std::move(region_info), server_name);
+}
+
+bool MetaUtil::IsMeta(const hbase::pb::TableName &tn) {
+  return folly::to<std::string>(tn) == MetaUtil::kMetaTableName;
 }
 }  // namespace hbase

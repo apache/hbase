@@ -147,8 +147,7 @@ class MockWrongRegionAsyncRegionLocator : public AsyncRegionLocatorBase {
     folly::Promise<std::shared_ptr<RegionLocation>> promise;
     /* set random region name, simulating invalid region */
     auto result = std::make_shared<RegionLocation>(
-        "whatever-region-name", region_location_->region_info(), region_location_->server_name(),
-        region_location_->service());
+        "whatever-region-name", region_location_->region_info(), region_location_->server_name());
     promise.setValue(result);
     return promise.getFuture();
   }

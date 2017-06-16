@@ -79,6 +79,10 @@ void TestUtil::CreateTable(const std::string &table, const std::vector<std::stri
   mini_->CreateTable(table, families, keys);
 }
 
+void TestUtil::MoveRegion(const std::string &region, const std::string &server) {
+  mini_->MoveRegion(region, server);
+}
+
 void TestUtil::StartStandAloneInstance() {
   auto p = temp_dir_.path().string();
   auto cmd = std::string{"bin/start-local-hbase.sh " + p};

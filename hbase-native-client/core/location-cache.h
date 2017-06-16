@@ -137,7 +137,7 @@ class LocationCache : public AsyncRegionLocator {
   /**
    * Remove the cached location of meta.
    */
-  void InvalidateMeta();
+  std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> InvalidateMeta();
 
   /**
    * Return cached region location corresponding to this row,
@@ -186,6 +186,10 @@ class LocationCache : public AsyncRegionLocator {
   const std::string &zk_quorum() { return zk_quorum_; }
 
  private:
+  void CloseZooKeeperConnection();
+  void EnsureZooKeeperConnection();
+
+ private:
   void RefreshMetaLocation();
   hbase::pb::ServerName ReadMetaLocation();
   std::shared_ptr<RegionLocation> CreateLocation(const Response &resp);
@@ -198,7 +202,7 @@ class LocationCache : public AsyncRegionLocator {
   std::string zk_quorum_;
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;
-  std::mutex meta_lock_;
+  std::recursive_mutex meta_lock_;
   MetaUtil meta_util_;
   std::shared_ptr<ConnectionPool> cp_;
 

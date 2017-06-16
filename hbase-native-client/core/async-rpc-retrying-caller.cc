@@ -168,14 +168,17 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::Call(const RegionLocation& loc) 
 
   ResetController(controller_, call_timeout_ns);
 
-  callable_(controller_, std::make_shared<RegionLocation>(loc), rpc_client)
-      .then([this](const RESP& resp) { this->promise_->setValue(std::move(resp)); })
-      .onError([&, this](const exception_wrapper& e) {
+  // TODO: RegionLocation should propagate through these method chains as a shared_ptr.
+  // Otherwise, it may get deleted underneat us. We are just copying for now.
+  auto loc_ptr = std::make_shared<RegionLocation>(loc);
+  callable_(controller_, loc_ptr, rpc_client)
+      .then([loc_ptr, this](const RESP& resp) { this->promise_->setValue(std::move(resp)); })
+      .onError([&, loc_ptr, this](const exception_wrapper& e) {
         OnError(e,
                 [&, this]() -> std::string {
-                  return "Call to " + folly::sformat("{0}:{1}", loc.server_name().host_name(),
-                                                     loc.server_name().port()) +
-                         " for '" + row_ + "' in " + loc.DebugString() + " of " +
+                  return "Call to " + folly::sformat("{0}:{1}", loc_ptr->server_name().host_name(),
+                                                     loc_ptr->server_name().port()) +
+                         " for '" + row_ + "' in " + loc_ptr->DebugString() + " of " +
                          table_name_->namespace_() + "::" + table_name_->qualifier() +
                          " failed, tries = " + std::to_string(tries_) + ", maxAttempts = " +
                          std::to_string(max_attempts_) + ", timeout = " +
@@ -184,7 +187,7 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::Call(const RegionLocation& loc) 
                          " ms";
                 },
                 [&, this](const exception_wrapper& error) {
-                  conn_->region_locator()->UpdateCachedLocation(loc, error);
+                  conn_->region_locator()->UpdateCachedLocation(*loc_ptr, error);
                 });
       });
 }
