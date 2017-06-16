@@ -2808,7 +2808,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // Yes, should be the same instance
     if (regionServer.getOnlineRegion(hri.getRegionName()) != rsh.r) {
       String msg = "Region has changed on the scanner " + scannerName + ": regionName="
-          + hri.getRegionName() + ", scannerRegionName=" + rsh.r;
+          + hri.getRegionNameAsString() + ", scannerRegionName=" + rsh.r;
       LOG.warn(msg + ", closing...");
       scanners.remove(scannerName);
       try {
