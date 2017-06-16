@@ -30,6 +30,7 @@
 #include "core/put.h"
 #include "core/result.h"
 #include "core/table.h"
+#include "exceptions/exception.h"
 #include "serde/table-name.h"
 #include "test-util/test-util.h"
 #include "utils/bytes-util.h"
@@ -37,6 +38,7 @@
 using hbase::Cell;
 using hbase::Configuration;
 using hbase::Get;
+using hbase::RetriesExhaustedException;
 using hbase::Put;
 using hbase::Table;
 using hbase::TestUtil;
@@ -326,7 +328,14 @@ TEST_F(ClientTest, GetForNonExistentTable) {
   ASSERT_TRUE(table) << "Unable to get connection to Table.";
 
   // Perform the Get
-  ASSERT_ANY_THROW(table->Get(get)) << "Table does not exist. We should get an exception";
+  try {
+    table->Get(get);
+    FAIL() << "Should have thrown RetriesExhaustedException";
+  } catch (const RetriesExhaustedException &ex) {
+    ASSERT_EQ(0, ex.num_retries());
+  } catch (...) {
+    FAIL() << "Should have thrown RetriesExhaustedException";
+  }
 
   table->Close();
   client.Close();

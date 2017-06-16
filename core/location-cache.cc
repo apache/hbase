@@ -24,9 +24,9 @@
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
 
-#include <folly/Logging.h>
 #include "connection/response.h"
 #include "connection/rpc-connection.h"
+#include "exceptions/exception.h"
 #include "if/Client.pb.h"
 #include "if/ZooKeeper.pb.h"
 #include "serde/region-info.h"
@@ -127,7 +127,7 @@ folly::Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
         // Make sure that the correct location was found.
         if (rl->region_info().table_name().namespace_() != tn.namespace_() ||
             rl->region_info().table_name().qualifier() != tn.qualifier()) {
-          throw std::runtime_error("Doesn't look like table exists.");
+          throw TableNotFoundException(folly::to<std::string>(tn));
         }
         return rl;
       })

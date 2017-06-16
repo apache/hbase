@@ -21,6 +21,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBuf.h>
 #include <exception>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -28,10 +29,10 @@ namespace hbase {
 
 class ThrowableWithExtraContext {
  public:
-  ThrowableWithExtraContext(folly::exception_wrapper cause, const long& when)
+  ThrowableWithExtraContext(folly::exception_wrapper cause, const int64_t& when)
       : cause_(cause), when_(when), extras_("") {}
 
-  ThrowableWithExtraContext(folly::exception_wrapper cause, const long& when,
+  ThrowableWithExtraContext(folly::exception_wrapper cause, const int64_t& when,
                             const std::string& extras)
       : cause_(cause), when_(when), extras_(extras) {}
 
@@ -45,23 +46,44 @@ class ThrowableWithExtraContext {
 
  private:
   folly::exception_wrapper cause_;
-  long when_;
+  int64_t when_;
   std::string extras_;
 };
 
 class IOException : public std::logic_error {
  public:
-  IOException() : logic_error("") {}
+  IOException() : logic_error(""), do_not_retry_(false) {}
 
-  IOException(const std::string& what) : logic_error(what) {}
+  explicit IOException(const std::string& what) : logic_error(what), do_not_retry_(false) {}
+
+  IOException(const std::string& what, bool do_not_retry)
+      : logic_error(what), do_not_retry_(do_not_retry) {}
+
   IOException(const std::string& what, folly::exception_wrapper cause)
-      : logic_error(what), cause_(cause) {}
+      : logic_error(what), cause_(cause), do_not_retry_(false) {}
+
+  IOException(const std::string& what, folly::exception_wrapper cause, bool do_not_retry)
+      : logic_error(what), cause_(cause), do_not_retry_(do_not_retry) {}
+
   virtual ~IOException() = default;
 
   virtual folly::exception_wrapper cause() { return cause_; }
 
+  bool do_not_retry() const { return do_not_retry_; }
+
+  IOException* set_do_not_retry(bool value) {
+    do_not_retry_ = value;
+    return this;
+  }
+
  private:
   folly::exception_wrapper cause_;
+  // In case the exception is a RemoteException, do_not_retry information can come from
+  // the PB field in the RPC response, or it can be deduced from the Java-exception
+  // hierarchy in ExceptionUtil::ShouldRetry(). In case this is a client-side exception
+  // raised from the C++ internals, set this field so that the retrying callers can
+  // re-throw the exception without retrying.
+  bool do_not_retry_;
 };
 
 class RetriesExhaustedException : public IOException {
@@ -70,8 +92,11 @@ class RetriesExhaustedException : public IOException {
                             std::shared_ptr<std::vector<ThrowableWithExtraContext>> exceptions)
       : IOException(GetMessage(num_retries, exceptions),
                     exceptions->empty() ? folly::exception_wrapper{}
-                                        : (*exceptions)[exceptions->size() - 1].cause()) {}
+                                        : (*exceptions)[exceptions->size() - 1].cause()),
+        num_retries_(num_retries) {}
   virtual ~RetriesExhaustedException() = default;
+
+  int32_t num_retries() const { return num_retries_; }
 
  private:
   std::string GetMessage(const int& num_retries,
@@ -85,18 +110,19 @@ class RetriesExhaustedException : public IOException {
     }
     return buffer;
   }
-};
 
-class HBaseIOException : public IOException {};
+ private:
+  int32_t num_retries_;
+};
 
 class RemoteException : public IOException {
  public:
-  RemoteException() : port_(0), do_not_retry_(false) {}
+  RemoteException() : IOException(), port_(0) {}
 
-  RemoteException(const std::string& what) : IOException(what), port_(0), do_not_retry_(false) {}
+  explicit RemoteException(const std::string& what) : IOException(what), port_(0) {}
 
   RemoteException(const std::string& what, folly::exception_wrapper cause)
-      : IOException(what, cause), port_(0), do_not_retry_(false) {}
+      : IOException(what, cause), port_(0) {}
 
   virtual ~RemoteException() = default;
 
@@ -128,19 +154,23 @@ class RemoteException : public IOException {
     return this;
   }
 
-  bool do_not_retry() const { return do_not_retry_; }
-
-  RemoteException* set_do_not_retry(bool value) {
-    do_not_retry_ = value;
-    return this;
-  }
-
  private:
   std::string exception_class_name_;
   std::string stack_trace_;
   std::string hostname_;
   int port_;
-  bool do_not_retry_;
+};
+
+/**
+ * Raised from the client side if we cannot find the table (does not have anything to
+ * do with the Java exception of the same name).
+ */
+class TableNotFoundException : public IOException {
+ public:
+  explicit TableNotFoundException(const std::string& table_name)
+      : IOException("Table cannot be found:" + table_name, true) {}
+
+  virtual ~TableNotFoundException() = default;
 };
 
 /**
@@ -174,54 +204,113 @@ class ExceptionUtil {
   static constexpr const char* kScannerResetException =
       "org.apache.hadoop.hbase.exceptions.ScannerResetException";
 
+  // All other DoNotRetryIOExceptions
+  static constexpr const char* kDoNotRetryIOException =
+      "org.apache.hadoop.hbase.DoNotRetryIOException";
+  static constexpr const char* kTableNotFoundException =
+      "org.apache.hadoop.hbase.TableNotFoundException";
+  static constexpr const char* kTableNotEnabledException =
+      "org.apache.hadoop.hbase.TableNotEnabledException";
+  static constexpr const char* kCoprocessorException =
+      "org.apache.hadoop.hbase.coprocessor.CoprocessorException";
+  static constexpr const char* kBypassCoprocessorException =
+      "org.apache.hadoop.hbase.coprocessor.BypassCoprocessorException";
+  static constexpr const char* kInvalidFamilyOperationException =
+      "org.apache.hadoop.hbase.InvalidFamilyOperationException";
+  static constexpr const char* kServerTooBusyException =
+      "org.apache.hadoop.hbase.ipc.ServerTooBusyException";  // This should NOT be DNRIOE?
+  static constexpr const char* kFailedSanityCheckException =
+      "org.apache.hadoop.hbase.exceptions.FailedSanityCheckException";
+  static constexpr const char* kCorruptHFileException =
+      "org.apache.hadoop.hbase.io.hfile.CorruptHFileException";
+  static constexpr const char* kLabelAlreadyExistsException =
+      "org.apache.hadoop.hbase.security.visibility.LabelAlreadyExistsException";
+  static constexpr const char* kFatalConnectionException =
+      "org.apache.hadoop.hbase.ipc.FatalConnectionException";
+  static constexpr const char* kUnsupportedCryptoException =
+      "org.apache.hadoop.hbase.ipc.UnsupportedCryptoException";
+  static constexpr const char* kUnsupportedCellCodecException =
+      "org.apache.hadoop.hbase.ipc.UnsupportedCellCodecException";
+  static constexpr const char* kEmptyServiceNameException =
+      "org.apache.hadoop.hbase.ipc.EmptyServiceNameException";
+  static constexpr const char* kUnknownServiceException =
+      "org.apache.hadoop.hbase.ipc.UnknownServiceException";
+  static constexpr const char* kWrongVersionException =
+      "org.apache.hadoop.hbase.ipc.WrongVersionException";
+  static constexpr const char* kBadAuthException = "org.apache.hadoop.hbase.ipc.BadAuthException";
+  static constexpr const char* kUnsupportedCompressionCodecException =
+      "org.apache.hadoop.hbase.ipc.UnsupportedCompressionCodecException";
+  static constexpr const char* kDoNotRetryRegionException =
+      "org.apache.hadoop.hbase.client.DoNotRetryRegionException";
+  static constexpr const char* kRowTooBigException =
+      "org.apache.hadoop.hbase.client.RowTooBigException";
+  static constexpr const char* kRowTooBigExceptionDeprecated =
+      "org.apache.hadoop.hbase.regionserver.RowTooBigException";
+  static constexpr const char* kUnknownRegionException =
+      "org.apache.hadoop.hbase.UnknownRegionException";
+  static constexpr const char* kMergeRegionException =
+      "org.apache.hadoop.hbase.exceptions.MergeRegionException";
+  static constexpr const char* kNoServerForRegionException =
+      "org.apache.hadoop.hbase.client.NoServerForRegionException";
+  static constexpr const char* kQuotaExceededException =
+      "org.apache.hadoop.hbase.quotas.QuotaExceededException";
+  static constexpr const char* kSpaceLimitingException =
+      "org.apache.hadoop.hbase.quotas.SpaceLimitingException";
+  static constexpr const char* kThrottlingException =
+      "org.apache.hadoop.hbase.quotas.ThrottlingException";
+  static constexpr const char* kAccessDeniedException =
+      "org.apache.hadoop.hbase.security.AccessDeniedException";
+  static constexpr const char* kUnknownProtocolException =
+      "org.apache.hadoop.hbase.exceptions.UnknownProtocolException";
+  static constexpr const char* kRequestTooBigException =
+      "org.apache.hadoop.hbase.exceptions.RequestTooBigException";
+  static constexpr const char* kNotAllMetaRegionsOnlineException =
+      "org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException";
+  static constexpr const char* kConstraintException =
+      "org.apache.hadoop.hbase.constraint.ConstraintException";
+  static constexpr const char* kNoSuchColumnFamilyException =
+      "org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException";
+  static constexpr const char* kLeaseException =
+      "org.apache.hadoop.hbase.regionserver.LeaseException";
+  static constexpr const char* kInvalidLabelException =
+      "org.apache.hadoop.hbase.security.visibility.InvalidLabelException";
+
+  // TODO:
+  // These exceptions are not thrown in the regular read / write paths, although they are
+  // DoNotRetryIOExceptions. Add these to the list below in case we start doing Admin/DDL ops
+  // ReplicationPeerNotFoundException, XXXSnapshotException, NamespaceExistException,
+  // NamespaceNotFoundException, TableExistsException, TableNotDisabledException,
+  static const std::vector<const char*> kAllDoNotRetryIOExceptions;
+
  public:
   /**
    * Returns whether or not the exception should be retried by looking at the
-   * remote exception.
+   * client-side IOException, or RemoteException coming from server side.
    */
-  static bool ShouldRetry(const folly::exception_wrapper& error) {
-    bool do_not_retry = false;
-    error.with_exception(
-        [&](const RemoteException& remote_ex) { do_not_retry = remote_ex.do_not_retry(); });
-    return !do_not_retry;
-  }
+  static bool ShouldRetry(const folly::exception_wrapper& error);
+
+  /**
+   * Returns whether the java exception class extends DoNotRetryException.
+   * In the java side, we just have a hierarchy of Exception classes that we use
+   * both client side and server side. On the client side, we rethrow the server
+   * side exception by un-wrapping the exception from a RemoteException or a ServiceException
+   * (see ConnectionUtils.translateException() in Java).
+   * Since this object-hierarchy info is not available in C++ side, we are doing a
+   * very fragile catch-all list of all exception types in Java that extend the
+   * DoNotRetryException class type.
+   */
+  static bool IsJavaDoNotRetryException(const std::string& java_class_name);
 
   /**
    * Returns whether the scanner is closed when the client received the
    * remote exception.
-   * Ok, here is a nice detail about the java exceptions. In the java side, we
-   * just have a hierarchy of Exception classes that we use both client side and
-   * server side. On the client side, we rethrow the server side exception by
-   * un-wrapping the exception from a RemoteException or a ServiceException
-   * (see ConnectionUtils.translateException() in Java).
-   * Since this object-hierarchy info is not available in C++ side, we are doing a
+   * Since the object-hierarchy info is not available in C++ side, we are doing a
    * very fragile catch-all list of all exception types in Java that extend these
    * three base classes: UnknownScannerException, NotServingRegionException,
    * RegionServerStoppedException
    */
-  static bool IsScannerClosed(const folly::exception_wrapper& exception) {
-    bool scanner_closed = false;
-    exception.with_exception([&](const RemoteException& remote_ex) {
-      auto java_class = remote_ex.exception_class_name();
-      if (java_class == kUnknownScannerException || java_class == kNotServingRegionException ||
-          java_class == kRegionInRecoveryException || java_class == kRegionOpeningException ||
-          java_class == kRegionMovedException || java_class == kRegionServerStoppedException ||
-          java_class == kRegionServerAbortedException) {
-        scanner_closed = true;
-      }
-    });
-    return scanner_closed;
-  }
+  static bool IsScannerClosed(const folly::exception_wrapper& exception);
 
-  static bool IsScannerOutOfOrder(const folly::exception_wrapper& exception) {
-    bool scanner_out_of_order = false;
-    exception.with_exception([&](const RemoteException& remote_ex) {
-      auto java_class = remote_ex.exception_class_name();
-      if (java_class == kOutOfOrderScannerNextException || java_class == kScannerResetException) {
-        scanner_out_of_order = true;
-      }
-    });
-    return scanner_out_of_order;
-  }
+  static bool IsScannerOutOfOrder(const folly::exception_wrapper& exception);
 };
 }  // namespace hbase
