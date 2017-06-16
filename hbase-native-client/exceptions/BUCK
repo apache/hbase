@@ -20,9 +20,20 @@ cxx_library(
     exported_headers=[
         "exception.h",
     ],
-    srcs=[],
+    srcs=[
+        "exception.cc",
+    ],
     deps=[
         "//third-party:folly",
     ],
     compiler_flags=['-Weffc++'],
     visibility=['//core/...', '//connection//...'],)
+cxx_test(
+    name="exception-test",
+    srcs=[
+        "exception-test.cc",
+    ],
+    deps=[
+        ":exceptions",
+    ],
+    run_test_separately=True,)
