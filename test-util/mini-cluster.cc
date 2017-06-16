@@ -59,6 +59,7 @@ JNIEnv *MiniCluster::CreateVM(JavaVM **jvm) {
     }
     fd.close();
   }
+
   auto options = std::string{"-Djava.class.path="} + clspath;
   jvm_options.optionString = const_cast<char *>(options.c_str());
   args.options = &jvm_options;
@@ -185,6 +186,9 @@ JNIEnv *MiniCluster::env() {
 }
 // converts C char* to Java byte[]
 jbyteArray MiniCluster::StrToByteChar(const std::string &str) {
+  if (str.size() == 0) {
+    return nullptr;
+  }
   char *p = const_cast<char *>(str.c_str());
   int n = str.length();
   jbyteArray arr = env_->NewByteArray(n);

@@ -55,4 +55,8 @@ std::string ZKUtil::MetaZNode(const hbase::Configuration& conf) {
   return zk_node;
 }
 
+int32_t ZKUtil::SessionTimeout(const hbase::Configuration& conf) {
+  return conf.GetInt(kHBaseZookeeperSessionTimeout_, kDefHBaseZookeeperSessionTimeout_);
+}
+
 }  // namespace hbase

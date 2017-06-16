@@ -24,16 +24,18 @@
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
 
+#include <map>
+#include <utility>
+
 #include "connection/response.h"
 #include "connection/rpc-connection.h"
+#include "core/meta-utils.h"
 #include "exceptions/exception.h"
 #include "if/Client.pb.h"
 #include "if/ZooKeeper.pb.h"
 #include "serde/region-info.h"
 #include "serde/server-name.h"
 #include "serde/zk.h"
-
-#include <utility>
 
 using hbase::pb::MetaRegionServer;
 using hbase::pb::ServerName;
@@ -54,27 +56,49 @@ LocationCache::LocationCache(std::shared_ptr<hbase::Configuration> conf,
       cached_locations_(),
       locations_lock_() {
   zk_quorum_ = ZKUtil::ParseZooKeeperQuorum(*conf_);
-  zk_ = zookeeper_init(zk_quorum_.c_str(), nullptr, 1000, 0, 0, 0);
+  EnsureZooKeeperConnection();
 }
 
-LocationCache::~LocationCache() {
-  zookeeper_close(zk_);
-  zk_ = nullptr;
-  LOG(INFO) << "Closed connection to ZooKeeper.";
+LocationCache::~LocationCache() { CloseZooKeeperConnection(); }
+
+void LocationCache::CloseZooKeeperConnection() {
+  if (zk_ != nullptr) {
+    zookeeper_close(zk_);
+    zk_ = nullptr;
+    LOG(INFO) << "Closed connection to ZooKeeper.";
+  }
+}
+
+void LocationCache::EnsureZooKeeperConnection() {
+  if (zk_ == nullptr) {
+    LOG(INFO) << "Connecting to ZooKeeper. Quorum:" + zk_quorum_;
+    auto session_timeout = ZKUtil::SessionTimeout(*conf_);
+    zk_ = zookeeper_init(zk_quorum_.c_str(), nullptr, session_timeout, nullptr, nullptr, 0);
+  }
 }
 
 folly::Future<ServerName> LocationCache::LocateMeta() {
-  std::lock_guard<std::mutex> g(meta_lock_);
+  std::lock_guard<std::recursive_mutex> g(meta_lock_);
   if (meta_promise_ == nullptr) {
     this->RefreshMetaLocation();
   }
-  return meta_promise_->getFuture();
+  return meta_promise_->getFuture().onError([&](const folly::exception_wrapper &ew) {
+    auto promise = InvalidateMeta();
+    promise->setException(ew);
+    return ServerName{};
+  });
 }
 
-void LocationCache::InvalidateMeta() {
+std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> LocationCache::InvalidateMeta() {
+  VLOG(2) << "Invalidating meta location";
+  std::lock_guard<std::recursive_mutex> g(meta_lock_);
   if (meta_promise_ != nullptr) {
-    std::lock_guard<std::mutex> g(meta_lock_);
-    meta_promise_ = nullptr;
+    // return the unique_ptr back to the caller.
+    std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> ret = nullptr;
+    std::swap(ret, meta_promise_);
+    return ret;
+  } else {
+    return nullptr;
   }
 }
 
@@ -84,18 +108,21 @@ void LocationCache::RefreshMetaLocation() {
   cpu_executor_->add([&] { meta_promise_->setWith([&] { return this->ReadMetaLocation(); }); });
 }
 
+// Note: this is a blocking call to zookeeper
 ServerName LocationCache::ReadMetaLocation() {
   auto buf = folly::IOBuf::create(4096);
   ZkDeserializer derser;
+  EnsureZooKeeperConnection();
 
   // This needs to be int rather than size_t as that's what ZK expects.
   int len = buf->capacity();
   std::string zk_node = ZKUtil::MetaZNode(*conf_);
-  // TODO(elliott): handle disconnects/reconntion as needed.
   int zk_result = zoo_get(this->zk_, zk_node.c_str(), 0,
                           reinterpret_cast<char *>(buf->writableData()), &len, nullptr);
   if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
+    // We just close the zk connection, and let the upper levels retry.
+    CloseZooKeeperConnection();
     throw std::runtime_error("Error getting meta location. Quorum: " + zk_quorum_);
   }
   buf->append(len);
@@ -103,6 +130,8 @@ ServerName LocationCache::ReadMetaLocation() {
   MetaRegionServer mrs;
   if (derser.Parse(buf.get(), &mrs) == false) {
     LOG(ERROR) << "Unable to decode";
+    throw std::runtime_error("Error getting meta location (Unable to decode). Quorum: " +
+                             zk_quorum_);
   }
   return mrs.server();
 }
@@ -118,10 +147,15 @@ folly::Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
       .then([tn, row, this](std::shared_ptr<RpcConnection> rpc_connection) {
         return (*rpc_connection->get_service())(std::move(meta_util_.MetaRequest(tn, row)));
       })
-      .then([this](std::unique_ptr<Response> resp) {
+      .onError([&](const folly::exception_wrapper &ew) {
+        auto promise = InvalidateMeta();
+        throw ew;
+        return static_cast<std::unique_ptr<Response>>(nullptr);
+      })
+      .then([tn, this](std::unique_ptr<Response> resp) {
         // take the protobuf response and make it into
         // a region location.
-        return meta_util_.CreateLocation(std::move(*resp));
+        return meta_util_.CreateLocation(std::move(*resp), tn);
       })
       .then([tn, this](std::shared_ptr<RegionLocation> rl) {
         // Make sure that the correct location was found.
@@ -134,9 +168,6 @@ folly::Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
       .then([this](std::shared_ptr<RegionLocation> rl) {
         auto remote_id =
             std::make_shared<ConnectionId>(rl->server_name().host_name(), rl->server_name().port());
-        // Now fill out the connection.
-        // rl->set_service(cp_->GetConnection(remote_id)->get_service()); TODO: this causes wangle
-        // assertion errors
         return rl;
       })
       .then([tn, this](std::shared_ptr<RegionLocation> rl) {
@@ -146,9 +177,20 @@ folly::Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
       });
 }
 
+constexpr const char *MetaUtil::kMetaRegionName;
+
 folly::Future<std::shared_ptr<RegionLocation>> LocationCache::LocateRegion(
     const TableName &tn, const std::string &row, const RegionLocateType locate_type,
     const int64_t locate_ns) {
+  // We maybe asked to locate meta itself
+  if (MetaUtil::IsMeta(tn)) {
+    return LocateMeta().then([this](const ServerName &server_name) {
+      auto rl = std::make_shared<RegionLocation>(MetaUtil::kMetaRegionName,
+                                                 meta_util_.meta_region_info(), server_name);
+      return rl;
+    });
+  }
+
   // TODO: implement region locate type and timeout
   auto cached_loc = this->GetCachedLocation(tn, row);
   if (cached_loc != nullptr) {
@@ -164,34 +206,28 @@ std::shared_ptr<RegionLocation> LocationCache::GetCachedLocation(const hbase::pb
   auto t_locs = this->GetTableLocations(tn);
   std::shared_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
 
-  if (VLOG_IS_ON(2)) {
-    for (const auto &p : *t_locs) {
-      VLOG(2) << "t_locs[" << p.first << "] = " << p.second->DebugString();
-    }
-  }
-
   // looking for the "floor" key as a start key
   auto possible_region = t_locs->upper_bound(row);
 
   if (t_locs->empty()) {
-    VLOG(2) << "Could not find region in cache, table map is empty";
+    VLOG(5) << "Could not find region in cache, table map is empty";
     return nullptr;
   }
 
   if (possible_region == t_locs->begin()) {
-    VLOG(2) << "Could not find region in cache, all keys are greater, row:" << row
+    VLOG(5) << "Could not find region in cache, all keys are greater, row:" << row
             << " ,possible_region:" << possible_region->second->DebugString();
     return nullptr;
   }
   --possible_region;
 
-  VLOG(2) << "Found possible region in cache for row:" << row
+  VLOG(5) << "Found possible region in cache for row:" << row
           << " ,possible_region:" << possible_region->second->DebugString();
 
   // found possible start key, now need to check end key
   if (possible_region->second->region_info().end_key() == "" ||
       possible_region->second->region_info().end_key() > row) {
-    VLOG(1) << "Found region in cache for row:" << row
+    VLOG(2) << "Found region in cache for row:" << row
             << " ,region:" << possible_region->second->DebugString();
     return possible_region->second;
   } else {
@@ -261,15 +297,23 @@ void LocationCache::ClearCache() {
 
 // must hold unique lock on locations_lock_
 void LocationCache::ClearCachedLocations(const hbase::pb::TableName &tn) {
+  VLOG(1) << "ClearCachedLocations, table:" << folly::to<std::string>(tn);
   std::unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
   cached_locations_.erase(tn);
+  if (MetaUtil::IsMeta(tn)) {
+    InvalidateMeta();
+  }
 }
 
 // must hold unique lock on locations_lock_
 void LocationCache::ClearCachedLocation(const hbase::pb::TableName &tn, const std::string &row) {
+  VLOG(1) << "ClearCachedLocation, table:" << folly::to<std::string>(tn) << ", row:" << row;
   auto table_locs = this->GetTableLocations(tn);
   std::unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
   table_locs->erase(row);
+  if (MetaUtil::IsMeta(tn)) {
+    InvalidateMeta();
+  }
 }
 
 void LocationCache::UpdateCachedLocation(const RegionLocation &loc,

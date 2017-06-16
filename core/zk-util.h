@@ -34,8 +34,13 @@ class ZKUtil {
   static constexpr const char* kDefHBaseZnodeParent_ = "/hbase";
   static constexpr const char* kHBaseMetaRegionServer_ = "meta-region-server";
 
+  static constexpr const char* kHBaseZookeeperSessionTimeout_ = "zookeeper.session.timeout";
+  static constexpr const int32_t kDefHBaseZookeeperSessionTimeout_ = 90000;
+
   static std::string ParseZooKeeperQuorum(const hbase::Configuration& conf);
 
   static std::string MetaZNode(const hbase::Configuration& conf);
+
+  static int32_t SessionTimeout(const hbase::Configuration& conf);
 };
 }  // namespace hbase

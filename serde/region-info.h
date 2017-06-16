@@ -19,12 +19,12 @@
 
 #pragma once
 
-#include "if/HBase.pb.h"
-
 #include <folly/Conv.h>
 #include <boost/algorithm/string/predicate.hpp>
 
 #include <string>
+
+#include "if/HBase.pb.h"
 
 namespace hbase {
 namespace pb {

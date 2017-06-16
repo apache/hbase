@@ -137,6 +137,18 @@ cxx_test(
     ],
     run_test_separately=True,)
 cxx_test(
+    name="location-cache-retry-test",
+    srcs=[
+        "location-cache-retry-test.cc",
+    ],
+    deps=[
+        ":core",
+        "//if:if",
+        "//serde:serde",
+        "//test-util:test-util",
+    ],
+    run_test_separately=True,)
+cxx_test(
     name="cell-test",
     srcs=[
         "cell-test.cc",

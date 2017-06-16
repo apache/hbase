@@ -34,6 +34,17 @@ namespace hbase {
  */
 class MetaUtil {
  public:
+  static constexpr const char *kSystemNamespace = "hbase";
+  static constexpr const char *kMetaTableQualifier = "meta";
+  static constexpr const char *kMetaTableName = "hbase:meta";
+  static constexpr const char *kMetaRegion = "1588230740";
+  static constexpr const char *kMetaRegionName = "hbase:meta,,1";
+  static constexpr const char *kCatalogFamily = "info";
+  static constexpr const char *kRegionInfoColumn = "regioninfo";
+  static constexpr const char *kServerColumn = "server";
+
+  MetaUtil();
+
   /**
    * Given a table and a row give the row key from which to start a scan to find
    * region locations.
@@ -49,6 +60,17 @@ class MetaUtil {
   /**
    * Return a RegionLocation from the parsed Response
    */
-  std::shared_ptr<RegionLocation> CreateLocation(const Response &resp);
+  std::shared_ptr<RegionLocation> CreateLocation(const Response &resp,
+                                                 const hbase::pb::TableName &tn);
+
+  /**
+   * Return whether the table is the meta table.
+   */
+  static bool IsMeta(const hbase::pb::TableName &tn);
+
+  const pb::RegionInfo &meta_region_info() const { return meta_region_info_; }
+
+ private:
+  pb::RegionInfo meta_region_info_;
 };
 }  // namespace hbase

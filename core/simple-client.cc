@@ -29,6 +29,7 @@
 #include "connection/rpc-client.h"
 #include "core/client.h"
 #include "core/get.h"
+#include "core/hbase-configuration-loader.h"
 #include "core/put.h"
 #include "core/scan.h"
 #include "core/table.h"
@@ -39,6 +40,7 @@
 using hbase::Client;
 using hbase::Configuration;
 using hbase::Get;
+using hbase::HBaseConfigurationLoader;
 using hbase::Scan;
 using hbase::Put;
 using hbase::Table;
@@ -49,6 +51,7 @@ using hbase::TimeUtil;
 DEFINE_string(table, "test_table", "What table to do the reads or writes");
 DEFINE_string(row, "row_", "row prefix");
 DEFINE_string(zookeeper, "localhost:2181", "What zk quorum to talk to");
+DEFINE_string(conf, "", "Conf directory to read the config from (optional)");
 DEFINE_uint64(num_rows, 10000, "How many rows to write and read");
 DEFINE_bool(puts, true, "Whether to perform puts");
 DEFINE_bool(gets, true, "Whether to perform gets");
@@ -76,10 +79,17 @@ int main(int argc, char *argv[]) {
   FLAGS_logtostderr = 1;
   FLAGS_stderrthreshold = 1;
 
-  // Configuration
-  auto conf = std::make_shared<Configuration>();
-  conf->Set("hbase.zookeeper.quorum", FLAGS_zookeeper);
-  conf->SetInt("hbase.client.cpu.thread.pool.size", FLAGS_threads);
+  std::shared_ptr<Configuration> conf = nullptr;
+  if (FLAGS_conf == "") {
+    // Configuration
+    conf = std::make_shared<Configuration>();
+    conf->Set("hbase.zookeeper.quorum", FLAGS_zookeeper);
+    conf->SetInt("hbase.client.cpu.thread.pool.size", FLAGS_threads);
+  } else {
+    setenv("HBASE_CONF", FLAGS_conf.c_str(), 1);
+    hbase::HBaseConfigurationLoader loader;
+    conf = std::make_shared<Configuration>(loader.LoadDefaultResources().value());
+  }
 
   auto row = FLAGS_row;
 

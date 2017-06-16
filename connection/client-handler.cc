@@ -51,7 +51,7 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<folly::IOBuf> buf) {
 
     int used_bytes = serde_.ParseDelimited(buf.get(), &header);
     VLOG(3) << "Read RPC ResponseHeader size=" << used_bytes << " call_id=" << header.call_id()
-            << " has_exception=" << header.has_exception();
+            << " has_exception=" << header.has_exception() << ", server: " << server_;
 
     // Get the response protobuf from the map
     auto search = resp_msgs_->find(header.call_id());
@@ -80,7 +80,8 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<folly::IOBuf> buf) {
       }
 
       VLOG(3) << "Read RPCResponse, buf length:" << buf->length()
-              << ", header PB length:" << used_bytes << ", cell_block length:" << cell_block_length;
+              << ", header PB length:" << used_bytes << ", cell_block length:" << cell_block_length
+              << ", server: " << server_;
 
       // Make sure that bytes were parsed.
       CHECK((used_bytes + cell_block_length) == buf->length());
@@ -113,7 +114,7 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<folly::IOBuf> buf) {
 
       VLOG(3) << "Exception RPC ResponseHeader, call_id=" << header.call_id()
               << " exception.what=" << remote_exception->what()
-              << ", do_not_retry=" << remote_exception->do_not_retry();
+              << ", do_not_retry=" << remote_exception->do_not_retry() << ", server: " << server_;
       received->set_exception(folly::exception_wrapper{*remote_exception});
     }
     ctx->fireRead(std::move(received));
@@ -129,7 +130,7 @@ folly::Future<folly::Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Re
     ctx->fireWrite(std::move(header));
   });
 
-  VLOG(3) << "Writing RPC Request:" << r->DebugString();
+  VLOG(3) << "Writing RPC Request:" << r->DebugString() << ", server: " << server_;
 
   // Now store the call id to response.
   resp_msgs_->insert(r->call_id(), r->resp_msg());

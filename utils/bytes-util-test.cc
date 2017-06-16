@@ -23,8 +23,7 @@
 
 #include "utils/bytes-util.h"
 
-using namespace std;
-using namespace hbase;
+using hbase::BytesUtil;
 
 TEST(TestBytesUtil, TestToStringBinary) {
   std::string empty{""};

@@ -18,12 +18,13 @@
  */
 #pragma once
 
+#include <folly/Conv.h>
+#include <folly/String.h>
+
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <folly/Conv.h>
-#include <folly/String.h>
 #include "if/HBase.pb.h"
 
 namespace hbase {

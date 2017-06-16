@@ -143,7 +143,7 @@ class ConnectionConfiguration {
    */
   static constexpr const char* kClientRetriesNumber = "hbase.client.retries.number";
 
-  static constexpr const uint32_t kDefaultClientRetriesNumber = 31;
+  static constexpr const uint32_t kDefaultClientRetriesNumber = 35;
 
   /**
     * Configure the number of failures after which the client will start logging. A few failures

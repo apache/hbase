@@ -68,6 +68,7 @@ class TestUtil {
   void StartStandAloneInstance();
   void StopStandAloneInstance();
   void RunShellCmd(const std::string &);
+  void MoveRegion(const std::string &region, const std::string &server);
 
  private:
   std::unique_ptr<MiniCluster> mini_;
