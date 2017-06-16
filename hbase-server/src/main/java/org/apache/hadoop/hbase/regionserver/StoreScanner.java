@@ -190,6 +190,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     if (get) {
       this.readType = Scan.ReadType.PREAD;
       this.scanUsePread = true;
+    } else if(scanType != scanType.USER_SCAN) {
+      // For compaction scanners never use Pread as already we have stream based scanners on the
+      // store files to be compacted
+      this.readType = Scan.ReadType.STREAM;
+      this.scanUsePread = false;
     } else {
       if (scan.getReadType() == Scan.ReadType.DEFAULT) {
         this.readType = scanInfo.isUsePread() ? Scan.ReadType.PREAD : Scan.ReadType.DEFAULT;
@@ -198,12 +203,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       }
       // Always start with pread unless user specific stream. Will change to stream later if
       // readType is default if the scan keeps running for a long time.
-      if (scanType != ScanType.COMPACT_DROP_DELETES
-          && scanType != ScanType.COMPACT_RETAIN_DELETES) {
-        // For compaction scanners never use Pread as already we have stream based scanners on the
-        // store files to be compacted
-        this.scanUsePread = this.readType != Scan.ReadType.STREAM;
-      }
+      this.scanUsePread = this.readType != Scan.ReadType.STREAM;
     }
     this.preadMaxBytes = scanInfo.getPreadMaxBytes();
     this.cellsPerHeartbeatCheck = scanInfo.getCellsPerTimeoutCheck();
