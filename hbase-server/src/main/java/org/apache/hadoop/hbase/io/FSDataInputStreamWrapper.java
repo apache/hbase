@@ -39,6 +39,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class FSDataInputStreamWrapper {
   private static final Log LOG = LogFactory.getLog(FSDataInputStreamWrapper.class);
+  private static final boolean isLogTraceEnabled = LOG.isTraceEnabled();
 
   private final HFileSystem hfs;
   private final Path path;
@@ -247,10 +248,11 @@ public class FSDataInputStreamWrapper {
             try {
               this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
             } catch (NoSuchMethodException | SecurityException e) {
-              LOG.warn("Failed to find 'unbuffer' method in class " + streamClass
-                  + " . So there may be a TCP socket connection "
-                  + "left open in CLOSE_WAIT state.",
-                e);
+              if (isLogTraceEnabled) {
+                LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
+                    + " . So there may be a TCP socket connection "
+                    + "left open in CLOSE_WAIT state.", e);
+              }
               return;
             }
             this.instanceOfCanUnbuffer = true;
@@ -262,15 +264,18 @@ public class FSDataInputStreamWrapper {
         try {
           this.unbuffer.invoke(wrappedStream);
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-          LOG.warn("Failed to invoke 'unbuffer' method in class " + streamClass
-              + " . So there may be a TCP socket connection left open in CLOSE_WAIT state.",
-            e);
+          if (isLogTraceEnabled) {
+            LOG.trace("Failed to invoke 'unbuffer' method in class " + streamClass
+                + " . So there may be a TCP socket connection left open in CLOSE_WAIT state.", e);
+          }
         }
       } else {
-        LOG.warn("Failed to find 'unbuffer' method in class " + streamClass
-            + " . So there may be a TCP socket connection "
-            + "left open in CLOSE_WAIT state. For more details check "
-            + "https://issues.apache.org/jira/browse/HBASE-9393");
+        if (isLogTraceEnabled) {
+          LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
+              + " . So there may be a TCP socket connection "
+              + "left open in CLOSE_WAIT state. For more details check "
+              + "https://issues.apache.org/jira/browse/HBASE-9393");
+        }
       }
     }
   }
