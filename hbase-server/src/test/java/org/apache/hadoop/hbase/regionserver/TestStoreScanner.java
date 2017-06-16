@@ -992,4 +992,20 @@ public class TestStoreScanner {
       EnvironmentEdgeManagerTestHelper.reset();
     }
   }
+
+  @Test
+  public void testPreadNotEnabledForCompactionStoreScanners() throws Exception {
+    ScanType scanType = ScanType.COMPACT_RETAIN_DELETES;
+    long now = System.currentTimeMillis();
+    KeyValue[] kvs = new KeyValue[] {
+        new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, now - 1000,
+            KeyValue.Type.DeleteFamily),
+        KeyValueTestUtil.create("R1", "cf", "a", now - 10, KeyValue.Type.Put, "dont-care"), };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
+    Scan scan = new Scan();
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
+        HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
+    StoreScanner storeScanner = new StoreScanner(scan, scanInfo, scanType, null, scanners);
+    assertFalse(storeScanner.isScanUsePread());
+  }
 }
