@@ -43,7 +43,7 @@ public class ProcedureWALFormatReader {
   private static final Log LOG = LogFactory.getLog(ProcedureWALFormatReader.class);
 
   // ==============================================================================================
-  //  We read the WALs in reverse order. from the newest to the oldest.
+  //  We read the WALs in reverse order from the newest to the oldest.
   //  We have different entry types:
   //   - INIT: Procedure submitted by the user (also known as 'root procedure')
   //   - INSERT: Children added to the procedure <parentId>:[<childId>, ...]
@@ -52,7 +52,8 @@ public class ProcedureWALFormatReader {
   //
   // In the WAL we can find multiple times the same procedure as UPDATE or INSERT.
   // We read the WAL from top to bottom, so every time we find an entry of the
-  // same procedure, that will be the "latest" update.
+  // same procedure, that will be the "latest" update (Caveat: with multiple threads writing
+  // the store, this assumption does not hold).
   //
   // We keep two in-memory maps:
   //  - localProcedureMap: is the map containing the entries in the WAL we are processing
@@ -64,7 +65,7 @@ public class ProcedureWALFormatReader {
   //
   // The WAL is append-only so the last procedure in the WAL is the one that
   // was in execution at the time we crashed/closed the server.
-  // given that, the procedure replay order can be inferred by the WAL order.
+  // Given that, the procedure replay order can be inferred by the WAL order.
   //
   // Example:
   //    WAL-2: [A, B, A, C, D]
@@ -77,7 +78,7 @@ public class ProcedureWALFormatReader {
   //    WAL-2 localProcedureMap.replayOrder is [D, C, A, B]
   //    WAL-1 localProcedureMap.replayOrder is [F, G]
   //
-  // each time we reach the WAL-EOF, the "replayOrder" list is merged/appended in 'procedureMap'
+  // Each time we reach the WAL-EOF, the "replayOrder" list is merged/appended in 'procedureMap'
   // so using the example above we end up with: [D, C, A, B] + [F, G] as replay order.
   //
   //  Fast Start: INIT/INSERT record and StackIDs
@@ -153,12 +154,12 @@ public class ProcedureWALFormatReader {
       log.setProcIds(localProcedureMap.getMinProcId(), localProcedureMap.getMaxProcId());
       procedureMap.mergeTail(localProcedureMap);
       //if (hasFastStartSupport) {
-        // TODO: Some procedure may be already runnables (see readInitEntry())
-        //       (we can also check the "update map" in the log trackers)
-        // --------------------------------------------------
-        //EntryIterator iter = procedureMap.fetchReady();
-        //if (iter != null) loader.load(iter);
-        // --------------------------------------------------
+      // TODO: Some procedure may be already runnables (see readInitEntry())
+      //       (we can also check the "update map" in the log trackers)
+      // --------------------------------------------------
+      //EntryIterator iter = procedureMap.fetchReady();
+      //if (iter != null) loader.load(iter);
+      // --------------------------------------------------
       //}
     }
   }
@@ -189,7 +190,7 @@ public class ProcedureWALFormatReader {
   }
 
   private void readInitEntry(final ProcedureWALEntry entry)
-      throws IOException {
+  throws IOException {
     assert entry.getProcedureCount() == 1 : "Expected only one procedure";
     loadProcedure(entry, entry.getProcedure(0));
   }
@@ -278,12 +279,25 @@ public class ProcedureWALFormatReader {
     protected ProcedureProtos.Procedure proto;
     protected boolean ready = false;
 
-    public Entry(Entry hashNext) { this.hashNext = hashNext; }
+    public Entry(Entry hashNext) {
+      this.hashNext = hashNext;
+    }
 
-    public long getProcId() { return proto.getProcId(); }
-    public long getParentId() { return proto.getParentId(); }
-    public boolean hasParent() { return proto.hasParentId(); }
-    public boolean isReady() { return ready; }
+    public long getProcId() {
+      return proto.getProcId();
+    }
+
+    public long getParentId() {
+      return proto.getParentId();
+    }
+
+    public boolean hasParent() {
+      return proto.hasParentId();
+    }
+
+    public boolean isReady() {
+      return ready;
+    }
 
     public boolean isCompleted() {
       if (!hasParent()) {
@@ -403,17 +417,38 @@ public class ProcedureWALFormatReader {
     public void add(ProcedureProtos.Procedure procProto) {
       trackProcIds(procProto.getProcId());
       Entry entry = addToMap(procProto.getProcId(), procProto.hasParentId());
-      boolean isNew = entry.proto == null;
-      entry.proto = procProto;
+      boolean newEntry = entry.proto == null;
+      // We have seen procedure WALs where the entries are out of order; see HBASE-18152.
+      // To compensate, only replace the Entry procedure if for sure this new procedure
+      // is indeed an entry that came later. TODO: Fix the writing of procedure info so
+      // it does not violate basic expectation, that WALs contain procedure changes going
+      // from start to finish in sequence.
+      if (newEntry || isIncreasing(entry.proto, procProto)) {
+        entry.proto = procProto;
+      }
       addToReplayList(entry);
-
-      if (isNew) {
+      if(newEntry) {
         if (procProto.hasParentId()) {
           childUnlinkedHead = addToLinkList(entry, childUnlinkedHead);
         } else {
           rootHead = addToLinkList(entry, rootHead);
         }
       }
+    }
+
+    /**
+     * @return True if this new procedure is 'richer' than the current one else
+     * false and we log this incidence where it appears that the WAL has older entries
+     * appended after newer ones. See HBASE-18152.
+     */
+    private static boolean isIncreasing(ProcedureProtos.Procedure current,
+    ProcedureProtos.Procedure candidate) {
+      boolean increasing = current.getStackIdCount() <= candidate.getStackIdCount() &&
+        current.getLastUpdate() <= candidate.getLastUpdate();
+      if (!increasing) {
+        LOG.warn("NOT INCREASING! current=" + current + ", candidate=" + candidate);
+      }
+      return increasing;
     }
 
     public boolean remove(long procId) {
@@ -592,7 +627,7 @@ public class ProcedureWALFormatReader {
     }
 
     /*
-     * (see the comprehensive explaination in the beginning of the file)
+     * (see the comprehensive explanation in the beginning of the file)
      * A Procedure is ready when parent and children are ready.
      * "ready" means that we all the information that we need in-memory.
      *
@@ -609,9 +644,9 @@ public class ProcedureWALFormatReader {
      *  - easy case, the parent is missing from the global map
      *  - more complex case we look at the Stack IDs
      *
-     * The Stack-IDs are added to the procedure order as incremental index
+     * The Stack-IDs are added to the procedure order as an incremental index
      * tracking how many times that procedure was executed, which is equivalent
-     * at the number of times we wrote the procedure to the WAL.
+     * to the number of times we wrote the procedure to the WAL.
      * In the example above:
      *   wal-2: B has stackId = [1, 2]
      *   wal-1: B has stackId = [1]
@@ -653,6 +688,10 @@ public class ProcedureWALFormatReader {
         int stackId = 1 + rootEntry.proto.getStackId(i);
         maxStackId  = Math.max(maxStackId, stackId);
         stackIdSum += stackId;
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("stackId=" + stackId + " stackIdSum=" + stackIdSum +
+          " maxStackid=" + maxStackId + " " + rootEntry);
+        }
       }
 
       for (Entry p = rootEntry.childHead; p != null; p = p.linkNext) {
@@ -660,8 +699,14 @@ public class ProcedureWALFormatReader {
           int stackId = 1 + p.proto.getStackId(i);
           maxStackId  = Math.max(maxStackId, stackId);
           stackIdSum += stackId;
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("stackId=" + stackId + " stackIdSum=" + stackIdSum +
+              " maxStackid=" + maxStackId + " " + p);
+          }
         }
       }
+      // The cmpStackIdSum is this formula for finding the sum of a series of numbers:
+      // http://www.wikihow.com/Sum-the-Integers-from-1-to-N#/Image:Sum-the-Integers-from-1-to-N-Step-2-Version-3.jpg
       final int cmpStackIdSum = (maxStackId * (maxStackId + 1) / 2);
       if (cmpStackIdSum == stackIdSum) {
         rootEntry.ready = true;
