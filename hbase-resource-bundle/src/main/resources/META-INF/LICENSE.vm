@@ -1550,7 +1550,27 @@ ${dep.scm.url}
 #thrift_license()
 #end
 ## Note that this will fail the build if we don't have a license. update supplemental-models.
-#if( !(${dep.licenses[0].name.contains("Apache License, Version 2.0")} || ${dep.licenses[0].name.contains("The Apache Software License, Version 2.0")}) )
+#if( ${dep.licenses.isEmpty()} )
+--
+ERROR: ${dep.name} dependency found without license information!
+
+Please find the appropriate license and update supplemental-models.xml or
+revert the change that added this dependency.
+
+More info on the dependency:
+
+<groupId>${dep.groupId}</groupId>
+<artifactId>${dep.artifactId}</artifactId>
+<version>${dep.version}</version>
+
+maven central search
+g:${dep.groupId} AND a:${dep.artifactId} AND v:${dep.version}
+
+project website
+${dep.url}
+project source
+${dep.scm.url}
+#elseif( !(${dep.licenses[0].name.contains("Apache License, Version 2.0")} || ${dep.licenses[0].name.contains("The Apache Software License, Version 2.0")}) )
 #if( ${dep.licenses[0].name.contains("CDDL")} )
 #if( ${dep.licenses[0].name.contains("1.0")} )
 #set($aggregated = $cddl_1_0.add($dep))
@@ -1576,7 +1596,7 @@ This product includes ${dep.name} licensed under the ${dep.licenses[0].name}.
 
 ${dep.licenses[0].comments}
 #if(!(${non_aggregate_fine.contains($dep.licenses[0].name)}))
-Please check ^^^^^^^^^^^^ this License for acceptability here:
+ERROR: Please check ^^^^^^^^^^^^ this License for acceptability here:
 
 https://www.apache.org/legal/resolved
 
@@ -1596,12 +1616,6 @@ project website
 ${dep.url}
 project source
 ${dep.scm.url}
-
-## fail the template. If you're looking at the source LICENSE.vm
-## file based on a stacktrace or exception message, you need to find
-## the generated LICENSE file that has the actual dependency info printed.
-#set($empty = [])
-${empty[0]}
 #end
 #end
 #end

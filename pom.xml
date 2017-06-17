@@ -901,6 +901,24 @@
     </pluginManagement>
     <plugins>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>negate-license-bundles-property</id>
+            <goals>
+              <goal>bsh-property</goal>
+            </goals>
+            <configuration>
+              <source>skip.license.check = !${license.bundles.dependencies};</source>
+              <properties>
+                <property>skip.license.check</property>
+              </properties>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>1.4</version>
@@ -995,6 +1013,41 @@
                   <message>We don't allow other modules to depend on hbase-spark, see HBASE-13992.</message>
                 </bannedDependencies>
               </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>check-aggregate-license</id>
+            <!-- must check after LICENSE is built at 'generate-resources' -->
+            <phase>process-resources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <evaluateBeanshell>
+                  <condition>
+                    File license = new File("${license.aggregate.path}");
+
+                    // Beanshell does not support try-with-resources,
+                    // so we must close this scanner manually
+                    Scanner scanner = new Scanner(license);
+
+                    while (scanner.hasNextLine()) {
+                      if (scanner.nextLine().startsWith("ERROR:")) {
+                        scanner.close();
+                        return false;
+                      }
+                    }
+                    scanner.close();
+                    return true;
+                  </condition>
+                  <message>
+                    License errors detected, for more detail find ERROR in
+                    ${license.aggregate.path}
+                  </message>
+                </evaluateBeanshell>
+              </rules>
+              <skip>${skip.license.check}</skip>
             </configuration>
           </execution>
         </executions>
@@ -1258,6 +1311,10 @@
     <license.bundles.bootstrap>false</license.bundles.bootstrap>
     <!-- modules that include jquery in their source tree should set true -->
     <license.bundles.jquery>false</license.bundles.jquery>
+    <!-- where to find the generated LICENSE files -->
+    <license.aggregate.path>
+      ${project.build.directory}/maven-shared-archive-resources/META-INF/LICENSE
+    </license.aggregate.path>
     <tar.name>${project.build.finalName}.tar.gz</tar.name>
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm
