@@ -1694,7 +1694,7 @@ ${empty[0]}
 This product includes the following works licensed under the MIT license:
 
 #foreach($dep in $mit)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}
@@ -1729,7 +1729,7 @@ THE SOFTWARE.
 This product includes the following works licensed under the BSD 3-Clause license:
 
 #foreach($dep in $bsd3)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}
@@ -1770,7 +1770,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 This product includes the following works licensed under the CDDL 1.0 license:
 
 #foreach($dep in $cddl_1_0)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}
@@ -2027,7 +2027,7 @@ the State of California, with venue lying in Santa Clara County, California.
 This product includes the following works licensed under the CDDL 1.1 license:
 
 #foreach($dep in $cddl_1_1)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}
@@ -2325,7 +2325,7 @@ the State of California, with venue lying in Santa Clara County, California.
 This product includes the following works licensed under the Common Public License Version 1.0:
 
 #foreach($dep in $cpl)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}
