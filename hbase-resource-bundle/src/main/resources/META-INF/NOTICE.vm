@@ -272,6 +272,22 @@ JRuby's licence.
 #if(${dep.artifactId.equals("jruby-complete")})
 #set($jruby=true)
 #end
+#if( ${dep.licenses.isEmpty()} )
+ERROR: This product includes ${dep.name} which has no licenses!
+Revert the change if invalid or if intentional add license info to supplemental-models.xml
+
+<groupId>${dep.groupId}</groupId>
+<artifactId>${dep.artifactId}</artifactId>
+<version>${dep.version}</version>
+
+maven central search
+g:${dep.groupId} AND a:${dep.artifactId} AND v:${dep.version}
+
+project website
+${dep.url}
+project source
+${dep.scm.url}
+#else
 #if( !(${dep.licenses[0].name.contains("BSD")} || ${dep.licenses[0].name.contains("MIT")}) )
 #if( !(${dep.licenses[0].name.equals("Public Domain")}) )
 #if( !(${dep.licenses[0].name.contains("Apache Software License, Version 2.0")}) )
@@ -298,6 +314,7 @@ Licensed under ${dep.licenses[0].name}, see LICENSE for details.
 incorporated from ${dep.groupId}:${dep.artifactId}:${dep.packaging}:${dep.version}
 
 For source see '${dep.url}'.
+#end
 #end
 #end
 #end
