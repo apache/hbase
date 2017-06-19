@@ -25,6 +25,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -573,6 +574,34 @@ public class MetaTableAccessor {
     };
     fullScan(connection, v);
     return hris;
+  }
+
+  /**
+   * Retrieve server names from meta table.
+   * @param connection connection we're using
+   * @return List of region servers.
+   * @throws IOException
+   */
+  public static Set<ServerName> getServerNames(Connection connection) throws IOException {
+    final Set<ServerName> serverNames = new HashSet<ServerName>();
+    // Fill the above serverNames set with server entries from hbase:meta
+    CollectingVisitor<Result> v = new CollectingVisitor<Result>() {
+      @Override
+          void add(Result r) {
+        if (r == null || r.isEmpty()) return;
+        RegionLocations locations = getRegionLocations(r);
+        if (locations == null) return;
+        for (HRegionLocation loc : locations.getRegionLocations()) {
+          if (loc != null) {
+            if (loc.getServerName() != null) {
+              serverNames.add(loc.getServerName());
+            }
+          }
+        }
+      }
+    };
+    fullScan(connection, v);
+    return serverNames;
   }
 
   public static void fullScanMetaAndPrint(Connection connection)

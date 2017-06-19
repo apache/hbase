@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,13 +34,17 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -77,6 +82,63 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     // bring up the minicluster
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.restartHBaseCluster(3);
+    validateMetaAndUserTableRows(1, 5);
+  }
+
+  @Test(timeout = 300000)
+  public void testHMasterStartupOnMetaRebuild() throws Exception {
+    // shutdown the minicluster
+    TEST_UTIL.shutdownMiniHBaseCluster();
+
+    // Assign meta in master and restart Hbase
+    TEST_UTIL.getConfiguration().set("hbase.balancer.tablesOnMaster", "hbase:meta");
+    // Set namespace initialization timeout
+    TEST_UTIL.getConfiguration().set("hbase.master.namespace.init.timeout", "150000");
+    TEST_UTIL.restartHBaseCluster(3);
+    TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster();
+
+    // Create namespace
+    TEST_UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create("ns1").build());
+    TEST_UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create("ns2").build());
+    // Create tables
+    TEST_UTIL.createTable(TableName.valueOf("ns1:testHMasterStartupOnMetaRebuild"),
+      Bytes.toBytes("cf1"));
+    TEST_UTIL.createTable(TableName.valueOf("ns2:testHMasterStartupOnMetaRebuild"),
+      Bytes.toBytes("cf1"));
+    // Flush meta
+    TEST_UTIL.flush(TableName.META_TABLE_NAME);
+
+    // HMaster graceful shutdown
+    TEST_UTIL.getHBaseCluster().getMaster().shutdown();
+
+    // Kill region servers
+    List<RegionServerThread> regionServerThreads =
+        TEST_UTIL.getHBaseCluster().getRegionServerThreads();
+    for (RegionServerThread regionServerThread : regionServerThreads) {
+      TEST_UTIL.getHBaseCluster()
+          .killRegionServer(regionServerThread.getRegionServer().getServerName());
+    }
+
+    // rebuild meta table from scratch
+    HBaseFsck fsck = new HBaseFsck(conf);
+    assertTrue(fsck.rebuildMeta(false));
+
+    // bring up the minicluster
+    TEST_UTIL.restartHBaseCluster(3);
+    validateMetaAndUserTableRows(3, 7);
+
+    // Remove table and namesapce
+    TEST_UTIL.deleteTable("ns1:testHMasterStartupOnMetaRebuild");
+    TEST_UTIL.deleteTable("ns2:testHMasterStartupOnMetaRebuild");
+    TEST_UTIL.getHBaseAdmin().deleteNamespace("ns1");
+    TEST_UTIL.getHBaseAdmin().deleteNamespace("ns2");
+  }
+
+  /*
+   * Validate meta table region count and user table rows.
+   */
+  private void validateMetaAndUserTableRows(int totalTableCount, int totalRegionCount)
+      throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       Admin admin = connection.getAdmin();
       admin.enableTable(table);
@@ -85,10 +147,10 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
       LOG.info("No more RIT in ZK, now doing final test verification");
 
       // everything is good again.
-      assertEquals(5, scanMeta());
+      assertEquals(totalRegionCount, scanMeta());
       HTableDescriptor[] htbls = admin.listTables();
       LOG.info("Tables present after restart: " + Arrays.toString(htbls));
-      assertEquals(1, htbls.length);
+      assertEquals(totalTableCount, htbls.length);
     }
 
     assertErrors(doFsck(conf, false), new ERROR_CODE[] {});
