@@ -558,6 +558,15 @@ public class TestCatalogJanitor {
       // Auto-generated method stub
       return 0;
     }
+
+    @Override
+    public String getRegionServerVersion(ServerName sn) {
+      return null;
+    }
+
+    @Override
+    public void checkIfShouldMoveSystemRegionAsync() {
+    }
   }
 
   @Test

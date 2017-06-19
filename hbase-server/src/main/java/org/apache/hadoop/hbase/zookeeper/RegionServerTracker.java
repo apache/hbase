@@ -30,6 +30,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
@@ -51,10 +54,10 @@ public class RegionServerTracker extends ZooKeeperListener {
   private NavigableMap<ServerName, RegionServerInfo> regionServers = 
       new TreeMap<ServerName, RegionServerInfo>();
   private ServerManager serverManager;
-  private Server server;
+  private MasterServices server;
 
   public RegionServerTracker(ZooKeeperWatcher watcher,
-      Server server, ServerManager serverManager) {
+      MasterServices server, ServerManager serverManager) {
     super(watcher);
     this.server = server;
     this.serverManager = serverManager;
@@ -72,10 +75,10 @@ public class RegionServerTracker extends ZooKeeperListener {
     watcher.registerListener(this);
     List<String> servers =
       ZKUtil.listChildrenAndWatchThem(watcher, watcher.rsZNode);
-    add(servers);
+    refresh(servers);
   }
 
-  private void add(final List<String> servers) throws IOException {
+  private void refresh(final List<String> servers) throws IOException {
     synchronized(this.regionServers) {
       this.regionServers.clear();
       for (String n: servers) {
@@ -102,6 +105,10 @@ public class RegionServerTracker extends ZooKeeperListener {
           this.regionServers.put(sn, rsInfoBuilder.build());
         }
       }
+    }
+
+    if (server.isInitialized()) {
+      server.checkIfShouldMoveSystemRegionAsync();
     }
   }
 
@@ -135,7 +142,7 @@ public class RegionServerTracker extends ZooKeeperListener {
       try {
         List<String> servers =
           ZKUtil.listChildrenAndWatchThem(watcher, watcher.rsZNode);
-        add(servers);
+        refresh(servers);
       } catch (IOException e) {
         server.abort("Unexpected zk exception getting RS nodes", e);
       } catch (KeeperException e) {

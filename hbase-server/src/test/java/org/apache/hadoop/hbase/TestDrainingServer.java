@@ -109,6 +109,7 @@ public class TestDrainingServer {
     Mockito.when(server.getConfiguration()).thenReturn(conf);
     Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("masterMock,1,1"));
     Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
+    Mockito.when(server.getRegionServerVersion(Mockito.any(ServerName.class))).thenReturn("0.0.0");
 
     CoordinatedStateManager cp = new ZkCoordinatedStateManager();
     cp.initialize(server);
@@ -124,6 +125,8 @@ public class TestDrainingServer {
         .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
     Mockito.when(serverManager.createDestinationServersList(null))
         .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
+    Mockito.when(serverManager.createDestinationServersList(Mockito.anyList())).thenReturn(
+        new ArrayList<ServerName>(onlineServers.keySet()));
 
     for (ServerName sn : onlineServers.keySet()) {
       Mockito.when(serverManager.isServerOnline(sn)).thenReturn(true);
@@ -225,6 +228,8 @@ public class TestDrainingServer {
       new ArrayList<ServerName>(onlineServers.keySet()));
     Mockito.when(serverManager.createDestinationServersList(null)).thenReturn(
       new ArrayList<ServerName>(onlineServers.keySet()));
+    Mockito.when(serverManager.createDestinationServersList(Mockito.anyList())).thenReturn(
+        new ArrayList<ServerName>(onlineServers.keySet()));
 
     for (Entry<HRegionInfo, ServerName> entry : bulk.entrySet()) {
       Mockito.when(serverManager.isServerOnline(entry.getValue())).thenReturn(true);
@@ -284,6 +289,8 @@ public class TestDrainingServer {
     List<ServerName> availableServers = new ArrayList<ServerName>(onlineServers.keySet());
     Mockito.when(serverManager.createDestinationServersList()).thenReturn(availableServers);
     Mockito.when(serverManager.createDestinationServersList(null)).thenReturn(availableServers);
+    Mockito.when(serverManager.createDestinationServersList(Mockito.anyList())).thenReturn(
+        new ArrayList<ServerName>(onlineServers.keySet()));
   }
 
   private void setRegionOpenedOnZK(final ZooKeeperWatcher zkWatcher, final ServerName serverName,

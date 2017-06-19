@@ -335,7 +335,6 @@ public class TestAssignmentListener {
     // Now, we follow the same order of steps that the HMaster does to setup
     // the ServerManager, RegionServerTracker, and DrainingServerTracker.
     ServerManager serverManager = new ServerManager(master, services);
-
     RegionServerTracker regionServerTracker = new RegionServerTracker(
         zooKeeper, master, serverManager);
     regionServerTracker.start();

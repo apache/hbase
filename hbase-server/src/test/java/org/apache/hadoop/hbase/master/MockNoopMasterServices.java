@@ -240,6 +240,15 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public String getRegionServerVersion(ServerName sn) {
+    return null;
+  }
+
+  @Override
+  public void checkIfShouldMoveSystemRegionAsync() {
+  }
+
+  @Override
   public Configuration getConfiguration() {
     return null;
   }
