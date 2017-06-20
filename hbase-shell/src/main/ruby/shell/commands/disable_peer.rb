@@ -19,9 +19,9 @@
 
 module Shell
   module Commands
-    class DisablePeer< Command
+    class DisablePeer < Command
       def help
-        return <<-EOF
+        <<-EOF
 Stops the replication stream to the specified cluster, but still
 keeps track of new edits to replicate.
 

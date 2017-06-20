@@ -19,9 +19,9 @@
 
 module Shell
   module Commands
-    class AddPeer< Command
+    class AddPeer < Command
       def help
-        return <<-EOF
+        <<-EOF
 A peer can either be another HBase cluster or a custom replication endpoint. In either case an id
 must be specified to identify the peer.
 

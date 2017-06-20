@@ -20,7 +20,7 @@ module Shell
   module Commands
     class Whoami < Command
       def help
-        return <<-EOF
+        <<-EOF
 Show the current hbase user.
 Syntax : whoami
 For example:
@@ -29,11 +29,11 @@ For example:
 EOF
       end
 
-      def command()
-        user = org.apache.hadoop.hbase.security.User.getCurrent()
-        puts "#{user.toString()}"
-        groups = user.getGroupNames().to_a
-        if not groups.nil? and groups.length > 0
+      def command
+        user = org.apache.hadoop.hbase.security.User.getCurrent
+        puts user.toString.to_s
+        groups = user.getGroupNames.to_a
+        if !groups.nil? && !groups.empty?
           puts "    groups: #{groups.join(', ')}"
         end
       end

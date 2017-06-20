@@ -19,7 +19,7 @@ module Shell
   module Commands
     class GetRsgroup < Command
       def help
-        return <<-EOF
+        <<-EOF
 Get a RegionServer group's information.
 
 Example:
@@ -34,7 +34,7 @@ EOF
         rsgroup_admin.get_rsgroup(group_name) do |s|
           formatter.row([s])
         end
-        formatter.footer()
+        formatter.footer
       end
     end
   end

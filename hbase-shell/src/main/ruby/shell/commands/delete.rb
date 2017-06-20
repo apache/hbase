@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Delete < Command
       def help
-        return <<-EOF
+        <<-EOF
 Put a delete cell value at specified table/row/column and optionally
 timestamp coordinates.  Deletes must match the deleted cell's
 coordinates exactly.  When scanning, a delete cell suppresses older
@@ -54,5 +54,5 @@ EOF
   end
 end
 
-#Add the method table.delete that calls delete.delete
-::Hbase::Table.add_shell_command("delete")
+# Add the method table.delete that calls delete.delete
+::Hbase::Table.add_shell_command('delete')

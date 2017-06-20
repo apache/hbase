@@ -20,33 +20,33 @@
 
 module Shell
   module Commands
-    class ListPeers< Command
+    class ListPeers < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all replication peer clusters.
 
   hbase> list_peers
 EOF
       end
 
-      def command()
+      def command
         peers = replication_admin.list_peers
 
-        formatter.header(["PEER_ID", "CLUSTER_KEY", "ENDPOINT_CLASSNAME",
-          "STATE", "NAMESPACES", "TABLE_CFS", "BANDWIDTH"])
+        formatter.header(%w[PEER_ID CLUSTER_KEY ENDPOINT_CLASSNAME
+                            STATE NAMESPACES TABLE_CFS BANDWIDTH])
 
         peers.each do |peer|
           id = peer.getPeerId
-          state = peer.isEnabled ? "ENABLED" : "DISABLED"
+          state = peer.isEnabled ? 'ENABLED' : 'DISABLED'
           config = peer.getPeerConfig
           namespaces = replication_admin.show_peer_namespaces(config)
           tableCFs = replication_admin.show_peer_tableCFs(id)
-          formatter.row([ id, config.getClusterKey,
-            config.getReplicationEndpointImpl, state, namespaces, tableCFs,
-            config.getBandwidth ])
+          formatter.row([id, config.getClusterKey,
+                         config.getReplicationEndpointImpl, state, namespaces, tableCFs,
+                         config.getBandwidth])
         end
 
-        formatter.footer()
+        formatter.footer
         peers
       end
     end

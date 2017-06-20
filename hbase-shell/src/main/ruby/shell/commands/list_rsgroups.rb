@@ -19,7 +19,7 @@ module Shell
   module Commands
     class ListRsgroups < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all RegionServer groups. Optional regular expression parameter can
 be used to filter the output.
 

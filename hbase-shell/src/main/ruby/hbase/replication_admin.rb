@@ -43,7 +43,7 @@ module Hbase
     def add_peer(id, args = {}, peer_tableCFs = nil)
       if args.is_a?(Hash)
         unless peer_tableCFs.nil?
-          raise(ArgumentError, "peer_tableCFs should be specified as TABLE_CFS in args")
+          raise(ArgumentError, 'peer_tableCFs should be specified as TABLE_CFS in args')
         end
 
         endpoint_classname = args.fetch(ENDPOINT_CLASSNAME, nil)
@@ -51,12 +51,12 @@ module Hbase
 
         # Handle cases where custom replication endpoint and cluster key are either both provided
         # or neither are provided
-        if endpoint_classname.nil? and cluster_key.nil?
-          raise(ArgumentError, "Either ENDPOINT_CLASSNAME or CLUSTER_KEY must be specified.")
+        if endpoint_classname.nil? && cluster_key.nil?
+          raise(ArgumentError, 'Either ENDPOINT_CLASSNAME or CLUSTER_KEY must be specified.')
         end
 
         # Cluster Key is required for ReplicationPeerConfig for a custom replication endpoint
-        if !endpoint_classname.nil? and cluster_key.nil?
+        if !endpoint_classname.nil? && cluster_key.nil?
           cluster_key = ZKConfig.getZooKeeperClusterKey(@configuration)
         end
 
@@ -81,9 +81,9 @@ module Hbase
         unless data.nil?
           # Convert Strings to Bytes for peer_data
           peer_data = replication_peer_config.get_peer_data
-          data.each{|key, val|
+          data.each do |key, val|
             peer_data.put(Bytes.to_bytes(key), Bytes.to_bytes(val))
-          }
+          end
         end
 
         unless namespaces.nil?
@@ -97,14 +97,14 @@ module Hbase
         unless table_cfs.nil?
           # convert table_cfs to TableName
           map = java.util.HashMap.new
-          table_cfs.each{|key, val|
+          table_cfs.each do |key, val|
             map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
-          }
+          end
           replication_peer_config.set_table_cfs_map(map)
         end
         @admin.addReplicationPeer(id, replication_peer_config)
       else
-        raise(ArgumentError, "args must be a Hash")
+        raise(ArgumentError, 'args must be a Hash')
       end
     end
 
@@ -116,10 +116,10 @@ module Hbase
 
     #---------------------------------------------------------------------------------------------
     # Show replcated tables/column families, and their ReplicationType
-    def list_replicated_tables(regex = ".*")
+    def list_replicated_tables(regex = '.*')
       pattern = java.util.regex.Pattern.compile(regex)
-      list = @admin.listReplicatedTableCFs()
-      list.select {|t| pattern.match(t.getTable().getNameAsString())}
+      list = @admin.listReplicatedTableCFs
+      list.select { |t| pattern.match(t.getTable.getNameAsString) }
     end
 
     #----------------------------------------------------------------------------------------------
@@ -144,7 +144,7 @@ module Hbase
     # Show the current tableCFs config for the specified peer
     def show_peer_tableCFs(id)
       rpc = @admin.getReplicationPeerConfig(id)
-      ReplicationSerDeHelper.convertToString(rpc.getTableCFsMap())
+      ReplicationSerDeHelper.convertToString(rpc.getTableCFsMap)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -153,9 +153,9 @@ module Hbase
       unless tableCFs.nil?
         # convert tableCFs to TableName
         map = java.util.HashMap.new
-        tableCFs.each{|key, val|
+        tableCFs.each do |key, val|
           map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
-        }
+        end
         rpc = get_peer_config(id)
         unless rpc.nil?
           rpc.setTableCFsMap(map)
@@ -170,9 +170,9 @@ module Hbase
       unless tableCFs.nil?
         # convert tableCFs to TableName
         map = java.util.HashMap.new
-        tableCFs.each{|key, val|
+        tableCFs.each do |key, val|
           map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
-        }
+        end
       end
       @admin.appendReplicationPeerTableCFs(id, map)
     end
@@ -183,9 +183,9 @@ module Hbase
       unless tableCFs.nil?
         # convert tableCFs to TableName
         map = java.util.HashMap.new
-        tableCFs.each{|key, val|
+        tableCFs.each do |key, val|
           map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
-        }
+        end
       end
       @admin.removeReplicationPeerTableCFs(id, map)
     end
@@ -210,10 +210,8 @@ module Hbase
       unless namespaces.nil?
         rpc = get_peer_config(id)
         unless rpc.nil?
-          ns_set = rpc.getNamespaces()
-          if ns_set.nil?
-            ns_set = java.util.HashSet.new
-          end
+          ns_set = rpc.getNamespaces
+          ns_set = java.util.HashSet.new if ns_set.nil?
           namespaces.each do |n|
             ns_set.add(n)
           end
@@ -228,7 +226,7 @@ module Hbase
       unless namespaces.nil?
         rpc = get_peer_config(id)
         unless rpc.nil?
-          ns_set = rpc.getNamespaces()
+          ns_set = rpc.getNamespaces
           unless ns_set.nil?
             namespaces.each do |n|
               ns_set.remove(n)
@@ -281,14 +279,14 @@ module Hbase
       peers.each do |peer|
         map.put(peer.getPeerId, peer.getPeerConfig)
       end
-      return map
+      map
     end
 
     def get_peer_config(id)
       @admin.getReplicationPeerConfig(id)
     end
 
-    def update_peer_config(id, args={})
+    def update_peer_config(id, args = {})
       # Optional parameters
       config = args.fetch(CONFIG, nil)
       data = args.fetch(DATA, nil)
@@ -302,9 +300,9 @@ module Hbase
       unless data.nil?
         # Convert Strings to Bytes for peer_data
         peer_data = replication_peer_config.get_peer_data
-        data.each{|key, val|
+        data.each do |key, val|
           peer_data.put(Bytes.to_bytes(key), Bytes.to_bytes(val))
-        }
+        end
       end
 
       @admin.updateReplicationPeerConfig(id, replication_peer_config)

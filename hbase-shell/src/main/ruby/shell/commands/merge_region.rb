@@ -21,7 +21,7 @@ module Shell
   module Commands
     class MergeRegion < Command
       def help
-        return <<-EOF
+        <<-EOF
 Merge two regions. Passing 'true' as the optional third parameter will force
 a merge ('force' merges regardless else merge will fail unless passed
 adjacent regions. 'force' is for expert use only).

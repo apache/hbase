@@ -23,7 +23,7 @@ module Shell
   module Commands
     class ShowFilters < Command
       def help
-        return <<-EOF
+        <<-EOF
 Show all the filters in hbase. Example:
   hbase> show_filters
 
@@ -35,7 +35,7 @@ Show all the filters in hbase. Example:
 EOF
       end
 
-      def command( )
+      def command
         parseFilter = ParseFilter.new
         supportedFilters = parseFilter.getSupportedFilters
 

@@ -23,10 +23,9 @@ java_import org.apache.hadoop.hbase.util.Bytes
 
 module Hbase
   class VisibilityLabelsAdmin
-
     def initialize(admin)
       @admin = admin
-      @connection = @admin.getConnection()
+      @connection = @admin.getConnection
     end
 
     def close
@@ -36,53 +35,43 @@ module Hbase
     def add_labels(*args)
       visibility_feature_available?
       # Normalize args
-      if args.kind_of?(Array)
-        labels = [ args ].flatten.compact
-      end
-      if labels.size() == 0
-        raise(ArgumentError, "Arguments cannot be null")
-      end
+      labels = [args].flatten.compact if args.is_a?(Array)
+      raise(ArgumentError, 'Arguments cannot be null') if labels.empty?
 
       begin
         response = VisibilityClient.addLabels(@connection, labels.to_java(:string))
         if response.nil?
-          raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
+          raise(ArgumentError, 'DISABLED: Visibility labels feature is not available')
         end
-        labelsWithException = ""
-        list = response.getResultList()
+        labelsWithException = ''
+        list = response.getResultList
         list.each do |result|
-            if result.hasException()
-               labelsWithException += Bytes.toString(result.getException().getValue().toByteArray())
-            end
-        end    
-        if labelsWithException.length > 0
-          raise(ArgumentError, labelsWithException)
-        end  
+          if result.hasException
+            labelsWithException += Bytes.toString(result.getException.getValue.toByteArray)
+          end
+        end
+        raise(ArgumentError, labelsWithException) unless labelsWithException.empty?
       end
     end
 
     def set_auths(user, *args)
       visibility_feature_available?
       # Normalize args
-      if args.kind_of?(Array)
-        auths = [ args ].flatten.compact
-      end
+      auths = [args].flatten.compact if args.is_a?(Array)
 
       begin
         response = VisibilityClient.setAuths(@connection, auths.to_java(:string), user)
         if response.nil?
-          raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
+          raise(ArgumentError, 'DISABLED: Visibility labels feature is not available')
         end
-        labelsWithException = ""
-        list = response.getResultList()
+        labelsWithException = ''
+        list = response.getResultList
         list.each do |result|
-            if result.hasException()
-               labelsWithException += Bytes.toString(result.getException().getValue().toByteArray())
-            end
-        end    
-        if labelsWithException.length > 0
-          raise(ArgumentError, labelsWithException)
+          if result.hasException
+            labelsWithException += Bytes.toString(result.getException.getValue.toByteArray)
+          end
         end
+        raise(ArgumentError, labelsWithException) unless labelsWithException.empty?
       end
     end
 
@@ -91,18 +80,18 @@ module Hbase
       begin
         response = VisibilityClient.getAuths(@connection, user)
         if response.nil?
-          raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
+          raise(ArgumentError, 'DISABLED: Visibility labels feature is not available')
         end
         return response.getAuthList
       end
     end
 
-    def list_labels(regex = ".*")
+    def list_labels(regex = '.*')
       visibility_feature_available?
       begin
         response = VisibilityClient.listLabels(@connection, regex)
         if response.nil?
-          raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
+          raise(ArgumentError, 'DISABLED: Visibility labels feature is not available')
         end
         return response.getLabelList
       end
@@ -111,30 +100,26 @@ module Hbase
     def clear_auths(user, *args)
       visibility_feature_available?
       # Normalize args
-      if args.kind_of?(Array)
-        auths = [ args ].flatten.compact
-      end
+      auths = [args].flatten.compact if args.is_a?(Array)
 
       begin
         response = VisibilityClient.clearAuths(@connection, auths.to_java(:string), user)
         if response.nil?
-          raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
+          raise(ArgumentError, 'DISABLED: Visibility labels feature is not available')
         end
-        labelsWithException = ""
-        list = response.getResultList()
+        labelsWithException = ''
+        list = response.getResultList
         list.each do |result|
-            if result.hasException()
-               labelsWithException += Bytes.toString(result.getException().getValue().toByteArray())
-            end
-        end    
-        if labelsWithException.length > 0
-          raise(ArgumentError, labelsWithException)
+          if result.hasException
+            labelsWithException += Bytes.toString(result.getException.getValue.toByteArray)
+          end
         end
+        raise(ArgumentError, labelsWithException) unless labelsWithException.empty?
       end
     end
 
     # Make sure that lables table is available
-    def visibility_feature_available?()
+    def visibility_feature_available?
       caps = []
       begin
         # Try the getSecurityCapabilities API where supported.
@@ -142,11 +127,11 @@ module Hbase
       rescue
         # If we are unable to use getSecurityCapabilities, fall back with a check for
         # deployment of the labels table
-        raise(ArgumentError, "DISABLED: Visibility labels feature is not available") unless \
+        raise(ArgumentError, 'DISABLED: Visibility labels feature is not available') unless \
           exists?(VisibilityConstants::LABELS_TABLE_NAME)
         return
       end
-      raise(ArgumentError, "DISABLED: Visibility labels feature is not available") unless \
+      raise(ArgumentError, 'DISABLED: Visibility labels feature is not available') unless \
         caps.include? org.apache.hadoop.hbase.client.security.SecurityCapability::CELL_VISIBILITY
     end
 

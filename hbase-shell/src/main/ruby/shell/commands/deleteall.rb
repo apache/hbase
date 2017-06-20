@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Deleteall < Command
       def help
-        return <<-EOF
+        <<-EOF
 Delete all cells in a given row; pass a table name, row, and optionally
 a column and timestamp. Deleteall also support deleting a row range using a
 row key prefix. Examples:
@@ -64,5 +64,5 @@ EOF
   end
 end
 
-#Add the method table.deleteall that calls deleteall.deleteall
-::Hbase::Table.add_shell_command("deleteall")
+# Add the method table.deleteall that calls deleteall.deleteall
+::Hbase::Table.add_shell_command('deleteall')

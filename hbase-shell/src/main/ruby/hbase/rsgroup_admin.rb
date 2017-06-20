@@ -36,21 +36,17 @@ module Hbase
     #--------------------------------------------------------------------------
     # Returns a list of groups in hbase
     def list_rs_groups
-      @admin.listRSGroups.map { |g| g.getName }
+      @admin.listRSGroups.map(&:getName)
     end
 
     #--------------------------------------------------------------------------
     # get a group's information
     def get_rsgroup(group_name)
       group = @admin.getRSGroupInfo(group_name)
-      if group.nil?
-        raise(ArgumentError, 'Group does not exist: ' + group_name)
-      end
+      raise(ArgumentError, 'Group does not exist: ' + group_name) if group.nil?
 
       res = {}
-      if block_given?
-        yield('Servers:')
-      end
+      yield('Servers:') if block_given?
 
       servers = []
       group.getServers.each do |v|
@@ -63,9 +59,7 @@ module Hbase
       res[:servers] = servers
 
       tables = []
-      if block_given?
-        yield('Tables:')
-      end
+      yield('Tables:') if block_given?
       group.getTables.each do |v|
         if block_given?
           yield(v.toString)
@@ -75,11 +69,7 @@ module Hbase
       end
       res[:tables] = tables
 
-      if !block_given?
-        res
-      else
-        nil
-      end
+      res unless block_given?
     end
 
     #--------------------------------------------------------------------------
@@ -113,7 +103,7 @@ module Hbase
     #--------------------------------------------------------------------------
     # move server to a group
     def move_tables(dest, *args)
-      tables = java.util.HashSet.new;
+      tables = java.util.HashSet.new
       args[0].each do |s|
         tables.add(org.apache.hadoop.hbase.TableName.valueOf(s))
       end
@@ -124,10 +114,9 @@ module Hbase
     # get group of server
     def get_rsgroup_of_server(server)
       res = @admin.getRSGroupOfServer(
-        org.apache.hadoop.hbase.net.Address.fromString(server))
-      if res.nil?
-        raise(ArgumentError,'Server has no group: ' + server)
-      end
+        org.apache.hadoop.hbase.net.Address.fromString(server)
+      )
+      raise(ArgumentError, 'Server has no group: ' + server) if res.nil?
       res
     end
 
@@ -135,10 +124,9 @@ module Hbase
     # get group of table
     def get_rsgroup_of_table(table)
       res = @admin.getRSGroupInfoOfTable(
-          org.apache.hadoop.hbase.TableName.valueOf(table))
-      if res.nil?
-        raise(ArgumentError,'Table has no group: ' + table)
-      end
+        org.apache.hadoop.hbase.TableName.valueOf(table)
+      )
+      raise(ArgumentError, 'Table has no group: ' + table) if res.nil?
       res
     end
 
@@ -146,7 +134,7 @@ module Hbase
     # move server and table to a group
     def move_servers_tables(dest, *args)
       servers = java.util.HashSet.new
-      tables = java.util.HashSet.new;
+      tables = java.util.HashSet.new
       args[0].each do |s|
         servers.add(org.apache.hadoop.hbase.net.Address.fromString(s))
       end
@@ -155,6 +143,5 @@ module Hbase
       end
       @admin.moveServersAndTables(servers, tables, dest)
     end
-
   end
 end

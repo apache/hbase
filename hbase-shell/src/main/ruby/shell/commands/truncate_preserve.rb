@@ -21,7 +21,7 @@ module Shell
   module Commands
     class TruncatePreserve < Command
       def help
-        return <<-EOF
+        <<-EOF
   Disables, drops and recreates the specified table while still maintaing the previous region boundaries.
 EOF
       end
@@ -29,7 +29,6 @@ EOF
       def command(table)
         admin.truncate_preserve(table)
       end
-
     end
   end
 end

@@ -21,7 +21,7 @@ module Shell
   module Commands
     class UpdateAllConfig < Command
       def help
-        return <<-EOF
+        <<-EOF
 Reload a subset of configuration on all servers in the cluster.  See
 http://hbase.apache.org/book.html?dyn_config for more details. Here is how
 you would run the command in the hbase shell:
@@ -29,8 +29,8 @@ you would run the command in the hbase shell:
 EOF
       end
 
-      def command()
-        admin.update_all_config()
+      def command
+        admin.update_all_config
       end
     end
   end

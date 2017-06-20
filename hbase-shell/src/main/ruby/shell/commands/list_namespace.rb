@@ -21,7 +21,7 @@ module Shell
   module Commands
     class ListNamespace < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all namespaces in hbase. Optional regular expression parameter could
 be used to filter the output. Examples:
 
@@ -30,12 +30,12 @@ be used to filter the output. Examples:
 EOF
       end
 
-      def command(regex = ".*")
-        formatter.header([ "NAMESPACE" ])
+      def command(regex = '.*')
+        formatter.header(['NAMESPACE'])
 
         list = admin.list_namespace(regex)
         list.each do |table|
-          formatter.row([ table ])
+          formatter.row([table])
         end
 
         formatter.footer(list.size)

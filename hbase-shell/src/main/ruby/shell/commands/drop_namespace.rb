@@ -21,7 +21,7 @@ module Shell
   module Commands
     class DropNamespace < Command
       def help
-        return <<-EOF
+        <<-EOF
 Drop the named namespace. The namespace must be empty.
 EOF
       end

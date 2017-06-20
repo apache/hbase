@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Flush < Command
       def help
-        return <<-EOF
+        <<-EOF
 Flush all regions in passed table or pass a region row to
 flush an individual region.  For example:
 

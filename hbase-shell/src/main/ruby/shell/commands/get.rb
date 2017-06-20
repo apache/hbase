@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Get < Command
       def help
-        return <<-EOF
+        <<-EOF
 Get row or cell contents; pass table name, row, and optionally
 a dictionary of column(s), timestamp, timerange and versions. Examples:
 
@@ -44,14 +44,14 @@ a dictionary of column(s), timestamp, timerange and versions. Examples:
 
 Besides the default 'toStringBinary' format, 'get' also supports custom formatting by
 column.  A user can define a FORMATTER by adding it to the column name in the get
-specification.  The FORMATTER can be stipulated: 
+specification.  The FORMATTER can be stipulated:
 
  1. either as a org.apache.hadoop.hbase.util.Bytes method name (e.g, toInt, toString)
  2. or as a custom class followed by method name: e.g. 'c(MyFormatterClass).format'.
 
-Example formatting cf:qualifier1 and cf:qualifier2 both as Integers: 
+Example formatting cf:qualifier1 and cf:qualifier2 both as Integers:
   hbase> get 't1', 'r1' {COLUMN => ['cf:qualifier1:toInt',
-    'cf:qualifier2:c(org.apache.hadoop.hbase.util.Bytes).toInt'] } 
+    'cf:qualifier2:c(org.apache.hadoop.hbase.util.Bytes).toInt'] }
 
 Note that you can specify a FORMATTER by column only (cf:qualifier). You can set a
 formatter for all columns (including, all key parts) using the "FORMATTER"
@@ -60,7 +60,7 @@ and "FORMATTER_CLASS" options. The default "FORMATTER_CLASS" is
 
   hbase> get 't1', 'r1', {FORMATTER => 'toString'}
   hbase> get 't1', 'r1', {FORMATTER_CLASS => 'org.apache.hadoop.hbase.util.Bytes', FORMATTER => 'toString'}
-    
+
 The same commands also can be run on a reference to a table (obtained via get_table or
 create_table). Suppose you had a reference t to table 't1', the corresponding commands
 would be:
@@ -87,10 +87,10 @@ EOF
 
       def get(table, row, *args)
         @start_time = Time.now
-        formatter.header(["COLUMN", "CELL"])
+        formatter.header(%w[COLUMN CELL])
 
         count, is_stale = table._get_internal(row, *args) do |column, value|
-          formatter.row([ column, value ])
+          formatter.row([column, value])
         end
 
         formatter.footer(count, is_stale)
@@ -99,5 +99,5 @@ EOF
   end
 end
 
-#add get command to table
+# add get command to table
 ::Hbase::Table.add_shell_command('get')

@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Describe < Command
       def help
-        return <<-EOF
+        <<-EOF
 Describe the named table. For example:
   hbase> describe 't1'
   hbase> describe 'ns1:t1'
@@ -35,13 +35,13 @@ EOF
       def command(table)
         column_families = admin.get_column_families(table)
 
-        formatter.header(["Table " + table.to_s + " is " + if admin.enabled?(table) then "ENABLED" else "DISABLED" end])
+        formatter.header(['Table ' + table.to_s + ' is ' + (admin.enabled?(table) ? 'ENABLED' : 'DISABLED')])
         formatter.row([table.to_s + admin.get_table_attributes(table)], true)
-        formatter.header(["COLUMN FAMILIES DESCRIPTION"])
+        formatter.header(['COLUMN FAMILIES DESCRIPTION'])
         column_families.each do |column_family|
-          formatter.row([ column_family.to_s ], true)
+          formatter.row([column_family.to_s], true)
         end
-        formatter.footer()
+        formatter.footer
       end
     end
   end

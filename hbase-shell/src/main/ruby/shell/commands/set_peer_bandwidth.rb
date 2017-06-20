@@ -20,9 +20,9 @@
 
 module Shell
   module Commands
-    class SetPeerBandwidth< Command
+    class SetPeerBandwidth < Command
       def help
-        return <<-EOF
+        <<-EOF
 Set the replication source per node bandwidth for the specified peer.
 Examples:
 

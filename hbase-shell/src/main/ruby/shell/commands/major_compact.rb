@@ -21,7 +21,7 @@ module Shell
   module Commands
     class MajorCompact < Command
       def help
-        return <<-EOF
+        <<-EOF
           Run major compaction on passed table or pass a region row
           to major compact an individual region. To compact a single
           column family within a region specify the region name
@@ -43,7 +43,7 @@ module Shell
         EOF
       end
 
-      def command(table_or_region_name, family = nil, type = "NORMAL")
+      def command(table_or_region_name, family = nil, type = 'NORMAL')
         admin.major_compact(table_or_region_name, family, type)
       end
     end

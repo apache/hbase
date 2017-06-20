@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Unassign < Command
       def help
-        return <<-EOF
+        <<-EOF
 Unassign a region. Unassign will close region in current location and then
 reopen it again.  Pass 'true' to force the unassignment ('force' will clear
 all in-memory state in master before the reassign. If results in

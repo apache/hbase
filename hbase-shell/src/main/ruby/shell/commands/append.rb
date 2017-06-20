@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Append < Command
       def help
-        return <<-EOF
+        <<-EOF
 Appends a cell 'value' at specified table/row/column coordinates.
 
   hbase> append 't1', 'r1', 'c1', 'value', ATTRIBUTES=>{'mykey'=>'myvalue'}
@@ -35,13 +35,13 @@ t to table 't1', the corresponding command would be:
 EOF
       end
 
-      def command(table_name, row, column, value, args={})
+      def command(table_name, row, column, value, args = {})
         table = table(table_name)
         @start_time = Time.now
         append(table, row, column, value, args)
       end
 
-      def append(table, row, column, value, args={})
+      def append(table, row, column, value, args = {})
         if current_value = table._append_internal(row, column, value, args)
           puts "CURRENT VALUE = #{current_value}"
         end
@@ -50,5 +50,5 @@ EOF
   end
 end
 
-#add incr comamnd to Table
-::Hbase::Table.add_shell_command("append")
+# add incr comamnd to Table
+::Hbase::Table.add_shell_command('append')

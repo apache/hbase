@@ -39,22 +39,22 @@ module Hbase
       else
         self.configuration = HBaseConfiguration.create
         # Turn off retries in hbase and ipc.  Human doesn't want to wait on N retries.
-        configuration.setInt("hbase.client.retries.number", 7)
-        configuration.setInt("hbase.ipc.client.connect.max.retries", 3)
+        configuration.setInt('hbase.client.retries.number', 7)
+        configuration.setInt('hbase.ipc.client.connect.max.retries', 3)
       end
-      @connection = ConnectionFactory.createConnection(self.configuration)
+      @connection = ConnectionFactory.createConnection(configuration)
     end
 
     # Returns ruby's Admin class from admin.rb
-    def admin()
+    def admin
       ::Hbase::Admin.new(@connection)
     end
 
-    def rsgroup_admin()
+    def rsgroup_admin
       ::Hbase::RSGroupAdmin.new(@connection)
     end
 
-    def taskmonitor()
+    def taskmonitor
       ::Hbase::TaskMonitor.new(configuration)
     end
 
@@ -63,19 +63,19 @@ module Hbase
       ::Hbase::Table.new(@connection.getTable(TableName.valueOf(table)), shell)
     end
 
-    def replication_admin()
+    def replication_admin
       ::Hbase::RepAdmin.new(configuration)
     end
 
-    def security_admin()
+    def security_admin
       ::Hbase::SecurityAdmin.new(@connection.getAdmin)
     end
 
-    def visibility_labels_admin()
+    def visibility_labels_admin
       ::Hbase::VisibilityLabelsAdmin.new(@connection.getAdmin)
     end
 
-    def quotas_admin()
+    def quotas_admin
       ::Hbase::QuotasAdmin.new(@connection.getAdmin)
     end
 

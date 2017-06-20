@@ -21,17 +21,17 @@ module Shell
   module Commands
     class ListSnapshotSizes < Command
       def help
-        return <<-EOF
+        <<-EOF
 Lists the size of every HBase snapshot given the space quota size computation
 algorithms. An HBase snapshot only "owns" the size of a file when the table
 from which the snapshot was created no longer refers to that file.
 EOF
       end
 
-      def command(args = {})
-        formatter.header(["SNAPSHOT", "SIZE"])
+      def command(_args = {})
+        formatter.header(%w[SNAPSHOT SIZE])
         count = 0
-        quotas_admin.list_snapshot_sizes().each do |snapshot,size|
+        quotas_admin.list_snapshot_sizes.each do |snapshot, size|
           formatter.row([snapshot.to_s, size.to_s])
           count += 1
         end

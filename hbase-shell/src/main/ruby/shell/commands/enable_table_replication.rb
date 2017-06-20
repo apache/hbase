@@ -18,9 +18,9 @@
 
 module Shell
   module Commands
-    class EnableTableReplication< Command
+    class EnableTableReplication < Command
       def help
-        return <<-EOF
+        <<-EOF
 Enable a table's replication switch.
 
 Examples:

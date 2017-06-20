@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Normalize < Command
       def help
-        return <<-EOF
+        <<-EOF
 Trigger region normalizer for all tables which have NORMALIZATION_ENABLED flag set. Returns true
  if normalizer ran successfully, false otherwise. Note that this command has no effect
  if region normalizer is disabled (make sure it's turned on using 'normalizer_switch' command).
@@ -32,10 +32,9 @@ Trigger region normalizer for all tables which have NORMALIZATION_ENABLED flag s
 EOF
       end
 
-      def command()
-        formatter.row([admin.normalize()? "true": "false"])
+      def command
+        formatter.row([admin.normalize ? 'true' : 'false'])
       end
     end
   end
 end
-

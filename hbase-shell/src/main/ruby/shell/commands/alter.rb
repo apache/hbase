@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Alter < Command
       def help
-        return <<-EOF
+        <<-EOF
 Alter a table. Tables can be altered without disabling them first.
 Altering enabled tables has caused problems
 in the past, so use caution and test it before using in production.

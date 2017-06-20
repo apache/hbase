@@ -24,7 +24,7 @@ module Shell
   module Commands
     class Trace < Command
       def help
-        return <<-EOF
+        <<-EOF
 Start or Stop tracing using HTrace.
 Always returns true if tracing is running, otherwise false.
 If the first argument is 'start', new span is started.
@@ -47,28 +47,25 @@ Examples:
 EOF
       end
 
-      def command(startstop="status", spanname="HBaseShell")
+      def command(startstop = 'status', spanname = 'HBaseShell')
         trace(startstop, spanname)
       end
 
       def trace(startstop, spanname)
         @@receiver ||= SpanReceiverHost.getInstance(@shell.hbase.configuration)
-        if startstop == "start"
-          if not tracing?
+        if startstop == 'start'
+          unless tracing?
             @@tracescope = HTrace.startSpan(spanname, Sampler.ALWAYS)
           end
-        elsif startstop == "stop"
-          if tracing?
-            @@tracescope.close()
-          end
+        elsif startstop == 'stop'
+          @@tracescope.close if tracing?
         end
         tracing?
       end
 
-      def tracing?()
-        HTrace.isTracing()
+      def tracing?
+        HTrace.isTracing
       end
-
     end
   end
 end
