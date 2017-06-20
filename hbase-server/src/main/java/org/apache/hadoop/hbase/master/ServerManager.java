@@ -1116,6 +1116,14 @@ public class ServerManager {
   }
 
   /**
+   * Check whether a server is online based on hostname and port
+   * @return true if finding a server with matching hostname and port.
+   */
+  public boolean isServerWithSameHostnamePortOnline(final ServerName serverName) {
+    return findServerWithSameHostnamePortWithLock(serverName) != null;
+  }
+
+  /**
    * Check if a server is known to be dead.  A server can be online,
    * or known to be dead, or unknown to this manager (i.e, not online,
    * not known to be dead either. it is simply not tracked by the
