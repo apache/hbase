@@ -23,8 +23,10 @@ import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 
@@ -547,13 +549,31 @@ implements ServerProcedureInterface {
   private boolean assign(final MasterProcedureEnv env, final List<HRegionInfo> hris)
   throws InterruptedIOException {
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
+    // If the dead server already restarted, assign to the same server to preserve locality
+    boolean retainAssignment =
+        env.getMasterServices().getServerManager().isServerWithSameHostnamePortOnline(serverName) ?
+            true : false;
     try {
-      am.assign(hris);
+      if (retainAssignment) {
+        Map<HRegionInfo, ServerName> hriServerMap =
+            new HashMap<HRegionInfo, ServerName>(hris.size());
+        for (HRegionInfo hri: hris) {
+          hriServerMap.put(hri, serverName);
+        }
+        LOG.info("Best effort in SSH to retain assignment of " + hris.size()
+          + " regions from the dead server " + serverName);
+        am.assign(hriServerMap);
+      } else {
+        LOG.info("Using round robin in SSH to assign " + hris.size()
+          + " regions from the dead server " + serverName);
+        am.assign(hris);
+      }
     } catch (InterruptedException ie) {
-      LOG.error("Caught " + ie + " during round-robin assignment");
+      LOG.error("Caught " + ie + " during " + (retainAssignment ? "retaining" : "round-robin")
+        + " assignment");
       throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
     } catch (IOException ioe) {
-      LOG.info("Caught " + ioe + " during region assignment, will retry");
+      LOG.warn("Caught " + ioe + " during region assignment, will retry");
       return false;
     }
     return true;
