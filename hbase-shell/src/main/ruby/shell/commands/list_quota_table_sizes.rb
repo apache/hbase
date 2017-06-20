@@ -21,7 +21,7 @@ module Shell
   module Commands
     class ListQuotaTableSizes < Command
       def help
-        return <<-EOF
+        <<-EOF
 Lists the computed size of each table in the cluster as computed by
 all RegionServers. This is the raw information that the Master uses to
 make decisions about space quotas. Most times, using `list_quota_snapshots`
@@ -33,10 +33,10 @@ For example:
 EOF
       end
 
-      def command(args = {})
-        formatter.header(["TABLE", "SIZE"])
+      def command(_args = {})
+        formatter.header(%w[TABLE SIZE])
         count = 0
-        quotas_admin.get_master_table_sizes().each do |tableName,size|
+        quotas_admin.get_master_table_sizes.each do |tableName, size|
           formatter.row([tableName.to_s, size.to_s])
           count += 1
         end

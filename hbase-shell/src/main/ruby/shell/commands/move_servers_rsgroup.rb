@@ -19,7 +19,7 @@ module Shell
   module Commands
     class MoveServersRsgroup < Command
       def help
-        return <<-EOF
+        <<-EOF
 Reassign RegionServers from one group to another.
 
 Example:

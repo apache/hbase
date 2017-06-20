@@ -20,9 +20,9 @@
 
 module Shell
   module Commands
-    class SetPeerNamespaces< Command
+    class SetPeerNamespaces < Command
       def help
-        return <<-EOF
+        <<-EOF
   Set the replicable namespaces config for the specified peer.
 
   Set a namespace in the peer config means that all tables in this

@@ -20,7 +20,7 @@ module Shell
   module Commands
     class CleanerChoreEnabled < Command
       def help
-        return <<-EOF
+        <<-EOF
 Query for the Cleaner chore state (enabled/disabled?).
 Examples:
 
@@ -28,8 +28,8 @@ Examples:
 EOF
       end
 
-      def command()
-        formatter.row([admin.cleaner_chore_enabled()? "true" : "false"])
+      def command
+        formatter.row([admin.cleaner_chore_enabled ? 'true' : 'false'])
       end
     end
   end

@@ -21,7 +21,7 @@ module Shell
   module Commands
     class ListQuotaSnapshots < Command
       def help
-        return <<-EOF
+        <<-EOF
 Lists the current space quota snapshots with optional selection criteria.
 Snapshots encapsulate relevant information to space quotas such as space
 use, configured limits, and quota violation details. This command is
@@ -48,15 +48,15 @@ EOF
         desired_table = args[TABLE]
         desired_namespace = args[NAMESPACE]
         desired_regionserver = args[REGIONSERVER]
-        formatter.header(["TABLE", "USAGE", "LIMIT", "IN_VIOLATION", "POLICY"])
+        formatter.header(%w[TABLE USAGE LIMIT IN_VIOLATION POLICY])
         count = 0
-        quotas_admin.get_quota_snapshots(desired_regionserver).each do |table_name,snapshot|
+        quotas_admin.get_quota_snapshots(desired_regionserver).each do |table_name, snapshot|
           # Skip this snapshot if it's for a table/namespace the user did not ask for
           next unless accept? table_name, desired_table, desired_namespace
-          status = snapshot.getQuotaStatus()
+          status = snapshot.getQuotaStatus
           policy = get_policy(status)
-          formatter.row([table_name.to_s, snapshot.getUsage().to_s, snapshot.getLimit().to_s,
-            status.isInViolation().to_s, policy])
+          formatter.row([table_name.to_s, snapshot.getUsage.to_s, snapshot.getLimit.to_s,
+                         status.isInViolation.to_s, policy])
           count += 1
         end
         formatter.footer(count)
@@ -64,20 +64,20 @@ EOF
 
       def get_policy(status)
         # Unwrap the violation policy if it exists
-        if status.isInViolation()
-          status.getPolicy().name()
+        if status.isInViolation
+          status.getPolicy.name
         else
-          "None"
+          'None'
         end
       end
 
-      def accept?(table_name, desired_table=nil, desired_namespace=nil)
+      def accept?(table_name, desired_table = nil, desired_namespace = nil)
         # Check the table name if given one
-        if desired_table and table_name.getQualifierAsString() != desired_table
+        if desired_table && table_name.getQualifierAsString != desired_table
           return false
         end
         # Check the namespace if given one
-        if desired_namespace and table_name.getNamespaceAsString() != desired_namespace
+        if desired_namespace && table_name.getNamespaceAsString != desired_namespace
           return false
         end
         true

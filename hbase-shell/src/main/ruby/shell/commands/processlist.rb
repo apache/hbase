@@ -22,7 +22,7 @@ module Shell
   module Commands
     class Processlist < Command
       def help
-        return <<-EOF
+        <<-EOF
 Show regionserver task list.
 
   hbase> processlist
@@ -32,34 +32,31 @@ Show regionserver task list.
   hbase> processlist 'rpc'
   hbase> processlist 'operation'
   hbase> processlist 'all','host187.example.com'
-  hbase> processlist 'all','host187.example.com,16020'  
+  hbase> processlist 'all','host187.example.com,16020'
   hbase> processlist 'all','host187.example.com,16020,1289493121758'
 
 EOF
       end
 
       def command(*args)
-        
-        if ['all','general','handler','rpc','operation'].include? args[0]
+        if %w[all general handler rpc operation].include? args[0]
           # if the first argument is a valid filter specifier, use it as such
           filter = args[0]
-          hosts = args[1,args.length]
+          hosts = args[1, args.length]
         else
           # otherwise, treat all arguments as host addresses by default
           filter = 'general'
           hosts = args
         end
-        
+
         hosts = admin.getServerNames(hosts)
 
-        if hosts == nil
-          puts "No regionservers available."
+        if hosts.nil?
+          puts 'No regionservers available.'
         else
-          taskmonitor.tasks(filter,hosts)
+          taskmonitor.tasks(filter, hosts)
         end
-        
       end
-
     end
   end
 end

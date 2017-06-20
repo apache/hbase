@@ -21,15 +21,15 @@ module Shell
   module Commands
     class ListLocks < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all locks in hbase. Examples:
 
   hbase> list_locks
 EOF
       end
 
-      def command()
-        list = admin.list_locks()
+      def command
+        list = admin.list_locks
 
         list.each do |lock|
           formatter.output_strln("#{lock.resourceType}(#{lock.resourceName})")
@@ -42,17 +42,17 @@ EOF
           end
 
           if lock.waitingProcedures.any?
-            formatter.output_strln("Waiting procedures:")
-            formatter.header([ "Lock type", "Procedure Id" ])
+            formatter.output_strln('Waiting procedures:')
+            formatter.header(['Lock type', 'Procedure Id'])
 
             lock.waitingProcedures.each do |waitingProcedure|
-              formatter.row([ waitingProcedure.lockType.to_s, waitingProcedure.procedure.procId.to_s ]);
+              formatter.row([waitingProcedure.lockType.to_s, waitingProcedure.procedure.procId.to_s])
             end
 
             formatter.footer(lock.waitingProcedures.size)
           end
 
-          formatter.output_strln("");
+          formatter.output_strln('')
         end
       end
     end

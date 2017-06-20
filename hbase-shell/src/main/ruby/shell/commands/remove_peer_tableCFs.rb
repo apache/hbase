@@ -21,7 +21,7 @@ module Shell
   module Commands
     class RemovePeerTableCFs < Command
       def help
-        return <<-EOF
+        <<-EOF
 Remove a table / table-cf from the table-cfs config for the specified peer
 Examples:
 

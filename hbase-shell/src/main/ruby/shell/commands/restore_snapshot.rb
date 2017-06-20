@@ -20,7 +20,7 @@ module Shell
   module Commands
     class RestoreSnapshot < Command
       def help
-        return <<-EOF
+        <<-EOF
 Restore a specified snapshot.
 The restore will replace the content of the original table,
 bringing back the content to the snapshot state.
@@ -36,7 +36,7 @@ EOF
       end
 
       def command(snapshot_name, args = {})
-        raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
+        raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
         restore_acl = args.delete(RESTORE_ACL) || false
         admin.restore_snapshot(snapshot_name, restore_acl)
       end

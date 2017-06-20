@@ -21,7 +21,7 @@ module Shell
   module Commands
     class CompactRs < Command
       def help
-        return <<-EOF
+        <<-EOF
           Compact all regions on passed regionserver.
           Examples:
           Compact all regions on a regionserver:

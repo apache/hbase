@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Compact < Command
       def help
-        return <<-EOF
+        <<-EOF
           Compact all regions in passed table or pass a region row
           to compact an individual region. You can also compact a single column
           family within a region.
@@ -43,7 +43,7 @@ module Shell
         EOF
       end
 
-      def command(table_or_region_name, family = nil, type = "NORMAL")
+      def command(table_or_region_name, family = nil, type = 'NORMAL')
         admin.compact(table_or_region_name, family, type)
       end
     end

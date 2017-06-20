@@ -21,7 +21,7 @@ module Shell
   module Commands
     class NormalizerEnabled < Command
       def help
-        return <<-EOF
+        <<-EOF
 Query the state of region normalizer.
 Examples:
 
@@ -29,7 +29,7 @@ Examples:
 EOF
       end
 
-      def command()
+      def command
         formatter.row([admin.normalizer_enabled?.to_s])
       end
     end

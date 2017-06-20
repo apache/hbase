@@ -19,9 +19,9 @@
 
 module Shell
   module Commands
-    class EnablePeer< Command
+    class EnablePeer < Command
       def help
-        return <<-EOF
+        <<-EOF
 Restarts the replication to the specified peer cluster,
 continuing from where it was disabled.
 

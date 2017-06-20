@@ -17,31 +17,25 @@
 # limitations under the License.
 #
 
-java_import org.apache.hadoop.hbase.filter.ParseFilter
-
 module Shell
   module Commands
-    class ShowFilters < Command
+    class ListSnapshotSizes < Command
       def help
         <<-EOF
-Show all the filters in hbase. Example:
-  hbase> show_filters
-
-  ColumnPrefixFilter
-  TimestampsFilter
-  PageFilter
-  .....
-  KeyOnlyFilter
+Lists the size of every HBase snapshot given the space quota size computation
+algorithms. An HBase snapshot only "owns" the size of a file when the table
+from which the snapshot was created no longer refers to that file.
 EOF
       end
 
-      def command
-        parseFilter = ParseFilter.new
-        supportedFilters = parseFilter.getSupportedFilters
-
-        supportedFilters.each do |filter|
-          formatter.row([filter])
+      def command(_args = {})
+        formatter.header(%w[SNAPSHOT SIZE])
+        count = 0
+        quotas_admin.list_snapshot_sizes.each do |snapshot, size|
+          formatter.row([snapshot.to_s, size.to_s])
+          count += 1
         end
+        formatter.footer(count)
       end
     end
   end

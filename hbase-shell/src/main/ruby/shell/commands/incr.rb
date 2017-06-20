@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Incr < Command
       def help
-        return <<-EOF
+        <<-EOF
 Increments a cell 'value' at specified table/row/column coordinates.
 To increment a cell value in table 'ns1:t1' or 't1' at row 'r1' under column
 'c1' by 1 (can be omitted) or 10 do:
@@ -48,16 +48,16 @@ EOF
         incr(table(table), row, column, value, args)
       end
 
-      def incr(table, row, column, value = nil, args={})
+      def incr(table, row, column, value = nil, args = {})
         if cnt = table._incr_internal(row, column, value, args)
           puts "COUNTER VALUE = #{cnt}"
         else
-          puts "No counter found at specified coordinates"
+          puts 'No counter found at specified coordinates'
         end
       end
     end
   end
 end
 
-#add incr comamnd to Table
-::Hbase::Table.add_shell_command("incr")
+# add incr comamnd to Table
+::Hbase::Table.add_shell_command('incr')

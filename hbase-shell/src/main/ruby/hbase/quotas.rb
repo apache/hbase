@@ -30,18 +30,18 @@ java_import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy
 
 module HBaseQuotasConstants
   # RPC Quota constants
-  GLOBAL_BYPASS = 'GLOBAL_BYPASS'
-  THROTTLE_TYPE = 'THROTTLE_TYPE'
-  THROTTLE = 'THROTTLE'
-  REQUEST = 'REQUEST'
-  WRITE = 'WRITE'
-  READ = 'READ'
+  GLOBAL_BYPASS = 'GLOBAL_BYPASS'.freeze
+  THROTTLE_TYPE = 'THROTTLE_TYPE'.freeze
+  THROTTLE = 'THROTTLE'.freeze
+  REQUEST = 'REQUEST'.freeze
+  WRITE = 'WRITE'.freeze
+  READ = 'READ'.freeze
   # Space quota constants
-  SPACE = 'SPACE'
-  NO_INSERTS = 'NO_INSERTS'
-  NO_WRITES = 'NO_WRITES'
-  NO_WRITES_COMPACTIONS = 'NO_WRITES_COMPACTIONS'
-  DISABLE = 'DISABLE'
+  SPACE = 'SPACE'.freeze
+  NO_INSERTS = 'NO_INSERTS'.freeze
+  NO_WRITES = 'NO_WRITES'.freeze
+  NO_WRITES_COMPACTIONS = 'NO_WRITES_COMPACTIONS'.freeze
+  DISABLE = 'DISABLE'.freeze
 end
 
 module Hbase
@@ -55,88 +55,88 @@ module Hbase
     end
 
     def throttle(args)
-      raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
+      raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
       type = args.fetch(THROTTLE_TYPE, REQUEST)
       args.delete(THROTTLE_TYPE)
       type, limit, time_unit = _parse_limit(args.delete(LIMIT), ThrottleType, type)
-      if args.has_key?(USER)
+      if args.key?(USER)
         user = args.delete(USER)
-        if args.has_key?(TABLE)
+        if args.key?(TABLE)
           table = TableName.valueOf(args.delete(TABLE))
-          raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
           settings = QuotaSettingsFactory.throttleUser(user, table, type, limit, time_unit)
-        elsif args.has_key?(NAMESPACE)
+        elsif args.key?(NAMESPACE)
           namespace = args.delete(NAMESPACE)
-          raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
           settings = QuotaSettingsFactory.throttleUser(user, namespace, type, limit, time_unit)
         else
-          raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
           settings = QuotaSettingsFactory.throttleUser(user, type, limit, time_unit)
         end
-      elsif args.has_key?(TABLE)
+      elsif args.key?(TABLE)
         table = TableName.valueOf(args.delete(TABLE))
-        raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
         settings = QuotaSettingsFactory.throttleTable(table, type, limit, time_unit)
-      elsif args.has_key?(NAMESPACE)
+      elsif args.key?(NAMESPACE)
         namespace = args.delete(NAMESPACE)
-        raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
         settings = QuotaSettingsFactory.throttleNamespace(namespace, type, limit, time_unit)
       else
-        raise "One of USER, TABLE or NAMESPACE must be specified"
+        raise 'One of USER, TABLE or NAMESPACE must be specified'
       end
       @admin.setQuota(settings)
     end
 
     def unthrottle(args)
-      raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
-      if args.has_key?(USER)
+      raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
+      if args.key?(USER)
         user = args.delete(USER)
-        if args.has_key?(TABLE)
+        if args.key?(TABLE)
           table = TableName.valueOf(args.delete(TABLE))
-          raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
           settings = QuotaSettingsFactory.unthrottleUser(user, table)
-        elsif args.has_key?(NAMESPACE)
+        elsif args.key?(NAMESPACE)
           namespace = args.delete(NAMESPACE)
-          raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
           settings = QuotaSettingsFactory.unthrottleUser(user, namespace)
         else
-          raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
           settings = QuotaSettingsFactory.unthrottleUser(user)
         end
-      elsif args.has_key?(TABLE)
+      elsif args.key?(TABLE)
         table = TableName.valueOf(args.delete(TABLE))
-        raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
         settings = QuotaSettingsFactory.unthrottleTable(table)
-      elsif args.has_key?(NAMESPACE)
+      elsif args.key?(NAMESPACE)
         namespace = args.delete(NAMESPACE)
-        raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
         settings = QuotaSettingsFactory.unthrottleNamespace(namespace)
       else
-        raise "One of USER, TABLE or NAMESPACE must be specified"
+        raise 'One of USER, TABLE or NAMESPACE must be specified'
       end
       @admin.setQuota(settings)
     end
 
     def limit_space(args)
-      raise(ArgumentError, 'Argument should be a Hash') unless (not args.nil? and args.kind_of?(Hash))
+      raise(ArgumentError, 'Argument should be a Hash') unless !args.nil? && args.is_a?(Hash)
       # Let the user provide a raw number
-      if args[LIMIT].is_a?(Numeric)
-        limit = args[LIMIT]
-      else
-        # Parse a string a 1K, 2G, etc.
-        limit = _parse_size(args[LIMIT])
-      end
+      limit = if args[LIMIT].is_a?(Numeric)
+                args[LIMIT]
+              else
+                # Parse a string a 1K, 2G, etc.
+                _parse_size(args[LIMIT])
+              end
       # Extract the policy, failing if something bogus was provided
       policy = SpaceViolationPolicy.valueOf(args[POLICY])
       # Create a table or namespace quota
       if args.key?(TABLE)
         if args.key?(NAMESPACE)
-          raise(ArgumentError, "Only one of TABLE or NAMESPACE can be specified.")
+          raise(ArgumentError, 'Only one of TABLE or NAMESPACE can be specified.')
         end
         settings = QuotaSettingsFactory.limitTableSpace(TableName.valueOf(args.delete(TABLE)), limit, policy)
       elsif args.key?(NAMESPACE)
         if args.key?(TABLE)
-          raise(ArgumentError, "Only one of TABLE or NAMESPACE can be specified.")
+          raise(ArgumentError, 'Only one of TABLE or NAMESPACE can be specified.')
         end
         settings = QuotaSettingsFactory.limitNamespaceSpace(args.delete(NAMESPACE), limit, policy)
       else
@@ -147,16 +147,16 @@ module Hbase
     end
 
     def remove_space_limit(args)
-      raise(ArgumentError, 'Argument should be a Hash') unless (not args.nil? and args.kind_of?(Hash))
+      raise(ArgumentError, 'Argument should be a Hash') unless !args.nil? && args.is_a?(Hash)
       if args.key?(TABLE)
         if args.key?(NAMESPACE)
-          raise(ArgumentError, "Only one of TABLE or NAMESPACE can be specified.")
+          raise(ArgumentError, 'Only one of TABLE or NAMESPACE can be specified.')
         end
         table = TableName.valueOf(args.delete(TABLE))
         settings = QuotaSettingsFactory.removeTableSpaceLimit(table)
       elsif args.key?(NAMESPACE)
         if args.key?(TABLE)
-          raise(ArgumentError, "Only one of TABLE or NAMESPACE can be specified.")
+          raise(ArgumentError, 'Only one of TABLE or NAMESPACE can be specified.')
         end
         settings = QuotaSettingsFactory.removeNamespaceSpaceLimit(args.delete(NAMESPACE))
       else
@@ -165,52 +165,52 @@ module Hbase
       @admin.setQuota(settings)
     end
 
-    def get_master_table_sizes()
-      QuotaTableUtil.getMasterReportedTableSizes(@admin.getConnection())
+    def get_master_table_sizes
+      QuotaTableUtil.getMasterReportedTableSizes(@admin.getConnection)
     end
 
-    def get_quota_snapshots(regionserver=nil)
+    def get_quota_snapshots(regionserver = nil)
       # Ask a regionserver if we were given one
       return get_rs_quota_snapshots(regionserver) if regionserver
       # Otherwise, read from the quota table
       get_quota_snapshots_from_table
     end
 
-    def get_quota_snapshots_from_table()
+    def get_quota_snapshots_from_table
       # Reads the snapshots from the hbase:quota table
-      QuotaTableUtil.getSnapshots(@admin.getConnection())
+      QuotaTableUtil.getSnapshots(@admin.getConnection)
     end
 
     def get_rs_quota_snapshots(rs)
       # Reads the snapshots from a specific regionserver
-      QuotaTableUtil.getRegionServerQuotaSnapshots(@admin.getConnection(),
-          ServerName.valueOf(rs))
+      QuotaTableUtil.getRegionServerQuotaSnapshots(@admin.getConnection,
+                                                   ServerName.valueOf(rs))
     end
 
     def set_global_bypass(bypass, args)
-      raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
+      raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
 
-      if args.has_key?(USER)
+      if args.key?(USER)
         user = args.delete(USER)
-        raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
         settings = QuotaSettingsFactory.bypassGlobals(user, bypass)
       else
-        raise "Expected USER"
+        raise 'Expected USER'
       end
       @admin.setQuota(settings)
     end
 
     def list_quotas(args = {})
-      raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
+      raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
 
-      limit = args.delete("LIMIT") || -1
+      limit = args.delete('LIMIT') || -1
       count = 0
 
-      filter = QuotaFilter.new()
-      filter.setUserFilter(args.delete(USER)) if args.has_key?(USER)
-      filter.setTableFilter(args.delete(TABLE)) if args.has_key?(TABLE)
-      filter.setNamespaceFilter(args.delete(NAMESPACE)) if args.has_key?(NAMESPACE)
-      raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+      filter = QuotaFilter.new
+      filter.setUserFilter(args.delete(USER)) if args.key?(USER)
+      filter.setTableFilter(args.delete(TABLE)) if args.key?(TABLE)
+      filter.setNamespaceFilter(args.delete(NAMESPACE)) if args.key?(NAMESPACE)
+      raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
 
       # Start the scanner
       scanner = @admin.getQuotaRetriever(filter)
@@ -219,26 +219,28 @@ module Hbase
 
         # Iterate results
         while iter.hasNext
-          if limit > 0 && count >= limit
-            break
-          end
+          break if limit > 0 && count >= limit
 
           settings = iter.next
           owner = {
-            USER => settings.getUserName(),
-            TABLE => settings.getTableName(),
-            NAMESPACE => settings.getNamespace(),
-          }.delete_if { |k, v| v.nil? }.map {|k, v| k.to_s + " => " + v.to_s} * ', '
+            USER => settings.getUserName,
+            TABLE => settings.getTableName,
+            NAMESPACE => settings.getNamespace
+          }.delete_if { |_k, v| v.nil? }.map { |k, v| k.to_s + ' => ' + v.to_s } * ', '
 
           yield owner, settings.to_s
 
           count += 1
         end
       ensure
-        scanner.close()
+        scanner.close
       end
 
-      return count
+      count
+    end
+
+    def list_snapshot_sizes
+      QuotaTableUtil.getObservedSnapshotSizes(@admin.getConnection)
     end
 
     def _parse_size(str_limit)
@@ -251,7 +253,7 @@ module Hbase
           return _size_from_str(match[1].to_i, match[2])
         end
       else
-        raise(ArgumentError, "Invalid size limit syntax")
+        raise(ArgumentError, 'Invalid size limit syntax')
       end
     end
 
@@ -261,38 +263,38 @@ module Hbase
       if match
         if match[2] == 'req'
           limit = match[1].to_i
-          type = type_cls.valueOf(type + "_NUMBER")
+          type = type_cls.valueOf(type + '_NUMBER')
         else
           limit = _size_from_str(match[1].to_i, match[2])
-          type = type_cls.valueOf(type + "_SIZE")
+          type = type_cls.valueOf(type + '_SIZE')
         end
 
         if limit <= 0
-          raise(ArgumentError, "Invalid throttle limit, must be greater then 0")
+          raise(ArgumentError, 'Invalid throttle limit, must be greater then 0')
         end
 
         case match[3]
-          when 'sec'  then time_unit = TimeUnit::SECONDS
-          when 'min'  then time_unit = TimeUnit::MINUTES
-          when 'hour' then time_unit = TimeUnit::HOURS
-          when 'day'  then time_unit = TimeUnit::DAYS
+        when 'sec'  then time_unit = TimeUnit::SECONDS
+        when 'min'  then time_unit = TimeUnit::MINUTES
+        when 'hour' then time_unit = TimeUnit::HOURS
+        when 'day'  then time_unit = TimeUnit::DAYS
         end
 
         return type, limit, time_unit
       else
-        raise(ArgumentError, "Invalid throttle limit syntax")
+        raise(ArgumentError, 'Invalid throttle limit syntax')
       end
     end
 
     def _size_from_str(value, suffix)
       case suffix
-        when 'k' then value <<= 10
-        when 'm' then value <<= 20
-        when 'g' then value <<= 30
-        when 't' then value <<= 40
-        when 'p' then value <<= 50
+      when 'k' then value <<= 10
+      when 'm' then value <<= 20
+      when 'g' then value <<= 30
+      when 't' then value <<= 40
+      when 'p' then value <<= 50
       end
-      return value
+      value
     end
   end
 end

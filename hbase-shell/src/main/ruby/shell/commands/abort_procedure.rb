@@ -21,7 +21,7 @@ module Shell
   module Commands
     class AbortProcedure < Command
       def help
-        return <<-EOF
+        <<-EOF
 Given a procedure Id (and optional boolean may_interrupt_if_running parameter,
 default is true), abort a procedure in hbase. Use with caution. Some procedures
 might not be abortable. For experts only.
@@ -39,7 +39,7 @@ Examples:
 EOF
       end
 
-      def command(proc_id, may_interrupt_if_running=nil)
+      def command(proc_id, may_interrupt_if_running = nil)
         formatter.row([admin.abort_procedure?(proc_id, may_interrupt_if_running).to_s])
       end
     end

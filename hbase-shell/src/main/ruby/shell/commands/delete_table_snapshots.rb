@@ -20,7 +20,7 @@ module Shell
   module Commands
     class DeleteTableSnapshots < Command
       def help
-        return <<-EOF
+        <<-EOF
 Delete all of the snapshots matching the given table name regular expression
 and snapshot name regular expression.
 By default snapshot name regular expression will delete all the snapshots of the
@@ -37,18 +37,18 @@ Examples:
 EOF
       end
 
-      def command(tableNameregex, snapshotNameRegex = ".*")
-        formatter.header([ "SNAPSHOT", "TABLE + CREATION TIME"])
+      def command(tableNameregex, snapshotNameRegex = '.*')
+        formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
         list = admin.list_table_snapshots(tableNameregex, snapshotNameRegex)
         count = list.size
         list.each do |snapshot|
-          creation_time = Time.at(snapshot.getCreationTime() / 1000).to_s
-          formatter.row([ snapshot.getName, snapshot.getTable + " (" + creation_time + ")" ])
+          creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
+          formatter.row([snapshot.getName, snapshot.getTable + ' (' + creation_time + ')'])
         end
         puts "\nDelete the above #{count} snapshots (y/n)?" unless count == 0
         answer = 'n'
         answer = gets.chomp unless count == 0
-        puts "No snapshots matched the table name regular expression #{tableNameregex.to_s} and the snapshot name regular expression #{snapshotNameRegex.to_s}" if count == 0
+        puts "No snapshots matched the table name regular expression #{tableNameregex} and the snapshot name regular expression #{snapshotNameRegex}" if count == 0
         return unless answer =~ /y.*/i
 
         @start_time = Time.now
@@ -58,7 +58,7 @@ EOF
             puts "Successfully deleted snapshot: #{deleteSnapshot.getName}"
             puts "\n"
           rescue RuntimeError
-            puts "Failed to delete snapshot: #{deleteSnapshot.getName}, due to below exception,\n" + $!
+            puts "Failed to delete snapshot: #{deleteSnapshot.getName}, due to below exception,\n" + $ERROR_INFO
             puts "\n"
           end
         end

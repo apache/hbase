@@ -20,7 +20,7 @@ module Shell
   module Commands
     class DeleteSnapshot < Command
       def help
-        return <<-EOF
+        <<-EOF
 Delete a specified snapshot. Examples:
 
   hbase> delete_snapshot 'snapshotName',

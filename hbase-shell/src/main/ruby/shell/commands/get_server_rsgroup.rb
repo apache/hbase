@@ -19,7 +19,7 @@ module Shell
   module Commands
     class GetServerRsgroup < Command
       def help
-        return <<-EOF
+        <<-EOF
 Get the group name the given RegionServer is a member of.
 
 Example:

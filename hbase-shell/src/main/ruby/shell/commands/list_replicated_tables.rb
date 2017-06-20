@@ -20,9 +20,9 @@
 
 module Shell
   module Commands
-    class ListReplicatedTables< Command
+    class ListReplicatedTables < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all the tables and column families replicated from this cluster
 
   hbase> list_replicated_tables
@@ -30,25 +30,25 @@ List all the tables and column families replicated from this cluster
 EOF
       end
 
-      def command(regex = ".*")
-        formatter.header([ "TABLE:COLUMNFAMILY", "ReplicationType" ], [ 32 ])
+      def command(regex = '.*')
+        formatter.header(['TABLE:COLUMNFAMILY', 'ReplicationType'], [32])
         list = replication_admin.list_replicated_tables(regex)
         list.each do |e|
-          map = e.getColumnFamilyMap()
+          map = e.getColumnFamilyMap
           map.each do |cf|
             if cf[1] == org.apache.hadoop.hbase.HConstants::REPLICATION_SCOPE_LOCAL
-              replicateType = "LOCAL"
+              replicateType = 'LOCAL'
             elsif cf[1] == org.apache.hadoop.hbase.HConstants::REPLICATION_SCOPE_GLOBAL
-              replicateType = "GLOBAL"
+              replicateType = 'GLOBAL'
             elsif cf[1] == org.apache.hadoop.hbase.HConstants::REPLICATION_SCOPE_SERIAL
-              replicateType = "SERIAL"
+              replicateType = 'SERIAL'
             else
-              replicateType = "UNKNOWN"
+              replicateType = 'UNKNOWN'
             end
-            formatter.row([e.getTable().getNameAsString() + ":" + cf[0], replicateType], true, [32])
+            formatter.row([e.getTable.getNameAsString + ':' + cf[0], replicateType], true, [32])
           end
         end
-        formatter.footer()
+        formatter.footer
       end
     end
   end

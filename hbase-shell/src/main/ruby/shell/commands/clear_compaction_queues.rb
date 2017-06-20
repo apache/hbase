@@ -21,7 +21,7 @@ module Shell
   module Commands
     class ClearCompactionQueues < Command
       def help
-        return <<-EOF
+        <<-EOF
           Clear compacting queues on a regionserver.
           The queue_name contains short and long.
           short is shortCompactions's queue,long is longCompactions's queue.
