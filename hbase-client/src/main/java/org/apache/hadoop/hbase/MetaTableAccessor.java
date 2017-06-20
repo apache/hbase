@@ -1721,4 +1721,39 @@ public class MetaTableAccessor {
     return null;
   }
 
+  /**
+   * Checks whether hbase:meta contains any info:server entry.
+   * @param connection connection we're using
+   * @return true if hbase:meta contains any info:server entry, false if not
+   * @throws IOException
+   */
+  public static boolean infoServerExists(Connection connection) throws IOException {
+    // Make a version of ResultCollectingVisitor that only collects the first
+    CollectingVisitor<Result> visitor = new CollectingVisitor<Result>() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        if (r == null || r.isEmpty()) return true;
+        RegionLocations locations = getRegionLocations(r);
+        if (locations == null) return true;
+        for (HRegionLocation loc : locations.getRegionLocations()) {
+          if (loc != null) {
+            if (loc.getServerName() != null) {
+              add(r);
+              // Stop collecting results after we get one.
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+
+      @Override
+      void add(Result r) {
+        this.results.add(r);
+      }
+    };
+    fullScan(connection, visitor);
+    // If visitor has results >= 1 then hbase:meta has the info:server entry
+    return visitor.getResults().size() >= 1;
+  }
 }
