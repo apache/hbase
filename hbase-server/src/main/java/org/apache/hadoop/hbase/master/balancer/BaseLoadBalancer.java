@@ -914,7 +914,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     private Comparator<Integer> numRegionsComparator = new Comparator<Integer>() {
       @Override
       public int compare(Integer integer, Integer integer2) {
-        return Integer.valueOf(getNumRegions(integer)).compareTo(getNumRegions(integer2));
+        return Integer.compare(getNumRegions(integer), getNumRegions(integer2));
       }
     };
 
@@ -929,15 +929,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     private Comparator<Integer> localityComparator = new Comparator<Integer>() {
       @Override
       public int compare(Integer integer, Integer integer2) {
-        float locality1 = getLocality(integer);
-        float locality2 = getLocality(integer2);
-        if (locality1 < locality2) {
-          return -1;
-        } else if (locality1 > locality2) {
-          return 1;
-        } else {
-          return 0;
-        }
+        return Float.compare(getLocality(integer), getLocality(integer2));
       }
     };
 
