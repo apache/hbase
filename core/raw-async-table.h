@@ -72,6 +72,11 @@ class RawAsyncTable {
                                   const hbase::Put& put,
                                   const pb::CompareType& compare_op = pb::CompareType::EQUAL);
 
+  folly::Future<bool> CheckAndDelete(const std::string& row, const std::string& family,
+                                     const std::string& qualifier, const std::string& value,
+                                     const hbase::Delete& del,
+                                     const pb::CompareType& compare_op = pb::CompareType::EQUAL);
+
   void Scan(const hbase::Scan& scan, std::shared_ptr<RawScanResultConsumer> consumer);
 
   void Close() {}
