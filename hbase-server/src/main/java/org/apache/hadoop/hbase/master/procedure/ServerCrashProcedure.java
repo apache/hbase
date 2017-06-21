@@ -150,7 +150,7 @@ implements ServerProcedureInterface {
 
       case SERVER_CRASH_GET_REGIONS:
         // If hbase:meta is not assigned, yield.
-        if (env.getAssignmentManager().waitMetaInitialized(this)) {
+        if (env.getAssignmentManager().waitMetaLoaded(this)) {
           throw new ProcedureSuspendedException();
         }
 

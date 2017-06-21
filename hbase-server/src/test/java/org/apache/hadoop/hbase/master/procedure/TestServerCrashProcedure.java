@@ -93,7 +93,6 @@ public class TestServerCrashProcedure {
   }
 
   @Test(timeout=60000)
-  @Ignore // Fix for AMv2
   public void testRecoveryAndDoubleExecutionOnRsWithoutMeta() throws Exception {
     testRecoveryAndDoubleExecution(false);
   }
