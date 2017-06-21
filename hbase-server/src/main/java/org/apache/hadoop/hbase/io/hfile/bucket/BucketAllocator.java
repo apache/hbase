@@ -184,7 +184,7 @@ public final class BucketAllocator {
       this.sizeIndex = sizeIndex;
     }
 
-    public void instantiateBucket(Bucket b) {
+    public synchronized void instantiateBucket(Bucket b) {
       assert b.isUninstantiated() || b.isCompletelyFree();
       b.reconfigure(sizeIndex, bucketSizes, bucketCapacity);
       bucketList.put(b, b);
@@ -236,7 +236,7 @@ public final class BucketAllocator {
       return b;
     }
 
-    private void removeBucket(Bucket b) {
+    private synchronized void removeBucket(Bucket b) {
       assert b.isCompletelyFree();
       bucketList.remove(b);
       freeBuckets.remove(b);
@@ -252,7 +252,7 @@ public final class BucketAllocator {
       if (b.isCompletelyFree()) completelyFreeBuckets.put(b, b);
     }
 
-    public IndexStatistics statistics() {
+    public synchronized IndexStatistics statistics() {
       long free = 0, used = 0;
       for (Object obj : bucketList.keySet()) {
         Bucket b = (Bucket) obj;
