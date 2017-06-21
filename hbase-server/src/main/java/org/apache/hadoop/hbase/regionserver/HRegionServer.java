@@ -450,6 +450,11 @@ public class HRegionServer extends HasThread implements
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   protected final static String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
 
+  // HBASE-18226: This config and hbase.regionserver.hostname are mutually exclusive.
+  // Exception will be thrown if both are used.
+  final static String RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY =
+    "hbase.regionserver.hostname.disable.master.reversedns";
+
   /**
    * This servers startcode.
    */
@@ -577,6 +582,16 @@ public class HRegionServer extends HasThread implements
       useThisHostnameInstead = conf.get(MASTER_HOSTNAME_KEY);
     } else {
       useThisHostnameInstead = conf.get(RS_HOSTNAME_KEY);
+      if (conf.getBoolean(RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false)) {
+        if (shouldUseThisHostnameInstead()) {
+          String msg = RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and " + RS_HOSTNAME_KEY +
+            " are mutually exclusive. Do not set " + RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY +
+            " to true while " + RS_HOSTNAME_KEY + " is used";
+          throw new IOException(msg);
+        } else {
+          useThisHostnameInstead = rpcServices.isa.getHostName();
+        }
+      }
     }
     String hostName = shouldUseThisHostnameInstead() ? useThisHostnameInstead :
       rpcServices.isa.getHostName();
