@@ -278,6 +278,37 @@ TEST_F(ClientTest, CheckAndPut) {
   ASSERT_FALSE(result) << "CheckAndPut shouldn't replace value";
 }
 
+TEST_F(ClientTest, CheckAndDelete) {
+  // Using TestUtil to populate test data
+  ClientTest::test_util->CreateTable("checkDel", "d");
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>("checkDel");
+  auto row = "test1";
+
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+
+  // Get connection to HBase Table
+  auto table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  auto val1 = "value1";
+
+  // Perform Puts
+  table->Put(Put{row}.AddColumn("d", "1", val1));
+  table->Put(Put{row}.AddColumn("d", "2", "value2"));
+  auto result =
+      table->CheckAndDelete(row, "d", "1", val1, hbase::Delete{row}.AddColumn("d", "2"));
+  ASSERT_TRUE(result) << "CheckAndDelete didn't replace value";
+
+  // Perform the Get
+  hbase::Get get(row);
+  auto result1 = table->Get(get);
+  EXPECT_EQ(val1, *(result1->Value("d", "1")));
+  ASSERT_FALSE(result1->Value("d", "2")) << "Column 2 should be gone";
+}
+
 TEST_F(ClientTest, PutGet) {
   // Using TestUtil to populate test data
   ClientTest::test_util->CreateTable("t", "d");

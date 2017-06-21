@@ -86,6 +86,29 @@ class Table {
   void Delete(const hbase::Delete &del);
 
   /**
+   * Atomically checks if a row/family/qualifier value matches the expected
+   * value. If it does, it adds the delete.  If the passed value is null, the
+   * check is for the lack of column (ie: non-existence)
+   *
+   * The expected value argument of this call is on the left and the current
+   * value of the cell is on the right side of the comparison operator.
+   *
+   * Ie. eg. GREATER operator means expected value > existing <=> add the delete.
+   *
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param compare_op comparison operator to use
+   * @param value the expected value
+   * @param del data to delete if check succeeds
+   * @return true if the new delete was executed, false otherwise
+   */
+  bool CheckAndDelete(const std::string &row, const std::string &family,
+                      const std::string &qualifier, const std::string &value,
+                      const hbase::Delete &del,
+                      const pb::CompareType &compare_op = pb::CompareType::EQUAL);
+
+  /**
    * @brief - Increments some data in the table.
    * @param - increment Increment object to perform HBase Increment operation.
    */

@@ -297,6 +297,27 @@ std::unique_ptr<Request> RequestConverter::CheckAndPutToMutateRequest(
   return pb_req;
 }
 
+std::unique_ptr<Request> RequestConverter::CheckAndDeleteToMutateRequest(
+    const std::string &row, const std::string &family, const std::string &qualifier,
+    const std::string &value, const pb::CompareType compare_op, const hbase::Delete &del,
+    const std::string &region_name) {
+  auto pb_req = Request::mutate();
+  auto pb_msg = std::static_pointer_cast<hbase::pb::MutateRequest>(pb_req->req_msg());
+
+  pb_msg->set_allocated_mutation(
+      ToMutation(MutationType::MutationProto_MutationType_DELETE, del, -1).release());
+  ::hbase::pb::Condition *cond = pb_msg->mutable_condition();
+  cond->set_row(row);
+  cond->set_family(family);
+  cond->set_qualifier(qualifier);
+  cond->set_allocated_comparator(
+      Comparator::ToProto(*(ComparatorFactory::BinaryComparator(value).get())).release());
+  cond->set_compare_type(compare_op);
+
+  RequestConverter::SetRegion(region_name, pb_msg->mutable_region());
+  return pb_req;
+}
+
 std::unique_ptr<Request> RequestConverter::DeleteToMutateRequest(const Delete &del,
                                                                  const std::string &region_name) {
   auto pb_req = Request::mutate();

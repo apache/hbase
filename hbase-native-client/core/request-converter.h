@@ -89,6 +89,11 @@ class RequestConverter {
       const std::string &value, const pb::CompareType compare_op, const hbase::Put &put,
       const std::string &region_name);
 
+  static std::unique_ptr<Request> CheckAndDeleteToMutateRequest(
+      const std::string &row, const std::string &family, const std::string &qualifier,
+      const std::string &value, const pb::CompareType compare_op, const hbase::Delete &del,
+      const std::string &region_name);
+
   static std::unique_ptr<Request> IncrementToMutateRequest(const Increment &incr,
                                                            const std::string &region_name);
 
