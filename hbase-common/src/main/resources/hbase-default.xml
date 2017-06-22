@@ -1543,4 +1543,11 @@ possible configurations would overwhelm and obscure the important.
        Timeout for regionservers to keep threads in snapshot request pool waiting
     </description>
    </property>
+   <property>
+    <name>hbase.rpc.rows.warning.threshold</name>
+    <value>1000</value>
+    <description>
+      Number of rows in a batch operation above which a warning will be logged.
+    </description>
+  </property>
 </configuration>
