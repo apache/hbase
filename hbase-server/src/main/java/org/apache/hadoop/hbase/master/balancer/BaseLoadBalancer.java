@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -75,7 +76,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   static final Predicate<ServerLoad> IDLE_SERVER_PREDICATOR
     = load -> load.getNumberOfRegions() == 0;
 
-  protected final RegionLocationFinder regionFinder = new RegionLocationFinder();
+  protected RegionLocationFinder regionFinder;
+  protected boolean useRegionFinder;
 
   private static class DefaultRackManager extends RackManager {
     @Override
@@ -89,6 +91,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   protected BaseLoadBalancer() {
     metricsBalancer = new MetricsBalancer();
+    createRegionFinder();
   }
 
   /**
@@ -97,6 +100,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   protected BaseLoadBalancer(MetricsBalancer metricsBalancer) {
     this.metricsBalancer = (metricsBalancer != null) ? metricsBalancer : new MetricsBalancer();
+    createRegionFinder();
+  }
+
+  private void createRegionFinder() {
+    useRegionFinder = config.getBoolean("hbase.master.balancer.uselocality", true);
+    if (useRegionFinder) {
+      regionFinder = new RegionLocationFinder();
+    }
   }
 
   /**
@@ -990,7 +1001,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected float slop;
   // overallSlop to control simpleLoadBalancer's cluster level threshold
   protected float overallSlop;
-  protected Configuration config;
+  protected Configuration config = HBaseConfiguration.create();
   protected RackManager rackManager;
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
@@ -1019,7 +1030,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       this.tablesOnMaster = true;
     }
     this.rackManager = new RackManager(getConf());
-    regionFinder.setConf(conf);
+    if (useRegionFinder) {
+      regionFinder.setConf(conf);
+    }
     // Print out base configs. Don't print overallSlop since it for simple balancer exclusively.
     LOG.info("slop=" + this.slop + ", tablesOnMaster=" + this.tablesOnMaster +
       ", systemTablesOnMaster=" + this.onlySystemTablesOnMaster);
@@ -1117,7 +1130,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   @Override
   public synchronized void setClusterStatus(ClusterStatus st) {
     this.clusterStatus = st;
-    regionFinder.setClusterStatus(st);
+    if (useRegionFinder) {
+      regionFinder.setClusterStatus(st);
+    }
   }
 
   @Override
@@ -1129,7 +1144,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   public void setMasterServices(MasterServices masterServices) {
     masterServerName = masterServices.getServerName();
     this.services = masterServices;
-    this.regionFinder.setServices(masterServices);
+    if (useRegionFinder) {
+      this.regionFinder.setServices(masterServices);
+    }
   }
 
   public void setRackManager(RackManager rackManager) {
@@ -1271,7 +1288,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   protected Cluster createCluster(List<ServerName> servers,
       Collection<HRegionInfo> regions, boolean forceRefresh) {
-    if (forceRefresh) {
+    if (forceRefresh && useRegionFinder) {
       regionFinder.refreshAndWait(regions);
     }
     // Get the snapshot of the current assignments for the regions in question, and then create
