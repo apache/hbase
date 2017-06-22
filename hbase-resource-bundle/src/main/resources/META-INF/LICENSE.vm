@@ -1594,7 +1594,9 @@ ${dep.scm.url}
 --
 This product includes ${dep.name} licensed under the ${dep.licenses[0].name}.
 
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
 ${dep.licenses[0].comments}
+#end
 #if(!(${non_aggregate_fine.contains($dep.licenses[0].name)}))
 ERROR: Please check ^^^^^^^^^^^^ this License for acceptability here:
 
