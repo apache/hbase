@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -71,7 +72,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   private static final List<HRegionInfo> EMPTY_REGION_LIST = new ArrayList<HRegionInfo>(0);
 
-  protected final RegionLocationFinder regionFinder = new RegionLocationFinder();
+  protected RegionLocationFinder regionFinder;
+  protected boolean useRegionFinder;
 
   private static class DefaultRackManager extends RackManager {
     @Override
@@ -85,6 +87,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   protected BaseLoadBalancer() {
     metricsBalancer = new MetricsBalancer();
+    createRegionFinder();
   }
 
   /**
@@ -93,6 +96,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   protected BaseLoadBalancer(MetricsBalancer metricsBalancer) {
     this.metricsBalancer = (metricsBalancer != null) ? metricsBalancer : new MetricsBalancer();
+    createRegionFinder();
+  }
+
+  private void createRegionFinder() {
+    useRegionFinder = config.getBoolean("hbase.master.balancer.uselocality", true);
+    if (useRegionFinder) {
+      regionFinder = new RegionLocationFinder();
+    }
   }
 
   /**
@@ -1085,7 +1096,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   // slop for regions
   protected float slop;
-  protected Configuration config;
+  protected Configuration config = HBaseConfiguration.create();
   protected RackManager rackManager;
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
@@ -1145,7 +1156,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       Collections.addAll(tablesOnMaster, tables);
     }
     this.rackManager = new RackManager(getConf());
-    regionFinder.setConf(conf);
+    if (useRegionFinder) {
+      regionFinder.setConf(conf);
+    }
   }
 
   protected void setSlop(Configuration conf) {
@@ -1240,14 +1253,18 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   @Override
   public synchronized void setClusterStatus(ClusterStatus st) {
     this.clusterStatus = st;
-    regionFinder.setClusterStatus(st);
+    if (useRegionFinder) {
+      regionFinder.setClusterStatus(st);
+    }
   }
 
   @Override
   public void setMasterServices(MasterServices masterServices) {
     masterServerName = masterServices.getServerName();
     this.services = masterServices;
-    this.regionFinder.setServices(masterServices);
+    if (useRegionFinder) {
+      this.regionFinder.setServices(masterServices);
+    }
   }
 
   public void setRackManager(RackManager rackManager) {
@@ -1398,7 +1415,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   protected Cluster createCluster(List<ServerName> servers,
       Collection<HRegionInfo> regions, boolean forceRefresh) {
-    if (forceRefresh == true) {
+    if (forceRefresh && useRegionFinder) {
       regionFinder.refreshAndWait(regions);
     }
     // Get the snapshot of the current assignments for the regions in question, and then create
