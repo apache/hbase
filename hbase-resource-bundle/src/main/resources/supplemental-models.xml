@@ -1852,6 +1852,24 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     </project>
   </supplement>
   <supplement>
+    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha4 -->
+      <groupId>org.codehaus.woodstox</groupId>
+      <artifactId>stax2-api</artifactId>
+      <version>3.1.4</version>
+      <licenses>
+        <license>
+          <name>BSD license</name>
+          <url>https://opensource.org/licenses/bsd-license.php</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright 2010 FasterXML.com
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+  <supplement>
     <project>
       <groupId>org.jruby.jcodings</groupId>
       <artifactId>jcodings</artifactId>
