@@ -254,6 +254,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private static final long DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA = 10;
 
+  /**
+   * Number of rows in a batch operation above which a warning will be logged.
+   */
+  static final String BATCH_ROWS_THRESHOLD_NAME = "hbase.rpc.rows.warning.threshold";
+  /**
+   * Default value of {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
+   */
+  static final int BATCH_ROWS_THRESHOLD_DEFAULT = 1000;
+
   // Request counter. (Includes requests that are not serviced by regions.)
   final LongAdder requestCount = new LongAdder();
 
@@ -299,6 +308,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * The minimum allowable delta to use for the scan limit
    */
   private final long minimumScanTimeLimitDelta;
+
+  /**
+   * Row size threshold for multi requests above which a warning is logged
+   */
+  private final int rowSizeWarnThreshold;
 
   final AtomicBoolean clearCompactionQueues = new AtomicBoolean(false);
 
@@ -1116,9 +1130,33 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  public RSRpcServices(HRegionServer rs) throws IOException {
-    regionServer = rs;
+  // Exposed for testing
+  static interface LogDelegate {
+    void logBatchWarning(int sum, int rowSizeWarnThreshold);
+  }
 
+  private static LogDelegate DEFAULT_LOG_DELEGATE = new LogDelegate() {
+    @Override
+    public void logBatchWarning(int sum, int rowSizeWarnThreshold) {
+      if (LOG.isWarnEnabled()) {
+        LOG.warn("Large batch operation detected (greater than " + rowSizeWarnThreshold
+            + ") (HBASE-18023)." + " Requested Number of Rows: " + sum + " Client: "
+            + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress());
+      }
+    }
+  };
+
+  private final LogDelegate ld;
+
+  public RSRpcServices(HRegionServer rs) throws IOException {
+    this(rs, DEFAULT_LOG_DELEGATE);
+  }
+
+  // Directly invoked only for testing
+  RSRpcServices(HRegionServer rs, LogDelegate ld) throws IOException {
+    this.ld = ld;
+    regionServer = rs;
+    rowSizeWarnThreshold = rs.conf.getInt(BATCH_ROWS_THRESHOLD_NAME, BATCH_ROWS_THRESHOLD_DEFAULT);
     RpcSchedulerFactory rpcSchedulerFactory;
     try {
       Class<?> rpcSchedulerFactoryClass = rs.conf.getClass(
@@ -2492,6 +2530,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
+  private void checkBatchSizeAndLogLargeSize(MultiRequest request) {
+    int sum = 0;
+    for (RegionAction regionAction : request.getRegionActionList()) {
+      sum += regionAction.getActionCount();
+    }
+    if (sum > rowSizeWarnThreshold) {
+      ld.logBatchWarning(sum, rowSizeWarnThreshold);
+    }
+  }
+
   /**
    * Execute multiple actions on a table: get, mutate, and/or execCoprocessor
    *
@@ -2507,6 +2555,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
+
+    checkBatchSizeAndLogLargeSize(request);
 
     // rpc controller is how we bring in data via the back door;  it is unprotobuf'ed data.
     // It is also the conduit via which we pass back data.
