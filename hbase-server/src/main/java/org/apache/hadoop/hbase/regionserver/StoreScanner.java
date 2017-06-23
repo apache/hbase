@@ -966,7 +966,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return heap.reseek(kv);
   }
 
-  private void trySwitchToStreamRead() {
+  @VisibleForTesting
+  void trySwitchToStreamRead() {
     if (readType != Scan.ReadType.DEFAULT || !scanUsePread || closing || heap.peek() == null ||
         bytesRead < preadMaxBytes) {
       return;
@@ -977,34 +978,27 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
     scanUsePread = false;
     Cell lastTop = heap.peek();
-    Map<String, StoreFile> name2File = new HashMap<>(store.getStorefilesCount());
-    for (StoreFile file : store.getStorefiles()) {
-      name2File.put(file.getFileInfo().getActiveFileName(), file);
-    }
-    List<StoreFile> filesToReopen = new ArrayList<>();
     List<KeyValueScanner> memstoreScanners = new ArrayList<>();
     List<KeyValueScanner> scannersToClose = new ArrayList<>();
     for (KeyValueScanner kvs : currentScanners) {
       if (!kvs.isFileScanner()) {
+        // collect memstorescanners here
         memstoreScanners.add(kvs);
       } else {
         scannersToClose.add(kvs);
-        if (kvs.peek() == null) {
-          continue;
-        }
-        filesToReopen.add(name2File.get(kvs.getFilePath().getName()));
       }
-    }
-    if (filesToReopen.isEmpty()) {
-      return;
     }
     List<KeyValueScanner> fileScanners = null;
     List<KeyValueScanner> newCurrentScanners;
     KeyValueHeap newHeap;
     try {
-      fileScanners =
-          store.getScanners(filesToReopen, cacheBlocks, false, false, matcher, scan.getStartRow(),
-            scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(), readPt, false);
+      // recreate the scanners on the current file scanners
+      fileScanners = store.recreateScanners(scannersToClose, cacheBlocks, false, false,
+        matcher, scan.getStartRow(), scan.includeStartRow(), scan.getStopRow(),
+        scan.includeStopRow(), readPt, false);
+      if (fileScanners == null) {
+        return;
+      }
       seekScanners(fileScanners, lastTop, false, parallelSeekEnabled);
       newCurrentScanners = new ArrayList<>(fileScanners.size() + memstoreScanners.size());
       newCurrentScanners.addAll(fileScanners);

@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -724,6 +725,11 @@ public class HStore implements Store {
   @Override
   public Collection<StoreFile> getStorefiles() {
     return this.storeEngine.getStoreFileManager().getStorefiles();
+  }
+
+  @Override
+  public Collection<StoreFile> getCompactedFiles() {
+    return this.storeEngine.getStoreFileManager().getCompactedfiles();
   }
 
   /**
@@ -1927,6 +1933,41 @@ public class HStore implements Store {
   }
 
   @Override
+  public List<KeyValueScanner> recreateScanners(List<KeyValueScanner> currentFileScanners,
+      boolean cacheBlocks, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
+      byte[] startRow, boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
+      boolean includeMemstoreScanner) throws IOException {
+    this.lock.readLock().lock();
+    try {
+      Map<String, StoreFile> name2File =
+          new HashMap<>(getStorefilesCount() + getCompactedFilesCount());
+      for (StoreFile file : getStorefiles()) {
+        name2File.put(file.getFileInfo().getActiveFileName(), file);
+      }
+      if (getCompactedFiles() != null) {
+        for (StoreFile file : getCompactedFiles()) {
+          name2File.put(file.getFileInfo().getActiveFileName(), file);
+        }
+      }
+      List<StoreFile> filesToReopen = new ArrayList<>();
+      for (KeyValueScanner kvs : currentFileScanners) {
+        assert kvs.isFileScanner();
+        if (kvs.peek() == null) {
+          continue;
+        }
+        filesToReopen.add(name2File.get(kvs.getFilePath().getName()));
+      }
+      if (filesToReopen.isEmpty()) {
+        return null;
+      }
+      return getScanners(filesToReopen, cacheBlocks, false, false, matcher, startRow,
+        includeStartRow, stopRow, includeStopRow, readPt, false);
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+
+  @Override
   public String toString() {
     return this.getColumnFamilyName();
   }
@@ -1934,6 +1975,11 @@ public class HStore implements Store {
   @Override
   public int getStorefilesCount() {
     return this.storeEngine.getStoreFileManager().getStorefileCount();
+  }
+
+  @Override
+  public int getCompactedFilesCount() {
+    return this.storeEngine.getStoreFileManager().getCompactedFilesCount();
   }
 
   @Override

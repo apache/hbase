@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -45,6 +46,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
@@ -104,7 +106,6 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Test class for the Store
@@ -161,19 +162,19 @@ public class TestStore {
     init(methodName, TEST_UTIL.getConfiguration());
   }
 
-  private void init(String methodName, Configuration conf)
+  private Store init(String methodName, Configuration conf)
   throws IOException {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     // some of the tests write 4 versions and then flush
     // (with HBASE-4241, lower versions are collected on flush)
     hcd.setMaxVersions(4);
-    init(methodName, conf, hcd);
+    return init(methodName, conf, hcd);
   }
 
-  private void init(String methodName, Configuration conf,
+  private Store init(String methodName, Configuration conf,
       HColumnDescriptor hcd) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    init(methodName, conf, htd, hcd);
+    return init(methodName, conf, htd, hcd);
   }
 
   private Store init(String methodName, Configuration conf, HTableDescriptor htd,
@@ -184,6 +185,11 @@ public class TestStore {
   @SuppressWarnings("deprecation")
   private Store init(String methodName, Configuration conf, HTableDescriptor htd,
       HColumnDescriptor hcd, MyScannerHook hook) throws IOException {
+    return init(methodName, conf, htd, hcd, hook, false);
+  }
+  @SuppressWarnings("deprecation")
+  private Store init(String methodName, Configuration conf, HTableDescriptor htd,
+      HColumnDescriptor hcd, MyScannerHook hook, boolean switchToPread) throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
@@ -198,7 +204,8 @@ public class TestStore {
     } else {
       htd.addFamily(hcd);
     }
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, MemStoreLABImpl.CHUNK_SIZE_DEFAULT, 1, 0, null);
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false,
+      MemStoreLABImpl.CHUNK_SIZE_DEFAULT, 1, 0, null);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
@@ -208,7 +215,7 @@ public class TestStore {
     if (hook == null) {
       store = new HStore(region, hcd, conf);
     } else {
-      store = new MyStore(region, hcd, conf, hook);
+      store = new MyStore(region, hcd, conf, hook, switchToPread);
     }
     return store;
   }
@@ -833,9 +840,10 @@ public class TestStore {
 
   public static class DummyStoreEngine extends DefaultStoreEngine {
     public static DefaultCompactor lastCreatedCompactor = null;
+
     @Override
-    protected void createComponents(
-        Configuration conf, Store store, CellComparator comparator) throws IOException {
+    protected void createComponents(Configuration conf, Store store, CellComparator comparator)
+        throws IOException {
       super.createComponents(conf, store, comparator);
       lastCreatedCompactor = this.compactor;
     }
@@ -1034,6 +1042,13 @@ public class TestStore {
   }
 
   private Cell createCell(byte[] qualifier, long ts, long sequenceId, byte[] value) throws IOException {
+    Cell c = CellUtil.createCell(row, family, qualifier, ts, KeyValue.Type.Put.getCode(), value);
+    CellUtil.setSequenceId(c, sequenceId);
+    return c;
+  }
+
+  private Cell createCell(byte[] row, byte[] qualifier, long ts, long sequenceId, byte[] value)
+      throws IOException {
     Cell c = CellUtil.createCell(row, family, qualifier, ts, KeyValue.Type.Put.getCode(), value);
     CellUtil.setSequenceId(c, sequenceId);
     return c;
@@ -1269,33 +1284,128 @@ public class TestStore {
     storeFlushCtx.commit(Mockito.mock(MonitoredTask.class));
   }
 
-  private MyStore initMyStore(String methodName, Configuration conf, MyScannerHook hook) throws IOException {
+  private MyStore initMyStore(String methodName, Configuration conf, MyScannerHook hook)
+      throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMaxVersions(5);
     return (MyStore) init(methodName, conf, htd, hcd, hook);
   }
 
-  private static class MyStore extends HStore {
+  class MyStore extends HStore {
     private final MyScannerHook hook;
-    MyStore(final HRegion region, final HColumnDescriptor family,
-        final Configuration confParam, MyScannerHook hook) throws IOException {
+
+    MyStore(final HRegion region, final HColumnDescriptor family, final Configuration confParam,
+        MyScannerHook hook, boolean switchToPread) throws IOException {
       super(region, family, confParam);
       this.hook = hook;
     }
 
     @Override
     public List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks,
-      boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
-      boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-      boolean includeMemstoreScanner) throws IOException {
+        boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
+        boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
+        boolean includeMemstoreScanner) throws IOException {
       hook.hook(this);
-      return super.getScanners(files, cacheBlocks, usePread,
-          isCompaction, matcher, startRow, true, stopRow, false, readPt, includeMemstoreScanner);
+      return super.getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true,
+        stopRow, false, readPt, includeMemstoreScanner);
     }
   }
   private interface MyScannerHook {
     void hook(MyStore store) throws IOException;
+  }
+
+  @Test
+  public void testSwitchingPreadtoStreamParallelyWithCompactionDischarger() throws Exception {
+    int flushSize = 500;
+    Configuration conf = HBaseConfiguration.create();
+    conf.set("hbase.hstore.engine.class", DummyStoreEngine.class.getName());
+    conf.setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 0);
+    // Set the lower threshold to invoke the "MERGE" policy
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setInMemoryCompaction(MemoryCompactionPolicy.BASIC);
+    MyStore store = initMyStore(name.getMethodName(), conf, new MyScannerHook() {
+      @Override
+      public void hook(org.apache.hadoop.hbase.regionserver.TestStore.MyStore store)
+          throws IOException {
+      }
+    });
+    MemstoreSize memStoreSize = new MemstoreSize();
+    long ts = System.currentTimeMillis();
+    long seqID = 1l;
+    // Add some data to the region and do some flushes
+    for (int i = 1; i < 10; i++) {
+      store.add(createCell(Bytes.toBytes("row" + i), qf1, ts, seqID++, Bytes.toBytes("")),
+        memStoreSize);
+    }
+    // flush them
+    flushStore(store, seqID);
+    for (int i = 11; i < 20; i++) {
+      store.add(createCell(Bytes.toBytes("row" + i), qf1, ts, seqID++, Bytes.toBytes("")),
+        memStoreSize);
+    }
+    // flush them
+    flushStore(store, seqID);
+    for (int i = 21; i < 30; i++) {
+      store.add(createCell(Bytes.toBytes("row" + i), qf1, ts, seqID++, Bytes.toBytes("")),
+        memStoreSize);
+    }
+    // flush them
+    flushStore(store, seqID);
+
+    assertEquals(3, store.getStorefilesCount());
+    ScanInfo scanInfo = store.getScanInfo();
+    Scan scan = new Scan();
+    scan.addFamily(family);
+    Collection<StoreFile> storefiles2 = store.getStorefiles();
+    ArrayList<StoreFile> actualStorefiles = Lists.newArrayList(storefiles2);
+    StoreScanner storeScanner =
+        (StoreScanner) store.getScanner(scan, scan.getFamilyMap().get(family), Long.MAX_VALUE);
+    // get the current heap
+    KeyValueHeap heap = storeScanner.heap;
+    // create more store files
+    for (int i = 31; i < 40; i++) {
+      store.add(createCell(Bytes.toBytes("row" + i), qf1, ts, seqID++, Bytes.toBytes("")),
+        memStoreSize);
+    }
+    // flush them
+    flushStore(store, seqID);
+
+    for (int i = 41; i < 50; i++) {
+      store.add(createCell(Bytes.toBytes("row" + i), qf1, ts, seqID++, Bytes.toBytes("")),
+        memStoreSize);
+    }
+    // flush them
+    flushStore(store, seqID);
+    storefiles2 = store.getStorefiles();
+    ArrayList<StoreFile> actualStorefiles1 = Lists.newArrayList(storefiles2);
+    actualStorefiles1.removeAll(actualStorefiles);
+    // Do compaction
+    List<Exception> exceptions = new ArrayList<Exception>();
+    MyThread thread = new MyThread(storeScanner);
+    thread.start();
+    store.replaceStoreFiles(actualStorefiles, actualStorefiles1);
+    thread.join();
+    KeyValueHeap heap2 = thread.getHeap();
+    assertFalse(heap.equals(heap2));
+  }
+
+  private static class MyThread extends Thread {
+    private StoreScanner scanner;
+    private KeyValueHeap heap;
+
+    public MyThread(StoreScanner scanner) {
+      this.scanner = scanner;
+    }
+
+    public KeyValueHeap getHeap() {
+      return this.heap;
+    }
+
+    public void run() {
+      scanner.trySwitchToStreamRead();
+      heap = scanner.heap;
+    }
   }
 
   private static class MyMemStoreCompactor extends MemStoreCompactor {

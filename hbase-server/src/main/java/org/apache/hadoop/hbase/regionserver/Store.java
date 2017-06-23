@@ -61,6 +61,8 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
 
   Collection<StoreFile> getStorefiles();
 
+  Collection<StoreFile> getCompactedFiles();
+
   /**
    * Close all the readers We don't need to worry about subsequent requests because the Region
    * holds a write lock that will prevent any more reads or writes.
@@ -114,6 +116,27 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread, boolean isCompaction,
       ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow, byte[] stopRow,
       boolean includeStopRow, long readPt) throws IOException;
+
+  /**
+   * Recreates the scanners on the current list of active store file scanners
+   * @param currentFileScanners the current set of active store file scanners
+   * @param cacheBlocks cache the blocks or not
+   * @param usePread use pread or not
+   * @param isCompaction is the scanner for compaction
+   * @param matcher the scan query matcher
+   * @param startRow the scan's start row
+   * @param includeStartRow should the scan include the start row
+   * @param stopRow the scan's stop row
+   * @param includeStopRow should the scan include the stop row
+   * @param readPt the read point of the current scane
+   * @param includeMemstoreScanner whether the current scanner should include memstorescanner
+   * @return list of scanners recreated on the current Scanners
+   * @throws IOException
+   */
+  List<KeyValueScanner> recreateScanners(List<KeyValueScanner> currentFileScanners,
+      boolean cacheBlocks, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
+      byte[] startRow, boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
+      boolean includeMemstoreScanner) throws IOException;
 
   /**
    * Create scanners on the given files and if needed on the memstore with no filtering based on TTL
@@ -365,6 +388,11 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @return Count of store files
    */
   int getStorefilesCount();
+
+  /**
+   * @return Count of compacted store files
+   */
+  int getCompactedFilesCount();
 
   /**
    * @return Max age of store files in this store
