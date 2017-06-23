@@ -125,7 +125,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 <ul class="nav navbar-nav">
                 <li class="active"><a href="/">Home</a></li>
                 <li><a href="/tablesDetailed.jsp">Table Details</a></li>
+                <%if master.isActiveMaster() %>
                 <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
+                </%if>
                 <li><a href="/logs/">Local Logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug Dump</a></li>
