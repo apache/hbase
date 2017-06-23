@@ -88,7 +88,7 @@ possible configurations would overwhelm and obscure the important.
     list of ZooKeeper ensemble servers. If HBASE_MANAGES_ZK is set in hbase-env.sh
     this is the list of servers which hbase will start/stop ZooKeeper on as
     part of cluster start/stop.  Client-side, we will take this list of
-    ensemble members and put it together with the hbase.zookeeper.clientPort
+    ensemble members and put it together with the hbase.zookeeper.property.clientPort
     config. and pass it into zookeeper constructor as the connectString
     parameter.</description>
   </property>
