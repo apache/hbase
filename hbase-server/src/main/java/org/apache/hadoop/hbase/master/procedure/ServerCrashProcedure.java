@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -79,17 +78,6 @@ implements ServerProcedureInterface {
   private boolean shouldSplitWal;
 
   /**
-   * Cycles on same state. Good for figuring if we are stuck.
-   */
-  private int cycles = 0;
-
-  /**
-   * Ordinal of the previous state. So we can tell if we are progressing or not. TODO: if useful,
-   * move this back up into StateMachineProcedure
-   */
-  private int previousState;
-
-  /**
    * Call this constructor queuing up a Procedure.
    * @param serverName Name of the crashed server.
    * @param shouldSplitWal True if we should split WALs as part of crashed server processing.
@@ -117,16 +105,6 @@ implements ServerProcedureInterface {
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, ServerCrashState state)
       throws ProcedureSuspendedException, ProcedureYieldException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(state  + " " + this + "; cycles=" + this.cycles);
-    }
-    // Keep running count of cycles
-    if (state.ordinal() != this.previousState) {
-      this.previousState = state.ordinal();
-      this.cycles = 0;
-    } else {
-      this.cycles++;
-    }
     final MasterServices services = env.getMasterServices();
     // HBASE-14802
     // If we have not yet notified that we are processing a dead server, we should do now.
@@ -182,7 +160,7 @@ implements ServerProcedureInterface {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Assigning regions " +
               HRegionInfo.getShortNameToLog(regionsOnCrashedServer) + ", " + this +
-              "; cycles=" + this.cycles);
+              "; cycles=" + getCycles());
           }
           handleRIT(env, regionsOnCrashedServer);
           AssignmentManager am = env.getAssignmentManager();
@@ -200,7 +178,7 @@ implements ServerProcedureInterface {
         throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.warn("Failed state=" + state + ", retry " + this + "; cycles=" + this.cycles, e);
+      LOG.warn("Failed state=" + state + ", retry " + this + "; cycles=" + getCycles(), e);
     }
     return Flow.HAS_MORE_STATE;
   }
@@ -208,15 +186,10 @@ implements ServerProcedureInterface {
   /**
    * @param env
    * @throws IOException
-   * @throws InterruptedException
    */
   private void processMeta(final MasterProcedureEnv env) throws IOException {
-    if (LOG.isDebugEnabled()) LOG.debug("Processing hbase:meta that was on " + this.serverName);
-
-    if (this.shouldSplitWal) {
-      // TODO: Matteo. We BLOCK here but most important thing to be doing at this moment.
-      env.getMasterServices().getMasterWalManager().splitMetaLog(serverName);
-    }
+    if (LOG.isDebugEnabled()) LOG.debug(this + "; Processing hbase:meta that was on " +
+        this.serverName);
 
     // Assign meta if still carrying it. Check again: region may be assigned because of RIT timeout
     final AssignmentManager am = env.getMasterServices().getAssignmentManager();
@@ -224,19 +197,13 @@ implements ServerProcedureInterface {
       if (!isDefaultMetaRegion(hri)) continue;
 
       am.offlineRegion(hri);
-      addChildProcedure(am.createAssignProcedure(hri, true));
+      addChildProcedure(new RecoverMetaProcedure(serverName, this.shouldSplitWal));
     }
   }
 
   private boolean filterDefaultMetaRegions(final List<HRegionInfo> regions) {
     if (regions == null) return false;
-    final Iterator<HRegionInfo> it = regions.iterator();
-    while (it.hasNext()) {
-      final HRegionInfo hri = it.next();
-      if (isDefaultMetaRegion(hri)) {
-        it.remove();
-      }
-    }
+    regions.removeIf(this::isDefaultMetaRegion);
     return !regions.isEmpty();
   }
 
@@ -260,10 +227,6 @@ implements ServerProcedureInterface {
     am.getRegionStates().logSplit(this.serverName);
   }
 
-  static int size(final Collection<HRegionInfo> hris) {
-    return hris == null? 0: hris.size();
-  }
-
   @Override
   protected void rollbackState(MasterProcedureEnv env, ServerCrashState state)
   throws IOException {
@@ -273,7 +236,7 @@ implements ServerProcedureInterface {
 
   @Override
   protected ServerCrashState getState(int stateId) {
-    return ServerCrashState.valueOf(stateId);
+    return ServerCrashState.forNumber(stateId);
   }
 
   @Override
@@ -394,9 +357,8 @@ implements ServerProcedureInterface {
    * Notify them of crash. Remove assign entries from the passed in <code>regions</code>
    * otherwise we have two assigns going on and they will fight over who has lock.
    * Notify Unassigns also.
-   * @param crashedServer Server that crashed.
+   * @param env
    * @param regions Regions that were on crashed server
-   * @return Subset of <code>regions</code> that were RIT against <code>crashedServer</code>
    */
   private void handleRIT(final MasterProcedureEnv env, final List<HRegionInfo> regions) {
     if (regions == null) return;

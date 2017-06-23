@@ -84,17 +84,18 @@ public class TestServerCrashProcedure {
 
   @Test(timeout=60000)
   public void testCrashTargetRs() throws Exception {
+    testRecoveryAndDoubleExecution(false, false);
   }
 
   @Ignore  // HBASE-18366... To be enabled again.
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionOnRsWithMeta() throws Exception {
-    testRecoveryAndDoubleExecution(true);
+    testRecoveryAndDoubleExecution(true, true);
   }
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionOnRsWithoutMeta() throws Exception {
-    testRecoveryAndDoubleExecution(false);
+    testRecoveryAndDoubleExecution(false, true);
   }
 
   /**
@@ -102,7 +103,8 @@ public class TestServerCrashProcedure {
    * needed state.
    * @throws Exception
    */
-  private void testRecoveryAndDoubleExecution(final boolean carryingMeta) throws Exception {
+  private void testRecoveryAndDoubleExecution(final boolean carryingMeta,
+                                              final boolean doubleExecution) throws Exception {
     final TableName tableName = TableName.valueOf(
       "testRecoveryAndDoubleExecution-carryingMeta-" + carryingMeta);
     final Table t = this.util.createTable(tableName, HBaseTestingUtility.COLUMNS,
@@ -120,7 +122,7 @@ public class TestServerCrashProcedure {
       master.setServerCrashProcessingEnabled(false);
       // find the first server that match the request and executes the test
       ServerName rsToKill = null;
-      for (HRegionInfo hri: util.getHBaseAdmin().getTableRegions(tableName)) {
+      for (HRegionInfo hri : util.getHBaseAdmin().getTableRegions(tableName)) {
         final ServerName serverName = AssignmentTestingUtil.getServerHoldingRegion(util, hri);
         if (AssignmentTestingUtil.isServerHoldingMeta(util, serverName) == carryingMeta) {
           rsToKill = serverName;
@@ -135,14 +137,22 @@ public class TestServerCrashProcedure {
       master.getServerManager().moveFromOnlineToDeadServers(rsToKill);
       // Enable test flags and then queue the crash procedure.
       ProcedureTestingUtility.waitNoProcedureRunning(procExec);
-      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
-      long procId = procExec.submitProcedure(new ServerCrashProcedure(
-          procExec.getEnvironment(), rsToKill, true, carryingMeta));
-      // Now run through the procedure twice crashing the executor on each step...
-      MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+      ServerCrashProcedure scp = new ServerCrashProcedure(procExec.getEnvironment(), rsToKill,
+          true, carryingMeta);
+      if (doubleExecution) {
+        ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
+        long procId = procExec.submitProcedure(scp);
+        // Now run through the procedure twice crashing the executor on each step...
+        MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+      } else {
+        ProcedureTestingUtility.submitAndWait(procExec, scp);
+      }
       // Assert all data came back.
       assertEquals(count, util.countRows(t));
       assertEquals(checksum, util.checksumRows(t));
+    } catch(Throwable throwable) {
+      LOG.error("Test failed!", throwable);
+      throw throwable;
     } finally {
       t.close();
     }

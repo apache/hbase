@@ -500,4 +500,11 @@ public interface MasterServices extends Server {
   public String getRegionServerVersion(final ServerName sn);
 
   public void checkIfShouldMoveSystemRegionAsync();
+
+  /**
+   * Recover meta table. Will result in no-op is meta is already initialized. Any code that has
+   * access to master and requires to access meta during process initialization can call this
+   * method to make sure meta is initialized.
+   */
+  boolean recoverMeta() throws IOException;
 }

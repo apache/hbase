@@ -123,6 +123,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
+import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.replication.ReplicationManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -395,9 +396,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private long splitPlanCount;
   private long mergePlanCount;
-
-  /** flag used in test cases in order to simulate RS failures during master initialization */
-  private volatile boolean initializationBeforeMetaAssignment = false;
 
   /* Handle favored nodes information */
   private FavoredNodesManager favoredNodesManager;
@@ -794,14 +792,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     status.setStatus("Wait for region servers to report in");
     waitForRegionServers(status);
 
-    // get a list for previously failed RS which need log splitting work
-    // we recover hbase:meta region servers inside master initialization and
-    // handle other failed servers in SSH in order to start up master node ASAP
-    MasterMetaBootstrap metaBootstrap = createMetaBootstrap(this, status);
-    metaBootstrap.splitMetaLogsBeforeAssignment();
-
-    this.initializationBeforeMetaAssignment = true;
-
     if (this.balancer instanceof FavoredNodesPromoter) {
       favoredNodesManager = new FavoredNodesManager(this);
     }
@@ -820,8 +810,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (isStopped()) return;
 
     // Make sure meta assigned before proceeding.
-    status.setStatus("Assigning Meta Region");
-    metaBootstrap.assignMeta();
+    status.setStatus("Recovering  Meta Region");
+
+    // we recover hbase:meta region servers inside master initialization and
+    // handle other failed servers in SSH in order to start up master node ASAP
+    MasterMetaBootstrap metaBootstrap = createMetaBootstrap(this, status);
+    metaBootstrap.recoverMeta();
 
     // check if master is shutting down because above assignMeta could return even hbase:meta isn't
     // assigned when master is shutting down
@@ -2710,14 +2704,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * Report whether this master has started initialization and is about to do meta region assignment
-   * @return true if master is in initialization &amp; about to assign hbase:meta regions
-   */
-  public boolean isInitializationStartsMetaRegionAssignment() {
-    return this.initializationBeforeMetaAssignment;
-  }
-
-  /**
    * Compute the average load across all region servers.
    * Currently, this uses a very naive computation - just uses the number of
    * regions being served, ignoring stats about number of requests.
@@ -3422,6 +3408,17 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public LockManager getLockManager() {
     return lockManager;
+  }
+
+  @Override
+  public boolean recoverMeta() throws IOException {
+    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
+    long procId = procedureExecutor.submitProcedure(new RecoverMetaProcedure(null, true, latch));
+    LOG.info("Waiting on RecoverMetaProcedure submitted with procId=" + procId);
+    latch.await();
+    LOG.info("Default replica of hbase:meta, location=" +
+        getMetaTableLocator().getMetaRegionLocation(getZooKeeper()));
+    return assignmentManager.isMetaInitialized();
   }
 
   public QuotaObserverChore getQuotaObserverChore() {

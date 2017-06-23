@@ -59,6 +59,20 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
 
   private List<Procedure<TEnvironment>> subProcList = null;
 
+  protected final int getCycles() {
+    return cycles;
+  }
+
+  /**
+   * Cycles on same state. Good for figuring if we are stuck.
+   */
+  private int cycles = 0;
+
+  /**
+   * Ordinal of the previous state. So we can tell if we are progressing or not.
+   */
+  private int previousState;
+
   protected enum Flow {
     HAS_MORE_STATE,
     NO_MORE_STATE,
@@ -152,6 +166,18 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       if (stateCount == 0) {
         setNextState(getStateId(state));
       }
+
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(state  + " " + this + "; cycles=" + this.cycles);
+      }
+      // Keep running count of cycles
+      if (getStateId(state) != this.previousState) {
+        this.previousState = getStateId(state);
+        this.cycles = 0;
+      } else {
+        this.cycles++;
+      }
+
       stateFlow = executeFromState(env, state);
       if (!hasMoreState()) setNextState(EOF_STATE);
       if (subProcList != null && !subProcList.isEmpty()) {
