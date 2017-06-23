@@ -151,7 +151,7 @@ public class MasterWalManager {
    * Inspect the log directory to find dead servers which need recovery work
    * @return A set of ServerNames which aren't running but still have WAL files left in file system
    */
-  Set<ServerName> getFailedServersFromLogFolders() {
+  public Set<ServerName> getFailedServersFromLogFolders() {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 

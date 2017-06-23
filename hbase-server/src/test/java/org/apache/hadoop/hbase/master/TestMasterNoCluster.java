@@ -272,7 +272,7 @@ public class TestMasterNoCluster {
       MasterMetaBootstrap createMetaBootstrap(final HMaster master, final MonitoredTask status) {
         return new MasterMetaBootstrap(this, status) {
           @Override
-          protected void assignMeta(Set<ServerName> previouslyFailedMeatRSs, int replicaId) { }
+          protected void assignMeta(int replicaId) { }
         };
       }
 

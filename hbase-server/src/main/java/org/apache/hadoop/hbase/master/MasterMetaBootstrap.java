@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -49,45 +48,24 @@ public class MasterMetaBootstrap {
   private final MonitoredTask status;
   private final HMaster master;
 
-  private Set<ServerName> previouslyFailedServers;
-  private Set<ServerName> previouslyFailedMetaRSs;
-
   public MasterMetaBootstrap(final HMaster master, final MonitoredTask status) {
     this.master = master;
     this.status = status;
   }
 
-  public void splitMetaLogsBeforeAssignment() throws IOException, KeeperException {
+  public void recoverMeta() throws InterruptedException, IOException {
+    master.recoverMeta();
+    master.getTableStateManager().start();
+    enableCrashedServerProcessing(false);
+  }
+
+  public void processDeadServers() {
     // get a list for previously failed RS which need log splitting work
     // we recover hbase:meta region servers inside master initialization and
     // handle other failed servers in SSH in order to start up master node ASAP
-    previouslyFailedServers = master.getMasterWalManager().getFailedServersFromLogFolders();
+    Set<ServerName> previouslyFailedServers =
+        master.getMasterWalManager().getFailedServersFromLogFolders();
 
-    // log splitting for hbase:meta server
-    ServerName oldMetaServerLocation = master.getMetaTableLocator()
-        .getMetaRegionLocation(master.getZooKeeper());
-    if (oldMetaServerLocation != null && previouslyFailedServers.contains(oldMetaServerLocation)) {
-      splitMetaLogBeforeAssignment(oldMetaServerLocation);
-      // Note: we can't remove oldMetaServerLocation from previousFailedServers list because it
-      // may also host user regions
-    }
-    previouslyFailedMetaRSs = getPreviouselyFailedMetaServersFromZK();
-    // need to use union of previouslyFailedMetaRSs recorded in ZK and previouslyFailedServers
-    // instead of previouslyFailedMetaRSs alone to address the following two situations:
-    // 1) the chained failure situation(recovery failed multiple times in a row).
-    // 2) master get killed right before it could delete the recovering hbase:meta from ZK while the
-    // same server still has non-meta wals to be replayed so that
-    // removeStaleRecoveringRegionsFromZK can't delete the stale hbase:meta region
-    // Passing more servers into splitMetaLog is all right. If a server doesn't have hbase:meta wal,
-    // there is no op for the server.
-    previouslyFailedMetaRSs.addAll(previouslyFailedServers);
-  }
-
-  public void assignMeta() throws InterruptedException, IOException, KeeperException {
-    assignMeta(previouslyFailedMetaRSs, HRegionInfo.DEFAULT_REPLICA_ID);
-  }
-
-  public void processDeadServers() throws IOException {
     // Master has recovered hbase:meta region server and we put
     // other failed region servers in a queue to be handled later by SSH
     for (ServerName tmpServer : previouslyFailedServers) {
@@ -99,15 +77,10 @@ public class MasterMetaBootstrap {
       throws IOException, InterruptedException, KeeperException {
     int numReplicas = master.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
            HConstants.DEFAULT_META_REPLICA_NUM);
-    final Set<ServerName> EMPTY_SET = new HashSet<>();
     for (int i = 1; i < numReplicas; i++) {
-      assignMeta(EMPTY_SET, i);
+      assignMeta(i);
     }
     unassignExcessMetaReplica(numReplicas);
-  }
-
-  private void splitMetaLogBeforeAssignment(ServerName currentMetaServer) throws IOException {
-    master.getMasterWalManager().splitMetaLog(currentMetaServer);
   }
 
   private void unassignExcessMetaReplica(int numMetaReplicasConfigured) {
@@ -137,12 +110,11 @@ public class MasterMetaBootstrap {
   /**
    * Check <code>hbase:meta</code> is assigned. If not, assign it.
    */
-  protected void assignMeta(Set<ServerName> previouslyFailedMetaRSs, int replicaId)
+  protected void assignMeta(int replicaId)
       throws InterruptedException, IOException, KeeperException {
     final AssignmentManager assignmentManager = master.getAssignmentManager();
 
     // Work on meta region
-    int assigned = 0;
     // TODO: Unimplemented
     // long timeout =
     //   master.getConfiguration().getLong("hbase.catalog.verification.timeout", 1000);
@@ -172,14 +144,14 @@ public class MasterMetaBootstrap {
     // if the meta region server is died at this time, we need it to be re-assigned
     // by SSH so that system tables can be assigned.
     // No need to wait for meta is assigned = 0 when meta is just verified.
-    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableCrashedServerProcessing(assigned != 0);
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableCrashedServerProcessing(false);
     LOG.info("hbase:meta with replicaId " + replicaId + ", location="
       + master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper(), replicaId));
     status.setStatus("META assigned.");
   }
 
   private void enableCrashedServerProcessing(final boolean waitForMeta)
-      throws IOException, InterruptedException {
+      throws InterruptedException {
     // If crashed server processing is disabled, we enable it and expire those dead but not expired
     // servers. This is required so that if meta is assigning to a server which dies after
     // assignMeta starts assignment, ServerCrashProcedure can re-assign it. Otherwise, we will be
@@ -192,24 +164,5 @@ public class MasterMetaBootstrap {
     if (waitForMeta) {
       master.getMetaTableLocator().waitMetaRegionLocation(master.getZooKeeper());
     }
-  }
-
-  /**
-   * This function returns a set of region server names under hbase:meta recovering region ZK node
-   * @return Set of meta server names which were recorded in ZK
-   */
-  private Set<ServerName> getPreviouselyFailedMetaServersFromZK() throws KeeperException {
-    final ZooKeeperWatcher zooKeeper = master.getZooKeeper();
-    Set<ServerName> result = new HashSet<>();
-    String metaRecoveringZNode = ZKUtil.joinZNode(zooKeeper.znodePaths.recoveringRegionsZNode,
-      HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
-    List<String> regionFailedServers = ZKUtil.listChildrenNoWatch(zooKeeper, metaRecoveringZNode);
-    if (regionFailedServers == null) return result;
-
-    for (String failedServer : regionFailedServers) {
-      ServerName server = ServerName.parseServerName(failedServer);
-      result.add(server);
-    }
-    return result;
   }
 }

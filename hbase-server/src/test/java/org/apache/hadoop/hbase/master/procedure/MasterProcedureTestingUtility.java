@@ -92,13 +92,10 @@ public class MasterProcedureTestingUtility {
         public Void call() throws Exception {
           final AssignmentManager am = env.getAssignmentManager();
           am.start();
-          if (true) {
-            MasterMetaBootstrap metaBootstrap = new MasterMetaBootstrap(master,
-                TaskMonitor.get().createStatus("meta"));
-            metaBootstrap.splitMetaLogsBeforeAssignment();
-            metaBootstrap.assignMeta();
-            metaBootstrap.processDeadServers();
-          }
+          MasterMetaBootstrap metaBootstrap = new MasterMetaBootstrap(master,
+              TaskMonitor.get().createStatus("meta"));
+          metaBootstrap.recoverMeta();
+          metaBootstrap.processDeadServers();
           am.joinCluster();
           master.setInitialized(true);
           return null;

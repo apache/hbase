@@ -1448,6 +1448,8 @@ public class AssignmentManager implements ServerListener {
     synchronized (regionNode) {
       State state = regionNode.transitionState(State.OPEN, RegionStates.STATES_EXPECTED_ON_OPEN);
       if (isMetaRegion(hri)) {
+        master.getTableStateManager().setTableState(TableName.META_TABLE_NAME,
+            TableState.State.ENABLED);
         setMetaInitialized(hri, true);
       }
       regionStates.addRegionToServer(regionNode.getRegionLocation(), regionNode);

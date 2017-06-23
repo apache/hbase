@@ -52,6 +52,8 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import com.google.protobuf.Service;
 
+import static org.mockito.Mockito.mock;
+
 public class MockNoopMasterServices implements MasterServices, Server {
   private final Configuration conf;
   private final MetricsMaster metricsMaster;
@@ -324,7 +326,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
 
   @Override
   public TableStateManager getTableStateManager() {
-    return null;
+    return mock(TableStateManager.class);
   }
 
   @Override
@@ -449,6 +451,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
 
   @Override
   public void checkIfShouldMoveSystemRegionAsync() {
+  }
+
+  @Override
+  public boolean recoverMeta() throws IOException {
+    return false;
   }
 
   @Override
