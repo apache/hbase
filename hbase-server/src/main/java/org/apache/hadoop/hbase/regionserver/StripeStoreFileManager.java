@@ -147,6 +147,11 @@ public class StripeStoreFileManager
   }
 
   @Override
+  public int getCompactedFilesCount() {
+    return state.allCompactedFilesCached.size();
+  }
+
+  @Override
   public void insertNewFiles(Collection<StoreFile> sfs) throws IOException {
     CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(true);
     // Passing null does not cause NPE??

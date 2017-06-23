@@ -104,6 +104,12 @@ public interface StoreFileManager {
   int getStorefileCount();
 
   /**
+   * Returns the number of compacted files.
+   * @return The number of files.
+   */
+  int getCompactedFilesCount();
+
+  /**
    * Gets the store files to scan for a Scan or Get request.
    * @param startRow Start row of the request.
    * @param stopRow Stop row of the request.
