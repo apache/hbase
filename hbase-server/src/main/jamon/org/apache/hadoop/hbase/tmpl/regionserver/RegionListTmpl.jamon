@@ -78,7 +78,7 @@
     The hbase:meta table keeps a list of all regions in the system. The empty key is used to denote
     table start and table end.  A region with an empty start key is the first region in a table.
     If a region has both an empty start key and an empty end key, it's the only region in the
-    table. See <a href="http://hbase.org">HBase Home</a> for further explication.<p>
+    table. See <a href="http://hbase.apache.org">HBase Home</a> for further explication.<p>
 <%else>
     <p>Not serving regions</p>
 </%if>
