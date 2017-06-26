@@ -20,6 +20,7 @@ cxx_library(
     exported_headers=[
         "bytes-util.h",
         "connection-util.h",
+        "concurrent-map.h",
         "optional.h",
         "sys-util.h",
         "time-util.h",
@@ -38,17 +39,25 @@ cxx_library(
     ],
     compiler_flags=['-Weffc++'],)
 cxx_test(
-    name="user-util-test",
+    name="bytes-util-test",
     srcs=[
-        "user-util-test.cc",
+        "bytes-util-test.cc",
     ],
     deps=[
         ":utils",
     ],)
 cxx_test(
-    name="bytes-util-test",
+    name="concurrent-map-test",
     srcs=[
-        "bytes-util-test.cc",
+        "concurrent-map-test.cc",
+    ],
+    deps=[
+        ":utils",
+    ],)
+cxx_test(
+    name="user-util-test",
+    srcs=[
+        "user-util-test.cc",
     ],
     deps=[
         ":utils",

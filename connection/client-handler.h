@@ -18,7 +18,6 @@
  */
 #pragma once
 
-#include <folly/AtomicHashMap.h>
 #include <wangle/channel/Handler.h>
 
 #include <atomic>
@@ -30,6 +29,7 @@
 #include "exceptions/exception.h"
 #include "serde/codec.h"
 #include "serde/rpc.h"
+#include "utils/concurrent-map.h"
 
 // Forward decs.
 namespace hbase {
@@ -81,7 +81,6 @@ class ClientHandler
   std::string server_;  // for logging
 
   // in flight requests
-  std::unique_ptr<folly::AtomicHashMap<uint32_t, std::shared_ptr<google::protobuf::Message>>>
-      resp_msgs_;
+  std::unique_ptr<concurrent_map<uint32_t, std::shared_ptr<google::protobuf::Message>>> resp_msgs_;
 };
 }  // namespace hbase

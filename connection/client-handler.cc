@@ -40,8 +40,9 @@ ClientHandler::ClientHandler(std::string user_name, std::shared_ptr<Codec> codec
       serde_(codec),
       server_(server),
       once_flag_(std::make_unique<std::once_flag>()),
-      resp_msgs_(std::make_unique<folly::AtomicHashMap<uint32_t, std::shared_ptr<Message>>>(5000)) {
-}
+      resp_msgs_(
+          std::make_unique<concurrent_map<uint32_t, std::shared_ptr<google::protobuf::Message>>>(
+              5000)) {}
 
 void ClientHandler::read(Context *ctx, std::unique_ptr<folly::IOBuf> buf) {
   if (LIKELY(buf != nullptr)) {
@@ -53,15 +54,7 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<folly::IOBuf> buf) {
     VLOG(3) << "Read RPC ResponseHeader size=" << used_bytes << " call_id=" << header.call_id()
             << " has_exception=" << header.has_exception() << ", server: " << server_;
 
-    // Get the response protobuf from the map
-    auto search = resp_msgs_->find(header.call_id());
-    // It's an error if it's not there.
-    CHECK(search != resp_msgs_->end());
-    auto resp_msg = search->second;
-    CHECK(resp_msg != nullptr);
-
-    // Make sure we don't leak the protobuf
-    resp_msgs_->erase(header.call_id());
+    auto resp_msg = resp_msgs_->find_and_erase(header.call_id());
 
     // set the call_id.
     // This will be used to by the dispatcher to match up
@@ -133,7 +126,7 @@ folly::Future<folly::Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Re
   VLOG(3) << "Writing RPC Request:" << r->DebugString() << ", server: " << server_;
 
   // Now store the call id to response.
-  resp_msgs_->insert(r->call_id(), r->resp_msg());
+  resp_msgs_->insert(std::make_pair(r->call_id(), r->resp_msg()));
 
   // Send the data down the pipeline.
   return ctx->fireWrite(serde_.Request(r->call_id(), r->method(), r->req_msg().get()));
