@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -87,7 +86,6 @@ public class TestServerCrashProcedure {
   }
 
   @Test(timeout=60000)
-  @Ignore // Fix for AMv2
   public void testRecoveryAndDoubleExecutionOnRsWithMeta() throws Exception {
     testRecoveryAndDoubleExecution(true);
   }
