@@ -81,6 +81,7 @@ public class MasterProcedureTestingUtility {
             env.getMasterServices().getServerManager().removeRegion(regionState.getRegion());
           }
           am.stop();
+          master.setServerCrashProcessingEnabled(false);
           master.setInitialized(false);
           return null;
         }
