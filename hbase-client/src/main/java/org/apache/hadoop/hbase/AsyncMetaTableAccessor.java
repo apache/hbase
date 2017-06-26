@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -30,6 +31,7 @@ import java.util.SortedMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor.CollectingVisitor;
 import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RawAsyncTable;
@@ -45,6 +48,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -98,34 +102,72 @@ public class AsyncMetaTableAccessor {
     return future;
   }
 
-  public static CompletableFuture<Pair<HRegionInfo, ServerName>> getRegion(RawAsyncTable metaTable,
-      byte[] regionName) {
-    CompletableFuture<Pair<HRegionInfo, ServerName>> future = new CompletableFuture<>();
-    byte[] row = regionName;
-    HRegionInfo parsedInfo = null;
+  /**
+   * Returns the HRegionLocation from meta for the given region
+   * @param metaTable
+   * @param regionName region we're looking for
+   * @return HRegionLocation for the given region
+   */
+  public static CompletableFuture<Optional<HRegionLocation>> getRegionLocation(
+      RawAsyncTable metaTable, byte[] regionName) {
+    CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
     try {
-      parsedInfo = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
-      row = MetaTableAccessor.getMetaKeyForRegion(parsedInfo);
-    } catch (Exception parseEx) {
-      // Ignore if regionName is a encoded region name.
+      HRegionInfo parsedRegionInfo = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
+      metaTable.get(
+        new Get(MetaTableAccessor.getMetaKeyForRegion(parsedRegionInfo))
+            .addFamily(HConstants.CATALOG_FAMILY)).whenComplete(
+        (r, err) -> {
+          if (err != null) {
+            future.completeExceptionally(err);
+            return;
+          }
+          future.complete(getRegionLocations(r).map(
+            locations -> locations.getRegionLocation(parsedRegionInfo.getReplicaId())));
+        });
+    } catch (IOException parseEx) {
+      LOG.warn("Failed to parse the passed region name: " + Bytes.toStringBinary(regionName));
+      future.completeExceptionally(parseEx);
     }
+    return future;
+  }
 
-    final HRegionInfo finalHRI = parsedInfo;
-    metaTable.get(new Get(row).addFamily(HConstants.CATALOG_FAMILY)).whenComplete((r, err) -> {
-      if (err != null) {
-        future.completeExceptionally(err);
-        return;
-      }
-      RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
-      HRegionLocation hrl = locations == null ? null
-          : locations.getRegionLocation(finalHRI == null ? 0 : finalHRI.getReplicaId());
-      if (hrl == null) {
-        future.complete(null);
-      } else {
-        future.complete(new Pair<>(hrl.getRegionInfo(), hrl.getServerName()));
-      }
-    });
-
+  /**
+   * Returns the HRegionLocation from meta for the given encoded region name
+   * @param metaTable
+   * @param encodedRegionName region we're looking for
+   * @return HRegionLocation for the given region
+   */
+  public static CompletableFuture<Optional<HRegionLocation>> getRegionLocationWithEncodedName(
+      RawAsyncTable metaTable, byte[] encodedRegionName) {
+    CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
+    metaTable.scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY))
+        .whenComplete(
+          (results, err) -> {
+            if (err != null) {
+              future.completeExceptionally(err);
+              return;
+            }
+            String encodedRegionNameStr = Bytes.toString(encodedRegionName);
+            results
+                .stream()
+                .filter(result -> !result.isEmpty())
+                .filter(result -> MetaTableAccessor.getHRegionInfo(result) != null)
+                .forEach(
+                  result -> {
+                    getRegionLocations(result).ifPresent(
+                      locations -> {
+                        for (HRegionLocation location : locations.getRegionLocations()) {
+                          if (location != null
+                              && encodedRegionNameStr.equals(location.getRegionInfo()
+                                  .getEncodedName())) {
+                            future.complete(Optional.of(location));
+                            return;
+                          }
+                        }
+                      });
+                  });
+            future.complete(Optional.empty());
+          });
     return future;
   }
 
@@ -143,15 +185,29 @@ public class AsyncMetaTableAccessor {
   }
 
   /**
-   * Used to get table regions' info and server.
+   * Used to get all region locations for the specific table.
    * @param metaTable
    * @param tableName table we're looking for, can be null for getting all regions
-   * @return the list of regioninfos and server. The return value will be wrapped by a
+   * @return the list of region locations. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
-  public static CompletableFuture<List<Pair<HRegionInfo, ServerName>>> getTableRegionsAndLocations(
+  public static CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(
       RawAsyncTable metaTable, final Optional<TableName> tableName) {
-    return getTableRegionsAndLocations(metaTable, tableName, true);
+    CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
+    getTableRegionsAndLocations(metaTable, tableName, true).whenComplete(
+      (locations, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else if (locations == null || locations.isEmpty()) {
+          future.complete(Collections.emptyList());
+        } else {
+          List<HRegionLocation> regionLocations = locations.stream()
+              .map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
+              .collect(Collectors.toList());
+          future.complete(regionLocations);
+        }
+      });
+    return future;
   }
 
   /**
@@ -162,7 +218,7 @@ public class AsyncMetaTableAccessor {
    * @return the list of regioninfos and server. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
-  public static CompletableFuture<List<Pair<HRegionInfo, ServerName>>> getTableRegionsAndLocations(
+  private static CompletableFuture<List<Pair<HRegionInfo, ServerName>>> getTableRegionsAndLocations(
       RawAsyncTable metaTable, final Optional<TableName> tableName,
       final boolean excludeOfflinedSplitParents) {
     CompletableFuture<List<Pair<HRegionInfo, ServerName>>> future = new CompletableFuture<>();

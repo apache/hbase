@@ -53,9 +53,9 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
 
   @After
   public void cleanup() throws Exception {
-    admin.deleteSnapshots(".*").get();
-    admin.disableTables(".*").get();
-    admin.deleteTables(".*").get();
+    admin.deleteSnapshots(Pattern.compile(".*")).get();
+    admin.disableTables(Pattern.compile(".*")).get();
+    admin.deleteTables(Pattern.compile(".*")).get();
   }
 
   @Test
@@ -175,13 +175,22 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
     admin.snapshot(snapshotName3, tableName).get();
     Assert.assertEquals(admin.listSnapshots().get().size(), 3);
 
-    Assert.assertEquals(admin.listSnapshots("(.*)").get().size(), 3);
-    Assert.assertEquals(admin.listSnapshots("snapshotName(\\d+)").get().size(), 3);
-    Assert.assertEquals(admin.listSnapshots("snapshotName[1|3]").get().size(), 2);
+    Assert.assertEquals(admin.listSnapshots(Pattern.compile("(.*)")).get().size(), 3);
+    Assert.assertEquals(admin.listSnapshots(Pattern.compile("snapshotName(\\d+)")).get().size(), 3);
+    Assert.assertEquals(admin.listSnapshots(Pattern.compile("snapshotName[1|3]")).get().size(), 2);
     Assert.assertEquals(admin.listSnapshots(Pattern.compile("snapshot(.*)")).get().size(), 3);
-    Assert.assertEquals(admin.listTableSnapshots("testListSnapshots", "s(.*)").get().size(), 3);
-    Assert.assertEquals(admin.listTableSnapshots("fakeTableName", "snap(.*)").get().size(), 0);
-    Assert.assertEquals(admin.listTableSnapshots("test(.*)", "snap(.*)[1|3]").get().size(), 2);
+    Assert.assertEquals(
+      admin.listTableSnapshots(Pattern.compile("testListSnapshots"), Pattern.compile("s(.*)")).get()
+          .size(),
+      3);
+    Assert.assertEquals(
+      admin.listTableSnapshots(Pattern.compile("fakeTableName"), Pattern.compile("snap(.*)")).get()
+          .size(),
+      0);
+    Assert.assertEquals(
+      admin.listTableSnapshots(Pattern.compile("test(.*)"), Pattern.compile("snap(.*)[1|3]")).get()
+          .size(),
+      2);
   }
 
   @Test
@@ -201,19 +210,19 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
     admin.deleteSnapshot(snapshotName1).get();
     Assert.assertEquals(admin.listSnapshots().get().size(), 2);
 
-    admin.deleteSnapshots("(.*)abc").get();
+    admin.deleteSnapshots(Pattern.compile("(.*)abc")).get();
     Assert.assertEquals(admin.listSnapshots().get().size(), 2);
 
-    admin.deleteSnapshots("(.*)1").get();
+    admin.deleteSnapshots(Pattern.compile("(.*)1")).get();
     Assert.assertEquals(admin.listSnapshots().get().size(), 2);
 
-    admin.deleteTableSnapshots("(.*)", "(.*)1").get();
+    admin.deleteTableSnapshots(Pattern.compile("(.*)"), Pattern.compile("(.*)1")).get();
     Assert.assertEquals(admin.listSnapshots().get().size(), 2);
 
-    admin.deleteTableSnapshots("(.*)", "(.*)2").get();
+    admin.deleteTableSnapshots(Pattern.compile("(.*)"), Pattern.compile("(.*)2")).get();
     Assert.assertEquals(admin.listSnapshots().get().size(), 1);
 
-    admin.deleteTableSnapshots("(.*)", "(.*)3").get();
+    admin.deleteTableSnapshots(Pattern.compile("(.*)"), Pattern.compile("(.*)3")).get();
     Assert.assertEquals(admin.listSnapshots().get().size(), 0);
   }
 }

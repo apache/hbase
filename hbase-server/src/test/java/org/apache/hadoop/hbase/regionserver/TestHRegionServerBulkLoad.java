@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -236,7 +237,7 @@ public class TestHRegionServerBulkLoad {
             AdminProtos.AdminService.BlockingInterface server =
               conn.getAdmin(getLocation().getServerName());
             CompactRegionRequest request = RequestConverter.buildCompactRegionRequest(
-                getLocation().getRegionInfo().getRegionName(), true, null);
+                getLocation().getRegionInfo().getRegionName(), true, Optional.empty());
             server.compactRegion(null, request);
             numCompactions.incrementAndGet();
             return null;

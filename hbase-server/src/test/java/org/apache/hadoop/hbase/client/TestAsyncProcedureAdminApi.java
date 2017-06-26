@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -94,8 +95,8 @@ public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void listProcedure() throws Exception {
-    ProcedureInfo[] procList = admin.listProcedures().get();
-    assertTrue(procList.length >= 0);
+    List<ProcedureInfo> procList = admin.listProcedures().get();
+    assertTrue(procList.size() >= 0);
   }
 
   @Test

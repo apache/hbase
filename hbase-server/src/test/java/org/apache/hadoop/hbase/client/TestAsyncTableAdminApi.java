@@ -80,7 +80,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testListTables() throws Exception {
-    int numTables = admin.listTables().get().length;
+    int numTables = admin.listTables().get().size();
     final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
     final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
     final TableName tableName3 = TableName.valueOf(name.getMethodName() + "3");
@@ -89,13 +89,13 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       TEST_UTIL.createTable(tables[i], FAMILY);
     }
 
-    TableDescriptor[] tableDescs = admin.listTables().get();
-    int size = tableDescs.length;
+    List<TableDescriptor> tableDescs = admin.listTables().get();
+    int size = tableDescs.size();
     assertTrue(size >= tables.length);
     for (int i = 0; i < tables.length && i < size; i++) {
       boolean found = false;
-      for (int j = 0; j < tableDescs.length; j++) {
-        if (tableDescs[j].getTableName().equals(tables[i])) {
+      for (int j = 0; j < size; j++) {
+        if (tableDescs.get(j).getTableName().equals(tables[i])) {
           found = true;
           break;
         }
@@ -103,13 +103,13 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       assertTrue("Not found: " + tables[i], found);
     }
 
-    TableName[] tableNames = admin.listTableNames().get();
-    size = tableNames.length;
+    List<TableName> tableNames = admin.listTableNames().get();
+    size = tableNames.size();
     assertTrue(size == (numTables + tables.length));
     for (int i = 0; i < tables.length && i < size; i++) {
       boolean found = false;
-      for (int j = 0; j < tableNames.length; j++) {
-        if (tableNames[j].equals(tables[i])) {
+      for (int j = 0; j < size; j++) {
+        if (tableNames.get(j).equals(tables[i])) {
           found = true;
           break;
         }
@@ -121,10 +121,10 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       TEST_UTIL.deleteTable(tables[i]);
     }
 
-    tableDescs = admin.listTables((Pattern) null, true).get();
-    assertTrue("Not found system tables", tableDescs.length > 0);
-    tableNames = admin.listTableNames((Pattern) null, true).get();
-    assertTrue("Not found system tables", tableNames.length > 0);
+    tableDescs = admin.listTables(Optional.empty(), true).get();
+    assertTrue("Not found system tables", tableDescs.size() > 0);
+    tableNames = admin.listTableNames(Optional.empty(), true).get();
+    assertTrue("Not found system tables", tableNames.size() > 0);
   }
 
   @Test(timeout = 300000)
@@ -143,13 +143,13 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   @Test(timeout = 300000)
   public void testCreateTable() throws Exception {
-    TableDescriptor[] tables = admin.listTables().get();
-    int numTables = tables.length;
+    List<TableDescriptor> tables = admin.listTables().get();
+    int numTables = tables.size();
     final  TableName tableName = TableName.valueOf(name.getMethodName());
     admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(FAMILY)))
         .join();
     tables = admin.listTables().get();
-    assertEquals(numTables + 1, tables.length);
+    assertEquals(numTables + 1, tables.size());
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
         .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
@@ -449,8 +449,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
           } catch (Exception e) {
           }
         });
-    TableDescriptor[] failed = admin.deleteTables(Pattern.compile("testDeleteTables.*")).get();
-    assertEquals(0, failed.length);
+    List<TableDescriptor> failed = admin.deleteTables(Pattern.compile("testDeleteTables.*")).get();
+    assertEquals(0, failed.size());
     Arrays.stream(tables).forEach((table) -> {
       admin.tableExists(table).thenAccept((exist) -> assertFalse(exist)).join();
     });
@@ -572,7 +572,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     ht1.get(get);
     ht2.get(get);
 
-    this.admin.disableTables("testDisableAndEnableTable.*").join();
+    this.admin.disableTables(Pattern.compile("testDisableAndEnableTable.*")).join();
 
     // Test that tables are disabled
     get = new Get(row);
@@ -589,7 +589,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName2));
 
     assertTrue(ok);
-    this.admin.enableTables("testDisableAndEnableTable.*").join();
+    this.admin.enableTables(Pattern.compile("testDisableAndEnableTable.*")).join();
 
     // Test that tables are enabled
     try {

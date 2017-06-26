@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -84,8 +85,8 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.getTable().isSystemTable()) {
         info = regionInfo;
-        boolean closed = admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(),
-          rs.getServerName().getServerName()).get();
+        boolean closed = admin.closeRegion(regionInfo.getRegionName(),
+          Optional.of(rs.getServerName())).get();
         assertTrue(closed);
       }
     }
@@ -114,7 +115,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
           info = regionInfo;
           boolean catchNotServingException = false;
           try {
-            admin.closeRegionWithEncodedRegionName("sample", rs.getServerName().getServerName())
+            admin.closeRegion(Bytes.toBytes("sample"), Optional.of(rs.getServerName()))
                 .get();
           } catch (Exception e) {
             catchNotServingException = true;
@@ -130,76 +131,19 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   }
 
   @Test
-  public void testCloseRegionWhenServerNameIsNull() throws Exception {
-    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion3");
-    createTableWithDefaultConf(TableName.valueOf(TABLENAME));
-
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(TABLENAME));
-
-    try {
-      List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-      for (HRegionInfo regionInfo : onlineRegions) {
-        if (!regionInfo.isMetaTable()) {
-          if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion3")) {
-            admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(), null).get();
-          }
-        }
-      }
-      fail("The test should throw exception if the servername passed is null.");
-    } catch (IllegalArgumentException e) {
-    }
-  }
-
-  @Test
   public void testCloseRegionWhenServerNameIsEmpty() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegionWhenServerNameIsEmpty");
     createTableWithDefaultConf(TableName.valueOf(TABLENAME));
 
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(TABLENAME));
-
-    try {
-      List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-      for (HRegionInfo regionInfo : onlineRegions) {
-        if (!regionInfo.isMetaTable()) {
-          if (regionInfo.getRegionNameAsString()
-              .contains("TestHBACloseRegionWhenServerNameIsEmpty")) {
-            admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(), " ").get();
-          }
-        }
-      }
-      fail("The test should throw exception if the servername passed is empty.");
-    } catch (IllegalArgumentException e) {
-    }
-  }
-
-  @Test
-  public void testCloseRegionWhenEncodedRegionNameIsNotGiven() throws Exception {
-    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion4");
-    createTableWithDefaultConf(TableName.valueOf(TABLENAME));
-
-    HRegionInfo info = null;
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(TABLENAME));
-
     List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
-        if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion4")) {
-          info = regionInfo;
-          boolean catchNotServingException = false;
-          try {
-            admin.closeRegionWithEncodedRegionName(regionInfo.getRegionNameAsString(),
-              rs.getServerName().getServerName()).get();
-          } catch (Exception e) {
-            // expected, ignore it.
-            catchNotServingException = true;
-          }
-          assertTrue(catchNotServingException);
+        if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegionWhenServerNameIsEmpty")) {
+          admin.closeRegion(regionInfo.getRegionName(), Optional.empty()).get();
         }
       }
     }
-    onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    assertTrue("The region should be present in online regions list.",
-      onlineRegions.contains(info));
   }
 
   @Test
@@ -214,10 +158,10 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       HRegionLocation regionLocation = locator.getRegionLocation(Bytes.toBytes("mmm"));
       HRegionInfo region = regionLocation.getRegionInfo();
       byte[] regionName = region.getRegionName();
-      Pair<HRegionInfo, ServerName> pair = rawAdmin.getRegion(regionName).get();
-      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
-      pair = rawAdmin.getRegion(region.getEncodedNameAsBytes()).get();
-      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+      HRegionLocation location = rawAdmin.getRegionLocation(regionName).get();
+      assertTrue(Bytes.equals(regionName, location.getRegionInfo().getRegionName()));
+      location = rawAdmin.getRegionLocation(region.getEncodedNameAsBytes()).get();
+      assertTrue(Bytes.equals(regionName, location.getRegionInfo().getRegionName()));
     }
   }
 
@@ -289,7 +233,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     table.put(puts);
 
     if (isSplitRegion) {
-      admin.splitRegion(regions.get(0).getRegionName(), splitPoint).get();
+      admin.splitRegion(regions.get(0).getRegionName(), Optional.ofNullable(splitPoint)).get();
     } else {
       if (splitPoint == null) {
         admin.split(tableName).get();
@@ -456,7 +400,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
         }
       }
       assertTrue(destServerName != null && !destServerName.equals(serverName));
-      admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(destServerName.getServerName())).get();
+      admin.move(hri.getRegionName(), Optional.of(destServerName)).get();
 
       long timeoutTime = System.currentTimeMillis() + 30000;
       while (true) {
@@ -607,15 +551,15 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       assertTrue(countBefore > 0); // there should be some data files
       if (expectedState == CompactionState.MINOR) {
         if (singleFamily) {
-          admin.compact(table, family).get();
+          admin.compact(table, Optional.of(family)).get();
         } else {
-          admin.compact(table).get();
+          admin.compact(table, Optional.empty()).get();
         }
       } else {
         if (singleFamily) {
-          admin.majorCompact(table, family).get();
+          admin.majorCompact(table, Optional.of(family)).get();
         } else {
-          admin.majorCompact(table).get();
+          admin.majorCompact(table, Optional.empty()).get();
         }
       }
       long curt = System.currentTimeMillis();
