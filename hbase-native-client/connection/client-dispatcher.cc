@@ -25,16 +25,11 @@ using std::unique_ptr;
 
 namespace hbase {
 
-ClientDispatcher::ClientDispatcher() : requests_(5000), current_call_id_(9) {}
+ClientDispatcher::ClientDispatcher() : current_call_id_(9), requests_(5000) {}
 
 void ClientDispatcher::read(Context *ctx, unique_ptr<Response> in) {
   auto call_id = in->call_id();
-
-  auto search = requests_.find(call_id);
-  CHECK(search != requests_.end());
-  auto p = std::move(search->second);
-
-  requests_.erase(call_id);
+  auto p = requests_.find_and_erase(call_id);
 
   if (in->exception()) {
     p.setException(in->exception());
@@ -46,8 +41,11 @@ void ClientDispatcher::read(Context *ctx, unique_ptr<Response> in) {
 folly::Future<unique_ptr<Response>> ClientDispatcher::operator()(unique_ptr<Request> arg) {
   auto call_id = current_call_id_++;
   arg->set_call_id(call_id);
-  requests_.insert(call_id, folly::Promise<unique_ptr<Response>>{});
-  auto &p = requests_.find(call_id)->second;
+
+  // TODO: if the map is full (or we have more than hbase.client.perserver.requests.threshold)
+  // then throw ServerTooBusyException so that upper layers will retry.
+  auto &p = requests_[call_id];
+
   auto f = p.getFuture();
   p.setInterruptHandler([call_id, this](const folly::exception_wrapper &e) {
     LOG(ERROR) << "e = " << call_id;

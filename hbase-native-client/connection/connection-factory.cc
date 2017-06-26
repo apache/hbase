@@ -17,15 +17,15 @@
  *
  */
 
-#include "connection/connection-factory.h"
-#include "connection/sasl-handler.h"
+#include <glog/logging.h>
+#include <wangle/channel/Handler.h>
 
 #include <chrono>
 
-#include <glog/logging.h>
-#include <wangle/channel/Handler.h>
 #include "connection/client-dispatcher.h"
+#include "connection/connection-factory.h"
 #include "connection/pipeline.h"
+#include "connection/sasl-handler.h"
 #include "connection/service.h"
 
 using std::chrono::milliseconds;

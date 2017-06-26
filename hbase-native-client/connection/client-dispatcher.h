@@ -19,16 +19,18 @@
 
 #pragma once
 
-#include <folly/AtomicHashMap.h>
 #include <folly/Logging.h>
 #include <wangle/service/ClientDispatcher.h>
 
 #include <atomic>
+#include <map>
 #include <memory>
+#include <mutex>
 
 #include "connection/pipeline.h"
 #include "connection/request.h"
 #include "connection/response.h"
+#include "utils/concurrent-map.h"
 
 namespace hbase {
 /**
@@ -51,7 +53,7 @@ class ClientDispatcher
   folly::Future<folly::Unit> close() override;
 
  private:
-  folly::AtomicHashMap<uint32_t, folly::Promise<std::unique_ptr<Response>>> requests_;
+  concurrent_map<uint32_t, folly::Promise<std::unique_ptr<Response>>> requests_;
   // Start at some number way above what could
   // be there for un-initialized call id counters.
   //
