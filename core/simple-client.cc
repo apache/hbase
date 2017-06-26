@@ -43,6 +43,7 @@ using hbase::Get;
 using hbase::HBaseConfigurationLoader;
 using hbase::Scan;
 using hbase::Put;
+using hbase::Result;
 using hbase::Table;
 using hbase::pb::TableName;
 using hbase::pb::ServerName;
@@ -53,6 +54,8 @@ DEFINE_string(row, "row_", "row prefix");
 DEFINE_string(zookeeper, "localhost:2181", "What zk quorum to talk to");
 DEFINE_string(conf, "", "Conf directory to read the config from (optional)");
 DEFINE_uint64(num_rows, 10000, "How many rows to write and read");
+DEFINE_uint64(batch_num_rows, 10000, "How many rows batch for multi-gets and multi-puts");
+DEFINE_uint64(report_num_rows, 10000, "How frequent we should report the progress");
 DEFINE_bool(puts, true, "Whether to perform puts");
 DEFINE_bool(gets, true, "Whether to perform gets");
 DEFINE_bool(multigets, true, "Whether to perform multi-gets");
@@ -69,6 +72,13 @@ std::unique_ptr<Put> MakePut(const std::string &row) {
 std::string Row(const std::string &prefix, uint64_t i) {
   auto suf = folly::to<std::string>(i);
   return prefix + suf;
+}
+
+void ValidateResult(const Result &result, const std::string &row) {
+  CHECK(!result.IsEmpty());
+  CHECK_EQ(result.Row(), row);
+  CHECK_EQ(result.Size(), 1);
+  CHECK_EQ(result.Value("f", "q").value(), row);
 }
 
 int main(int argc, char *argv[]) {
@@ -106,6 +116,10 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Sending put requests";
     for (uint64_t i = 0; i < num_puts; i++) {
       table->Put(*MakePut(Row(FLAGS_row, i)));
+      if (i != 0 && i % FLAGS_report_num_rows == 0) {
+        LOG(INFO) << "Sent  " << i << " Put requests in " << TimeUtil::ElapsedMillis(start_ns)
+                  << " ms.";
+      }
     }
 
     LOG(INFO) << "Successfully sent  " << num_puts << " Put requests in "
@@ -117,10 +131,15 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Sending get requests";
     start_ns = TimeUtil::GetNowNanos();
     for (uint64_t i = 0; i < num_puts; i++) {
-      auto result = table->Get(Get{Row(FLAGS_row, i)});
+      auto row = Row(FLAGS_row, i);
+      auto result = table->Get(Get{row});
       if (FLAGS_display_results) {
         LOG(INFO) << result->DebugString();
+      } else if (i != 0 && i % FLAGS_report_num_rows == 0) {
+        LOG(INFO) << "Sent  " << i << " Get requests in " << TimeUtil::ElapsedMillis(start_ns)
+                  << " ms.";
       }
+      ValidateResult(*result, row);
     }
 
     LOG(INFO) << "Successfully sent  " << num_puts << " Get requests in "
@@ -129,21 +148,29 @@ int main(int argc, char *argv[]) {
 
   // Do the Multi-Gets
   if (FLAGS_multigets) {
-    std::vector<hbase::Get> gets;
-    for (uint64_t i = 0; i < num_puts; ++i) {
-      hbase::Get get(Row(FLAGS_row, i));
-      gets.push_back(get);
-    }
-
     LOG(INFO) << "Sending multi-get requests";
     start_ns = TimeUtil::GetNowNanos();
-    auto results = table->Get(gets);
+    std::vector<hbase::Get> gets;
 
-    if (FLAGS_display_results) {
-      for (const auto &result : results) LOG(INFO) << result->DebugString();
+    for (uint64_t i = 0; i < num_puts;) {
+      gets.clear();
+      // accumulate batch_num_rows at a time
+      for (uint64_t j = 0; j < FLAGS_batch_num_rows && i < num_puts; ++j) {
+        hbase::Get get(Row(FLAGS_row, i));
+        gets.push_back(get);
+        i++;
+      }
+      auto results = table->Get(gets);
+
+      if (FLAGS_display_results) {
+        for (const auto &result : results) LOG(INFO) << result->DebugString();
+      } else if (i != 0 && i % FLAGS_report_num_rows == 0) {
+        LOG(INFO) << "Sent  " << i << " Multi-Get requests in " << TimeUtil::ElapsedMillis(start_ns)
+                  << " ms.";
+      }
     }
 
-    LOG(INFO) << "Successfully sent  " << gets.size() << " Multi-Get requests in "
+    LOG(INFO) << "Successfully sent  " << num_puts << " Multi-Get requests in "
               << TimeUtil::ElapsedMillis(start_ns) << " ms.";
   }
 
@@ -162,6 +189,10 @@ int main(int argc, char *argv[]) {
       }
       r = scanner->Next();
       i++;
+      if (!FLAGS_display_results && i != 0 && i % FLAGS_report_num_rows == 0) {
+        LOG(INFO) << "Scan iterated over " << i << " results " << TimeUtil::ElapsedMillis(start_ns)
+                  << " ms.";
+      }
     }
 
     LOG(INFO) << "Successfully iterated over  " << i << " Scan results in "
