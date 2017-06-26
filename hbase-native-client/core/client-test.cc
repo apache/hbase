@@ -298,8 +298,7 @@ TEST_F(ClientTest, CheckAndDelete) {
   // Perform Puts
   table->Put(Put{row}.AddColumn("d", "1", val1));
   table->Put(Put{row}.AddColumn("d", "2", "value2"));
-  auto result =
-      table->CheckAndDelete(row, "d", "1", val1, hbase::Delete{row}.AddColumn("d", "2"));
+  auto result = table->CheckAndDelete(row, "d", "1", val1, hbase::Delete{row}.AddColumn("d", "2"));
   ASSERT_TRUE(result) << "CheckAndDelete didn't replace value";
 
   // Perform the Get
