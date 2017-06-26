@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -919,25 +920,37 @@ public final class RequestConverter {
     builder.setRegionInfo(HRegionInfo.convert(regionInfo));
     return builder.build();
   }
- /**
-  * Create a  CompactRegionRequest for a given region name
-  *
-  * @param regionName the name of the region to get info
-  * @param major indicator if it is a major compaction
-  * @return a CompactRegionRequest
-  */
- public static CompactRegionRequest buildCompactRegionRequest(
-     final byte[] regionName, final boolean major, final byte [] family) {
-   CompactRegionRequest.Builder builder = CompactRegionRequest.newBuilder();
-   RegionSpecifier region = buildRegionSpecifier(
-     RegionSpecifierType.REGION_NAME, regionName);
-   builder.setRegion(region);
-   builder.setMajor(major);
-   if (family != null) {
-     builder.setFamily(UnsafeByteOperations.unsafeWrap(family));
-   }
-   return builder.build();
- }
+
+  /**
+   * Create a CompactRegionRequest for a given region name
+   * @param regionName the name of the region to get info
+   * @param major indicator if it is a major compaction
+   * @param columnFamily
+   * @return a CompactRegionRequest
+   * @deprecated Use {@link #buildCompactRegionRequest(byte[], boolean, Optional)} instead.
+   */
+  @Deprecated
+  public static CompactRegionRequest buildCompactRegionRequest(byte[] regionName, boolean major,
+      byte[] columnFamily) {
+    return buildCompactRegionRequest(regionName, major, Optional.ofNullable(columnFamily));
+  }
+
+  /**
+   * Create a CompactRegionRequest for a given region name
+   * @param regionName the name of the region to get info
+   * @param major indicator if it is a major compaction
+   * @param columnFamily
+   * @return a CompactRegionRequest
+   */
+  public static CompactRegionRequest buildCompactRegionRequest(byte[] regionName, boolean major,
+      Optional<byte[]> columnFamily) {
+    CompactRegionRequest.Builder builder = CompactRegionRequest.newBuilder();
+    RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
+    builder.setRegion(region);
+    builder.setMajor(major);
+    columnFamily.ifPresent(family -> builder.setFamily(UnsafeByteOperations.unsafeWrap(family)));
+    return builder.build();
+  }
 
  /**
   * @see {@link #buildRollWALWriterRequest()}
@@ -1084,12 +1097,13 @@ public final class RequestConverter {
 
   /**
    * Create a protocol buffer MoveRegionRequest
-   *
    * @param encodedRegionName
    * @param destServerName
    * @return A MoveRegionRequest
    * @throws DeserializationException
+   * @deprecated Use {@link #buildMoveRegionRequest(byte[], Optional)} instead.
    */
+  @Deprecated
   public static MoveRegionRequest buildMoveRegionRequest(
       final byte [] encodedRegionName, final byte [] destServerName) throws
       DeserializationException {
@@ -1100,6 +1114,22 @@ public final class RequestConverter {
       builder.setDestServerName(
         ProtobufUtil.toServerName(ServerName.valueOf(Bytes.toString(destServerName))));
     }
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer MoveRegionRequest
+   * @param encodedRegionName
+   * @param destServerName
+   * @return A MoveRegionRequest
+   */
+  public static MoveRegionRequest buildMoveRegionRequest(byte[] encodedRegionName,
+      Optional<ServerName> destServerName) {
+    MoveRegionRequest.Builder builder = MoveRegionRequest.newBuilder();
+    builder.setRegion(buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME,
+      encodedRegionName));
+    destServerName.ifPresent(serverName -> builder.setDestServerName(ProtobufUtil
+        .toServerName(serverName)));
     return builder.build();
   }
 
@@ -1310,11 +1340,25 @@ public final class RequestConverter {
    * @param pattern The compiled regular expression to match against
    * @param includeSysTables False to match only against userspace tables
    * @return a GetTableDescriptorsRequest
+   * @deprecated Use {@link #buildGetTableDescriptorsRequest(Optional, boolean)} instead.
    */
+  @Deprecated
   public static GetTableDescriptorsRequest buildGetTableDescriptorsRequest(final Pattern pattern,
       boolean includeSysTables) {
+    return buildGetTableDescriptorsRequest(Optional.ofNullable(pattern), includeSysTables);
+  }
+
+  /**
+   * Creates a protocol buffer GetTableDescriptorsRequest
+   *
+   * @param pattern The compiled regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return a GetTableDescriptorsRequest
+   */
+  public static GetTableDescriptorsRequest
+      buildGetTableDescriptorsRequest(Optional<Pattern> pattern, boolean includeSysTables) {
     GetTableDescriptorsRequest.Builder builder = GetTableDescriptorsRequest.newBuilder();
-    if (pattern != null) builder.setRegex(pattern.toString());
+    pattern.ifPresent(p -> builder.setRegex(p.toString()));
     builder.setIncludeSysTables(includeSysTables);
     return builder.build();
   }
@@ -1325,11 +1369,25 @@ public final class RequestConverter {
    * @param pattern The compiled regular expression to match against
    * @param includeSysTables False to match only against userspace tables
    * @return a GetTableNamesRequest
+   * @deprecated Use {@link #buildGetTableNamesRequest(Optional, boolean)} instead.
    */
+  @Deprecated
   public static GetTableNamesRequest buildGetTableNamesRequest(final Pattern pattern,
       boolean includeSysTables) {
+    return buildGetTableNamesRequest(Optional.ofNullable(pattern), includeSysTables);
+  }
+
+  /**
+   * Creates a protocol buffer GetTableNamesRequest
+   *
+   * @param pattern The compiled regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return a GetTableNamesRequest
+   */
+  public static GetTableNamesRequest buildGetTableNamesRequest(Optional<Pattern> pattern,
+      boolean includeSysTables) {
     GetTableNamesRequest.Builder builder = GetTableNamesRequest.newBuilder();
-    if (pattern != null) builder.setRegex(pattern.toString());
+    pattern.ifPresent(p -> builder.setRegex(p.toString()));
     builder.setIncludeSysTables(includeSysTables);
     return builder.build();
   }
@@ -1635,11 +1693,18 @@ public final class RequestConverter {
     return builder.build();
   }
 
+  /**
+   * @deprecated Use {@link #buildListReplicationPeersRequest(Optional)} instead.
+   */
+  @Deprecated
   public static ListReplicationPeersRequest buildListReplicationPeersRequest(Pattern pattern) {
+    return buildListReplicationPeersRequest(Optional.ofNullable(pattern));
+  }
+
+  public static ListReplicationPeersRequest
+      buildListReplicationPeersRequest(Optional<Pattern> pattern) {
     ListReplicationPeersRequest.Builder builder = ListReplicationPeersRequest.newBuilder();
-    if (pattern != null) {
-      builder.setRegex(pattern.toString());
-    }
+    pattern.ifPresent(p -> builder.setRegex(p.toString()));
     return builder.build();
   }
 

@@ -364,13 +364,12 @@ public class MetaTableAccessor {
    * is stored in the name, so the returned object should only be used for the fields
    * in the regionName.
    */
-  protected static HRegionInfo parseRegionInfoFromRegionName(byte[] regionName)
-    throws IOException {
+  public static HRegionInfo parseRegionInfoFromRegionName(byte[] regionName) throws IOException {
     byte[][] fields = HRegionInfo.parseRegionName(regionName);
-    long regionId =  Long.parseLong(Bytes.toString(fields[2]));
+    long regionId = Long.parseLong(Bytes.toString(fields[2]));
     int replicaId = fields.length > 3 ? Integer.parseInt(Bytes.toString(fields[3]), 16) : 0;
-    return new HRegionInfo(
-      TableName.valueOf(fields[0]), fields[1], fields[1], false, regionId, replicaId);
+    return new HRegionInfo(TableName.valueOf(fields[0]), fields[1], fields[1], false, regionId,
+        replicaId);
   }
 
   /**

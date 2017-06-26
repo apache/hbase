@@ -29,23 +29,23 @@ public class TestAsyncBalancerAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testBalancer() throws Exception {
-    boolean initialState = admin.isBalancerEnabled().get();
+    boolean initialState = admin.isBalancerOn().get();
 
     // Start the balancer, wait for it.
-    boolean prevState = admin.setBalancerRunning(!initialState).get();
+    boolean prevState = admin.setBalancerOn(!initialState).get();
 
     // The previous state should be the original state we observed
     assertEquals(initialState, prevState);
 
     // Current state should be opposite of the original
-    assertEquals(!initialState, admin.isBalancerEnabled().get());
+    assertEquals(!initialState, admin.isBalancerOn().get());
 
     // Reset it back to what it was
-    prevState = admin.setBalancerRunning(initialState).get();
+    prevState = admin.setBalancerOn(initialState).get();
 
     // The previous state should be the opposite of the initial state
     assertEquals(!initialState, prevState);
     // Current state should be the original state again
-    assertEquals(initialState, admin.isBalancerEnabled().get());
+    assertEquals(initialState, admin.isBalancerOn().get());
   }
 }

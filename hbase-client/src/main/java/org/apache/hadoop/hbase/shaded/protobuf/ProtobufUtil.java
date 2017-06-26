@@ -33,8 +33,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -414,18 +416,14 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Get NamespaceDescriptor[] from ListNamespaceDescriptorsResponse protobuf
+   * Get a list of NamespaceDescriptor from ListNamespaceDescriptorsResponse protobuf
    * @param proto the ListNamespaceDescriptorsResponse
-   * @return NamespaceDescriptor[]
+   * @return a list of NamespaceDescriptor
    */
-  public static NamespaceDescriptor[] getNamespaceDescriptorArray(
+  public static List<NamespaceDescriptor> toNamespaceDescriptorList(
       ListNamespaceDescriptorsResponse proto) {
-    List<HBaseProtos.NamespaceDescriptor> list = proto.getNamespaceDescriptorList();
-    NamespaceDescriptor[] res = new NamespaceDescriptor[list.size()];
-    for (int i = 0; i < list.size(); i++) {
-      res[i] = ProtobufUtil.toNamespaceDescriptor(list.get(i));
-    }
-    return res;
+    return proto.getNamespaceDescriptorList().stream().map(ProtobufUtil::toNamespaceDescriptor)
+        .collect(Collectors.toList());
   }
 
   /**
@@ -433,7 +431,7 @@ public final class ProtobufUtil {
    *
    * @param proto the GetTableDescriptorsResponse
    * @return a immutable HTableDescriptor array
-   * @deprecated Use {@link #getTableDescriptorArray} after removing the HTableDescriptor
+   * @deprecated Use {@link #toTableDescriptorList} after removing the HTableDescriptor
    */
   @Deprecated
   public static HTableDescriptor[] getHTableDescriptorArray(GetTableDescriptorsResponse proto) {
@@ -447,18 +445,17 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Get TableDescriptor[] from GetTableDescriptorsResponse protobuf
+   * Get a list of TableDescriptor from GetTableDescriptorsResponse protobuf
    *
    * @param proto the GetTableDescriptorsResponse
-   * @return TableDescriptor[]
+   * @return a list of TableDescriptor
    */
-  public static TableDescriptor[] getTableDescriptorArray(GetTableDescriptorsResponse proto) {
-    if (proto == null) return new TableDescriptor[0];
-    return proto.getTableSchemaList()
-                .stream()
-                .map(ProtobufUtil::convertToTableDesc)
-                .toArray(size -> new TableDescriptor[size]);
+  public static List<TableDescriptor> toTableDescriptorList(GetTableDescriptorsResponse proto) {
+    if (proto == null) return new ArrayList<>();
+    return proto.getTableSchemaList().stream().map(ProtobufUtil::convertToTableDesc)
+        .collect(Collectors.toList());
   }
+
   /**
    * get the split keys in form "byte [][]" from a CreateTableRequest proto
    *
@@ -2398,6 +2395,13 @@ public final class ProtobufUtil {
         .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier())).build();
   }
 
+  public static List<TableName> toTableNameList(List<HBaseProtos.TableName> tableNamesList) {
+    if (tableNamesList == null) {
+      return new ArrayList<>();
+    }
+    return tableNamesList.stream().map(ProtobufUtil::toTableName).collect(Collectors.toList());
+  }
+
   public static TableName[] getTableNameArray(List<HBaseProtos.TableName> tableNamesList) {
     if (tableNamesList == null) {
       return new TableName[0];
@@ -3345,23 +3349,33 @@ public final class ProtobufUtil {
    }
 
   /**
-    * Create a SplitRegionRequest for a given region name
-    *
-    * @param regionName the name of the region to split
-    * @param splitPoint the split point
-    * @return a SplitRegionRequest
-    */
-   public static SplitRegionRequest buildSplitRegionRequest(
-       final byte[] regionName, final byte[] splitPoint) {
-     SplitRegionRequest.Builder builder = SplitRegionRequest.newBuilder();
-     RegionSpecifier region = RequestConverter.buildRegionSpecifier(
-       RegionSpecifierType.REGION_NAME, regionName);
-     builder.setRegion(region);
-     if (splitPoint != null) {
-       builder.setSplitPoint(UnsafeByteOperations.unsafeWrap(splitPoint));
-     }
-     return builder.build();
-   }
+   * Create a SplitRegionRequest for a given region name
+   * @param regionName the name of the region to split
+   * @param splitPoint the split point
+   * @return a SplitRegionRequest
+   * @deprecated Use {@link #buildSplitRegionRequest(byte[], Optional)} instead.
+   */
+  @Deprecated
+  public static SplitRegionRequest buildSplitRegionRequest(final byte[] regionName,
+      final byte[] splitPoint) {
+    return buildSplitRegionRequest(regionName, Optional.ofNullable(splitPoint));
+  }
+
+  /**
+   * Create a SplitRegionRequest for a given region name
+   * @param regionName the name of the region to split
+   * @param splitPoint the split point
+   * @return a SplitRegionRequest
+   */
+  public static SplitRegionRequest buildSplitRegionRequest(byte[] regionName,
+      Optional<byte[]> splitPoint) {
+    SplitRegionRequest.Builder builder = SplitRegionRequest.newBuilder();
+    RegionSpecifier region =
+        RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
+    builder.setRegion(region);
+    splitPoint.ifPresent(sp -> builder.setSplitPoint(UnsafeByteOperations.unsafeWrap(sp)));
+    return builder.build();
+  }
 
   public static ProcedureDescription buildProcedureDescription(String signature, String instance,
       Map<String, String> props) {
