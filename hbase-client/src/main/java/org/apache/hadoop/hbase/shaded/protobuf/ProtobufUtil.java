@@ -190,7 +190,6 @@ import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.mapreduce.tools.CLI;
 
 /**
  * Protobufs utility.
