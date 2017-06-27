@@ -220,7 +220,6 @@ case $startStop in
 
     check_before_start
     hbase_rotate_log $HBASE_LOGOUT
-    hbase_rotate_log $HBASE_LOGGC
     nohup $thiscmd --config "${HBASE_CONF_DIR}" --autostart-window-size ${AUTOSTART_WINDOW_SIZE} --autostart-window-retry-limit ${AUTOSTART_WINDOW_RETRY_LIMIT} \
         internal_autostart $command $args < /dev/null > ${HBASE_LOGOUT} 2>&1  &
   ;;
@@ -260,6 +259,7 @@ case $startStop in
     # keep starting the command until asked to stop. Reloop on software crash
     while true
     do
+      hbase_rotate_log $HBASE_LOGGC
       if [ -f $HBASE_PID ] &&  kill -0 "$(cat "$HBASE_PID")" > /dev/null 2>&1 ; then
         wait "$(cat "$HBASE_PID")"
       else
