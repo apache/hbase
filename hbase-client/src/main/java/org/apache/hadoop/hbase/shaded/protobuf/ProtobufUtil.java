@@ -3211,7 +3211,6 @@ public final class ProtobufUtil {
       for (ServerName serverName : status.getServers()) {
         LiveServerInfo.Builder lsi =
             LiveServerInfo.newBuilder().setServer(ProtobufUtil.toServerName(serverName));
-        status.getLoad(serverName);
         lsi.setServerLoad(status.getLoad(serverName).obtainServerLoadPB());
         builder.addLiveServers(lsi.build());
       }
