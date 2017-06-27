@@ -210,7 +210,7 @@ public class PoolMap<K, V> implements Map<K, V> {
         }
       }
     }
-    return null;
+    return entries;
   }
 
   protected interface Pool<R> {
