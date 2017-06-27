@@ -167,7 +167,13 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
                 regionMap.get(groupKey),
                 serverMap.get(groupKey));
         if(result != null) {
-          assignments.putAll(result);
+          if(result.containsKey(LoadBalancer.BOGUS_SERVER_NAME) &&
+              assignments.containsKey(LoadBalancer.BOGUS_SERVER_NAME)){
+            assignments.get(LoadBalancer.BOGUS_SERVER_NAME).addAll(
+              result.get(LoadBalancer.BOGUS_SERVER_NAME));
+          } else {
+            assignments.putAll(result);
+          }
         }
       }
     }

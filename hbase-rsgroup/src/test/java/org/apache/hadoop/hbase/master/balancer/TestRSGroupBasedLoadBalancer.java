@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.net.Address;
@@ -52,6 +53,8 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -242,6 +245,37 @@ public class TestRSGroupBasedLoadBalancer {
     Map<ServerName, List<HRegionInfo>> newAssignment = loadBalancer
         .retainAssignment(inputForTest, servers);
     assertRetainedAssignment(inputForTest, servers, newAssignment);
+  }
+
+  /**
+   * Test BOGUS_SERVER_NAME among groups do not overwrite each other
+   * @throws Exception
+   */
+  @Test
+  public void testRoundRobinAssignment() throws Exception {
+    List<ServerName> onlineServers = new ArrayList<ServerName>(servers.size());
+    onlineServers.addAll(servers);
+    List<HRegionInfo> regions = randomRegions(25);
+    int bogusRegion = 0;
+    for(HRegionInfo region : regions){
+      String group = tableMap.get(region.getTable());
+      if("dg3".equals(group) || "dg4".equals(group)){
+        bogusRegion++;
+      }
+    }
+    Set<Address> offlineServers = new HashSet<Address>();
+    offlineServers.addAll(groupMap.get("dg3").getServers());
+    offlineServers.addAll(groupMap.get("dg4").getServers());
+    for(Iterator<ServerName> it =  onlineServers.iterator(); it.hasNext();){
+      ServerName server = it.next();
+      Address address = server.getAddress();
+      if(offlineServers.contains(address)){
+        it.remove();
+      }
+    }
+    Map<ServerName, List<HRegionInfo>> assignments = loadBalancer
+        .roundRobinAssignment(regions, onlineServers);
+    assertEquals(bogusRegion, assignments.get(LoadBalancer.BOGUS_SERVER_NAME).size());
   }
 
   /**
