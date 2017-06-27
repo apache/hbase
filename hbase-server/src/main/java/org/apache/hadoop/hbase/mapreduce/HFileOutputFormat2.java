@@ -22,14 +22,20 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -88,24 +94,48 @@ import com.google.common.annotations.VisibleForTesting;
  * all HFiles being written.
  * <p>
  * Using this class as part of a MapReduce job is best done
- * using {@link #configureIncrementalLoad(Job, HTableDescriptor, RegionLocator, Class)}.
+ * using {@link #configureIncrementalLoad(Job, HTableDescriptor, RegionLocator)}.
  */
 @InterfaceAudience.Public
 public class HFileOutputFormat2
     extends FileOutputFormat<ImmutableBytesWritable, Cell> {
   private static final Log LOG = LogFactory.getLog(HFileOutputFormat2.class);
+  static class TableInfo {
+    private HTableDescriptor hTableDescriptor;
+    private RegionLocator regionLocator;
+
+    public TableInfo(HTableDescriptor hTableDescriptor, RegionLocator regionLocator) {
+      this.hTableDescriptor = hTableDescriptor;
+      this.regionLocator = regionLocator;
+    }
+
+    public HTableDescriptor getHTableDescriptor() {
+      return hTableDescriptor;
+    }
+
+    public RegionLocator getRegionLocator() {
+      return regionLocator;
+    }
+  }
+
+  protected static final byte[] tableSeparator = ";".getBytes(StandardCharsets.UTF_8);
+
+  protected static byte[] combineTableNameSuffix(byte[] tableName,
+                                       byte[] suffix ) {
+    return Bytes.add(tableName, tableSeparator, suffix);
+  }
 
   // The following constants are private since these are used by
   // HFileOutputFormat2 to internally transfer data between job setup and
   // reducer run using conf.
   // These should not be changed by the client.
-  private static final String COMPRESSION_FAMILIES_CONF_KEY =
+  static final String COMPRESSION_FAMILIES_CONF_KEY =
       "hbase.hfileoutputformat.families.compression";
-  private static final String BLOOM_TYPE_FAMILIES_CONF_KEY =
+  static final String BLOOM_TYPE_FAMILIES_CONF_KEY =
       "hbase.hfileoutputformat.families.bloomtype";
-  private static final String BLOCK_SIZE_FAMILIES_CONF_KEY =
+  static final String BLOCK_SIZE_FAMILIES_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.blocksize";
-  private static final String DATABLOCK_ENCODING_FAMILIES_CONF_KEY =
+  static final String DATABLOCK_ENCODING_FAMILIES_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.families.datablock.encoding";
 
   // This constant is public since the client can modify this when setting
@@ -121,8 +151,10 @@ public class HFileOutputFormat2
   public static final String LOCALITY_SENSITIVE_CONF_KEY =
       "hbase.bulkload.locality.sensitive.enabled";
   private static final boolean DEFAULT_LOCALITY_SENSITIVE = true;
-  private static final String OUTPUT_TABLE_NAME_CONF_KEY =
+  static final String OUTPUT_TABLE_NAME_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.table.name";
+  static final String MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY =
+          "hbase.mapreduce.use.multi.table.hfileoutputformat";
 
   public static final String STORAGE_POLICY_PROPERTY = "hbase.hstore.storagepolicy";
   public static final String STORAGE_POLICY_PROPERTY_CF_PREFIX = STORAGE_POLICY_PROPERTY + ".";
@@ -133,270 +165,277 @@ public class HFileOutputFormat2
     return createRecordWriter(context);
   }
 
-  static <V extends Cell> RecordWriter<ImmutableBytesWritable, V>
-  createRecordWriter(final TaskAttemptContext context) throws IOException {
-    return new HFileRecordWriter<>(context, null);
+  protected static byte[] getTableNameSuffixedWithFamily(byte[] tableName, byte[] family) {
+    return combineTableNameSuffix(tableName, family);
   }
 
-  protected static class HFileRecordWriter<V extends Cell>
-      extends RecordWriter<ImmutableBytesWritable, V> {
-    private final TaskAttemptContext context;
-    private final Path outputPath;
-    private final Path outputDir;
-    private final Configuration conf;
-    private final FileSystem fs;
+  static <V extends Cell> RecordWriter<ImmutableBytesWritable, V>
+      createRecordWriter(final TaskAttemptContext context)
+          throws IOException {
 
-    private final long maxsize;
+    // Get the path of the temporary output file
+    final Path outputPath = FileOutputFormat.getOutputPath(context);
+    final Path outputDir = new FileOutputCommitter(outputPath, context).getWorkPath();
+    final Configuration conf = context.getConfiguration();
+    final boolean writeMultipleTables = conf.getBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false) ;
+    final String writeTableNames = conf.get(OUTPUT_TABLE_NAME_CONF_KEY);
+    if (writeTableNames==null || writeTableNames.isEmpty()) {
+      throw new IllegalArgumentException("Configuration parameter " + OUTPUT_TABLE_NAME_CONF_KEY
+              + " cannot be empty");
+    }
+    final FileSystem fs = outputDir.getFileSystem(conf);
+    // These configs. are from hbase-*.xml
+    final long maxsize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
+        HConstants.DEFAULT_MAX_FILE_SIZE);
+    // Invented config.  Add to hbase-*.xml if other than default compression.
+    final String defaultCompressionStr = conf.get("hfile.compression",
+        Compression.Algorithm.NONE.getName());
+    final Algorithm defaultCompression = HFileWriterImpl
+        .compressionByName(defaultCompressionStr);
+    final boolean compactionExclude = conf.getBoolean(
+        "hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
 
-    private final Algorithm defaultCompression;
-    private final boolean compactionExclude;
+    final Set<String> allTableNames = Arrays.stream(writeTableNames.split(
+            Bytes.toString(tableSeparator))).collect(Collectors.toSet());
 
-    private final Map<byte[], Algorithm> compressionMap;
-    private final Map<byte[], BloomType> bloomTypeMap;
-    private final Map<byte[], Integer> blockSizeMap;
+    // create a map from column family to the compression algorithm
+    final Map<byte[], Algorithm> compressionMap = createFamilyCompressionMap(conf);
+    final Map<byte[], BloomType> bloomTypeMap = createFamilyBloomTypeMap(conf);
+    final Map<byte[], Integer> blockSizeMap = createFamilyBlockSizeMap(conf);
 
-    private final Map<byte[], DataBlockEncoding> datablockEncodingMap;
-    private final DataBlockEncoding overriddenEncoding;
-
-    private final Map<byte[], WriterLength> writers;
-    private byte[] previousRow;
-    private final byte[] now;
-    private boolean rollRequested;
-
-    /**
-     * Mapredue job will create a temp path for outputting results. If out != null, it means that
-     * the caller has set the temp working dir; If out == null, it means we need to set it here.
-     * Used by HFileOutputFormat2 and MultiTableHFileOutputFormat. MultiTableHFileOutputFormat will give us
-     * temp working dir at the table level and HFileOutputFormat2 has to set it here within this
-     * constructor.
-     */
-    public HFileRecordWriter(final TaskAttemptContext taContext, final Path out)
-        throws IOException {
-      // Get the path of the temporary output file
-      context = taContext;
-
-      if (out == null) {
-        outputPath = FileOutputFormat.getOutputPath(context);
-        outputDir = new FileOutputCommitter(outputPath, context).getWorkPath();
-      } else {
-        outputPath = out;
-        outputDir = outputPath;
-      }
-
-      conf = context.getConfiguration();
-      fs = outputDir.getFileSystem(conf);
-
-      // These configs. are from hbase-*.xml
-      maxsize = conf.getLong(HConstants.HREGION_MAX_FILESIZE, HConstants.DEFAULT_MAX_FILE_SIZE);
-
-      // Invented config. Add to hbase-*.xml if other than default compression.
-      String defaultCompressionStr = conf.get("hfile.compression", Compression.Algorithm.NONE.getName());
-      defaultCompression = HFileWriterImpl.compressionByName(defaultCompressionStr);
-      compactionExclude =
-          conf.getBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
-
-      // create a map from column family to the compression algorithm
-      compressionMap = createFamilyCompressionMap(conf);
-      bloomTypeMap = createFamilyBloomTypeMap(conf);
-      blockSizeMap = createFamilyBlockSizeMap(conf);
-
-      // Config for data block encoding
-      String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_OVERRIDE_CONF_KEY);
-      datablockEncodingMap = createFamilyDataBlockEncodingMap(conf);
-      if (dataBlockEncodingStr != null) {
-        overriddenEncoding = DataBlockEncoding.valueOf(dataBlockEncodingStr);
-      } else {
-        overriddenEncoding = null;
-      }
-
-      writers = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      previousRow = HConstants.EMPTY_BYTE_ARRAY;
-      now = Bytes.toBytes(EnvironmentEdgeManager.currentTime());
-      rollRequested = false;
+    String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_OVERRIDE_CONF_KEY);
+    final Map<byte[], DataBlockEncoding> datablockEncodingMap
+        = createFamilyDataBlockEncodingMap(conf);
+    final DataBlockEncoding overriddenEncoding;
+    if (dataBlockEncodingStr != null) {
+      overriddenEncoding = DataBlockEncoding.valueOf(dataBlockEncodingStr);
+    } else {
+      overriddenEncoding = null;
     }
 
-    @Override
-    public void write(ImmutableBytesWritable row, V cell) throws IOException {
-      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+    return new RecordWriter<ImmutableBytesWritable, V>() {
+      // Map of families to writers and how much has been output on the writer.
+      private final Map<byte[], WriterLength> writers =
+              new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      private byte[] previousRow = HConstants.EMPTY_BYTE_ARRAY;
+      private final byte[] now = Bytes.toBytes(EnvironmentEdgeManager.currentTime());
+      private boolean rollRequested = false;
 
-      // null input == user explicitly wants to flush
-      if (row == null && kv == null) {
-        rollWriters();
-        return;
-      }
+      @Override
+      public void write(ImmutableBytesWritable row, V cell)
+          throws IOException {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
 
-      byte[] rowKey = CellUtil.cloneRow(kv);
-      long length = kv.getLength();
-      byte[] family = CellUtil.cloneFamily(kv);
-      WriterLength wl = this.writers.get(family);
+        // null input == user explicitly wants to flush
+        if (row == null && kv == null) {
+          rollWriters();
+          return;
+        }
 
-      // If this is a new column family, verify that the directory exists
-      if (wl == null) {
-        Path cfPath = new Path(outputDir, Bytes.toString(family));
-        fs.mkdirs(cfPath);
-        configureStoragePolicy(conf, fs, family, cfPath);
-      }
-
-      // If any of the HFiles for the column families has reached
-      // maxsize, we need to roll all the writers
-      if (wl != null && wl.written + length >= maxsize) {
-        this.rollRequested = true;
-      }
-
-      // This can only happen once a row is finished though
-      if (rollRequested && Bytes.compareTo(this.previousRow, rowKey) != 0) {
-        rollWriters();
-      }
-
-      // create a new WAL writer, if necessary
-      if (wl == null || wl.writer == null) {
-        if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
-          HRegionLocation loc = null;
-          String tableName = conf.get(OUTPUT_TABLE_NAME_CONF_KEY);
-          if (tableName != null) {
-            try (Connection connection = ConnectionFactory.createConnection(conf);
-                RegionLocator locator = connection.getRegionLocator(TableName.valueOf(tableName))) {
-              loc = locator.getRegionLocation(rowKey);
-            } catch (Throwable e) {
-              LOG.warn("there's something wrong when locating rowkey: " + Bytes.toString(rowKey),
-                  e);
-              loc = null;
-            }
-          }
-
-          if (null == loc) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace(
-                  "failed to get region location, so use default writer: " + Bytes.toString(rowKey));
-            }
-            wl = getNewWriter(family, conf, null);
-          } else {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("first rowkey: [" + Bytes.toString(rowKey) + "]");
-            }
-            InetSocketAddress initialIsa = new InetSocketAddress(loc.getHostname(), loc.getPort());
-            if (initialIsa.isUnresolved()) {
-              if (LOG.isTraceEnabled()) {
-                LOG.trace("failed to resolve bind address: " + loc.getHostname() + ":"
-                    + loc.getPort() + ", so use default writer");
-              }
-              wl = getNewWriter(family, conf, null);
-            } else {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("use favored nodes writer: " + initialIsa.getHostString());
-              }
-              wl = getNewWriter(family, conf, new InetSocketAddress[] { initialIsa });
-            }
+        byte[] rowKey = CellUtil.cloneRow(kv);
+        long length = kv.getLength();
+        byte[] family = CellUtil.cloneFamily(kv);
+        byte[] tableNameBytes = null;
+        if (writeMultipleTables) {
+          tableNameBytes = MultiTableHFileOutputFormat.getTableName(row.get());
+          if (!allTableNames.contains(Bytes.toString(tableNameBytes))) {
+            throw new IllegalArgumentException("TableName '" + Bytes.toString(tableNameBytes) +
+                    "' not" + " expected");
           }
         } else {
-          wl = getNewWriter(family, conf, null);
+          tableNameBytes = writeTableNames.getBytes(StandardCharsets.UTF_8);
+        }
+        byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableNameBytes, family);
+        WriterLength wl = this.writers.get(tableAndFamily);
+
+        // If this is a new column family, verify that the directory exists
+        if (wl == null) {
+          Path writerPath = null;
+          if (writeMultipleTables) {
+            writerPath = new Path(outputDir, new Path(Bytes.toString(tableNameBytes), Bytes
+                    .toString(family)));
+          }
+          else {
+            writerPath = new Path(outputDir, Bytes.toString(family));
+          }
+          fs.mkdirs(writerPath);
+          configureStoragePolicy(conf, fs, tableAndFamily, writerPath);
+        }
+
+        // If any of the HFiles for the column families has reached
+        // maxsize, we need to roll all the writers
+        if (wl != null && wl.written + length >= maxsize) {
+          this.rollRequested = true;
+        }
+
+        // This can only happen once a row is finished though
+        if (rollRequested && Bytes.compareTo(this.previousRow, rowKey) != 0) {
+          rollWriters();
+        }
+
+        // create a new WAL writer, if necessary
+        if (wl == null || wl.writer == null) {
+          if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
+            HRegionLocation loc = null;
+
+            String tableName = Bytes.toString(tableNameBytes);
+            if (tableName != null) {
+              try (Connection connection = ConnectionFactory.createConnection(conf);
+                     RegionLocator locator =
+                       connection.getRegionLocator(TableName.valueOf(tableName))) {
+                loc = locator.getRegionLocation(rowKey);
+              } catch (Throwable e) {
+                LOG.warn("There's something wrong when locating rowkey: " +
+                  Bytes.toString(rowKey) + " for tablename: " + tableName, e);
+                loc = null;
+              } }
+
+            if (null == loc) {
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("failed to get region location, so use default writer for rowkey: " +
+                  Bytes.toString(rowKey));
+              }
+              wl = getNewWriter(tableNameBytes, family, conf, null);
+            } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("first rowkey: [" + Bytes.toString(rowKey) + "]");
+              }
+              InetSocketAddress initialIsa =
+                  new InetSocketAddress(loc.getHostname(), loc.getPort());
+              if (initialIsa.isUnresolved()) {
+                if (LOG.isTraceEnabled()) {
+                  LOG.trace("failed to resolve bind address: " + loc.getHostname() + ":"
+                      + loc.getPort() + ", so use default writer");
+                }
+                wl = getNewWriter(tableNameBytes, family, conf, null);
+              } else {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("use favored nodes writer: " + initialIsa.getHostString());
+                }
+                wl = getNewWriter(tableNameBytes, family, conf, new InetSocketAddress[] { initialIsa
+                });
+              }
+            }
+          } else {
+            wl = getNewWriter(tableNameBytes, family, conf, null);
+          }
+        }
+
+        // we now have the proper WAL writer. full steam ahead
+        kv.updateLatestStamp(this.now);
+        wl.writer.append(kv);
+        wl.written += length;
+
+        // Copy the row so we know when a row transition.
+        this.previousRow = rowKey;
+      }
+
+      private void rollWriters() throws IOException {
+        for (WriterLength wl : this.writers.values()) {
+          if (wl.writer != null) {
+            LOG.info(
+                "Writer=" + wl.writer.getPath() + ((wl.written == 0)? "": ", wrote=" + wl.written));
+            close(wl.writer);
+          }
+          wl.writer = null;
+          wl.written = 0;
+        }
+        this.rollRequested = false;
+      }
+
+      /*
+       * Create a new StoreFile.Writer.
+       * @param family
+       * @return A WriterLength, containing a new StoreFile.Writer.
+       * @throws IOException
+       */
+      @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BX_UNBOXING_IMMEDIATELY_REBOXED",
+          justification="Not important")
+      private WriterLength getNewWriter(byte[] tableName, byte[] family, Configuration
+              conf, InetSocketAddress[] favoredNodes) throws IOException {
+        byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableName, family);
+        Path familydir = new Path(outputDir, Bytes.toString(family));
+        if (writeMultipleTables) {
+          familydir = new Path(outputDir,
+                  new Path(Bytes.toString(tableName), Bytes.toString(family)));
+        }
+        WriterLength wl = new WriterLength();
+        Algorithm compression = compressionMap.get(tableAndFamily);
+        compression = compression == null ? defaultCompression : compression;
+        BloomType bloomType = bloomTypeMap.get(tableAndFamily);
+        bloomType = bloomType == null ? BloomType.NONE : bloomType;
+        Integer blockSize = blockSizeMap.get(tableAndFamily);
+        blockSize = blockSize == null ? HConstants.DEFAULT_BLOCKSIZE : blockSize;
+        DataBlockEncoding encoding = overriddenEncoding;
+        encoding = encoding == null ? datablockEncodingMap.get(tableAndFamily) : encoding;
+        encoding = encoding == null ? DataBlockEncoding.NONE : encoding;
+        Configuration tempConf = new Configuration(conf);
+        tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
+        HFileContextBuilder contextBuilder = new HFileContextBuilder()
+                                    .withCompression(compression)
+                                    .withChecksumType(HStore.getChecksumType(conf))
+                                    .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
+                                    .withBlockSize(blockSize);
+
+        if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+          contextBuilder.withIncludesTags(true);
+        }
+
+        contextBuilder.withDataBlockEncoding(encoding);
+        HFileContext hFileContext = contextBuilder.build();
+        if (null == favoredNodes) {
+          wl.writer =
+              new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), fs)
+                  .withOutputDir(familydir).withBloomType(bloomType)
+                  .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext).build();
+        } else {
+          wl.writer =
+              new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
+                  .withOutputDir(familydir).withBloomType(bloomType)
+                  .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext)
+                  .withFavoredNodes(favoredNodes).build();
+        }
+
+        this.writers.put(tableAndFamily, wl);
+        return wl;
+      }
+
+      private void close(final StoreFileWriter w) throws IOException {
+        if (w != null) {
+          w.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY,
+              Bytes.toBytes(System.currentTimeMillis()));
+          w.appendFileInfo(StoreFile.BULKLOAD_TASK_KEY,
+              Bytes.toBytes(context.getTaskAttemptID().toString()));
+          w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY,
+              Bytes.toBytes(true));
+          w.appendFileInfo(StoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
+              Bytes.toBytes(compactionExclude));
+          w.appendTrackedTimestampsToMetadata();
+          w.close();
         }
       }
 
-      // we now have the proper WAL writer. full steam ahead
-      kv.updateLatestStamp(this.now);
-      wl.writer.append(kv);
-      wl.written += length;
-
-      // Copy the row so we know when a row transition.
-      this.previousRow = rowKey;
-    }
-
-    private void rollWriters() throws IOException {
-      for (WriterLength wl : this.writers.values()) {
-        if (wl.writer != null) {
-          LOG.info(
-              "Writer=" + wl.writer.getPath() + ((wl.written == 0) ? "" : ", wrote=" + wl.written));
+      @Override
+      public void close(TaskAttemptContext c)
+      throws IOException, InterruptedException {
+        for (WriterLength wl: this.writers.values()) {
           close(wl.writer);
         }
-        wl.writer = null;
-        wl.written = 0;
       }
-      this.rollRequested = false;
-    }
-
-    /*
-     * Create a new StoreFile.Writer.
-     * @param family
-     * @return A WriterLength, containing a new StoreFile.Writer.
-     * @throws IOException
-     */
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "BX_UNBOXING_IMMEDIATELY_REBOXED",
-        justification = "Not important")
-    private WriterLength getNewWriter(byte[] family, Configuration conf,
-        InetSocketAddress[] favoredNodes) throws IOException {
-      WriterLength wl = new WriterLength();
-      Path familyDir = new Path(outputDir, Bytes.toString(family));
-      Algorithm compression = compressionMap.get(family);
-      compression = compression == null ? defaultCompression : compression;
-      BloomType bloomType = bloomTypeMap.get(family);
-      bloomType = bloomType == null ? BloomType.NONE : bloomType;
-      Integer blockSize = blockSizeMap.get(family);
-      blockSize = blockSize == null ? HConstants.DEFAULT_BLOCKSIZE : blockSize;
-      DataBlockEncoding encoding = overriddenEncoding;
-      encoding = encoding == null ? datablockEncodingMap.get(family) : encoding;
-      encoding = encoding == null ? DataBlockEncoding.NONE : encoding;
-      Configuration tempConf = new Configuration(conf);
-      tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
-      HFileContextBuilder contextBuilder = new HFileContextBuilder().withCompression(compression)
-          .withChecksumType(HStore.getChecksumType(conf))
-          .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(blockSize);
-
-      if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
-        contextBuilder.withIncludesTags(true);
-      }
-
-      contextBuilder.withDataBlockEncoding(encoding);
-      HFileContext hFileContext = contextBuilder.build();
-
-      if (null == favoredNodes) {
-        wl.writer = new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), fs)
-            .withOutputDir(familyDir).withBloomType(bloomType)
-            .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext).build();
-      } else {
-        wl.writer =
-            new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
-                .withOutputDir(familyDir).withBloomType(bloomType)
-                .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext)
-                .withFavoredNodes(favoredNodes).build();
-      }
-
-      this.writers.put(family, wl);
-      return wl;
-    }
-
-    private void close(final StoreFileWriter w) throws IOException {
-      if (w != null) {
-        w.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY, Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
-        w.appendFileInfo(StoreFile.BULKLOAD_TASK_KEY,
-            Bytes.toBytes(context.getTaskAttemptID().toString()));
-        w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY, Bytes.toBytes(true));
-        w.appendFileInfo(StoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
-            Bytes.toBytes(compactionExclude));
-        w.appendTrackedTimestampsToMetadata();
-        w.close();
-      }
-    }
-
-    @Override
-    public void close(TaskAttemptContext c) throws IOException, InterruptedException {
-      for (WriterLength wl : this.writers.values()) {
-        close(wl.writer);
-      }
-    }
+    };
   }
 
   /**
    * Configure block storage policy for CF after the directory is created.
    */
   static void configureStoragePolicy(final Configuration conf, final FileSystem fs,
-      byte[] family, Path cfPath) {
-    if (null == conf || null == fs || null == family || null == cfPath) {
+      byte[] tableAndFamily, Path cfPath) {
+    if (null == conf || null == fs || null == tableAndFamily || null == cfPath) {
       return;
     }
 
     String policy =
-        conf.get(STORAGE_POLICY_PROPERTY_CF_PREFIX + Bytes.toString(family),
+        conf.get(STORAGE_POLICY_PROPERTY_CF_PREFIX + Bytes.toString(tableAndFamily),
           conf.get(STORAGE_POLICY_PROPERTY));
     FSUtils.setStoragePolicy(fs, cfPath, policy);
   }
@@ -413,12 +452,29 @@ public class HFileOutputFormat2
    * Return the start keys of all of the regions in this table,
    * as a list of ImmutableBytesWritable.
    */
-  private static List<ImmutableBytesWritable> getRegionStartKeys(RegionLocator table)
-  throws IOException {
-    byte[][] byteKeys = table.getStartKeys();
-    ArrayList<ImmutableBytesWritable> ret = new ArrayList<>(byteKeys.length);
-    for (byte[] byteKey : byteKeys) {
-      ret.add(new ImmutableBytesWritable(byteKey));
+  private static List<ImmutableBytesWritable> getRegionStartKeys(List<RegionLocator> regionLocators,
+                                                                 boolean writeMultipleTables)
+          throws IOException {
+
+    ArrayList<ImmutableBytesWritable> ret = new ArrayList<>();
+    for(RegionLocator regionLocator : regionLocators)
+    {
+      TableName tableName = regionLocator.getName();
+      LOG.info("Looking up current regions for table " + tableName);
+      byte[][] byteKeys = regionLocator.getStartKeys();
+      for (byte[] byteKey : byteKeys) {
+        byte[] fullKey = byteKey; //HFileOutputFormat2 use case
+        if (writeMultipleTables)
+        {
+          //MultiTableHFileOutputFormat use case
+          fullKey = combineTableNameSuffix(tableName.getName(), byteKey);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("SplitPoint startkey for table [" + tableName + "]: [" + Bytes.toStringBinary
+                  (fullKey) + "]");
+        }
+        ret.add(new ImmutableBytesWritable(fullKey));
+      }
     }
     return ret;
   }
@@ -429,7 +485,7 @@ public class HFileOutputFormat2
    */
   @SuppressWarnings("deprecation")
   private static void writePartitions(Configuration conf, Path partitionsPath,
-      List<ImmutableBytesWritable> startKeys) throws IOException {
+      List<ImmutableBytesWritable> startKeys, boolean writeMultipleTables) throws IOException {
     LOG.info("Writing partition information to " + partitionsPath);
     if (startKeys.isEmpty()) {
       throw new IllegalArgumentException("No regions passed");
@@ -440,14 +496,17 @@ public class HFileOutputFormat2
     // so we need to remove it. Otherwise we would end up with an
     // empty reducer with index 0
     TreeSet<ImmutableBytesWritable> sorted = new TreeSet<>(startKeys);
-
     ImmutableBytesWritable first = sorted.first();
+    if (writeMultipleTables) {
+      first = new ImmutableBytesWritable(MultiTableHFileOutputFormat.getSuffix(sorted.first
+              ().get()));
+    }
     if (!first.equals(HConstants.EMPTY_BYTE_ARRAY)) {
       throw new IllegalArgumentException(
           "First region of table should have empty start key. Instead has: "
           + Bytes.toStringBinary(first.get()));
     }
-    sorted.remove(first);
+    sorted.remove(sorted.first());
 
     // Write the actual file
     FileSystem fs = partitionsPath.getFileSystem(conf);
@@ -499,17 +558,25 @@ public class HFileOutputFormat2
    */
   public static void configureIncrementalLoad(Job job, HTableDescriptor tableDescriptor,
       RegionLocator regionLocator) throws IOException {
-    configureIncrementalLoad(job, tableDescriptor, regionLocator, HFileOutputFormat2.class);
+    ArrayList<TableInfo> singleTableInfo = new ArrayList<>();
+    singleTableInfo.add(new TableInfo(tableDescriptor, regionLocator));
+    configureIncrementalLoad(job, singleTableInfo, HFileOutputFormat2.class);
   }
 
-  static void configureIncrementalLoad(Job job, HTableDescriptor tableDescriptor,
-      RegionLocator regionLocator, Class<? extends OutputFormat<?, ?>> cls) throws IOException,
-      UnsupportedEncodingException {
+  static void configureIncrementalLoad(Job job, List<TableInfo> multiTableInfo, Class<? extends OutputFormat<?, ?>> cls) throws IOException {
     Configuration conf = job.getConfiguration();
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(KeyValue.class);
     job.setOutputFormatClass(cls);
 
+    if (multiTableInfo.stream().distinct().count() != multiTableInfo.size()) {
+      throw new IllegalArgumentException("Duplicate entries found in TableInfo argument");
+    }
+    boolean writeMultipleTables = false;
+    if (MultiTableHFileOutputFormat.class.equals(cls)) {
+      writeMultipleTables = true;
+      conf.setBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, true);
+    }
     // Based on the configured map output class, set the correct reducer to properly
     // sort the incoming values.
     // TODO it would be nice to pick one or the other of these formats.
@@ -528,28 +595,44 @@ public class HFileOutputFormat2
         KeyValueSerialization.class.getName());
 
     if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
-      // record this table name for creating writer by favored nodes
       LOG.info("bulkload locality sensitive enabled");
-      conf.set(OUTPUT_TABLE_NAME_CONF_KEY, regionLocator.getName().getNameAsString());
     }
 
+    /* Now get the region start keys for every table required */
+    List<String> allTableNames = new ArrayList<>(multiTableInfo.size());
+    List<RegionLocator> regionLocators = new ArrayList<>( multiTableInfo.size());
+    List<HTableDescriptor> tableDescriptors = new ArrayList<>( multiTableInfo.size());
+
+    for( TableInfo tableInfo : multiTableInfo )
+    {
+      regionLocators.add(tableInfo.getRegionLocator());
+      allTableNames.add(tableInfo.getRegionLocator().getName().getNameAsString());
+      tableDescriptors.add(tableInfo.getHTableDescriptor());
+    }
+    // Record tablenames for creating writer by favored nodes, and decoding compression, block size and other attributes of columnfamily per table
+    conf.set(OUTPUT_TABLE_NAME_CONF_KEY, StringUtils.join(allTableNames, Bytes
+            .toString(tableSeparator)));
+    List<ImmutableBytesWritable> startKeys = getRegionStartKeys(regionLocators, writeMultipleTables);
     // Use table's region boundaries for TOP split points.
-    LOG.info("Looking up current regions for table " + regionLocator.getName());
-    List<ImmutableBytesWritable> startKeys = getRegionStartKeys(regionLocator);
     LOG.info("Configuring " + startKeys.size() + " reduce partitions " +
-        "to match current region count");
+        "to match current region count for all tables");
     job.setNumReduceTasks(startKeys.size());
 
-    configurePartitioner(job, startKeys);
+    configurePartitioner(job, startKeys, writeMultipleTables);
     // Set compression algorithms based on column families
-    configureCompression(conf, tableDescriptor);
-    configureBloomType(tableDescriptor, conf);
-    configureBlockSize(tableDescriptor, conf);
-    configureDataBlockEncoding(tableDescriptor, conf);
+
+    conf.set(COMPRESSION_FAMILIES_CONF_KEY, serializeColumnFamilyAttribute(compressionDetails,
+            tableDescriptors));
+    conf.set(BLOCK_SIZE_FAMILIES_CONF_KEY, serializeColumnFamilyAttribute(blockSizeDetails,
+            tableDescriptors));
+    conf.set(BLOOM_TYPE_FAMILIES_CONF_KEY, serializeColumnFamilyAttribute(bloomTypeDetails,
+            tableDescriptors));
+    conf.set(DATABLOCK_ENCODING_FAMILIES_CONF_KEY,
+            serializeColumnFamilyAttribute(dataBlockEncodingDetails, tableDescriptors));
 
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.initCredentials(job);
-    LOG.info("Incremental table " + regionLocator.getName() + " output configured.");
+    LOG.info("Incremental output configured for tables: " + StringUtils.join(allTableNames, ","));
   }
 
   public static void configureIncrementalLoadMap(Job job, HTableDescriptor tableDescriptor) throws
@@ -560,11 +643,19 @@ public class HFileOutputFormat2
     job.setOutputValueClass(KeyValue.class);
     job.setOutputFormatClass(HFileOutputFormat2.class);
 
+    ArrayList<HTableDescriptor> singleTableDescriptor = new ArrayList<>(1);
+    singleTableDescriptor.add(tableDescriptor);
+
+    conf.set(OUTPUT_TABLE_NAME_CONF_KEY, tableDescriptor.getNameAsString());
     // Set compression algorithms based on column families
-    configureCompression(conf, tableDescriptor);
-    configureBloomType(tableDescriptor, conf);
-    configureBlockSize(tableDescriptor, conf);
-    configureDataBlockEncoding(tableDescriptor, conf);
+    conf.set(COMPRESSION_FAMILIES_CONF_KEY,
+        serializeColumnFamilyAttribute(compressionDetails, singleTableDescriptor));
+    conf.set(BLOCK_SIZE_FAMILIES_CONF_KEY,
+        serializeColumnFamilyAttribute(blockSizeDetails, singleTableDescriptor));
+    conf.set(BLOOM_TYPE_FAMILIES_CONF_KEY,
+        serializeColumnFamilyAttribute(bloomTypeDetails, singleTableDescriptor));
+    conf.set(DATABLOCK_ENCODING_FAMILIES_CONF_KEY,
+        serializeColumnFamilyAttribute(dataBlockEncodingDetails, singleTableDescriptor));
 
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.initCredentials(job);
@@ -667,7 +758,7 @@ public class HFileOutputFormat2
         continue;
       }
       try {
-        confValMap.put(URLDecoder.decode(familySplit[0], "UTF-8").getBytes(),
+        confValMap.put(URLDecoder.decode(familySplit[0], "UTF-8").getBytes(StandardCharsets.UTF_8),
             URLDecoder.decode(familySplit[1], "UTF-8"));
       } catch (UnsupportedEncodingException e) {
         // will not happen with UTF-8 encoding
@@ -681,7 +772,8 @@ public class HFileOutputFormat2
    * Configure <code>job</code> with a TotalOrderPartitioner, partitioning against
    * <code>splitPoints</code>. Cleans up the partitions file after job exists.
    */
-  static void configurePartitioner(Job job, List<ImmutableBytesWritable> splitPoints)
+  static void configurePartitioner(Job job, List<ImmutableBytesWritable> splitPoints, boolean
+          writeMultipleTables)
       throws IOException {
     Configuration conf = job.getConfiguration();
     // create the partitions file
@@ -691,12 +783,40 @@ public class HFileOutputFormat2
           HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
     Path partitionsPath = new Path(hbaseTmpFsDir, "partitions_" + UUID.randomUUID());
     fs.makeQualified(partitionsPath);
-    writePartitions(conf, partitionsPath, splitPoints);
+    writePartitions(conf, partitionsPath, splitPoints, writeMultipleTables);
     fs.deleteOnExit(partitionsPath);
 
     // configure job to use it
     job.setPartitionerClass(TotalOrderPartitioner.class);
     TotalOrderPartitioner.setPartitionFile(conf, partitionsPath);
+  }
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
+  @VisibleForTesting
+  static String serializeColumnFamilyAttribute(Function<HColumnDescriptor, String> fn, List<HTableDescriptor> allTables)
+      throws UnsupportedEncodingException {
+    StringBuilder attributeValue = new StringBuilder();
+    int i = 0;
+    for (HTableDescriptor tableDescriptor : allTables) {
+      if (tableDescriptor == null) {
+        // could happen with mock table instance
+        // CODEREVIEW: Can I set an empty string in conf if mock table instance?
+        return "";
+      }
+      Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
+      for (HColumnDescriptor familyDescriptor : families) {
+        if (i++ > 0) {
+          attributeValue.append('&');
+        }
+        attributeValue.append(URLEncoder.encode(
+            Bytes.toString(combineTableNameSuffix(tableDescriptor.getTableName().getName(), familyDescriptor.getName())),
+            "UTF-8"));
+        attributeValue.append('=');
+        attributeValue.append(URLEncoder.encode(fn.apply(familyDescriptor), "UTF-8"));
+      }
+    }
+    // Get rid of the last ampersand
+    return attributeValue.toString();
   }
 
   /**
@@ -708,134 +828,65 @@ public class HFileOutputFormat2
    * @throws IOException
    *           on failure to read column family descriptors
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-      value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   @VisibleForTesting
-  static void configureCompression(Configuration conf, HTableDescriptor tableDescriptor)
-      throws UnsupportedEncodingException {
-    StringBuilder compressionConfigValue = new StringBuilder();
-    if(tableDescriptor == null){
-      // could happen with mock table instance
-      return;
-    }
-    Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
-    int i = 0;
-    for (HColumnDescriptor familyDescriptor : families) {
-      if (i++ > 0) {
-        compressionConfigValue.append('&');
-      }
-      compressionConfigValue.append(URLEncoder.encode(
-        familyDescriptor.getNameAsString(), "UTF-8"));
-      compressionConfigValue.append('=');
-      compressionConfigValue.append(URLEncoder.encode(
-        familyDescriptor.getCompressionType().getName(), "UTF-8"));
-    }
-    // Get rid of the last ampersand
-    conf.set(COMPRESSION_FAMILIES_CONF_KEY, compressionConfigValue.toString());
-  }
+  static Function<HColumnDescriptor, String> compressionDetails = familyDescriptor ->
+          familyDescriptor.getCompressionType().getName();
 
   /**
-   * Serialize column family to block size map to configuration.
-   * Invoked while configuring the MR job for incremental load.
-   * @param tableDescriptor to read the properties from
-   * @param conf to persist serialized values into
+   * Serialize column family to block size map to configuration. Invoked while
+   * configuring the MR job for incremental load.
+   *
+   * @param tableDescriptor
+   *          to read the properties from
+   * @param conf
+   *          to persist serialized values into
    *
    * @throws IOException
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureBlockSize(HTableDescriptor tableDescriptor, Configuration conf)
-      throws UnsupportedEncodingException {
-    StringBuilder blockSizeConfigValue = new StringBuilder();
-    if (tableDescriptor == null) {
-      // could happen with mock table instance
-      return;
-    }
-    Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
-    int i = 0;
-    for (HColumnDescriptor familyDescriptor : families) {
-      if (i++ > 0) {
-        blockSizeConfigValue.append('&');
-      }
-      blockSizeConfigValue.append(URLEncoder.encode(
-          familyDescriptor.getNameAsString(), "UTF-8"));
-      blockSizeConfigValue.append('=');
-      blockSizeConfigValue.append(URLEncoder.encode(
-          String.valueOf(familyDescriptor.getBlocksize()), "UTF-8"));
-    }
-    // Get rid of the last ampersand
-    conf.set(BLOCK_SIZE_FAMILIES_CONF_KEY, blockSizeConfigValue.toString());
-  }
+  static Function<HColumnDescriptor, String> blockSizeDetails = familyDescriptor -> String
+          .valueOf(familyDescriptor.getBlocksize());
 
   /**
-   * Serialize column family to bloom type map to configuration.
-   * Invoked while configuring the MR job for incremental load.
-   * @param tableDescriptor to read the properties from
-   * @param conf to persist serialized values into
+   * Serialize column family to bloom type map to configuration. Invoked while
+   * configuring the MR job for incremental load.
+   *
+   * @param tableDescriptor
+   *          to read the properties from
+   * @param conf
+   *          to persist serialized values into
    *
    * @throws IOException
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureBloomType(HTableDescriptor tableDescriptor, Configuration conf)
-      throws UnsupportedEncodingException {
-    if (tableDescriptor == null) {
-      // could happen with mock table instance
-      return;
+  static Function<HColumnDescriptor, String> bloomTypeDetails = familyDescriptor -> {
+    String bloomType = familyDescriptor.getBloomFilterType().toString();
+    if (bloomType == null) {
+      bloomType = HColumnDescriptor.DEFAULT_BLOOMFILTER;
     }
-    StringBuilder bloomTypeConfigValue = new StringBuilder();
-    Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
-    int i = 0;
-    for (HColumnDescriptor familyDescriptor : families) {
-      if (i++ > 0) {
-        bloomTypeConfigValue.append('&');
-      }
-      bloomTypeConfigValue.append(URLEncoder.encode(
-        familyDescriptor.getNameAsString(), "UTF-8"));
-      bloomTypeConfigValue.append('=');
-      String bloomType = familyDescriptor.getBloomFilterType().toString();
-      if (bloomType == null) {
-        bloomType = HColumnDescriptor.DEFAULT_BLOOMFILTER;
-      }
-      bloomTypeConfigValue.append(URLEncoder.encode(bloomType, "UTF-8"));
-    }
-    conf.set(BLOOM_TYPE_FAMILIES_CONF_KEY, bloomTypeConfigValue.toString());
-  }
+    return bloomType;
+  };
 
   /**
    * Serialize column family to data block encoding map to configuration.
    * Invoked while configuring the MR job for incremental load.
    *
-   * @param tableDescriptor to read the properties from
-   * @param conf to persist serialized values into
+   * @param tableDescriptor
+   *          to read the properties from
+   * @param conf
+   *          to persist serialized values into
    * @throws IOException
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureDataBlockEncoding(HTableDescriptor tableDescriptor,
-      Configuration conf) throws UnsupportedEncodingException {
-    if (tableDescriptor == null) {
-      // could happen with mock table instance
-      return;
+  static Function<HColumnDescriptor, String> dataBlockEncodingDetails = familyDescriptor -> {
+    DataBlockEncoding encoding = familyDescriptor.getDataBlockEncoding();
+    if (encoding == null) {
+      encoding = DataBlockEncoding.NONE;
     }
-    StringBuilder dataBlockEncodingConfigValue = new StringBuilder();
-    Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
-    int i = 0;
-    for (HColumnDescriptor familyDescriptor : families) {
-      if (i++ > 0) {
-        dataBlockEncodingConfigValue.append('&');
-      }
-      dataBlockEncodingConfigValue.append(
-          URLEncoder.encode(familyDescriptor.getNameAsString(), "UTF-8"));
-      dataBlockEncodingConfigValue.append('=');
-      DataBlockEncoding encoding = familyDescriptor.getDataBlockEncoding();
-      if (encoding == null) {
-        encoding = DataBlockEncoding.NONE;
-      }
-      dataBlockEncodingConfigValue.append(URLEncoder.encode(encoding.toString(),
-          "UTF-8"));
-    }
-    conf.set(DATABLOCK_ENCODING_FAMILIES_CONF_KEY,
-        dataBlockEncodingConfigValue.toString());
-  }
+    return encoding.toString();
+  };
+
 }
