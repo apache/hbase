@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,7 +56,7 @@ import org.apache.hadoop.io.WritableUtils;
 @InterfaceAudience.Private
 public class StoreFileWriter implements CellSink, ShipperListener {
   private static final Log LOG = LogFactory.getLog(StoreFileWriter.class.getName());
-
+  private static final Pattern dash = Pattern.compile("-");
   private final BloomFilterWriter generalBloomFilterWriter;
   private final BloomFilterWriter deleteFamilyBloomFilterWriter;
   private final BloomType bloomType;
@@ -367,7 +368,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     if (!fs.getFileStatus(dir).isDirectory()) {
       throw new IOException("Expecting " + dir.toString() + " to be a directory");
     }
-    return new Path(dir, UUID.randomUUID().toString().replaceAll("-", ""));
+    return new Path(dir, dash.matcher(UUID.randomUUID().toString()).replaceAll(""));
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ICAST_INTEGER_MULTIPLY_CAST_TO_LONG",
