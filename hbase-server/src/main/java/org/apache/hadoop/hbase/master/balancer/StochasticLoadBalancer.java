@@ -1279,9 +1279,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
 
       // We normalize locality to be a score between 0 and 1.0 representing how good it
-      // is compared to how good it could be. If bestLocality is 0, assume locality is 100
-      // (and the cost is 0)
-      locality = bestLocality == 0 ? 1 : locality / bestLocality;
+      // is compared to how good it could be
+      locality /= bestLocality;
     }
 
     @Override
@@ -1292,7 +1291,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return;
       }
       double localityDelta = getWeightedLocality(region, newEntity) - getWeightedLocality(region, oldEntity);
-      double normalizedDelta = bestLocality == 0 ? 0.0 : localityDelta / bestLocality;
+      double normalizedDelta = localityDelta / bestLocality;
       locality += normalizedDelta;
     }
 
