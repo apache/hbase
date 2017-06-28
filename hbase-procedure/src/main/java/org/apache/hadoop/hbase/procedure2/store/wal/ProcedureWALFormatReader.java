@@ -483,8 +483,12 @@ public class ProcedureWALFormatReader {
      */
     private static boolean isIncreasing(ProcedureProtos.Procedure current,
         ProcedureProtos.Procedure candidate) {
-      boolean increasing = current.getStackIdCount() <= candidate.getStackIdCount() &&
-        current.getLastUpdate() <= candidate.getLastUpdate();
+      // Check that the procedures we see are 'increasing'. We used to compare
+      // procedure id first and then update time but it can legitimately go backwards if the
+      // procedure is failed or rolled back so that was unreliable. Was going to compare
+      // state but lets see if comparing update time enough (unfortunately this issue only
+      // seen under load...)
+      boolean increasing = current.getLastUpdate() <= candidate.getLastUpdate();
       if (!increasing) {
         LOG.warn("NOT INCREASING! current=" + current + ", candidate=" + candidate);
       }
