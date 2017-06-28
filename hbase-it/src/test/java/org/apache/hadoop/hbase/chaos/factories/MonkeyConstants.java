@@ -39,6 +39,7 @@ public interface MonkeyConstants {
   String UNBALANCE_WAIT_FOR_UNBALANCE_MS = "unbalance.action.wait.period";
   String UNBALANCE_WAIT_FOR_KILLS_MS = "unbalance.action.kill.period";
   String UNBALANCE_WAIT_AFTER_BALANCE_MS = "unbalance.action.wait.after.period";
+  String UNBALANCE_KILL_META_RS = "unbalance.action.kill.meta.rs";
   String DECREASE_HFILE_SIZE_SLEEP_TIME = "decrease.hfile.size.sleep.time";
 
   long DEFAULT_PERIODIC_ACTION1_PERIOD = 60 * 1000;
@@ -61,5 +62,6 @@ public interface MonkeyConstants {
   long DEFAULT_UNBALANCE_WAIT_FOR_UNBALANCE_MS = 2 * 1000;
   long DEFAULT_UNBALANCE_WAIT_FOR_KILLS_MS = 2 * 1000;
   long DEFAULT_UNBALANCE_WAIT_AFTER_BALANCE_MS = 5 * 1000;
+  boolean DEFAULT_UNBALANCE_KILL_META_RS = true;
   long DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME = 30 * 1000;
 }
