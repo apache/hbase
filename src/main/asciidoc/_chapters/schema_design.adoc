@@ -748,7 +748,7 @@ This approach would be useful if scanning by hostname was a priority.
 [[schema.casestudies.log_timeseries.revts]]
 ==== Timestamp, or Reverse Timestamp?
 
-If the most important access path is to pull most recent events, then storing the timestamps as reverse-timestamps (e.g., `timestamp = Long.MAX_VALUE – timestamp`) will create the property of being able to do a Scan on `[hostname][log-event]` to obtain the quickly obtain the most recently captured events.
+If the most important access path is to pull most recent events, then storing the timestamps as reverse-timestamps (e.g., `timestamp = Long.MAX_VALUE – timestamp`) will create the property of being able to do a Scan on `[hostname][log-event]` to obtain the most recently captured events.
 
 Neither approach is wrong, it just depends on what is most appropriate for the situation.
 
@@ -1152,7 +1152,7 @@ Detect regionserver failure as fast as reasonable. Set the following parameters:
 - `dfs.client.read.shortcircuit = true`
 - `dfs.client.read.shortcircuit.buffer.size = 131072` (Important to avoid OOME)
 * Ensure data locality. In `hbase-site.xml`, set `hbase.hstore.min.locality.to.skip.major.compact = 0.7` (Meaning that 0.7 \<= n \<= 1)
-* Make sure DataNodes have enough handlers for block transfers. In `hdfs-site`.xml``, set the following parameters:
+* Make sure DataNodes have enough handlers for block transfers. In `hdfs-site.xml`, set the following parameters:
 - `dfs.datanode.max.xcievers >= 8192`
 - `dfs.datanode.handler.count =` number of spindles
 
