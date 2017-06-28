@@ -31,13 +31,14 @@ public class UnbalanceMonkeyFactory extends MonkeyFactory {
   private long waitForUnbalanceMilliSec;
   private long waitForKillMilliSec;
   private long waitAfterBalanceMilliSec;
+  private boolean killMetaRs;
 
   @Override
   public ChaosMonkey build() {
     loadProperties();
     Policy chaosPolicy = new PeriodicRandomActionPolicy(chaosEveryMilliSec,
         new UnbalanceKillAndRebalanceAction(waitForUnbalanceMilliSec, waitForKillMilliSec,
-            waitAfterBalanceMilliSec));
+            waitAfterBalanceMilliSec, killMetaRs));
 
     return new PolicyBasedChaosMonkey(util, chaosPolicy);
   }
@@ -55,5 +56,8 @@ public class UnbalanceMonkeyFactory extends MonkeyFactory {
     waitAfterBalanceMilliSec = Long.parseLong(this.properties.getProperty(
       MonkeyConstants.UNBALANCE_WAIT_AFTER_BALANCE_MS,
       MonkeyConstants.DEFAULT_UNBALANCE_WAIT_AFTER_BALANCE_MS + ""));
+    killMetaRs = Boolean.parseBoolean(this.properties.getProperty(
+      MonkeyConstants.UNBALANCE_KILL_META_RS,
+      MonkeyConstants.DEFAULT_UNBALANCE_KILL_META_RS + ""));
   }
 }
