@@ -1355,6 +1355,7 @@
     <jetty-jsp.version>9.2.19.v20160908</jetty-jsp.version>
     <jackson1.version>1.9.13</jackson1.version>
     <servlet.api.version>3.1.0</servlet.api.version>
+    <wx.rs.api.version>2.0.1</wx.rs.api.version>
     <jersey.version>2.25.1</jersey.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jruby.version>9.1.10.0</jruby.version>
@@ -1821,6 +1822,11 @@
         <groupId>javax.servlet</groupId>
         <artifactId>javax.servlet-api</artifactId>
         <version>${servlet.api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.ws.rs</groupId>
+        <artifactId>javax.ws.rs-api</artifactId>
+        <version>${wx.rs.api.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
