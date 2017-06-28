@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.*;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Pair;
 import org.hamcrest.core.IsInstanceOf;
 import org.hamcrest.core.StringStartsWith;
 import org.junit.rules.TestRule;
@@ -74,8 +75,8 @@ public class TestLockProcedure {
   @Rule
   public TestName testName = new TestName();
   // crank this up if this test turns out to be flaky.
-  private static final int HEARTBEAT_TIMEOUT = 1000;
-  private static final int LOCAL_LOCKS_TIMEOUT = 2000;
+  private static final int HEARTBEAT_TIMEOUT = 2000;
+  private static final int LOCAL_LOCKS_TIMEOUT = 4000;
 
   private static final Log LOG = LogFactory.getLog(TestLockProcedure.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -438,9 +439,9 @@ public class TestLockProcedure {
       Thread.sleep(250);
     }
     assertEquals(true, procExec.isRunning());
-    LockProcedure proc = (LockProcedure) procExec.getProcedure(lockProc.getProcId());
-    assertTrue(proc == null || !proc.isLocked());
     ProcedureTestingUtility.waitProcedure(procExec, lockProc.getProcId());
+    Pair<ProcedureInfo, Procedure> result = procExec.getResultOrProcedure(lockProc.getProcId());
+    assertTrue(result.getFirst() != null && !result.getFirst().isFailed());
     ProcedureTestingUtility.assertProcNotFailed(procExec, lockProc.getProcId());
   }
 }
