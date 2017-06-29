@@ -636,7 +636,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       long procId = master.splitRegion(
         HRegionInfo.convert(request.getRegionInfo()),
-        request.getSplitRow().toByteArray(),
+        request.hasSplitRow() ? request.getSplitRow().toByteArray() : null,
         request.getNonceGroup(),
         request.getNonce());
       return SplitTableRegionResponse.newBuilder().setProcId(procId).build();

@@ -118,6 +118,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleaner
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
@@ -782,6 +784,19 @@ public final class RequestConverter {
   public static GetRegionInfoRequest
       buildGetRegionInfoRequest(final byte[] regionName,
         final boolean includeCompactionState) {
+    return buildGetRegionInfoRequest(regionName, includeCompactionState, false);
+  }
+
+  /**
+   *
+   * @param regionName the name of the region to get info
+   * @param includeCompactionState indicate if the compaction state is requested
+   * @param includeBestSplitRow indicate if the bestSplitRow  is requested
+   * @return protocol buffer GetRegionInfoRequest
+   */
+  public static GetRegionInfoRequest
+      buildGetRegionInfoRequest(final byte[] regionName,
+      final boolean includeCompactionState, final boolean includeBestSplitRow) {
     GetRegionInfoRequest.Builder builder = GetRegionInfoRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
@@ -789,8 +804,12 @@ public final class RequestConverter {
     if (includeCompactionState) {
       builder.setCompactionState(includeCompactionState);
     }
+    if(includeBestSplitRow) {
+      builder.setBestSplitRow(includeBestSplitRow);
+    }
     return builder.build();
   }
+
 
   /**
    * Create a protocol buffer GetRegionLoadRequest for all regions/regions of a table.
@@ -1144,6 +1163,21 @@ public final class RequestConverter {
         RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfdaughaterRegions[i]));
     }
     builder.setForcible(forcible);
+    builder.setNonceGroup(nonceGroup);
+    builder.setNonce(nonce);
+    return builder.build();
+  }
+
+  public static SplitTableRegionRequest buildSplitTableRegionRequest(
+      final HRegionInfo regionInfo,
+      final byte[] splitRow,
+      final long nonceGroup,
+      final long nonce) throws DeserializationException {
+    SplitTableRegionRequest.Builder builder = SplitTableRegionRequest.newBuilder();
+    builder.setRegionInfo(HRegionInfo.convert(regionInfo));
+    if (splitRow != null) {
+      builder.setSplitRow(UnsafeByteOperations.unsafeWrap(splitRow));
+    }
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();

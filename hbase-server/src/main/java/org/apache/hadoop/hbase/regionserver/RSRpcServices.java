@@ -1673,6 +1673,20 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       requestCount.increment();
       Region region = getRegion(request.getRegion());
       HRegionInfo info = region.getRegionInfo();
+      byte[] bestSplitRow = null;
+      if (request.hasBestSplitRow() && request.getBestSplitRow()) {
+        HRegion r = (HRegion) region;
+        region.startRegionOperation(Operation.SPLIT_REGION);
+        r.forceSplit(null);
+        bestSplitRow = r.checkSplit();
+        // when all table data are in memstore, bestSplitRow = null
+        // try to flush region first
+        if(bestSplitRow == null) {
+          r.flush(true);
+          bestSplitRow = r.checkSplit();
+        }
+        r.clearSplit();
+      }
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
       builder.setRegionInfo(HRegionInfo.convert(info));
       if (request.hasCompactionState() && request.getCompactionState()) {
@@ -1681,6 +1695,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       builder.setSplittable(region.isSplittable());
       builder.setMergeable(region.isMergeable());
       builder.setIsRecovering(region.isRecovering());
+      if (request.hasBestSplitRow() && request.getBestSplitRow() && bestSplitRow != null) {
+        builder.setBestSplitRow(UnsafeByteOperations.unsafeWrap(bestSplitRow));
+      }
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);

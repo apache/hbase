@@ -985,6 +985,8 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param regionName region to split
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 2.0. Will be removed in 3.0. Use
+   *     {@link #splitRegionAsync(byte[], byte[])} instead.
    */
   void splitRegion(final byte[] regionName) throws IOException;
 
@@ -1004,8 +1006,19 @@ public interface Admin extends Abortable, Closeable {
    * @param regionName region to split
    * @param splitPoint the explicit position to split on
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 2.0. Will be removed in 3.0. Use
+   *     {@link #splitRegionAsync(byte[], byte[])} instead.
    */
   void splitRegion(final byte[] regionName, final byte[] splitPoint)
+    throws IOException;
+
+  /**
+   * Split an individual region. Asynchronous operation.
+   * @param regionName region to split
+   * @param splitPoint the explicit position to split on
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> splitRegionAsync(byte[] regionName, byte[] splitPoint)
     throws IOException;
 
   /**
