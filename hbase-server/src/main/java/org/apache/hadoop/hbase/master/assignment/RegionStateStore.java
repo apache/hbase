@@ -171,7 +171,7 @@ public class RegionStateStore {
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
           "Open region should be on a server");
-      MetaTableAccessor.addLocation(put, regionLocation, openSeqNum, -1, replicaId);
+      MetaTableAccessor.addLocation(put, regionLocation, openSeqNum, replicaId);
       info.append(", openSeqNum=").append(openSeqNum);
       info.append(", regionLocation=").append(regionLocation);
     } else if (regionLocation != null && !regionLocation.equals(lastHost)) {
@@ -233,8 +233,7 @@ public class RegionStateStore {
       final HRegionInfo hriB, final ServerName serverName)  throws IOException {
     final HTableDescriptor htd = getTableDescriptor(parent.getTable());
     MetaTableAccessor.mergeRegions(master.getConnection(), parent, hriA, hriB, serverName,
-        getRegionReplication(htd), EnvironmentEdgeManager.currentTime(),
-        hasSerialReplicationScope(htd));
+      getRegionReplication(htd), hasSerialReplicationScope(htd));
   }
 
   // ============================================================================================

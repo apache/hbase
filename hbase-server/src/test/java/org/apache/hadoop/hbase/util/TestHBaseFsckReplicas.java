@@ -181,7 +181,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
       Collection<ServerName> var = admin.getClusterStatus().getServers();
       ServerName sn = var.toArray(new ServerName[var.size()])[0];
       //add a location with replicaId as 2 (since we already have replicas with replicaid 0 and 1)
-      MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), -1, 2);
+      MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), 2);
       meta.put(put);
       // assign the new replica
       HBaseFsckRepair.fixUnassigned(admin, newHri);

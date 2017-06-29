@@ -2216,7 +2216,6 @@ public class HRegionServer extends HasThread implements
   public boolean reportRegionStateTransition(final RegionStateTransitionContext context) {
     TransitionCode code = context.getCode();
     long openSeqNum = context.getOpenSeqNum();
-    long masterSystemTime = context.getMasterSystemTime();
     HRegionInfo[] hris = context.getHris();
 
     if (TEST_SKIP_REPORTING_TRANSITION) {
@@ -2235,7 +2234,7 @@ public class HRegionServer extends HasThread implements
         } else {
           try {
             MetaTableAccessor.updateRegionLocation(clusterConnection,
-              hris[0], serverName, openSeqNum, masterSystemTime);
+              hris[0], serverName, openSeqNum);
           } catch (IOException e) {
             LOG.info("Failed to update meta", e);
             return false;

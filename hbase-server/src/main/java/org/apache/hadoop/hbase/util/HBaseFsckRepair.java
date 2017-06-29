@@ -176,7 +176,7 @@ public class HBaseFsckRepair {
         // see the additional replicas when it is asked to assign. The
         // final value of these columns will be different and will be updated
         // by the actual regionservers that start hosting the respective replicas
-        MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), -1, i);
+        MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), i);
       }
     }
     meta.put(put);
