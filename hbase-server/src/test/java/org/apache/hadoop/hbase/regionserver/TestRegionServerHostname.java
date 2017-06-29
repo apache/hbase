@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -44,36 +46,40 @@ import org.junit.experimental.categories.Category;
 public class TestRegionServerHostname {
   private static final Log LOG = LogFactory.getLog(TestRegionServerHostname.class);
 
-  @Test (timeout=30000)
-  public void testInvalidRegionServerHostnameAbortsServer() throws Exception {
-    final int NUM_MASTERS = 1;
-    final int NUM_RS = 1;
-    String invalidHostname = "hostAddr.invalid";
+  private HBaseTestingUtility TEST_UTIL;
+
+  private static final int NUM_MASTERS = 1;
+  private static final int NUM_RS = 1;
+
+  @Before
+  public void setup() {
     Configuration conf = HBaseConfiguration.create();
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL = new HBaseTestingUtility(conf);
+  }
+
+  @After
+  public void teardown() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test(timeout=30000)
+  public void testInvalidRegionServerHostnameAbortsServer() throws Exception {
+    String invalidHostname = "hostAddr.invalid";
     TEST_UTIL.getConfiguration().set(HRegionServer.RS_HOSTNAME_KEY, invalidHostname);
+    HRegionServer hrs = null;
     try {
-      TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    } catch (IOException ioe) {
-      Throwable t1 = ioe.getCause();
-      Throwable t2 = t1.getCause();
-      assertTrue(t1.getMessage() + " - " + t2.getMessage(),
-        t2.getMessage().contains("Failed resolve of " + invalidHostname) ||
-        t2.getMessage().contains("Problem binding to " + invalidHostname));
-      return;
-    } finally {
-      TEST_UTIL.shutdownMiniCluster();
+      hrs = new HRegionServer(TEST_UTIL.getConfiguration(), null);
+    } catch (IllegalArgumentException iae) {
+      assertTrue(iae.getMessage(),
+        iae.getMessage().contains("Failed resolve of " + invalidHostname) ||
+        iae.getMessage().contains("Problem binding to " + invalidHostname));
     }
-    assertTrue("Failed to validate against invalid hostname", false);
+    assertNull("Failed to validate against invalid hostname", hrs);
   }
 
   @Test(timeout=120000)
   public void testRegionServerHostname() throws Exception {
-    final int NUM_MASTERS = 1;
-    final int NUM_RS = 1;
     Enumeration<NetworkInterface> netInterfaceList = NetworkInterface.getNetworkInterfaces();
-    Configuration conf = HBaseConfiguration.create();
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     while (netInterfaceList.hasMoreElements()) {
       NetworkInterface ni = netInterfaceList.nextElement();
       Enumeration<InetAddress> addrList = ni.getInetAddresses();
@@ -108,11 +114,7 @@ public class TestRegionServerHostname {
 
   @Test(timeout=30000)
   public void testConflictRegionServerHostnameConfigurationsAbortServer() throws Exception {
-    final int NUM_MASTERS = 1;
-    final int NUM_RS = 1;
     Enumeration<NetworkInterface> netInterfaceList = NetworkInterface.getNetworkInterfaces();
-    Configuration conf = HBaseConfiguration.create();
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     while (netInterfaceList.hasMoreElements()) {
       NetworkInterface ni = netInterfaceList.nextElement();
       Enumeration<InetAddress> addrList = ni.getInetAddresses();
@@ -149,20 +151,12 @@ public class TestRegionServerHostname {
 
   @Test(timeout=30000)
   public void testRegionServerHostnameReportedToMaster() throws Exception {
-    final int NUM_MASTERS = 1;
-    final int NUM_RS = 1;
-    Configuration conf = HBaseConfiguration.create();
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.getConfiguration().setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    try {
-      ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    try (ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher()) {
       List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.rsZNode);
       // there would be NUM_RS+1 children - one for the master
       assertTrue(servers.size() == NUM_RS);
-      zkw.close();
-    } finally {
-      TEST_UTIL.shutdownMiniCluster();
     }
   }
 }
