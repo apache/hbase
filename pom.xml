@@ -574,13 +574,6 @@
             <xmlOutput>true</xmlOutput>
             <effort>Max</effort>
           </configuration>
-          <dependencies>
-            <dependency>
-              <groupId>com.github.spotbugs</groupId>
-              <artifactId>spotbugs</artifactId>
-              <version>${spotbugs.version}</version>
-            </dependency>
-          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -1886,6 +1879,25 @@
                 <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used -->
                 <additionalparam>-Xdoclint:none</additionalparam>
               </configuration>
+            </plugin>
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>findbugs-maven-plugin</artifactId>
+              <version>3.0.0</version>
+              <!--NOTE: Findbugs 3.0.0 requires jdk7-->
+              <configuration>
+                <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
+                <findbugsXmlOutput>true</findbugsXmlOutput>
+                <xmlOutput>true</xmlOutput>
+                <effort>Max</effort>
+              </configuration>
+              <dependencies>
+                <dependency>
+                  <groupId>com.github.spotbugs</groupId>
+                  <artifactId>spotbugs</artifactId>
+                  <version>${spotbugs.version}</version>
+                </dependency>
+              </dependencies>
             </plugin>
           </plugins>
         </pluginManagement>
