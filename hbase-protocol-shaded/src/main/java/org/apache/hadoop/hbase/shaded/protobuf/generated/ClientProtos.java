@@ -22985,7 +22985,7 @@ public final class ClientProtos {
        * <code>optional .hbase.pb.Cursor cursor = 12;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Cursor, org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Cursor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CursorOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Cursor, org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Cursor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CursorOrBuilder> 
           getCursorFieldBuilder() {
         if (cursorBuilder_ == null) {
           cursorBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -41831,7 +41831,7 @@ public final class ClientProtos {
       internal_static_hbase_pb_ScanRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_Cursor_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_Cursor_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
