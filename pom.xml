@@ -529,25 +529,26 @@
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.5.0.Final</version>
+        <version>${os.maven.version}</version>
       </extension>
     </extensions>
+    <!-- Plugin versions are inherited from ASF parent pom: https://maven.apache.org/pom/asf/
+         For specific version use a property and define it in the parent pom.
+     -->
     <pluginManagement>
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
            <artifactId>maven-javadoc-plugin</artifactId>
-           <version>${javadoc.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.5</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>2.4.1</version>
+          <version>${maven.shade.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -569,7 +570,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.2</version>
+          <version>${maven.compiler.version}</version>
           <configuration>
             <source>${compileSource}</source>
             <target>${compileSource}</target>
@@ -654,12 +655,12 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>buildnumber-maven-plugin</artifactId>
-          <version>1.3</version>
+          <version>${buildnumber.maven.version}</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>3.0.0</version>
+          <version>${findbugs.maven.version}</version>
           <!--NOTE: Findbugs 3.0.0 requires jdk7-->
           <configuration>
             <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
@@ -671,7 +672,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.9.1</version>
+          <version>${build.helper.maven.version}</version>
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
@@ -731,7 +732,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-eclipse-plugin</artifactId>
-          <version>2.9</version>
+          <version>${maven.eclipse.version}</version>
         </plugin>
         <!--This plugin's configuration is used to store Eclipse m2e settings
             only. It has no influence on the Maven build itself. m2e does not
@@ -744,7 +745,7 @@
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
+          <version>${lifecycle.mapping.version}</version>
           <configuration>
             <lifecycleMappingMetadata>
               <pluginExecutions>
@@ -812,7 +813,7 @@
           <!-- excludes are inherited -->
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>0.11</version>
+          <version>${apache.rat.version}</version>
           <configuration>
             <excludes>
               <exclude>**/*.versionsBackup</exclude>
@@ -862,7 +863,6 @@
         </plugin>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>${maven.assembly.version}</version>
           <configuration>
             <!--Defer to the hbase-assembly sub-module.  It
              does all assembly-->
@@ -884,7 +884,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>2.17</version>
+          <version>${maven.checkstyle.version}</version>
           <dependencies>
             <dependency>
               <groupId>org.apache.hbase</groupId>
@@ -926,7 +926,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.4</version>
         <dependencies>
           <dependency>
             <groupId>org.codehaus.mojo</groupId>
@@ -1061,7 +1060,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0</version>
+        <version>${xml.maven.version}</version>
         <inherited>false</inherited>
         <executions>
           <execution>
@@ -1133,14 +1132,13 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
-        <version>3.4</version>
         <inherited>false</inherited>
         <dependencies>
           <dependency>
             <!-- add support for ssh/scp -->
             <groupId>org.apache.maven.wagon</groupId>
             <artifactId>wagon-ssh</artifactId>
-            <version>2.2</version>
+            <version>${wagon.ssh.version}</version>
           </dependency>
         </dependencies>
         <configuration>
@@ -1160,7 +1158,7 @@
           <dependency>
             <groupId>org.asciidoctor</groupId>
             <artifactId>asciidoctorj-pdf</artifactId>
-            <version>1.5.0-alpha.6</version>
+            <version>${asciidoctorj.pdf.version}</version>
           </dependency>
         </dependencies>
         <configuration>
@@ -1293,14 +1291,14 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.5.3</version>
+        <version>${maven.bundle.version}</version>
         <inherited>true</inherited>
         <extensions>true</extensions>
       </plugin>
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
-        <version>2.15.2</version>
+        <version>${maven.scala.version}</version>
       </plugin>
     </plugins>
   </build>
@@ -1390,14 +1388,34 @@
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>2.12.0</curator.version>
     <!-- Plugin Dependencies -->
-    <maven.assembly.version>2.4</maven.assembly.version>
-    <maven.antrun.version>1.8</maven.antrun.version>
-    <jamon.plugin.version>2.4.1</jamon.plugin.version>
-    <findbugs-annotations>1.3.9-1</findbugs-annotations>
+    <apache.rat.version>0.12</apache.rat.version>
+    <asciidoctor.plugin.version>1.5.5</asciidoctor.plugin.version>
+    <asciidoctorj.pdf.version>1.5.0-alpha.15</asciidoctorj.pdf.version>
+    <build.helper.maven.version>3.0.0</build.helper.maven.version>
+    <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <checkstyle.version>6.18</checkstyle.version>
-    <javadoc.version>2.10.3</javadoc.version>
-    <asciidoctor.plugin.version>1.5.2.1</asciidoctor.plugin.version>
-    <spotbugs.version>3.1.0-RC1</spotbugs.version>
+    <exec.maven.version>1.6.0</exec.maven.version>
+    <findbugs-annotations>1.3.9-1</findbugs-annotations>
+    <findbugs.maven.version>3.0.4</findbugs.maven.version>
+    <jamon.plugin.version>2.4.2</jamon.plugin.version>
+    <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
+    <maven.antrun.version>1.8</maven.antrun.version>
+    <maven.bundle.version>3.3.0</maven.bundle.version>
+    <maven.checkstyle.version>2.17</maven.checkstyle.version>
+    <maven.compiler.version>3.6.1</maven.compiler.version>
+    <maven.eclipse.version>2.10</maven.eclipse.version>
+    <maven.install.version>2.5.2</maven.install.version>
+    <maven.jar.version>3.0.2</maven.jar.version>
+    <maven.patch.version>1.2</maven.patch.version>
+    <maven.scala.version>2.15.2</maven.scala.version>
+    <maven.shade.version>3.0.0</maven.shade.version>
+    <maven.source.version>3.0.1</maven.source.version>
+    <os.maven.version>1.5.0.Final</os.maven.version>
+    <scala.maven.version>3.2.2</scala.maven.version>
+    <scalatest.maven.version>1.0</scalatest.maven.version>
+    <spotbugs.version>3.1.0-RC3</spotbugs.version>
+    <wagon.ssh.version>2.12</wagon.ssh.version>
+    <xml.maven.version>1.0.1</xml.maven.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
@@ -1414,7 +1432,7 @@
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
     <rsgroup.test.jar>hbase-rsgroup-${project.version}-tests.jar</rsgroup.test.jar>
-    <surefire.version>2.18.1</surefire.version>
+    <surefire.version>2.20</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
@@ -1443,7 +1461,7 @@
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine}</argLine>
     <jacoco.version>0.7.5.201505241946</jacoco.version>
-    <extra.enforcer.version>1.0-beta-3</extra.enforcer.version>
+    <extra.enforcer.version>1.0-beta-6</extra.enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
@@ -3067,7 +3085,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.5.1</version>
+                    <version>${maven.compiler.version}</version>
                     <configuration>
                         <compilerId>javac-with-errorprone</compilerId>
                         <forceJavacCompilerUse>true</forceJavacCompilerUse>
@@ -3089,7 +3107,6 @@
     <plugins>
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>2.7</version>
         <reportSets>
           <reportSet>
             <reports>
@@ -3119,7 +3136,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>${javadoc.version}</version>
         <reportSets>
           <!-- Dev API -->
           <reportSet>
@@ -3329,7 +3345,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.17</version>
+        <version>${maven.checkstyle.version}</version>
         <configuration>
           <excludes>target/**</excludes>
           <configLocation>hbase/checkstyle.xml</configLocation>

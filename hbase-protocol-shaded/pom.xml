@@ -60,7 +60,6 @@
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>${maven.assembly.version}</version>
         <configuration>
           <skipAssembly>true</skipAssembly>
         </configuration>
@@ -88,7 +87,6 @@
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
           <configuration>
             <lifecycleMappingMetadata>
               <pluginExecutions>
@@ -244,7 +242,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-jar-plugin</artifactId>
-            <version>3.0.2</version>
+            <version>${maven.jar.version}</version>
             <configuration>
               <finalName>${jar.finalName}</finalName>                   
             </configuration>
@@ -252,7 +250,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
-            <version>2.4.3</version>
+            <version>${maven.shade.version}</version>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -301,7 +299,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-dependency-plugin</artifactId>
-            <version>2.10</version>
             <executions>
               <execution>
                 <id>unpack</id>
@@ -329,7 +326,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-patch-plugin</artifactId>
-        <version>1.2</version>
+        <version>${maven.patch.version}</version>
         <configuration>
            <!--Patches are made at top-level-->
            <targetDirectory>${basedir}/..</targetDirectory>
@@ -355,7 +352,7 @@
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-install-plugin</artifactId>
-            <version>2.5.2</version>
+            <version>${maven.install.version}</version>
             <configuration>
                 <skip>true</skip>
             </configuration>
