@@ -316,16 +316,7 @@ public class TestTablePermissions {
     table.put(new Put(Bytes.toBytes("row2"))
             .addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v2")));
     Admin admin = UTIL.getAdmin();
-    try {
-      admin.split(TEST_TABLE);
-    }
-    catch (IOException e) {
-      //although split fail, this may not affect following check
-      //In old Split API without AM2, if region's best split key is not found,
-      //there are not exception thrown. But in current API, exception
-      //will be thrown.
-      LOG.debug("region is not splittable, because " + e);
-    }
+    admin.split(TEST_TABLE);
 
     // wait for split
     Thread.sleep(10000);

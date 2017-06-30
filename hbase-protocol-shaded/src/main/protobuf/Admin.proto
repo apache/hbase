@@ -33,7 +33,6 @@ import "Quota.proto";
 message GetRegionInfoRequest {
   required RegionSpecifier region = 1;
   optional bool compaction_state = 2;
-  optional bool best_split_row = 3;
 }
 
 message GetRegionInfoResponse {
@@ -44,8 +43,6 @@ message GetRegionInfoResponse {
   optional bool splittable = 4;
   // True if region is mergeable, false otherwise.
   optional bool mergeable = 5;
-  // Get bestSplitRow
-  optional bytes best_split_row = 6;
 
   enum CompactionState {
     NONE = 0;

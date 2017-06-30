@@ -903,12 +903,10 @@ public class TestAdmin1 {
     int[] rowCounts = new int[] { 6000 };
     int numVersions = HColumnDescriptor.DEFAULT_VERSIONS;
     int blockSize = 256;
-    splitTest(null, familyNames, rowCounts, numVersions, blockSize, true);
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
 
     byte[] splitKey = Bytes.toBytes(3500);
-    splitTest(splitKey, familyNames, rowCounts, numVersions, blockSize, true);
-    // test regionSplitSync
-    splitTest(splitKey, familyNames, rowCounts, numVersions, blockSize, false);
+    splitTest(splitKey, familyNames, rowCounts, numVersions, blockSize);
   }
 
   /**
@@ -965,23 +963,23 @@ public class TestAdmin1 {
 
     // one of the column families isn't splittable
     int[] rowCounts = new int[] { 6000, 1 };
-    splitTest(null, familyNames, rowCounts, numVersions, blockSize, true);
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
 
     rowCounts = new int[] { 1, 6000 };
-    splitTest(null, familyNames, rowCounts, numVersions, blockSize, true);
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
 
     // one column family has much smaller data than the other
     // the split key should be based on the largest column family
     rowCounts = new int[] { 6000, 300 };
-    splitTest(null, familyNames, rowCounts, numVersions, blockSize, true);
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
 
     rowCounts = new int[] { 300, 6000 };
-    splitTest(null, familyNames, rowCounts, numVersions, blockSize, true);
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
 
   }
 
   void splitTest(byte[] splitPoint, byte[][] familyNames, int[] rowCounts,
-    int numVersions, int blockSize, boolean async) throws Exception {
+    int numVersions, int blockSize) throws Exception {
     TableName tableName = TableName.valueOf("testForceSplit");
     StringBuilder sb = new StringBuilder();
     // Add tail to String so can see better in logs where a test is running.
@@ -1035,42 +1033,39 @@ public class TestAdmin1 {
       scanner.next();
 
       // Split the table
-      if (async) {
-        this.admin.split(tableName, splitPoint);
-        final AtomicInteger count = new AtomicInteger(0);
-        Thread t = new Thread("CheckForSplit") {
-          @Override public void run() {
-            for (int i = 0; i < 45; i++) {
-              try {
-                sleep(1000);
-              } catch (InterruptedException e) {
-                continue;
-              }
-              // check again
-              List<HRegionLocation> regions = null;
-              try {
-                regions = locator.getAllRegionLocations();
-              } catch (IOException e) {
-                e.printStackTrace();
-              }
-              if (regions == null) continue;
-              count.set(regions.size());
-              if (count.get() >= 2) {
-                LOG.info("Found: " + regions);
-                break;
-              }
-              LOG.debug("Cycle waiting on split");
+      this.admin.split(tableName, splitPoint);
+
+      final AtomicInteger count = new AtomicInteger(0);
+      Thread t = new Thread("CheckForSplit") {
+        @Override
+        public void run() {
+          for (int i = 0; i < 45; i++) {
+            try {
+              sleep(1000);
+            } catch (InterruptedException e) {
+              continue;
             }
-            LOG.debug("CheckForSplit thread exited, current region count: " + count.get());
+            // check again
+            List<HRegionLocation> regions = null;
+            try {
+              regions = locator.getAllRegionLocations();
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+            if (regions == null) continue;
+            count.set(regions.size());
+            if (count.get() >= 2) {
+              LOG.info("Found: " + regions);
+              break;
+            }
+            LOG.debug("Cycle waiting on split");
           }
-        };
-        t.setPriority(Thread.NORM_PRIORITY - 2);
-        t.start();
-        t.join();
-      } else {
-        // Sync split region, no need to create a thread to check
-        ((HBaseAdmin)admin).splitRegionSync(m.get(0).getRegionInfo().getRegionName(), splitPoint);
-      }
+          LOG.debug("CheckForSplit thread exited, current region count: " + count.get());
+        }
+      };
+      t.setPriority(Thread.NORM_PRIORITY - 2);
+      t.start();
+      t.join();
 
       // Verify row count
       rows = 1; // We counted one row above.
@@ -1171,23 +1166,12 @@ public class TestAdmin1 {
     // regions). Try splitting that region via a different split API (the difference is
     // this API goes direct to the regionserver skipping any checks in the admin). Should fail
     try {
-      TEST_UTIL.getHBaseAdmin().splitRegionAsync(regions.get(1).getFirst(),
+      TEST_UTIL.getHBaseAdmin().split(regions.get(1).getSecond(), regions.get(1).getFirst(),
           new byte[]{(byte)'1'});
     } catch (IOException ex) {
       gotException = true;
     }
     assertTrue(gotException);
-
-    gotException = false;
-    //testing Sync split operation
-    try {
-      TEST_UTIL.getHBaseAdmin().splitRegionSync(regions.get(1).getFirst().getRegionName(),
-          new byte[]{(byte)'1'});
-    } catch (IllegalArgumentException ex) {
-      gotException = true;
-    }
-    assertTrue(gotException);
-
     gotException = false;
     // Try merging a replica with another. Should fail.
     try {
