@@ -45,23 +45,12 @@ class Util {
   static GetRegionInfoResponse getRegionInfoResponse(final MasterProcedureEnv env,
       final ServerName regionLocation, final HRegionInfo hri)
   throws IOException {
-    return getRegionInfoResponse(env, regionLocation, hri, false);
-  }
-
-  static GetRegionInfoResponse getRegionInfoResponse(final MasterProcedureEnv env,
-      final ServerName regionLocation, final HRegionInfo hri, boolean includeBestSplitRow)
-  throws IOException {
     // TODO: There is no timeout on this controller. Set one!
     HBaseRpcController controller = env.getMasterServices().getClusterConnection().
         getRpcControllerFactory().newController();
     final AdminService.BlockingInterface admin =
         env.getMasterServices().getClusterConnection().getAdmin(regionLocation);
-    GetRegionInfoRequest request = null;
-    if (includeBestSplitRow) {
-      request = RequestConverter.buildGetRegionInfoRequest(hri.getRegionName(), false, true);
-    } else {
-      request = RequestConverter.buildGetRegionInfoRequest(hri.getRegionName());
-    }
+    GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(hri.getRegionName());
     try {
       return admin.getRegionInfo(controller, request);
     } catch (ServiceException e) {

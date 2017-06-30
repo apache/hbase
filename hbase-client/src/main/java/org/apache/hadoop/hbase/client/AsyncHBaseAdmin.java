@@ -160,8 +160,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -1104,7 +1102,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
                       if (hri == null || hri.isSplitParent()
                           || hri.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID)
                         continue;
-                      splitFutures.add(split(hri, Optional.empty()));
+                      splitFutures.add(split(h.getServerName(), hri, Optional.empty()));
                     }
                   }
                 }
@@ -1172,7 +1170,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
               .toStringBinary(regionName)));
           return;
         }
-        split(regionInfo, splitPoint).whenComplete((ret, err2) -> {
+        split(serverName, regionInfo, splitPoint).whenComplete((ret, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
           } else {
@@ -1183,36 +1181,21 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  private CompletableFuture<Void> split(final HRegionInfo hri,
+  private CompletableFuture<Void> split(final ServerName sn, final HRegionInfo hri,
       Optional<byte[]> splitPoint) {
     if (hri.getStartKey() != null && splitPoint.isPresent()
         && Bytes.compareTo(hri.getStartKey(), splitPoint.get()) == 0) {
       return failedFuture(new IllegalArgumentException(
           "should not give a splitkey which equals to startkey!"));
     }
-
-    CompletableFuture<Void> future = new CompletableFuture<>();
-    TableName tableName = hri.getTable();
-    SplitTableRegionRequest request = null;
-    try {
-      request = RequestConverter
-          .buildSplitTableRegionRequest(hri, splitPoint.isPresent() ? splitPoint.get() : null,
-              ng.getNonceGroup(), ng.newNonce());
-    } catch (DeserializationException e) {
-      future.completeExceptionally(e);
-      return future;
-    }
-
-    this.<SplitTableRegionRequest, SplitTableRegionResponse>procedureCall(request,
-        (s, c, req, done) -> s.splitRegion(c, req, done), (resp) -> resp.getProcId(),
-        new SplitTableRegionProcedureBiConsumer(this, tableName)).whenComplete((ret, err2) -> {
-      if (err2 != null) {
-        future.completeExceptionally(err2);
-      } else {
-        future.complete(ret);
-      }
-    });
-    return future;
+    return this
+        .<Void> newAdminCaller()
+        .action(
+          (controller, stub) -> this.<SplitRegionRequest, SplitRegionResponse, Void> adminCall(
+            controller, stub,
+            ProtobufUtil.buildSplitRegionRequest(hri.getRegionName(), splitPoint),
+            (s, c, req, done) -> s.splitRegion(controller, req, done), resp -> null))
+        .serverName(sn).call();
   }
 
   @Override
@@ -2256,17 +2239,6 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
     String getOperationType() {
       return "MERGE_REGIONS";
-    }
-  }
-
-  private class SplitTableRegionProcedureBiConsumer extends  TableProcedureBiConsumer {
-
-    SplitTableRegionProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
-      super(admin, tableName);
-    }
-
-    String getOperationType() {
-      return "SPLIT_REGION";
     }
   }
 

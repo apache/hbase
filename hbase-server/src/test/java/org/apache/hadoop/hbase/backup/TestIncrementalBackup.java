@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -117,15 +116,7 @@ public class TestIncrementalBackup extends TestBackupBase {
 
     byte[] name = regions.get(0).getRegionInfo().getRegionName();
     long startSplitTime = EnvironmentEdgeManager.currentTime();
-    try {
-      admin.splitRegion(name);
-    } catch (IOException e) {
-      //although split fail, this may not affect following check
-      //In old split without AM2, if region's best split key is not found,
-      //there are not exception thrown. But in current API, exception
-      //will be thrown.
-      LOG.debug("region is not splittable, because " + e);
-    }
+    admin.splitRegion(name);
 
     while (!admin.isTableAvailable(table1)) {
       Thread.sleep(100);

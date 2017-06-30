@@ -11552,11 +11552,11 @@ public final class MasterProtos {
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder();
 
     /**
-     * <code>optional bytes split_row = 2;</code>
+     * <code>required bytes split_row = 2;</code>
      */
     boolean hasSplitRow();
     /**
-     * <code>optional bytes split_row = 2;</code>
+     * <code>required bytes split_row = 2;</code>
      */
     org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getSplitRow();
 
@@ -11700,13 +11700,13 @@ public final class MasterProtos {
     public static final int SPLIT_ROW_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString splitRow_;
     /**
-     * <code>optional bytes split_row = 2;</code>
+     * <code>required bytes split_row = 2;</code>
      */
     public boolean hasSplitRow() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional bytes split_row = 2;</code>
+     * <code>required bytes split_row = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getSplitRow() {
       return splitRow_;
@@ -11749,6 +11749,10 @@ public final class MasterProtos {
       if (isInitialized == 0) return false;
 
       if (!hasRegionInfo()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasSplitRow()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -12102,6 +12106,9 @@ public final class MasterProtos {
         if (!hasRegionInfo()) {
           return false;
         }
+        if (!hasSplitRow()) {
+          return false;
+        }
         if (!getRegionInfo().isInitialized()) {
           return false;
         }
@@ -12247,19 +12254,19 @@ public final class MasterProtos {
 
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString splitRow_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
       /**
-       * <code>optional bytes split_row = 2;</code>
+       * <code>required bytes split_row = 2;</code>
        */
       public boolean hasSplitRow() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional bytes split_row = 2;</code>
+       * <code>required bytes split_row = 2;</code>
        */
       public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getSplitRow() {
         return splitRow_;
       }
       /**
-       * <code>optional bytes split_row = 2;</code>
+       * <code>required bytes split_row = 2;</code>
        */
       public Builder setSplitRow(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
         if (value == null) {
@@ -12271,7 +12278,7 @@ public final class MasterProtos {
         return this;
       }
       /**
-       * <code>optional bytes split_row = 2;</code>
+       * <code>required bytes split_row = 2;</code>
        */
       public Builder clearSplitRow() {
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -81236,7 +81243,7 @@ public final class MasterProtos {
       ".pb.RegionSpecifier\"\027\n\025OfflineRegionResp",
       "onse\"\201\001\n\027SplitTableRegionRequest\022)\n\013regi" +
       "on_info\030\001 \002(\0132\024.hbase.pb.RegionInfo\022\021\n\ts" +
-      "plit_row\030\002 \001(\014\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020" +
+      "plit_row\030\002 \002(\014\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020" +
       "\n\005nonce\030\004 \001(\004:\0010\"+\n\030SplitTableRegionResp" +
       "onse\022\017\n\007proc_id\030\001 \001(\004\"\177\n\022CreateTableRequ" +
       "est\022+\n\014table_schema\030\001 \002(\0132\025.hbase.pb.Tab" +

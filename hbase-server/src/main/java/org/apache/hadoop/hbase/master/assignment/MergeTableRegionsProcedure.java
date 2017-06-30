@@ -49,14 +49,12 @@ import org.apache.hadoop.hbase.master.CatalogJanitor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
-import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -531,13 +529,7 @@ public class MergeTableRegionsProcedure
       }
     }
     // TODO: Clean up split and merge. Currently all over the place.
-    try {
-      env.getMasterServices().getMasterQuotaManager().onRegionMerged(this.mergedRegion);
-    } catch (QuotaExceededException e) {
-      env.getAssignmentManager().getRegionNormalizer().planSkipped(this.mergedRegion,
-          NormalizationPlan.PlanType.MERGE);
-      throw e;
-    }
+    env.getMasterServices().getMasterQuotaManager().onRegionMerged(this.mergedRegion);
   }
 
   /**

@@ -54,12 +54,10 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
-import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SplitTableRegionState;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -86,7 +84,6 @@ public class SplitTableRegionProcedure
   private Boolean traceEnabled = null;
   private HRegionInfo daughter_1_HRI;
   private HRegionInfo daughter_2_HRI;
-  private byte[] bestSplitRow;
 
   public SplitTableRegionProcedure() {
     // Required by the Procedure framework to create the procedure on replay
@@ -95,70 +92,27 @@ public class SplitTableRegionProcedure
   public SplitTableRegionProcedure(final MasterProcedureEnv env,
       final HRegionInfo regionToSplit, final byte[] splitRow) throws IOException {
     super(env, regionToSplit);
-    this.bestSplitRow = splitRow;
-    checkSplittable(env, regionToSplit, bestSplitRow);
+
+    checkSplitRow(regionToSplit, splitRow);
+
     final TableName table = regionToSplit.getTable();
     final long rid = getDaughterRegionIdTimestamp(regionToSplit);
-    this.daughter_1_HRI = new HRegionInfo(table, regionToSplit.getStartKey(), bestSplitRow, false, rid);
-    this.daughter_2_HRI = new HRegionInfo(table, bestSplitRow, regionToSplit.getEndKey(), false, rid);
+    this.daughter_1_HRI = new HRegionInfo(table, regionToSplit.getStartKey(), splitRow, false, rid);
+    this.daughter_2_HRI = new HRegionInfo(table, splitRow, regionToSplit.getEndKey(), false, rid);
   }
 
-  /**
-   * Check whether the region is splittable
-   * @param env MasterProcedureEnv
-   * @param regionToSplit parent Region to be split
-   * @param splitRow if splitRow is not specified, will first try to get bestSplitRow from RS
-   * @throws IOException
-   */
-  private void checkSplittable(final MasterProcedureEnv env,
-      final HRegionInfo regionToSplit, final byte[] splitRow) throws IOException {
-    // Ask the remote RS if this region is splittable.
-    // If we get an IOE, report it along w/ the failure so can see why we are not splittable at this time.
-    if(regionToSplit.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
-      throw new IllegalArgumentException ("Can't invoke split on non-default regions directly");
-    }
-    RegionStateNode node =
-        env.getAssignmentManager().getRegionStates().getRegionNode(getParentRegion());
-    IOException splittableCheckIOE = null;
-    boolean splittable = false;
-    if (node != null) {
-      try {
-        GetRegionInfoResponse response = null;
-        if (bestSplitRow == null || bestSplitRow.length == 0) {
-          LOG.info("splitKey isn't explicitly specified, " + " will try to find a best split key from RS");
-          response =
-              Util.getRegionInfoResponse(env, node.getRegionLocation(), node.getRegionInfo(), true);
-          bestSplitRow =
-              response.hasBestSplitRow() ? response.getBestSplitRow().toByteArray() : null;
-        } else {
-          response = Util.getRegionInfoResponse(env, node.getRegionLocation(), node.getRegionInfo(), false);
-        }
-        splittable = response.hasSplittable() && response.getSplittable();
-
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Splittable=" + splittable + " " + node.toShortString());
-        }
-      } catch (IOException e) {
-        splittableCheckIOE = e;
-      }
+  private static void checkSplitRow(final HRegionInfo regionToSplit, final byte[] splitRow)
+      throws IOException {
+    if (splitRow == null || splitRow.length == 0) {
+      throw new DoNotRetryIOException("Split row cannot be null");
     }
 
-    if (!splittable) {
-      IOException e = new IOException(regionToSplit.getShortNameToLog() + " NOT splittable");
-      if (splittableCheckIOE != null) e.initCause(splittableCheckIOE);
-      throw e;
-    }
-
-    if(bestSplitRow == null || bestSplitRow.length == 0) {
-      throw new DoNotRetryIOException("Region not splittable because bestSplitPoint = null");
-    }
-
-    if (Bytes.equals(regionToSplit.getStartKey(), bestSplitRow)) {
+    if (Bytes.equals(regionToSplit.getStartKey(), splitRow)) {
       throw new DoNotRetryIOException(
         "Split row is equal to startkey: " + Bytes.toStringBinary(splitRow));
     }
 
-    if (!regionToSplit.containsRow(bestSplitRow)) {
+    if (!regionToSplit.containsRow(splitRow)) {
       throw new DoNotRetryIOException(
         "Split row is not inside region key range splitKey:" + Bytes.toStringBinary(splitRow) +
         " region: " + regionToSplit);
@@ -244,7 +198,6 @@ public class SplitTableRegionProcedure
         setFailure(e);
       }
     }
-    // if split fails,  need to call ((HRegion)parent).clearSplit() when it is a force split
     return Flow.HAS_MORE_STATE;
   }
 
@@ -414,6 +367,27 @@ public class SplitTableRegionProcedure
             Arrays.toString(EXPECTED_SPLIT_STATES)));
         return false;
       }
+
+      // Ask the remote regionserver if this region is splittable. If we get an IOE, report it
+      // along w/ the failure so can see why we are not splittable at this time.
+      IOException splittableCheckIOE = null;
+      boolean splittable = false;
+      try {
+        GetRegionInfoResponse response =
+            Util.getRegionInfoResponse(env, node.getRegionLocation(), node.getRegionInfo());
+        splittable = response.hasSplittable() && response.getSplittable();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Splittable=" + splittable + " " + this + " " + node.toShortString());
+        }
+      } catch (IOException e) {
+        splittableCheckIOE = e;
+      }
+      if (!splittable) {
+        IOException e = new IOException(parentHRI.getShortNameToLog() + " NOT splittable");
+        if (splittableCheckIOE != null) e.initCause(splittableCheckIOE);
+        setFailure(e);
+        return false;
+      }
     }
 
     // Since we have the lock and the master is coordinating the operation
@@ -439,16 +413,6 @@ public class SplitTableRegionProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preSplitRegionAction(getTableName(), getSplitRow(), getUser());
-    }
-
-    // TODO: Clean up split and merge. Currently all over the place.
-    // Notify QuotaManager and RegionNormalizer
-    try {
-      env.getMasterServices().getMasterQuotaManager().onRegionSplit(this.getParentRegion());
-    } catch (QuotaExceededException e) {
-      env.getAssignmentManager().getRegionNormalizer().planSkipped(this.getParentRegion(),
-          NormalizationPlan.PlanType.SPLIT);
-      throw e;
     }
   }
 
