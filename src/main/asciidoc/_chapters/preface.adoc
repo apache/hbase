@@ -99,7 +99,7 @@ Tested::
 
 Not Tested::
   In the context of Apache HBase, /not tested/ means that a feature or use pattern
-  may or may notwork in a given way, and may or may not corrupt your data or cause
+  may or may not work in a given way, and may or may not corrupt your data or cause
   operational issues. It is an unknown, and there are no guarantees. If you can provide
   proof that a feature designated as /not tested/ does work in a given way, please
   submit the tests and/or the metrics so that other users can gain certainty about
