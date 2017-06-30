@@ -92,6 +92,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+import org.apache.hadoop.hbase.TimestampType;
+import org.apache.hadoop.hbase.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -340,10 +342,10 @@ public class HStore implements Store {
 
   /**
    * @param family
-   * @return TTL in seconds of the specified family
+   * @return TTL in milli seconds of the specified family
    */
   public static long determineTTLFromFamily(final HColumnDescriptor family) {
-    // HCD.getTimeToLive returns ttl in seconds.  Convert to milliseconds.
+    // HColumnDescriptor.getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     long ttl = family.getTimeToLive();
     if (ttl == HConstants.FOREVER) {
       // Default is unlimited ttl.
@@ -399,6 +401,10 @@ public class HStore implements Store {
   @Override
   public MemstoreSize getSizeToFlush() {
     return this.memstore.getFlushableSize();
+  }
+
+  public Clock getClock() {
+    return region.getClock();
   }
 
   @Override

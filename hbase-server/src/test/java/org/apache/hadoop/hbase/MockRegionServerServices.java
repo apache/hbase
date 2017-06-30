@@ -252,6 +252,16 @@ public class MockRegionServerServices implements RegionServerServices {
     return null;
   }
 
+  @Override public Clock getRegionServerClock(ClockType clockType) {
+    if (clockType.equals(ClockType.HLC)){
+      return new Clock.HLC();
+    } else if (clockType.equals(ClockType.SYSTEM_MONOTONIC)) {
+      return new Clock.SystemMonotonic();
+    } else {
+      return new Clock.System();
+    }
+  }
+
   @Override
   public ExecutorService getExecutorService() {
     return null;

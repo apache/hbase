@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -117,6 +118,14 @@ public class TableDescriptorBuilder {
           = new Bytes(Bytes.toBytes("DURABILITY"));
 
   /**
+   * {@link ClockType} setting for the table.
+   */
+  @InterfaceAudience.Private
+  public static final String CLOCK_TYPE = "CLOCK_TYPE";
+  private static final Bytes CLOCK_TYPE_KEY
+      = new Bytes(Bytes.toBytes(CLOCK_TYPE));
+
+  /**
    * The number of region replicas for the table.
    */
   @InterfaceAudience.Private
@@ -148,6 +157,11 @@ public class TableDescriptorBuilder {
    * default value
    */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
+
+  /**
+   * Default clock type for HTD is SYSTEM
+   */
+  public static final ClockType DEFAULT_CLOCK_TYPE = ClockType.SYSTEM;
 
   @InterfaceAudience.Private
   public static final String PRIORITY = "PRIORITY";
@@ -335,6 +349,11 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setDurability(Durability durability) {
     desc.setDurability(durability);
+    return this;
+  }
+
+  public TableDescriptorBuilder setClockType(ClockType clockType) {
+    desc.setClockType(clockType);
     return this;
   }
 
@@ -684,6 +703,24 @@ public class TableDescriptorBuilder {
     @Override
     public Durability getDurability() {
       return getOrDefault(DURABILITY_KEY, Durability::valueOf, DEFAULT_DURABLITY);
+    }
+
+    /**
+     * Sets the {@link ClockType} for the table. This defaults to DEFAULT_CLOCK_TYPE.
+     * @param clockType
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor setClockType(ClockType clockType) {
+      return setValue(CLOCK_TYPE_KEY, clockType.name());
+    }
+
+    /**
+     * Returns the clock type for the table.
+     * @return the clock type for the table.
+     */
+    @Override
+    public ClockType getClockType() {
+      return getOrDefault(CLOCK_TYPE_KEY, ClockType::valueOf, DEFAULT_CLOCK_TYPE);
     }
 
     /**
@@ -1462,6 +1499,8 @@ public class TableDescriptorBuilder {
     public int getColumnFamilyCount() {
       return families.size();
     }
+
+
   }
 
 }

@@ -46,7 +46,9 @@ public class TestTableName extends TestWatcher {
    */
   @Override
   protected void starting(Description description) {
-    tableName = TableName.valueOf(description.getMethodName());
+    tableName = TableName.valueOf(description.getMethodName()
+        .replace("[", ".")
+        .replace("]", ""));
   }
 
   public TableName getTableName() {

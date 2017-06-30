@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.apache.hadoop.hbase.constraint.CheckConfigurationConstraint.getConfiguration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -28,7 +29,9 @@ import java.io.PrintStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -189,13 +192,24 @@ public class TestCopyTable {
    */
   @Test
   public void testRenameFamily() throws Exception {
-    final TableName sourceTable = TableName.valueOf(name.getMethodName() + "source");
-    final TableName targetTable = TableName.valueOf(name.getMethodName() + "-target");
+    testRenameFamily(ClockType.SYSTEM);
+    testRenameFamily(ClockType.SYSTEM_MONOTONIC);
+    testRenameFamily(ClockType.HLC);
+  }
+
+  public void testRenameFamily(ClockType clockType) throws Exception {
+    TableName sourceTable = TableName.valueOf("sourceTable");
+    HTableDescriptor sourceTableDesc = new HTableDescriptor(sourceTable);
+    sourceTableDesc.setClockType(clockType);
+    TableName targetTable = TableName.valueOf("targetTable");
+    HTableDescriptor targetTableDesc = new HTableDescriptor(targetTable);
+    targetTableDesc.setClockType(clockType);
 
     byte[][] families = { FAMILY_A, FAMILY_B };
-
-    Table t = TEST_UTIL.createTable(sourceTable, families);
-    Table t2 = TEST_UTIL.createTable(targetTable, families);
+    Table t = TEST_UTIL.createTable(sourceTableDesc, families, (byte[][]) null, new Configuration
+        (getConfiguration()));
+    Table t2 = TEST_UTIL.createTable(targetTableDesc, families, (byte[][]) null, new Configuration
+        (getConfiguration()));
     Put p = new Put(ROW1);
     p.addColumn(FAMILY_A, QUALIFIER, Bytes.toBytes("Data11"));
     p.addColumn(FAMILY_B, QUALIFIER, Bytes.toBytes("Data12"));
@@ -224,6 +238,9 @@ public class TestCopyTable {
     b1 = res.getValue(FAMILY_A, QUALIFIER);
     // Data from the family of B is not copied
     assertNull(b1);
+
+    TEST_UTIL.deleteTable(sourceTable);
+    TEST_UTIL.deleteTable(targetTable);
 
   }
 

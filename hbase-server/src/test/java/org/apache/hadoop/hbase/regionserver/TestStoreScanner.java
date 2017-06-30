@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,11 +40,14 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -816,16 +821,31 @@ public class TestStoreScanner {
    */
   @Test
   public void testWildCardTtlScan() throws IOException {
+    //testWildCardTtlScan(ClockType.SYSTEM);
+    //testWildCardTtlScan(ClockType.SYSTEM_MONOTONIC);
+    testWildCardTtlScan(ClockType.HLC);
+  }
+
+  public void testWildCardTtlScan(ClockType clockType) throws IOException {
     long now = System.currentTimeMillis();
+    TimestampType timestampType = clockType.timestampType();
     KeyValue [] kvs = new KeyValue[] {
-        KeyValueTestUtil.create("R1", "cf", "a", now-1000, KeyValue.Type.Put, "dont-care"),
-        KeyValueTestUtil.create("R1", "cf", "b", now-10, KeyValue.Type.Put, "dont-care"),
-        KeyValueTestUtil.create("R1", "cf", "c", now-200, KeyValue.Type.Put, "dont-care"),
-        KeyValueTestUtil.create("R1", "cf", "d", now-10000, KeyValue.Type.Put, "dont-care"),
-        KeyValueTestUtil.create("R2", "cf", "a", now, KeyValue.Type.Put, "dont-care"),
-        KeyValueTestUtil.create("R2", "cf", "b", now-10, KeyValue.Type.Put, "dont-care"),
-        KeyValueTestUtil.create("R2", "cf", "c", now-200, KeyValue.Type.Put, "dont-care"),
-        KeyValueTestUtil.create("R2", "cf", "c", now-1000, KeyValue.Type.Put, "dont-care")
+        KeyValueTestUtil.create("R1", "cf", "a", timestampType.fromEpochTimeMillisToTimestamp
+          (now-1000), KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R1", "cf", "b", timestampType.fromEpochTimeMillisToTimestamp
+          (now-10), KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R1", "cf", "c", timestampType.fromEpochTimeMillisToTimestamp
+          (now-200), KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R1", "cf", "d", timestampType.fromEpochTimeMillisToTimestamp
+          (now-10000), KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R2", "cf", "a", timestampType.fromEpochTimeMillisToTimestamp
+          (now), KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R2", "cf", "b", timestampType.fromEpochTimeMillisToTimestamp
+          (now-10), KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R2", "cf", "c", timestampType.fromEpochTimeMillisToTimestamp
+          (now-200), KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R2", "cf", "c", timestampType.fromEpochTimeMillisToTimestamp
+          (now-1000), KeyValue.Type.Put, "dont-care")
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scan = new Scan();
@@ -833,7 +853,9 @@ public class TestStoreScanner {
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
         HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
-    try (StoreScanner scanner = new StoreScanner(scan, scanInfo, scanType, null, scanners)) {
+    Store store = mock(HStore.class);
+    when(store.getClock()).thenReturn(Clock.getDummyClockOfGivenClockType(clockType));
+    try (StoreScanner scanner = new StoreScanner(store, scan, scanInfo, scanType, null, scanners)) {
       List<Cell> results = new ArrayList<>();
       Assert.assertEquals(true, scanner.next(results));
       Assert.assertEquals(2, results.size());
@@ -892,12 +914,19 @@ public class TestStoreScanner {
    */
   @Test
   public void testExpiredDeleteFamily() throws Exception {
+    testExpiredDeleteFamily(new Clock.HLC());
+    testExpiredDeleteFamily(new Clock.SystemMonotonic());
+    testExpiredDeleteFamily(new Clock.System());
+  }
+
+  public void testExpiredDeleteFamily(Clock clock) throws Exception {
     long now = System.currentTimeMillis();
+    TimestampType timestampType = clock.getTimestampType();
     KeyValue [] kvs = new KeyValue[] {
-        new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, now-1000,
-            KeyValue.Type.DeleteFamily),
-        KeyValueTestUtil.create("R1", "cf", "a", now-10, KeyValue.Type.Put,
-            "dont-care"),
+        new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, timestampType
+          .fromEpochTimeMillisToTimestamp(now-1000), KeyValue.Type.DeleteFamily),
+        KeyValueTestUtil.create("R1", "cf", "a", timestampType.fromEpochTimeMillisToTimestamp
+          (now-10), KeyValue.Type.Put, "dont-care"),
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scan = new Scan();
@@ -906,9 +935,10 @@ public class TestStoreScanner {
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
         HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
+    Store store = mock(HStore.class);
+    when(store.getClock()).thenReturn(clock);
     try (StoreScanner scanner =
-        new StoreScanner(scan, scanInfo, scanType, null, scanners)) {
-
+        new StoreScanner(store, scan, scanInfo, scanType, null, scanners)) {
       List<Cell> results = new ArrayList<>();
       Assert.assertEquals(true, scanner.next(results));
       Assert.assertEquals(1, results.size());
@@ -921,8 +951,15 @@ public class TestStoreScanner {
 
   @Test
   public void testDeleteMarkerLongevity() throws Exception {
+    testDeleteMarkerLongevity(new Clock.HLC());
+    testDeleteMarkerLongevity(new Clock.SystemMonotonic());
+    testDeleteMarkerLongevity(new Clock.System());
+  }
+
+  public void testDeleteMarkerLongevity(Clock clock) throws Exception {
     try {
       final long now = System.currentTimeMillis();
+      TimestampType timestampType = clock.getTimestampType();
       EnvironmentEdgeManagerTestHelper.injectEdge(new EnvironmentEdge() {
         public long currentTime() {
           return now;
@@ -930,37 +967,40 @@ public class TestStoreScanner {
       });
       KeyValue[] kvs = new KeyValue[]{
         /*0*/ new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null,
-        now - 100, KeyValue.Type.DeleteFamily), // live
+          timestampType.fromEpochTimeMillisToTimestamp(now - 100), KeyValue.Type.DeleteFamily),
+          // live
         /*1*/ new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null,
-        now - 1000, KeyValue.Type.DeleteFamily), // expired
-        /*2*/ KeyValueTestUtil.create("R1", "cf", "a", now - 50,
-        KeyValue.Type.Put, "v3"), // live
-        /*3*/ KeyValueTestUtil.create("R1", "cf", "a", now - 55,
-        KeyValue.Type.Delete, "dontcare"), // live
-        /*4*/ KeyValueTestUtil.create("R1", "cf", "a", now - 55,
-        KeyValue.Type.Put, "deleted-version v2"), // deleted
-        /*5*/ KeyValueTestUtil.create("R1", "cf", "a", now - 60,
-        KeyValue.Type.Put, "v1"), // live
-        /*6*/ KeyValueTestUtil.create("R1", "cf", "a", now - 65,
-        KeyValue.Type.Put, "v0"), // max-version reached
+          timestampType.fromEpochTimeMillisToTimestamp(now - 1000), KeyValue.Type.DeleteFamily),
+          // expired
+        /*2*/ KeyValueTestUtil.create("R1", "cf", "a", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 50), KeyValue.Type.Put, "v3"), // live
+        /*3*/ KeyValueTestUtil.create("R1", "cf", "a", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 55), KeyValue.Type.Delete, "dontcare"), // live
+        /*4*/ KeyValueTestUtil.create("R1", "cf", "a", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 55), KeyValue.Type.Put, "deleted-version v2"), // deleted
+        /*5*/ KeyValueTestUtil.create("R1", "cf", "a", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 60), KeyValue.Type.Put, "v1"), // live
+        /*6*/ KeyValueTestUtil.create("R1", "cf", "a", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 65), KeyValue.Type.Put, "v0"), // max-version reached
         /*7*/ KeyValueTestUtil.create("R1", "cf", "a",
-        now - 100, KeyValue.Type.DeleteColumn, "dont-care"), // max-version
-        /*8*/ KeyValueTestUtil.create("R1", "cf", "b", now - 600,
-        KeyValue.Type.DeleteColumn, "dont-care"), //expired
-        /*9*/ KeyValueTestUtil.create("R1", "cf", "b", now - 70,
-        KeyValue.Type.Put, "v2"), //live
-        /*10*/ KeyValueTestUtil.create("R1", "cf", "b", now - 750,
-        KeyValue.Type.Put, "v1"), //expired
-        /*11*/ KeyValueTestUtil.create("R1", "cf", "c", now - 500,
-        KeyValue.Type.Delete, "dontcare"), //expired
-        /*12*/ KeyValueTestUtil.create("R1", "cf", "c", now - 600,
-        KeyValue.Type.Put, "v1"), //expired
-        /*13*/ KeyValueTestUtil.create("R1", "cf", "c", now - 1000,
-        KeyValue.Type.Delete, "dontcare"), //expired
-        /*14*/ KeyValueTestUtil.create("R1", "cf", "d", now - 60,
-        KeyValue.Type.Put, "expired put"), //live
-        /*15*/ KeyValueTestUtil.create("R1", "cf", "d", now - 100,
-        KeyValue.Type.Delete, "not-expired delete"), //live
+          timestampType.fromEpochTimeMillisToTimestamp(now - 100), KeyValue.Type.DeleteColumn,
+          "dont-care"), // max-version
+        /*8*/ KeyValueTestUtil.create("R1", "cf", "b", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 600), KeyValue.Type.DeleteColumn, "dont-care"), //expired
+        /*9*/ KeyValueTestUtil.create("R1", "cf", "b", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 70), KeyValue.Type.Put, "v2"), //live
+        /*10*/ KeyValueTestUtil.create("R1", "cf", "b", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 750), KeyValue.Type.Put, "v1"), //expired
+        /*11*/ KeyValueTestUtil.create("R1", "cf", "c", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 500), KeyValue.Type.Delete, "dontcare"), //expired
+        /*12*/ KeyValueTestUtil.create("R1", "cf", "c", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 600), KeyValue.Type.Put, "v1"), //expired
+        /*13*/ KeyValueTestUtil.create("R1", "cf", "c", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 1000), KeyValue.Type.Delete, "dontcare"), //expired
+        /*14*/ KeyValueTestUtil.create("R1", "cf", "d", timestampType
+              .fromEpochTimeMillisToTimestamp(now - 60), KeyValue.Type.Put, "expired put"), //live
+        /*15*/ KeyValueTestUtil.create("R1", "cf", "d", timestampType
+          .fromEpochTimeMillisToTimestamp(now - 100), KeyValue.Type.Delete, "not-expired delete"), //live
       };
       List<KeyValueScanner> scanners = scanFixture(kvs);
       Scan scan = new Scan();
@@ -972,10 +1012,10 @@ public class TestStoreScanner {
         HConstants.DEFAULT_BLOCKSIZE /* block size */,
         200, /* timeToPurgeDeletes */
         CellComparator.COMPARATOR);
-      try (StoreScanner scanner =
-        new StoreScanner(scan, scanInfo,
-          ScanType.COMPACT_DROP_DELETES, null, scanners,
-          HConstants.OLDEST_TIMESTAMP)) {
+      Store store = mock(HStore.class);
+      when(store.getClock()).thenReturn(clock);
+      try (StoreScanner scanner = new StoreScanner(store, scan, scanInfo, ScanType
+          .COMPACT_DROP_DELETES, null, scanners, HConstants.OLDEST_TIMESTAMP)) {
         List<Cell> results = new ArrayList<>();
         results = new ArrayList<>();
         Assert.assertEquals(true, scanner.next(results));

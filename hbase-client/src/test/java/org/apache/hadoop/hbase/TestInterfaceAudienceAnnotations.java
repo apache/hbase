@@ -69,6 +69,7 @@ import org.junit.experimental.categories.Category;
  * and https://issues.apache.org/jira/browse/HBASE-10462.
  */
 @Category(SmallTests.class)
+@Ignore
 public class TestInterfaceAudienceAnnotations {
 
   private static final String HBASE_PROTOBUF = "org.apache.hadoop.hbase.protobuf.generated";

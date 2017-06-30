@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -60,6 +61,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
@@ -580,16 +583,22 @@ public class TestDefaultMemStore {
    */
   @Test
   public void testGetNextRow() throws Exception {
-    addRows(this.memstore);
+    testGetNextRow(new Clock.HLC());
+    testGetNextRow(new Clock.SystemMonotonic());
+    testGetNextRow(new Clock.System());
+  }
+
+  public void testGetNextRow(Clock clock) throws Exception {
+    addRows(this.memstore, clock);
     // Add more versions to make it a little more interesting.
     Thread.sleep(1);
-    addRows(this.memstore);
+    addRows(this.memstore, clock);
     Cell closestToEmpty = ((DefaultMemStore) this.memstore).getNextRow(KeyValue.LOWESTKEY);
     assertTrue(CellComparator.COMPARATOR.compareRows(closestToEmpty,
         new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((DefaultMemStore) this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
-          System.currentTimeMillis()));
+          clock.now()));
       if (i + 1 == ROW_COUNT) {
         assertEquals(nr, null);
       } else {
@@ -603,9 +612,11 @@ public class TestDefaultMemStore {
       ScanInfo scanInfo = new ScanInfo(conf, FAMILY, 0, 1, Integer.MAX_VALUE,
           KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator());
       ScanType scanType = ScanType.USER_SCAN;
-      try (InternalScanner scanner = new StoreScanner(new Scan(
-          Bytes.toBytes(startRowId)), scanInfo, scanType, null,
-          memstore.getScanners(0))) {
+      Store store = mock(HStore.class);
+      when(store.getClock()).thenReturn(Clock.getDummyClockOfGivenClockType(clock.clockType));
+
+      try (InternalScanner scanner = new StoreScanner(store, new Scan(Bytes.toBytes(startRowId)),
+          scanInfo, scanType, null, memstore.getScanners(0))) {
         List<Cell> results = new ArrayList<>();
         for (int i = 0; scanner.next(results); i++) {
           int rowId = startRowId + i;
@@ -1014,6 +1025,24 @@ public class TestDefaultMemStore {
     for (int i = 0; i < ROW_COUNT; i++) {
       long timestamp = ts == HConstants.LATEST_TIMESTAMP ?
         System.currentTimeMillis() : ts;
+      for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
+        byte [] row = Bytes.toBytes(i);
+        byte [] qf = makeQualifier(i, ii);
+        hmc.add(new KeyValue(row, FAMILY, qf, timestamp, qf), null);
+      }
+    }
+    return ROW_COUNT;
+  }
+
+  /**
+   * Adds {@link #ROW_COUNT} rows and {@link #QUALIFIER_COUNT}
+   * @param hmc Instance to add rows to.
+   * @return How many rows we added.
+   * @throws IOException
+   */
+  protected int addRows(final MemStore hmc, Clock clock) {
+    for (int i = 0; i < ROW_COUNT; i++) {
+      long timestamp = clock.now();
       for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
         byte [] row = Bytes.toBytes(i);
         byte [] qf = makeQualifier(i, ii);

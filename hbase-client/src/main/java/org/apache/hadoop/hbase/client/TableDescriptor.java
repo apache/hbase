@@ -24,6 +24,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -104,6 +106,13 @@ public interface TableDescriptor {
    * @return durability setting for the table.
    */
   Durability getDurability();
+
+  /**
+   * Returns the clock type setting for the table.
+   *
+   * @return clock type setting for the table.
+   */
+  ClockType getClockType();
 
   /**
    * Returns an unmodifiable collection of all the {@link ColumnFamilyDescriptor} of
