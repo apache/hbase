@@ -82,10 +82,7 @@ public class TestMultiRowResource {
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
-    List<Object[]> params = new ArrayList<>(2);
-    params.add(new Object[] {Boolean.TRUE});
-    params.add(new Object[] {Boolean.FALSE});
-    return params;
+    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
   }
 
   public TestMultiRowResource(Boolean csrf) {

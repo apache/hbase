@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
@@ -28,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.compress.Compression;
 
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
@@ -36,6 +39,25 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Public
 public class HBaseCommonTestingUtility {
   protected static final Log LOG = LogFactory.getLog(HBaseCommonTestingUtility.class);
+
+  /** Compression algorithms to use in parameterized JUnit 4 tests */
+  public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =
+    Arrays.asList(new Object[][] {
+      { Compression.Algorithm.NONE },
+      { Compression.Algorithm.GZ }
+    });
+
+  /** This is for unit tests parameterized with a two booleans. */
+  public static final List<Object[]> BOOLEAN_PARAMETERIZED =
+      Arrays.asList(new Object[][] {
+          {false},
+          {true}
+      });
+
+  /** Compression algorithms to use in testing */
+  public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
+      Compression.Algorithm.NONE, Compression.Algorithm.GZ
+  };
 
   protected Configuration conf;
 

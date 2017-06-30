@@ -47,17 +47,15 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({MiscTests.class, SmallTests.class})
 public class TestStruct {
 
-  private Struct generic;
-  @SuppressWarnings("rawtypes")
-  private DataType specialized;
-  private Object[][] constructorArgs;
+  @Parameterized.Parameter(value = 0)
+  public Struct generic;
 
-  public TestStruct(Struct generic, @SuppressWarnings("rawtypes") DataType specialized,
-      Object[][] constructorArgs) {
-    this.generic = generic;
-    this.specialized = specialized;
-    this.constructorArgs = constructorArgs;
-  }
+  @SuppressWarnings("rawtypes")
+  @Parameterized.Parameter(value = 1)
+  public DataType specialized;
+
+  @Parameterized.Parameter(value = 2)
+  public Object[][] constructorArgs;
 
   @Parameters
   public static Collection<Object[]> params() {
