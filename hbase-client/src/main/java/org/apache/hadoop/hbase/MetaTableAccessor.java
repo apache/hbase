@@ -1977,7 +1977,10 @@ public class MetaTableAccessor {
       deletes.add(e);
     }
     deleteFromMetaTable(connection, deletes);
-    LOG.info("Deleted " + regionsInfo);
+    LOG.info("Deleted " + regionInfos.size() + " regions from META");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Deleted regions: " + regionInfos);
+    }
   }
 
   /**
@@ -2029,7 +2032,10 @@ public class MetaTableAccessor {
     //
     // HBASE-13875 uses master timestamp for the mutations. The 20ms sleep is not needed
     addRegionsToMeta(connection, regionInfos, regionReplication, now+1);
-    LOG.info("Overwritten " + regionInfos);
+    LOG.info("Overwritten " + regionInfos.size() + " regions to Meta");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Overwritten regions: " + regionInfos);
+    }
   }
 
   /**
