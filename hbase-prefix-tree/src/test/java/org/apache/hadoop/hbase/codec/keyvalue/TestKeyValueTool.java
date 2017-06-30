@@ -31,11 +31,14 @@ import org.apache.hadoop.hbase.codec.prefixtree.row.TestRowData;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataRandomKeyValuesWithTags;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataTrivialWithTags;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import static org.junit.Assume.assumeFalse;
 
 @Category({MiscTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
@@ -46,17 +49,14 @@ public class TestKeyValueTool {
     return TestRowData.InMemory.getAllAsObjectArray();
   }
 
-  private TestRowData rows;
-
-  public TestKeyValueTool(TestRowData testRows) {
-    this.rows = testRows;
-  }
+  @Parameterized.Parameter
+  public TestRowData rows;
 
   @Test
   public void testRoundTripToBytes() {
-    if(rows instanceof TestRowDataTrivialWithTags || rows instanceof TestRowDataRandomKeyValuesWithTags) {
-      return;
-    }
+    assumeFalse(rows instanceof TestRowDataTrivialWithTags);
+    assumeFalse(rows instanceof TestRowDataRandomKeyValuesWithTags);
+
     List<KeyValue> kvs = rows.getInputs();
     ByteBuffer bb = KeyValueTestUtil.toByteBufferAndRewind(kvs, false);
     List<KeyValue> roundTrippedKvs = KeyValueTestUtil.rewindThenToList(bb, false, false);

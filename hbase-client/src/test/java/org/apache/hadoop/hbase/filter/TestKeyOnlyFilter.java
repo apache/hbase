@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -44,20 +45,12 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class TestKeyOnlyFilter {
 
-  private final boolean lenAsVal;
+  @Parameterized.Parameter
+  public boolean lenAsVal;
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<>(2);
-    {
-      paramList.add(new Object[] { false });
-      paramList.add(new Object[] { true });
-    }
-    return paramList;
-  }
-
-  public TestKeyOnlyFilter(boolean lenAsVal) {
-    this.lenAsVal = lenAsVal;
+    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
   }
 
   @Test

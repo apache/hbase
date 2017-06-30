@@ -44,6 +44,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -69,12 +70,7 @@ public class TestByteBufferUtils {
 
   @Parameterized.Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<>(2);
-    {
-      paramList.add(new Object[] { false });
-      paramList.add(new Object[] { true });
-    }
-    return paramList;
+    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
   }
 
   private static void setUnsafe(String fieldName, boolean value) throws Exception {

@@ -216,26 +216,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String FS_URI;
 
-  /** Compression algorithms to use in parameterized JUnit 4 tests */
-  public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =
-    Arrays.asList(new Object[][] {
-      { Compression.Algorithm.NONE },
-      { Compression.Algorithm.GZ }
-    });
-
-  /** This is for unit tests parameterized with a two booleans. */
-  public static final List<Object[]> BOOLEAN_PARAMETERIZED =
-      Arrays.asList(new Object[][] {
-          {false},
-          {true}
-      });
-
   /** This is for unit tests parameterized with a single boolean. */
   public static final List<Object[]> MEMSTORETS_TAGS_PARAMETRIZED = memStoreTSAndTagsCombination();
-  /** Compression algorithms to use in testing */
-  public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS ={
-      Compression.Algorithm.NONE, Compression.Algorithm.GZ
-    };
 
   /**
    * Checks to see if a specific port is available.
@@ -278,7 +260,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   private static List<Object[]> bloomAndCompressionCombinations() {
     List<Object[]> configurations = new ArrayList<>();
     for (Compression.Algorithm comprAlgo :
-         HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
+         HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS) {
       for (BloomType bloomType : BloomType.values()) {
         configurations.add(new Object[] { comprAlgo, bloomType });
       }

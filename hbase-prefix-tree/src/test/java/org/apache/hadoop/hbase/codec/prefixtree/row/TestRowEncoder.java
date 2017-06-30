@@ -55,11 +55,7 @@ public class TestRowEncoder {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> parameters = Lists.newArrayList();
-    for (TestRowData testRows : TestRowData.InMemory.getAll()) {
-      parameters.add(new Object[] { testRows });
-    }
-    return parameters;
+    return TestRowData.InMemory.getAllAsObjectArray();
   }
 
   protected TestRowData rows;
