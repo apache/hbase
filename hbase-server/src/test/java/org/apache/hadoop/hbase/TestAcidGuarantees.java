@@ -367,6 +367,8 @@ public class TestAcidGuarantees implements Tool {
     final boolean useMob) throws Exception {
 
     createTableIfMissing(useMob);
+    // set the max threads to avoid java.lang.OutOfMemoryError: unable to create new native thread
+    util.getConfiguration().setInt("hbase.hconnection.threads.max", 40);
     TestContext ctx = new TestContext(util.getConfiguration());
 
     byte rows[][] = new byte[numUniqueRows][];
