@@ -1977,9 +1977,9 @@ public class MetaTableAccessor {
       deletes.add(e);
     }
     deleteFromMetaTable(connection, deletes);
-    LOG.info("Deleted " + regionInfos.size() + " regions from META");
+    LOG.info("Deleted " + regionsInfo.size() + " regions from META");
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Deleted regions: " + regionInfos);
+      LOG.debug("Deleted regions: " + regionsInfo);
     }
   }
 
