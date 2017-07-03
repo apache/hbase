@@ -884,6 +884,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Set master as 'initialized'.
     setInitialized(true);
 
+    assignmentManager.checkIfShouldMoveSystemRegionAsync();
+
     status.setStatus("Assign meta replicas");
     metaBootstrap.assignMetaReplicas();
 
@@ -1647,8 +1649,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Replace with an async implementation from which you can get
   // a success/failure result.
   @VisibleForTesting
-  public void move(final byte[] encodedRegionName,
-      final byte[] destServerName) throws HBaseIOException {
+  public void move(final byte[] encodedRegionName, byte[] destServerName) throws HBaseIOException {
     RegionState regionState = assignmentManager.getRegionStates().
       getRegionState(Bytes.toString(encodedRegionName));
 
@@ -1660,11 +1661,19 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     ServerName dest;
+    List<ServerName> exclude = hri.isSystemTable() ? assignmentManager.getExcludedServersForSystemTable()
+        : new ArrayList<>(1);
+    if (destServerName != null && exclude.contains(ServerName.valueOf(Bytes.toString(destServerName)))) {
+      LOG.info(
+          Bytes.toString(encodedRegionName) + " can not move to " + Bytes.toString(destServerName)
+              + " because the server is in exclude list");
+      destServerName = null;
+    }
     if (destServerName == null || destServerName.length == 0) {
       LOG.info("Passed destination servername is null/empty so " +
         "choosing a server at random");
-      final List<ServerName> destServers = this.serverManager.createDestinationServersList(
-        regionState.getServerName());
+      exclude.add(regionState.getServerName());
+      final List<ServerName> destServers = this.serverManager.createDestinationServersList(exclude);
       dest = balancer.randomAssignment(hri, destServers);
       if (dest == null) {
         LOG.debug("Unable to determine a plan to assign " + hri);
@@ -2575,7 +2584,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (info != null && info.hasVersionInfo()) {
       return info.getVersionInfo().getVersion();
     }
-    return "Unknown";
+    return "0.0.0"; //Lowest version to prevent move system region to unknown version RS.
+  }
+
+  @Override
+  public void checkIfShouldMoveSystemRegionAsync() {
+    assignmentManager.checkIfShouldMoveSystemRegionAsync();
   }
 
   /**

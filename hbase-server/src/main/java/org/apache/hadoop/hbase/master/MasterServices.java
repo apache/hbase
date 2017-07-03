@@ -513,4 +513,8 @@ public interface MasterServices extends Server {
    * @return {@link LockManager} to lock namespaces/tables/regions.
    */
   LockManager getLockManager();
+
+  public String getRegionServerVersion(final ServerName sn);
+
+  public void checkIfShouldMoveSystemRegionAsync();
 }

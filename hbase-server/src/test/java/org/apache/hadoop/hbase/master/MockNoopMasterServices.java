@@ -443,6 +443,15 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public String getRegionServerVersion(ServerName sn) {
+    return null;
+  }
+
+  @Override
+  public void checkIfShouldMoveSystemRegionAsync() {
+  }
+
+  @Override
   public long dispatchMergingRegions(HRegionInfo region_a, HRegionInfo region_b, boolean forcible, long nonceGroup,
       long nonce) throws IOException {
     return 0;
