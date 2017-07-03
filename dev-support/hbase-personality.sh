@@ -393,7 +393,7 @@ function mvnsite_filefilter
   local filename=$1
 
   if [[ ${BUILDTOOL} = maven ]]; then
-    if [[ ${filename} =~ src/main/site || ${filename} =~ src/main/asciidoc ]]; then
+    if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc ]]; then
       yetus_debug "tests/mvnsite: ${filename}"
       add_test mvnsite
     fi
