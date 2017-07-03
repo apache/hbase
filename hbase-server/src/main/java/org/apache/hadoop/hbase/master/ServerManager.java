@@ -1206,13 +1206,13 @@ public class ServerManager {
   /**
    * Creates a list of possible destinations for a region. It contains the online servers, but not
    *  the draining or dying servers.
-   *  @param serverToExclude can be null if there is no server to exclude
+   *  @param serversToExclude can be null if there is no server to exclude
    */
-  public List<ServerName> createDestinationServersList(final ServerName serverToExclude){
+  public List<ServerName> createDestinationServersList(final List<ServerName> serversToExclude){
     final List<ServerName> destServers = getOnlineServersList();
 
-    if (serverToExclude != null){
-      destServers.remove(serverToExclude);
+    if (serversToExclude != null){
+      destServers.removeAll(serversToExclude);
     }
 
     // Loop through the draining server list and remove them from the server list

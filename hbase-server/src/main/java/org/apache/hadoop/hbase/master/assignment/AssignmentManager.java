@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -86,8 +87,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.VersionInfo;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 
 /**
  * The AssignmentManager is the coordinator for region assign/unassign operations.
@@ -169,6 +172,8 @@ public class AssignmentManager implements ServerListener {
   private final int assignDispatchWaitQueueMaxSize;
   private final int assignDispatchWaitMillis;
   private final int assignMaxAttempts;
+
+  private final Object checkIfShouldMoveSystemRegionLock = new Object();
 
   private Thread assignThread;
 
@@ -452,6 +457,55 @@ public class AssignmentManager implements ServerListener {
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
   }
 
+  /**
+   * Start a new thread to check if there are region servers whose versions are higher than others.
+   * If so, move all system table regions to RS with the highest version to keep compatibility.
+   * The reason is, RS in new version may not be able to access RS in old version when there are
+   * some incompatible changes.
+   */
+  public void checkIfShouldMoveSystemRegionAsync() {
+    new Thread(() -> {
+      try {
+        synchronized (checkIfShouldMoveSystemRegionLock) {
+          List<ServerName> serverList = master.getServerManager()
+              .createDestinationServersList(getExcludedServersForSystemTable());
+          List<RegionPlan> plans = new ArrayList<>();
+          for (ServerName server : getExcludedServersForSystemTable()) {
+            List<HRegionInfo> regionsShouldMove = getCarryingSystemTables(server);
+            if (!regionsShouldMove.isEmpty()) {
+              for (HRegionInfo regionInfo : regionsShouldMove) {
+                RegionPlan plan = new RegionPlan(regionInfo, server,
+                    getBalancer().randomAssignment(regionInfo, serverList));
+                if (regionInfo.isMetaRegion()) {
+                  // Must move meta region first.
+                  moveAsync(plan);
+                } else {
+                  plans.add(plan);
+                }
+              }
+            }
+            for (RegionPlan plan : plans) {
+              moveAsync(plan);
+            }
+          }
+        }
+      } catch (Throwable t) {
+        LOG.error(t);
+      }
+    }).start();
+  }
+
+  private List<HRegionInfo> getCarryingSystemTables(ServerName serverName) {
+    Set<RegionStateNode> regions = this.getRegionStates().getServerNode(serverName).getRegions();
+    if (regions == null) {
+      return new ArrayList<>();
+    }
+    return regions.stream()
+        .map(RegionStateNode::getRegionInfo)
+        .filter(HRegionInfo::isSystemTable)
+        .collect(Collectors.toList());
+  }
+
   public void assign(final HRegionInfo regionInfo) throws IOException {
     assign(regionInfo, true);
   }
@@ -617,6 +671,19 @@ public class AssignmentManager implements ServerListener {
   }
 
   public MoveRegionProcedure createMoveRegionProcedure(final RegionPlan plan) {
+    if (plan.getRegionInfo().isSystemTable()) {
+      List<ServerName> exclude = getExcludedServersForSystemTable();
+      if (plan.getDestination() != null && exclude.contains(plan.getDestination())) {
+        try {
+          LOG.info("Can not move " + plan.getRegionInfo() + " to " + plan.getDestination()
+              + " because the server is not with highest version");
+          plan.setDestination(getBalancer().randomAssignment(plan.getRegionInfo(),
+              this.master.getServerManager().createDestinationServersList(exclude)));
+        } catch (HBaseIOException e) {
+          LOG.warn(e);
+        }
+      }
+    }
     return new MoveRegionProcedure(getProcedureEnvironment(), plan);
   }
 
@@ -1684,6 +1751,26 @@ public class AssignmentManager implements ServerListener {
     } finally {
       assignQueueLock.unlock();
     }
+  }
+
+  /**
+   * Get a list of servers that this region can not assign to.
+   * For system table, we must assign them to a server with highest version.
+   */
+  public List<ServerName> getExcludedServersForSystemTable() {
+    List<Pair<ServerName, String>> serverList = master.getServerManager().getOnlineServersList()
+        .stream()
+        .map((s)->new Pair<>(s, master.getRegionServerVersion(s)))
+        .collect(Collectors.toList());
+    if (serverList.isEmpty()) {
+      return new ArrayList<>();
+    }
+    String highestVersion = Collections.max(serverList,
+        (o1, o2) -> VersionInfo.compareVersion(o1.getSecond(), o2.getSecond())).getSecond();
+    return serverList.stream()
+        .filter((p)->!p.getSecond().equals(highestVersion))
+        .map(Pair::getFirst)
+        .collect(Collectors.toList());
   }
 
   // ============================================================================================
