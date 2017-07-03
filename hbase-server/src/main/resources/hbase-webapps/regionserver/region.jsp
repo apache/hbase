@@ -73,6 +73,7 @@
           <div class="collapse navbar-collapse">
               <ul class="nav navbar-nav">
                   <li class="active"><a href="/rs-status">Home</a></li>
+                  <li><a href="/processRS.jsp">Process Metrics</a></li>
                   <li><a href="/logs/">Local Logs</a></li>
                   <li><a href="/logLevel">Log Level</a></li>
                   <li><a href="/dump">Debug Dump</a></li>

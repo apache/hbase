@@ -61,6 +61,7 @@
                         <li><a href="/master-status">Home</a></li>
                         <li><a href="/tablesDetailed.jsp">Table Details</a></li>
                         <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
+                        <li><a href="/processMaster.jsp">Process Metrics</a></li>
                         <li><a href="/logs/">Local Logs</a></li>
                         <li><a href="/logLevel">Log Level</a></li>
                         <li><a href="/dump">Debug Dump</a></li>
