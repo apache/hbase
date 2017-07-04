@@ -40,13 +40,13 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -275,11 +275,11 @@ public class LoadTestTool extends AbstractHBaseTool {
       byte[][] columnFamilies) throws IOException {
     try (Connection conn = ConnectionFactory.createConnection(conf);
         Admin admin = conn.getAdmin()) {
-      HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
+      TableDescriptor tableDesc = admin.getTableDescriptor(tableName);
       LOG.info("Disabling table " + tableName);
       admin.disableTable(tableName);
       for (byte[] cf : columnFamilies) {
-        HColumnDescriptor columnDesc = tableDesc.getFamily(cf);
+        HColumnDescriptor columnDesc = (HColumnDescriptor) tableDesc.getColumnFamily(cf);
         boolean isNewCf = columnDesc == null;
         if (isNewCf) {
           columnDesc = new HColumnDescriptor(cf);
