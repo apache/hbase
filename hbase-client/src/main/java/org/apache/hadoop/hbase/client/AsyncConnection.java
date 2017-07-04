@@ -96,11 +96,17 @@ public interface AsyncConnection extends Closeable {
   AsyncTableBuilder<AsyncTable> getTableBuilder(TableName tableName, ExecutorService pool);
 
   /**
-   * Retrieve an AsyncAdmin implementation to administer an HBase cluster. The returned AsyncAdmin
-   * is not guaranteed to be thread-safe. A new instance should be created for each using thread.
-   * This is a lightweight operation. Pooling or caching of the returned AsyncAdmin is not
-   * recommended.
+   * Retrieve an AsyncAdmin implementation to administer an HBase cluster. The returned
+   * {@code CompletableFuture} will be finished directly in the rpc framework's callback thread, so
+   * typically you should not do any time consuming work inside these methods.
    * @return an AsyncAdmin instance for cluster administration
    */
   AsyncAdmin getAdmin();
+
+  /**
+   * Retrieve an AsyncAdmin implementation to administer an HBase cluster.
+   * @param pool the thread pool to use for executing callback
+   * @return an AsyncAdmin instance for cluster administration
+   */
+  AsyncAdmin getAdmin(ExecutorService pool);
 }

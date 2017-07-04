@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
+
 
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -1271,18 +1273,25 @@ public final class RequestConverter {
       final byte [][] splitKeys,
       final long nonceGroup,
       final long nonce) {
+    return buildCreateTableRequest(hTableDesc, Optional.ofNullable(splitKeys), nonceGroup, nonce);
+  }
+
+  /**
+   * Creates a protocol buffer CreateTableRequest
+   * @param hTableDesc
+   * @param splitKeys
+   * @return a CreateTableRequest
+   */
+  public static CreateTableRequest buildCreateTableRequest(TableDescriptor hTableDesc,
+      Optional<byte[][]> splitKeys, long nonceGroup, long nonce) {
     CreateTableRequest.Builder builder = CreateTableRequest.newBuilder();
     builder.setTableSchema(ProtobufUtil.convertToTableSchema(hTableDesc));
-    if (splitKeys != null) {
-      for (byte [] splitKey : splitKeys) {
-        builder.addSplitKeys(UnsafeByteOperations.unsafeWrap(splitKey));
-      }
-    }
+    splitKeys.ifPresent(keys -> Arrays.stream(keys).forEach(
+      key -> builder.addSplitKeys(UnsafeByteOperations.unsafeWrap(key))));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();
   }
-
 
   /**
    * Creates a protocol buffer ModifyTableRequest

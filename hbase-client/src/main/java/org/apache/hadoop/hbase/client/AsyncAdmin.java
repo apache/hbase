@@ -47,11 +47,6 @@ import org.apache.hadoop.hbase.util.Pair;
 public interface AsyncAdmin {
 
   /**
-   * @return Async Connection used by this object.
-   */
-  AsyncConnectionImpl getConnection();
-
-  /**
    * @param tableName Table to check.
    * @return True if table exists already. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -105,7 +100,9 @@ public interface AsyncAdmin {
    * Creates a new table.
    * @param desc table descriptor for table
    */
-  CompletableFuture<Void> createTable(TableDescriptor desc);
+  default CompletableFuture<Void> createTable(TableDescriptor desc) {
+    return createTable(desc, Optional.empty());
+  }
 
   /**
    * Creates a new table with the specified number of regions. The start key specified will become
@@ -128,7 +125,7 @@ public interface AsyncAdmin {
    * @param desc table descriptor for table
    * @param splitKeys array of split keys for the initial regions of the table
    */
-  CompletableFuture<Void> createTable(TableDescriptor desc, byte[][] splitKeys);
+  CompletableFuture<Void> createTable(TableDescriptor desc, Optional<byte[][]> splitKeys);
 
   /**
    * Deletes a table.
@@ -188,6 +185,13 @@ public interface AsyncAdmin {
 
   /**
    * @param tableName name of table to check
+   * @return true if table is on-line. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isTableEnabled(TableName tableName);
+
+  /**
+   * @param tableName name of table to check
    * @return true if table is off-line. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
@@ -198,7 +202,9 @@ public interface AsyncAdmin {
    * @return true if all regions of the table are available. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
-  CompletableFuture<Boolean> isTableAvailable(TableName tableName);
+  default CompletableFuture<Boolean> isTableAvailable(TableName tableName) {
+    return isTableAvailable(tableName, null);
+  }
 
   /**
    * Use this api to check if the table has been created with the specified number of splitkeys
@@ -275,13 +281,6 @@ public interface AsyncAdmin {
   CompletableFuture<List<NamespaceDescriptor>> listNamespaceDescriptors();
 
   /**
-   * @param tableName name of table to check
-   * @return true if table is on-line. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
-   */
-  CompletableFuture<Boolean> isTableEnabled(TableName tableName);
-
-  /**
    * Turn the load balancer on or off.
    * @param on
    * @return Previous balancer value wrapped by a {@link CompletableFuture}.
@@ -330,7 +329,7 @@ public interface AsyncAdmin {
   /**
    * Get all the online regions on a region server.
    */
-  CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName sn);
+  CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName serverName);
 
   /**
    * Flush a table.
@@ -422,15 +421,15 @@ public interface AsyncAdmin {
 
   /**
    * Compact all regions on the region server.
-   * @param sn the region server name
+   * @param serverName the region server name
    */
-  CompletableFuture<Void> compactRegionServer(ServerName sn);
+  CompletableFuture<Void> compactRegionServer(ServerName serverName);
 
   /**
    * Compact all regions on the region server.
-   * @param sn the region server name
+   * @param serverName the region server name
    */
-  CompletableFuture<Void> majorCompactRegionServer(ServerName sn);
+  CompletableFuture<Void> majorCompactRegionServer(ServerName serverName);
 
   /**
    * Merge two regions.
@@ -563,18 +562,18 @@ public interface AsyncAdmin {
 
   /**
    * Append the replicable table-cf config of the specified peer
-   * @param id a short that identifies the cluster
+   * @param peerId a short that identifies the cluster
    * @param tableCfs A map from tableName to column family names
    */
-  CompletableFuture<Void> appendReplicationPeerTableCFs(String id,
+  CompletableFuture<Void> appendReplicationPeerTableCFs(String peerId,
       Map<TableName, ? extends Collection<String>> tableCfs);
 
   /**
    * Remove some table-cfs from config of the specified peer
-   * @param id a short name that identifies the cluster
+   * @param peerId a short name that identifies the cluster
    * @param tableCfs A map from tableName to column family names
    */
-  CompletableFuture<Void> removeReplicationPeerTableCFs(String id,
+  CompletableFuture<Void> removeReplicationPeerTableCFs(String peerId,
       Map<TableName, ? extends Collection<String>> tableCfs);
 
   /**
@@ -613,7 +612,9 @@ public interface AsyncAdmin {
    * @param snapshotName name of the snapshot to be created
    * @param tableName name of the table for which snapshot is created
    */
-  CompletableFuture<Void> snapshot(String snapshotName, TableName tableName);
+  default CompletableFuture<Void> snapshot(String snapshotName, TableName tableName) {
+    return snapshot(snapshotName, tableName, SnapshotType.FLUSH);
+  }
 
   /**
    * Create typed snapshot of the table. Snapshots are considered unique based on <b>the name of the
@@ -627,8 +628,10 @@ public interface AsyncAdmin {
    * @param tableName name of the table to snapshot
    * @param type type of snapshot to take
    */
-  CompletableFuture<Void> snapshot(String snapshotName, TableName tableName,
-      SnapshotType type);
+  default CompletableFuture<Void> snapshot(String snapshotName, TableName tableName,
+      SnapshotType type) {
+    return snapshot(new SnapshotDescription(snapshotName, tableName, type));
+  }
 
   /**
    * Take a snapshot and wait for the server to complete that snapshot asynchronously. Only a single
@@ -695,14 +698,16 @@ public interface AsyncAdmin {
    * @return a list of snapshot descriptors for completed snapshots wrapped by a
    *         {@link CompletableFuture}
    */
-  CompletableFuture<List<SnapshotDescription>> listSnapshots();
+  default CompletableFuture<List<SnapshotDescription>> listSnapshots() {
+    return listSnapshots(Optional.empty());
+  }
 
   /**
    * List all the completed snapshots matching the given pattern.
    * @param pattern The compiled regular expression to match against
    * @return - returns a List of SnapshotDescription wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<List<SnapshotDescription>> listSnapshots(Pattern pattern);
+  CompletableFuture<List<SnapshotDescription>> listSnapshots(Optional<Pattern> pattern);
 
   /**
    * List all the completed snapshots matching the given table name regular expression and snapshot
@@ -725,7 +730,9 @@ public interface AsyncAdmin {
    * Delete existing snapshots whose names match the pattern passed.
    * @param pattern pattern for names of the snapshot to match
    */
-  CompletableFuture<Void> deleteSnapshots(Pattern pattern);
+  default CompletableFuture<Void> deleteSnapshots(Pattern pattern) {
+    return deleteTableSnapshots(null, pattern);
+  }
 
   /**
    * Delete all existing snapshots matching the given table name regular expression and snapshot

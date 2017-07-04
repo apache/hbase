@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -32,11 +33,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDescriptor;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -51,23 +53,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Class to test asynchronous table admin operations.
  */
+@RunWith(Parameterized.class)
 @Category({LargeTests.class, ClientTests.class})
 public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
-  @Rule
-  public TestName name = new TestName();
-
   @Test
   public void testTableExist() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
     boolean exist;
     exist = admin.tableExists(tableName).get();
     assertEquals(false, exist);
@@ -81,12 +80,12 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   @Test
   public void testListTables() throws Exception {
     int numTables = admin.listTables().get().size();
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
-    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "3");
+    final TableName tableName1 = TableName.valueOf(tableName.getNameAsString() + "1");
+    final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "2");
+    final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "3");
     TableName[] tables = new TableName[] { tableName1, tableName2, tableName3 };
     for (int i = 0; i < tables.length; i++) {
-      TEST_UTIL.createTable(tables[i], FAMILY);
+      createTableWithDefaultConf(tables[i]);
     }
 
     List<TableDescriptor> tableDescs = admin.listTables().get();
@@ -118,7 +117,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     }
 
     for (int i = 0; i < tables.length; i++) {
-      TEST_UTIL.deleteTable(tables[i]);
+      admin.disableTable(tables[i]).join();
+      admin.deleteTable(tables[i]).join();
     }
 
     tableDescs = admin.listTables(Optional.empty(), true).get();
@@ -127,27 +127,25 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertTrue("Not found system tables", tableNames.size() > 0);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testGetTableDescriptor() throws Exception {
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
-    HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    htd.addFamily(fam1);
-    htd.addFamily(fam2);
-    htd.addFamily(fam3);
-    admin.createTable(htd).join();
-    TableDescriptor confirmedHtd = admin.getTableDescriptor(htd.getTableName()).get();
-    assertEquals(htd.compareTo(new HTableDescriptor(confirmedHtd)), 0);
+    byte[][] families = { FAMILY, FAMILY_0, FAMILY_1 };
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    for (byte[] family : families) {
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    }
+    TableDescriptor desc = builder.build();
+    admin.createTable(desc).join();
+    ModifyableTableDescriptor modifyableDesc = ((ModifyableTableDescriptor) desc);
+    TableDescriptor confirmedHtd = admin.getTableDescriptor(tableName).get();
+    assertEquals(modifyableDesc.compareTo((ModifyableTableDescriptor) confirmedHtd), 0);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCreateTable() throws Exception {
     List<TableDescriptor> tables = admin.listTables().get();
     int numTables = tables.size();
-    final  TableName tableName = TableName.valueOf(name.getMethodName());
-    admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(FAMILY)))
-        .join();
+    createTableWithDefaultConf(tableName);
     tables = admin.listTables().get();
     assertEquals(numTables + 1, tables.size());
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
@@ -162,118 +160,102 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     return state.get().getState();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCreateTableNumberOfRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc).join();
-    List<HRegionLocation> regions;
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      regions = l.getAllRegionLocations();
-      assertEquals("Table should have only 1 region", 1, regions.size());
-    }
+    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+
+    createTableWithDefaultConf(tableName);
+    List<HRegionLocation> regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    assertEquals("Table should have only 1 region", 1, regionLocations.size());
 
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "_2");
-    desc = new HTableDescriptor(tableName2);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, new byte[][] { new byte[] { 42 } }).join();
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName2)) {
-      regions = l.getAllRegionLocations();
-      assertEquals("Table should have only 2 region", 2, regions.size());
-    }
+    createTableWithDefaultConf(tableName2, Optional.of(new byte[][] { new byte[] { 42 } }));
+    regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName2)).get();
+    assertEquals("Table should have only 2 region", 2, regionLocations.size());
 
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "_3");
-    desc = new HTableDescriptor(tableName3);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, "a".getBytes(), "z".getBytes(), 3).join();
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName3)) {
-      regions = l.getAllRegionLocations();
-      assertEquals("Table should have only 3 region", 3, regions.size());
-    }
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName3);
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
+    admin.createTable(builder.build(), "a".getBytes(), "z".getBytes(), 3).join();
+    regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName3)).get();
+    assertEquals("Table should have only 3 region", 3, regionLocations.size());
 
     final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");
-    desc = new HTableDescriptor(tableName4);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    builder = TableDescriptorBuilder.newBuilder(tableName4);
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
     try {
-      admin.createTable(desc, "a".getBytes(), "z".getBytes(), 2).join();
+      admin.createTable(builder.build(), "a".getBytes(), "z".getBytes(), 2).join();
       fail("Should not be able to create a table with only 2 regions using this API.");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof IllegalArgumentException);
     }
 
     final TableName tableName5 = TableName.valueOf(tableName.getNameAsString() + "_5");
-    desc = new HTableDescriptor(tableName5);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, new byte[] { 1 }, new byte[] { 127 }, 16).join();
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName5)) {
-      regions = l.getAllRegionLocations();
-      assertEquals("Table should have 16 region", 16, regions.size());
-    }
+    builder = TableDescriptorBuilder.newBuilder(tableName5);
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
+    admin.createTable(builder.build(), new byte[] { 1 }, new byte[] { 127 }, 16).join();
+    regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName5)).get();
+    assertEquals("Table should have 16 region", 16, regionLocations.size());
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCreateTableWithRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
         new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
         new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 }, };
     int expectedRegions = splitKeys.length + 1;
-
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, splitKeys).join();
+    createTableWithDefaultConf(tableName, Optional.of(splitKeys));
 
     boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys).get();
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
-    List<HRegionLocation> regions;
-    Iterator<HRegionLocation> hris;
+    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    List<HRegionLocation> regions =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    Iterator<HRegionLocation> hris = regions.iterator();
+
+    assertEquals(
+      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
+      expectedRegions, regions.size());
+    System.err.println("Found " + regions.size() + " regions");
+
     HRegionInfo hri;
-    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      regions = l.getAllRegionLocations();
-
-      assertEquals(
-        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-        expectedRegions, regions.size());
-      System.err.println("Found " + regions.size() + " regions");
-
-      hris = regions.iterator();
-      hri = hris.next().getRegionInfo();
-      assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
-      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[0]));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[0]));
-      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[1]));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[1]));
-      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[2]));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[2]));
-      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[3]));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[3]));
-      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[4]));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[4]));
-      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[5]));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[5]));
-      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[6]));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[6]));
-      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[7]));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[7]));
-      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[8]));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
-      assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
-
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
-    }
+    hris = regions.iterator();
+    hri = hris.next().getRegionInfo();
+    assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[0]));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[0]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[1]));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[1]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[2]));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[2]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[3]));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[3]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[4]));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[4]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[5]));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[5]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[6]));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[6]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[7]));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[7]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[8]));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
+    assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
+    verifyRoundRobinDistribution(regions, expectedRegions);
 
     // Now test using start/end with a number of regions
 
@@ -283,99 +265,86 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     // Splitting into 10 regions, we expect (null,1) ... (9, null)
     // with (1,2) (2,3) (3,4) (4,5) (5,6) (6,7) (7,8) (8,9) in the middle
-
     expectedRegions = 10;
-
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "_2");
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName2);
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
+    admin.createTable(builder.build(), startKey, endKey, expectedRegions).join();
 
-    desc = new HTableDescriptor(tableName2);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, startKey, endKey, expectedRegions).join();
+    regions =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName2)).get();
+    assertEquals(
+      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
+      expectedRegions, regions.size());
+    System.err.println("Found " + regions.size() + " regions");
 
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName2)) {
-      regions = l.getAllRegionLocations();
-      assertEquals(
-        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-        expectedRegions, regions.size());
-      System.err.println("Found " + regions.size() + " regions");
-
-      hris = regions.iterator();
-      hri = hris.next().getRegionInfo();
-      assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
-      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }));
-      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 }));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 }));
-      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 }));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 }));
-      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 }));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 }));
-      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }));
-      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 }));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 }));
-      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 }));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 }));
-      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 }));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 }));
-      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
-      hri = hris.next().getRegionInfo();
-      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
-      assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
-
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
-    }
+    hris = regions.iterator();
+    hri = hris.next().getRegionInfo();
+    assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 }));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 }));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 }));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 }));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 }));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 }));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 }));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 }));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 }));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 }));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 }));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 }));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
+    hri = hris.next().getRegionInfo();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
+    assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
+    verifyRoundRobinDistribution(regions, expectedRegions);
 
     // Try once more with something that divides into something infinite
-
     startKey = new byte[] { 0, 0, 0, 0, 0, 0 };
     endKey = new byte[] { 1, 0, 0, 0, 0, 0 };
 
     expectedRegions = 5;
-
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "_3");
+    builder = TableDescriptorBuilder.newBuilder(tableName3);
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
+    admin.createTable(builder.build(), startKey, endKey, expectedRegions).join();
 
-    desc = new HTableDescriptor(tableName3);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, startKey, endKey, expectedRegions).join();
-
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName3)) {
-      regions = l.getAllRegionLocations();
-      assertEquals(
-        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-        expectedRegions, regions.size());
-      System.err.println("Found " + regions.size() + " regions");
-
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
-    }
+    regions =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName3)).get();
+    assertEquals(
+      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
+      expectedRegions, regions.size());
+    System.err.println("Found " + regions.size() + " regions");
+    verifyRoundRobinDistribution(regions, expectedRegions);
 
     // Try an invalid case where there are duplicate split keys
     splitKeys = new byte[][] { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },
         new byte[] { 3, 3, 3 }, new byte[] { 2, 2, 2 } };
-
-    final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");
-    desc = new HTableDescriptor(tableName4);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");;
     try {
-      admin.createTable(desc, splitKeys).join();
+      createTableWithDefaultConf(tableName4, Optional.of(splitKeys));
       fail("Should not be able to create this table because of " + "duplicate split keys");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof IllegalArgumentException);
     }
   }
 
-  private void verifyRoundRobinDistribution(ClusterConnection c, RegionLocator regionLocator,
-      int expectedRegions) throws IOException {
-    int numRS = c.getCurrentNrHRS();
-    List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
+  private void verifyRoundRobinDistribution(List<HRegionLocation> regions, int expectedRegions)
+      throws IOException {
+    int numRS = ((ClusterConnection) TEST_UTIL.getConnection()).getCurrentNrHRS();
+
     Map<ServerName, List<HRegionInfo>> server2Regions = new HashMap<>();
     regions.stream().forEach((loc) -> {
       ServerName server = loc.getServerName();
@@ -394,103 +363,93 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     });
   }
 
-  @Test(timeout = 300000)
-  public void testCreateTableWithOnlyEmptyStartRow() throws IOException {
-    byte[] tableName = Bytes.toBytes(name.getMethodName());
+  @Test
+  public void testCreateTableWithOnlyEmptyStartRow() throws Exception {
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    desc.addFamily(new HColumnDescriptor("col"));
     try {
-      admin.createTable(desc, splitKeys).join();
+      createTableWithDefaultConf(tableName, Optional.of(splitKeys));
       fail("Test case should fail as empty split key is passed.");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof IllegalArgumentException);
     }
   }
 
-  @Test(timeout = 300000)
-  public void testCreateTableWithEmptyRowInTheSplitKeys() throws IOException {
-    byte[] tableName = Bytes.toBytes(name.getMethodName());
+  @Test
+  public void testCreateTableWithEmptyRowInTheSplitKeys() throws Exception {
     byte[][] splitKeys = new byte[3][];
     splitKeys[0] = "region1".getBytes();
     splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
     splitKeys[2] = "region2".getBytes();
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    desc.addFamily(new HColumnDescriptor("col"));
     try {
-      admin.createTable(desc, splitKeys).join();
+      createTableWithDefaultConf(tableName, Optional.of(splitKeys));
       fail("Test case should fail as empty split key is passed.");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof IllegalArgumentException);
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDeleteTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(FAMILY))).join();
+    createTableWithDefaultConf(tableName);
     assertTrue(admin.tableExists(tableName).get());
     TEST_UTIL.getAdmin().disableTable(tableName);
     admin.deleteTable(tableName).join();
     assertFalse(admin.tableExists(tableName).get());
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDeleteTables() throws Exception {
-    TableName[] tables = { TableName.valueOf(name.getMethodName() + "1"),
-        TableName.valueOf(name.getMethodName() + "2"), TableName.valueOf(name.getMethodName() + "3") };
-    Arrays.stream(tables).map(HTableDescriptor::new)
-        .map((table) -> table.addFamily(new HColumnDescriptor(FAMILY))).forEach((table) -> {
-          admin.createTable(table).join();
-          admin.tableExists(table.getTableName()).thenAccept((exist) -> assertTrue(exist)).join();
-          try {
-            TEST_UTIL.getAdmin().disableTable(table.getTableName());
-          } catch (Exception e) {
-          }
-        });
-    List<TableDescriptor> failed = admin.deleteTables(Pattern.compile("testDeleteTables.*")).get();
+    TableName[] tables =
+        { TableName.valueOf(tableName.getNameAsString() + "1"),
+            TableName.valueOf(tableName.getNameAsString() + "2"),
+            TableName.valueOf(tableName.getNameAsString() + "3") };
+    Arrays.stream(tables).forEach((table) -> {
+      createTableWithDefaultConf(table);
+      admin.tableExists(table).thenAccept((exist) -> assertTrue(exist)).join();
+      admin.disableTable(table).join();
+    });
+    List<TableDescriptor> failed =
+        admin.deleteTables(Pattern.compile(tableName.getNameAsString() + ".*")).get();
     assertEquals(0, failed.size());
     Arrays.stream(tables).forEach((table) -> {
       admin.tableExists(table).thenAccept((exist) -> assertFalse(exist)).join();
     });
   }
 
-  @Test(timeout = 300000)
-  public void testTruncateTable() throws IOException {
-    testTruncateTable(TableName.valueOf(name.getMethodName()), false);
+  @Test
+  public void testTruncateTable() throws Exception {
+    testTruncateTable(tableName, false);
   }
 
-  @Test(timeout = 300000)
-  public void testTruncateTablePreservingSplits() throws IOException {
-    testTruncateTable(TableName.valueOf(name.getMethodName()), true);
+  @Test
+  public void testTruncateTablePreservingSplits() throws Exception {
+    testTruncateTable(tableName, true);
   }
 
   private void testTruncateTable(final TableName tableName, boolean preserveSplits)
-      throws IOException {
+      throws Exception {
     byte[][] splitKeys = new byte[2][];
     splitKeys[0] = Bytes.toBytes(4);
     splitKeys[1] = Bytes.toBytes(8);
 
     // Create & Fill the table
-    Table table = TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY, splitKeys);
-    try {
-      TEST_UTIL.loadNumericRows(table, HConstants.CATALOG_FAMILY, 0, 10);
-      assertEquals(10, TEST_UTIL.countRows(table));
-    } finally {
-      table.close();
+    createTableWithDefaultConf(tableName, Optional.of(splitKeys));
+    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    int expectedRows = 10;
+    for (int i = 0; i < expectedRows; i++) {
+      byte[] data = Bytes.toBytes(String.valueOf(i));
+      Put put = new Put(data);
+      put.addColumn(FAMILY, null, data);
+      table.put(put).join();
     }
+    assertEquals(10, table.scanAll(new Scan()).get().size());
     assertEquals(3, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
 
     // Truncate & Verify
-    TEST_UTIL.getAdmin().disableTable(tableName);
+    admin.disableTable(tableName).join();
     admin.truncateTable(tableName, preserveSplits).join();
-    table = TEST_UTIL.getConnection().getTable(tableName);
-    try {
-      assertEquals(0, TEST_UTIL.countRows(table));
-    } finally {
-      table.close();
-    }
+    assertEquals(0, table.scanAll(new Scan()).get().size());
     if (preserveSplits) {
       assertEquals(3, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
     } else {
@@ -498,149 +457,147 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDisableAndEnableTable() throws Exception {
+    createTableWithDefaultConf(tableName);
+    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
     final byte[] row = Bytes.toBytes("row");
     final byte[] qualifier = Bytes.toBytes("qualifier");
     final byte[] value = Bytes.toBytes("value");
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
-    put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
-    ht.put(put);
+    put.addColumn(FAMILY, qualifier, value);
+    table.put(put).join();
     Get get = new Get(row);
-    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
-    ht.get(get);
+    get.addColumn(FAMILY, qualifier);
+    table.get(get).get();
 
-    this.admin.disableTable(ht.getName()).join();
+    this.admin.disableTable(tableName).join();
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster().getMaster()
-        .getTableStateManager().isTableState(ht.getName(), TableState.State.DISABLED));
+        .getTableStateManager().isTableState(tableName, TableState.State.DISABLED));
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName));
 
     // Test that table is disabled
     get = new Get(row);
-    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    get.addColumn(FAMILY, qualifier);
     boolean ok = false;
     try {
-      ht.get(get);
-    } catch (TableNotEnabledException e) {
+      table.get(get).get();
+    } catch (ExecutionException e) {
       ok = true;
     }
     ok = false;
     // verify that scan encounters correct exception
-    Scan scan = new Scan();
     try {
-      ResultScanner scanner = ht.getScanner(scan);
-      Result res = null;
-      do {
-        res = scanner.next();
-      } while (res != null);
-    } catch (TableNotEnabledException e) {
+      table.scanAll(new Scan()).get();
+    } catch (ExecutionException e) {
       ok = true;
     }
     assertTrue(ok);
     this.admin.enableTable(tableName).join();
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
-        .getTableStateManager().isTableState(ht.getName(), TableState.State.ENABLED));
+        .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
 
     // Test that table is enabled
     try {
-      ht.get(get);
-    } catch (RetriesExhaustedException e) {
+      table.get(get).get();
+    } catch (Exception e) {
       ok = false;
     }
     assertTrue(ok);
-    ht.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDisableAndEnableTables() throws Exception {
+    final TableName tableName1 = TableName.valueOf(tableName.getNameAsString() + "1");
+    final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "2");
+    createTableWithDefaultConf(tableName1);
+    createTableWithDefaultConf(tableName2);
+    RawAsyncTable table1 = ASYNC_CONN.getRawTable(tableName1);
+    RawAsyncTable table2 = ASYNC_CONN.getRawTable(tableName1);
+
     final byte[] row = Bytes.toBytes("row");
     final byte[] qualifier = Bytes.toBytes("qualifier");
     final byte[] value = Bytes.toBytes("value");
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName());
-    Table ht1 = TEST_UTIL.createTable(tableName1, HConstants.CATALOG_FAMILY);
-    Table ht2 = TEST_UTIL.createTable(tableName2, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
-    put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
-    ht1.put(put);
-    ht2.put(put);
+    put.addColumn(FAMILY, qualifier, value);
+    table1.put(put).join();
+    table2.put(put).join();
     Get get = new Get(row);
-    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
-    ht1.get(get);
-    ht2.get(get);
+    get.addColumn(FAMILY, qualifier);
+    table1.get(get).get();
+    table2.get(get).get();
 
-    this.admin.disableTables(Pattern.compile("testDisableAndEnableTable.*")).join();
+    this.admin.disableTables(Pattern.compile(tableName.getNameAsString() + ".*")).join();
 
     // Test that tables are disabled
     get = new Get(row);
-    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    get.addColumn(FAMILY, qualifier);
     boolean ok = false;
     try {
-      ht1.get(get);
-      ht2.get(get);
-    } catch (org.apache.hadoop.hbase.DoNotRetryIOException e) {
+      table1.get(get).get();
+    } catch (ExecutionException e) {
       ok = true;
     }
+    assertTrue(ok);
 
+    ok = false;
+    try {
+      table2.get(get).get();
+    } catch (ExecutionException e) {
+      ok = true;
+    }
+    assertTrue(ok);
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName1));
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName2));
 
-    assertTrue(ok);
-    this.admin.enableTables(Pattern.compile("testDisableAndEnableTable.*")).join();
+    this.admin.enableTables(Pattern.compile("testDisableAndEnableTables.*")).join();
 
     // Test that tables are enabled
     try {
-      ht1.get(get);
-    } catch (IOException e) {
+      table1.get(get).get();
+    } catch (Exception e) {
       ok = false;
     }
     try {
-      ht2.get(get);
-    } catch (IOException e) {
+      table2.get(get).get();
+    } catch (Exception e) {
       ok = false;
     }
     assertTrue(ok);
-
-    ht1.close();
-    ht2.close();
-
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName1));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName2));
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testEnableTableRetainAssignment() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
-        new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
-        new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
+    byte[][] splitKeys =
+        { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
+            new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
+            new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
     int expectedRegions = splitKeys.length + 1;
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, splitKeys).join();
+    createTableWithDefaultConf(tableName, Optional.of(splitKeys));
 
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      List<HRegionLocation> regions = l.getAllRegionLocations();
+    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    List<HRegionLocation> regions =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    assertEquals(
+      "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
+      expectedRegions, regions.size());
 
-      assertEquals(
-        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-        expectedRegions, regions.size());
-      // Disable table.
-      admin.disableTable(tableName).join();
-      // Enable table, use retain assignment to assign regions.
-      admin.enableTable(tableName).join();
-      List<HRegionLocation> regions2 = l.getAllRegionLocations();
+    // Disable table.
+    admin.disableTable(tableName).join();
+    // Enable table, use retain assignment to assign regions.
+    admin.enableTable(tableName).join();
 
-      // Check the assignment.
-      assertEquals(regions.size(), regions2.size());
-      assertTrue(regions2.containsAll(regions));
-    }
+    List<HRegionLocation> regions2 =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    // Check the assignment.
+    assertEquals(regions.size(), regions2.size());
+    assertTrue(regions2.containsAll(regions));
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDisableCatalogTable() throws Exception {
     try {
       this.admin.disableTable(TableName.META_TABLE_NAME).join();
@@ -649,188 +606,149 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     }
     // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
     // actually getting disabled by the disableTable() call.
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName().getBytes()));
-    HColumnDescriptor hcd = new HColumnDescriptor("cf1".getBytes());
-    htd.addFamily(hcd);
-    admin.createTable(htd).join();
+    createTableWithDefaultConf(tableName);
   }
 
   @Test
-  public void testAddColumnFamily() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testAddColumnFamily() throws Exception {
     // Create a table with two families
-    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
-    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
-    admin.createTable(baseHtd).join();
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_0).build());
+    admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
-    try {
-      // Verify the table descriptor
-      verifyTableDescriptor(tableName, FAMILY_0);
+    // Verify the table descriptor
+    verifyTableDescriptor(tableName, FAMILY_0);
 
-      // Modify the table removing one family and verify the descriptor
-      admin.addColumnFamily(tableName, new HColumnDescriptor(FAMILY_1)).join();
-      verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
-    } finally {
-      admin.deleteTable(tableName);
-    }
+    // Modify the table removing one family and verify the descriptor
+    admin.addColumnFamily(tableName, ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).build())
+        .join();
+    verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
   }
 
   @Test
   public void testAddSameColumnFamilyTwice() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create a table with one families
-    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
-    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
-    admin.createTable(baseHtd).join();
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_0).build());
+    admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
+    // Verify the table descriptor
+    verifyTableDescriptor(tableName, FAMILY_0);
+
+    // Modify the table removing one family and verify the descriptor
+    admin.addColumnFamily(tableName, ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).build())
+        .join();
+    verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
+
     try {
-      // Verify the table descriptor
-      verifyTableDescriptor(tableName, FAMILY_0);
-
-      // Modify the table removing one family and verify the descriptor
-      this.admin.addColumnFamily(tableName, new HColumnDescriptor(FAMILY_1)).join();
-      verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
-
-      try {
-        // Add same column family again - expect failure
-        this.admin.addColumnFamily(tableName, new HColumnDescriptor(FAMILY_1)).join();
-        Assert.fail("Delete a non-exist column family should fail");
-      } catch (Exception e) {
-        // Expected.
-      }
-    } finally {
-      admin.deleteTable(tableName).join();
+      // Add same column family again - expect failure
+      this.admin.addColumnFamily(tableName,
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).build()).join();
+      Assert.fail("Delete a non-exist column family should fail");
+    } catch (Exception e) {
+      // Expected.
     }
   }
 
   @Test
   public void testModifyColumnFamily() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-
-    HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_0);
-    int blockSize = cfDescriptor.getBlocksize();
-    // Create a table with one families
-    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
-    baseHtd.addFamily(cfDescriptor);
-    admin.createTable(baseHtd).join();
+    TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_0).build();
+    int blockSize = cfd.getBlocksize();
+    admin.createTable(tdBuilder.addColumnFamily(cfd).build()).join();
     admin.disableTable(tableName).join();
+    // Verify the table descriptor
+    verifyTableDescriptor(tableName, FAMILY_0);
+
+    int newBlockSize = 2 * blockSize;
+    cfd = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_0).setBlocksize(newBlockSize).build();
+    // Modify colymn family
+    admin.modifyColumnFamily(tableName, cfd).join();
+
+    TableDescriptor htd = admin.getTableDescriptor(tableName).get();
+    ColumnFamilyDescriptor hcfd = htd.getColumnFamily(FAMILY_0);
+    assertTrue(hcfd.getBlocksize() == newBlockSize);
+  }
+
+  @Test
+  public void testModifyNonExistingColumnFamily() throws Exception {
+    TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_0).build();
+    int blockSize = cfd.getBlocksize();
+    admin.createTable(tdBuilder.addColumnFamily(cfd).build()).join();
+    admin.disableTable(tableName).join();
+    // Verify the table descriptor
+    verifyTableDescriptor(tableName, FAMILY_0);
+
+    int newBlockSize = 2 * blockSize;
+    cfd = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).setBlocksize(newBlockSize).build();
+
+    // Modify a column family that is not in the table.
     try {
-      // Verify the table descriptor
-      verifyTableDescriptor(tableName, FAMILY_0);
-
-      int newBlockSize = 2 * blockSize;
-      cfDescriptor.setBlocksize(newBlockSize);
-
-      // Modify colymn family
-      admin.modifyColumnFamily(tableName, cfDescriptor).join();
-
-      TableDescriptor htd = admin.getTableDescriptor(tableName).get();
-      ColumnFamilyDescriptor hcfd = htd.getColumnFamily(FAMILY_0);
-      assertTrue(hcfd.getBlocksize() == newBlockSize);
-    } finally {
-      admin.deleteTable(tableName).join();
+      admin.modifyColumnFamily(tableName, cfd).join();
+      Assert.fail("Modify a non-exist column family should fail");
+    } catch (Exception e) {
+      // Expected.
     }
   }
 
   @Test
-  public void testModifyNonExistingColumnFamily() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-
-    HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_1);
-    int blockSize = cfDescriptor.getBlocksize();
-    // Create a table with one families
-    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
-    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
-    admin.createTable(baseHtd).join();
-    admin.disableTable(tableName).join();
-    try {
-      // Verify the table descriptor
-      verifyTableDescriptor(tableName, FAMILY_0);
-
-      int newBlockSize = 2 * blockSize;
-      cfDescriptor.setBlocksize(newBlockSize);
-
-      // Modify a column family that is not in the table.
-      try {
-        admin.modifyColumnFamily(tableName, cfDescriptor).join();
-        Assert.fail("Modify a non-exist column family should fail");
-      } catch (Exception e) {
-        // Expected.
-      }
-    } finally {
-      admin.deleteTable(tableName).join();
-    }
-  }
-
-  @Test
-  public void testDeleteColumnFamily() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testDeleteColumnFamily() throws Exception {
     // Create a table with two families
-    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
-    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
-    baseHtd.addFamily(new HColumnDescriptor(FAMILY_1));
-    admin.createTable(baseHtd).join();
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_0).build())
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).build());
+    admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
-    try {
-      // Verify the table descriptor
-      verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
+    // Verify the table descriptor
+    verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
 
-      // Modify the table removing one family and verify the descriptor
-      admin.deleteColumnFamily(tableName, FAMILY_1).join();
-      verifyTableDescriptor(tableName, FAMILY_0);
-    } finally {
-      admin.deleteTable(tableName).join();
-    }
+    // Modify the table removing one family and verify the descriptor
+    admin.deleteColumnFamily(tableName, FAMILY_1).join();
+    verifyTableDescriptor(tableName, FAMILY_0);
   }
 
   @Test
-  public void testDeleteSameColumnFamilyTwice() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testDeleteSameColumnFamilyTwice() throws Exception {
     // Create a table with two families
-    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
-    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
-    baseHtd.addFamily(new HColumnDescriptor(FAMILY_1));
-    admin.createTable(baseHtd).join();
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_0).build())
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).build());
+    admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
+    // Verify the table descriptor
+    verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
+
+    // Modify the table removing one family and verify the descriptor
+    admin.deleteColumnFamily(tableName, FAMILY_1).join();
+    verifyTableDescriptor(tableName, FAMILY_0);
+
     try {
-      // Verify the table descriptor
-      verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
-
-      // Modify the table removing one family and verify the descriptor
+      // Delete again - expect failure
       admin.deleteColumnFamily(tableName, FAMILY_1).join();
-      verifyTableDescriptor(tableName, FAMILY_0);
-
-      try {
-        // Delete again - expect failure
-        admin.deleteColumnFamily(tableName, FAMILY_1).join();
-        Assert.fail("Delete a non-exist column family should fail");
-      } catch (Exception e) {
-        // Expected.
-      }
-    } finally {
-      admin.deleteTable(tableName).join();
+      Assert.fail("Delete a non-exist column family should fail");
+    } catch (Exception e) {
+      // Expected.
     }
   }
 
   private void verifyTableDescriptor(final TableName tableName, final byte[]... families)
-      throws IOException {
-    Admin admin = TEST_UTIL.getAdmin();
-
+      throws Exception {
     // Verify descriptor from master
-    HTableDescriptor htd = admin.getTableDescriptor(tableName);
+    TableDescriptor htd = admin.getTableDescriptor(tableName).get();
     verifyTableDescriptor(htd, tableName, families);
 
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    HTableDescriptor td = FSTableDescriptors
-        .getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
+    HTableDescriptor td =
+        FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
     verifyTableDescriptor(td, tableName, families);
   }
 
-  private void verifyTableDescriptor(final HTableDescriptor htd, final TableName tableName,
+  private void verifyTableDescriptor(final TableDescriptor htd, final TableName tableName,
       final byte[]... families) {
-    Set<byte[]> htdFamilies = htd.getFamiliesKeys();
+    Set<byte[]> htdFamilies = htd.getColumnFamilyNames();
     assertEquals(tableName, htd.getTableName());
     assertEquals(families.length, htdFamilies.size());
     for (byte[] familyName : families) {
@@ -840,28 +758,20 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testIsTableEnabledAndDisabled() throws Exception {
-    final TableName table = TableName.valueOf("testIsTableEnabledAndDisabled");
-    HTableDescriptor desc = new HTableDescriptor(table);
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    admin.createTable(desc).join();
-    assertTrue(admin.isTableEnabled(table).get());
-    assertFalse(admin.isTableDisabled(table).get());
-    admin.disableTable(table).join();
-    assertFalse(admin.isTableEnabled(table).get());
-    assertTrue(admin.isTableDisabled(table).get());
-    admin.deleteTable(table).join();
+    createTableWithDefaultConf(tableName);
+    assertTrue(admin.isTableEnabled(tableName).get());
+    assertFalse(admin.isTableDisabled(tableName).get());
+    admin.disableTable(tableName).join();
+    assertFalse(admin.isTableEnabled(tableName).get());
+    assertTrue(admin.isTableDisabled(tableName).get());
   }
 
   @Test
   public void testTableAvailableWithRandomSplitKeys() throws Exception {
-    TableName tableName = TableName.valueOf("testTableAvailableWithRandomSplitKeys");
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor("col"));
+    createTableWithDefaultConf(tableName);
     byte[][] splitKeys = new byte[1][];
     splitKeys = new byte[][] { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 } };
-    admin.createTable(desc).join();
     boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys).get();
     assertFalse("Table should be created with 1 row in META", tableAvailable);
   }
-
 }
