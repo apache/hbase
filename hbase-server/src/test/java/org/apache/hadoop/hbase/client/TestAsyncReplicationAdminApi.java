@@ -45,10 +45,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Class to test asynchronous replication admin operations.
  */
+@RunWith(Parameterized.class)
 @Category({LargeTests.class, ClientTests.class})
 public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
@@ -56,9 +59,6 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
   private final String KEY_ONE = "127.0.0.1:2181:/hbase";
   private final String ID_SECOND = "2";
   private final String KEY_SECOND = "127.0.0.1:2181:/hbase2";
-
-  @Rule
-  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -142,12 +142,12 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
   public void testAppendPeerTableCFs() throws Exception {
     ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
     rpc1.setClusterKey(KEY_ONE);
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "t1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "t2");
-    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "t3");
-    final TableName tableName4 = TableName.valueOf(name.getMethodName() + "t4");
-    final TableName tableName5 = TableName.valueOf(name.getMethodName() + "t5");
-    final TableName tableName6 = TableName.valueOf(name.getMethodName() + "t6");
+    final TableName tableName1 = TableName.valueOf(tableName.getNameAsString() + "t1");
+    final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "t2");
+    final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "t3");
+    final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "t4");
+    final TableName tableName5 = TableName.valueOf(tableName.getNameAsString() + "t5");
+    final TableName tableName6 = TableName.valueOf(tableName.getNameAsString() + "t6");
 
     // Add a valid peer
     admin.addReplicationPeer(ID_ONE, rpc1).join();
@@ -244,10 +244,10 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
   public void testRemovePeerTableCFs() throws Exception {
     ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
     rpc1.setClusterKey(KEY_ONE);
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "t1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "t2");
-    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "t3");
-    final TableName tableName4 = TableName.valueOf(name.getMethodName() + "t4");
+    final TableName tableName1 = TableName.valueOf(tableName.getNameAsString() + "t1");
+    final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "t2");
+    final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "t3");
+    final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "t4");
     // Add a valid peer
     admin.addReplicationPeer(ID_ONE, rpc1).join();
     Map<TableName, List<String>> tableCFs = new HashMap<>();
@@ -360,8 +360,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
   public void testNamespacesAndTableCfsConfigConflict() throws Exception {
     String ns1 = "ns1";
     String ns2 = "ns2";
-    final TableName tableName1 = TableName.valueOf(ns1 + ":" + name.getMethodName());
-    final TableName tableName2 = TableName.valueOf(ns2 + ":" + name.getMethodName() + "2");
+    final TableName tableName1 = TableName.valueOf(ns1 + ":" + tableName.getNameAsString() + "1");
+    final TableName tableName2 = TableName.valueOf(ns2 + ":" + tableName.getNameAsString() + "2");
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);

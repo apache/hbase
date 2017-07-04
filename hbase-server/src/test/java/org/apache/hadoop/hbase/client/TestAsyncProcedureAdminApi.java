@@ -66,7 +66,7 @@ public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testExecProcedure() throws Exception {
-    TableName tableName = TableName.valueOf("testExecProcedure");
+    String snapshotString = "offlineTableSnapshot";
     try {
       Table table = TEST_UTIL.createTable(tableName, Bytes.toBytes("cf"));
       for (int i = 0; i < 100; i++) {
@@ -74,13 +74,13 @@ public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
         table.put(put);
       }
       // take a snapshot of the enabled table
-      String snapshotString = "offlineTableSnapshot";
       Map<String, String> props = new HashMap<>();
       props.put("table", tableName.getNameAsString());
       admin.execProcedure(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION, snapshotString,
         props).get();
       LOG.debug("Snapshot completed.");
     } finally {
+      admin.deleteSnapshot(snapshotString).join();
       TEST_UTIL.deleteTable(tableName);
     }
   }

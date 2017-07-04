@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -31,11 +32,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -51,36 +51,29 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Class to test asynchronous region admin operations.
  */
+@RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   public static Random RANDOM = new Random(System.currentTimeMillis());
 
-  private void createTableWithDefaultConf(TableName TABLENAME) throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
-    HColumnDescriptor hcd = new HColumnDescriptor("value");
-    htd.addFamily(hcd);
-
-    admin.createTable(htd, null).get();
-  }
-
   @Test
   public void testCloseRegion() throws Exception {
-    TableName TABLENAME = TableName.valueOf("TestHBACloseRegion");
-    createTableWithDefaultConf(TABLENAME);
+    createTableWithDefaultConf(tableName);
 
     HRegionInfo info = null;
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.getTable().isSystemTable()) {
@@ -102,16 +95,14 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testCloseRegionIfInvalidRegionNameIsPassed() throws Exception {
-    final String name = "TestHBACloseRegion1";
-    byte[] TABLENAME = Bytes.toBytes(name);
-    createTableWithDefaultConf(TableName.valueOf(TABLENAME));
+    createTableWithDefaultConf(tableName);
 
     HRegionInfo info = null;
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(TABLENAME));
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
-        if (regionInfo.getRegionNameAsString().contains(name)) {
+        if (regionInfo.getRegionNameAsString().contains(tableName.getNameAsString())) {
           info = regionInfo;
           boolean catchNotServingException = false;
           try {
@@ -132,10 +123,9 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testCloseRegionWhenServerNameIsEmpty() throws Exception {
-    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegionWhenServerNameIsEmpty");
-    createTableWithDefaultConf(TableName.valueOf(TABLENAME));
+    createTableWithDefaultConf(tableName);
 
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(TABLENAME));
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
@@ -147,166 +137,61 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   }
 
   @Test
-  public void testGetRegion() throws Exception {
-    AsyncHBaseAdmin rawAdmin = (AsyncHBaseAdmin) admin;
-
-    final TableName tableName = TableName.valueOf("testGetRegion");
-    LOG.info("Started " + tableName);
+  public void testGetRegionLocation() throws Exception {
+    RawAsyncHBaseAdmin rawAdmin = (RawAsyncHBaseAdmin) ASYNC_CONN.getAdmin();
     TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
-
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      HRegionLocation regionLocation = locator.getRegionLocation(Bytes.toBytes("mmm"));
-      HRegionInfo region = regionLocation.getRegionInfo();
-      byte[] regionName = region.getRegionName();
-      HRegionLocation location = rawAdmin.getRegionLocation(regionName).get();
-      assertTrue(Bytes.equals(regionName, location.getRegionInfo().getRegionName()));
-      location = rawAdmin.getRegionLocation(region.getEncodedNameAsBytes()).get();
-      assertTrue(Bytes.equals(regionName, location.getRegionInfo().getRegionName()));
-    }
-  }
-
-  @Test
-  public void testMergeRegions() throws Exception {
-    final TableName tableName = TableName.valueOf("testMergeRegions");
-    HColumnDescriptor cd = new HColumnDescriptor("d");
-    HTableDescriptor td = new HTableDescriptor(tableName);
-    td.addFamily(cd);
-    byte[][] splitRows = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("6") };
-    Admin syncAdmin = TEST_UTIL.getAdmin();
-    try {
-      TEST_UTIL.createTable(td, splitRows);
-      TEST_UTIL.waitTableAvailable(tableName);
-
-      List<HRegionInfo> tableRegions;
-      HRegionInfo regionA;
-      HRegionInfo regionB;
-
-      // merge with full name
-      tableRegions = syncAdmin.getTableRegions(tableName);
-      assertEquals(3, syncAdmin.getTableRegions(tableName).size());
-      regionA = tableRegions.get(0);
-      regionB = tableRegions.get(1);
-      admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
-
-      assertEquals(2, syncAdmin.getTableRegions(tableName).size());
-
-      // merge with encoded name
-      tableRegions = syncAdmin.getTableRegions(tableName);
-      regionA = tableRegions.get(0);
-      regionB = tableRegions.get(1);
-      admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
-
-      assertEquals(1, syncAdmin.getTableRegions(tableName).size());
-    } finally {
-      syncAdmin.disableTable(tableName);
-      syncAdmin.deleteTable(tableName);
-    }
-  }
-
-  @Test
-  public void testSplitTable() throws Exception {
-    splitTests(TableName.valueOf("testSplitTable"), 3000, false, null);
-    splitTests(TableName.valueOf("testSplitTableWithSplitPoint"), 3000, false, Bytes.toBytes("3"));
-    splitTests(TableName.valueOf("testSplitRegion"), 3000, true, null);
-    splitTests(TableName.valueOf("testSplitRegionWithSplitPoint"), 3000, true, Bytes.toBytes("3"));
-  }
-
-  private void splitTests(TableName tableName, int rowCount, boolean isSplitRegion,
-      byte[] splitPoint) throws Exception {
-    int count = 0;
-    // create table
-    HColumnDescriptor cd = new HColumnDescriptor("d");
-    HTableDescriptor td = new HTableDescriptor(tableName);
-    td.addFamily(cd);
-    Table table = TEST_UTIL.createTable(td, null);
-    TEST_UTIL.waitTableAvailable(tableName);
-
-    List<HRegionInfo> regions = TEST_UTIL.getAdmin().getTableRegions(tableName);
-    assertEquals(regions.size(), 1);
-
-    List<Put> puts = new ArrayList<>();
-    for (int i = 0; i < rowCount; i++) {
-      Put put = new Put(Bytes.toBytes(i));
-      put.addColumn(Bytes.toBytes("d"), null, Bytes.toBytes("value" + i));
-      puts.add(put);
-    }
-    table.put(puts);
-
-    if (isSplitRegion) {
-      admin.splitRegion(regions.get(0).getRegionName(), Optional.ofNullable(splitPoint)).get();
-    } else {
-      if (splitPoint == null) {
-        admin.split(tableName).get();
-      } else {
-        admin.split(tableName, splitPoint).get();
-      }
-    }
-
-    for (int i = 0; i < 45; i++) {
-      try {
-        List<HRegionInfo> hRegionInfos = TEST_UTIL.getAdmin().getTableRegions(tableName);
-        count = hRegionInfos.size();
-        if (count >= 2) {
-          break;
-        }
-        Thread.sleep(1000L);
-      } catch (Exception e) {
-        LOG.error(e);
-      }
-    }
-
-    assertEquals(count, 2);
+    AsyncTableRegionLocator locator = ASYNC_CONN.getRegionLocator(tableName);
+    HRegionLocation regionLocation = locator.getRegionLocation(Bytes.toBytes("mmm")).get();
+    HRegionInfo region = regionLocation.getRegionInfo();
+    byte[] regionName = regionLocation.getRegionInfo().getRegionName();
+    HRegionLocation location = rawAdmin.getRegionLocation(regionName).get();
+    assertTrue(Bytes.equals(regionName, location.getRegionInfo().getRegionName()));
+    location = rawAdmin.getRegionLocation(region.getEncodedNameAsBytes()).get();
+    assertTrue(Bytes.equals(regionName, location.getRegionInfo().getRegionName()));
   }
 
   @Test
   public void testAssignRegionAndUnassignRegion() throws Exception {
-    final TableName tableName = TableName.valueOf("testAssignRegionAndUnassignRegion");
+    createTableWithDefaultConf(tableName);
+
+    // assign region.
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    AssignmentManager am = master.getAssignmentManager();
+    HRegionInfo hri = am.getRegionStates().getRegionsOfTable(tableName).get(0);
+
+    // assert region on server
+    RegionStates regionStates = am.getRegionStates();
+    ServerName serverName = regionStates.getRegionServerOfRegion(hri);
+    TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+    assertTrue(regionStates.getRegionState(hri).isOpened());
+
+    // Region is assigned now. Let's assign it again.
+    // Master should not abort, and region should stay assigned.
+    admin.assign(hri.getRegionName()).get();
     try {
-      // create test table
-      HTableDescriptor desc = new HTableDescriptor(tableName);
-      desc.addFamily(new HColumnDescriptor(FAMILY));
-      admin.createTable(desc).get();
-
-      // assign region.
-      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-      AssignmentManager am = master.getAssignmentManager();
-      HRegionInfo hri = am.getRegionStates().getRegionsOfTable(tableName).get(0);
-
-      // assert region on server
-      RegionStates regionStates = am.getRegionStates();
-      ServerName serverName = regionStates.getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
-      assertTrue(regionStates.getRegionState(hri).isOpened());
-
-      // Region is assigned now. Let's assign it again.
-      // Master should not abort, and region should stay assigned.
-      admin.assign(hri.getRegionName()).get();
-      try {
-        am.waitForAssignment(hri);
-        fail("Expected NoSuchProcedureException");
-      } catch (NoSuchProcedureException e) {
-        // Expected
-      }
-      assertTrue(regionStates.getRegionState(hri).isOpened());
-
-      // unassign region
-      admin.unassign(hri.getRegionName(), true).get();
-      try {
-        am.waitForAssignment(hri);
-        fail("Expected NoSuchProcedureException");
-      } catch (NoSuchProcedureException e) {
-        // Expected
-      }
-      assertTrue(regionStates.getRegionState(hri).isClosed());
-    } finally {
-      TEST_UTIL.deleteTable(tableName);
+      am.waitForAssignment(hri);
+      fail("Expected NoSuchProcedureException");
+    } catch (NoSuchProcedureException e) {
+      // Expected
     }
+    assertTrue(regionStates.getRegionState(hri).isOpened());
+
+    // unassign region
+    admin.unassign(hri.getRegionName(), true).get();
+    try {
+      am.waitForAssignment(hri);
+      fail("Expected NoSuchProcedureException");
+    } catch (NoSuchProcedureException e) {
+      // Expected
+    }
+    assertTrue(regionStates.getRegionState(hri).isClosed());
   }
 
   HRegionInfo createTableAndGetOneRegion(final TableName tableName)
       throws IOException, InterruptedException, ExecutionException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILY));
+    TableDescriptor desc =
+        TableDescriptorBuilder.newBuilder(tableName)
+            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build();
     admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5).get();
 
     // wait till the table is assigned
@@ -333,280 +218,341 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   // Will cause the Master to tell the regionserver to shut itself down because
   // regionserver is reporting the state as OPEN.
   public void testOfflineRegion() throws Exception {
-    final TableName tableName = TableName.valueOf("testOfflineRegion");
-    try {
-      HRegionInfo hri = createTableAndGetOneRegion(tableName);
+    HRegionInfo hri = createTableAndGetOneRegion(tableName);
 
-      RegionStates regionStates =
-          TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-      admin.offline(hri.getRegionName()).get();
+    RegionStates regionStates =
+        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+    admin.offline(hri.getRegionName()).get();
 
-      long timeoutTime = System.currentTimeMillis() + 3000;
-      while (true) {
-        if (regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OFFLINE)
-            .contains(hri))
-          break;
-        long now = System.currentTimeMillis();
-        if (now > timeoutTime) {
-          fail("Failed to offline the region in time");
-          break;
-        }
-        Thread.sleep(10);
+    long timeoutTime = System.currentTimeMillis() + 3000;
+    while (true) {
+      if (regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OFFLINE)
+          .contains(hri)) break;
+      long now = System.currentTimeMillis();
+      if (now > timeoutTime) {
+        fail("Failed to offline the region in time");
+        break;
       }
-      RegionState regionState = regionStates.getRegionState(hri);
-      assertTrue(regionState.isOffline());
-    } finally {
-      TEST_UTIL.deleteTable(tableName);
+      Thread.sleep(10);
     }
+    RegionState regionState = regionStates.getRegionState(hri);
+    assertTrue(regionState.isOffline());
   }
 
   @Test
   public void testGetRegionByStateOfTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testGetRegionByStateOfTable");
-    try {
-      HRegionInfo hri = createTableAndGetOneRegion(tableName);
+    HRegionInfo hri = createTableAndGetOneRegion(tableName);
 
-      RegionStates regionStates =
-          TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-      assertTrue(regionStates.getRegionByStateOfTable(tableName)
-              .get(RegionState.State.OPEN)
-              .contains(hri));
-      assertFalse(regionStates.getRegionByStateOfTable(TableName.valueOf("I_am_the_phantom"))
-              .get(RegionState.State.OPEN)
-              .contains(hri));
-    } finally {
-      TEST_UTIL.deleteTable(tableName);
-    }
+    RegionStates regionStates =
+        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+    assertTrue(regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OPEN)
+        .contains(hri));
+    assertFalse(regionStates.getRegionByStateOfTable(TableName.valueOf("I_am_the_phantom"))
+        .get(RegionState.State.OPEN).contains(hri));
   }
 
   @Test
   public void testMoveRegion() throws Exception {
-    final TableName tableName = TableName.valueOf("testMoveRegion");
-    try {
-      HRegionInfo hri = createTableAndGetOneRegion(tableName);
+    admin.setBalancerOn(false).join();
 
-      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-      ServerName serverName = regionStates.getRegionServerOfRegion(hri);
-      ServerManager serverManager = master.getServerManager();
-      ServerName destServerName = null;
-      List<JVMClusterUtil.RegionServerThread> regionServers =
-          TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads();
-      for (JVMClusterUtil.RegionServerThread regionServer : regionServers) {
-        HRegionServer destServer = regionServer.getRegionServer();
-        destServerName = destServer.getServerName();
-        if (!destServerName.equals(serverName) && serverManager.isServerOnline(destServerName)) {
-          break;
-        }
-      }
-      assertTrue(destServerName != null && !destServerName.equals(serverName));
-      admin.move(hri.getRegionName(), Optional.of(destServerName)).get();
+    HRegionInfo hri = createTableAndGetOneRegion(tableName);
+    RawAsyncHBaseAdmin rawAdmin = (RawAsyncHBaseAdmin) ASYNC_CONN.getAdmin();
+    ServerName serverName = rawAdmin.getRegionLocation(hri.getRegionName()).get().getServerName();
 
-      long timeoutTime = System.currentTimeMillis() + 30000;
-      while (true) {
-        ServerName sn = regionStates.getRegionServerOfRegion(hri);
-        if (sn != null && sn.equals(destServerName)) {
-          TEST_UTIL.assertRegionOnServer(hri, sn, 200);
-          break;
-        }
-        long now = System.currentTimeMillis();
-        if (now > timeoutTime) {
-          fail("Failed to move the region in time: " + regionStates.getRegionState(hri));
-        }
-        regionStates.wait(50);
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    ServerManager serverManager = master.getServerManager();
+    ServerName destServerName = null;
+    List<JVMClusterUtil.RegionServerThread> regionServers =
+        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads();
+    for (JVMClusterUtil.RegionServerThread regionServer : regionServers) {
+      HRegionServer destServer = regionServer.getRegionServer();
+      destServerName = destServer.getServerName();
+      if (!destServerName.equals(serverName) && serverManager.isServerOnline(destServerName)) {
+        break;
       }
-    } finally {
-      TEST_UTIL.deleteTable(tableName);
     }
+
+    assertTrue(destServerName != null && !destServerName.equals(serverName));
+    admin.move(hri.getRegionName(), Optional.of(destServerName)).get();
+
+    long timeoutTime = System.currentTimeMillis() + 30000;
+    while (true) {
+      ServerName sn = rawAdmin.getRegionLocation(hri.getRegionName()).get().getServerName();
+      if (sn != null && sn.equals(destServerName)) {
+        break;
+      }
+      long now = System.currentTimeMillis();
+      if (now > timeoutTime) {
+        fail("Failed to move the region in time: " + hri);
+      }
+      Thread.sleep(100);
+    }
+    admin.setBalancerOn(true).join();
   }
 
   @Test
   public void testGetOnlineRegions() throws Exception {
-    final TableName tableName = TableName.valueOf("testGetOnlineRegions");
-    try {
-      createTableAndGetOneRegion(tableName);
-      AtomicInteger regionServerCount = new AtomicInteger(0);
-      TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
-          .map(rsThread -> rsThread.getRegionServer().getServerName()).forEach(serverName -> {
+    createTableAndGetOneRegion(tableName);
+    AtomicInteger regionServerCount = new AtomicInteger(0);
+    TEST_UTIL
+        .getHBaseCluster()
+        .getLiveRegionServerThreads()
+        .stream()
+        .map(rsThread -> rsThread.getRegionServer())
+        .forEach(
+          rs -> {
+            ServerName serverName = rs.getServerName();
             try {
-              Assert.assertEquals(admin.getOnlineRegions(serverName).get().size(),
-                TEST_UTIL.getAdmin().getOnlineRegions(serverName).size());
+              Assert.assertEquals(admin.getOnlineRegions(serverName).get().size(), rs
+                  .getOnlineRegions().size());
             } catch (Exception e) {
               fail("admin.getOnlineRegions() method throws a exception: " + e.getMessage());
             }
             regionServerCount.incrementAndGet();
           });
-      Assert.assertEquals(regionServerCount.get(), 2);
-    } catch (Exception e) {
-      LOG.info("Exception", e);
-      throw e;
-    } finally {
-      TEST_UTIL.deleteTable(tableName);
-    }
+    Assert.assertEquals(regionServerCount.get(), 2);
   }
 
   @Test
   public void testFlushTableAndRegion() throws Exception {
-    final TableName tableName = TableName.valueOf("testFlushRegion");
-    try {
-      HRegionInfo hri = createTableAndGetOneRegion(tableName);
-      ServerName serverName = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .getRegionStates().getRegionServerOfRegion(hri);
-      HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
-          .map(rsThread -> rsThread.getRegionServer())
-          .filter(rs -> rs.getServerName().equals(serverName)).findFirst().get();
-      // write a put into the specific region
-      try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
-        table.put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-1")));
-      }
-      Assert.assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0);
-      // flush region and wait flush operation finished.
-      LOG.info("flushing region: " + Bytes.toStringBinary(hri.getRegionName()));
-      admin.flushRegion(hri.getRegionName()).get();
-      LOG.info("blocking until flush is complete: " + Bytes.toStringBinary(hri.getRegionName()));
-      Threads.sleepWithoutInterrupt(500);
-      while (regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0) {
-        Threads.sleep(50);
-      }
-      // check the memstore.
-      Assert.assertEquals(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize(), 0);
+    HRegionInfo hri = createTableAndGetOneRegion(tableName);
+    ServerName serverName =
+        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+            .getRegionServerOfRegion(hri);
+    HRegionServer regionServer =
+        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+            .map(rsThread -> rsThread.getRegionServer())
+            .filter(rs -> rs.getServerName().equals(serverName)).findFirst().get();
 
-      // write another put into the specific region
-      try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
-        table.put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-2")));
-      }
-      Assert.assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0);
-      admin.flush(tableName).get();
-      Threads.sleepWithoutInterrupt(500);
-      while (regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0) {
-        Threads.sleep(50);
-      }
-      // check the memstore.
-      Assert.assertEquals(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize(), 0);
-    } finally {
-      TEST_UTIL.deleteTable(tableName);
+    // write a put into the specific region
+    ASYNC_CONN.getRawTable(tableName)
+        .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-1")))
+        .join();
+    Assert.assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0);
+    // flush region and wait flush operation finished.
+    LOG.info("flushing region: " + Bytes.toStringBinary(hri.getRegionName()));
+    admin.flushRegion(hri.getRegionName()).get();
+    LOG.info("blocking until flush is complete: " + Bytes.toStringBinary(hri.getRegionName()));
+    Threads.sleepWithoutInterrupt(500);
+    while (regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0) {
+      Threads.sleep(50);
     }
+    // check the memstore.
+    Assert.assertEquals(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize(), 0);
+
+    // write another put into the specific region
+    ASYNC_CONN.getRawTable(tableName)
+        .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-2")))
+        .join();
+    Assert.assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0);
+    admin.flush(tableName).get();
+    Threads.sleepWithoutInterrupt(500);
+    while (regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize() > 0) {
+      Threads.sleep(50);
+    }
+    // check the memstore.
+    Assert.assertEquals(regionServer.getOnlineRegion(hri.getRegionName()).getMemstoreSize(), 0);
   }
 
-  @Test(timeout = 600000)
-  public void testCompactRpcAPI() throws Exception {
-    String tableName = "testCompactRpcAPI";
-    compactionTest(tableName, 8, CompactionState.MAJOR, false);
-    compactionTest(tableName, 15, CompactionState.MINOR, false);
-    compactionTest(tableName, 8, CompactionState.MAJOR, true);
-    compactionTest(tableName, 15, CompactionState.MINOR, true);
+  @Test
+  public void testMergeRegions() throws Exception {
+    byte[][] splitRows = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("6") };
+    createTableWithDefaultConf(tableName, Optional.of(splitRows));
+
+    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    List<HRegionLocation> regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    HRegionInfo regionA;
+    HRegionInfo regionB;
+
+    // merge with full name
+    assertEquals(3, regionLocations.size());
+    regionA = regionLocations.get(0).getRegionInfo();
+    regionB = regionLocations.get(1).getRegionInfo();
+    admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
+
+    regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    assertEquals(2, regionLocations.size());
+    // merge with encoded name
+    regionA = regionLocations.get(0).getRegionInfo();
+    regionB = regionLocations.get(1).getRegionInfo();
+    admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
+
+    regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    assertEquals(1, regionLocations.size());
   }
 
-  @Test(timeout = 600000)
+  @Test
+  public void testSplitTable() throws Exception {
+    splitTest(TableName.valueOf("testSplitTable"), 3000, false, null);
+    splitTest(TableName.valueOf("testSplitTableWithSplitPoint"), 3000, false, Bytes.toBytes("3"));
+    splitTest(TableName.valueOf("testSplitTableRegion"), 3000, true, null);
+    splitTest(TableName.valueOf("testSplitTableRegionWithSplitPoint2"), 3000, true, Bytes.toBytes("3"));
+  }
+
+  private void
+      splitTest(TableName tableName, int rowCount, boolean isSplitRegion, byte[] splitPoint)
+          throws Exception {
+    // create table
+    createTableWithDefaultConf(tableName);
+
+    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    List<HRegionLocation> regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    assertEquals(1, regionLocations.size());
+
+    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    List<Put> puts = new ArrayList<>();
+    for (int i = 0; i < rowCount; i++) {
+      Put put = new Put(Bytes.toBytes(i));
+      put.addColumn(FAMILY, null, Bytes.toBytes("value" + i));
+      puts.add(put);
+    }
+    table.putAll(puts).join();
+
+    if (isSplitRegion) {
+      admin.splitRegion(regionLocations.get(0).getRegionInfo().getRegionName(),
+        Optional.ofNullable(splitPoint)).get();
+    } else {
+      if (splitPoint == null) {
+        admin.split(tableName).get();
+      } else {
+        admin.split(tableName, splitPoint).get();
+      }
+    }
+
+    int count = 0;
+    for (int i = 0; i < 45; i++) {
+      try {
+        regionLocations =
+            AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName))
+                .get();
+        count = regionLocations.size();
+        if (count >= 2) {
+          break;
+        }
+        Thread.sleep(1000L);
+      } catch (Exception e) {
+        LOG.error(e);
+      }
+    }
+    assertEquals(count, 2);
+  }
+
+  @Test
   public void testCompactRegionServer() throws Exception {
-    TableName table = TableName.valueOf("testCompactRegionServer");
     byte[][] families = { Bytes.toBytes("f1"), Bytes.toBytes("f2"), Bytes.toBytes("f3") };
-    Table ht = null;
-    try {
-      ht = TEST_UTIL.createTable(table, families);
-      loadData(ht, families, 3000, 8);
-      List<HRegionServer> rsList = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
-          .map(rsThread -> rsThread.getRegionServer()).collect(Collectors.toList());
-      List<Region> regions = new ArrayList<>();
-      rsList.forEach(rs -> regions.addAll(rs.getOnlineRegions(table)));
-      Assert.assertEquals(regions.size(), 1);
-      int countBefore = countStoreFilesInFamilies(regions, families);
-      Assert.assertTrue(countBefore > 0);
-      // Minor compaction for all region servers.
-      for (HRegionServer rs : rsList)
-        admin.compactRegionServer(rs.getServerName()).get();
-      Thread.sleep(5000);
-      int countAfterMinorCompaction = countStoreFilesInFamilies(regions, families);
-      Assert.assertTrue(countAfterMinorCompaction < countBefore);
-      // Major compaction for all region servers.
-      for (HRegionServer rs : rsList)
-        admin.majorCompactRegionServer(rs.getServerName()).get();
-      Thread.sleep(5000);
-      int countAfterMajorCompaction = countStoreFilesInFamilies(regions, families);
-      Assert.assertEquals(countAfterMajorCompaction, 3);
-    } finally {
-      if (ht != null) {
-        TEST_UTIL.deleteTable(table);
-      }
-    }
+    createTableWithDefaultConf(tableName, Optional.empty(), families);
+    loadData(tableName, families, 3000, 8);
+
+    List<HRegionServer> rsList =
+        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+            .map(rsThread -> rsThread.getRegionServer()).collect(Collectors.toList());
+    List<Region> regions = new ArrayList<>();
+    rsList.forEach(rs -> regions.addAll(rs.getOnlineRegions(tableName)));
+    Assert.assertEquals(regions.size(), 1);
+    int countBefore = countStoreFilesInFamilies(regions, families);
+    Assert.assertTrue(countBefore > 0);
+
+    // Minor compaction for all region servers.
+    for (HRegionServer rs : rsList)
+      admin.compactRegionServer(rs.getServerName()).get();
+    Thread.sleep(5000);
+    int countAfterMinorCompaction = countStoreFilesInFamilies(regions, families);
+    Assert.assertTrue(countAfterMinorCompaction < countBefore);
+
+    // Major compaction for all region servers.
+    for (HRegionServer rs : rsList)
+      admin.majorCompactRegionServer(rs.getServerName()).get();
+    Thread.sleep(5000);
+    int countAfterMajorCompaction = countStoreFilesInFamilies(regions, families);
+    Assert.assertEquals(countAfterMajorCompaction, 3);
   }
 
-  private void compactionTest(final String tableName, final int flushes,
+  @Test
+  public void testCompact() throws Exception {
+    compactionTest(TableName.valueOf("testCompact1"), 8, CompactionState.MAJOR, false);
+    compactionTest(TableName.valueOf("testCompact2"), 15, CompactionState.MINOR, false);
+    compactionTest(TableName.valueOf("testCompact3"), 8, CompactionState.MAJOR, true);
+    compactionTest(TableName.valueOf("testCompact4"), 15, CompactionState.MINOR, true);
+  }
+
+  private void compactionTest(final TableName tableName, final int flushes,
       final CompactionState expectedState, boolean singleFamily) throws Exception {
     // Create a table with regions
-    final TableName table = TableName.valueOf(tableName);
     byte[] family = Bytes.toBytes("family");
     byte[][] families =
         { family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3")) };
-    Table ht = null;
-    try {
-      ht = TEST_UTIL.createTable(table, families);
-      loadData(ht, families, 3000, flushes);
-      List<Region> regions = new ArrayList<>();
-      TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads()
-          .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getOnlineRegions(table)));
-      Assert.assertEquals(regions.size(), 1);
-      int countBefore = countStoreFilesInFamilies(regions, families);
-      int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
-      assertTrue(countBefore > 0); // there should be some data files
-      if (expectedState == CompactionState.MINOR) {
-        if (singleFamily) {
-          admin.compact(table, Optional.of(family)).get();
-        } else {
-          admin.compact(table, Optional.empty()).get();
-        }
+    createTableWithDefaultConf(tableName, Optional.empty(), families);
+    loadData(tableName, families, 3000, flushes);
+
+    List<Region> regions = new ArrayList<>();
+    TEST_UTIL
+        .getHBaseCluster()
+        .getLiveRegionServerThreads()
+        .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getOnlineRegions(tableName)));
+    Assert.assertEquals(regions.size(), 1);
+
+    int countBefore = countStoreFilesInFamilies(regions, families);
+    int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
+    assertTrue(countBefore > 0); // there should be some data files
+    if (expectedState == CompactionState.MINOR) {
+      if (singleFamily) {
+        admin.compact(tableName, Optional.of(family)).get();
       } else {
-        if (singleFamily) {
-          admin.majorCompact(table, Optional.of(family)).get();
-        } else {
-          admin.majorCompact(table, Optional.empty()).get();
-        }
+        admin.compact(tableName, Optional.empty()).get();
       }
-      long curt = System.currentTimeMillis();
-      long waitTime = 5000;
-      long endt = curt + waitTime;
-      CompactionState state = TEST_UTIL.getAdmin().getCompactionState(table);
-      while (state == CompactionState.NONE && curt < endt) {
-        Thread.sleep(10);
-        state = TEST_UTIL.getAdmin().getCompactionState(table);
-        curt = System.currentTimeMillis();
-      }
-      // Now, should have the right compaction state,
-      // otherwise, the compaction should have already been done
-      if (expectedState != state) {
-        for (Region region : regions) {
-          state = CompactionState.valueOf(region.getCompactionState().toString());
-          assertEquals(CompactionState.NONE, state);
-        }
+    } else {
+      if (singleFamily) {
+        admin.majorCompact(tableName, Optional.of(family)).get();
       } else {
-        // Wait until the compaction is done
-        state = TEST_UTIL.getAdmin().getCompactionState(table);
-        while (state != CompactionState.NONE && curt < endt) {
-          Thread.sleep(10);
-          state = TEST_UTIL.getAdmin().getCompactionState(table);
-        }
-        // Now, compaction should be done.
+        admin.majorCompact(tableName, Optional.empty()).get();
+      }
+    }
+
+    long curt = System.currentTimeMillis();
+    long waitTime = 5000;
+    long endt = curt + waitTime;
+    CompactionState state = TEST_UTIL.getAdmin().getCompactionState(tableName);
+    while (state == CompactionState.NONE && curt < endt) {
+      Thread.sleep(10);
+      state = TEST_UTIL.getAdmin().getCompactionState(tableName);
+      curt = System.currentTimeMillis();
+    }
+    // Now, should have the right compaction state,
+    // otherwise, the compaction should have already been done
+    if (expectedState != state) {
+      for (Region region : regions) {
+        state = CompactionState.valueOf(region.getCompactionState().toString());
         assertEquals(CompactionState.NONE, state);
       }
-      int countAfter = countStoreFilesInFamilies(regions, families);
-      int countAfterSingleFamily = countStoreFilesInFamily(regions, family);
-      assertTrue(countAfter < countBefore);
-      if (!singleFamily) {
-        if (expectedState == CompactionState.MAJOR) assertTrue(families.length == countAfter);
-        else assertTrue(families.length < countAfter);
-      } else {
-        int singleFamDiff = countBeforeSingleFamily - countAfterSingleFamily;
-        // assert only change was to single column family
-        assertTrue(singleFamDiff == (countBefore - countAfter));
-        if (expectedState == CompactionState.MAJOR) {
-          assertTrue(1 == countAfterSingleFamily);
-        } else {
-          assertTrue(1 < countAfterSingleFamily);
-        }
+    } else {
+      // Wait until the compaction is done
+      state = TEST_UTIL.getAdmin().getCompactionState(tableName);
+      while (state != CompactionState.NONE && curt < endt) {
+        Thread.sleep(10);
+        state = TEST_UTIL.getAdmin().getCompactionState(tableName);
       }
-    } finally {
-      if (ht != null) {
-        TEST_UTIL.deleteTable(table);
+      // Now, compaction should be done.
+      assertEquals(CompactionState.NONE, state);
+    }
+
+    int countAfter = countStoreFilesInFamilies(regions, families);
+    int countAfterSingleFamily = countStoreFilesInFamily(regions, family);
+    assertTrue(countAfter < countBefore);
+    if (!singleFamily) {
+      if (expectedState == CompactionState.MAJOR) assertTrue(families.length == countAfter);
+      else assertTrue(families.length < countAfter);
+    } else {
+      int singleFamDiff = countBeforeSingleFamily - countAfterSingleFamily;
+      // assert only change was to single column family
+      assertTrue(singleFamDiff == (countBefore - countAfter));
+      if (expectedState == CompactionState.MAJOR) {
+        assertTrue(1 == countAfterSingleFamily);
+      } else {
+        assertTrue(1 < countAfterSingleFamily);
       }
     }
   }
@@ -623,8 +569,9 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     return count;
   }
 
-  private static void loadData(final Table ht, final byte[][] families, final int rows,
+  private static void loadData(final TableName tableName, final byte[][] families, final int rows,
       final int flushes) throws IOException {
+    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
     List<Put> puts = new ArrayList<>(rows);
     byte[] qualifier = Bytes.toBytes("val");
     for (int i = 0; i < flushes; i++) {
@@ -636,7 +583,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
         }
         puts.add(p);
       }
-      ht.put(puts);
+      table.putAll(puts).join();
       TEST_UTIL.flush();
       puts.clear();
     }
