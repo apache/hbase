@@ -1132,6 +1132,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
+        <version>${maven.site.version}</version>
         <inherited>false</inherited>
         <dependencies>
           <dependency>
@@ -1389,8 +1390,8 @@
     <curator.version>2.12.0</curator.version>
     <!-- Plugin Dependencies -->
     <apache.rat.version>0.12</apache.rat.version>
-    <asciidoctor.plugin.version>1.5.5</asciidoctor.plugin.version>
-    <asciidoctorj.pdf.version>1.5.0-alpha.15</asciidoctorj.pdf.version>
+    <asciidoctor.plugin.version>1.5.2.1</asciidoctor.plugin.version>
+    <asciidoctorj.pdf.version>1.5.0-alpha.6</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <checkstyle.version>6.18</checkstyle.version>
@@ -1409,6 +1410,7 @@
     <maven.patch.version>1.2</maven.patch.version>
     <maven.scala.version>2.15.2</maven.scala.version>
     <maven.shade.version>3.0.0</maven.shade.version>
+    <maven.site.version>3.4</maven.site.version>
     <maven.source.version>3.0.1</maven.source.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <scala.maven.version>3.2.2</scala.maven.version>
