@@ -345,7 +345,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * existing KeyValue object in the family map.
    */
   public boolean has(byte [] family, byte [] qualifier) {
-  return has(family, qualifier, this.ts, new byte[0], true, true);
+  return has(family, qualifier, this.ts, HConstants.EMPTY_BYTE_ARRAY, true, true);
   }
 
   /**
@@ -360,7 +360,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * existing KeyValue object in the family map.
    */
   public boolean has(byte [] family, byte [] qualifier, long ts) {
-  return has(family, qualifier, ts, new byte[0], false, true);
+  return has(family, qualifier, ts, HConstants.EMPTY_BYTE_ARRAY, false, true);
   }
 
   /**
