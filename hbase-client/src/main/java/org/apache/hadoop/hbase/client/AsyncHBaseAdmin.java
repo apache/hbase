@@ -27,8 +27,10 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -222,6 +224,11 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName serverName) {
     return wrap(rawAdmin.getOnlineRegions(serverName));
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionInfo>> getTableRegions(TableName tableName) {
+    return wrap(rawAdmin.getTableRegions(tableName));
   }
 
   @Override
@@ -444,5 +451,42 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<ProcedureInfo>> listProcedures() {
     return wrap(rawAdmin.listProcedures());
+  }
+
+  @Override
+  public CompletableFuture<ClusterStatus> getClusterStatus() {
+    return wrap(rawAdmin.getClusterStatus());
+  }
+
+  @Override
+  public CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName,
+      Optional<TableName> tableName) {
+    return wrap(rawAdmin.getRegionLoads(serverName, tableName));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isMasterInMaintenanceMode() {
+    return wrap(rawAdmin.isMasterInMaintenanceMode());
+  }
+
+  @Override
+  public CompletableFuture<CompactionState> getCompactionState(TableName tableName) {
+    return wrap(rawAdmin.getCompactionState(tableName));
+  }
+
+  @Override
+  public CompletableFuture<CompactionState> getCompactionStateForRegion(byte[] regionName) {
+    return wrap(rawAdmin.getCompactionStateForRegion(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Optional<Long>> getLastMajorCompactionTimestamp(TableName tableName) {
+    return wrap(rawAdmin.getLastMajorCompactionTimestamp(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Optional<Long>> getLastMajorCompactionTimestampForRegion(
+      byte[] regionName) {
+    return wrap(rawAdmin.getLastMajorCompactionTimestampForRegion(regionName));
   }
 }

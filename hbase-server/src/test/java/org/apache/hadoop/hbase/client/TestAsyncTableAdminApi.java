@@ -38,6 +38,7 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -773,5 +774,83 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     splitKeys = new byte[][] { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 } };
     boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys).get();
     assertFalse("Table should be created with 1 row in META", tableAvailable);
+  }
+
+  @Test
+  public void testCompactionTimestamps() throws Exception {
+    createTableWithDefaultConf(tableName);
+    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    Optional<Long> ts = admin.getLastMajorCompactionTimestamp(tableName).get();
+    assertFalse(ts.isPresent());
+    Put p = new Put(Bytes.toBytes("row1"));
+    p.addColumn(FAMILY, Bytes.toBytes("q"), Bytes.toBytes("v"));
+    table.put(p).join();
+    ts = admin.getLastMajorCompactionTimestamp(tableName).get();
+    // no files written -> no data
+    assertFalse(ts.isPresent());
+
+    admin.flush(tableName).join();
+    ts = admin.getLastMajorCompactionTimestamp(tableName).get();
+    // still 0, we flushed a file, but no major compaction happened
+    assertFalse(ts.isPresent());
+
+    byte[] regionName =
+        ASYNC_CONN.getRegionLocator(tableName).getRegionLocation(Bytes.toBytes("row1")).get()
+            .getRegionInfo().getRegionName();
+    Optional<Long> ts1 = admin.getLastMajorCompactionTimestampForRegion(regionName).get();
+    assertFalse(ts1.isPresent());
+    p = new Put(Bytes.toBytes("row2"));
+    p.addColumn(FAMILY, Bytes.toBytes("q"), Bytes.toBytes("v"));
+    table.put(p).join();
+    admin.flush(tableName).join();
+    ts1 = admin.getLastMajorCompactionTimestamp(tableName).get();
+    // make sure the region API returns the same value, as the old file is still around
+    assertFalse(ts1.isPresent());
+
+    for (int i = 0; i < 3; i++) {
+      table.put(p).join();
+      admin.flush(tableName).join();
+    }
+    admin.majorCompact(tableName).join();
+    long curt = System.currentTimeMillis();
+    long waitTime = 10000;
+    long endt = curt + waitTime;
+    CompactionState state = admin.getCompactionState(tableName).get();
+    LOG.info("Current compaction state 1 is " + state);
+    while (state == CompactionState.NONE && curt < endt) {
+      Thread.sleep(100);
+      state = admin.getCompactionState(tableName).get();
+      curt = System.currentTimeMillis();
+      LOG.info("Current compaction state 2 is " + state);
+    }
+    // Now, should have the right compaction state, let's wait until the compaction is done
+    if (state == CompactionState.MAJOR) {
+      state = admin.getCompactionState(tableName).get();
+      LOG.info("Current compaction state 3 is " + state);
+      while (state != CompactionState.NONE && curt < endt) {
+        Thread.sleep(10);
+        state = admin.getCompactionState(tableName).get();
+        LOG.info("Current compaction state 4 is " + state);
+      }
+    }
+    // Sleep to wait region server report
+    Thread.sleep(TEST_UTIL.getConfiguration().getInt("hbase.regionserver.msginterval", 3 * 1000) * 2);
+
+    ts = admin.getLastMajorCompactionTimestamp(tableName).get();
+    // after a compaction our earliest timestamp will have progressed forward
+    assertTrue(ts.isPresent());
+    assertTrue(ts.get() > 0);
+    // region api still the same
+    ts1 = admin.getLastMajorCompactionTimestampForRegion(regionName).get();
+    assertTrue(ts1.isPresent());
+    assertEquals(ts.get(), ts1.get());
+    table.put(p).join();
+    admin.flush(tableName).join();
+    ts = admin.getLastMajorCompactionTimestamp(tableName).join();
+    assertTrue(ts.isPresent());
+    assertEquals(ts.get(), ts1.get());
+    ts1 = admin.getLastMajorCompactionTimestampForRegion(regionName).get();
+    assertTrue(ts1.isPresent());
+    assertEquals(ts.get(), ts1.get());
   }
 }
