@@ -1,7 +1,5 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -31,7 +29,6 @@
   <artifactId>hbase-rest</artifactId>
   <name>Apache HBase - Rest</name>
   <description>HBase Rest Server</description>
-
   <build>
     <!-- Makes sure the resources get added before they are processed
       by placing this first -->
@@ -72,7 +69,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
       </plugin>
-
       <!-- General ant tasks, bound to different build phases -->
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -84,10 +80,8 @@
             <configuration>
               <target>
                 <property name="build.webapps" location="${project.build.directory}/hbase-webapps"/>
-                <property name="src.webapps"
-                          location="${basedir}/src/main/resources/hbase-webapps"/>
-                <property name="generated.sources"
-                          location="${project.build.directory}/generated-sources"/>
+                <property name="src.webapps" location="${basedir}/src/main/resources/hbase-webapps"/>
+                <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
                 <mkdir dir="${build.webapps}"/>
                 <copy todir="${build.webapps}">
                   <fileset dir="${src.webapps}">
@@ -97,12 +91,9 @@
                   </fileset>
                 </copy>
                 <!--The compile.classpath is passed in by maven -->
-                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler"
-                         classpathref="maven.compile.classpath"/>
+                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
                 <mkdir dir="${build.webapps}/rest/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/rest" outputdir="${generated.sources}/java"
-                             package="org.apache.hadoop.hbase.generated.rest"
-                             webxml="${build.webapps}/rest/WEB-INF/web.xml"/>
+                <jspcompiler uriroot="${src.webapps}/rest" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.rest" webxml="${build.webapps}/rest/WEB-INF/web.xml"/>
               </target>
             </configuration>
             <goals>
@@ -145,6 +136,19 @@
           </systemPropertyVariables>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-protoc</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
@@ -166,7 +170,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore></ignore>
+                    <ignore/>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
@@ -176,7 +180,6 @@
       </plugins>
     </pluginManagement>
   </build>
-
   <dependencies>
     <!-- Intra-project dependencies -->
     <dependency>
@@ -295,8 +298,8 @@
       <artifactId>jetty-io</artifactId>
     </dependency>
     <dependency>
-    <groupId>org.eclipse.jetty</groupId>
-    <artifactId>jetty-jmx</artifactId>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-jmx</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -325,31 +328,6 @@
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
     </profile>
-        <profile>
-          <id>compile-protobuf</id>
-          <activation>
-            <property>
-              <name>compile-protobuf</name>
-            </property>
-          </activation>
-          <build>
-            <plugins>
-              <plugin>
-                <groupId>org.xolstice.maven.plugins</groupId>
-                <artifactId>protobuf-maven-plugin</artifactId>
-                <executions>
-                  <execution>
-                    <id>compile-protoc</id>
-                    <phase>generate-sources</phase>
-                    <goals>
-                      <goal>compile</goal>
-                    </goals>
-                  </execution>
-                </executions>
-              </plugin>
-            </plugins>
-          </build>
-        </profile>
     <!-- Hadoop-specific dependencies -->
     <!-- profile for building against Hadoop 2.0.x
          This is the default.
@@ -359,7 +337,8 @@
       <activation>
         <property>
           <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-          <!--h2--><name>!hadoop.profile</name>
+          <!--h2-->
+          <name>!hadoop.profile</name>
         </property>
       </activation>
       <dependencies>
