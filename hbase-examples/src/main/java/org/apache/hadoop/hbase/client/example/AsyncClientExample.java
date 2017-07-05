@@ -97,6 +97,8 @@ public class AsyncClientExample extends Configured implements Tool {
     }
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NONNULL_PARAM_VIOLATION",
+      justification="it is valid to pass NULL to CompletableFuture#completedFuture")
   private CompletableFuture<Void> closeConn() {
     CompletableFuture<AsyncConnection> f = future.get();
     if (f == null) {
@@ -150,7 +152,7 @@ public class AsyncClientExample extends Configured implements Tool {
               LOG.info("put for " + i + " succeeded, try getting");
               table.get(new Get(getKey(i))).whenComplete((result, getErr) -> {
                 if (getErr != null) {
-                  LOG.warn("get failed for " + i, putErr);
+                  LOG.warn("get failed for " + i);
                   latch.countDown();
                   return;
                 }
