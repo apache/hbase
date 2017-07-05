@@ -212,14 +212,14 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private final NonceGenerator ng;
 
-  RawAsyncHBaseAdmin(AsyncConnectionImpl connection) {
+  RawAsyncHBaseAdmin(AsyncConnectionImpl connection, AsyncAdminBuilderBase<?> builder) {
     this.connection = connection;
     this.metaTable = connection.getRawTable(META_TABLE_NAME);
-    this.rpcTimeoutNs = connection.connConf.getRpcTimeoutNs();
-    this.operationTimeoutNs = connection.connConf.getOperationTimeoutNs();
-    this.pauseNs = connection.connConf.getPauseNs();
-    this.maxAttempts = connection.connConf.getMaxRetries();
-    this.startLogErrorsCnt = connection.connConf.getStartLogErrorsCnt();
+    this.rpcTimeoutNs = builder.rpcTimeoutNs;
+    this.operationTimeoutNs = builder.operationTimeoutNs;
+    this.pauseNs = builder.pauseNs;
+    this.maxAttempts = builder.maxAttempts;
+    this.startLogErrorsCnt = builder.startLogErrorsCnt;
     this.ng = connection.getNonceGenerator();
   }
 
