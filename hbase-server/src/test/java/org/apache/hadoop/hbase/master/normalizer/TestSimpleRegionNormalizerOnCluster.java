@@ -179,7 +179,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     admin.deleteTable(TABLENAME);
   }
 
-  @Ignore @Test(timeout = 60000) // TODO: FIX!
+  @Test(timeout = 60000)
   @SuppressWarnings("deprecation")
   public void testRegionNormalizationMergeOnCluster() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
