@@ -253,6 +253,17 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return null;
   }
 
+  // Returning a new chunk, without replacing current chunk,
+  // meaning MSLABImpl does not make the returned chunk as CurChunk.
+  // The space on this chunk will be allocated externally
+  // The interface is only for external callers
+  @Override
+  public Chunk getNewExternalChunk() {
+    Chunk c = this.chunkCreator.getChunk();
+    chunks.add(c.getId());
+    return c;
+  }
+
   @VisibleForTesting
   Chunk getCurrentChunk() {
     return this.curChunk.get();

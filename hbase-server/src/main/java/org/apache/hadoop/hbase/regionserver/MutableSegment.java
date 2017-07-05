@@ -42,6 +42,7 @@ public class MutableSegment extends Segment {
 
   protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
     super(cellSet, comparator, memStoreLAB);
+    incSize(0,DEEP_OVERHEAD); // update the mutable segment metadata
   }
 
   /**
@@ -120,5 +121,9 @@ public class MutableSegment extends Segment {
   @Override
   public long getMinTimestamp() {
     return this.timeRangeTracker.getMin();
+  }
+
+  @Override protected long indexEntrySize() {
+      return ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY;
   }
 }

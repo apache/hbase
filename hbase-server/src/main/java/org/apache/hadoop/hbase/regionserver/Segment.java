@@ -305,6 +305,10 @@ public abstract class Segment {
     }
   }
 
+  protected void updateMetaInfo(Cell cellToAdd, boolean succ, MemstoreSize memstoreSize) {
+    updateMetaInfo(cellToAdd, succ, (getMemStoreLAB()!=null), memstoreSize);
+  }
+
   /**
    * @return The increase in heap size because of this cell addition. This includes this cell POJO's
    *         heap size itself and additional overhead because of addition on to CSLM.
@@ -312,10 +316,12 @@ public abstract class Segment {
   protected long heapSizeChange(Cell cell, boolean succ) {
     if (succ) {
       return ClassSize
-          .align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + CellUtil.estimatedHeapSizeOf(cell));
+          .align(indexEntrySize() + CellUtil.estimatedHeapSizeOf(cell));
     }
     return 0;
   }
+
+  protected abstract long indexEntrySize();
 
   /**
    * Returns a subset of the segment cell set, which starts with the given cell

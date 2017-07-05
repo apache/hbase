@@ -241,7 +241,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // CF2 should become empty
     assertEquals(0, cf2MemstoreSizePhaseII.getDataSize());
-    assertEquals(0, cf2MemstoreSizePhaseII.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf2MemstoreSizePhaseII.getHeapSize());
 
     // verify that CF3 was flushed to memory and was compacted (this is approximation check)
     assertTrue(cf3MemstoreSizePhaseI.getDataSize() > cf3MemstoreSizePhaseII.getDataSize());
@@ -302,7 +302,7 @@ public class TestWalAndCompactingMemStoreFlush {
     // CF2 should be flushed to disk
     assertTrue(cf1MemstoreSizePhaseIII.getDataSize() > cf1MemstoreSizePhaseIV.getDataSize());
     assertEquals(0, cf2MemstoreSizePhaseIV.getDataSize());
-    assertEquals(0, cf2MemstoreSizePhaseIV.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf2MemstoreSizePhaseIV.getHeapSize());
 
     // CF3 shouldn't have been touched.
     assertEquals(cf3MemstoreSizePhaseIV, cf3MemstoreSizePhaseII);
@@ -326,11 +326,11 @@ public class TestWalAndCompactingMemStoreFlush {
         .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     assertEquals(0, cf1MemstoreSizePhaseV.getDataSize());
-    assertEquals(0, cf1MemstoreSizePhaseV.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf1MemstoreSizePhaseV.getHeapSize());
     assertEquals(0, cf2MemstoreSizePhaseV.getDataSize());
-    assertEquals(0, cf2MemstoreSizePhaseV.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf2MemstoreSizePhaseV.getHeapSize());
     assertEquals(0, cf3MemstoreSizePhaseV.getDataSize());
-    assertEquals(0, cf3MemstoreSizePhaseV.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf3MemstoreSizePhaseV.getHeapSize());
 
     // What happens when we hit the memstore limit, but we are not able to find
     // any Column Family above the threshold?
@@ -476,7 +476,7 @@ public class TestWalAndCompactingMemStoreFlush {
     assertTrue(cf1MemstoreSizePhaseII.getHeapSize() < cf1MemstoreSizePhaseI.getHeapSize());
     // CF2 should become empty
     assertEquals(0, cf2MemstoreSizePhaseII.getDataSize());
-    assertEquals(0, cf2MemstoreSizePhaseII.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf2MemstoreSizePhaseII.getHeapSize());
     // verify that CF3 was flushed to memory and was not compacted (this is an approximation check)
     // if compacted CF# should be at least twice less because its every key was duplicated
     assertEquals(cf3MemstoreSizePhaseII.getDataSize() , cf3MemstoreSizePhaseI.getDataSize());
@@ -544,7 +544,7 @@ public class TestWalAndCompactingMemStoreFlush {
     // CF2 should remain empty
     assertTrue(cf1MemstoreSizePhaseIII.getDataSize() > cf1MemstoreSizePhaseIV.getDataSize());
     assertEquals(0, cf2MemstoreSizePhaseIV.getDataSize());
-    assertEquals(0, cf2MemstoreSizePhaseIV.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf2MemstoreSizePhaseIV.getHeapSize());
     // CF3 shouldn't have been touched.
     assertEquals(cf3MemstoreSizePhaseIV, cf3MemstoreSizePhaseII);
     // the smallest LSN of CF3 shouldn't change
@@ -573,11 +573,11 @@ public class TestWalAndCompactingMemStoreFlush {
     /*------------------------------------------------------------------------------*/
     /* PHASE V - validation */
     assertEquals(0, cf1MemstoreSizePhaseV.getDataSize());
-    assertEquals(0, cf1MemstoreSizePhaseV.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf1MemstoreSizePhaseV.getHeapSize());
     assertEquals(0, cf2MemstoreSizePhaseV.getDataSize());
-    assertEquals(0, cf2MemstoreSizePhaseV.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf2MemstoreSizePhaseV.getHeapSize());
     assertEquals(0, cf3MemstoreSizePhaseV.getDataSize());
-    assertEquals(0, cf3MemstoreSizePhaseV.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf3MemstoreSizePhaseV.getHeapSize());
     // The total memstores size should be empty
     assertEquals(0, totalMemstoreSizePhaseV);
     // Because there is nothing in any memstore the WAL's LSN should be -1
@@ -699,7 +699,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // CF2 should have been cleared
     assertEquals(0, cf2MemstoreSizePhaseII.getDataSize());
-    assertEquals(0, cf2MemstoreSizePhaseII.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf2MemstoreSizePhaseII.getHeapSize());
 
     String s = "\n\n----------------------------------\n"
         + "Upon initial insert and flush, LSN of CF1 is:"
@@ -875,9 +875,13 @@ public class TestWalAndCompactingMemStoreFlush {
     MemstoreSize cf2MemstoreSizePhaseIV = region.getStore(FAMILY2).getSizeOfMemStore();
 
     assertEquals(2*cf1MemstoreSizePhaseI.getDataSize(), cf1MemstoreSizePhaseIV.getDataSize());
+    // the decrease in the heap size due to usage of CellArrayMap instead of CSLM
+    // should be the same in flattening and in merge (first and second in-memory-flush)
+    // but in phase 1 we do not yet have immutable segment
     assertEquals(
         cf1MemstoreSizePhaseI.getHeapSize() - cf1MemstoreSizePhaseII.getHeapSize(),
-        cf1MemstoreSizePhaseIII.getHeapSize() - cf1MemstoreSizePhaseIV.getHeapSize());
+        cf1MemstoreSizePhaseIII.getHeapSize() - cf1MemstoreSizePhaseIV.getHeapSize()
+            - CellArrayImmutableSegment.DEEP_OVERHEAD_CAM);
     assertEquals(3, // active, one in pipeline, snapshot
         ((CompactingMemStore) ((HStore)region.getStore(FAMILY1)).memstore).getSegments().size());
     // CF2 should have been cleared

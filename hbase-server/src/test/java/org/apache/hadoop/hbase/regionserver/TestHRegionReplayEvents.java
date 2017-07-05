@@ -787,7 +787,8 @@ public class TestHRegionReplayEvents {
     Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
     long newFlushableSize = store.getFlushableSize();
     if (droppableMemstore) {
-      assertTrue(newFlushableSize == 0); // assert that the memstore is dropped
+      // assert that the memstore is dropped
+      assertTrue(newFlushableSize == MutableSegment.DEEP_OVERHEAD);
     } else {
       assertTrue(newFlushableSize > 0); // assert that the memstore is not dropped
     }
@@ -877,7 +878,7 @@ public class TestHRegionReplayEvents {
     }
     Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
     long newFlushableSize = store.getFlushableSize();
-    assertTrue(newFlushableSize == 0);
+    assertTrue(newFlushableSize == MutableSegment.DEEP_OVERHEAD);
 
     // assert that the region memstore is empty
     long newRegionMemstoreSize = secondaryRegion.getMemstoreSize();

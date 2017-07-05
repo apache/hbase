@@ -83,6 +83,12 @@ public interface MemStoreLAB {
    */
   void decScannerCount();
 
+  /**
+   * Return a new empty chunk without considering this chunk as current
+   * The space on this chunk will be allocated externally
+   */
+  Chunk getNewExternalChunk();
+
   public static MemStoreLAB newInstance(Configuration conf) {
     MemStoreLAB memStoreLAB = null;
     if (isEnabled(conf)) {

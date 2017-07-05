@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.HeapMemoryTuneObserver;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -51,9 +52,28 @@ public class ChunkCreator {
   private AtomicInteger chunkID = new AtomicInteger(1);
   // maps the chunk against the monotonically increasing chunk id. We need to preserve the
   // natural ordering of the key
-  // CellChunkMap creation should convert the soft ref to hard reference
-  private Map<Integer, SoftReference<Chunk>> chunkIdMap =
-      new ConcurrentHashMap<Integer, SoftReference<Chunk>>();
+  // CellChunkMap creation should convert the weak ref to hard reference
+
+  // chunk id of each chunk is the first integer written on each chunk,
+  // the header size need to be changed in case chunk id size is changed
+  public static final int SIZEOF_CHUNK_HEADER = Bytes.SIZEOF_INT;
+
+  // An object pointed by a weak reference can be garbage collected, in opposite to an object
+  // referenced by a strong (regular) reference. Every chunk created via ChunkCreator is referenced
+  // from either weakChunkIdMap or strongChunkIdMap.
+  // Upon chunk C creation, C's ID is mapped into weak reference to C, in order not to disturb C's
+  // GC in case all other reference to C are going to be removed.
+  // When chunk C is referenced from CellChunkMap (via C's ID) it is possible to GC the chunk C.
+  // To avoid that upon inserting C into CellChunkMap, C's ID is mapped into strong (regular)
+  // reference to C.
+
+  // map that doesn't influence GC
+  private Map<Integer, WeakReference<Chunk>> weakChunkIdMap =
+      new ConcurrentHashMap<Integer, WeakReference<Chunk>>();
+
+  // map that keeps chunks from garbage collection
+  private Map<Integer, Chunk> strongChunkIdMap = new ConcurrentHashMap<Integer, Chunk>();
+
   private final int chunkSize;
   private final boolean offheap;
   @VisibleForTesting
@@ -119,8 +139,8 @@ public class ChunkCreator {
     if (chunk == null) {
       chunk = createChunk();
     }
-    // put this chunk into the chunkIdMap
-    this.chunkIdMap.put(chunk.getId(), new SoftReference<>(chunk));
+    // put this chunk initially into the weakChunkIdMap
+    this.weakChunkIdMap.put(chunk.getId(), new WeakReference<>(chunk));
     // now we need to actually do the expensive memory allocation step in case of a new chunk,
     // else only the offset is set to the beginning of the chunk to accept allocations
     chunk.init();
@@ -148,12 +168,36 @@ public class ChunkCreator {
   }
 
   @VisibleForTesting
-  // TODO : To be used by CellChunkMap
+  // Used to translate the ChunkID into a chunk ref
   Chunk getChunk(int id) {
-    SoftReference<Chunk> ref = chunkIdMap.get(id);
+    WeakReference<Chunk> ref = weakChunkIdMap.get(id);
     if (ref != null) {
       return ref.get();
     }
+    // check also the strong mapping
+    return strongChunkIdMap.get(id);
+  }
+
+  // transfer the weak pointer to be a strong chunk pointer
+  Chunk saveChunkFromGC(int chunkID) {
+    Chunk c = strongChunkIdMap.get(chunkID); // check whether the chunk is already protected
+    if (c != null)                           // with strong pointer
+      return c;
+    WeakReference<Chunk> ref = weakChunkIdMap.get(chunkID);
+    if (ref != null) {
+      c = ref.get();
+    }
+    if (c != null) {
+      // put this strong reference to chunk into the strongChunkIdMap
+      // the read of the weakMap is always happening before the read of the strongMap
+      // so no synchronization issues here
+      this.strongChunkIdMap.put(chunkID, c);
+      this.weakChunkIdMap.remove(chunkID);
+      return c;
+    }
+    // we should actually never return null as someone should not ask to save from GC a chunk,
+    // which is already released. However, we are not asserting it here and we let the caller
+    // to deal with the return value an assert if needed
     return null;
   }
 
@@ -166,25 +210,30 @@ public class ChunkCreator {
   }
 
   private void removeChunks(Set<Integer> chunkIDs) {
-    this.chunkIdMap.keySet().removeAll(chunkIDs);
+    this.weakChunkIdMap.keySet().removeAll(chunkIDs);
+    this.strongChunkIdMap.keySet().removeAll(chunkIDs);
   }
 
   Chunk removeChunk(int chunkId) {
-    SoftReference<Chunk> ref = this.chunkIdMap.remove(chunkId);
-    if (ref != null) {
-      return ref.get();
+    WeakReference<Chunk> weak = this.weakChunkIdMap.remove(chunkId);
+    Chunk strong = this.strongChunkIdMap.remove(chunkId);
+    if (weak != null) {
+      return weak.get();
     }
-    return null;
+    return strong;
   }
 
   @VisibleForTesting
+  // the chunks in the weakChunkIdMap may already be released so we shouldn't relay
+  // on this counting for strong correctness. This method is used only in testing.
   int size() {
-    return this.chunkIdMap.size();
+    return this.weakChunkIdMap.size()+this.strongChunkIdMap.size();
   }
 
   @VisibleForTesting
   void clearChunkIds() {
-    this.chunkIdMap.clear();
+    this.strongChunkIdMap.clear();
+    this.weakChunkIdMap.clear();
   }
 
   /**

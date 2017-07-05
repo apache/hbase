@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * method accesses the read-only copy more than once it makes a local copy of it
  * to ensure it accesses the same copy.
  *
- * The methods getVersionedList(), getVersionedTail(), and flattenYoungestSegment() are also
+ * The methods getVersionedList(), getVersionedTail(), and flattenOneSegment() are also
  * protected by a lock since they need to have a consistent (atomic) view of the pipeline list
  * and version number.
  */
@@ -183,7 +183,7 @@ public class CompactionPipeline {
    *
    * @return true iff a segment was successfully flattened
    */
-  public boolean flattenYoungestSegment(long requesterVersion) {
+  public boolean flattenOneSegment(long requesterVersion, CompactingMemStore.IndexType idxType) {
 
     if(requesterVersion != version) {
       LOG.warn("Segment flattening failed, because versions do not match. Requester version: "
@@ -196,17 +196,22 @@ public class CompactionPipeline {
         LOG.warn("Segment flattening failed, because versions do not match");
         return false;
       }
-
+      int i = 0;
       for (ImmutableSegment s : pipeline) {
-        // remember the old size in case this segment is going to be flatten
-        MemstoreSize memstoreSize = new MemstoreSize();
-        if (s.flatten(memstoreSize)) {
+        if ( s.canBeFlattened() ) {
+          MemstoreSize newMemstoreSize = new MemstoreSize(); // the size to be updated
+          ImmutableSegment newS = SegmentFactory.instance().createImmutableSegmentByFlattening(
+              (CSLMImmutableSegment)s,idxType,newMemstoreSize);
+          replaceAtIndex(i,newS);
           if(region != null) {
-            region.addMemstoreSize(memstoreSize);
+            // update the global memstore size counter
+            // upon flattening there is no change in the data size
+            region.addMemstoreSize(new MemstoreSize(0, newMemstoreSize.getHeapSize()));
           }
           LOG.debug("Compaction pipeline segment " + s + " was flattened");
           return true;
         }
+        i++;
       }
 
     }
@@ -271,12 +276,19 @@ public class CompactionPipeline {
     if(segment != null) pipeline.addLast(segment);
   }
 
+  // replacing one segment in the pipeline with a new one exactly at the same index
+  // need to be called only within synchronized block
+  private void replaceAtIndex(int idx, ImmutableSegment newSegment) {
+    pipeline.set(idx, newSegment);
+    readOnlyCopy = new LinkedList<>(pipeline);
+  }
+
   public Segment getTail() {
     List<? extends Segment> localCopy = getSegments();
     if(localCopy.isEmpty()) {
       return null;
     }
-    return localCopy.get(localCopy.size()-1);
+    return localCopy.get(localCopy.size() - 1);
   }
 
   private boolean addFirst(ImmutableSegment segment) {

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -286,8 +287,8 @@ public class TestCellFlatSet extends TestCase {
 
     ByteBuffer idxBuffer = idxChunk.getData();  // the buffers of the chunks
     ByteBuffer dataBuffer = dataChunk.getData();
-    int dataOffset = Bytes.SIZEOF_INT;          // offset inside data buffer
-    int idxOffset = Bytes.SIZEOF_INT;           // skip the space for chunk ID
+    int dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;          // offset inside data buffer
+    int idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;           // skip the space for chunk ID
 
     Cell[] cellArray = asc ? ascCells : descCells;
 
@@ -296,16 +297,16 @@ public class TestCellFlatSet extends TestCase {
       if (dataOffset + KeyValueUtil.length(kv) > chunkCreator.getChunkSize()) {
         dataChunk = chunkCreator.getChunk();    // allocate more data chunks if needed
         dataBuffer = dataChunk.getData();
-        dataOffset = Bytes.SIZEOF_INT;
+        dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
       }
       int dataStartOfset = dataOffset;
       dataOffset = KeyValueUtil.appendTo(kv, dataBuffer, dataOffset, false); // write deep cell data
 
       // do we have enough space to write the cell-representation on the index chunk?
-      if (idxOffset + CellChunkMap.SIZEOF_CELL_REP > chunkCreator.getChunkSize()) {
+      if (idxOffset + ClassSize.CELL_CHUNK_MAP_ENTRY > chunkCreator.getChunkSize()) {
         idxChunk = chunkCreator.getChunk();    // allocate more index chunks if needed
         idxBuffer = idxChunk.getData();
-        idxOffset = Bytes.SIZEOF_INT;
+        idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
         chunkArray[chunkArrayIdx++] = idxChunk;
       }
       idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, dataChunk.getId()); // write data chunk id
@@ -314,8 +315,6 @@ public class TestCellFlatSet extends TestCase {
       idxOffset = ByteBufferUtils.putLong(idxBuffer, idxOffset, kv.getSequenceId());     // seqId
     }
 
-    return asc ?
-        new CellChunkMap(CellComparator.COMPARATOR,chunkArray,0,NUM_OF_CELLS,false) :
-        new CellChunkMap(CellComparator.COMPARATOR,chunkArray,0,NUM_OF_CELLS,true);
+    return new CellChunkMap(CellComparator.COMPARATOR,chunkArray,0,NUM_OF_CELLS,!asc);
   }
 }

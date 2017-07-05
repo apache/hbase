@@ -965,9 +965,12 @@ public class TestDefaultMemStore {
         conf, FSTableDescriptors.createMetaTableDescriptor(conf),
         wFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.
             getEncodedNameAsBytes()));
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()),
+    // parameterized tests add [#] suffix get rid of [ and ].
+    HRegionInfo hri =
+        new HRegionInfo(TableName.valueOf(name.getMethodName().replaceAll("[\\[\\]]", "_")),
         Bytes.toBytes("row_0200"), Bytes.toBytes("row_0300"));
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(
+        name.getMethodName().replaceAll("[\\[\\]]", "_")));
     desc.addFamily(new HColumnDescriptor("foo".getBytes()));
     HRegion r =
         HRegion.createHRegion(hri, testDir, conf, desc,
