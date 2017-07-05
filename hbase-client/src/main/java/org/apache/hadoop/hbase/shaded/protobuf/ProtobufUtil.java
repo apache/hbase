@@ -165,6 +165,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -1806,7 +1807,8 @@ public final class ProtobufUtil {
   public static List<org.apache.hadoop.hbase.RegionLoad> getRegionLoad(
       final RpcController controller, final AdminService.BlockingInterface admin,
       final TableName tableName) throws IOException {
-    GetRegionLoadRequest request = RequestConverter.buildGetRegionLoadRequest(tableName);
+    GetRegionLoadRequest request =
+        RequestConverter.buildGetRegionLoadRequest(Optional.ofNullable(tableName));
     GetRegionLoadResponse response;
     try {
       response = admin.getRegionLoad(controller, request);
@@ -1816,7 +1818,7 @@ public final class ProtobufUtil {
     return getRegionLoadInfo(response);
   }
 
-  static List<org.apache.hadoop.hbase.RegionLoad> getRegionLoadInfo(
+  public static List<org.apache.hadoop.hbase.RegionLoad> getRegionLoadInfo(
       GetRegionLoadResponse regionLoadResponse) {
     List<org.apache.hadoop.hbase.RegionLoad> regionLoadList =
         new ArrayList<>(regionLoadResponse.getRegionLoadsCount());
@@ -3064,6 +3066,11 @@ public final class ProtobufUtil {
    */
   public static CompactionState createCompactionState(GetRegionInfoResponse.CompactionState state) {
     return CompactionState.valueOf(state.toString());
+  }
+
+  public static Optional<Long> toOptionalTimestamp(MajorCompactionTimestampResponse resp) {
+    long timestamp = resp.getCompactionTimestamp();
+    return timestamp == 0 ? Optional.empty() : Optional.of(timestamp);
   }
 
   /**

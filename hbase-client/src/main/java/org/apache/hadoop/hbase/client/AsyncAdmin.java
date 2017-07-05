@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Collection;
 import java.util.Map;
@@ -24,8 +25,10 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -330,6 +333,11 @@ public interface AsyncAdmin {
    * Get all the online regions on a region server.
    */
   CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName serverName);
+
+  /**
+   * Get the regions of a given table.
+   */
+  CompletableFuture<List<HRegionInfo>> getTableRegions(TableName tableName);
 
   /**
    * Flush a table.
@@ -796,4 +804,91 @@ public interface AsyncAdmin {
    * @return procedure list wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<ProcedureInfo>> listProcedures();
+
+  /**
+   * @return cluster status wrapped by {@link CompletableFuture}
+   */
+  CompletableFuture<ClusterStatus> getClusterStatus();
+
+  /**
+   * @return current master server name wrapped by {@link CompletableFuture}
+   */
+  default CompletableFuture<ServerName> getMaster() {
+    return getClusterStatus().thenApply(ClusterStatus::getMaster);
+  }
+
+  /**
+   * @return current backup master list wrapped by {@link CompletableFuture}
+   */
+  default CompletableFuture<Collection<ServerName>> getBackupMasters() {
+    return getClusterStatus().thenApply(ClusterStatus::getBackupMasters);
+  }
+
+  /**
+   * @return current live region servers list wrapped by {@link CompletableFuture}
+   */
+  default CompletableFuture<Collection<ServerName>> getRegionServers() {
+    return getClusterStatus().thenApply(ClusterStatus::getServers);
+  }
+
+  /**
+   * Get a list of {@link RegionLoad} of all regions hosted on a region seerver.
+   * @param serverName
+   * @return a list of {@link RegionLoad} wrapped by {@link CompletableFuture}
+   */
+  default CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName) {
+    return getRegionLoads(serverName, Optional.empty());
+  }
+
+  /**
+   * Get a list of {@link RegionLoad} of all regions hosted on a region seerver for a table.
+   * @param serverName
+   * @param tableName
+   * @return a list of {@link RegionLoad} wrapped by {@link CompletableFuture}
+   */
+  CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName,
+      Optional<TableName> tableName);
+
+  /**
+   * Check whether master is in maintenance mode
+   * @return true if master is in maintenance mode, false otherwise. The return value will be
+   *         wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> isMasterInMaintenanceMode();
+
+  /**
+   * Get the current compaction state of a table. It could be in a major compaction, a minor
+   * compaction, both, or none.
+   * @param tableName table to examine
+   * @return the current compaction state wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<CompactionState> getCompactionState(TableName tableName);
+
+  /**
+   * Get the current compaction state of region. It could be in a major compaction, a minor
+   * compaction, both, or none.
+   * @param regionName region to examine
+   * @return the current compaction state wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<CompactionState> getCompactionStateForRegion(byte[] regionName);
+
+  /**
+   * Get the timestamp of the last major compaction for the passed table.
+   * <p>
+   * The timestamp of the oldest HFile resulting from a major compaction of that table, or not
+   * present if no such HFile could be found.
+   * @param tableName table to examine
+   * @return the last major compaction timestamp wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Optional<Long>> getLastMajorCompactionTimestamp(TableName tableName);
+
+  /**
+   * Get the timestamp of the last major compaction for the passed region.
+   * <p>
+   * The timestamp of the oldest HFile resulting from a major compaction of that region, or not
+   * present if no such HFile could be found.
+   * @param regionName region to examine
+   * @return the last major compaction timestamp wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Optional<Long>> getLastMajorCompactionTimestampForRegion(byte[] regionName);
 }

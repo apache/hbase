@@ -515,10 +515,10 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     long curt = System.currentTimeMillis();
     long waitTime = 5000;
     long endt = curt + waitTime;
-    CompactionState state = TEST_UTIL.getAdmin().getCompactionState(tableName);
+    CompactionState state = admin.getCompactionState(tableName).get();
     while (state == CompactionState.NONE && curt < endt) {
       Thread.sleep(10);
-      state = TEST_UTIL.getAdmin().getCompactionState(tableName);
+      state = admin.getCompactionState(tableName).get();
       curt = System.currentTimeMillis();
     }
     // Now, should have the right compaction state,
@@ -530,10 +530,10 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       }
     } else {
       // Wait until the compaction is done
-      state = TEST_UTIL.getAdmin().getCompactionState(tableName);
+      state = admin.getCompactionState(tableName).get();
       while (state != CompactionState.NONE && curt < endt) {
         Thread.sleep(10);
-        state = TEST_UTIL.getAdmin().getCompactionState(tableName);
+        state = admin.getCompactionState(tableName).get();
       }
       // Now, compaction should be done.
       assertEquals(CompactionState.NONE, state);

@@ -796,15 +796,23 @@ public final class RequestConverter {
 
   /**
    * Create a protocol buffer GetRegionLoadRequest for all regions/regions of a table.
-   *
+   * @param tableName the table for which regionLoad should be obtained from RS
+   * @return a protocol buffer GetRegionLoadRequest
+   * @deprecated use {@link #buildGetRegionLoadRequest(Optional)} instead.
+   */
+  @Deprecated
+  public static GetRegionLoadRequest buildGetRegionLoadRequest(final TableName tableName) {
+    return buildGetRegionLoadRequest(Optional.ofNullable(tableName));
+  }
+
+  /**
+   * Create a protocol buffer GetRegionLoadRequest for all regions/regions of a table.
    * @param tableName the table for which regionLoad should be obtained from RS
    * @return a protocol buffer GetRegionLoadRequest
    */
-  public static GetRegionLoadRequest buildGetRegionLoadRequest(final TableName tableName) {
+  public static GetRegionLoadRequest buildGetRegionLoadRequest(Optional<TableName> tableName) {
     GetRegionLoadRequest.Builder builder = GetRegionLoadRequest.newBuilder();
-    if (tableName != null) {
-      builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
-    }
+    tableName.ifPresent(table -> builder.setTableName(ProtobufUtil.toProtoTableName(table)));
     return builder.build();
   }
 

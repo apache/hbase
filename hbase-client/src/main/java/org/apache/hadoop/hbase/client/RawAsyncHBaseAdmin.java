@@ -46,12 +46,14 @@ import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -89,10 +91,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
@@ -115,6 +122,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
@@ -133,6 +142,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsInMaintenanceModeRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsInMaintenanceModeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
@@ -141,6 +152,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamesp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsResponse;
@@ -178,7 +192,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Remov
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.*;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -728,14 +742,26 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName sn) {
+  public CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName serverName) {
     return this.<List<HRegionInfo>> newAdminCaller()
         .action((controller, stub) -> this
             .<GetOnlineRegionRequest, GetOnlineRegionResponse, List<HRegionInfo>> adminCall(
               controller, stub, RequestConverter.buildGetOnlineRegionRequest(),
               (s, c, req, done) -> s.getOnlineRegion(c, req, done),
               resp -> ProtobufUtil.getRegionInfos(resp)))
-        .serverName(sn).call();
+        .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionInfo>> getTableRegions(TableName tableName) {
+    if (tableName.equals(META_TABLE_NAME)) {
+      return connection.getLocator().getRegionLocation(tableName, null, null, operationTimeoutNs)
+          .thenApply(loc -> Arrays.asList(loc.getRegionInfo()));
+    } else {
+      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName))
+          .thenApply(
+            locs -> locs.stream().map(loc -> loc.getRegionInfo()).collect(Collectors.toList()));
+    }
   }
 
   @Override
@@ -2274,5 +2300,190 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       return true;
     }
     return false;
+  }
+
+  @Override
+  public CompletableFuture<ClusterStatus> getClusterStatus() {
+    return this
+        .<ClusterStatus> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<GetClusterStatusRequest, GetClusterStatusResponse, ClusterStatus> call(controller,
+                stub, RequestConverter.buildGetClusterStatusRequest(),
+                (s, c, req, done) -> s.getClusterStatus(c, req, done),
+                resp -> ProtobufUtil.convert(resp.getClusterStatus()))).call();
+  }
+
+  @Override
+  public CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName,
+      Optional<TableName> tableName) {
+    return this
+        .<List<RegionLoad>> newAdminCaller()
+        .action(
+          (controller, stub) -> this
+              .<GetRegionLoadRequest, GetRegionLoadResponse, List<RegionLoad>> adminCall(
+                controller, stub, RequestConverter.buildGetRegionLoadRequest(tableName), (s, c,
+                    req, done) -> s.getRegionLoad(controller, req, done),
+                ProtobufUtil::getRegionLoadInfo)).serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isMasterInMaintenanceMode() {
+    return this
+        .<Boolean> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<IsInMaintenanceModeRequest, IsInMaintenanceModeResponse, Boolean> call(controller,
+                stub, IsInMaintenanceModeRequest.newBuilder().build(),
+                (s, c, req, done) -> s.isMasterInMaintenanceMode(c, req, done),
+                resp -> resp.getInMaintenanceMode())).call();
+  }
+
+  @Override
+  public CompletableFuture<CompactionState> getCompactionState(TableName tableName) {
+    CompletableFuture<CompactionState> future = new CompletableFuture<>();
+    getTableHRegionLocations(tableName).whenComplete(
+      (locations, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        List<CompactionState> regionStates = new ArrayList<>();
+        List<CompletableFuture<CompactionState>> futures = new ArrayList<>();
+        locations.stream().filter(loc -> loc.getServerName() != null)
+            .filter(loc -> loc.getRegionInfo() != null)
+            .filter(loc -> !loc.getRegionInfo().isOffline())
+            .map(loc -> loc.getRegionInfo().getRegionName()).forEach(region -> {
+              futures.add(getCompactionStateForRegion(region).whenComplete((regionState, err2) -> {
+                // If any region compaction state is MAJOR_AND_MINOR
+                // the table compaction state is MAJOR_AND_MINOR, too.
+                if (err2 != null) {
+                  future.completeExceptionally(err2);
+                } else if (regionState == CompactionState.MAJOR_AND_MINOR) {
+
+                  future.complete(regionState);
+                } else {
+                  regionStates.add(regionState);
+                }
+              }));
+            });
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()]))
+            .whenComplete((ret, err3) -> {
+              // If future not completed, check all regions's compaction state
+              if (!future.isCompletedExceptionally() && !future.isDone()) {
+                CompactionState state = CompactionState.NONE;
+                for (CompactionState regionState : regionStates) {
+                  switch (regionState) {
+                  case MAJOR:
+                    if (state == CompactionState.MINOR) {
+                      future.complete(CompactionState.MAJOR_AND_MINOR);
+                    } else {
+                      state = CompactionState.MAJOR;
+                    }
+                    break;
+                  case MINOR:
+                    if (state == CompactionState.MAJOR) {
+                      future.complete(CompactionState.MAJOR_AND_MINOR);
+                    } else {
+                      state = CompactionState.MINOR;
+                    }
+                    break;
+                  case NONE:
+                  default:
+                  }
+                  if (!future.isDone()) {
+                    future.complete(state);
+                  }
+                }
+              }
+            });
+      });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<CompactionState> getCompactionStateForRegion(byte[] regionName) {
+    CompletableFuture<CompactionState> future = new CompletableFuture<>();
+    getRegionLocation(regionName).whenComplete(
+      (location, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        ServerName serverName = location.getServerName();
+        if (serverName == null) {
+          future.completeExceptionally(new NoServerForRegionException(Bytes
+              .toStringBinary(regionName)));
+          return;
+        }
+        this.<GetRegionInfoResponse> newAdminCaller()
+            .action(
+              (controller, stub) -> this
+                  .<GetRegionInfoRequest, GetRegionInfoResponse, GetRegionInfoResponse> adminCall(
+                    controller, stub, RequestConverter.buildGetRegionInfoRequest(location
+                        .getRegionInfo().getRegionName(), true), (s, c, req, done) -> s
+                        .getRegionInfo(controller, req, done), resp -> resp))
+            .serverName(serverName).call().whenComplete((resp2, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                if (resp2.hasCompactionState()) {
+                  future.complete(ProtobufUtil.createCompactionState(resp2.getCompactionState()));
+                } else {
+                  future.complete(CompactionState.NONE);
+                }
+              }
+            });
+      });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Optional<Long>> getLastMajorCompactionTimestamp(TableName tableName) {
+    MajorCompactionTimestampRequest request =
+        MajorCompactionTimestampRequest.newBuilder()
+            .setTableName(ProtobufUtil.toProtoTableName(tableName)).build();
+    return this
+        .<Optional<Long>> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<MajorCompactionTimestampRequest, MajorCompactionTimestampResponse, Optional<Long>> call(
+                controller, stub, request,
+                (s, c, req, done) -> s.getLastMajorCompactionTimestamp(c, req, done),
+                ProtobufUtil::toOptionalTimestamp)).call();
+  }
+
+  @Override
+  public CompletableFuture<Optional<Long>> getLastMajorCompactionTimestampForRegion(
+      byte[] regionName) {
+    CompletableFuture<Optional<Long>> future = new CompletableFuture<>();
+    // regionName may be a full region name or encoded region name, so getRegionInfo(byte[]) first
+    getRegionInfo(regionName)
+        .whenComplete(
+          (region, err) -> {
+            if (err != null) {
+              future.completeExceptionally(err);
+              return;
+            }
+            MajorCompactionTimestampForRegionRequest.Builder builder =
+                MajorCompactionTimestampForRegionRequest.newBuilder();
+            builder.setRegion(RequestConverter.buildRegionSpecifier(
+              RegionSpecifierType.REGION_NAME, regionName));
+            this.<Optional<Long>> newMasterCaller()
+                .action(
+                  (controller, stub) -> this
+                      .<MajorCompactionTimestampForRegionRequest, MajorCompactionTimestampResponse, Optional<Long>> call(
+                        controller, stub, builder.build(), (s, c, req, done) -> s
+                            .getLastMajorCompactionTimestampForRegion(c, req, done),
+                        ProtobufUtil::toOptionalTimestamp)).call()
+                .whenComplete((timestamp, err2) -> {
+                  if (err2 != null) {
+                    future.completeExceptionally(err2);
+                  } else {
+                    future.complete(timestamp);
+                  }
+                });
+          });
+    return future;
   }
 }
