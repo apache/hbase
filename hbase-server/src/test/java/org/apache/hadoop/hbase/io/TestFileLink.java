@@ -36,7 +36,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.ipc.RemoteException;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -102,6 +104,35 @@ public class TestFileLink {
     } finally {
       testUtil.shutdownMiniCluster();
     }
+  }
+
+  private static class MyDistributedFileSystem extends DistributedFileSystem {
+    MyDistributedFileSystem() {
+    }
+    @Override
+    public FSDataInputStream open(Path f, final int bufferSize)
+        throws IOException {
+      throw new RemoteException(FileNotFoundException.class.getName(), "");
+    }
+    @Override
+    public Configuration getConf() {
+      return new Configuration();
+    }
+  }
+  @Test(expected = FileNotFoundException.class)
+  public void testLinkReadWithMissingFile() throws Exception {
+    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    FileSystem fs = new MyDistributedFileSystem();
+
+    Path originalPath = new Path(testUtil.getDefaultRootDirPath(), "test.file");
+    Path archivedPath = new Path(testUtil.getDefaultRootDirPath(), "archived.file");
+
+    List<Path> files = new ArrayList<Path>();
+    files.add(originalPath);
+    files.add(archivedPath);
+
+    FileLink link = new FileLink(files);
+    link.open(fs);
   }
 
   /**
