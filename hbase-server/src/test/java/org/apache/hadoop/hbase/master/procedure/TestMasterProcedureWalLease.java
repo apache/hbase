@@ -47,12 +47,14 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
 
 @Category({MasterTests.class, LargeTests.class})
+@Ignore
 public class TestMasterProcedureWalLease {
   private static final Log LOG = LogFactory.getLog(TestMasterProcedureWalLease.class);
 
