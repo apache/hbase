@@ -75,6 +75,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -330,6 +332,13 @@ public class HRegionServer extends HasThread implements
   // Go down hard. Used if file system becomes unavailable and also in
   // debugging and unit tests.
   private volatile boolean abortRequested;
+
+  // Region server contains instances of all three clock clocks. Regions have a set
+  // clock type so depending on the clock type needed by a region, the appropriate
+  // one can be accessed.
+  final protected Clock hybridLogicalClock;
+  final protected Clock systemMonotonicClock;
+  final protected Clock systemClock;
 
   ConcurrentMap<String, Integer> rowlocks = new ConcurrentHashMap<>();
 
@@ -587,6 +596,10 @@ public class HRegionServer extends HasThread implements
 
     this.abortRequested = false;
     this.stopped = false;
+
+    this.hybridLogicalClock = new Clock.HLC();
+    this.systemMonotonicClock = new Clock.SystemMonotonic();
+    this.systemClock = new Clock.System();
 
     rpcServices = createRpcServices();
     this.startcode = System.currentTimeMillis();
@@ -2071,6 +2084,17 @@ public class HRegionServer extends HasThread implements
 
   public LogRoller getWalRoller() {
     return walRoller;
+  }
+
+  @Override
+  public Clock getRegionServerClock(ClockType clockType) {
+    if (clockType.equals(ClockType.HLC)){
+      return this.hybridLogicalClock;
+    } else if (clockType.equals(ClockType.SYSTEM_MONOTONIC)) {
+      return this.systemMonotonicClock;
+    } else {
+      return this.systemClock;
+    }
   }
 
   @Override

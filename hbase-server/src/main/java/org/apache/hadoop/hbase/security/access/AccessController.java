@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -778,7 +779,14 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
     // any cells found there inclusively.
     long latestTs = Math.max(opTs, latestCellTs);
     if (latestTs == 0 || latestTs == HConstants.LATEST_TIMESTAMP) {
-      latestTs = EnvironmentEdgeManager.currentTime();
+      if (latestCellTs == HConstants.LATEST_TIMESTAMP || latestCellTs == 0) {
+        latestTs = HConstants.LATEST_TIMESTAMP - 1;
+      } else if (TimestampType.HYBRID.isLikelyOfType(latestCellTs)) {
+        latestTs = TimestampType.HYBRID.fromEpochTimeMillisToTimestamp(EnvironmentEdgeManager
+          .currentTime());
+      } else {
+        latestTs = EnvironmentEdgeManager.currentTime();
+      }
     }
     get.setTimeRange(0, latestTs + 1);
     // In case of Put operation we set to read all versions. This was done to consider the case

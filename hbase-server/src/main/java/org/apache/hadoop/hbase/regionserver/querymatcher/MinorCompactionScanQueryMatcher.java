@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 
@@ -36,7 +37,7 @@ public class MinorCompactionScanQueryMatcher extends CompactionScanQueryMatcher 
   }
 
   @Override
-  public MatchCode match(Cell cell) throws IOException {
+  public MatchCode match(Cell cell, TimestampType timestampType) throws IOException {
     MatchCode returnCode = preCheck(cell);
     if (returnCode != null) {
       return returnCode;

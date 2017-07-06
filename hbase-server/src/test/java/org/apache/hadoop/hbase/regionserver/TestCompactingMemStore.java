@@ -42,8 +42,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hadoop.hbase.Clock;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * compacted memstore test case
@@ -166,27 +170,46 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   // Get tests
   //////////////////////////////////////////////////////////////////////////////
 
-  /** Test getNextRow from memstore
+  /** Test getNextRow from memstore with using timestamps from a hybrid logical clock
    * @throws InterruptedException
    */
-  @Override
   @Test
-  public void testGetNextRow() throws Exception {
-    addRows(this.memstore);
+  public void testGetNextRowWithHybridLogicalClock() throws Exception {
+    testGetNextRow(new Clock.HLC());
+  }
+
+  /** Test getNextRow from memstore using timestamps from a system monotonic clock
+   * @throws InterruptedException
+   */
+  @Test
+  public void testGetNextRowWithSystemMonotonicClock() throws Exception {
+    testGetNextRow(new Clock.SystemMonotonic());
+  }
+
+  /** Test getNextRow from memstore using timestamps from a system clock
+   * @throws InterruptedException
+   */
+  @Test
+  public void testGetNextRowWithSystemClock() throws Exception {
+    testGetNextRow(new Clock.System());
+  }
+
+  public void testGetNextRow(Clock clock) throws Exception {
+    addRows(this.memstore, clock);
     // Add more versions to make it a little more interesting.
     Thread.sleep(1);
-    addRows(this.memstore);
+    addRows(this.memstore, clock);
     Cell closestToEmpty = ((CompactingMemStore)this.memstore).getNextRow(KeyValue.LOWESTKEY);
     assertTrue(CellComparator.COMPARATOR.compareRows(closestToEmpty,
-        new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
+        new KeyValue(Bytes.toBytes(0), clock.now())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((CompactingMemStore)this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
-          System.currentTimeMillis()));
+          clock.now()));
       if (i + 1 == ROW_COUNT) {
         assertEquals(nr, null);
       } else {
         assertTrue(CellComparator.COMPARATOR.compareRows(nr,
-            new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
+            new KeyValue(Bytes.toBytes(i + 1), clock.now())) == 0);
       }
     }
     //starting from each row, validate results should contain the starting row
@@ -195,9 +218,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       ScanInfo scanInfo = new ScanInfo(conf, FAMILY, 0, 1, Integer.MAX_VALUE,
           KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator());
       ScanType scanType = ScanType.USER_SCAN;
-      InternalScanner scanner = new StoreScanner(new Scan(
-          Bytes.toBytes(startRowId)), scanInfo, scanType, null,
-          memstore.getScanners(0));
+      Store mockStore = mock(HStore.class);
+      when(mockStore.getClock()).thenReturn(Clock.getDummyClockOfGivenClockType(clock.getClockType()));
+      InternalScanner scanner = new StoreScanner(mockStore, new Scan(Bytes.toBytes(startRowId)),
+          scanInfo, scanType, null, memstore.getScanners(0)) ;
       List<Cell> results = new ArrayList<>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;

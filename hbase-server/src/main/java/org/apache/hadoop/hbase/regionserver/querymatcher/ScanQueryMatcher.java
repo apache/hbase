@@ -31,12 +31,14 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker.DeleteResult;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -153,8 +155,23 @@ public abstract class ScanQueryMatcher implements ShipperListener {
         long ts = cell.getTimestamp();
         assert t.getValueLength() == Bytes.SIZEOF_LONG;
         long ttl = TagUtil.getValueAsLong(t);
-        if (ts + ttl < now) {
-          return true;
+        if (TimestampType.HYBRID.isLikelyOfType(ts)) {
+          if (TimestampType.HYBRID.isLikelyOfType(now)) {
+            if (TimestampType.HYBRID.toEpochTimeMillisFromTimestamp(ts) + ttl < TimestampType.HYBRID
+                .toEpochTimeMillisFromTimestamp(now)) {
+              return true;
+            }
+          }
+          else {
+            if (TimestampType.HYBRID.toEpochTimeMillisFromTimestamp(ts) + ttl < now) {
+              return true;
+            }
+          }
+
+        } else {
+          if (ts + ttl < now) {
+            return true;
+          }
         }
         // Per cell TTLs cannot extend lifetime beyond family settings, so
         // fall through to check that
@@ -226,11 +243,12 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * <li>got to the next row (MatchCode.DONE)</li>
    * </ul>
    * @param cell KeyValue to check
+   * @param timestampType type of timestamp for the timestamp in cell
    * @return The match code instance.
    * @throws IOException in case there is an internal consistency problem caused by a data
    *           corruption.
    */
-  public abstract MatchCode match(Cell cell) throws IOException;
+  public abstract MatchCode match(Cell cell, TimestampType timestampType) throws IOException;
 
   /**
    * @return the start key

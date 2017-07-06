@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -154,7 +155,7 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
   }
 
   @Override
-  public MatchCode match(Cell cell) throws IOException {
+  public MatchCode match(Cell cell, TimestampType timestampType) throws IOException {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }

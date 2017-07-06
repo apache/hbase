@@ -77,6 +77,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -112,6 +115,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -6007,20 +6011,34 @@ public class TestHRegion {
   }
 
   @Test
-  public void testCellTTLs() throws IOException {
-    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
-    EnvironmentEdgeManager.injectEdge(edge);
+  public void testCellTTLsWithHybridLogicalClock() throws IOException {
+    testCellTTLs(ClockType.HLC);
+  }
 
+  @Test
+  public void testCellTTLsWithSystemMonotonicClock() throws IOException {
+    testCellTTLs(ClockType.SYSTEM_MONOTONIC);
+  }
+
+  @Test
+  public void testCellTTLsWithSystemClock() throws IOException {
+    testCellTTLs(ClockType.SYSTEM);
+  }
+
+  public void testCellTTLs(ClockType clockType) throws IOException {
     final byte[] row = Bytes.toBytes("testRow");
     final byte[] q1 = Bytes.toBytes("q1");
     final byte[] q2 = Bytes.toBytes("q2");
     final byte[] q3 = Bytes.toBytes("q3");
     final byte[] q4 = Bytes.toBytes("q4");
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    hcd.setTimeToLive(10); // 10 seconds
-    htd.addFamily(hcd);
+    HTableDescriptor htd = new HTableDescriptor(TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName()))
+      .addColumnFamily(new HColumnDescriptor(fam1)
+        .setTimeToLive(10)) // 10 seconds
+      .setClockType(clockType)
+      .build());
+    TimestampType timestampType = clockType.timestampType();
 
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
@@ -6029,22 +6047,32 @@ public class TestHRegion {
             HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
         TEST_UTIL.getDataTestDir(), conf, htd);
     assertNotNull(region);
+
+    region.setClock(Clock.getDummyClockOfGivenClockType(clockType));
+    long now = timestampType.toEpochTimeMillisFromTimestamp(region.getClock().now());
+    ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(mee);
+    mee.setValue(now);
+
     try {
-      long now = EnvironmentEdgeManager.currentTime();
       // Add a cell that will expire in 5 seconds via cell TTL
-      region.put(new Put(row).add(new KeyValue(row, fam1, q1, now,
-        HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
+      region.put(new Put(row).add(new KeyValue(row, fam1, q1, timestampType
+          .fromEpochTimeMillisToTimestamp(now),
+          HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
           // TTL tags specify ts in milliseconds
           new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(5000L)) } )));
       // Add a cell that will expire after 10 seconds via family setting
-      region.put(new Put(row).addColumn(fam1, q2, now, HConstants.EMPTY_BYTE_ARRAY));
+      region.put(new Put(row).addColumn(fam1, q2, timestampType
+          .fromEpochTimeMillisToTimestamp(now), HConstants.EMPTY_BYTE_ARRAY));
       // Add a cell that will expire in 15 seconds via cell TTL
-      region.put(new Put(row).add(new KeyValue(row, fam1, q3, now + 10000 - 1,
-        HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
+      region.put(new Put(row).add(new KeyValue(row, fam1, q3, timestampType
+          .fromEpochTimeMillisToTimestamp(now + 10000 - 1),
+          HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
           // TTL tags specify ts in milliseconds
           new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(5000L)) } )));
       // Add a cell that will expire in 20 seconds via family setting
-      region.put(new Put(row).addColumn(fam1, q4, now + 10000 - 1, HConstants.EMPTY_BYTE_ARRAY));
+      region.put(new Put(row).addColumn(fam1, q4, timestampType.fromEpochTimeMillisToTimestamp
+          (now + 10000 - 1), HConstants.EMPTY_BYTE_ARRAY));
 
       // Flush so we are sure store scanning gets this right
       region.flush(true);
@@ -6057,7 +6085,7 @@ public class TestHRegion {
       assertNotNull(r.getValue(fam1, q4));
 
       // Increment time to T+5 seconds
-      edge.incrementTime(5000);
+      mee.setValue(now + 5001);
 
       r = region.get(new Get(row));
       assertNull(r.getValue(fam1, q1));
@@ -6066,7 +6094,7 @@ public class TestHRegion {
       assertNotNull(r.getValue(fam1, q4));
 
       // Increment time to T+10 seconds
-      edge.incrementTime(5000);
+      mee.setValue(now + 10001);
 
       r = region.get(new Get(row));
       assertNull(r.getValue(fam1, q1));
@@ -6075,7 +6103,7 @@ public class TestHRegion {
       assertNotNull(r.getValue(fam1, q4));
 
       // Increment time to T+15 seconds
-      edge.incrementTime(5000);
+      mee.setValue(now + 15000);
 
       r = region.get(new Get(row));
       assertNull(r.getValue(fam1, q1));
@@ -6084,7 +6112,7 @@ public class TestHRegion {
       assertNotNull(r.getValue(fam1, q4));
 
       // Increment time to T+20 seconds
-      edge.incrementTime(10000);
+      mee.setValue(now + 20000);
 
       r = region.get(new Get(row));
       assertNull(r.getValue(fam1, q1));
@@ -6113,7 +6141,13 @@ public class TestHRegion {
       assertEquals(Bytes.toLong(val), 2L);
 
       // Increment time to T+25 seconds
-      edge.incrementTime(5000);
+      // For the system and system monotonic clock, the increment operation adds 1 to the timestamp
+      // so we move must the clock forward an additional millisecond
+      if (clockType == ClockType.SYSTEM || clockType == ClockType.SYSTEM_MONOTONIC) {
+        mee.setValue(now + 25002);
+      } else {
+        mee.setValue(now + 25001);
+      }
 
       // Value should be back to 1
       r = region.get(new Get(row));
@@ -6122,7 +6156,7 @@ public class TestHRegion {
       assertEquals(Bytes.toLong(val), 1L);
 
       // Increment time to T+30 seconds
-      edge.incrementTime(5000);
+      mee.setValue(now + 30001);
 
       // Original value written at T+20 should be gone now via family TTL
       r = region.get(new Get(row));

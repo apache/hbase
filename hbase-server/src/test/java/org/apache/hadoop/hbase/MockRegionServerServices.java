@@ -253,6 +253,11 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
+  public Clock getRegionServerClock(ClockType clockType) {
+    return Clock.getDummyClockOfGivenClockType(clockType);
+  }
+
+  @Override
   public ExecutorService getExecutorService() {
     return null;
   }

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
@@ -86,7 +87,7 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
         qm.setToNewRow(KeyValueUtil.createFirstOnRow(row));
         prevRow = row;
       }
-      actual.add(qm.match(new KeyValue(row, fam2, null, now, Type.Delete)));
+      actual.add(qm.match(new KeyValue(row, fam2, null, now, Type.Delete), TimestampType.PHYSICAL));
     }
 
     assertEquals(expected.length, actual.size());

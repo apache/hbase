@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -1872,6 +1873,22 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return htd;
   }
 
+  public HTableDescriptor createTableDescriptor(final TableName name,
+      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted,
+      ClockType clockType) {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name);
+    for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
+      builder.addColumnFamily(new HColumnDescriptor(cfName)
+        .setMinVersions(minVersions)
+        .setMaxVersions(versions)
+        .setKeepDeletedCells(keepDeleted)
+        .setBlockCacheEnabled(false)
+        .setTimeToLive(ttl));
+    }
+    builder.setClockType(clockType);
+    return new HTableDescriptor(builder.build());
+  }
+
   /**
    * Create a table of name <code>name</code>.
    * @param name Name to give table.
@@ -1880,6 +1897,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTableDescriptor createTableDescriptor(final TableName name) {
     return createTableDescriptor(name,  HColumnDescriptor.DEFAULT_MIN_VERSIONS,
         MAXVERSIONS, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
+  }
+
+  /**
+   * Create a table of name <code>name</code>.
+   * @param name Name to give table.
+   * @param clockType clock type of the table
+   * @return Column descriptor.
+   */
+  public HTableDescriptor createTableDescriptor(final TableName name, ClockType clockType) {
+    return createTableDescriptor(name,  HColumnDescriptor.DEFAULT_MIN_VERSIONS,
+        MAXVERSIONS, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED, clockType);
   }
 
   public HTableDescriptor createTableDescriptor(final TableName tableName,

@@ -26,8 +26,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * Note : Server side Cell implementations in write path must implement this.
  * @deprecated as of 2.0 and will be removed in 3.0. Use {@link ExtendedCell} instead
  */
+@Deprecated // Co Processors SHOULD NOT use this if the clock type of the tables is HLC
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@Deprecated
 public interface SettableTimestamp {
 
   /**

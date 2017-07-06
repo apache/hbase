@@ -31,6 +31,7 @@ import java.util.NavigableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -148,25 +150,32 @@ public class TestCoprocessorScanPolicy {
   }
 
   @Test
-  public void testTTL() throws Exception {
+  public void testTTl() throws Exception {
+    testTTL(ClockType.HLC);
+    testTTL(ClockType.SYSTEM_MONOTONIC);
+    testTTL(ClockType.SYSTEM);
+  }
+
+  public void testTTL(ClockType clockType) throws Exception {
     TableName tableName =
         TableName.valueOf("testTTL");
     if (TEST_UTIL.getAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor(F)
-    .setMaxVersions(10)
-    .setTimeToLive(1);
-    desc.addFamily(hcd);
+    HTableDescriptor desc = new HTableDescriptor(TableDescriptorBuilder.newBuilder(tableName)
+      .addColumnFamily(new HColumnDescriptor(F)
+        .setMaxVersions(10)
+        .setTimeToLive(1))
+      .setClockType(clockType)
+      .build());
     TEST_UTIL.getAdmin().createTable(desc);
     Table t = TEST_UTIL.getConnection().getTable(tableName);
     long now = EnvironmentEdgeManager.currentTime();
     ManualEnvironmentEdge me = new ManualEnvironmentEdge();
-    me.setValue(now);
+    me.setValue(now-2000);
     EnvironmentEdgeManagerTestHelper.injectEdge(me);
     // 2s in the past
-    long ts = now - 2000;
+    long ts = Long.MAX_VALUE;
     // Set the TTL override to 3s
     Put p = new Put(R);
     p.setAttribute("ttl", new byte[]{});
@@ -176,12 +185,15 @@ public class TestCoprocessorScanPolicy {
     p = new Put(R);
     p.addColumn(F, Q, ts, Q);
     t.put(p);
+
+    me.setValue(now-1999);
     p = new Put(R);
-    p.addColumn(F, Q, ts + 1, Q);
+    p.addColumn(F, Q, ts , Q);
     t.put(p);
 
     // these two should be expired but for the override
     // (their ts was 2s in the past)
+    me.setValue(now);
     Get g = new Get(R);
     g.setMaxVersions(10);
     Result r = t.get(g);
