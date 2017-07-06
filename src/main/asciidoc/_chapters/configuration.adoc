@@ -929,7 +929,7 @@ And on the NameNode/DataNode side, set the following to enable 'staleness' intro
 
 JMX (Java Management Extensions) provides built-in instrumentation that enables you to monitor and manage the Java VM.
 To enable monitoring and management from remote systems, you need to set system property `com.sun.management.jmxremote.port` (the port number through which you want to enable JMX RMI connections) when you start the Java VM.
-See the link:http://docs.oracle.com/javase/6/docs/technotes/guides/management/agent.html[official documentation] for more information.
+See the link:http://docs.oracle.com/javase/8/docs/technotes/guides/management/agent.html[official documentation] for more information.
 Historically, besides above port mentioned, JMX opens two additional random TCP listening ports, which could lead to port conflict problem. (See link:https://issues.apache.org/jira/browse/HBASE-10289[HBASE-10289] for details)
 
 As an alternative, You can use the coprocessor-based JMX implementation provided by HBase.
