@@ -51,16 +51,18 @@ function personality_globals
   #shellcheck disable=SC2034
   GITHUB_REPO="apache/hbase"
 
-  # TODO use PATCH_BRANCH to select hadoop versions to use.
   # All supported Hadoop versions that we want to test the compilation with
-  HBASE_MASTER_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-  HBASE_MASTER_HADOOP3_VERSIONS="3.0.0-alpha3"
-
-  HBASE_BRANCH2_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-  HBASE_BRANCH2_HADOOP3_VERSIONS="3.0.0-alpha3"
-
-  HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-  HBASE_HADOOP3_VERSIONS=""
+  # See the Hadoop section on prereqs in the HBase Reference Guide
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    HBASE_HADOOP3_VERSIONS=""
+  elif [[ ${PATCH_BRANCH} = branch-2* ]]; then
+    HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    HBASE_HADOOP3_VERSIONS="3.0.0-alpha3"
+  else # master or a feature branch
+    HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    HBASE_HADOOP3_VERSIONS="3.0.0-alpha3"
+  fi
 
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
@@ -196,16 +198,9 @@ function hadoopcheck_rebuild
 
   big_console_header "Compiling against various Hadoop versions"
 
-  if [[ "${PATCH_BRANCH}" = "master" ]]; then
-    hbase_hadoop2_versions=${HBASE_MASTER_HADOOP2_VERSIONS}
-    hbase_hadoop3_versions=${HBASE_MASTER_HADOOP3_VERSIONS}
-  elif [[ ${PATCH_BRANCH} = branch-2* ]]; then
-    hbase_hadoop2_versions=${HBASE_BRANCH2_HADOOP2_VERSIONS}
-    hbase_hadoop3_versions=${HBASE_BRANCH2_HADOOP3_VERSIONS}
-  else
-    hbase_hadoop2_versions=${HBASE_HADOOP2_VERSIONS}
-    hbase_hadoop3_versions=${HBASE_HADOOP3_VERSIONS}
-  fi
+  hbase_hadoop2_versions=${HBASE_HADOOP2_VERSIONS}
+  hbase_hadoop3_versions=${HBASE_HADOOP3_VERSIONS}
+
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
   for hadoopver in ${hbase_hadoop2_versions}; do
