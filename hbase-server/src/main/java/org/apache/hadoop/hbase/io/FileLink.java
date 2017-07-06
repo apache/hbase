@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * The FileLink is a sort of hardlink, that allows access to a file given a set of locations.
@@ -302,6 +303,9 @@ public class FileLink {
           return(in);
         } catch (FileNotFoundException e) {
           // Try another file location
+        } catch (RemoteException re) {
+          IOException ioe = re.unwrapRemoteException(FileNotFoundException.class);
+          if (!(ioe instanceof FileNotFoundException)) throw re;
         }
       }
       throw new FileNotFoundException("Unable to open link: " + fileLink);
