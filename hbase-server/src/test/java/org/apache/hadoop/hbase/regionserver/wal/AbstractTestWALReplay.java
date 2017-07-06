@@ -52,8 +52,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.Clock;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -659,23 +657,13 @@ public abstract class AbstractTestWALReplay {
    * @throws IOException
    */
   @Test
-  public void testReplayEditsAfterAbortingFlush() throws Exception {
-    testReplayEditsAfterAbortingFlush(new Clock.System());
-    setUp();
-    testReplayEditsAfterAbortingFlush(new Clock.SystemMonotonic());
-    tearDown();
-    setUp();
-    testReplayEditsAfterAbortingFlush(new Clock.HLC());
-  }
-
-  public void testReplayEditsAfterAbortingFlush(Clock clock) throws IOException {
+  public void testReplayEditsAfterAbortingFlush() throws IOException {
     final TableName tableName =
         TableName.valueOf("testReplayEditsAfterAbortingFlush");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = FSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
-    htd.setClockType(clock.clockType);
     HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families. Do a flush on one
@@ -684,7 +672,6 @@ public abstract class AbstractTestWALReplay {
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
     Mockito.doReturn(false).when(rsServices).isAborted();
-    when(rsServices.getRegionServerClock(clock.clockType)).thenReturn(clock);
     when(rsServices.getServerName()).thenReturn(ServerName.valueOf("foo", 10, 10));
     Configuration customConf = new Configuration(this.conf);
     customConf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,

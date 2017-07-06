@@ -34,8 +34,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClockType;
-import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -578,12 +576,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public WAL getWAL(HRegionInfo regionInfo) throws IOException {
     return null;
-  }
-
-  @Override
-  public Clock getRegionServerClock(ClockType clockType) {
-    Clock systemClock = new Clock.System();
-    return systemClock;
   }
 
   @Override

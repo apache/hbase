@@ -18,28 +18,22 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -55,12 +49,9 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.DefaultEnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.TestTableName;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -70,25 +61,9 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 @Category({SecurityTests.class, MediumTests.class})
-@RunWith(Parameterized.class)
 public class TestCellACLWithMultipleVersions extends SecureTestUtil {
-
-  @Parameters()
-  public static Iterable<Object> data() {
-    return Arrays.asList(new Object[] {ClockType
-        .SYSTEM, ClockType.SYSTEM_MONOTONIC, ClockType.HLC});
-  }
-
-  public TestCellACLWithMultipleVersions(ClockType clockType) {
-    this.clockType = clockType;
-    this.timestampType = clockType.timestampType();
-  }
-
   private static final Log LOG = LogFactory.getLog(TestCellACLWithMultipleVersions.class);
 
   static {
@@ -96,9 +71,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     Logger.getLogger(AccessControlFilter.class).setLevel(Level.TRACE);
     Logger.getLogger(TableAuthManager.class).setLevel(Level.TRACE);
   }
-
-  private final ClockType clockType;
-  private final TimestampType timestampType;
 
   @Rule
   public TestTableName TEST_TABLE = new TestTableName();
@@ -121,8 +93,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   private static User USER_OTHER2;
 
   private static String[] usersAndGroups;
-  private static ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
-  private static long now;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -166,9 +136,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    EnvironmentEdgeManager.injectEdge(new DefaultEnvironmentEdge());
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
-    htd.setClockType(clockType);
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY1);
     hcd.setMaxVersions(4);
     htd.setOwner(USER_OWNER);
@@ -417,12 +385,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   public void testDeleteWithFutureTimestamp() throws Exception {
     // Store two values, one in the future
 
-    // Setting of future timestamps is not allowed with System Monotonic and HLC.
-    // So need not run this test against these two clocks.
-    if (clockType == ClockType.HLC || clockType == ClockType.SYSTEM_MONOTONIC) {
-      assertTrue(true);
-      return;
-    }
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -522,11 +484,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             // This version (TS = 123) with rw ACL for USER_OTHER and USER_OTHER2
             Put p = new Put(TEST_ROW);
-            EnvironmentEdgeManager.injectEdge(mee);
-            now += 10000;
-            mee.setValue(now);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //123
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO); //123
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 123L, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 123L, ZERO);
             p.setACL(prepareCellPermissions(
               new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP),
                   USER_OTHER2.getShortName() }, Permission.Action.READ, Permission.Action.WRITE));
@@ -534,9 +493,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
             // This version (TS = 125) with rw ACL for USER_OTHER
             p = new Put(TEST_ROW);
-            mee.setValue(now+2);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, ONE); //125
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, ONE); //125
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 125L, ONE);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 125L, ONE);
             p.setACL(prepareCellPermissions(
               new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) },
               Action.READ, Action.WRITE));
@@ -544,9 +502,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
             // This version (TS = 127) with rw ACL for USER_OTHER
             p = new Put(TEST_ROW);
-            mee.setValue(now+4);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, TWO); //127
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, TWO); //127
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 127L, TWO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 127L, TWO);
             p.setACL(prepareCellPermissions(
               new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) },
               Action.READ, Action.WRITE));
@@ -564,8 +521,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
-            Delete d = new Delete(TEST_ROW, timestampType.toTimestamp(TimeUnit.MILLISECONDS,
-                now+1, timestampType.getMaxLogicalTime())); //124
+            Delete d = new Delete(TEST_ROW, 124L);
             d.addColumns(TEST_FAMILY1, TEST_Q1);
             t.delete(d);
           }
@@ -581,8 +537,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW);
-            d.addColumns(TEST_FAMILY1, TEST_Q2, timestampType.toTimestamp(TimeUnit.MILLISECONDS,
-              now+1, timestampType.getMaxLogicalTime())); // 124
+            d.addColumns(TEST_FAMILY1, TEST_Q2, 124L);
             t.delete(d);
           }
         }
@@ -614,45 +569,37 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
                 prepareCellPermissions(
                   new String[] { user2.getShortName(), AuthUtil.toGroupEntry(GROUP),
                       USER_OWNER.getShortName() }, Action.READ, Action.WRITE);
-            now = EnvironmentEdgeManager.currentTime();
-            EnvironmentEdgeManager.injectEdge(mee);
-            now += 10000;
-            mee.setValue(now);
             Put p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //123
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO); //123
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY2, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //123
-            p.addColumn(TEST_FAMILY2, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO); //123
+            p.addColumn(TEST_FAMILY2, TEST_Q1, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q2, (long) 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
 
-            mee.setValue(now+2);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY2, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //125
-            p.addColumn(TEST_FAMILY2, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO); //125
+            p.addColumn(TEST_FAMILY2, TEST_Q1, (long) 125, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q2, (long) 125, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
 
-            mee.setValue(now+4);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //127
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO); //127
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
-
-            mee.setValue(now+6);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY2, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //129
-            p.addColumn(TEST_FAMILY2, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO); //129
+            p.addColumn(TEST_FAMILY2, TEST_Q1, (long) 129, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q2, (long) 129, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
           }
@@ -669,11 +616,9 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
-            d.addColumn(TEST_FAMILY1, TEST_Q1, timestampType.toTimestamp(TimeUnit.MILLISECONDS,
-              now, timestampType.getMaxLogicalTime())); //123
+            d.addColumn(TEST_FAMILY1, TEST_Q1, 123);
             d.addColumn(TEST_FAMILY1, TEST_Q2);
-            d.addFamilyVersion(TEST_FAMILY2, timestampType.toTimestamp(TimeUnit.MILLISECONDS,
-              now+2, timestampType.getMaxLogicalTime())); //125
+            d.addFamilyVersion(TEST_FAMILY2, 125);
             t.delete(d);
           }
         }
@@ -692,12 +637,10 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
-            Delete d = new Delete(row, timestampType.toTimestamp(TimeUnit.MILLISECONDS,
-              now+4, timestampType.getMaxLogicalTime())); //127
+            Delete d = new Delete(row, 127);
             d.addColumns(TEST_FAMILY1, q1);
             d.addColumns(TEST_FAMILY1, q2);
-            d.addFamily(TEST_FAMILY2, timestampType.toTimestamp(TimeUnit.MILLISECONDS,
-              now+6, timestampType.getMaxLogicalTime())); //129
+            d.addFamily(TEST_FAMILY2, 129);
             t.delete(d);
             fail(user.getShortName() + " can not do the delete");
           } catch (Exception e) {
@@ -732,27 +675,21 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
                 prepareCellPermissions(
                   new String[] { user2.getShortName(), AuthUtil.toGroupEntry(GROUP),
                       USER_OWNER.getShortName() }, Action.READ, Action.WRITE);
-            now = EnvironmentEdgeManager.currentTime();
-            EnvironmentEdgeManager.injectEdge(mee);
-            now += 10000;
-            mee.setValue(now);
             Put p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //123
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO); //123
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
 
-            System.out.println(now+4);
-            mee.setValue(now+4);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //127
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO); //127
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
           }
@@ -768,8 +705,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Increment inc = new Increment(TEST_ROW1);
-            inc.setTimeRange(0, timestampType.toTimestamp(TimeUnit.MILLISECONDS, now,
-              timestampType.getMaxLogicalTime()));
+            inc.setTimeRange(0, 123);
             inc.addColumn(TEST_FAMILY1, TEST_Q1, 2L);
             t.increment(inc);
             t.incrementColumnValue(TEST_ROW1, TEST_FAMILY1, TEST_Q2, 1L);
@@ -791,9 +727,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Increment inc = new Increment(row);
-            System.out.println(now+4);
-            inc.setTimeRange(0, timestampType.toTimestamp(TimeUnit.MILLISECONDS, now+4,
-              timestampType.getMaxLogicalTime()));
+            inc.setTimeRange(0, 127);
             inc.addColumn(TEST_FAMILY1, q1, 2L);
             t.increment(inc);
             fail(user.getShortName() + " cannot do the increment.");
@@ -808,14 +742,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @Test
   public void testCellPermissionsForPutWithMultipleVersions() throws Exception {
-
-    // This test relies is dependent on non monotonic timestamp updates which doesn't happen with
-    // HLC and System Monotonic Clocks.
-    if (clockType == ClockType.HLC || clockType == ClockType.SYSTEM_MONOTONIC) {
-      assertTrue(true);
-      return;
-    }
-
     final byte[] TEST_ROW1 = Bytes.toBytes("r1");
     final byte[] TEST_Q1 = Bytes.toBytes("q1");
     final byte[] TEST_Q2 = Bytes.toBytes("q2");
@@ -931,45 +857,38 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
                   Action.WRITE);
             Map<String, Permission> permsU1andU2andGUandOwner =
                 prepareCellPermissions(new String[] { user1.getShortName(), user2.getShortName(),
-                      AuthUtil.toGroupEntry(GROUP), USER_OWNER.getShortName() }, Action.READ,
+                    AuthUtil.toGroupEntry(GROUP), USER_OWNER.getShortName() }, Action.READ,
                   Action.WRITE);
             Map<String, Permission> permsU1_U2andGU =
                 prepareCellPermissions(new String[] { user1.getShortName(), user2.getShortName(),
                     AuthUtil.toGroupEntry(GROUP) }, Action.READ, Action.WRITE);
 
-            now = EnvironmentEdgeManager.currentTime();
-            EnvironmentEdgeManager.injectEdge(mee);
-            now += 5000;
-
-            mee.setValue(now);
             Put p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //120
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO);
-            p.addColumn(TEST_FAMILY1, TEST_Q3, HConstants.LATEST_TIMESTAMP, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 120, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 120, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q3, (long) 120, ZERO);
             p.setACL(permsU1andU2andGUandOwner);
             t.put(p);
 
-            mee.setValue(now+3);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //123
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO);
-            p.addColumn(TEST_FAMILY1, TEST_Q3, HConstants.LATEST_TIMESTAMP, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q3, (long) 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
 
-            mee.setValue(now+7);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, HConstants.LATEST_TIMESTAMP, ZERO); //127
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
             p.setACL(permsU1_U2andGU);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, HConstants.LATEST_TIMESTAMP, ZERO); //127
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
             p.setACL(user2.getShortName(), new Permission(Permission.Action.READ));
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q3, HConstants.LATEST_TIMESTAMP, ZERO); //127
+            p.addColumn(TEST_FAMILY1, TEST_Q3, 127, ZERO);
             p.setACL(AuthUtil.toGroupEntry(GROUP), new Permission(Permission.Action.READ));
             t.put(p);
           }
@@ -986,8 +905,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
-            d.addColumns(TEST_FAMILY1, TEST_Q1, timestampType.toTimestamp(TimeUnit.MILLISECONDS,
-              now, timestampType.getMaxLogicalTime())); //120
+            d.addColumns(TEST_FAMILY1, TEST_Q1, 120);
             t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
           }
         }
@@ -1023,8 +941,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(row);
-            d.addColumn(TEST_FAMILY1, q1, timestampType.toTimestamp(TimeUnit.MILLISECONDS,
-              now, timestampType.getMaxLogicalTime()));
+            d.addColumn(TEST_FAMILY1, q1, 120);
             t.checkAndDelete(row, TEST_FAMILY1, q1, value, d);
           }
         }

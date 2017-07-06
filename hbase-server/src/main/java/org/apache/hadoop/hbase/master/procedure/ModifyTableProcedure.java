@@ -256,10 +256,6 @@ public class ModifyTableProcedure
         throw new IOException("REGION_REPLICATION change is not supported for enabled tables");
       }
     }
-    // do not allow changing of clock type.
-    if (modifiedHTableDescriptor.getClockType() != unmodifiedHTableDescriptor.getClockType()) {
-      throw new IOException("Clock Type change is not supported for tables");
-    }
 
     // Find out whether all column families in unmodifiedHTableDescriptor also exists in
     // the modifiedHTableDescriptor. This is to determine whether we are safe to rollback.

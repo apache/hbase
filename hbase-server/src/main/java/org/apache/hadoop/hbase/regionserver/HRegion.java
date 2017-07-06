@@ -94,7 +94,6 @@ import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -103,8 +102,6 @@ import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.Clock;
-import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
@@ -382,23 +379,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return minimumReadPoint;
   }
 
-  @Override
-  public Clock getClock() {
-    if (this.clock == null) {
-      return this.getRegionServerServices().getRegionServerClock(this.getTableDesc().getClockType());
-    }
-    return this.clock;
-  }
-
-  /**
-   * Only for the purpose of testing
-   * @param clock
-   */
-  @VisibleForTesting
-  public void setClock(Clock clock) {
-    this.clock = clock;
-  }
-
   /*
    * Data structure of write state flags used coordinating flushes,
    * compactions and closes.
@@ -636,7 +616,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final ConcurrentMap<Store, Long> lastStoreFlushTimeMap = new ConcurrentHashMap<>();
 
   final RegionServerServices rsServices;
-  private Clock clock;
   private RegionServerAccounting rsAccounting;
   private long flushCheckInterval;
   // flushPerChanges is to prevent too many changes in memstore
@@ -795,7 +774,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         ? DEFAULT_DURABILITY
         : htd.getDurability();
     if (rsServices != null) {
-      this.clock = rsServices.getRegionServerClock(htd.getClockType());
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
       // TODO: revisit if coprocessors should load in other cases
@@ -810,8 +788,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         recoveringRegions.put(encodedName, this);
       }
     } else {
-      Clock systemClock = new Clock.System();
-      this.clock = systemClock;
       this.metricsRegionWrapper = null;
       this.metricsRegion = null;
     }
@@ -2813,31 +2789,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return getScanner(scan, additionalScanners, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  /*
-   * Clients use physical timestamps when setting time ranges. Tables that use HLCs must map the
-   * physical timestamp to HLC time
-   */
-  private void mapTimeRangesWithRespectToClock(Scan scan) {
-    TimeRange tr = scan.getTimeRange();
-    if (tr.isAllTime()) {
-      return;
-    }
-    TimestampType timestampType = getClock().getTimestampType();
-    // Clip time range max to prevent overflow when converting from epoch time to timestamp time
-    long trMaxClipped = Math.min(tr.getMax(), timestampType.getMaxPhysicalTime());
-    try {
-      scan.setTimeRange(timestampType.fromEpochTimeMillisToTimestamp(tr.getMin()),
-          timestampType.fromEpochTimeMillisToTimestamp(trMaxClipped));
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
   private RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners,
       long nonceGroup, long nonce) throws IOException {
-    if (getClock().clockType == ClockType.HLC) {
-      mapTimeRangesWithRespectToClock(scan);
-    }
     startRegionOperation(Operation.SCAN);
     try {
       // Verify families are all valid
@@ -3259,7 +3212,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       // STEP 1. Try to acquire as many locks as we can, and ensure we acquire at least one.
       int numReadyToWrite = 0;
-      long now = clock.now();
+      long now = EnvironmentEdgeManager.currentTime();
       while (lastIndexExclusive < batchOp.operations.length) {
         if (checkBatchOp(batchOp, lastIndexExclusive, familyMaps, now, observedExceptions)) {
           lastIndexExclusive++;
@@ -3297,7 +3250,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // STEP 2. Update any LATEST_TIMESTAMP timestamps
       // We should record the timestamp only after we have acquired the rowLock,
       // otherwise, newer puts/deletes are not guaranteed to have a newer timestamp
-      now = clock.now();
+      now = EnvironmentEdgeManager.currentTime();
       byte[] byteNow = Bytes.toBytes(now);
 
       // Nothing to put/delete -- an exception in the above such as NoSuchColumnFamily?
@@ -3796,8 +3749,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // non-decreasing (see HBASE-14070) we should make sure that the mutation has a
           // larger timestamp than what was observed via Get. doBatchMutate already does this, but
           // there is no way to pass the cellTs. See HBASE-14054.
-          long now = clock.now();
-          long ts = clock.isMonotonic() ? now : Math.max(now, cellTs); // ensure write is not eclipsed
+          long now = EnvironmentEdgeManager.currentTime();
+          long ts = Math.max(now, cellTs); // ensure write is not eclipsed
           byte[] byteTs = Bytes.toBytes(ts);
           if (mutation != null) {
             if (mutation instanceof Put) {
@@ -4078,7 +4031,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (timestampSlop == HConstants.LATEST_TIMESTAMP) {
       return;
     }
-    long maxTs = clock.getTimestampType().getPhysicalTime(now) + timestampSlop;
+    long maxTs = now + timestampSlop;
     for (List<Cell> kvs : familyMap.values()) {
       assert kvs instanceof RandomAccess;
       int listSize  = kvs.size();
@@ -7138,7 +7091,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Short circuit the read only case
     if (processor.readOnly()) {
       try {
-        long now = clock.now();
+        long now = EnvironmentEdgeManager.currentTime();
         doProcessRowWithTimeout(processor, now, this, null, null, timeout);
         processor.postProcess(this, walEdit, true);
       } finally {
@@ -7168,7 +7121,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // STEP 3. Region lock
         lock(this.updatesLock.readLock(), acquiredRowLocks.isEmpty() ? 1 : acquiredRowLocks.size());
         locked = true;
-        long now = clock.now();
+        long now = EnvironmentEdgeManager.currentTime();
         // STEP 4. Let the processor scan the rows, generate mutations and add waledits
         doProcessRowWithTimeout(processor, now, this, mutations, walEdit, timeout);
         if (!mutations.isEmpty()) {
@@ -7477,7 +7430,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       final List<Cell> results)
   throws IOException {
     WALEdit walEdit = null;
-    long now = clock.now();
+    long now = EnvironmentEdgeManager.currentTime();
     final boolean writeToWAL = effectiveDurability != Durability.SKIP_WAL;
     // Process a Store/family at a time.
     for (Map.Entry<byte [], List<Cell>> entry: mutation.getFamilyCellMap().entrySet()) {
@@ -7593,9 +7546,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     long ts = now;
     if (currentValue != null) {
       tags = TagUtil.carryForwardTags(tags, currentValue);
-      if (this.getClock().clockType == ClockType.SYSTEM) {
-        ts = Math.max(now, currentValue.getTimestamp() + 1);
-      }
+      ts = Math.max(now, currentValue.getTimestamp() + 1);
       newValue += getLongValue(currentValue);
     }
     // Now make up the new Cell. TODO: FIX. This is carnel knowledge of how KeyValues are made...
@@ -7621,9 +7572,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     byte [] row = mutation.getRow();
     if (currentValue != null) {
       tags = TagUtil.carryForwardTags(tags, currentValue);
-      if (this.getClock().clockType == ClockType.SYSTEM) {
-        ts = Math.max(now, currentValue.getTimestamp() + 1);
-      }
+      ts = Math.max(now, currentValue.getTimestamp() + 1);
       tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
       byte[] tagBytes = TagUtil.fromList(tags);
       // Allocate an empty cell and copy in all parts.
@@ -7726,7 +7675,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      50 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      49 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (15 * Bytes.SIZEOF_LONG) +
       6 * Bytes.SIZEOF_BOOLEAN);
 

@@ -31,7 +31,6 @@ import java.util.NavigableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -148,20 +147,13 @@ public class TestCoprocessorScanPolicy {
   }
 
   @Test
-  public void testTTl() throws Exception {
-    testTTL(ClockType.HLC);
-    testTTL(ClockType.SYSTEM_MONOTONIC);
-    testTTL(ClockType.SYSTEM);
-  }
-
-  public void testTTL(ClockType clockType) throws Exception {
+  public void testTTL() throws Exception {
     TableName tableName =
         TableName.valueOf("testTTL");
     if (TEST_UTIL.getAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
     HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setClockType(clockType);
     HColumnDescriptor hcd = new HColumnDescriptor(F)
     .setMaxVersions(10)
     .setTimeToLive(1);
@@ -170,10 +162,10 @@ public class TestCoprocessorScanPolicy {
     Table t = TEST_UTIL.getConnection().getTable(tableName);
     long now = EnvironmentEdgeManager.currentTime();
     ManualEnvironmentEdge me = new ManualEnvironmentEdge();
-    me.setValue(now-2000);
+    me.setValue(now);
     EnvironmentEdgeManagerTestHelper.injectEdge(me);
     // 2s in the past
-    long ts = Long.MAX_VALUE;
+    long ts = now - 2000;
     // Set the TTL override to 3s
     Put p = new Put(R);
     p.setAttribute("ttl", new byte[]{});
@@ -183,15 +175,12 @@ public class TestCoprocessorScanPolicy {
     p = new Put(R);
     p.addColumn(F, Q, ts, Q);
     t.put(p);
-
-    me.setValue(now-1999);
     p = new Put(R);
-    p.addColumn(F, Q, ts , Q);
+    p.addColumn(F, Q, ts + 1, Q);
     t.put(p);
 
     // these two should be expired but for the override
     // (their ts was 2s in the past)
-    me.setValue(now);
     Get g = new Get(R);
     g.setMaxVersions(10);
     Result r = t.get(g);

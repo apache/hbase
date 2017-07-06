@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -154,23 +153,8 @@ public abstract class ScanQueryMatcher implements ShipperListener {
         long ts = cell.getTimestamp();
         assert t.getValueLength() == Bytes.SIZEOF_LONG;
         long ttl = TagUtil.getValueAsLong(t);
-        if (TimestampType.HYBRID.isLikelyOfType(ts, true)) {
-          if (TimestampType.HYBRID.isLikelyOfType(now, true)) {
-            if (TimestampType.HYBRID.toEpochTimeMillisFromTimestamp(ts) + ttl < TimestampType.HYBRID
-                .toEpochTimeMillisFromTimestamp(now)) {
-              return true;
-            }
-          }
-          else {
-            if (TimestampType.HYBRID.toEpochTimeMillisFromTimestamp(ts) + ttl < now) {
-              return true;
-            }
-          }
-
-        } else {
-          if (ts + ttl < now) {
-            return true;
-          }
+        if (ts + ttl < now) {
+          return true;
         }
         // Per cell TTLs cannot extend lifetime beyond family settings, so
         // fall through to check that
