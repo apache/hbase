@@ -61,6 +61,8 @@
   </licenses>
 
   <modules>
+    <module>hbase-build-support</module>
+    <module>hbase-build-configuration</module>
     <module>hbase-resource-bundle</module>
     <module>hbase-server</module>
     <module>hbase-thrift</module>
@@ -1424,6 +1426,7 @@
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <checkstyle.version>6.18</checkstyle.version>
     <exec.maven.version>1.6.0</exec.maven.version>
+    <error-prone.version>2.0.21</error-prone.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <findbugs.maven.version>3.0.4</findbugs.maven.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
@@ -1441,6 +1444,7 @@
     <maven.site.version>3.4</maven.site.version>
     <maven.source.version>3.0.1</maven.source.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
+    <plexus.errorprone.javac.version>2.8.2</plexus.errorprone.javac.version>
     <scala.maven.version>3.2.2</scala.maven.version>
     <scalatest.maven.version>1.0</scalatest.maven.version>
     <spotbugs.version>3.1.0-RC3</spotbugs.version>
@@ -1523,6 +1527,11 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <!--Was test scope only but if we want to run hbase-it tests, need the annotations test jar-->
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-error-prone</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -3133,33 +3142,6 @@
           </plugin>
         </plugins>
       </build>
-    </profile>
-    <profile>
-      <id>errorProne</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-        <build>
-            <plugins>
-                <!-- Turn on error-prone -->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${maven.compiler.version}</version>
-                    <configuration>
-                        <compilerId>javac-with-errorprone</compilerId>
-                        <forceJavacCompilerUse>true</forceJavacCompilerUse>
-                    </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.codehaus.plexus</groupId>
-                            <artifactId>plexus-compiler-javac-errorprone</artifactId>
-                            <version>2.5</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-            </plugins>
-        </build>
     </profile>
   </profiles>
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->

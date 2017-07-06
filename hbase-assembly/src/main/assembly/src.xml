@@ -33,6 +33,8 @@
       <includes>
         <include>org.apache.hbase:hbase-annotations</include>
         <include>org.apache.hbase:hbase-archetypes</include>
+        <include>org.apache.hbase:hbase-build-support</include>
+        <include>org.apache.hbase:hbase-build-configuration</include>
         <include>org.apache.hbase:hbase-assembly</include>
         <include>org.apache.hbase:hbase-checkstyle</include>
         <include>org.apache.hbase:hbase-client</include>
@@ -71,7 +73,7 @@
             <!--Make sure this excludes is same as the hbase-hadoop2-compat
                  excludes below-->
             <excludes>
-              <exclude>target/</exclude>
+              <exclude>**/target/</exclude>
               <exclude>test/</exclude>
               <exclude>.classpath</exclude>
               <exclude>.project</exclude>

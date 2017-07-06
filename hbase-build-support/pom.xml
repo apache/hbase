@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
   /**
    * Licensed to the Apache Software Foundation (ASF) under one
@@ -22,26 +21,28 @@
   -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
+    <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
     <version>3.0.0-SNAPSHOT</version>
-    <relativePath>../hbase-build-configuration</relativePath>
+    <relativePath>..</relativePath>
   </parent>
 
-  <artifactId>hbase-archetypes</artifactId>
+  <artifactId>hbase-build-support</artifactId>
+  <name>Apache HBase - Build Support</name>
+  <description>Parent module for build-support artifacts</description>
+
   <packaging>pom</packaging>
-
-  <name>Apache HBase - Archetypes</name>
-  <description>Maven archetypes for generation of fully-configured HBase client projects</description>
-
+  <properties>
+    <!-- Don't make a test-jar -->
+    <maven.test.skip>true</maven.test.skip>
+    <!-- Don't make a source-jar -->
+    <source.skip>true</source.skip>
+    <!-- Don't make a site -->
+    <maven.site.skip>true</maven.site.skip>
+  </properties>
   <modules>
-    <module>hbase-client-project</module>
-    <module>hbase-shaded-client-project</module>
-    <!-- For new archetype, add exemplar project above this comment.
-         (See hbase-archetypes/README.md for details on adding new archetype.)  -->
-    <module>hbase-archetype-builder</module>
+    <module>hbase-error-prone</module>
   </modules>
-
   <build>
     <pluginManagement>
       <plugins>
@@ -53,30 +54,24 @@
           <artifactId>findbugs-maven-plugin</artifactId>
           <configuration>
             <excludeFilterFile>${project.basedir}/../../dev-support/findbugs-exclude.xml</excludeFilterFile>
-            <findbugsXmlOutput>true</findbugsXmlOutput>
-            <xmlOutput>true</xmlOutput>
-            <effort>Max</effort>
+          </configuration>
+        </plugin>
+        <plugin>
+          <!--Make it so assembly:single does nothing in here-->
+          <artifactId>maven-assembly-plugin</artifactId>
+          <configuration>
+            <skipAssembly>true</skipAssembly>
           </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
-      <!-- Special configuration for findbugs just in the parent, emulating the setup in
-           hbase/pom.xml. Note that exclude-file-filter is found ONE level up from this project. -->
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <inherited>false</inherited>
-            <goals>
-              <goal>findbugs</goal>
-            </goals>
-            <configuration>
-              <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
-            </configuration>
-          </execution>
-        </executions>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
       </plugin>
     </plugins>
   </build>
