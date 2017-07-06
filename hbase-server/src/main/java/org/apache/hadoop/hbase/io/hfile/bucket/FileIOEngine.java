@@ -52,11 +52,24 @@ public class FileIOEngine implements IOEngine {
   private FileReadAccessor readAccessor = new FileReadAccessor();
   private FileWriteAccessor writeAccessor = new FileWriteAccessor();
 
-  public FileIOEngine(long capacity, String... filePaths) throws IOException {
+  public FileIOEngine(long capacity, boolean maintainPersistence, String... filePaths)
+      throws IOException {
     this.sizePerFile = capacity / filePaths.length;
     this.capacity = this.sizePerFile * filePaths.length;
     this.filePaths = filePaths;
     this.fileChannels = new FileChannel[filePaths.length];
+    if (!maintainPersistence) {
+      for (String filePath : filePaths) {
+        File file = new File(filePath);
+        if (file.exists()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("File " + filePath + " already exists. Deleting!!");
+          }
+          file.delete();
+          // If deletion fails still we can manage with the writes
+        }
+      }
+    }
     this.rafs = new RandomAccessFile[filePaths.length];
     for (int i = 0; i < filePaths.length; i++) {
       String filePath = filePaths[i];

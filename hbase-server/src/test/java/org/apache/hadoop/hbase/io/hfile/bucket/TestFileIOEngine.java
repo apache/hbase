@@ -58,7 +58,7 @@ public class TestFileIOEngine {
       boundaryStopPositions.add(sizePerFile * i + 1);
     }
     boundaryStopPositions.add(sizePerFile * filePaths.length - 1);
-    FileIOEngine fileIOEngine = new FileIOEngine(totalCapacity, filePaths);
+    FileIOEngine fileIOEngine = new FileIOEngine(totalCapacity, false, filePaths);
     try {
       for (int i = 0; i < 500; i++) {
         int len = (int) Math.floor(Math.random() * 100);

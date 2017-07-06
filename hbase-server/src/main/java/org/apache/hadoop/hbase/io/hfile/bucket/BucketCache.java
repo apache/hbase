@@ -227,7 +227,7 @@ public class BucketCache implements BlockCache, HeapSize {
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration)
       throws FileNotFoundException, IOException {
-    this.ioEngine = getIOEngineFromName(ioEngineName, capacity);
+    this.ioEngine = getIOEngineFromName(ioEngineName, capacity, persistencePath);
     this.writerThreads = new WriterThread[writerThreadNum];
     long blockNumCapacity = capacity / blockSize;
     if (blockNumCapacity >= Integer.MAX_VALUE) {
@@ -309,10 +309,11 @@ public class BucketCache implements BlockCache, HeapSize {
    * Get the IOEngine from the IO engine name
    * @param ioEngineName
    * @param capacity
+   * @param persistencePath
    * @return the IOEngine
    * @throws IOException
    */
-  private IOEngine getIOEngineFromName(String ioEngineName, long capacity)
+  private IOEngine getIOEngineFromName(String ioEngineName, long capacity, String persistencePath)
       throws IOException {
     if (ioEngineName.startsWith("file:") || ioEngineName.startsWith("files:")) {
       // In order to make the usage simple, we only need the prefix 'files:' in
@@ -320,7 +321,7 @@ public class BucketCache implements BlockCache, HeapSize {
       // the compatibility
       String[] filePaths = ioEngineName.substring(ioEngineName.indexOf(":") + 1)
           .split(FileIOEngine.FILE_DELIMITER);
-      return new FileIOEngine(capacity, filePaths);
+      return new FileIOEngine(capacity, persistencePath != null, filePaths);
     } else if (ioEngineName.startsWith("offheap")) {
       return new ByteBufferIOEngine(capacity, true);
     } else if (ioEngineName.startsWith("heap")) {
