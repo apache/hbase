@@ -284,40 +284,6 @@ public interface AsyncAdmin {
   CompletableFuture<List<NamespaceDescriptor>> listNamespaceDescriptors();
 
   /**
-   * Turn the load balancer on or off.
-   * @param on
-   * @return Previous balancer value wrapped by a {@link CompletableFuture}.
-   */
-  CompletableFuture<Boolean> setBalancerOn(boolean on);
-
-  /**
-   * Invoke the balancer. Will run the balancer and if regions to move, it will go ahead and do the
-   * reassignments. Can NOT run for various reasons. Check logs.
-   * @return True if balancer ran, false otherwise. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
-   */
-  default CompletableFuture<Boolean> balance() {
-    return balance(false);
-  }
-
-  /**
-   * Invoke the balancer. Will run the balancer and if regions to move, it will go ahead and do the
-   * reassignments. If there is region in transition, force parameter of true would still run
-   * balancer. Can *not* run for other reasons. Check logs.
-   * @param forcible whether we should force balance even if there is region in transition.
-   * @return True if balancer ran, false otherwise. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
-   */
-  CompletableFuture<Boolean> balance(boolean forcible);
-
-  /**
-   * Query the current state of the balancer.
-   * @return true if the balance switch is on, false otherwise The return value will be wrapped by a
-   *         {@link CompletableFuture}.
-   */
-  CompletableFuture<Boolean> isBalancerOn();
-
-  /**
    * Close a region. For expert-admins Runs close on the regionserver. The master will not be
    * informed of the close.
    * @param regionName region name to close
@@ -891,4 +857,101 @@ public interface AsyncAdmin {
    * @return the last major compaction timestamp wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Optional<Long>> getLastMajorCompactionTimestampForRegion(byte[] regionName);
+
+  /**
+   * Turn the load balancer on or off.
+   * @param on
+   * @return Previous balancer value wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> setBalancerOn(boolean on);
+
+  /**
+   * Invoke the balancer. Will run the balancer and if regions to move, it will go ahead and do the
+   * reassignments. Can NOT run for various reasons. Check logs.
+   * @return True if balancer ran, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  default CompletableFuture<Boolean> balance() {
+    return balance(false);
+  }
+
+  /**
+   * Invoke the balancer. Will run the balancer and if regions to move, it will go ahead and do the
+   * reassignments. If there is region in transition, force parameter of true would still run
+   * balancer. Can *not* run for other reasons. Check logs.
+   * @param forcible whether we should force balance even if there is region in transition.
+   * @return True if balancer ran, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> balance(boolean forcible);
+
+  /**
+   * Query the current state of the balancer.
+   * @return true if the balance switch is on, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isBalancerOn();
+
+  /**
+   * Set region normalizer on/off.
+   * @param on whether normalizer should be on or off
+   * @return Previous normalizer value wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> setNormalizerOn(boolean on);
+
+  /**
+   * Query the current state of the region normalizer
+   * @return true if region normalizer is on, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> isNormalizerOn();
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons. Check logs.
+   * @return true if region normalizer ran, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> normalize();
+
+  /**
+   * Turn the cleaner chore on/off.
+   * @param on
+   * @return Previous cleaner state wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> setCleanerChoreOn(boolean on);
+
+  /**
+   * Query the current state of the cleaner chore.
+   * @return true if cleaner chore is on, false otherwise. The return value will be wrapped by
+   *         a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> isCleanerChoreOn();
+
+  /**
+   * Ask for cleaner chore to run.
+   * @return true if cleaner chore ran, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> runCleanerChore();
+
+  /**
+   * Turn the catalog janitor on/off.
+   * @param on
+   * @return the previous state wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> setCatalogJanitorOn(boolean on);
+
+  /**
+   * Query on the catalog janitor state.
+   * @return true if the catalog janitor is on, false otherwise. The return value will be
+   *         wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> isCatalogJanitorOn();
+
+  /**
+   * Ask for a scan of the catalog table.
+   * @return the number of entries cleaned. The return value will be wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Integer> runCatalogJanitor();
 }

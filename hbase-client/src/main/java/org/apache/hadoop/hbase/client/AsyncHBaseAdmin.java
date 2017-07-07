@@ -202,21 +202,6 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> setBalancerOn(boolean on) {
-    return wrap(rawAdmin.setBalancerOn(on));
-  }
-
-  @Override
-  public CompletableFuture<Boolean> balance(boolean forcible) {
-    return wrap(rawAdmin.balance(forcible));
-  }
-
-  @Override
-  public CompletableFuture<Boolean> isBalancerOn() {
-    return wrap(rawAdmin.isBalancerOn());
-  }
-
-  @Override
   public CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> serverName) {
     return wrap(rawAdmin.closeRegion(regionName, serverName));
   }
@@ -488,5 +473,65 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Optional<Long>> getLastMajorCompactionTimestampForRegion(
       byte[] regionName) {
     return wrap(rawAdmin.getLastMajorCompactionTimestampForRegion(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> setBalancerOn(boolean on) {
+    return wrap(rawAdmin.setBalancerOn(on));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> balance(boolean forcible) {
+    return wrap(rawAdmin.balance(forcible));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isBalancerOn() {
+    return wrap(rawAdmin.isBalancerOn());
+  }
+
+  @Override
+  public CompletableFuture<Boolean> setNormalizerOn(boolean on) {
+    return wrap(rawAdmin.setNormalizerOn(on));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isNormalizerOn() {
+    return wrap(rawAdmin.isNormalizerOn());
+  }
+
+  @Override
+  public CompletableFuture<Boolean> normalize() {
+    return wrap(rawAdmin.normalize());
+  }
+
+  @Override
+  public CompletableFuture<Boolean> setCleanerChoreOn(boolean enabled) {
+    return wrap(rawAdmin.setCleanerChoreOn(enabled));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isCleanerChoreOn() {
+    return wrap(rawAdmin.isCleanerChoreOn());
+  }
+
+  @Override
+  public CompletableFuture<Boolean> runCleanerChore() {
+    return wrap(rawAdmin.runCleanerChore());
+  }
+
+  @Override
+  public CompletableFuture<Boolean> setCatalogJanitorOn(boolean enabled) {
+    return wrap(rawAdmin.setCatalogJanitorOn(enabled));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isCatalogJanitorOn() {
+    return wrap(rawAdmin.isCatalogJanitorOn());
+  }
+
+  @Override
+  public CompletableFuture<Integer> runCatalogJanitor() {
+    return wrap(rawAdmin.runCatalogJanitor());
   }
 }
