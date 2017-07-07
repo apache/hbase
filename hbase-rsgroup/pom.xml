@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
   /**
    * Licensed to the Apache Software Foundation (ASF) under one
@@ -26,9 +27,12 @@
     <version>2.0.0-alpha-1</version>
     <relativePath>..</relativePath>
   </parent>
+
   <artifactId>hbase-rsgroup</artifactId>
   <name>Apache HBase - RSGroup</name>
   <description>Regionserver Groups for HBase</description>
+<!--REMOVE-->
+
   <build>
     <plugins>
       <plugin>
@@ -49,19 +53,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.xolstice.maven.plugins</groupId>
-        <artifactId>protobuf-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>compile-protoc</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
     <pluginManagement>
@@ -84,7 +75,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore/>
+                    <ignore></ignore>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
@@ -94,6 +85,7 @@
       </plugins>
     </pluginManagement>
   </build>
+
   <dependencies>
     <!-- Intra-project dependencies -->
     <dependency>
@@ -197,6 +189,7 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
@@ -211,21 +204,51 @@
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
     </profile>
+    <profile>
+      <id>compile-protobuf</id>
+      <activation>
+        <property>
+          <name>compile-protobuf</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.xolstice.maven.plugins</groupId>
+            <artifactId>protobuf-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>compile-protoc</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+                <configuration>
+                  <additionalProtoPathElements>
+                    <additionalProtoPathElement>${basedir}/../hbase-protocol/src/main/protobuf</additionalProtoPathElement>
+                  </additionalProtoPathElements>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+        </profile>
+
     <!-- profile against Hadoop 2.x: This is the default. -->
     <profile>
       <id>hadoop-2.0</id>
       <activation>
         <property>
-          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-          <!--h2-->
-          <name>!hadoop.profile</name>
+            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+            <!--h2--><name>!hadoop.profile</name>
         </property>
       </activation>
       <dependencies>
         <dependency>
-          <groupId>com.github.stephenc.findbugs</groupId>
-          <artifactId>findbugs-annotations</artifactId>
-          <optional>true</optional>
+           <groupId>com.github.stephenc.findbugs</groupId>
+           <artifactId>findbugs-annotations</artifactId>
+           <optional>true</optional>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -258,7 +281,7 @@
             <exclusion>
               <groupId>com.sun.jersey</groupId>
               <artifactId>jersey-json</artifactId>
-            </exclusion>
+            </exclusion> 
             <exclusion>
               <groupId>javax.servlet</groupId>
               <artifactId>servlet-api</artifactId>
@@ -279,6 +302,7 @@
         </dependency>
       </dependencies>
     </profile>
+
     <!--
       profile for building against Hadoop 3.0.x. Activate using:
        mvn -Dhadoop.profile=3.0
