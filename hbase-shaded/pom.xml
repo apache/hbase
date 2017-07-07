@@ -347,6 +347,16 @@
                                     <projectName>${project.name}</projectName>
                                   </transformer>
                                 </transformers>
+                                <filters>
+                                  <filter>
+                                    <!-- this is a signed osgi bundle -->
+                                    <artifact>org.eclipse.jetty.orbit:javax.servlet.jsp.jstl</artifact>
+                                    <excludes>
+                                      <exclude>META-INF/ECLIPSEF.SF</exclude>
+                                      <exclude>META-INF/ECLIPSEF.RSA</exclude>
+                                    </excludes>
+                                  </filter>
+                                </filters>
                             </configuration>
                         </execution>
                     </executions>
