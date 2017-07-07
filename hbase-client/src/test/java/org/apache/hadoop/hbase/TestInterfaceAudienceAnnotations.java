@@ -286,7 +286,7 @@ public class TestInterfaceAudienceAnnotations {
    * Checks whether all the classes in client and common modules contain
    * {@link InterfaceAudience} annotations.
    */
-  @Test
+  @Ignore @Test
   public void testInterfaceAudienceAnnotation()
       throws ClassNotFoundException, IOException, LinkageError {
 
@@ -327,7 +327,7 @@ public class TestInterfaceAudienceAnnotations {
    * Checks whether all the classes in client and common modules that are marked
    * InterfaceAudience.Public do not have {@link InterfaceStability} annotations.
    */
-  @Test
+  @Ignore @Test
   public void testNoInterfaceStabilityAnnotationForPublicAPI()
       throws ClassNotFoundException, IOException, LinkageError {
 
@@ -411,7 +411,7 @@ public class TestInterfaceAudienceAnnotations {
       0, classes.size());
   }
 
-  @Test
+  @Ignore @Test
   public void testProtosInReturnTypes() throws ClassNotFoundException, IOException, LinkageError {
     Set<Class<?>> classes = findPublicClasses();
     List<Pair<Class<?>, Method>> protosReturnType = new ArrayList<>();
@@ -443,7 +443,7 @@ public class TestInterfaceAudienceAnnotations {
     return classes;
   }
 
-  @Test
+  @Ignore @Test
   public void testProtosInParamTypes() throws ClassNotFoundException, IOException, LinkageError {
     Set<Class<?>> classes = findPublicClasses();
     List<Triple<Class<?>, Method, Class<?>>> protosParamType = new ArrayList<>();
@@ -463,7 +463,7 @@ public class TestInterfaceAudienceAnnotations {
       protosParamType.size());
   }
 
-  @Test
+  @Ignore @Test
   public void testProtosInConstructors() throws ClassNotFoundException, IOException, LinkageError {
     Set<Class<?>> classes = findPublicClasses();
     List<Class<?>> classList = new ArrayList<>();

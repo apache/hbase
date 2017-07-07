@@ -2004,8 +2004,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param startKey
    * @param stopKey
-   * @param callingMethod
-   * @param conf
    * @param isReadOnly
    * @param families
    * @return A region on which you must call
@@ -3450,7 +3448,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Uses directly the assignment manager to assign the region.
    * and waits until the specified region has completed assignment.
-   * @param tableName the table name
    * @throws IOException
    * @throw InterruptedException
    * @return true if the region is assigned false otherwise.

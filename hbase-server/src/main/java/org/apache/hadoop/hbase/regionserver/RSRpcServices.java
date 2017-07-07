@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
+import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -226,7 +226,7 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implements the regionserver RPC services.
@@ -1349,7 +1349,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     RegionScannerHolder rsh =
         new RegionScannerHolder(scannerName, s, r, closeCallback, shippedCallback, needCursor);
     RegionScannerHolder existing = scanners.putIfAbsent(scannerName, rsh);
-    assert existing == null : "scannerId must be unique within regionserver's whole lifecycle!";
+    assert existing == null : "scannerId must be unique within regionserver's whole lifecycle! " +
+      scannerName;
     return rsh;
   }
 

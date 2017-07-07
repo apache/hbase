@@ -54,7 +54,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})

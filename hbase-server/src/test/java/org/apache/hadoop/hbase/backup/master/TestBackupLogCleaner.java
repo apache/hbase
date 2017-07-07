@@ -49,8 +49,8 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupLogCleaner extends TestBackupBase {

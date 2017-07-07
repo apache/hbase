@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import com.google.common.math.LongMath;
+import org.apache.hadoop.hbase.shaded.com.google.common.math.LongMath;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

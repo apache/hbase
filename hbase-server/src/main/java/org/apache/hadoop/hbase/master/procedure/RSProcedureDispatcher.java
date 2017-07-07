@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;

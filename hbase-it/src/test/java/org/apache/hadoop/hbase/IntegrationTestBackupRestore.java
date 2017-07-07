@@ -46,14 +46,15 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Objects;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * An integration test to detect regressions in HBASE-7912. Create
@@ -297,7 +298,8 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     rowsInBatch =
         Integer.parseInt(cmd.getOptionValue(NB_ROWS_IN_BATCH_KEY,
           Integer.toString(DEFAULT_NB_ROWS_IN_BATCH)));
-    LOG.info(Objects.toStringHelper("Parsed Options").add(REGION_COUNT_KEY, regionsCountPerServer)
+    LOG.info(MoreObjects.toStringHelper("Parsed Options").
+      add(REGION_COUNT_KEY, regionsCountPerServer)
         .add(REGIONSERVER_COUNT_KEY, regionServerCount).add(NB_ROWS_IN_BATCH_KEY, rowsInBatch)
         .toString());
   }

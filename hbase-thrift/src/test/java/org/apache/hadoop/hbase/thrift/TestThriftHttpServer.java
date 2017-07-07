@@ -43,7 +43,7 @@ import static org.junit.Assert.assertFalse;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 
 /**
  * Start the HBase Thrift HTTP server on a random port through the command-line

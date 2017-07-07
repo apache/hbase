@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 
 import java.io.IOException;
 import java.util.Collections;

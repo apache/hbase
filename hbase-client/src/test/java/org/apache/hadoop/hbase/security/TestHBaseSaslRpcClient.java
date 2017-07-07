@@ -27,7 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Strings;
 
 import java.io.IOException;
 import java.io.InputStream;

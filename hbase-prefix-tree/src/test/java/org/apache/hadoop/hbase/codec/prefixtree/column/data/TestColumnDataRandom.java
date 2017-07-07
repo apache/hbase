@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.util.byterange.ByteRangeSet;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
 import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 public class TestColumnDataRandom implements TestColumnData {
 

@@ -106,6 +106,10 @@
   </build>
   <dependencies>
     <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-miscellaneous</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-annotations</artifactId>
       <type>test-jar</type>
@@ -215,6 +219,12 @@ if we can combine these profiles somehow -->
              <dependency>
                  <groupId>org.apache.hadoop</groupId>
                  <artifactId>hadoop-mapreduce-client-core</artifactId>
+                <exclusions>
+                  <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                  </exclusion>
+                </exclusions>
              </dependency>
              <dependency>
                  <groupId>org.apache.hadoop</groupId>

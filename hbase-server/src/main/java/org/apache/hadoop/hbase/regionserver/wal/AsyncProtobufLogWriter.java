@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import com.google.common.base.Throwables;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;

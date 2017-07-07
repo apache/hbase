@@ -100,6 +100,4 @@ public class TestShellRSGroups {
       System.clearProperty("shell.test");
     }
   }
-
 }
-

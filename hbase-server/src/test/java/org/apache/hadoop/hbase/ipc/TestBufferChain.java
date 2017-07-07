@@ -34,8 +34,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.hbase.shaded.com.google.common.io.Files;
 
 @Category({RPCTests.class, SmallTests.class})
 public class TestBufferChain {

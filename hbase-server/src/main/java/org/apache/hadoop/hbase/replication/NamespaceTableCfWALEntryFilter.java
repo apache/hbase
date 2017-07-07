@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
-import com.google.common.base.Predicate;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
 
 /**
  * Filter a WAL Entry by namespaces and table-cfs config in the peer. It first filter entry

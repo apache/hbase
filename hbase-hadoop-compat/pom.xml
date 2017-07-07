@@ -95,6 +95,10 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-miscellaneous</artifactId>
+      </dependency>
       <!-- General dependencies -->
       <dependency>
         <groupId>commons-logging</groupId>

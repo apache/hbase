@@ -37,7 +37,7 @@ import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHBaseConfiguration {

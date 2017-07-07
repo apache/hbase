@@ -794,7 +794,7 @@ public class TableMapReduceUtil {
       org.apache.zookeeper.ZooKeeper.class,
       io.netty.channel.Channel.class,
       com.google.protobuf.Message.class,
-      com.google.common.collect.Lists.class,
+      org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists.class,
       org.apache.htrace.Trace.class,
       com.codahale.metrics.MetricRegistry.class);
   }

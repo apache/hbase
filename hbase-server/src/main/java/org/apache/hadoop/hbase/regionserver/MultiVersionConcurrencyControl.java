@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
 
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -240,7 +240,7 @@ public class MultiVersionConcurrencyControl {
 
   @VisibleForTesting
   public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("readPoint", readPoint)
         .add("writePoint", writePoint).toString();
   }

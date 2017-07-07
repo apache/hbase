@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -131,7 +131,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
     @Override
     public String toString() {
-      return com.google.common.base.Objects.toStringHelper(this).add("startRow", startRow)
+      return org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects.
+        toStringHelper(this).add("startRow", startRow)
           .add("stopRow", stopRow).toString();
     }
   }

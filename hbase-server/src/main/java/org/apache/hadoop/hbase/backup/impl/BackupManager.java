@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.util.Pair;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Handles backup requests, creates backup info records in backup system table to

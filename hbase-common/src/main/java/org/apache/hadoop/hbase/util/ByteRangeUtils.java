@@ -25,7 +25,7 @@ import java.util.Collection;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * Utility methods for working with {@link ByteRange}.

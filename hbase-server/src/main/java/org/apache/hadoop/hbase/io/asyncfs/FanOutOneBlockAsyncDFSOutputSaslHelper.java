@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.io.asyncfs;
 import static io.netty.handler.timeout.IdleState.READER_IDLE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import com.google.protobuf.CodedOutputStream;
 
 import io.netty.buffer.ByteBuf;
@@ -85,7 +85,7 @@ import org.apache.hadoop.crypto.Encryptor;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ByteStringer;
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -365,7 +365,9 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           DataTransferEncryptorMessageProto.newBuilder();
       builder.setStatus(DataTransferEncryptorStatus.SUCCESS);
       if (payload != null) {
-        builder.setPayload(ByteStringer.wrap(payload));
+        // Was ByteStringer; fix w/o using ByteStringer. Its in hbase-protocol
+        // and we want to keep that out of hbase-server.
+        builder.setPayload(ByteString.copyFrom(payload));
       }
       if (options != null) {
         builder.addAllCipherOption(PB_HELPER.convertCipherOptions(options));

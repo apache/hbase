@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.column.data.TestColumnDataRandom
 import org.apache.hadoop.hbase.codec.prefixtree.column.data.TestColumnDataSimple;
 import org.apache.hadoop.hbase.util.ByteRange;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 public interface TestColumnData {
 

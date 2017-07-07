@@ -54,7 +54,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * An IntegrationTest for doing reads with a timeout, to a read-only table with region

@@ -72,7 +72,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * Tests RegionReplicaReplicationEndpoint. Unlike TestRegionReplicaReplicationEndpoint this
@@ -250,7 +250,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     when(context.getMetrics()).thenReturn(mock(MetricsSource.class));
 
     replicator.init(context);
-    replicator.start();
+    replicator.startAsync();
 
     //load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
@@ -287,7 +287,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     when(context.getReplicationPeer()).thenReturn(mockPeer);
 
     replicator.init(context);
-    replicator.start();
+    replicator.startAsync();
 
     // test the filter for the RE, not actual replication
     WALEntryFilter filter = replicator.getWALEntryfilter();

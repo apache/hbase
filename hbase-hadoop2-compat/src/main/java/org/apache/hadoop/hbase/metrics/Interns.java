@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.metrics;
 
 
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.hbase.shaded.com.google.common.cache.LoadingCache;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
 import org.junit.Assert;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /*
  * test different timestamps

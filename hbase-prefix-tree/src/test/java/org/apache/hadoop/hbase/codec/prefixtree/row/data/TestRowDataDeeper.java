@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /*
  * Goes beyond a trivial trie to add a branch on the "cf" node

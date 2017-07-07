@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,7 +39,8 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.Service;
 
 @InterfaceAudience.Private
 public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
@@ -134,18 +138,13 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
   }
 
   @Override
+  public Service startAsync() {
+    return this.delegator.startAsync();
+  }
+
+  @Override
   public boolean isRunning() {
     return delegator.isRunning();
-  }
-
-  @Override
-  public ListenableFuture<State> start() {
-    return delegator.start();
-  }
-
-  @Override
-  public State startAndWait() {
-    return delegator.startAndWait();
   }
 
   @Override
@@ -154,13 +153,37 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
   }
 
   @Override
-  public ListenableFuture<State> stop() {
-    return delegator.stop();
+  public Service stopAsync() {
+    return this.delegator.stopAsync();
   }
 
   @Override
-  public State stopAndWait() {
-    return delegator.stopAndWait();
+  public void awaitRunning() {
+    this.delegator.awaitRunning();
   }
 
+  @Override
+  public void awaitRunning(long l, TimeUnit timeUnit) throws TimeoutException {
+    this.delegator.awaitRunning(l, timeUnit);
+  }
+
+  @Override
+  public void awaitTerminated() {
+    this.delegator.awaitTerminated();
+  }
+
+  @Override
+  public void awaitTerminated(long l, TimeUnit timeUnit) throws TimeoutException {
+    this.delegator.awaitTerminated(l, timeUnit);
+  }
+
+  @Override
+  public Throwable failureCause() {
+    return this.delegator.failureCause();
+  }
+
+  @Override
+  public void addListener(Listener listener, Executor executor) {
+    this.delegator.addListener(listener, executor);
+  }
 }

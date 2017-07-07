@@ -131,7 +131,7 @@ public class HFileSplitterJob extends Configured implements Tool {
       LOG.debug("success configuring load incremental job");
 
       TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
-        com.google.common.base.Preconditions.class);
+        org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.class);
     } else {
       throw new IOException("No bulk output directory specified");
     }

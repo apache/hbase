@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.master.assignment;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 
 import java.io.IOException;

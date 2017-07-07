@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;

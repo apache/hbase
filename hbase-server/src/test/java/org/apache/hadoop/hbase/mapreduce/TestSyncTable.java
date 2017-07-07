@@ -49,7 +49,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
-import com.google.common.base.Throwables;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 
 /**
  * Basic test for the SyncTable M/R tool

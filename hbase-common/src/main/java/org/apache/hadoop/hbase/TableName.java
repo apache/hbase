@@ -141,7 +141,8 @@ public final class TableName implements Comparable<TableName> {
       throw new IllegalArgumentException("Name is null or empty");
     }
 
-    int namespaceDelimIndex = com.google.common.primitives.Bytes.lastIndexOf(tableName,
+    int namespaceDelimIndex =
+      org.apache.hadoop.hbase.shaded.com.google.common.primitives.Bytes.lastIndexOf(tableName,
         (byte) NAMESPACE_DELIM);
     if (namespaceDelimIndex < 0){
       isLegalTableQualifierName(tableName);
@@ -435,7 +436,8 @@ public final class TableName implements Comparable<TableName> {
       }
     }
 
-    int namespaceDelimIndex = com.google.common.primitives.Bytes.lastIndexOf(fullName,
+    int namespaceDelimIndex =
+      org.apache.hadoop.hbase.shaded.com.google.common.primitives.Bytes.lastIndexOf(fullName,
         (byte) NAMESPACE_DELIM);
 
     if (namespaceDelimIndex < 0) {

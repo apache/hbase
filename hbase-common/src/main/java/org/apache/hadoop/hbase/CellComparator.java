@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.hbase.shaded.com.google.common.primitives.Longs;
 
 /**
  * Compare two HBase cells.  Do not use this method comparing <code>-ROOT-</code> or

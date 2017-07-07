@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimaps;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Function;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimaps;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;

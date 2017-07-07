@@ -25,8 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.AbstractService;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.AbstractService;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 
 /**
@@ -111,5 +111,4 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   public boolean canReplicateToSameCluster() {
     return false;
   }
-
 }

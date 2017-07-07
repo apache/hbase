@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.Service;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang.StringUtils;
@@ -244,9 +245,12 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     this.sourceRunning = true;
     try {
       // start the endpoint, connect to the cluster
-      Service.State state = replicationEndpoint.start().get();
-      if (state != Service.State.RUNNING) {
-        LOG.warn("ReplicationEndpoint was not started. Exiting");
+      Service service = replicationEndpoint.startAsync();
+      final int waitTime = 10;
+      service.awaitRunning(waitTime, TimeUnit.SECONDS);
+      if (!service.isRunning()) {
+        LOG.warn("ReplicationEndpoint was not started after waiting " + waitTime +
+          " + seconds. Exiting");
         uninitialize();
         return;
       }
@@ -381,7 +385,13 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     metrics.clear();
     if (replicationEndpoint.state() == Service.State.STARTING
         || replicationEndpoint.state() == Service.State.RUNNING) {
-      replicationEndpoint.stopAndWait();
+      replicationEndpoint.stopAsync();
+      final int waitTime = 10;
+      try {
+        replicationEndpoint.awaitTerminated(waitTime, TimeUnit.SECONDS);
+      } catch (TimeoutException e) {
+        LOG.warn("Failed termination after " + waitTime + " seconds.");
+      }
     }
   }
 
@@ -453,22 +463,22 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       worker.entryReader.interrupt();
       worker.interrupt();
     }
-    ListenableFuture<Service.State> future = null;
+    Service service = null;
     if (this.replicationEndpoint != null) {
-      future = this.replicationEndpoint.stop();
+      service = this.replicationEndpoint.stopAsync();
     }
     if (join) {
       for (ReplicationSourceShipper worker : workers) {
         Threads.shutdown(worker, this.sleepForRetries);
         LOG.info("ReplicationSourceWorker " + worker.getName() + " terminated");
       }
-      if (future != null) {
+      if (service != null) {
         try {
-          future.get(sleepForRetries * maxRetriesMultiplier, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
+          service.awaitTerminated(sleepForRetries * maxRetriesMultiplier, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException te) {
           LOG.warn("Got exception while waiting for endpoint to shutdown for replication source :"
               + this.peerClusterZnode,
-            e);
+            te);
         }
       }
     }

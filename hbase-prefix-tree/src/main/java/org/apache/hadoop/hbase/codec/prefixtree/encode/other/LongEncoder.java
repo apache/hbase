@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 
 /**
  * Used to de-duplicate, sort, minimize/diff, and serialize timestamps and mvccVersions from a

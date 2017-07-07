@@ -100,8 +100,8 @@ import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 import org.apache.htrace.impl.ProbabilitySampler;
 
-import com.google.common.base.Objects;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
 
@@ -333,7 +333,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)) {
       needsDelete = true;
       // wait, why did it delete my table?!?
-      LOG.debug(Objects.toStringHelper("needsDelete")
+      LOG.debug(MoreObjects.toStringHelper("needsDelete")
         .add("needsDelete", needsDelete)
         .add("isReadCmd", isReadCmd)
         .add("exists", exists)

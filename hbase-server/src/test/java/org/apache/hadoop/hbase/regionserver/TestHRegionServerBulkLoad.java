@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;

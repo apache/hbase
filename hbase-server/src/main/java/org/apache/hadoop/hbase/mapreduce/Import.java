@@ -642,7 +642,7 @@ public class Import extends Configured implements Tool {
         job.setPartitionerClass(KeyValueWritableComparablePartitioner.class);
         job.setNumReduceTasks(regionLocator.getStartKeys().length);
         TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-            com.google.common.base.Preconditions.class);
+            org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.class);
       }
     } else if (hfileOutPath != null) {
       LOG.info("writing to hfiles for bulk load.");
@@ -657,7 +657,7 @@ public class Import extends Configured implements Tool {
         job.setMapOutputValueClass(KeyValue.class);
         HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
         TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-            com.google.common.base.Preconditions.class);
+            org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.class);
       }
     } else {
       LOG.info("writing directly to table from Mapper.");
