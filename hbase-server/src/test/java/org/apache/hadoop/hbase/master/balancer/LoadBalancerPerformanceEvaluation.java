@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.logging.Log;
@@ -41,6 +41,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tool to test performance of different {@link org.apache.hadoop.hbase.master.LoadBalancer}
@@ -153,21 +154,21 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
 
     String methodName = "roundRobinAssignment";
     LOG.info("Calling " + methodName);
-    Stopwatch watch = new Stopwatch().start();
+    Stopwatch watch = Stopwatch.createStarted();
     loadBalancer.roundRobinAssignment(regions, servers);
-    System.out.print(formatResults(methodName, watch.elapsedMillis()));
+    System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     methodName = "retainAssignment";
     LOG.info("Calling " + methodName);
     watch.reset().start();
     loadBalancer.retainAssignment(regionServerMap, servers);
-    System.out.print(formatResults(methodName, watch.elapsedMillis()));
+    System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     methodName = "balanceCluster";
     LOG.info("Calling " + methodName);
     watch.reset().start();
     loadBalancer.balanceCluster(serverRegionMap);
-    System.out.print(formatResults(methodName, watch.elapsedMillis()));
+    System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     return EXIT_SUCCESS;
   }

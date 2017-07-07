@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.crypto.aes;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.commons.crypto.stream.CryptoInputStream;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;

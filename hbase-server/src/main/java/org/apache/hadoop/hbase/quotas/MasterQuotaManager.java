@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleReq
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Master Quota Manager.

@@ -86,7 +86,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionMergeTransactionOnCluster {

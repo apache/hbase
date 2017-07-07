@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.favored;
 
-import com.google.common.net.HostAndPort;
+import org.apache.hadoop.hbase.shaded.com.google.common.net.HostAndPort;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -46,7 +46,7 @@ class StartcodeAgnosticServerName extends ServerName {
   }
 
   public static StartcodeAgnosticServerName valueOf(final HostAndPort hostnameAndPort, long startcode) {
-    return new StartcodeAgnosticServerName(hostnameAndPort.getHostText(),
+    return new StartcodeAgnosticServerName(hostnameAndPort.getHost(),
       hostnameAndPort.getPort(), startcode);
   }
 

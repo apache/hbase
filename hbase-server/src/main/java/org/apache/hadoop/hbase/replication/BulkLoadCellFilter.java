@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
-import com.google.common.base.Predicate;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
 
 public class BulkLoadCellFilter {
   private static final Log LOG = LogFactory.getLog(BulkLoadCellFilter.class);

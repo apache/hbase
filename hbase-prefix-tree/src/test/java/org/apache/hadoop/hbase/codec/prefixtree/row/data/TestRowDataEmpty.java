@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.codec.prefixtree.row.BaseTestRowData;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 public class TestRowDataEmpty extends BaseTestRowData{
 

@@ -31,7 +31,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,8 +54,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.FavoredNode
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 /**
  * Helper class for {@link FavoredNodeLoadBalancer} that has all the intelligence for racks,

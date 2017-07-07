@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.util.JsonFormat;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -70,5 +71,12 @@ public class TestProcedureUtil {
 
   public static class TestProcedureNoDefaultConstructor extends TestProcedure {
     public TestProcedureNoDefaultConstructor(int x) {}
+  }
+
+  public static void main(final String [] args) throws Exception {
+    final TestProcedure proc1 = new TestProcedure(10);
+    final ProcedureProtos.Procedure proto1 = ProcedureUtil.convertToProtoProcedure(proc1);
+    JsonFormat.Printer printer = JsonFormat.printer().omittingInsignificantWhitespace();
+    System.out.println(printer.print(proto1));
   }
 }

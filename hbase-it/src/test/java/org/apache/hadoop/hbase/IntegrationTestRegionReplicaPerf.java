@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import com.codahale.metrics.Histogram;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
@@ -149,7 +149,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
     @Override
     public String toString() {
-      return Objects.toStringHelper(this)
+      return MoreObjects.toStringHelper(this)
         .add("numRows", numRows)
         .add("elapsedTime", elapsedTime)
         .toString();
@@ -214,7 +214,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     primaryTimeout =
       Integer.parseInt(cmd.getOptionValue(PRIMARY_TIMEOUT_KEY, PRIMARY_TIMEOUT_DEFAULT));
     clusterSize = Integer.parseInt(cmd.getOptionValue(NUM_RS_KEY, NUM_RS_DEFAULT));
-    LOG.debug(Objects.toStringHelper("Parsed Options")
+    LOG.debug(MoreObjects.toStringHelper("Parsed Options")
       .add(TABLE_NAME_KEY, tableName)
       .add(SLEEP_TIME_KEY, sleepTime)
       .add(REPLICA_COUNT_KEY, replicaCount)
@@ -313,7 +313,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     double withReplicas9999Mean =
         calcMean("withReplicas", Stat.FOUR_9S, resultsWithReplicas);
 
-    LOG.info(Objects.toStringHelper(this)
+    LOG.info(MoreObjects.toStringHelper(this)
       .add("withoutReplicas", resultsWithoutReplicas)
       .add("withReplicas", resultsWithReplicas)
       .add("withoutReplicasStdevMean", withoutReplicasStdevMean)

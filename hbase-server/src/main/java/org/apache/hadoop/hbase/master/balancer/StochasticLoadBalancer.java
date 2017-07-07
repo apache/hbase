@@ -53,8 +53,8 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegi
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Optional;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * <p>This is a best effort load balancer. Given a Cost function F(C) =&gt; x It will

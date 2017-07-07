@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;

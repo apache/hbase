@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkPositionIndex;
+import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.checkPositionIndex;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -48,8 +48,8 @@ import org.apache.hadoop.io.WritableUtils;
 
 import sun.misc.Unsafe;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
 /**

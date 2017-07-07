@@ -27,7 +27,7 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm

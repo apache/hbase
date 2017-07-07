@@ -28,7 +28,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.updateResultsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.updateServerSideMetrics;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;

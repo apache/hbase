@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.timestamp.data.TestTimestampData
 import org.apache.hadoop.hbase.codec.prefixtree.timestamp.data.TestTimestampDataNumbers;
 import org.apache.hadoop.hbase.codec.prefixtree.timestamp.data.TestTimestampDataRepeats;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 public interface TestTimestampData {
 

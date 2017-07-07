@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client.example;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.common.io.ByteStreams;
+import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteStreams;
 
 import java.nio.charset.StandardCharsets;
 

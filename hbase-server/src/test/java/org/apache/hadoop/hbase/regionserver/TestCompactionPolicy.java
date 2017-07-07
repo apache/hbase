@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;

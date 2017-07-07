@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -30,6 +29,7 @@ import org.apache.hadoop.mapreduce.Job;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Create 3 level tree directory, first level is using table name as parent

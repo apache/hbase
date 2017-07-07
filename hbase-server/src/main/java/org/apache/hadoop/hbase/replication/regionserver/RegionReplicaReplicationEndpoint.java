@@ -75,9 +75,9 @@ import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
 import org.apache.hadoop.hbase.wal.WALSplitter.SinkWriter;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
+import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} endpoint

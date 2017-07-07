@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.Map;

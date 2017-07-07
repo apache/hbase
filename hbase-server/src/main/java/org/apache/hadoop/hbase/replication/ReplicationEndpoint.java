@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 
-import com.google.common.util.concurrent.Service;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.Service;
 
 /**
  * ReplicationEndpoint is a plugin which implements replication
@@ -176,5 +176,4 @@ public interface ReplicationEndpoint extends Service, ReplicationPeerConfigListe
    * parameters can be obtained.
    */
   boolean replicate(ReplicateContext replicateContext);
-
 }

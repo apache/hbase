@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -386,13 +386,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       abortable.abort(errMsg, new IOException(errMsg));
     }
     notifyStopped();
-  }
-
-  // is this needed? Nobody else will call doStop() otherwise
-  @Override
-  public State stopAndWait() {
-    doStop();
-    return super.stopAndWait();
   }
 
   @VisibleForTesting

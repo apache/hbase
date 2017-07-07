@@ -56,7 +56,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import com.google.common.collect.Multimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
 
 @Ignore // Until after HBASE-14614 goes in.
 @Category({MiscTests.class, LargeTests.class})

@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 @InterfaceAudience.Private
 public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggregate, Closeable {

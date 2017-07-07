@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.util.StringUtils.humanReadableInt;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;

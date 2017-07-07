@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdmi
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import com.google.protobuf.ServiceException;
 
 /**

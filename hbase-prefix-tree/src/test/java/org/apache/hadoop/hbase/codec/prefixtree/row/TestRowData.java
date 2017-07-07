@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataUrls;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataUrlsExample;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /*
  * A master class for registering different implementations of TestRowData.

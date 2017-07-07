@@ -47,9 +47,10 @@ import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Objects;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A block cache implementation that is memory-aware using {@link HeapSize},
@@ -722,7 +723,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
       .add("blockCount", getBlockCount())
       .add("currentSize", getCurrentSize())
       .add("freeSize", getFreeSize())
@@ -807,7 +808,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
     @Override
     public String toString() {
-      return Objects.toStringHelper(this)
+      return MoreObjects.toStringHelper(this)
         .add("name", name)
         .add("totalSize", StringUtils.byteDesc(totalSize))
         .add("bucketSize", StringUtils.byteDesc(bucketSize))

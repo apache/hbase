@@ -52,7 +52,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 
 /**
  * Test class to exercise the inclusion of snapshots in space quotas

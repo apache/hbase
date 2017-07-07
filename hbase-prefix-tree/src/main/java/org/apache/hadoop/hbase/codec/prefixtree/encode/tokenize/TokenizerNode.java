@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.util.Strings;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * Individual node in a Trie structure.  Each node is one of 3 types:

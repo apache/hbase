@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;

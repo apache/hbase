@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.wal;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 import java.io.Closeable;
 import java.io.IOException;

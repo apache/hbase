@@ -39,7 +39,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 
 @Category(LargeTests.class)
 public class TestSizeFailures {

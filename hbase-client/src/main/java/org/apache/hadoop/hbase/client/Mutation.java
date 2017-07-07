@@ -50,11 +50,11 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteArrayDataInput;
+import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteArrayDataOutput;
+import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteStreams;
 
 @InterfaceAudience.Public
 public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable,

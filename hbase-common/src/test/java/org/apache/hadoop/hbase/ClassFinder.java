@@ -273,7 +273,7 @@ public class ClassFinder {
       Class<?> c = Class.forName(className, false, this.getClass().getClassLoader());
       boolean isCandidateClass = null == classFilter || classFilter.isCandidateClass(c);
       return isCandidateClass ? c : null;
-    } catch (ClassNotFoundException classNotFoundEx) {
+    } catch (NoClassDefFoundError|ClassNotFoundException classNotFoundEx) {
       if (!proceedOnExceptions) {
         throw classNotFoundEx;
       }

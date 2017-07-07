@@ -29,7 +29,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.MinMaxPriorityQueue;
 import org.apache.commons.collections.map.LinkedMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,9 +39,9 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.com.google.common.primitives.Ints;
 
 /**
  * This class is used to allocate a block with specified size and free the block
@@ -268,7 +268,7 @@ public final class BucketAllocator {
 
     @Override
     public String toString() {
-      return Objects.toStringHelper(this.getClass())
+      return MoreObjects.toStringHelper(this.getClass())
         .add("sizeIndex", sizeIndex)
         .add("bucketSize", bucketSizes[sizeIndex])
         .toString();

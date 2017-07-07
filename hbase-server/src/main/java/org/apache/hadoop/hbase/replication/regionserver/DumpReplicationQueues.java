@@ -59,7 +59,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.util.concurrent.AtomicLongMap;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.AtomicLongMap;
 
 /**
  * Provides information about the existing states of replication, replication peers and queues.

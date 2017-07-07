@@ -24,7 +24,7 @@ import static org.apache.hadoop.hbase.HConstants.SPLIT_LOGDIR_NAME;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_ZNODE_PARENT;
 import static org.apache.hadoop.hbase.HRegionInfo.DEFAULT_REPLICA_ID;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
 
 import java.util.Optional;
 import java.util.stream.IntStream;

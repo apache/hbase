@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;

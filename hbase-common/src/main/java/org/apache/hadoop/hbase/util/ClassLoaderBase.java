@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.net.URL;
 import java.net.URLClassLoader;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**

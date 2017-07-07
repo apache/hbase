@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.io.hadoopbackport;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;

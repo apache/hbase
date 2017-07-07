@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;

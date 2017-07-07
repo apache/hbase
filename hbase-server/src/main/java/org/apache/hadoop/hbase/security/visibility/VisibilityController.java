@@ -104,13 +104,12 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -942,7 +941,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       response.setUser(request.getUser());
       if (labels != null) {
         for (String label : labels) {
-          response.addAuth(ByteStringer.wrap(Bytes.toBytes(label)));
+          response.addAuth(ByteString.copyFrom(Bytes.toBytes(label)));
         }
       }
     }
@@ -1030,7 +1029,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       }
       if (labels != null && !labels.isEmpty()) {
         for (String label : labels) {
-          response.addLabel(ByteStringer.wrap(Bytes.toBytes(label)));
+          response.addLabel(ByteString.copyFrom(Bytes.toBytes(label)));
         }
       }
     }

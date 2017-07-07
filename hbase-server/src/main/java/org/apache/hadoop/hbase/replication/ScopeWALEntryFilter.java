@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
-import com.google.common.base.Predicate;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
 
 /**
  * Keeps KVs that are scoped other than local

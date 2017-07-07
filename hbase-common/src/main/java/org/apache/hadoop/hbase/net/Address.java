@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.net;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.google.common.net.HostAndPort;
+import org.apache.hadoop.hbase.shaded.com.google.common.net.HostAndPort;
 
 /**
  * An immutable type to hold a hostname and port combo, like an Endpoint
@@ -46,7 +46,7 @@ public class Address implements Comparable<Address> {
   }
 
   public String getHostname() {
-    return this.hostAndPort.getHostText();
+    return this.hostAndPort.getHost();
   }
 
   public int getPort() {

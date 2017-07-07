@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Text;
@@ -89,8 +88,8 @@ public class TokenUtil {
    */
   public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
     AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
-    builder.setIdentifier(ByteStringer.wrap(token.getIdentifier()));
-    builder.setPassword(ByteStringer.wrap(token.getPassword()));
+    builder.setIdentifier(ByteString.copyFrom(token.getIdentifier()));
+    builder.setPassword(ByteString.copyFrom(token.getPassword()));
     if (token.getService() != null) {
       builder.setService(ByteString.copyFromUtf8(token.getService().toString()));
     }

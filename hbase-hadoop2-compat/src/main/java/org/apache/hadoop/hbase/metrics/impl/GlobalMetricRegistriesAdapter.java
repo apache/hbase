@@ -39,7 +39,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystemHelper;
 import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class acts as an adapter to export the MetricRegistry's in the global registry. Each
