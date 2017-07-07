@@ -876,6 +876,7 @@
           <configuration>
             <protocArtifact>com.google.protobuf:protoc:${external.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
             <protoSourceRoot>${basedir}/src/main/protobuf/</protoSourceRoot>
+            <outputDirectory>${basedir}/src/main/java/</outputDirectory>
             <clearOutputDirectory>false</clearOutputDirectory>
             <checkStaleness>true</checkStaleness>
           </configuration>
@@ -1417,7 +1418,6 @@
     <spotbugs.version>3.1.0-RC3</spotbugs.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>1.0.0</hbase-thirdparty.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
@@ -2015,21 +2015,6 @@
             <artifactId>guava</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase.thirdparty</groupId>
-        <artifactId>hbase-shaded-miscellaneous</artifactId>
-        <version>${hbase-thirdparty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase.thirdparty</groupId>
-        <artifactId>hbase-shaded-netty</artifactId>
-        <version>${hbase-thirdparty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase.thirdparty</groupId>
-        <artifactId>hbase-shaded-protobuf</artifactId>
-        <version>${hbase-thirdparty.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
