@@ -43,12 +43,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -66,6 +66,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 
 /**
  * The {@link RegionSplitter} class provides several utilities to help in the
@@ -378,16 +380,16 @@ public class RegionSplitter {
     LOG.debug("Creating table " + tableName + " with " + columnFamilies.length
         + " column families.  Presplitting to " + splitCount + " regions");
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (String cf : columnFamilies) {
-      desc.addFamily(new HColumnDescriptor(Bytes.toBytes(cf)));
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf)).build());
     }
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       Admin admin = connection.getAdmin();
       try {
         Preconditions.checkArgument(!admin.tableExists(tableName),
           "Table already exists: " + tableName);
-        admin.createTable(desc, splitAlgo.split(splitCount));
+        admin.createTable(builder.build(), splitAlgo.split(splitCount));
       } finally {
         admin.close();
       }
@@ -684,9 +686,9 @@ public class RegionSplitter {
     FileSystem fs = tableDir.getFileSystem(connection.getConfiguration());
     // Clear the cache to forcibly refresh region information
     ((ClusterConnection)connection).clearRegionCache();
-    HTableDescriptor htd = null;
+    TableDescriptor htd = null;
     try (Table table = connection.getTable(tableName)) {
-      htd = table.getTableDescriptor();
+      htd = table.getDescriptor();
     }
     try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
 
@@ -725,7 +727,7 @@ public class RegionSplitter {
 
             // Check every Column Family for that region -- check does not have references.
             boolean refFound = false;
-            for (HColumnDescriptor c : htd.getFamilies()) {
+            for (ColumnFamilyDescriptor c : htd.getColumnFamilies()) {
               if ((refFound = regionFs.hasReferences(c.getNameAsString()))) {
                 break;
               }

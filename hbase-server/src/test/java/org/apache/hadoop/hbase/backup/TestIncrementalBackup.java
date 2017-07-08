@@ -181,7 +181,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       false, tablesRestoreIncMultiple, tablesMapIncMultiple, true));
 
     hTable = (HTable) conn.getTable(table1_restore);
-    LOG.debug("After incremental restore: " + hTable.getTableDescriptor());
+    LOG.debug("After incremental restore: " + hTable.getDescriptor());
     LOG.debug("f1 has " + TEST_UTIL.countRows(hTable, famName) + " rows");
     Assert.assertEquals(TEST_UTIL.countRows(hTable, famName), NB_ROWS_IN_BATCH + ADD_ROWS);
     LOG.debug("f2 has " + TEST_UTIL.countRows(hTable, fam2Name) + " rows");

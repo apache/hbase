@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -91,7 +92,7 @@ public class HMobStore extends HStore {
   private volatile long mobFlushedCellsSize = 0;
   private volatile long mobScanCellsCount = 0;
   private volatile long mobScanCellsSize = 0;
-  private HColumnDescriptor family;
+  private ColumnFamilyDescriptor family;
   private Map<String, List<Path>> map = new ConcurrentHashMap<>();
   private final IdLock keyLock = new IdLock();
   // When we add a MOB reference cell to the HFile, we will add 2 tags along with it
@@ -102,7 +103,7 @@ public class HMobStore extends HStore {
   // cloning snapshot for mob files.
   private final byte[] refCellTags;
 
-  public HMobStore(final HRegion region, final HColumnDescriptor family,
+  public HMobStore(final HRegion region, final ColumnFamilyDescriptor family,
       final Configuration confParam) throws IOException {
     super(region, family, confParam);
     this.family = family;
@@ -112,7 +113,7 @@ public class HMobStore extends HStore {
         family.getNameAsString());
     List<Path> locations = new ArrayList<>(2);
     locations.add(mobFamilyPath);
-    TableName tn = region.getTableDesc().getTableName();
+    TableName tn = region.getTableDescriptor().getTableName();
     locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
         .getEncodedName(), family.getNameAsString()));
     map.put(Bytes.toString(tn.getName()), locations);
@@ -128,7 +129,7 @@ public class HMobStore extends HStore {
    * Creates the mob cache config.
    */
   @Override
-  protected void createCacheConf(HColumnDescriptor family) {
+  protected void createCacheConf(ColumnFamilyDescriptor family) {
     cacheConf = new MobCacheConfig(conf, family);
   }
 

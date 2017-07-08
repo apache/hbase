@@ -99,7 +99,7 @@ public class TestCoprocessorConfiguration {
     Configuration conf = new Configuration(CONF);
     HRegion region = mock(HRegion.class);
     when(region.getRegionInfo()).thenReturn(REGIONINFO);
-    when(region.getTableDesc()).thenReturn(TABLEDESC);
+    when(region.getTableDescriptor()).thenReturn(TABLEDESC);
     RegionServerServices rsServices = mock(RegionServerServices.class);
     systemCoprocessorLoaded.set(false);
     tableCoprocessorLoaded.set(false);
@@ -141,7 +141,7 @@ public class TestCoprocessorConfiguration {
     conf.setBoolean(CoprocessorHost.COPROCESSORS_ENABLED_CONF_KEY, false);
     HRegion region = mock(HRegion.class);
     when(region.getRegionInfo()).thenReturn(REGIONINFO);
-    when(region.getTableDesc()).thenReturn(TABLEDESC);
+    when(region.getTableDescriptor()).thenReturn(TABLEDESC);
     RegionServerServices rsServices = mock(RegionServerServices.class);
     systemCoprocessorLoaded.set(false);
     tableCoprocessorLoaded.set(false);
@@ -159,7 +159,7 @@ public class TestCoprocessorConfiguration {
     conf.setBoolean(CoprocessorHost.USER_COPROCESSORS_ENABLED_CONF_KEY, false);
     HRegion region = mock(HRegion.class);
     when(region.getRegionInfo()).thenReturn(REGIONINFO);
-    when(region.getTableDesc()).thenReturn(TABLEDESC);
+    when(region.getTableDescriptor()).thenReturn(TABLEDESC);
     RegionServerServices rsServices = mock(RegionServerServices.class);
     systemCoprocessorLoaded.set(false);
     tableCoprocessorLoaded.set(false);

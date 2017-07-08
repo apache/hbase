@@ -25,7 +25,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,20 +43,19 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -67,10 +65,13 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -94,23 +95,33 @@ import com.google.common.annotations.VisibleForTesting;
  * all HFiles being written.
  * <p>
  * Using this class as part of a MapReduce job is best done
- * using {@link #configureIncrementalLoad(Job, HTableDescriptor, RegionLocator)}.
+ * using {@link #configureIncrementalLoad(Job, TableDescriptor, RegionLocator)}.
  */
 @InterfaceAudience.Public
 public class HFileOutputFormat2
     extends FileOutputFormat<ImmutableBytesWritable, Cell> {
   private static final Log LOG = LogFactory.getLog(HFileOutputFormat2.class);
   static class TableInfo {
-    private HTableDescriptor hTableDescriptor;
+    private TableDescriptor tableDesctiptor;
     private RegionLocator regionLocator;
 
-    public TableInfo(HTableDescriptor hTableDescriptor, RegionLocator regionLocator) {
-      this.hTableDescriptor = hTableDescriptor;
+    public TableInfo(TableDescriptor tableDesctiptor, RegionLocator regionLocator) {
+      this.tableDesctiptor = tableDesctiptor;
       this.regionLocator = regionLocator;
     }
 
+    /**
+     * The modification for the returned HTD doesn't affect the inner TD.
+     * @return A clone of inner table descriptor
+     * @deprecated use {@link #getTableDescriptor}
+     */
+    @Deprecated
     public HTableDescriptor getHTableDescriptor() {
-      return hTableDescriptor;
+      return new HTableDescriptor(tableDesctiptor);
+    }
+
+    public TableDescriptor getTableDescriptor() {
+      return tableDesctiptor;
     }
 
     public RegionLocator getRegionLocator() {
@@ -539,7 +550,7 @@ public class HFileOutputFormat2
    */
   public static void configureIncrementalLoad(Job job, Table table, RegionLocator regionLocator)
       throws IOException {
-    configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+    configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
   }
 
   /**
@@ -556,7 +567,7 @@ public class HFileOutputFormat2
    * The user should be sure to set the map output value class to either KeyValue or Put before
    * running this function.
    */
-  public static void configureIncrementalLoad(Job job, HTableDescriptor tableDescriptor,
+  public static void configureIncrementalLoad(Job job, TableDescriptor tableDescriptor,
       RegionLocator regionLocator) throws IOException {
     ArrayList<TableInfo> singleTableInfo = new ArrayList<>();
     singleTableInfo.add(new TableInfo(tableDescriptor, regionLocator));
@@ -601,13 +612,13 @@ public class HFileOutputFormat2
     /* Now get the region start keys for every table required */
     List<String> allTableNames = new ArrayList<>(multiTableInfo.size());
     List<RegionLocator> regionLocators = new ArrayList<>( multiTableInfo.size());
-    List<HTableDescriptor> tableDescriptors = new ArrayList<>( multiTableInfo.size());
+    List<TableDescriptor> tableDescriptors = new ArrayList<>( multiTableInfo.size());
 
     for( TableInfo tableInfo : multiTableInfo )
     {
       regionLocators.add(tableInfo.getRegionLocator());
       allTableNames.add(tableInfo.getRegionLocator().getName().getNameAsString());
-      tableDescriptors.add(tableInfo.getHTableDescriptor());
+      tableDescriptors.add(tableInfo.getTableDescriptor());
     }
     // Record tablenames for creating writer by favored nodes, and decoding compression, block size and other attributes of columnfamily per table
     conf.set(OUTPUT_TABLE_NAME_CONF_KEY, StringUtils.join(allTableNames, Bytes
@@ -635,7 +646,7 @@ public class HFileOutputFormat2
     LOG.info("Incremental output configured for tables: " + StringUtils.join(allTableNames, ","));
   }
 
-  public static void configureIncrementalLoadMap(Job job, HTableDescriptor tableDescriptor) throws
+  public static void configureIncrementalLoadMap(Job job, TableDescriptor tableDescriptor) throws
       IOException {
     Configuration conf = job.getConfiguration();
 
@@ -643,10 +654,10 @@ public class HFileOutputFormat2
     job.setOutputValueClass(KeyValue.class);
     job.setOutputFormatClass(HFileOutputFormat2.class);
 
-    ArrayList<HTableDescriptor> singleTableDescriptor = new ArrayList<>(1);
+    ArrayList<TableDescriptor> singleTableDescriptor = new ArrayList<>(1);
     singleTableDescriptor.add(tableDescriptor);
 
-    conf.set(OUTPUT_TABLE_NAME_CONF_KEY, tableDescriptor.getNameAsString());
+    conf.set(OUTPUT_TABLE_NAME_CONF_KEY, tableDescriptor.getTableName().getNameAsString());
     // Set compression algorithms based on column families
     conf.set(COMPRESSION_FAMILIES_CONF_KEY,
         serializeColumnFamilyAttribute(compressionDetails, singleTableDescriptor));
@@ -793,18 +804,17 @@ public class HFileOutputFormat2
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   @VisibleForTesting
-  static String serializeColumnFamilyAttribute(Function<HColumnDescriptor, String> fn, List<HTableDescriptor> allTables)
+  static String serializeColumnFamilyAttribute(Function<ColumnFamilyDescriptor, String> fn, List<TableDescriptor> allTables)
       throws UnsupportedEncodingException {
     StringBuilder attributeValue = new StringBuilder();
     int i = 0;
-    for (HTableDescriptor tableDescriptor : allTables) {
+    for (TableDescriptor tableDescriptor : allTables) {
       if (tableDescriptor == null) {
         // could happen with mock table instance
         // CODEREVIEW: Can I set an empty string in conf if mock table instance?
         return "";
       }
-      Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
-      for (HColumnDescriptor familyDescriptor : families) {
+      for (ColumnFamilyDescriptor familyDescriptor : tableDescriptor.getColumnFamilies()) {
         if (i++ > 0) {
           attributeValue.append('&');
         }
@@ -829,7 +839,7 @@ public class HFileOutputFormat2
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static Function<HColumnDescriptor, String> compressionDetails = familyDescriptor ->
+  static Function<ColumnFamilyDescriptor, String> compressionDetails = familyDescriptor ->
           familyDescriptor.getCompressionType().getName();
 
   /**
@@ -845,7 +855,7 @@ public class HFileOutputFormat2
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static Function<HColumnDescriptor, String> blockSizeDetails = familyDescriptor -> String
+  static Function<ColumnFamilyDescriptor, String> blockSizeDetails = familyDescriptor -> String
           .valueOf(familyDescriptor.getBlocksize());
 
   /**
@@ -861,10 +871,10 @@ public class HFileOutputFormat2
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static Function<HColumnDescriptor, String> bloomTypeDetails = familyDescriptor -> {
+  static Function<ColumnFamilyDescriptor, String> bloomTypeDetails = familyDescriptor -> {
     String bloomType = familyDescriptor.getBloomFilterType().toString();
     if (bloomType == null) {
-      bloomType = HColumnDescriptor.DEFAULT_BLOOMFILTER;
+      bloomType = ColumnFamilyDescriptorBuilder.DEFAULT_BLOOMFILTER.name();
     }
     return bloomType;
   };
@@ -881,7 +891,7 @@ public class HFileOutputFormat2
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static Function<HColumnDescriptor, String> dataBlockEncodingDetails = familyDescriptor -> {
+  static Function<ColumnFamilyDescriptor, String> dataBlockEncodingDetails = familyDescriptor -> {
     DataBlockEncoding encoding = familyDescriptor.getDataBlockEncoding();
     if (encoding == null) {
       encoding = DataBlockEncoding.NONE;

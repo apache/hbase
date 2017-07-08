@@ -110,7 +110,7 @@ public class RSDumpServlet extends StateDumpServlet {
       if (hRegion.getLockedRows().size() > 0) {
         for (HRegion.RowLockContext rowLockContext : hRegion.getLockedRows().values()) {
           sb.setLength(0);
-          sb.append(hRegion.getTableDesc().getTableName()).append(",")
+          sb.append(hRegion.getTableDescriptor().getTableName()).append(",")
             .append(hRegion.getRegionInfo().getEncodedName()).append(",");
           sb.append(rowLockContext.toString());
           out.println(sb.toString());

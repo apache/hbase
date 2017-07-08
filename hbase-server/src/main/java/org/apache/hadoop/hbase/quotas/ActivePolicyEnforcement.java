@@ -69,7 +69,7 @@ public class ActivePolicyEnforcement {
    * @see #getPolicyEnforcement(TableName)
    */
   public SpaceViolationPolicyEnforcement getPolicyEnforcement(Region r) {
-    return getPolicyEnforcement(Objects.requireNonNull(r).getTableDesc().getTableName());
+    return getPolicyEnforcement(Objects.requireNonNull(r).getTableDescriptor().getTableName());
   }
 
   /**

@@ -3013,7 +3013,7 @@ public class HRegionServer extends HasThread implements
     Set<TableName> tables = new HashSet<>();
     synchronized (this.onlineRegions) {
       for (Region region: this.onlineRegions.values()) {
-        tables.add(region.getTableDesc().getTableName());
+        tables.add(region.getTableDescriptor().getTableName());
       }
     }
     return tables;
@@ -3167,7 +3167,7 @@ public class HRegionServer extends HasThread implements
          if (exceptionToThrow instanceof IOException) throw (IOException)exceptionToThrow;
          throw new IOException(exceptionToThrow);
        }
-       if (regionToClose.getTableDesc().hasSerialReplicationScope()) {
+       if (regionToClose.getTableDescriptor().hasSerialReplicationScope()) {
          // For serial replication, we need add a final barrier on this region. But the splitting
          // or merging may be reverted, so we should make sure if we reopen this region, the open
          // barrier is same as this final barrier
@@ -3185,7 +3185,7 @@ public class HRegionServer extends HasThread implements
          Put finalBarrier = MetaTableAccessor.makeBarrierPut(
            Bytes.toBytes(regionEncodedName.get(i)),
            seq,
-           regionToClose.getTableDesc().getTableName().getName());
+           regionToClose.getTableDescriptor().getTableName().getName());
          MetaTableAccessor.putToMetaTable(getConnection(), finalBarrier);
        }
        // Offline the region

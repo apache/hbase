@@ -440,7 +440,7 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   private byte[] getFamilyNameInBytes() {
-    return store.getFamily().getName();
+    return store.getColumnFamilyDescriptor().getName();
   }
 
   private ThreadPoolExecutor getPool() {

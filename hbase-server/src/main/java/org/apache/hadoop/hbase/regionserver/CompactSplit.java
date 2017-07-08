@@ -332,7 +332,7 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
       final String why, int priority, CompactionRequest request, boolean selectNow, User user)
           throws IOException {
     if (this.server.isStopped()
-        || (r.getTableDesc() != null && !r.getTableDesc().isCompactionEnabled())) {
+        || (r.getTableDescriptor() != null && !r.getTableDescriptor().isCompactionEnabled())) {
       return null;
     }
 
@@ -345,7 +345,7 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
     final RegionServerSpaceQuotaManager spaceQuotaManager =
       this.server.getRegionServerSpaceQuotaManager();
     if (spaceQuotaManager != null && spaceQuotaManager.areCompactionsDisabled(
-        r.getTableDesc().getTableName())) {
+        r.getTableDescriptor().getTableName())) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Ignoring compaction request for " + r + " as an active space quota violation "
             + " policy disallows compactions.");
@@ -562,7 +562,7 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
     public void run() {
       Preconditions.checkNotNull(server);
       if (server.isStopped()
-          || (region.getTableDesc() != null && !region.getTableDesc().isCompactionEnabled())) {
+          || (region.getTableDescriptor() != null && !region.getTableDescriptor().isCompactionEnabled())) {
         return;
       }
       doCompaction(user);

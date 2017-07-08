@@ -23,12 +23,13 @@ import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.base.Preconditions;
+
 
 /**
  * A split policy determines when a region should be split.
@@ -101,14 +102,14 @@ public abstract class RegionSplitPolicy extends Configured {
   public static RegionSplitPolicy create(HRegion region,
       Configuration conf) throws IOException {
     Class<? extends RegionSplitPolicy> clazz = getSplitPolicyClass(
-        region.getTableDesc(), conf);
+        region.getTableDescriptor(), conf);
     RegionSplitPolicy policy = ReflectionUtils.newInstance(clazz, conf);
     policy.configureForRegion(region);
     return policy;
   }
 
   public static Class<? extends RegionSplitPolicy> getSplitPolicyClass(
-      HTableDescriptor htd, Configuration conf) throws IOException {
+      TableDescriptor htd, Configuration conf) throws IOException {
     String className = htd.getRegionSplitPolicyClassName();
     if (className == null) {
       className = conf.get(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,

@@ -480,7 +480,7 @@ public class TestStore {
     w.close();
     this.store.close();
     // Reopen it... should pick up two files
-    this.store = new HStore(this.store.getHRegion(), this.store.getFamily(), c);
+    this.store = new HStore(this.store.getHRegion(), this.store.getColumnFamilyDescriptor(), c);
     Assert.assertEquals(2, this.store.getStorefilesCount());
 
     result = HBaseTestingUtility.getFromStoreFile(store,

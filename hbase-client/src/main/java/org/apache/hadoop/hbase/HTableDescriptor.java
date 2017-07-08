@@ -150,17 +150,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Getter for accessing the metadata associated with the key
-   *
-   * @param key The key.
-   * @return The value.
-   */
-  public String getValue(String key) {
-    byte[] value = getValue(Bytes.toBytes(key));
-    return value == null ? null : Bytes.toString(value);
-  }
-
-  /**
    * @return Getter for fetching an unmodifiable map.
    */
   @Override
@@ -857,6 +846,11 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   @Override
   public Bytes getValue(Bytes key) {
+    return delegatee.getValue(key);
+  }
+
+  @Override
+  public String getValue(String key) {
     return delegatee.getValue(key);
   }
 

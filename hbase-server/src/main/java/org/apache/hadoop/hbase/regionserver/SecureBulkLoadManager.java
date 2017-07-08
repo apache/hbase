@@ -150,7 +150,7 @@ public class SecureBulkLoadManager {
     }
 
     String bulkToken =
-        createStagingDir(baseStagingDir, getActiveUser(), region.getTableDesc().getTableName())
+        createStagingDir(baseStagingDir, getActiveUser(), region.getTableDescriptor().getTableName())
             .toString();
 
     return bulkToken;

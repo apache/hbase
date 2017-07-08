@@ -263,7 +263,17 @@ public class HTable implements Table {
    */
   @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
-    HTableDescriptor htd = HBaseAdmin.getTableDescriptor(tableName, connection, rpcCallerFactory,
+    HTableDescriptor htd = HBaseAdmin.getHTableDescriptor(tableName, connection, rpcCallerFactory,
+      rpcControllerFactory, operationTimeout, readRpcTimeout);
+    if (htd != null) {
+      return new ImmutableHTableDescriptor(htd);
+    }
+    return null;
+  }
+
+  @Override
+  public TableDescriptor getDescriptor() throws IOException {
+    HTableDescriptor htd = HBaseAdmin.getHTableDescriptor(tableName, connection, rpcCallerFactory,
       rpcControllerFactory, operationTimeout, readRpcTimeout);
     if (htd != null) {
       return new ImmutableHTableDescriptor(htd);

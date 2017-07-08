@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -73,7 +74,7 @@ public class RegionAsTable implements Table {
 
   @Override
   public TableName getName() {
-    return this.region.getTableDesc().getTableName();
+    return this.region.getTableDescriptor().getTableName();
   }
 
   @Override
@@ -83,7 +84,12 @@ public class RegionAsTable implements Table {
 
   @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
-    return this.region.getTableDesc();
+    return new HTableDescriptor(this.region.getTableDescriptor());
+  }
+
+  @Override
+  public TableDescriptor getDescriptor() throws IOException {
+    return this.region.getTableDescriptor();
   }
 
   @Override

@@ -420,8 +420,8 @@ public class TestAdmin1 {
     htd.addFamily(fam3);
     this.admin.createTable(htd);
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
-    HTableDescriptor confirmedHtd = table.getTableDescriptor();
-    assertEquals(htd.compareTo(confirmedHtd), 0);
+    TableDescriptor confirmedHtd = table.getDescriptor();
+    assertEquals(TableDescriptor.COMPARATOR.compare(htd, confirmedHtd), 0);
     MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
     table.close();
   }

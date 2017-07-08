@@ -183,7 +183,7 @@ public class RegionServerRpcQuotaManager {
     } else {
       ugi = User.getCurrent().getUGI();
     }
-    TableName table = region.getTableDesc().getTableName();
+    TableName table = region.getTableDescriptor().getTableName();
 
     OperationQuota quota = getQuota(ugi, table);
     try {

@@ -220,6 +220,11 @@ public final class HTableWrapper implements Table {
   }
 
   @Override
+  public TableDescriptor getDescriptor() throws IOException {
+    return table.getDescriptor();
+  }
+
+  @Override
   public TableName getName() {
     return table.getName();
   }

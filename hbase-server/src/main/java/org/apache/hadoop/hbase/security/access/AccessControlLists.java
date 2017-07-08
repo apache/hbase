@@ -359,7 +359,7 @@ public class AccessControlLists {
    * metadata table.
    */
   static boolean isAclRegion(Region region) {
-    return ACL_TABLE_NAME.equals(region.getTableDesc().getTableName());
+    return ACL_TABLE_NAME.equals(region.getTableDescriptor().getTableName());
   }
 
   /**

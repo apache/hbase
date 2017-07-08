@@ -72,7 +72,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
 
   public DefaultMobStoreFlusher(Configuration conf, Store store) throws IOException {
     super(conf, store);
-    mobCellValueSizeThreshold = store.getFamily().getMobThreshold();
+    mobCellValueSizeThreshold = store.getColumnFamilyDescriptor().getMobThreshold();
     this.targetPath = MobUtils.getMobFamilyPath(conf, store.getTableName(),
         store.getColumnFamilyName());
     if (!this.store.getFileSystem().exists(targetPath)) {
@@ -115,7 +115,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       synchronized (flushLock) {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
-        writer = store.createWriterInTmp(cellsCount, store.getFamily().getCompressionType(),
+        writer = store.createWriterInTmp(cellsCount, store.getColumnFamilyDescriptor().getCompressionType(),
             false, true, true, false, snapshot.getTimeRangeTracker());
         IOException e = null;
         try {
@@ -173,7 +173,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     long mobSize = 0;
     long time = snapshot.getTimeRangeTracker().getMax();
     mobFileWriter = mobStore.createWriterInTmp(new Date(time), snapshot.getCellsCount(),
-        store.getFamily().getCompressionType(), store.getRegionInfo().getStartKey(), false);
+        store.getColumnFamilyDescriptor().getCompressionType(), store.getRegionInfo().getStartKey(), false);
     // the target path is {tableName}/.mob/{cfName}/mobFiles
     // the relative path is mobFiles
     byte[] fileName = Bytes.toBytes(mobFileWriter.getPath().getName());

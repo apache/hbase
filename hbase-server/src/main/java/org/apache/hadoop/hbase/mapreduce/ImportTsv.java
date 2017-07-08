@@ -63,6 +63,8 @@ import org.apache.hadoop.util.ToolRunner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 
 /**
  * Tool to import data from a TSV file.
@@ -521,15 +523,15 @@ public class ImportTsv extends Configured implements Tool {
             if(!noStrict) {
               ArrayList<String> unmatchedFamilies = new ArrayList<>();
               Set<String> cfSet = getColumnFamilies(columns);
-              HTableDescriptor tDesc = table.getTableDescriptor();
+              TableDescriptor tDesc = table.getDescriptor();
               for (String cf : cfSet) {
-                if(tDesc.getFamily(Bytes.toBytes(cf)) == null) {
+                if(!tDesc.hasColumnFamily(Bytes.toBytes(cf))) {
                   unmatchedFamilies.add(cf);
                 }
               }
               if(unmatchedFamilies.size() > 0) {
                 ArrayList<String> familyNames = new ArrayList<>();
-                for (HColumnDescriptor family : table.getTableDescriptor().getFamilies()) {
+                for (ColumnFamilyDescriptor family : table.getDescriptor().getColumnFamilies()) {
                   familyNames.add(family.getNameAsString());
                 }
                 String msg =
@@ -553,7 +555,7 @@ public class ImportTsv extends Configured implements Tool {
             if (!isDryRun) {
               Path outputDir = new Path(hfileOutPath);
               FileOutputFormat.setOutputPath(job, outputDir);
-              HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
+              HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(),
                   regionLocator);
             }
           }

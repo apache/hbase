@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -137,6 +138,9 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -1360,7 +1364,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create a table.
    * @param tableName
    * @param family
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, String family)
@@ -1372,7 +1376,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create a table.
    * @param tableName
    * @param families
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, String[] families)
@@ -1388,7 +1392,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create a table.
    * @param tableName
    * @param family
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[] family)
@@ -1401,7 +1405,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param family
    * @param numRegions
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, byte[] family, int numRegions)
@@ -1418,7 +1422,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create a table.
    * @param tableName
    * @param families
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families)
@@ -1430,7 +1434,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create a table with multiple regions.
    * @param tableName
    * @param families
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, byte[][] families) throws IOException {
@@ -1442,7 +1446,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param families
    * @param splitKeys
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys)
@@ -1467,10 +1471,26 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param htd
    * @param families
    * @param c Configuration to use
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
+   * @throws IOException
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createTable(TableDescriptor, byte[][], Configuration)}
+   */
+  @Deprecated
+  public Table createTable(HTableDescriptor htd, byte[][] families, Configuration c)
+  throws IOException {
+    return createTable((TableDescriptor) htd, families, c);
+  }
+
+  /**
+   * Create a table.
+   * @param htd
+   * @param families
+   * @param c Configuration to use
+   * @return A Table instance for the created table.
    * @throws IOException
    */
-  public Table createTable(HTableDescriptor htd, byte[][] families, Configuration c)
+  public Table createTable(TableDescriptor htd, byte[][] families, Configuration c)
   throws IOException {
     return createTable(htd, families, null, c);
   }
@@ -1481,34 +1501,68 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param families
    * @param splitKeys
    * @param c Configuration to use
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createTable(TableDescriptor, byte[][], byte[][], Configuration)}
    */
+  @Deprecated
   public Table createTable(HTableDescriptor htd, byte[][] families, byte[][] splitKeys,
       Configuration c) throws IOException {
+    return createTable((TableDescriptor) htd, families, splitKeys, c);
+  }
+
+  /**
+   * Create a table.
+   * @param htd
+   * @param families
+   * @param splitKeys
+   * @param c Configuration to use
+   * @return A Table instance for the created table.
+   * @throws IOException
+   */
+  public Table createTable(TableDescriptor htd, byte[][] families, byte[][] splitKeys,
+      Configuration c) throws IOException {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
       // Disable blooms (they are on by default as of 0.95) but we disable them here because
       // tests have hard coded counts of what to expect in block cache, etc., and blooms being
       // on is interfering.
-      hcd.setBloomFilterType(BloomType.NONE);
-      htd.addFamily(hcd);
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
+                              .setBloomFilterType(BloomType.NONE)
+                              .build());
     }
-    getAdmin().createTable(htd, splitKeys);
+    TableDescriptor td = builder.build();
+    getAdmin().createTable(td, splitKeys);
     // HBaseAdmin only waits for regions to appear in hbase:meta
     // we should wait until they are assigned
-    waitUntilAllRegionsAssigned(htd.getTableName());
-    return getConnection().getTable(htd.getTableName());
+    waitUntilAllRegionsAssigned(td.getTableName());
+    return getConnection().getTable(td.getTableName());
   }
 
   /**
    * Create a table.
    * @param htd
    * @param splitRows
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
+   * @throws IOException
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createTable(TableDescriptor, byte[][])}
+   */
+  @Deprecated
+  public Table createTable(HTableDescriptor htd, byte[][] splitRows)
+      throws IOException {
+    return createTable((TableDescriptor) htd, splitRows);
+  }
+
+  /**
+   * Create a table.
+   * @param htd
+   * @param splitRows
+   * @return A Table instance for the created table.
    * @throws IOException
    */
-  public Table createTable(HTableDescriptor htd, byte[][] splitRows)
+  public Table createTable(TableDescriptor htd, byte[][] splitRows)
       throws IOException {
     getAdmin().createTable(htd, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta
@@ -1523,7 +1577,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param families
    * @param splitKeys
    * @param c Configuration to use
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys,
@@ -1536,7 +1590,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param family
    * @param numVersions
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[] family, int numVersions)
@@ -1549,7 +1603,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param families
    * @param numVersions
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, int numVersions)
@@ -1563,7 +1617,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param families
    * @param numVersions
    * @param splitKeys
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, int numVersions,
@@ -1585,7 +1639,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param families
    * @param numVersions
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, byte[][] families, int numVersions)
@@ -1599,7 +1653,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param families
    * @param numVersions
    * @param blockSize
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families,
@@ -1642,7 +1696,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param families
    * @param numVersions
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families,
@@ -1668,7 +1722,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param family
    * @param splitRows
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[] family, byte[][] splitRows)
@@ -1687,7 +1741,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create a table with multiple regions.
    * @param tableName
    * @param family
-   * @return An HTable instance for the created table.
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, byte[] family) throws IOException {
@@ -1696,11 +1750,22 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Modify a table, synchronous. Waiting logic similar to that of {@code admin.rb#alter_status}.
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #modifyTableSync(Admin, TableDescriptor)}
    */
+  @Deprecated
   @SuppressWarnings("serial")
   public static void modifyTableSync(Admin admin, HTableDescriptor desc)
       throws IOException, InterruptedException {
-    admin.modifyTable(desc.getTableName(), desc);
+    modifyTableSync(admin, (TableDescriptor) desc);
+  }
+  /**
+   * Modify a table, synchronous. Waiting logic similar to that of {@code admin.rb#alter_status}.
+   */
+  @SuppressWarnings("serial")
+  public static void modifyTableSync(Admin admin, TableDescriptor desc)
+      throws IOException, InterruptedException {
+    admin.modifyTable(desc);
     Pair<Integer, Integer> status = new Pair<Integer, Integer>() {{
       setFirst(0);
       setSecond(0);
@@ -1840,8 +1905,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param endKey
    * @return
    * @throws IOException
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createLocalHRegion(TableDescriptor, byte[], byte[])}
    */
+  @Deprecated
   public HRegion createLocalHRegion(HTableDescriptor desc, byte [] startKey,
+      byte [] endKey) throws IOException {
+    return createLocalHRegion((TableDescriptor) desc, startKey, endKey);
+  }
+
+  /**
+   * Create an HRegion that writes to the local tmp dirs
+   * @param desc
+   * @param startKey
+   * @param endKey
+   * @return
+   * @throws IOException
+   */
+  public HRegion createLocalHRegion(TableDescriptor desc, byte [] startKey,
       byte [] endKey)
   throws IOException {
     HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
@@ -1851,8 +1932,19 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Create an HRegion that writes to the local tmp dirs. Creates the WAL for you. Be sure to call
    * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when you're finished with it.
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createLocalHRegion(HRegionInfo, TableDescriptor)}
    */
+  @Deprecated
   public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc) throws IOException {
+    return createLocalHRegion(info, (TableDescriptor) desc);
+  }
+
+  /**
+   * Create an HRegion that writes to the local tmp dirs. Creates the WAL for you. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when you're finished with it.
+   */
+  public HRegion createLocalHRegion(HRegionInfo info, TableDescriptor desc) throws IOException {
     return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), desc);
   }
 
@@ -1863,8 +1955,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param wal wal for this region.
    * @return created hregion
    * @throws IOException
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createLocalHRegion(HRegionInfo, TableDescriptor, WAL)}
    */
+  @Deprecated
   public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc, WAL wal)
+      throws IOException {
+    return createLocalHRegion(info, (TableDescriptor) desc, wal);
+  }
+
+  /**
+   * Create an HRegion that writes to the local tmp dirs with specified wal
+   * @param info regioninfo
+   * @param desc table descriptor
+   * @param wal wal for this region.
+   * @return created hregion
+   * @throws IOException
+   */
+  public HRegion createLocalHRegion(HRegionInfo info, TableDescriptor desc, WAL wal)
       throws IOException {
     return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, wal);
   }
@@ -2375,9 +2483,26 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param startKeys
    * @return list of region info for regions added to meta
    * @throws IOException
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createMultiRegionsInMeta(Configuration, TableDescriptor, byte[][])}
+   */
+  @Deprecated
+  public List<HRegionInfo> createMultiRegionsInMeta(final Configuration conf,
+      final HTableDescriptor htd, byte [][] startKeys) throws IOException {
+    return createMultiRegionsInMeta(conf, (TableDescriptor) htd, startKeys);
+  }
+  /**
+   * Create rows in hbase:meta for regions of the specified table with the specified
+   * start keys.  The first startKey should be a 0 length byte array if you
+   * want to form a proper range of regions.
+   * @param conf
+   * @param htd
+   * @param startKeys
+   * @return list of region info for regions added to meta
+   * @throws IOException
    */
   public List<HRegionInfo> createMultiRegionsInMeta(final Configuration conf,
-      final HTableDescriptor htd, byte [][] startKeys)
+      final TableDescriptor htd, byte [][] startKeys)
   throws IOException {
     Table meta = getConnection().getTable(TableName.META_TABLE_NAME);
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
@@ -2415,10 +2540,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Create a region with it's own WAL. Be sure to call
    * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createRegionAndWAL(HRegionInfo, Path, Configuration, TableDescriptor)}
    */
+  @Deprecated
   public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
       final Configuration conf, final HTableDescriptor htd) throws IOException {
-    return createRegionAndWAL(info, rootDir, conf, htd, true);
+    return createRegionAndWAL(info, rootDir, conf, (TableDescriptor) htd);
   }
 
   /**
@@ -2426,7 +2554,29 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
    */
   public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
+      final Configuration conf, final TableDescriptor htd) throws IOException {
+    return createRegionAndWAL(info, rootDir, conf, htd, true);
+  }
+
+  /**
+   * Create a region with it's own WAL. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createRegionAndWAL(HRegionInfo, Path, Configuration, TableDescriptor, boolean)}
+   */
+  @Deprecated
+  public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
       final Configuration conf, final HTableDescriptor htd, boolean initialize)
+      throws IOException {
+    return createRegionAndWAL(info, rootDir, conf, (TableDescriptor) htd, initialize);
+  }
+
+  /**
+   * Create a region with it's own WAL. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   */
+  public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
+      final Configuration conf, final TableDescriptor htd, boolean initialize)
       throws IOException {
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     WAL wal = createWal(conf, rootDir, info);
@@ -2738,7 +2888,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * [2] https://issues.apache.org/jira/browse/ZOOKEEPER-1105
    *
    * @param nodeZK - the ZK watcher to expire
-   * @param checkStatus - true to check if we can create an HTable with the
+   * @param checkStatus - true to check if we can create a Table with the
    *                    current configuration.
    */
   public void expireSession(ZooKeeperWatcher nodeZK, boolean checkStatus)
@@ -3435,7 +3585,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
                                                 Get get) throws IOException {
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getFamily().getName()),
+        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
         // originally MultiVersionConcurrencyControl.resetThreadReadPoint() was called to set
         // readpoint 0.
         0);
@@ -3480,7 +3630,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
                                                 ) throws IOException {
     Get get = new Get(row);
     Map<byte[], NavigableSet<byte[]>> s = get.getFamilyMap();
-    s.put(store.getFamily().getName(), columns);
+    s.put(store.getColumnFamilyDescriptor().getName(), columns);
 
     return getFromStoreFile(store,get);
   }
@@ -3802,9 +3952,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Creates a pre-split table for load testing. If the table already exists,
    * logs a warning and continues.
    * @return the number of regions the table was split into
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createPreSplitLoadTestTable(Configuration,
+   *                 TableDescriptor, ColumnFamilyDescriptor)}
    */
+  @Deprecated
   public static int createPreSplitLoadTestTable(Configuration conf,
       HTableDescriptor desc, HColumnDescriptor hcd) throws IOException {
+    return createPreSplitLoadTestTable(conf, (TableDescriptor) desc,
+            (ColumnFamilyDescriptor) hcd);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      TableDescriptor desc, ColumnFamilyDescriptor hcd) throws IOException {
     return createPreSplitLoadTestTable(conf, desc, hcd, DEFAULT_REGIONS_PER_SERVER);
   }
 
@@ -3812,11 +3977,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Creates a pre-split table for load testing. If the table already exists,
    * logs a warning and continues.
    * @return the number of regions the table was split into
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createPreSplitLoadTestTable(Configuration,
+   *                 TableDescriptor, ColumnFamilyDescriptor, int)}
    */
+  @Deprecated
   public static int createPreSplitLoadTestTable(Configuration conf,
       HTableDescriptor desc, HColumnDescriptor hcd, int numRegionsPerServer) throws IOException {
-    return createPreSplitLoadTestTable(conf, desc, new HColumnDescriptor[] {hcd},
-        numRegionsPerServer);
+    return createPreSplitLoadTestTable(conf, (TableDescriptor) desc,
+            (ColumnFamilyDescriptor) hcd, numRegionsPerServer);
   }
 
   /**
@@ -3825,8 +3994,35 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
-      HTableDescriptor desc, HColumnDescriptor[] hcds, int numRegionsPerServer) throws IOException {
+      TableDescriptor desc, ColumnFamilyDescriptor hcd, int numRegionsPerServer) throws IOException {
+    return createPreSplitLoadTestTable(conf, desc, new ColumnFamilyDescriptor[] {hcd},
+        numRegionsPerServer);
+  }
 
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createPreSplitLoadTestTable(Configuration,
+   *                 TableDescriptor, ColumnFamilyDescriptor[], int)}
+   */
+  @Deprecated
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      HTableDescriptor desc, HColumnDescriptor[] hcds,
+      int numRegionsPerServer) throws IOException {
+    return createPreSplitLoadTestTable(conf, (TableDescriptor) desc,
+            (ColumnFamilyDescriptor[]) hcds, numRegionsPerServer);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      TableDescriptor desc, ColumnFamilyDescriptor[] hcds,
+      int numRegionsPerServer) throws IOException {
     return createPreSplitLoadTestTable(conf, desc, hcds,
       new RegionSplitter.HexStringSplit(), numRegionsPerServer);
   }
@@ -3837,13 +4033,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
-      HTableDescriptor desc, HColumnDescriptor[] hcds,
+      TableDescriptor td, ColumnFamilyDescriptor[] cds,
       SplitAlgorithm splitter, int numRegionsPerServer) throws IOException {
-    for (HColumnDescriptor hcd : hcds) {
-      if (!desc.hasFamily(hcd.getName())) {
-        desc.addFamily(hcd);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(td);
+    for (ColumnFamilyDescriptor cd : cds) {
+      if (!td.hasColumnFamily(cd.getName())) {
+        builder.addColumnFamily(cd);
       }
     }
+    td = builder.build();
     int totalNumberOfRegions = 0;
     Connection unmanagedConnection = ConnectionFactory.createConnection(conf);
     Admin admin = unmanagedConnection.getAdmin();
@@ -3865,12 +4063,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       byte[][] splits = splitter.split(
           totalNumberOfRegions);
 
-      admin.createTable(desc, splits);
+      admin.createTable(td, splits);
     } catch (MasterNotRunningException e) {
       LOG.error("Master not running", e);
       throw new IOException(e);
     } catch (TableExistsException e) {
-      LOG.warn("Table " + desc.getTableName() +
+      LOG.warn("Table " + td.getTableName() +
           " already exists, continuing");
     } finally {
       admin.close();
@@ -3940,13 +4138,25 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       + " on server " + server);
   }
 
-  public HRegion createTestRegion(String tableName, HColumnDescriptor hcd)
+  /**
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #createTestRegion(String, ColumnFamilyDescriptor)}
+   */
+  @Deprecated
+  public HRegion createTestRegion(String tableName, HColumnDescriptor cd)
       throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-    htd.addFamily(hcd);
+    return createTestRegion(tableName, (ColumnFamilyDescriptor) cd);
+  }
+
+  public HRegion createTestRegion(String tableName, ColumnFamilyDescriptor cd)
+      throws IOException {
+    TableDescriptor td
+        = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+            .addColumnFamily(cd)
+            .build();
     HRegionInfo info =
         new HRegionInfo(TableName.valueOf(tableName), null, null, false);
-    return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), htd);
+    return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), td);
   }
 
   public void setFileSystemURI(String fsURI) {
@@ -4049,13 +4259,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         boolean tableAvailable = getAdmin().isTableAvailable(tableName);
         if (tableAvailable) {
           try (Table table = getConnection().getTable(tableName)) {
-            HTableDescriptor htd = table.getTableDescriptor();
+            TableDescriptor htd = table.getDescriptor();
             for (HRegionLocation loc : getConnection().getRegionLocator(tableName)
                 .getAllRegionLocations()) {
               Scan scan = new Scan().withStartRow(loc.getRegionInfo().getStartKey())
                   .withStopRow(loc.getRegionInfo().getEndKey()).setOneRowLimit()
                   .setMaxResultsPerColumnFamily(1).setCacheBlocks(false);
-              for (byte[] family : htd.getFamiliesKeys()) {
+              for (byte[] family : htd.getColumnFamilyNames()) {
                 scan.addFamily(family);
               }
               try (ResultScanner scanner = table.getScanner(scan)) {

@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -555,7 +556,7 @@ public final class Constraints {
    * @throws IOException
    *           if any part of reading/arguments fails
    */
-  static List<? extends Constraint> getConstraints(HTableDescriptor desc,
+  static List<? extends Constraint> getConstraints(TableDescriptor desc,
       ClassLoader classloader) throws IOException {
     List<Constraint> constraints = new ArrayList<>();
     // loop through all the key, values looking for constraints

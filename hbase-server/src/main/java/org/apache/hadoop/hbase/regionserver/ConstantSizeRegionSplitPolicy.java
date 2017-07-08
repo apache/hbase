@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 
 /**
  * A {@link RegionSplitPolicy} implementation which splits a region
@@ -47,7 +48,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     Configuration conf = getConf();
-    HTableDescriptor desc = region.getTableDesc();
+    TableDescriptor desc = region.getTableDescriptor();
     if (desc != null) {
       this.desiredMaxFileSize = desc.getMaxFileSize();
     }

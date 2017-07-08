@@ -302,11 +302,13 @@ public class TestReplicaWithCluster {
 
   @Test (timeout=120000)
   public void testChangeTable() throws Exception {
-    HTableDescriptor hdt = HTU.createTableDescriptor("testChangeTable");
-    hdt.setRegionReplication(NB_SERVERS);
-    hdt.addCoprocessor(SlowMeCopro.class.getName());
-    Table table = HTU.createTable(hdt, new byte[][]{f}, null);
-
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("testChangeTable"))
+            .setRegionReplication(NB_SERVERS)
+            .addCoprocessor(SlowMeCopro.class.getName())
+            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f).build())
+            .build();
+    HTU.getAdmin().createTable(td);
+    Table table = HTU.getConnection().getTable(td.getTableName());
     // basic test: it should work.
     Put p = new Put(row);
     p.addColumn(f, row, row);
@@ -317,13 +319,14 @@ public class TestReplicaWithCluster {
     Assert.assertFalse(r.isStale());
 
     // Add a CF, it should work.
-    HTableDescriptor bHdt = HTU.getAdmin().getTableDescriptor(hdt.getTableName());
-    HColumnDescriptor hcd = new HColumnDescriptor(row);
-    hdt.addFamily(hcd);
-    HTU.getAdmin().disableTable(hdt.getTableName());
-    HTU.getAdmin().modifyTable(hdt.getTableName(), hdt);
-    HTU.getAdmin().enableTable(hdt.getTableName());
-    HTableDescriptor nHdt = HTU.getAdmin().getTableDescriptor(hdt.getTableName());
+    TableDescriptor bHdt = HTU.getAdmin().listTableDescriptor(td.getTableName());
+    td = TableDescriptorBuilder.newBuilder(td)
+            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(row).build())
+            .build();
+    HTU.getAdmin().disableTable(td.getTableName());
+    HTU.getAdmin().modifyTable(td);
+    HTU.getAdmin().enableTable(td.getTableName());
+    TableDescriptor nHdt = HTU.getAdmin().listTableDescriptor(td.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
         bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
 
@@ -347,12 +350,12 @@ public class TestReplicaWithCluster {
     }
 
     Admin admin = HTU.getAdmin();
-    nHdt =admin.getTableDescriptor(hdt.getTableName());
+    nHdt =admin.listTableDescriptor(td.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
         bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
 
-    admin.disableTable(hdt.getTableName());
-    admin.deleteTable(hdt.getTableName());
+    admin.disableTable(td.getTableName());
+    admin.deleteTable(td.getTableName());
     admin.close();
   }
 

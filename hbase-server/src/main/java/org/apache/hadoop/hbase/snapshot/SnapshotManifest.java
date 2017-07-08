@@ -216,7 +216,7 @@ public final class SnapshotManifest {
 
     for (Store store : region.getStores()) {
       // 2.1. build the snapshot reference for the store
-      Object familyData = visitor.familyOpen(regionData, store.getFamily().getName());
+      Object familyData = visitor.familyOpen(regionData, store.getColumnFamilyDescriptor().getName());
       monitor.rethrowException();
 
       List<StoreFile> storeFiles = new ArrayList<>(store.getStorefiles());

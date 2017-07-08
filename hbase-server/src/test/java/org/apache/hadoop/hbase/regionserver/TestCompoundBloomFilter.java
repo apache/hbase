@@ -291,7 +291,7 @@ public class TestCompoundBloomFilter {
     Store store = mock(Store.class);
     HColumnDescriptor hcd = mock(HColumnDescriptor.class);
     when(hcd.getName()).thenReturn(Bytes.toBytes(RandomKeyValueUtil.COLUMN_FAMILY_NAME));
-    when(store.getFamily()).thenReturn(hcd);
+    when(store.getColumnFamilyDescriptor()).thenReturn(hcd);
     return scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
   }
 

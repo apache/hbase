@@ -270,7 +270,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
         List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs)
         throws IOException {
       Scan scan = new Scan();
-      scan.setMaxVersions(store.getFamily().getMaxVersions());
+      scan.setMaxVersions(store.getColumnFamilyDescriptor().getMaxVersions());
       return new CompactorStoreScanner(store, store.getScanInfo(), scan, scanners, scanType,
           store.getSmallestReadPoint(), earliestPutTs);
     }

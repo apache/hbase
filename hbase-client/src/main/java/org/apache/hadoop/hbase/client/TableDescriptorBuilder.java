@@ -500,13 +500,20 @@ public class TableDescriptorBuilder {
 
     @Override
     public Bytes getValue(Bytes key) {
-      return values.get(key);
+      Bytes rval = values.get(key);
+      return rval == null ? null : new Bytes(rval.copyBytes());
+    }
+
+    @Override
+    public String getValue(String key) {
+      Bytes rval = values.get(new Bytes(Bytes.toBytes(key)));
+      return rval == null ? null : Bytes.toString(rval.get(), rval.getOffset(), rval.getLength());
     }
 
     @Override
     public byte[] getValue(byte[] key) {
       Bytes value = values.get(new Bytes(key));
-      return value == null ? null : value.get();
+      return value == null ? null : value.copyBytes();
     }
 
     private <T> T getOrDefault(Bytes key, Function<String, T> function, T defaultValue) {

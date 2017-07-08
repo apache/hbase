@@ -97,7 +97,7 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * @return whether the replica is read only
    */
   public static boolean isReadOnly(HRegion region) {
-    return region.getTableDesc().isReadOnly()
+    return region.getTableDescriptor().isReadOnly()
       || !isDefaultReplica(region.getRegionInfo());
   }
 

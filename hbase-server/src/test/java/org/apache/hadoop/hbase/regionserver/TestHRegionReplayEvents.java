@@ -1135,7 +1135,7 @@ public class TestHRegionReplayEvents {
     secondaryRegion.replayWALFlushStartMarker(FlushDescriptor.newBuilder().
       setFlushSequenceNumber(10)
       .setTableName(UnsafeByteOperations.unsafeWrap(
-          primaryRegion.getTableDesc().getTableName().getName()))
+          primaryRegion.getTableDescriptor().getTableName().getName()))
       .setAction(FlushAction.START_FLUSH)
       .setEncodedRegionName(
           UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
@@ -1543,7 +1543,7 @@ public class TestHRegionReplayEvents {
     // from primary and also deleted from the archive directory
     secondaryRegion.replayWALFlushCommitMarker(FlushDescriptor.newBuilder().
       setFlushSequenceNumber(Long.MAX_VALUE)
-      .setTableName(UnsafeByteOperations.unsafeWrap(primaryRegion.getTableDesc().getTableName().getName()))
+      .setTableName(UnsafeByteOperations.unsafeWrap(primaryRegion.getTableDescriptor().getTableName().getName()))
       .setAction(FlushAction.COMMIT_FLUSH)
       .setEncodedRegionName(
           UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
@@ -1563,7 +1563,7 @@ public class TestHRegionReplayEvents {
     // from primary and also deleted from the archive directory
     secondaryRegion.replayWALCompactionMarker(CompactionDescriptor.newBuilder()
       .setTableName(UnsafeByteOperations.unsafeWrap(
-          primaryRegion.getTableDesc().getTableName().getName()))
+          primaryRegion.getTableDescriptor().getTableName().getName()))
       .setEncodedRegionName(
           UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
       .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
@@ -1581,7 +1581,7 @@ public class TestHRegionReplayEvents {
     // from primary and also deleted from the archive directory
     secondaryRegion.replayWALRegionEventMarker(RegionEventDescriptor.newBuilder()
       .setTableName(UnsafeByteOperations.unsafeWrap(
-          primaryRegion.getTableDesc().getTableName().getName()))
+          primaryRegion.getTableDescriptor().getTableName().getName()))
       .setEncodedRegionName(
           UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
       .setRegionName(UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getRegionName()))
@@ -1601,7 +1601,7 @@ public class TestHRegionReplayEvents {
     // tests replaying bulk load event marker, but the bulk load files have already been compacted
     // from primary and also deleted from the archive directory
     secondaryRegion.replayWALBulkLoadEventMarker(BulkLoadDescriptor.newBuilder()
-      .setTableName(ProtobufUtil.toProtoTableName(primaryRegion.getTableDesc().getTableName()))
+      .setTableName(ProtobufUtil.toProtoTableName(primaryRegion.getTableDescriptor().getTableName()))
       .setEncodedRegionName(
           UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
       .setBulkloadSeqNum(Long.MAX_VALUE)

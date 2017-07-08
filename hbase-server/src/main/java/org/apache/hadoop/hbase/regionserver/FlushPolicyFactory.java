@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -47,7 +48,7 @@ public class FlushPolicyFactory {
    * Create the FlushPolicy configured for the given table.
    */
   public static FlushPolicy create(HRegion region, Configuration conf) throws IOException {
-    Class<? extends FlushPolicy> clazz = getFlushPolicyClass(region.getTableDesc(), conf);
+    Class<? extends FlushPolicy> clazz = getFlushPolicyClass(region.getTableDescriptor(), conf);
     FlushPolicy policy = ReflectionUtils.newInstance(clazz, conf);
     policy.configureForRegion(region);
     return policy;
@@ -56,7 +57,7 @@ public class FlushPolicyFactory {
   /**
    * Get FlushPolicy class for the given table.
    */
-  public static Class<? extends FlushPolicy> getFlushPolicyClass(HTableDescriptor htd,
+  public static Class<? extends FlushPolicy> getFlushPolicyClass(TableDescriptor htd,
       Configuration conf) throws IOException {
     String className = htd.getFlushPolicyClassName();
     if (className == null) {

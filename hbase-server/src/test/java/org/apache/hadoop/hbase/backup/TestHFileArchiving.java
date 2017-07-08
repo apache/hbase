@@ -256,7 +256,7 @@ public class TestHFileArchiving {
     clearArchiveDirectory();
 
     // then get the current store files
-    byte[][]columns = region.getTableDesc().getFamiliesKeys().toArray(new byte[0][]);
+    byte[][]columns = region.getTableDescriptor().getColumnFamilyNames().toArray(new byte[0][]);
     List<String> storeFiles = region.getStoreFileList(columns);
 
     // then delete the table so the hfiles get archived
@@ -335,7 +335,7 @@ public class TestHFileArchiving {
     clearArchiveDirectory();
 
     // then get the current store files
-    byte[][]columns = region.getTableDesc().getFamiliesKeys().toArray(new byte[0][]);
+    byte[][]columns = region.getTableDescriptor().getColumnFamilyNames().toArray(new byte[0][]);
     List<String> storeFiles = region.getStoreFileList(columns);
 
     // then delete the table so the hfiles get archived

@@ -75,7 +75,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     public InternalScanner createScanner(List<StoreFileScanner> scanners,
         ScanType scanType, FileDetails fd, long smallestReadPoint) throws IOException {
       Scan scan = new Scan();
-      scan.setMaxVersions(store.getFamily().getMaxVersions());
+      scan.setMaxVersions(store.getColumnFamilyDescriptor().getMaxVersions());
       return new StoreScanner(store, store.getScanInfo(), scan, scanners, scanType,
           smallestReadPoint, fd.earliestPutTs);
     }
@@ -103,7 +103,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       throw new IllegalArgumentException("The store " + store + " is not a HMobStore");
     }
     mobStore = (HMobStore) store;
-    mobSizeThreshold = store.getFamily().getMobThreshold();
+    mobSizeThreshold = store.getColumnFamilyDescriptor().getMobThreshold();
   }
 
   @Override
@@ -195,7 +195,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner)? (KeyValueScanner)scanner : null;
-    long shippedCallSizeLimit = (long) numofFilesToCompact * this.store.getFamily().getBlocksize();
+    long shippedCallSizeLimit = (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
     try {
       try {
         // If the mob file writer could not be created, directly write the cell to the store file.

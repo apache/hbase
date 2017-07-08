@@ -43,7 +43,7 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
   protected long flushSizeLowerBound = -1;
 
   protected long getFlushSizeLowerBound(HRegion region) {
-    int familyNumber = region.getTableDesc().getFamilies().size();
+    int familyNumber = region.getTableDescriptor().getColumnFamilyCount();
     // For multiple families, lower bound is the "average flush size" by default
     // unless setting in configuration is larger.
     long flushSizeLowerBound = region.getMemstoreFlushSize() / familyNumber;
@@ -55,11 +55,11 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
     }
     // use the setting in table description if any
     String flushedSizeLowerBoundString =
-        region.getTableDesc().getValue(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND);
+        region.getTableDescriptor().getValue(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND);
     if (flushedSizeLowerBoundString == null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("No " + HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND
-            + " set in description of table " + region.getTableDesc().getTableName()
+            + " set in description of table " + region.getTableDescriptor().getTableName()
             + ", use config (" + flushSizeLowerBound + ") instead");
       }
     } else {
@@ -69,7 +69,7 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
         // fall back for fault setting
         LOG.warn("Number format exception when parsing "
             + HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND + " for table "
-            + region.getTableDesc().getTableName() + ":" + flushedSizeLowerBoundString + ". " + nfe
+            + region.getTableDescriptor().getTableName() + ":" + flushedSizeLowerBoundString + ". " + nfe
             + ", use config (" + flushSizeLowerBound + ") instead");
 
       }

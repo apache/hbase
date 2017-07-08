@@ -111,6 +111,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -812,7 +813,7 @@ public class TestHRegion {
       Path regiondir = region.getRegionFileSystem().getRegionDir();
       FileSystem fs = region.getRegionFileSystem().getFileSystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
-      byte[][] columns = region.getTableDesc().getFamiliesKeys().toArray(new byte[0][]);
+      byte[][] columns = region.getTableDescriptor().getColumnFamilyNames().toArray(new byte[0][]);
 
       assertEquals(0, region.getStoreFileList(columns).size());
 
@@ -945,7 +946,7 @@ public class TestHRegion {
       writer.close();
 
       // close the region now, and reopen again
-      region.getTableDesc();
+      region.getTableDescriptor();
       region.getRegionInfo();
       region.close();
       try {
@@ -4157,7 +4158,7 @@ public class TestHRegion {
       // use the static method to compute the value, it should be the same.
       // static method is used by load balancer or other components
       HDFSBlocksDistribution blocksDistribution2 = HRegion.computeHDFSBlocksDistribution(
-          htu.getConfiguration(), firstRegion.getTableDesc(), firstRegion.getRegionInfo());
+          htu.getConfiguration(), firstRegion.getTableDescriptor(), firstRegion.getRegionInfo());
       long uniqueBlocksWeight2 = blocksDistribution2.getUniqueBlocksTotalWeight();
 
       assertTrue(uniqueBlocksWeight1 == uniqueBlocksWeight2);
@@ -5757,7 +5758,7 @@ public class TestHRegion {
   static class HRegionWithSeqId extends HRegion {
     public HRegionWithSeqId(final Path tableDir, final WAL wal, final FileSystem fs,
         final Configuration confParam, final HRegionInfo regionInfo,
-        final HTableDescriptor htd, final RegionServerServices rsServices) {
+        final TableDescriptor htd, final RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
     @Override

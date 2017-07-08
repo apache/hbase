@@ -213,7 +213,7 @@ public class HFileArchiveTestingUtil {
   public static Path getRegionArchiveDir(Configuration conf, HRegion region) throws IOException {
     return HFileArchiveUtil.getRegionArchiveDir(
         FSUtils.getRootDir(conf),
-        region.getTableDesc().getTableName(),
+        region.getTableDescriptor().getTableName(),
         region.getRegionInfo().getEncodedName());
   }
 
@@ -227,7 +227,7 @@ public class HFileArchiveTestingUtil {
   public static Path getStoreArchivePath(Configuration conf, HRegion region, Store store)
       throws IOException {
     return HFileArchiveUtil.getStoreArchivePath(conf, region.getRegionInfo(),
-        region.getRegionFileSystem().getTableDir(), store.getFamily().getName());
+        region.getRegionFileSystem().getTableDir(), store.getColumnFamilyDescriptor().getName());
   }
 
   public static Path getStoreArchivePath(HBaseTestingUtility util, String tableName,

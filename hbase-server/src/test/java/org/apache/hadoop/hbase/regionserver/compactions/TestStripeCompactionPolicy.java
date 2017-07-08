@@ -773,7 +773,7 @@ public class TestStripeCompactionPolicy {
     Store store = mock(Store.class);
     HRegionInfo info = mock(HRegionInfo.class);
     when(info.getRegionNameAsString()).thenReturn("testRegion");
-    when(store.getFamily()).thenReturn(col);
+    when(store.getColumnFamilyDescriptor()).thenReturn(col);
     when(store.getRegionInfo()).thenReturn(info);
     when(
       store.createWriterInTmp(anyLong(), any(Compression.Algorithm.class), anyBoolean(),

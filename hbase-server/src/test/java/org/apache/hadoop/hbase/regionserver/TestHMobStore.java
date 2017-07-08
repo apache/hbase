@@ -219,7 +219,7 @@ public class TestHMobStore {
 
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getFamily().getName()),
+        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
         0);
 
     List<Cell> results = new ArrayList<>();
@@ -264,7 +264,7 @@ public class TestHMobStore {
 
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getFamily().getName()),
+        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
         0);
 
     List<Cell> results = new ArrayList<>();
@@ -309,7 +309,7 @@ public class TestHMobStore {
     Scan scan = new Scan(get);
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-      scan.getFamilyMap().get(store.getFamily().getName()),
+      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
       0);
 
     List<Cell> results = new ArrayList<>();
@@ -354,7 +354,7 @@ public class TestHMobStore {
 
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getFamily().getName()),
+        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
         0);
 
     List<Cell> results = new ArrayList<>();
@@ -406,7 +406,7 @@ public class TestHMobStore {
     Scan scan = new Scan(get);
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-      scan.getFamilyMap().get(store.getFamily().getName()),
+      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
       0);
 
     List<Cell> results = new ArrayList<>();
@@ -421,7 +421,7 @@ public class TestHMobStore {
       //this is not mob reference cell.
       Assert.assertFalse(MobUtils.isMobReferenceCell(cell));
       Assert.assertEquals(expected.get(i), results.get(i));
-      Assert.assertEquals(100, store.getFamily().getMobThreshold());
+      Assert.assertEquals(100, store.getColumnFamilyDescriptor().getMobThreshold());
     }
   }
 
@@ -522,7 +522,7 @@ public class TestHMobStore {
     // Scan the values
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getFamily().getName()),
+        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
         0);
 
     List<Cell> results = new ArrayList<>();

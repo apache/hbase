@@ -33,7 +33,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -98,7 +100,7 @@ public class TestIOFencing {
     @SuppressWarnings("deprecation")
     public CompactionBlockerRegion(Path tableDir, WAL log,
         FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
+        TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
 
@@ -158,7 +160,7 @@ public class TestIOFencing {
 
     public BlockCompactionsInPrepRegion(Path tableDir, WAL log,
         FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
+        TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
     @Override
@@ -181,18 +183,18 @@ public class TestIOFencing {
   public static class BlockCompactionsInCompletionRegion extends CompactionBlockerRegion {
     public BlockCompactionsInCompletionRegion(Path tableDir, WAL log,
         FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
+        TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
     @Override
-    protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
+    protected HStore instantiateHStore(final ColumnFamilyDescriptor family) throws IOException {
       return new BlockCompactionsInCompletionHStore(this, family, this.conf);
     }
   }
 
   public static class BlockCompactionsInCompletionHStore extends HStore {
     CompactionBlockerRegion r;
-    protected BlockCompactionsInCompletionHStore(HRegion region, HColumnDescriptor family,
+    protected BlockCompactionsInCompletionHStore(HRegion region, ColumnFamilyDescriptor family,
         Configuration confParam) throws IOException {
       super(region, family, confParam);
       r = (CompactionBlockerRegion) region;

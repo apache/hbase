@@ -210,7 +210,7 @@ public class TestHStoreFile extends HBaseTestCase {
     HColumnDescriptor hcd = mock(HColumnDescriptor.class);
     byte[] cf = Bytes.toBytes("ty");
     when(hcd.getName()).thenReturn(cf);
-    when(store.getFamily()).thenReturn(hcd);
+    when(store.getColumnFamilyDescriptor()).thenReturn(hcd);
     StoreFileScanner scanner =
         new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0, 0, true);
     Scan scan = new Scan();
@@ -530,7 +530,7 @@ public class TestHStoreFile extends HBaseTestCase {
       Store store = mock(Store.class);
       HColumnDescriptor hcd = mock(HColumnDescriptor.class);
       when(hcd.getName()).thenReturn(Bytes.toBytes("family"));
-      when(store.getFamily()).thenReturn(hcd);
+      when(store.getColumnFamilyDescriptor()).thenReturn(hcd);
       boolean exists = scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
       if (i % 2 == 0) {
         if (!exists) falseNeg++;
@@ -717,7 +717,7 @@ public class TestHStoreFile extends HBaseTestCase {
       Store store = mock(Store.class);
       HColumnDescriptor hcd = mock(HColumnDescriptor.class);
       when(hcd.getName()).thenReturn(Bytes.toBytes("family"));
-      when(store.getFamily()).thenReturn(hcd);
+      when(store.getColumnFamilyDescriptor()).thenReturn(hcd);
       // check false positives rate
       int falsePos = 0;
       int falseNeg = 0;
@@ -861,7 +861,7 @@ public class TestHStoreFile extends HBaseTestCase {
     Store store = mock(Store.class);
     HColumnDescriptor hcd = mock(HColumnDescriptor.class);
     when(hcd.getName()).thenReturn(family);
-    when(store.getFamily()).thenReturn(hcd);
+    when(store.getColumnFamilyDescriptor()).thenReturn(hcd);
     hsf.initReader();
     StoreFileReader reader = hsf.getReader();
     StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
