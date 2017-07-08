@@ -98,14 +98,14 @@ public abstract class TestAsyncAdminBase {
   }
 
   @Before
-  public void setUp() {
-    admin = ASYNC_CONN.getAdmin();
+  public void setUp() throws Exception {
+    admin = getAdmin.get();
     String methodName = testName.getMethodName();
     tableName = TableName.valueOf(methodName.substring(0, methodName.length() - 3));
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
     admin.listTableNames(Optional.of(Pattern.compile(tableName.getNameAsString() + ".*")), false)
         .whenCompleteAsync((tables, err) -> {
           if (tables != null) {

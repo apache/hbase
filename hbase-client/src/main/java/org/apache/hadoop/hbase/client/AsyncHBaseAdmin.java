@@ -459,6 +459,31 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> shutdown() {
+    return wrap(rawAdmin.shutdown());
+  }
+
+  @Override
+  public CompletableFuture<Void> stopMaster() {
+    return wrap(rawAdmin.stopMaster());
+  }
+
+  @Override
+  public CompletableFuture<Void> stopRegionServer(ServerName serverName) {
+    return wrap(rawAdmin.stopRegionServer(serverName));
+  }
+
+  @Override
+  public CompletableFuture<Void> updateConfiguration(ServerName serverName) {
+    return wrap(rawAdmin.updateConfiguration(serverName));
+  }
+
+  @Override
+  public CompletableFuture<Void> updateConfiguration() {
+    return wrap(rawAdmin.updateConfiguration());
+  }
+
+  @Override
   public CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName,
       Optional<TableName> tableName) {
     return wrap(rawAdmin.getRegionLoads(serverName, tableName));
