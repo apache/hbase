@@ -32,6 +32,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +48,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Class to test asynchronous procedure admin operations.
  */
+@RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
 

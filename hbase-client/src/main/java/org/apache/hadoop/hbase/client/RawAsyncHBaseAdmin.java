@@ -97,6 +97,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -196,8 +200,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormali
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -2341,6 +2349,76 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
                 stub, RequestConverter.buildGetClusterStatusRequest(),
                 (s, c, req, done) -> s.getClusterStatus(c, req, done),
                 resp -> ProtobufUtil.convert(resp.getClusterStatus()))).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> shutdown() {
+    return this
+        .<Void> newMasterCaller()
+        .action(
+          (controller, stub) -> this.<ShutdownRequest, ShutdownResponse, Void> call(controller,
+            stub, ShutdownRequest.newBuilder().build(),
+            (s, c, req, done) -> s.shutdown(c, req, done), resp -> null)).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> stopMaster() {
+    return this
+        .<Void> newMasterCaller()
+        .action(
+          (controller, stub) -> this.<StopMasterRequest, StopMasterResponse, Void> call(controller,
+            stub, StopMasterRequest.newBuilder().build(),
+            (s, c, req, done) -> s.stopMaster(c, req, done), resp -> null)).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> stopRegionServer(ServerName serverName) {
+    StopServerRequest request =
+        RequestConverter.buildStopServerRequest("Called by admin client "
+            + this.connection.toString());
+    return this
+        .<Void> newAdminCaller()
+        .action(
+          (controller, stub) -> this.<StopServerRequest, StopServerResponse, Void> adminCall(
+            controller, stub, request, (s, c, req, done) -> s.stopServer(controller, req, done),
+            resp -> null)).serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> updateConfiguration(ServerName serverName) {
+    return this
+        .<Void> newAdminCaller()
+        .action(
+          (controller, stub) -> this
+              .<UpdateConfigurationRequest, UpdateConfigurationResponse, Void> adminCall(
+                controller, stub, UpdateConfigurationRequest.getDefaultInstance(),
+                (s, c, req, done) -> s.updateConfiguration(controller, req, done), resp -> null))
+        .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> updateConfiguration() {
+    CompletableFuture<Void> future = new CompletableFuture<Void>();
+    getClusterStatus().whenComplete(
+      (status, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          List<CompletableFuture<Void>> futures = new ArrayList<>();
+          status.getServers().forEach((server) -> futures.add(updateConfiguration(server)));
+          futures.add(updateConfiguration(status.getMaster()));
+          status.getBackupMasters().forEach(master -> futures.add(updateConfiguration(master)));
+          CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()]))
+              .whenComplete((result, err2) -> {
+                if (err2 != null) {
+                  future.completeExceptionally(err2);
+                } else {
+                  future.complete(result);
+                }
+              });
+        }
+      });
+    return future;
   }
 
   @Override

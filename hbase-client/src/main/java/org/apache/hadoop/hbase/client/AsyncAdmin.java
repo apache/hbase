@@ -824,6 +824,34 @@ public interface AsyncAdmin {
   }
 
   /**
+   * Shuts down the HBase cluster.
+   */
+  CompletableFuture<Void> shutdown();
+
+  /**
+   * Shuts down the current HBase master only.
+   */
+  CompletableFuture<Void> stopMaster();
+
+  /**
+   * Stop the designated regionserver.
+   * @param serverName
+   */
+  CompletableFuture<Void> stopRegionServer(ServerName serverName);
+
+  /**
+   * Update the configuration and trigger an online config change on the regionserver.
+   * @param serverName : The server whose config needs to be updated.
+   */
+  CompletableFuture<Void> updateConfiguration(ServerName serverName);
+
+  /**
+   * Update the configuration and trigger an online config change on all the masters and
+   * regionservers.
+   */
+  CompletableFuture<Void> updateConfiguration();
+
+  /**
    * Get a list of {@link RegionLoad} of all regions hosted on a region seerver for a table.
    * @param serverName
    * @param tableName
