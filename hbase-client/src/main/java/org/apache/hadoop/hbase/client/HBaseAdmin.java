@@ -206,6 +206,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
+import java.util.stream.Collectors;
 
 /**
  * HBaseAdmin is no longer a client API. It is marked InterfaceAudience.Private indicating that
@@ -305,6 +306,96 @@ public class HBaseAdmin implements Admin {
       }
     }).getIsProcedureAborted();
     return new AbortProcedureFuture(this, procId, abortProcResponse);
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptors() throws IOException {
+    return listTableDescriptors((Pattern)null, false);
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptors(Pattern pattern) throws IOException {
+    return listTableDescriptors(pattern, false);
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptors(String regex) throws IOException {
+    return listTableDescriptors(Pattern.compile(regex), false);
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptors(Pattern pattern, boolean includeSysTables) throws IOException {
+    return executeCallable(new MasterCallable<List<TableDescriptor>>(getConnection(),
+        getRpcControllerFactory()) {
+      @Override
+      protected List<TableDescriptor> rpcCall() throws Exception {
+        GetTableDescriptorsRequest req =
+            RequestConverter.buildGetTableDescriptorsRequest(pattern, includeSysTables);
+        return ProtobufUtil.toTableDescriptorList(master.getTableDescriptors(getRpcController(),
+            req));
+      }
+    });
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptors(String regex, boolean includeSysTables) throws IOException {
+    return listTableDescriptors(Pattern.compile(regex), includeSysTables);
+  }
+
+  @Override
+  public TableDescriptor listTableDescriptor(TableName tableName) throws TableNotFoundException, IOException {
+    return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
+       operationTimeout, rpcTimeout);
+  }
+
+  @Override
+  public void modifyTable(TableDescriptor td) throws IOException {
+    get(modifyTableAsync(td), syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
+    ModifyTableResponse response = executeCallable(
+      new MasterCallable<ModifyTableResponse>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected ModifyTableResponse rpcCall() throws Exception {
+          setPriority(td.getTableName());
+          ModifyTableRequest request = RequestConverter.buildModifyTableRequest(
+            td.getTableName(), td, ng.getNonceGroup(), ng.newNonce());
+          return master.modifyTable(getRpcController(), request);
+        }
+      });
+    return new ModifyTableFuture(this, td.getTableName(), response);
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptorsByNamespace(byte[] name) throws IOException {
+    return executeCallable(new MasterCallable<List<TableDescriptor>>(getConnection(),
+        getRpcControllerFactory()) {
+      @Override
+      protected List<TableDescriptor> rpcCall() throws Exception {
+        return master.listTableDescriptorsByNamespace(getRpcController(),
+                ListTableDescriptorsByNamespaceRequest.newBuilder()
+                  .setNamespaceName(Bytes.toString(name)).build())
+                .getTableSchemaList()
+                .stream()
+                .map(ProtobufUtil::convertToTableDesc)
+                .collect(Collectors.toList());
+      }
+    });
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptors(List<TableName> tableNames) throws IOException {
+    return executeCallable(new MasterCallable<List<TableDescriptor>>(getConnection(),
+        getRpcControllerFactory()) {
+      @Override
+      protected List<TableDescriptor> rpcCall() throws Exception {
+        GetTableDescriptorsRequest req =
+            RequestConverter.buildGetTableDescriptorsRequest(tableNames);
+          return ProtobufUtil.toTableDescriptorList(master.getTableDescriptors(getRpcController(), req));
+      }
+    });
   }
 
   private static class AbortProcedureFuture extends ProcedureFuture<Boolean> {
@@ -419,11 +510,40 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public HTableDescriptor getTableDescriptor(final TableName tableName) throws IOException {
-    return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
+    return getHTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
        operationTimeout, rpcTimeout);
   }
 
-  static HTableDescriptor getTableDescriptor(final TableName tableName, Connection connection,
+  static TableDescriptor getTableDescriptor(final TableName tableName, Connection connection,
+      RpcRetryingCallerFactory rpcCallerFactory, final RpcControllerFactory rpcControllerFactory,
+      int operationTimeout, int rpcTimeout) throws IOException {
+    if (tableName == null) return null;
+    TableDescriptor td =
+        executeCallable(new MasterCallable<TableDescriptor>(connection, rpcControllerFactory) {
+      @Override
+      protected TableDescriptor rpcCall() throws Exception {
+        GetTableDescriptorsRequest req =
+            RequestConverter.buildGetTableDescriptorsRequest(tableName);
+        GetTableDescriptorsResponse htds = master.getTableDescriptors(getRpcController(), req);
+        if (!htds.getTableSchemaList().isEmpty()) {
+          return ProtobufUtil.convertToTableDesc(htds.getTableSchemaList().get(0));
+        }
+        return null;
+      }
+    }, rpcCallerFactory, operationTimeout, rpcTimeout);
+    if (td != null) {
+      return td;
+    }
+    throw new TableNotFoundException(tableName.getNameAsString());
+  }
+
+  /**
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #getTableDescriptor(TableName,
+   *             Connection, RpcRetryingCallerFactory,RpcControllerFactory,int,int)}
+   */
+  @Deprecated
+  static HTableDescriptor getHTableDescriptor(final TableName tableName, Connection connection,
       RpcRetryingCallerFactory rpcCallerFactory, final RpcControllerFactory rpcControllerFactory,
       int operationTimeout, int rpcTimeout) throws IOException {
     if (tableName == null) return null;
@@ -455,13 +575,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void createTable(HTableDescriptor desc)
+  public void createTable(TableDescriptor desc)
   throws IOException {
     createTable(desc, null);
   }
 
   @Override
-  public void createTable(HTableDescriptor desc, byte [] startKey,
+  public void createTable(TableDescriptor desc, byte [] startKey,
       byte [] endKey, int numRegions)
   throws IOException {
     if(numRegions < 3) {
@@ -481,13 +601,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void createTable(final HTableDescriptor desc, byte [][] splitKeys)
+  public void createTable(final TableDescriptor desc, byte [][] splitKeys)
       throws IOException {
     get(createTableAsync(desc, splitKeys), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
-  public Future<Void> createTableAsync(final HTableDescriptor desc, final byte[][] splitKeys)
+  public Future<Void> createTableAsync(final TableDescriptor desc, final byte[][] splitKeys)
       throws IOException {
     if (desc.getTableName() == null) {
       throw new IllegalArgumentException("TableName cannot be null");
@@ -524,19 +644,19 @@ public class HBaseAdmin implements Admin {
   }
 
   private static class CreateTableFuture extends TableFuture<Void> {
-    private final HTableDescriptor desc;
+    private final TableDescriptor desc;
     private final byte[][] splitKeys;
 
-    public CreateTableFuture(final HBaseAdmin admin, final HTableDescriptor desc,
+    public CreateTableFuture(final HBaseAdmin admin, final TableDescriptor desc,
         final byte[][] splitKeys, final CreateTableResponse response) {
       super(admin, desc.getTableName(),
               (response != null && response.hasProcId()) ? response.getProcId() : null);
       this.splitKeys = splitKeys;
-      this.desc = new ImmutableHTableDescriptor(desc);
+      this.desc = desc;
     }
 
     @Override
-    protected HTableDescriptor getTableDescriptor() {
+    protected TableDescriptor getTableDescriptor() {
       return desc;
     }
 
@@ -3546,7 +3666,7 @@ public class HBaseAdmin implements Admin {
     /**
      * @return the table descriptor
      */
-    protected HTableDescriptor getTableDescriptor() throws IOException {
+    protected TableDescriptor getTableDescriptor() throws IOException {
       return getAdmin().getTableDescriptorByTableName(getTableName());
     }
 
@@ -3642,7 +3762,7 @@ public class HBaseAdmin implements Admin {
 
     protected void waitForAllRegionsOnline(final long deadlineTs, final byte[][] splitKeys)
         throws IOException, TimeoutException {
-      final HTableDescriptor desc = getTableDescriptor();
+      final TableDescriptor desc = getTableDescriptor();
       final AtomicInteger actualRegCount = new AtomicInteger(0);
       final MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
         @Override

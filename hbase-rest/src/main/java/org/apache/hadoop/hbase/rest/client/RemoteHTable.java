@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -506,6 +507,11 @@ public class RemoteHTable implements Table {
 
   public void flushCommits() throws IOException {
     // no-op
+  }
+
+  @Override
+  public TableDescriptor getDescriptor() throws IOException {
+    return getTableDescriptor();
   }
 
   class Scanner implements ResultScanner {

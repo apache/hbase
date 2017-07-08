@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
@@ -424,13 +425,12 @@ public class TestRegionPlacement {
         // All regions are supposed to have favored nodes,
         // except for hbase:meta and ROOT
         if (favoredServerList == null) {
-          HTableDescriptor desc = region.getTableDesc();
+          TableDescriptor desc = region.getTableDescriptor();
           // Verify they are ROOT and hbase:meta regions since no favored nodes
           assertNull(favoredSocketAddress);
           assertTrue("User region " +
-              region.getTableDesc().getTableName() +
-              " should have favored nodes",
-              (desc.isRootRegion() || desc.isMetaRegion()));
+              region.getTableDescriptor().getTableName() +
+              " should have favored nodes", desc.isMetaRegion());
         } else {
           // For user region, the favored nodes in the region server should be
           // identical to favored nodes in the assignmentPlan

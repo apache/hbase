@@ -82,7 +82,7 @@ public class RegionServicesForStores {
   }
 
   public int getNumStores() {
-    return region.getTableDesc().getColumnFamilyCount();
+    return region.getTableDescriptor().getColumnFamilyCount();
   }
 
   // methods for tests

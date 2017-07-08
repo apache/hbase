@@ -208,6 +208,14 @@ public interface TableDescriptor {
   byte[] getValue(byte[] key);
 
   /**
+   * Getter for accessing the metadata associated with the key.
+   *
+   * @param key The key.
+   * @return Null if no mapping for the key
+   */
+  String getValue(String key);
+
+  /**
    * @return Getter for fetching an unmodifiable map.
    */
   Map<Bytes, Bytes> getValues();

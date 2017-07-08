@@ -30,7 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 
@@ -65,7 +65,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public String getTableName() {
-    HTableDescriptor tableDesc = this.region.getTableDesc();
+    TableDescriptor tableDesc = this.region.getTableDescriptor();
     if (tableDesc == null) {
       return UNKNOWN;
     }
@@ -74,7 +74,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public String getNamespace() {
-    HTableDescriptor tableDesc = this.region.getTableDesc();
+    TableDescriptor tableDesc = this.region.getTableDescriptor();
     if (tableDesc == null) {
       return UNKNOWN;
     }

@@ -1305,17 +1305,17 @@ public final class RequestConverter {
    * Creates a protocol buffer ModifyTableRequest
    *
    * @param tableName
-   * @param hTableDesc
+   * @param tableDesc
    * @return a ModifyTableRequest
    */
   public static ModifyTableRequest buildModifyTableRequest(
       final TableName tableName,
-      final HTableDescriptor hTableDesc,
+      final TableDescriptor tableDesc,
       final long nonceGroup,
       final long nonce) {
     ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
-    builder.setTableSchema(ProtobufUtil.convertToTableSchema(hTableDesc));
+    builder.setTableSchema(ProtobufUtil.convertToTableSchema(tableDesc));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();

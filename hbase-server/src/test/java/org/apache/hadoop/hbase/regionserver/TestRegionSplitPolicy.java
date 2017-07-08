@@ -61,7 +61,7 @@ public class TestRegionSplitPolicy {
     HRegionInfo hri = new HRegionInfo(TABLENAME);
     htd = new HTableDescriptor(TABLENAME);
     mockRegion = Mockito.mock(HRegion.class);
-    Mockito.doReturn(htd).when(mockRegion).getTableDesc();
+    Mockito.doReturn(htd).when(mockRegion).getTableDescriptor();
     Mockito.doReturn(hri).when(mockRegion).getRegionInfo();
     stores = new ArrayList<>();
     Mockito.doReturn(stores).when(mockRegion).getStores();
@@ -240,7 +240,7 @@ public class TestRegionSplitPolicy {
     myHtd.setValue(KeyPrefixRegionSplitPolicy.PREFIX_LENGTH_KEY, String.valueOf(2));
 
     HRegion myMockRegion = Mockito.mock(HRegion.class);
-    Mockito.doReturn(myHtd).when(myMockRegion).getTableDesc();
+    Mockito.doReturn(myHtd).when(myMockRegion).getTableDescriptor();
     Mockito.doReturn(stores).when(myMockRegion).getStores();
 
     HStore mockStore = Mockito.mock(HStore.class);
@@ -349,7 +349,7 @@ public class TestRegionSplitPolicy {
     myHtd.setValue(DelimitedKeyPrefixRegionSplitPolicy.DELIMITER_KEY, ",");
 
     HRegion myMockRegion = Mockito.mock(HRegion.class);
-    Mockito.doReturn(myHtd).when(myMockRegion).getTableDesc();
+    Mockito.doReturn(myHtd).when(myMockRegion).getTableDescriptor();
     Mockito.doReturn(stores).when(myMockRegion).getStores();
 
     HStore mockStore = Mockito.mock(HStore.class);

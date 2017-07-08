@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -182,7 +183,7 @@ public final class EncryptionUtil {
    * @throws IOException if an encryption key for the column cannot be unwrapped
    */
   public static Encryption.Context createEncryptionContext(Configuration conf,
-    HColumnDescriptor family) throws IOException {
+    ColumnFamilyDescriptor family) throws IOException {
     Encryption.Context cryptoContext = Encryption.Context.NONE;
     String cipherName = family.getEncryptionType();
     if (cipherName != null) {

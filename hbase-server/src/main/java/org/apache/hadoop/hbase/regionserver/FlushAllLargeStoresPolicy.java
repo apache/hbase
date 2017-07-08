@@ -38,7 +38,7 @@ public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy{
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
-    int familyNumber = region.getTableDesc().getFamilies().size();
+    int familyNumber = region.getTableDescriptor().getColumnFamilyCount();
     if (familyNumber <= 1) {
       // No need to parse and set flush size lower bound if only one family
       // Family number might also be zero in some of our unit test case
@@ -50,7 +50,7 @@ public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy{
   @Override
   public Collection<Store> selectStoresToFlush() {
     // no need to select stores if only one family
-    if (region.getTableDesc().getFamilies().size() == 1) {
+    if (region.getTableDescriptor().getColumnFamilyCount() == 1) {
       return region.stores.values();
     }
     // start selection

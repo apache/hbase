@@ -134,6 +134,7 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -954,7 +955,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
     } else if (env instanceof RegionCoprocessorEnvironment) {
       // if running at region
       regionEnv = (RegionCoprocessorEnvironment) env;
-      conf.addStringMap(regionEnv.getRegion().getTableDesc().getConfiguration());
+      conf.addStringMap(regionEnv.getRegion().getTableDescriptor().getConfiguration());
       zk = regionEnv.getRegionServerServices().getZooKeeper();
       compatibleEarlyTermination = conf.getBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT,
         AccessControlConstants.DEFAULT_ATTRIBUTE_EARLY_OUT);
@@ -1551,7 +1552,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
     Region region = getRegion(env);
     TableName table = getTableName(region);
     Map<ByteRange, Integer> cfVsMaxVersions = Maps.newHashMap();
-    for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
+    for (ColumnFamilyDescriptor hcd : region.getTableDescriptor().getColumnFamilies()) {
       cfVsMaxVersions.put(new SimpleMutableByteRange(hcd.getName()), hcd.getMaxVersions());
     }
     if (!authResult.isAllowed()) {
@@ -2155,7 +2156,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
     User user = getActiveUser(ctx);
     for(Pair<byte[],String> el : familyPaths) {
       requirePermission(user, "preBulkLoadHFile",
-          ctx.getEnvironment().getRegion().getTableDesc().getTableName(),
+          ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(),
           el.getFirst(),
           null,
           Action.CREATE);
@@ -2173,7 +2174,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
       PrepareBulkLoadRequest request) throws IOException {
     requireAccess(getActiveUser(ctx), "prePrepareBulkLoad",
-        ctx.getEnvironment().getRegion().getTableDesc().getTableName(), Action.CREATE);
+        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.CREATE);
   }
 
   /**
@@ -2187,7 +2188,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
       CleanupBulkLoadRequest request) throws IOException {
     requireAccess(getActiveUser(ctx), "preCleanupBulkLoad",
-        ctx.getEnvironment().getRegion().getTableDesc().getTableName(), Action.CREATE);
+        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.CREATE);
   }
 
   /* ---- EndpointObserver implementation ---- */
@@ -2392,7 +2393,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
     AccessControlProtos.CheckPermissionsResponse response = null;
     try {
       User user = RpcServer.getRequestUser();
-      TableName tableName = regionEnv.getRegion().getTableDesc().getTableName();
+      TableName tableName = regionEnv.getRegion().getTableDescriptor().getTableName();
       for (Permission permission : permissions) {
         if (permission instanceof TablePermission) {
           // Check table permissions
@@ -2586,7 +2587,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   @Override
   public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, Region regionA,
       Region regionB) throws IOException {
-    requirePermission(getActiveUser(ctx), "mergeRegions", regionA.getTableDesc().getTableName(),
+    requirePermission(getActiveUser(ctx), "mergeRegions", regionA.getTableDescriptor().getTableName(),
         null, null, Action.ADMIN);
   }
 

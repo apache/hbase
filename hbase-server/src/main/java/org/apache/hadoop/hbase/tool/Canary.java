@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -79,6 +80,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.tool.Canary.RegionTask.TaskType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -117,14 +119,14 @@ public final class Canary implements Tool {
     public long getReadFailureCount();
     public long incReadFailureCount();
     public void publishReadFailure(ServerName serverName, HRegionInfo region, Exception e);
-    public void publishReadFailure(ServerName serverName, HRegionInfo region, HColumnDescriptor column, Exception e);
+    public void publishReadFailure(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, Exception e);
     public void updateReadFailedHostList(HRegionInfo region, String serverName);
     public Map<String,String> getReadFailures();
-    public void publishReadTiming(ServerName serverName, HRegionInfo region, HColumnDescriptor column, long msTime);
+    public void publishReadTiming(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, long msTime);
     public long getWriteFailureCount();
     public void publishWriteFailure(ServerName serverName, HRegionInfo region, Exception e);
-    public void publishWriteFailure(ServerName serverName, HRegionInfo region, HColumnDescriptor column, Exception e);
-    public void publishWriteTiming(ServerName serverName, HRegionInfo region, HColumnDescriptor column, long msTime);
+    public void publishWriteFailure(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, Exception e);
+    public void publishWriteTiming(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, long msTime);
     public void updateWriteFailedHostList(HRegionInfo region, String serverName);
     public Map<String,String> getWriteFailures();
   }
@@ -161,7 +163,7 @@ public final class Canary implements Tool {
     }
 
     @Override
-    public void publishReadFailure(ServerName serverName, HRegionInfo region, HColumnDescriptor column, Exception e) {
+    public void publishReadFailure(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, Exception e) {
       readFailureCount.incrementAndGet();
       LOG.error(String.format("read from region %s on regionserver %s column family %s failed",
                 region.getRegionNameAsString(), serverName, column.getNameAsString()), e);
@@ -173,7 +175,7 @@ public final class Canary implements Tool {
     }
 
     @Override
-    public void publishReadTiming(ServerName serverName, HRegionInfo region, HColumnDescriptor column, long msTime) {
+    public void publishReadTiming(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, long msTime) {
       LOG.info(String.format("read from region %s on regionserver %s column family %s in %dms",
         region.getRegionNameAsString(), serverName, column.getNameAsString(), msTime));
     }
@@ -200,14 +202,14 @@ public final class Canary implements Tool {
     }
 
     @Override
-    public void publishWriteFailure(ServerName serverName, HRegionInfo region, HColumnDescriptor column, Exception e) {
+    public void publishWriteFailure(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, Exception e) {
       writeFailureCount.incrementAndGet();
       LOG.error(String.format("write to region %s on regionserver %s column family %s failed",
         region.getRegionNameAsString(), serverName, column.getNameAsString()), e);
     }
 
     @Override
-    public void publishWriteTiming(ServerName serverName, HRegionInfo region, HColumnDescriptor column, long msTime) {
+    public void publishWriteTiming(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, long msTime) {
       LOG.info(String.format("write to region %s on regionserver %s column family %s in %dms",
         region.getRegionNameAsString(), serverName, column.getNameAsString(), msTime));
     }
@@ -348,14 +350,14 @@ public final class Canary implements Tool {
 
     public Void read() {
       Table table = null;
-      HTableDescriptor tableDesc = null;
+      TableDescriptor tableDesc = null;
       try {
         if (LOG.isDebugEnabled()) {
           LOG.debug(String.format("reading table descriptor for table %s",
             region.getTable()));
         }
         table = connection.getTable(region.getTable());
-        tableDesc = table.getTableDescriptor();
+        tableDesc = table.getDescriptor();
       } catch (IOException e) {
         LOG.debug("sniffRegion failed", e);
         sink.publishReadFailure(serverName, region, e);
@@ -374,7 +376,7 @@ public final class Canary implements Tool {
       Scan scan = null;
       ResultScanner rs = null;
       StopWatch stopWatch = new StopWatch();
-      for (HColumnDescriptor column : tableDesc.getColumnFamilies()) {
+      for (ColumnFamilyDescriptor column : tableDesc.getColumnFamilies()) {
         stopWatch.reset();
         startKey = region.getStartKey();
         // Can't do a get on empty start row so do a Scan of first element if any instead.
@@ -439,17 +441,17 @@ public final class Canary implements Tool {
      */
     private Void write() {
       Table table = null;
-      HTableDescriptor tableDesc = null;
+      TableDescriptor tableDesc = null;
       try {
         table = connection.getTable(region.getTable());
-        tableDesc = table.getTableDescriptor();
+        tableDesc = table.getDescriptor();
         byte[] rowToCheck = region.getStartKey();
         if (rowToCheck.length == 0) {
           rowToCheck = new byte[]{0x0};
         }
         int writeValueSize =
             connection.getConfiguration().getInt(HConstants.HBASE_CANARY_WRITE_VALUE_SIZE_KEY, 10);
-        for (HColumnDescriptor column : tableDesc.getColumnFamilies()) {
+        for (ColumnFamilyDescriptor column : tableDesc.getColumnFamilies()) {
           Put put = new Put(rowToCheck);
           byte[] value = new byte[writeValueSize];
           Bytes.random(value);

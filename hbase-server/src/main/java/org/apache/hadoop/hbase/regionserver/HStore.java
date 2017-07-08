@@ -98,6 +98,7 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
@@ -129,7 +130,7 @@ public class HStore implements Store {
   protected final MemStore memstore;
   // This stores directory in the filesystem.
   protected final HRegion region;
-  private final HColumnDescriptor family;
+  private final ColumnFamilyDescriptor family;
   private final HRegionFileSystem fs;
   protected Configuration conf;
   protected CacheConfig cacheConf;
@@ -213,7 +214,7 @@ public class HStore implements Store {
    * failed.  Can be null.
    * @throws IOException
    */
-  protected HStore(final HRegion region, final HColumnDescriptor family,
+  protected HStore(final HRegion region, final ColumnFamilyDescriptor family,
       final Configuration confParam) throws IOException {
 
     this.fs = region.getRegionFileSystem();
@@ -227,7 +228,7 @@ public class HStore implements Store {
     // add global config first, then table and cf overrides, then cf metadata.
     this.conf = new CompoundConfiguration()
       .add(confParam)
-      .addStringMap(region.getTableDesc().getConfiguration())
+      .addStringMap(region.getTableDescriptor().getConfiguration())
       .addStringMap(family.getConfiguration())
       .addBytesMap(family.getValues());
     this.blocksize = family.getBlocksize();
@@ -320,7 +321,7 @@ public class HStore implements Store {
    * Creates the cache config.
    * @param family The current column family.
    */
-  protected void createCacheConf(final HColumnDescriptor family) {
+  protected void createCacheConf(final ColumnFamilyDescriptor family) {
     this.cacheConf = new CacheConfig(conf, family);
   }
 
@@ -341,7 +342,7 @@ public class HStore implements Store {
    * @param family
    * @return TTL in seconds of the specified family
    */
-  public static long determineTTLFromFamily(final HColumnDescriptor family) {
+  public static long determineTTLFromFamily(final ColumnFamilyDescriptor family) {
     // HCD.getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     long ttl = family.getTimeToLive();
     if (ttl == HConstants.FOREVER) {
@@ -455,7 +456,7 @@ public class HStore implements Store {
   }
 
   @Override
-  public HColumnDescriptor getFamily() {
+  public ColumnFamilyDescriptor getColumnFamilyDescriptor() {
     return this.family;
   }
 
@@ -1418,7 +1419,7 @@ public class HStore implements Store {
     }
     HRegionInfo info = this.region.getRegionInfo();
     CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
-        family.getName(), inputPaths, outputPaths, fs.getStoreDir(getFamily().getNameAsString()));
+        family.getName(), inputPaths, outputPaths, fs.getStoreDir(getColumnFamilyDescriptor().getNameAsString()));
     // Fix reaching into Region to get the maxWaitForSeqId.
     // Does this method belong in Region altogether given it is making so many references up there?
     // Could be Region#writeCompactionMarker(compactionDescriptor);
@@ -1736,9 +1737,9 @@ public class HStore implements Store {
 
   private void removeUnneededFiles() throws IOException {
     if (!conf.getBoolean("hbase.store.delete.expired.storefile", true)) return;
-    if (getFamily().getMinVersions() > 0) {
+    if (getColumnFamilyDescriptor().getMinVersions() > 0) {
       LOG.debug("Skipping expired store file removal due to min version being " +
-          getFamily().getMinVersions());
+          getColumnFamilyDescriptor().getMinVersions());
       return;
     }
     this.lock.readLock().lock();
@@ -2546,7 +2547,7 @@ public class HStore implements Store {
         }
         // Only if this is successful it has to be removed
         try {
-          this.fs.removeStoreFiles(this.getFamily().getNameAsString(), filesToRemove);
+          this.fs.removeStoreFiles(this.getColumnFamilyDescriptor().getNameAsString(), filesToRemove);
         } catch (FailedArchiveException fae) {
           // Even if archiving some files failed, we still need to clear out any of the
           // files which were successfully archived.  Otherwise we will receive a

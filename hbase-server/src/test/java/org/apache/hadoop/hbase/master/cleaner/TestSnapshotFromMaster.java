@@ -69,6 +69,9 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 
 /**
  * Test the master-related aspects of a snapshot
@@ -280,9 +283,11 @@ public class TestSnapshotFromMaster {
     // recreate test table with disabled compactions; otherwise compaction may happen before
     // snapshot, the call after snapshot will be a no-op and checks will fail
     UTIL.deleteTable(TABLE_NAME);
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
-    htd.setCompactionEnabled(false);
-    UTIL.createTable(htd, new byte[][] { TEST_FAM }, null);
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAM).build())
+            .setCompactionEnabled(false)
+            .build();
+    UTIL.getAdmin().createTable(td);
 
     // load the table
     for (int i = 0; i < blockingStoreFiles / 2; i ++) {
@@ -292,7 +297,6 @@ public class TestSnapshotFromMaster {
 
     // disable the table so we can take a snapshot
     admin.disableTable(TABLE_NAME);
-    htd.setCompactionEnabled(true);
 
     // take a snapshot of the table
     String snapshotName = "snapshot";
@@ -305,8 +309,11 @@ public class TestSnapshotFromMaster {
     // ensure we only have one snapshot
     SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshotNameBytes, TABLE_NAME);
 
+    td = TableDescriptorBuilder.newBuilder(td)
+            .setCompactionEnabled(true)
+            .build();
     // enable compactions now
-    admin.modifyTable(TABLE_NAME, htd);
+    admin.modifyTable(td);
 
     // renable the table so we can compact the regions
     admin.enableTable(TABLE_NAME);

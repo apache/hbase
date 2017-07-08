@@ -196,7 +196,7 @@ public class TestStripeCompactor {
     HColumnDescriptor col = new HColumnDescriptor(NAME_OF_THINGS);
     ScanInfo si = new ScanInfo(conf, col, Long.MAX_VALUE, 0, CellComparator.COMPARATOR);
     Store store = mock(Store.class);
-    when(store.getFamily()).thenReturn(col);
+    when(store.getColumnFamilyDescriptor()).thenReturn(col);
     when(store.getScanInfo()).thenReturn(si);
     when(store.areWritesEnabled()).thenReturn(true);
     when(store.getFileSystem()).thenReturn(mock(FileSystem.class));

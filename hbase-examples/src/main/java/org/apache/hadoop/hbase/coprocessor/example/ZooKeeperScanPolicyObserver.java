@@ -182,7 +182,7 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
     }
     long ttl = Math.max(EnvironmentEdgeManager.currentTime() -
         Bytes.toLong(data), oldSI.getTtl());
-    return new ScanInfo(oldSI.getConfiguration(), store.getFamily(), ttl,
+    return new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(), ttl,
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
   }
 

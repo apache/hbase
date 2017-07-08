@@ -50,6 +50,7 @@ public final class ThroughputControlUtil {
       }
     }
     return store.getRegionInfo().getRegionNameAsString() + NAME_DELIMITER
-        + store.getFamily().getNameAsString() + NAME_DELIMITER + opName + NAME_DELIMITER + counter;
+        + store.getColumnFamilyDescriptor().getNameAsString()
+        + NAME_DELIMITER + opName + NAME_DELIMITER + counter;
   }
 }

@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -51,6 +53,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -452,7 +456,7 @@ public class TestRegionServerMetrics {
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       assertCounter("mobScanCellsCount", numHfiles);
 
-      region.getTableDesc().getFamily(cf).setMobThreshold(100);
+      setMobThreshold(region, cf, 100);
       // metrics are reset by the region initialization
       ((HRegion) region).initialize();
       region.compact(true);
@@ -472,7 +476,7 @@ public class TestRegionServerMetrics {
         table.put(p);
         admin.flush(tableName);
       }
-      region.getTableDesc().getFamily(cf).setMobThreshold(0);
+      setMobThreshold(region, cf, 0);
 
       // closing the region forces the compaction.discharger to archive the compacted hfiles
       ((HRegion) region).close();
@@ -488,6 +492,20 @@ public class TestRegionServerMetrics {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
     }
+  }
+
+  private static Region setMobThreshold(Region region, byte[] cfName, long modThreshold) {
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder
+            .newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
+            .setMobThreshold(modThreshold)
+            .build();
+    TableDescriptor td = TableDescriptorBuilder
+            .newBuilder(region.getTableDescriptor())
+            .removeColumnFamily(cfName)
+            .addColumnFamily(cfd)
+            .build();
+    ((HRegion)region).setTableDescriptor(td);
+    return region;
   }
 
   @Test

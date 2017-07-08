@@ -62,7 +62,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       Map<TableName, MetricsTableValues> localMetricsTableMap = new HashMap<>();
 
       for (Region r : regionServer.getOnlineRegionsLocalContext()) {
-        TableName tbl= r.getTableDesc().getTableName();
+        TableName tbl= r.getTableDescriptor().getTableName();
         MetricsTableValues metricsTable = localMetricsTableMap.get(tbl);
         if (metricsTable == null) {
           metricsTable = new MetricsTableValues();

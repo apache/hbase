@@ -472,7 +472,7 @@ public class StoreFileScanner implements KeyValueScanner {
   @Override
   public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
     // if the file has no entries, no need to validate or create a scanner.
-    byte[] cf = store.getFamily().getName();
+    byte[] cf = store.getColumnFamilyDescriptor().getName();
     TimeRange timeRange = scan.getColumnFamilyTimeRange().get(cf);
     if (timeRange == null) {
       timeRange = scan.getTimeRange();

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,13 +57,13 @@ public class ScanInfo {
 
   /**
    * @param conf
-   * @param family {@link HColumnDescriptor} describing the column family
+   * @param family {@link ColumnFamilyDescriptor} describing the column family
    * @param ttl Store's TTL (in ms)
    * @param timeToPurgeDeletes duration in ms after which a delete marker can be purged during a
    *          major compaction.
    * @param comparator The store's comparator
    */
-  public ScanInfo(final Configuration conf, final HColumnDescriptor family, final long ttl,
+  public ScanInfo(final Configuration conf, final ColumnFamilyDescriptor family, final long ttl,
       final long timeToPurgeDeletes, final CellComparator comparator) {
     this(conf, family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl,
         family.getKeepDeletedCells(), family.getBlocksize(), timeToPurgeDeletes, comparator);

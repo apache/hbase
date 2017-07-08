@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -228,7 +228,7 @@ public class TestRegionObserverScannerOpenHook {
     @SuppressWarnings("deprecation")
     public CompactionCompletionNotifyingRegion(Path tableDir, WAL log,
         FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
+        TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
 

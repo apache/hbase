@@ -25,11 +25,11 @@ import java.util.NavigableSet;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -361,7 +361,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    */
   MemstoreSize getSizeOfSnapshot();
 
-  HColumnDescriptor getFamily();
+  ColumnFamilyDescriptor getColumnFamilyDescriptor();
 
   /**
    * @return The maximum sequence id in all store files.

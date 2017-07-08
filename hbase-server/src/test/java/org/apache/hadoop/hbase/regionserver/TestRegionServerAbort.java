@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -191,7 +192,7 @@ public class TestRegionServerAbort {
    */
   public static class ErrorThrowingHRegion extends HRegion {
     public ErrorThrowingHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-                                HRegionInfo regionInfo, HTableDescriptor htd,
+                                HRegionInfo regionInfo, TableDescriptor htd,
                                 RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }

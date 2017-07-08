@@ -45,11 +45,15 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -171,7 +175,7 @@ public class TestMobStoreCompaction {
     assertEquals("Before compaction: number of mob cells", compactionThreshold,
         countMobCellsInMetadata());
     // Change the threshold larger than the data size
-    region.getTableDesc().getFamily(COLUMN_FAMILY).setMobThreshold(500);
+    setMobThreshold(region, COLUMN_FAMILY, 500);
     region.initialize();
     region.compactStores();
 
@@ -180,6 +184,20 @@ public class TestMobStoreCompaction {
     assertEquals("After compaction: referenced mob file count", 0, countReferencedMobFiles());
     assertEquals("After compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("After compaction: mob rows", 0, countMobRows());
+  }
+
+  private static HRegion setMobThreshold(HRegion region, byte[] cfName, long modThreshold) {
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder
+            .newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
+            .setMobThreshold(modThreshold)
+            .build();
+    TableDescriptor td = TableDescriptorBuilder
+            .newBuilder(region.getTableDescriptor())
+            .removeColumnFamily(cfName)
+            .addColumnFamily(cfd)
+            .build();
+    region.setTableDescriptor(td);
+    return region;
   }
 
   /**

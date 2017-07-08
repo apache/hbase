@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -67,7 +68,7 @@ public class ConstraintProcessor implements RegionObserver {
           "Constraints only act on regions - started in an environment that was not a region");
     }
     RegionCoprocessorEnvironment env = (RegionCoprocessorEnvironment) environment;
-    HTableDescriptor desc = env.getRegion().getTableDesc();
+    TableDescriptor desc = env.getRegion().getTableDescriptor();
     // load all the constraints from the HTD
     try {
       this.constraints = Constraints.getConstraints(desc, classloader);

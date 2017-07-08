@@ -629,7 +629,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
       for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
-        if(r.getTableDesc().getTableName().equals(tableName)) {
+        if(r.getTableDescriptor().getTableName().equals(tableName)) {
           r.flush(true);
         }
       }
@@ -657,7 +657,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
       for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
-        if(r.getTableDesc().getTableName().equals(tableName)) {
+        if(r.getTableDescriptor().getTableName().equals(tableName)) {
           r.compact(major);
         }
       }
@@ -703,7 +703,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       for (Region region : hrs.getOnlineRegionsLocalContext()) {
-        if (region.getTableDesc().getTableName().equals(tableName)) {
+        if (region.getTableDescriptor().getTableName().equals(tableName)) {
           ret.add((HRegion)region);
         }
       }
@@ -801,7 +801,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       for (Region region : hrs.getOnlineRegions(tableName)) {
-        if (region.getTableDesc().getTableName().equals(tableName)) {
+        if (region.getTableDescriptor().getTableName().equals(tableName)) {
           ret.add((HRegion)region);
         }
       }

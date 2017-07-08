@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -647,9 +648,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    */
   private void validateFamiliesInHFiles(Table table, Deque<LoadQueueItem> queue, boolean silence)
       throws IOException {
-    Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
-    List<String> familyNames = new ArrayList<>(families.size());
-    for (HColumnDescriptor family : families) {
+    ColumnFamilyDescriptor[] families = table.getDescriptor().getColumnFamilies();
+    List<String> familyNames = new ArrayList<>(families.length);
+    for (ColumnFamilyDescriptor family : families) {
       familyNames.add(family.getNameAsString());
     }
     Iterator<LoadQueueItem> queueIter = queue.iterator();

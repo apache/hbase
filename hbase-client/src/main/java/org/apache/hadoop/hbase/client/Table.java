@@ -65,8 +65,17 @@ public interface Table extends Closeable {
   /**
    * Gets the {@link org.apache.hadoop.hbase.HTableDescriptor table descriptor} for this table.
    * @throws java.io.IOException if a remote or network exception occurs.
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #getDescriptor()}
    */
+  @Deprecated
   HTableDescriptor getTableDescriptor() throws IOException;
+
+  /**
+   * Gets the {@link org.apache.hadoop.hbase.client.TableDescriptor table descriptor} for this table.
+   * @throws java.io.IOException if a remote or network exception occurs.
+   */
+  TableDescriptor getDescriptor() throws IOException;
 
   /**
    * Test for the existence of columns in the table, as specified by the Get.
@@ -604,7 +613,7 @@ public interface Table extends Closeable {
   /**
    * Get timeout (millisecond) of each rpc request in this Table instance.
    *
-   * @returns Currently configured read timeout
+   * @return Currently configured read timeout
    * @deprecated Use getReadRpcTimeout or getWriteRpcTimeout instead
    */
   @Deprecated

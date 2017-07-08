@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -651,7 +652,7 @@ public final class MobUtils {
    * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
-      HColumnDescriptor family, Path path, long maxKeyCount,
+      ColumnFamilyDescriptor family, Path path, long maxKeyCount,
       Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext,
       ChecksumType checksumType, int bytesPerChecksum, int blocksize, BloomType bloomType,
       boolean isCompaction)

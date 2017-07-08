@@ -93,9 +93,9 @@ public abstract class Compactor<T extends CellSink> {
     this.store = store;
     this.compactionKVMax =
       this.conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
-    this.compactionCompression = (this.store.getFamily() == null) ?
-        Compression.Algorithm.NONE : this.store.getFamily().getCompactionCompressionType();
-    this.keepSeqIdPeriod = Math.max(this.conf.getInt(HConstants.KEEP_SEQID_PERIOD, 
+    this.compactionCompression = (this.store.getColumnFamilyDescriptor() == null) ?
+        Compression.Algorithm.NONE : this.store.getColumnFamilyDescriptor().getCompactionCompressionType();
+    this.keepSeqIdPeriod = Math.max(this.conf.getInt(HConstants.KEEP_SEQID_PERIOD,
       HConstants.MIN_KEEP_SEQID_PERIOD), HConstants.MIN_KEEP_SEQID_PERIOD);
     this.dropCacheMajor = conf.getBoolean(MAJOR_COMPACTION_DROP_CACHE, true);
     this.dropCacheMinor = conf.getBoolean(MINOR_COMPACTION_DROP_CACHE, true);
@@ -397,7 +397,7 @@ public abstract class Compactor<T extends CellSink> {
 
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner)? (KeyValueScanner)scanner : null;
-    long shippedCallSizeLimit = (long) numofFilesToCompact * this.store.getFamily().getBlocksize();
+    long shippedCallSizeLimit = (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
     try {
       do {
         hasMore = scanner.next(cells, scannerContext);
@@ -499,7 +499,7 @@ public abstract class Compactor<T extends CellSink> {
   protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
       ScanType scanType, long smallestReadPoint, long earliestPutTs) throws IOException {
     Scan scan = new Scan();
-    scan.setMaxVersions(store.getFamily().getMaxVersions());
+    scan.setMaxVersions(store.getColumnFamilyDescriptor().getMaxVersions());
     return new StoreScanner(store, store.getScanInfo(), scan, scanners,
         scanType, smallestReadPoint, earliestPutTs);
   }
@@ -517,7 +517,7 @@ public abstract class Compactor<T extends CellSink> {
      long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
      byte[] dropDeletesToRow) throws IOException {
     Scan scan = new Scan();
-    scan.setMaxVersions(store.getFamily().getMaxVersions());
+    scan.setMaxVersions(store.getColumnFamilyDescriptor().getMaxVersions());
     return new StoreScanner(store, store.getScanInfo(), scan, scanners, smallestReadPoint,
         earliestPutTs, dropDeletesFromRow, dropDeletesToRow);
   }

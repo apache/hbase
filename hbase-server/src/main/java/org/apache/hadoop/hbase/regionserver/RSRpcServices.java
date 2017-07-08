@@ -1548,7 +1548,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (QuotaUtil.isQuotaEnabled(getConfiguration()) &&
           !Superusers.isSuperUser(RpcServer.getRequestUser()) &&
           this.regionServer.getRegionServerSpaceQuotaManager().areCompactionsDisabled(
-              region.getTableDesc().getTableName())) {
+              region.getTableDescriptor().getTableName())) {
         throw new DoNotRetryIOException("Compactions on this region are "
             + "disabled due to a space quota violation.");
       }
@@ -1784,7 +1784,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       requestCount.increment();
       Set<byte[]> columnFamilies;
       if (request.getFamilyCount() == 0) {
-        columnFamilies = region.getTableDesc().getFamiliesKeys();
+        columnFamilies = region.getTableDescriptor().getColumnFamilyNames();
       } else {
         columnFamilies = new TreeSet<>(Bytes.BYTES_RAWCOMPARATOR);
         for (ByteString cf: request.getFamilyList()) {
@@ -2890,7 +2890,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     if (!scan.hasFamilies()) {
       // Adding all families to scanner
-      for (byte[] family : region.getTableDesc().getFamiliesKeys()) {
+      for (byte[] family : region.getTableDescriptor().getColumnFamilyNames()) {
         scan.addFamily(family);
       }
     }

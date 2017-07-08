@@ -307,7 +307,7 @@ public class WALPlayer extends Configured implements Tool {
       try (Connection conn = ConnectionFactory.createConnection(conf);
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
-        HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+        HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
       }
       TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
           com.google.common.base.Preconditions.class);

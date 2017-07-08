@@ -260,7 +260,7 @@ public class TestMetaCache {
                                   HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {
       try {
         return TABLE_NAME.equals(
-            rpcServices.getRegion(regionSpec).getTableDesc().getTableName());
+            rpcServices.getRegion(regionSpec).getTableDescriptor().getTableName());
       } catch (IOException ioe) {
         throw new ServiceException(ioe);
       }

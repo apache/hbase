@@ -230,7 +230,7 @@ public class Import extends Configured implements Tool {
       int reduceNum = context.getNumReduceTasks();
       Configuration conf = context.getConfiguration();
       TableName tableName = TableName.valueOf(context.getConfiguration().get(TABLE_NAME));
-      try (Connection conn = ConnectionFactory.createConnection(conf); 
+      try (Connection conn = ConnectionFactory.createConnection(conf);
           RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
         byte[][] startKeys = regionLocator.getStartKeys();
         if (startKeys.length != reduceNum) {
@@ -622,10 +622,10 @@ public class Import extends Configured implements Tool {
 
     if (hfileOutPath != null && conf.getBoolean(HAS_LARGE_RESULT, false)) {
       LOG.info("Use Large Result!!");
-      try (Connection conn = ConnectionFactory.createConnection(conf); 
+      try (Connection conn = ConnectionFactory.createConnection(conf);
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
-        HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+        HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
         job.setMapperClass(KeyValueSortImporter.class);
         job.setReducerClass(KeyValueReducer.class);
         Path outputDir = new Path(hfileOutPath);
@@ -655,7 +655,7 @@ public class Import extends Configured implements Tool {
         FileOutputFormat.setOutputPath(job, outputDir);
         job.setMapOutputKeyClass(ImmutableBytesWritable.class);
         job.setMapOutputValueClass(KeyValue.class);
-        HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+        HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
         TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
             com.google.common.base.Preconditions.class);
       }

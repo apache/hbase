@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -244,7 +245,7 @@ public class TestCoprocessorScanPolicy {
       }
       Integer newVersions = versions.get(store.getTableName());
       ScanInfo oldSI = store.getScanInfo();
-      HColumnDescriptor family = store.getFamily();
+      ColumnFamilyDescriptor family = store.getColumnFamilyDescriptor();
       ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
           family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
@@ -264,7 +265,7 @@ public class TestCoprocessorScanPolicy {
       Long newTtl = ttls.get(store.getTableName());
       Integer newVersions = versions.get(store.getTableName());
       ScanInfo oldSI = store.getScanInfo();
-      HColumnDescriptor family = store.getFamily();
+      ColumnFamilyDescriptor family = store.getColumnFamilyDescriptor();
       ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
           family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
@@ -284,7 +285,7 @@ public class TestCoprocessorScanPolicy {
         Long newTtl = ttls.get(store.getTableName());
         Integer newVersions = versions.get(store.getTableName());
         ScanInfo oldSI = store.getScanInfo();
-        HColumnDescriptor family = store.getFamily();
+        ColumnFamilyDescriptor family = store.getColumnFamilyDescriptor();
         ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
             family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
             newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),

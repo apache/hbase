@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
@@ -445,7 +446,7 @@ public class TestScannerHeartbeatMessages {
     private static volatile boolean sleepBetweenColumnFamilies = false;
 
     public HeartbeatHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-        HRegionInfo regionInfo, HTableDescriptor htd, RegionServerServices rsServices) {
+        HRegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 

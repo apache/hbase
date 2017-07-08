@@ -96,7 +96,7 @@ public class TestDateTieredCompactor {
     ScanInfo si = new ScanInfo(conf, col, Long.MAX_VALUE, 0, CellComparator.COMPARATOR);
     final Store store = mock(Store.class);
     when(store.getStorefiles()).thenReturn(storefiles);
-    when(store.getFamily()).thenReturn(col);
+    when(store.getColumnFamilyDescriptor()).thenReturn(col);
     when(store.getScanInfo()).thenReturn(si);
     when(store.areWritesEnabled()).thenReturn(true);
     when(store.getFileSystem()).thenReturn(mock(FileSystem.class));

@@ -88,12 +88,10 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -105,6 +103,7 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -117,6 +116,8 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver.MutationType;
@@ -635,7 +636,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // Coprocessor host
   private RegionCoprocessorHost coprocessorHost;
 
-  private HTableDescriptor htableDescriptor = null;
+  private TableDescriptor htableDescriptor = null;
   private RegionSplitPolicy splitPolicy;
   private FlushPolicy flushPolicy;
 
@@ -675,7 +676,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @VisibleForTesting
   public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
       final Configuration confParam, final HRegionInfo regionInfo,
-      final HTableDescriptor htd, final RegionServerServices rsServices) {
+      final TableDescriptor htd, final RegionServerServices rsServices) {
     this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo),
       wal, confParam, htd, rsServices);
   }
@@ -697,7 +698,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param rsServices reference to {@link RegionServerServices} or null
    */
   public HRegion(final HRegionFileSystem fs, final WAL wal, final Configuration confParam,
-      final HTableDescriptor htd, final RegionServerServices rsServices) {
+      final TableDescriptor htd, final RegionServerServices rsServices) {
     if (htd == null) {
       throw new IllegalArgumentException("Need table descriptor");
     }
@@ -727,10 +728,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     this.isLoadingCfsOnDemandDefault = conf.getBoolean(LOAD_CFS_ON_DEMAND_CONFIG_KEY, true);
     this.htableDescriptor = htd;
-    Set<byte[]> families = this.htableDescriptor.getFamiliesKeys();
+    Set<byte[]> families = this.htableDescriptor.getColumnFamilyNames();
     for (byte[] family : families) {
       if (!replicationScope.containsKey(family)) {
-        int scope = htd.getFamily(family).getScope();
+        int scope = htd.getColumnFamily(family).getScope();
         // Only store those families that has NON-DEFAULT scope
         if (scope != REPLICATION_SCOPE_LOCAL) {
           // Do a copy before storing it here.
@@ -826,7 +827,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     if (flushSize <= 0) {
       flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
-        HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
+        TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
     this.memstoreFlushSize = flushSize;
     this.blockingMemStoreSize = this.memstoreFlushSize *
@@ -858,7 +859,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     //Refuse to open the region if there is no column family in the table
     if (htableDescriptor.getColumnFamilyCount() == 0) {
-      throw new DoNotRetryIOException("Table " + htableDescriptor.getNameAsString() +
+      throw new DoNotRetryIOException("Table " + htableDescriptor.getTableName().getNameAsString()+
           " should have at least one column family.");
     }
 
@@ -987,14 +988,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // initialized to -1 so that we pick up MemstoreTS from column families
     long maxMemstoreTS = -1;
 
-    if (!htableDescriptor.getFamilies().isEmpty()) {
+    if (htableDescriptor.getColumnFamilyCount() != 0) {
       // initialize the thread pool for opening stores in parallel.
       ThreadPoolExecutor storeOpenerThreadPool =
         getStoreOpenAndCloseThreadPool("StoreOpener-" + this.getRegionInfo().getShortNameToLog());
       CompletionService<HStore> completionService = new ExecutorCompletionService<>(storeOpenerThreadPool);
 
       // initialize each store in parallel
-      for (final HColumnDescriptor family : htableDescriptor.getFamilies()) {
+      for (final ColumnFamilyDescriptor family : htableDescriptor.getColumnFamilies()) {
         status.setStatus("Instantiating store for column family " + family);
         completionService.submit(new Callable<HStore>() {
           @Override
@@ -1006,10 +1007,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       boolean allStoresOpened = false;
       boolean hasSloppyStores = false;
       try {
-        for (int i = 0; i < htableDescriptor.getFamilies().size(); i++) {
+        for (int i = 0; i < htableDescriptor.getColumnFamilyCount(); i++) {
           Future<HStore> future = completionService.take();
           HStore store = future.get();
-          this.stores.put(store.getFamily().getName(), store);
+          this.stores.put(store.getColumnFamilyDescriptor().getName(), store);
           if (store.isSloppyMemstore()) {
             hasSloppyStores = true;
           }
@@ -1027,8 +1028,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         allStoresOpened = true;
         if(hasSloppyStores) {
-          htableDescriptor.setFlushPolicyClassName(FlushNonSloppyStoresFirstPolicy.class
-              .getName());
+          htableDescriptor = TableDescriptorBuilder.newBuilder(htableDescriptor)
+                  .setFlushPolicyClassName(FlushNonSloppyStoresFirstPolicy.class.getName())
+                  .build();
           LOG.info("Setting FlushNonSloppyStoresFirstPolicy for the region=" + this);
         }
       } catch (InterruptedException e) {
@@ -1076,7 +1078,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (StoreFile storeFile: storeFiles) {
         storeFileNames.add(storeFile.getPath());
       }
-      allStoreFiles.put(store.getFamily().getName(), storeFileNames);
+      allStoreFiles.put(store.getColumnFamilyDescriptor().getName(), storeFileNames);
     }
     return allStoreFiles;
   }
@@ -1146,13 +1148,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * This is a helper function to compute HDFS block distribution on demand
    * @param conf configuration
-   * @param tableDescriptor HTableDescriptor of the table
+   * @param tableDescriptor TableDescriptor of the table
    * @param regionInfo encoded name of the region
    * @return The HDFS blocks distribution for the given region.
    * @throws IOException
    */
   public static HDFSBlocksDistribution computeHDFSBlocksDistribution(final Configuration conf,
-      final HTableDescriptor tableDescriptor, final HRegionInfo regionInfo) throws IOException {
+      final TableDescriptor tableDescriptor, final HRegionInfo regionInfo) throws IOException {
     Path tablePath = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableDescriptor.getTableName());
     return computeHDFSBlocksDistribution(conf, tableDescriptor, regionInfo, tablePath);
   }
@@ -1160,20 +1162,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * This is a helper function to compute HDFS block distribution on demand
    * @param conf configuration
-   * @param tableDescriptor HTableDescriptor of the table
+   * @param tableDescriptor TableDescriptor of the table
    * @param regionInfo encoded name of the region
    * @param tablePath the table directory
    * @return The HDFS blocks distribution for the given region.
    * @throws IOException
    */
   public static HDFSBlocksDistribution computeHDFSBlocksDistribution(final Configuration conf,
-      final HTableDescriptor tableDescriptor, final HRegionInfo regionInfo,  Path tablePath)
+      final TableDescriptor tableDescriptor, final HRegionInfo regionInfo,  Path tablePath)
       throws IOException {
     HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
     FileSystem fs = tablePath.getFileSystem(conf);
 
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tablePath, regionInfo);
-    for (HColumnDescriptor family : tableDescriptor.getFamilies()) {
+    for (ColumnFamilyDescriptor family : tableDescriptor.getColumnFamilies()) {
       List<LocatedFileStatus> locatedFileStatusList = HRegionFileSystem
           .getStoreFilesLocatedStatus(regionFs, family.getNameAsString(), true);
       if (locatedFileStatusList == null) {
@@ -1338,7 +1340,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         && wasRecovering && !newState) {
 
       // force a flush only if region replication is set up for this region. Otherwise no need.
-      boolean forceFlush = getTableDesc().getRegionReplication() > 1;
+      boolean forceFlush = getTableDescriptor().getRegionReplication() > 1;
 
       MonitoredTask status = TaskMonitor.get().createStatus("Recovering region " + this);
 
@@ -1672,7 +1674,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               .submit(new Callable<Pair<byte[], Collection<StoreFile>>>() {
                 @Override
                 public Pair<byte[], Collection<StoreFile>> call() throws IOException {
-                  return new Pair<>(store.getFamily().getName(), store.close());
+                  return new Pair<>(store.getColumnFamilyDescriptor().getName(), store.close());
                 }
               });
         }
@@ -1799,7 +1801,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
   protected ThreadPoolExecutor getStoreOpenAndCloseThreadPool(
       final String threadNamePrefix) {
-    int numStores = Math.max(1, this.htableDescriptor.getFamilies().size());
+    int numStores = Math.max(1, this.htableDescriptor.getColumnFamilyCount());
     int maxThreads = Math.min(numStores,
         conf.getInt(HConstants.HSTORE_OPEN_AND_CLOSE_THREADS_MAX,
             HConstants.DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX));
@@ -1808,7 +1810,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   protected ThreadPoolExecutor getStoreFileOpenAndCloseThreadPool(
       final String threadNamePrefix) {
-    int numStores = Math.max(1, this.htableDescriptor.getFamilies().size());
+    int numStores = Math.max(1, this.htableDescriptor.getColumnFamilyCount());
     int maxThreads = Math.max(1,
         conf.getInt(HConstants.HSTORE_OPEN_AND_CLOSE_THREADS_MAX,
             HConstants.DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX)
@@ -1842,8 +1844,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   //////////////////////////////////////////////////////////////////////////////
 
   @Override
-  public HTableDescriptor getTableDesc() {
+  public TableDescriptor getTableDescriptor() {
     return this.htableDescriptor;
+  }
+
+  @VisibleForTesting
+  void setTableDescriptor(TableDescriptor desc) {
+    htableDescriptor = desc;
   }
 
   /** @return WAL in use for this region */
@@ -2280,7 +2287,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   boolean shouldFlushStore(Store store) {
     long earliest = this.wal.getEarliestMemstoreSeqNum(getRegionInfo().getEncodedNameAsBytes(),
-      store.getFamily().getName()) - 1;
+      store.getColumnFamilyDescriptor().getName()) - 1;
     if (earliest > 0 && earliest + flushPerChanges < mvcc.getReadPoint()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Flush column family " + store.getColumnFamilyName() + " of " +
@@ -2461,7 +2468,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     Map<byte[], Long> flushedFamilyNamesToSeq = new HashMap<>();
     for (Store store: storesToFlush) {
-      flushedFamilyNamesToSeq.put(store.getFamily().getName(),
+      flushedFamilyNamesToSeq.put(store.getColumnFamilyDescriptor().getName(),
           ((HStore) store).preFlushSeqIDEstimation());
     }
 
@@ -2501,9 +2508,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (Store s : storesToFlush) {
         MemstoreSize flushableSize = s.getSizeToFlush();
         totalSizeOfFlushableStores.incMemstoreSize(flushableSize);
-        storeFlushCtxs.put(s.getFamily().getName(), s.createFlushContext(flushOpSeqId));
-        committedFiles.put(s.getFamily().getName(), null); // for writing stores to WAL
-        storeFlushableSize.put(s.getFamily().getName(), flushableSize);
+        storeFlushCtxs.put(s.getColumnFamilyDescriptor().getName(), s.createFlushContext(flushOpSeqId));
+        committedFiles.put(s.getColumnFamilyDescriptor().getName(), null); // for writing stores to WAL
+        storeFlushableSize.put(s.getColumnFamilyDescriptor().getName(), flushableSize);
       }
 
       // write the snapshot start to WAL
@@ -2661,7 +2668,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (needsCompaction) {
           compactionRequested = true;
         }
-        byte[] storeName = it.next().getFamily().getName();
+        byte[] storeName = it.next().getColumnFamilyDescriptor().getName();
         List<Path> storeCommittedFiles = flush.getCommittedFiles();
         committedFiles.put(storeName, storeCommittedFiles);
         // Flush committed no files, indicating flush is empty or flush was canceled
@@ -2796,7 +2803,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Verify families are all valid
       if (!scan.hasFamilies()) {
         // Adding all families to scanner
-        for (byte[] family : this.htableDescriptor.getFamiliesKeys()) {
+        for (byte[] family : this.htableDescriptor.getColumnFamilyNames()) {
           scan.addFamily(family);
         }
       } else {
@@ -2831,7 +2838,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void prepareDelete(Delete delete) throws IOException {
     // Check to see if this is a deleteRow insert
     if(delete.getFamilyCellMap().isEmpty()){
-      for(byte [] family : this.htableDescriptor.getFamiliesKeys()){
+      for(byte [] family : this.htableDescriptor.getColumnFamilyNames()){
         // Don't eat the timestamp
         delete.addFamily(family, delete.getTimeStamp());
       }
@@ -3643,7 +3650,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private void removeNonExistentColumnFamilyForReplay(final Map<byte[], List<Cell>> familyMap) {
     List<byte[]> nonExistentList = null;
     for (byte[] family : familyMap.keySet()) {
-      if (!this.htableDescriptor.hasFamily(family)) {
+      if (!this.htableDescriptor.hasColumnFamily(family)) {
         if (nonExistentList == null) {
           nonExistentList = new ArrayList<>();
         }
@@ -3997,7 +4004,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private void applyToMemstore(final Store store, final List<Cell> cells, final boolean delta,
       MemstoreSize memstoreSize) throws IOException {
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemstore!!!!
-    boolean upsert = delta && store.getFamily().getMaxVersions() == 1;
+    boolean upsert = delta && store.getColumnFamilyDescriptor().getMaxVersions() == 1;
     if (upsert) {
       ((HStore) store).upsert(cells, getSmallestReadPoint(), memstoreSize);
     } else {
@@ -4352,7 +4359,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               continue;
             }
             // Figure which store the edit is meant for.
-            if (store == null || !CellUtil.matchingFamily(cell, store.getFamily().getName())) {
+            if (store == null || !CellUtil.matchingFamily(cell,
+                store.getColumnFamilyDescriptor().getName())) {
               store = getHStore(cell);
             }
             if (store == null) {
@@ -4369,7 +4377,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               continue;
             }
             // Now, figure if we should skip this edit.
-            if (key.getLogSeqNum() <= maxSeqIdInStores.get(store.getFamily()
+            if (key.getLogSeqNum() <= maxSeqIdInStores.get(store.getColumnFamilyDescriptor()
                 .getName())) {
               skippedEdits++;
               continue;
@@ -5170,12 +5178,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               // only drop memstore snapshots if they are smaller than last flush for the store
               if (this.prepareFlushResult.flushOpSeqId <= storeSeqId) {
                 StoreFlushContext ctx = this.prepareFlushResult.storeFlushCtxs == null ?
-                    null : this.prepareFlushResult.storeFlushCtxs.get(store.getFamily().getName());
+                    null : this.prepareFlushResult.storeFlushCtxs.get(
+                            store.getColumnFamilyDescriptor().getName());
                 if (ctx != null) {
                   MemstoreSize snapshotSize = store.getSizeToFlush();
                   ctx.abort();
                   this.decrMemstoreSize(snapshotSize);
-                  this.prepareFlushResult.storeFlushCtxs.remove(store.getFamily().getName());
+                  this.prepareFlushResult.storeFlushCtxs.remove(
+                          store.getColumnFamilyDescriptor().getName());
                   totalFreedDataSize += snapshotSize.getDataSize();
                 }
               }
@@ -5280,7 +5290,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return true;
   }
 
-  protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
+  protected HStore instantiateHStore(final ColumnFamilyDescriptor family) throws IOException {
     if (family.isMobEnabled()) {
       if (HFile.getFormatVersion(this.conf) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
         throw new IOException("A minimum HFile version of "
@@ -6500,7 +6510,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return the new instance
    */
   static HRegion newHRegion(Path tableDir, WAL wal, FileSystem fs,
-      Configuration conf, HRegionInfo regionInfo, final HTableDescriptor htd,
+      Configuration conf, HRegionInfo regionInfo, final TableDescriptor htd,
       RegionServerServices rsServices) {
     try {
       @SuppressWarnings("unchecked")
@@ -6509,7 +6519,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       Constructor<? extends HRegion> c =
           regionClass.getConstructor(Path.class, WAL.class, FileSystem.class,
-              Configuration.class, HRegionInfo.class, HTableDescriptor.class,
+              Configuration.class, HRegionInfo.class, TableDescriptor.class,
               RegionServerServices.class);
 
       return c.newInstance(tableDir, wal, fs, conf, regionInfo, htd, rsServices);
@@ -6530,7 +6540,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-        final Configuration conf, final HTableDescriptor hTableDescriptor,
+        final Configuration conf, final TableDescriptor hTableDescriptor,
         final WAL wal, final boolean initialize)
   throws IOException {
     LOG.info("creating HRegion " + info.getTable().getNameAsString()
@@ -6546,7 +6556,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
                                       final Configuration conf,
-                                      final HTableDescriptor hTableDescriptor,
+                                      final TableDescriptor hTableDescriptor,
                                       final WAL wal)
     throws IOException {
     return createHRegion(info, rootDir, conf, hTableDescriptor, wal, true);
@@ -6565,7 +6575,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(final HRegionInfo info,
-      final HTableDescriptor htd, final WAL wal,
+      final TableDescriptor htd, final WAL wal,
       final Configuration conf)
   throws IOException {
     return openHRegion(info, htd, wal, conf, null, null);
@@ -6587,7 +6597,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(final HRegionInfo info,
-    final HTableDescriptor htd, final WAL wal, final Configuration conf,
+    final TableDescriptor htd, final WAL wal, final Configuration conf,
     final RegionServerServices rsServices,
     final CancelableProgressable reporter)
   throws IOException {
@@ -6608,7 +6618,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(Path rootDir, final HRegionInfo info,
-      final HTableDescriptor htd, final WAL wal, final Configuration conf)
+      final TableDescriptor htd, final WAL wal, final Configuration conf)
   throws IOException {
     return openHRegion(rootDir, info, htd, wal, conf, null, null);
   }
@@ -6629,7 +6639,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(final Path rootDir, final HRegionInfo info,
-      final HTableDescriptor htd, final WAL wal, final Configuration conf,
+      final TableDescriptor htd, final WAL wal, final Configuration conf,
       final RegionServerServices rsServices,
       final CancelableProgressable reporter)
   throws IOException {
@@ -6658,7 +6668,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
-      final Path rootDir, final HRegionInfo info, final HTableDescriptor htd, final WAL wal)
+      final Path rootDir, final HRegionInfo info, final TableDescriptor htd, final WAL wal)
       throws IOException {
     return openHRegion(conf, fs, rootDir, info, htd, wal, null, null);
   }
@@ -6680,7 +6690,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
-      final Path rootDir, final HRegionInfo info, final HTableDescriptor htd, final WAL wal,
+      final Path rootDir, final HRegionInfo info, final TableDescriptor htd, final WAL wal,
       final RegionServerServices rsServices, final CancelableProgressable reporter)
       throws IOException {
     Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
@@ -6704,7 +6714,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
-      final Path rootDir, final Path tableDir, final HRegionInfo info, final HTableDescriptor htd,
+      final Path rootDir, final Path tableDir, final HRegionInfo info, final TableDescriptor htd,
       final WAL wal, final RegionServerServices rsServices,
       final CancelableProgressable reporter)
       throws IOException {
@@ -6732,7 +6742,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       throws IOException {
     HRegionFileSystem regionFs = other.getRegionFileSystem();
     HRegion r = newHRegion(regionFs.getTableDir(), other.getWAL(), regionFs.getFileSystem(),
-        other.baseConf, other.getRegionInfo(), other.getTableDesc(), null);
+        other.baseConf, other.getRegionInfo(), other.getTableDescriptor(), null);
     return r.openHRegion(reporter);
   }
 
@@ -6769,7 +6779,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   public static void warmupHRegion(final HRegionInfo info,
-      final HTableDescriptor htd, final WAL wal, final Configuration conf,
+      final TableDescriptor htd, final WAL wal, final Configuration conf,
       final RegionServerServices rsServices,
       final CancelableProgressable reporter)
       throws IOException {
@@ -6797,14 +6807,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
 
   private void checkCompressionCodecs() throws IOException {
-    for (HColumnDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
+    for (ColumnFamilyDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
       CompressionTest.testCompression(fam.getCompressionType());
       CompressionTest.testCompression(fam.getCompactionCompressionType());
     }
   }
 
   private void checkEncryption() throws IOException {
-    for (HColumnDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
+    for (ColumnFamilyDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
       EncryptionTest.testEncryption(conf, fam.getEncryptionType(), fam.getEncryptionKey());
     }
   }
@@ -6825,7 +6835,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // Create the daughter HRegion instance
     HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(), fs.getFileSystem(),
-        this.getBaseConf(), hri, this.getTableDesc(), rsServices);
+        this.getBaseConf(), hri, this.getTableDescriptor(), rsServices);
     r.readRequestsCount.add(this.getReadRequestsCount() / 2);
     r.filteredReadRequestsCount.add(this.getFilteredReadRequestsCount() / 2);
     r.writeRequestsCount.add(this.getWriteRequestsCount() / 2);
@@ -6842,7 +6852,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       final HRegion region_b) throws IOException {
     HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(),
         fs.getFileSystem(), this.getBaseConf(), mergedRegionInfo,
-        this.getTableDesc(), this.rsServices);
+        this.getTableDescriptor(), this.rsServices);
     r.readRequestsCount.add(this.getReadRequestsCount()
         + region_b.getReadRequestsCount());
     r.filteredReadRequestsCount.add(this.getFilteredReadRequestsCount()
@@ -6949,7 +6959,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         checkFamily(family);
       }
     } else { // Adding all families to scanner
-      for (byte[] family : this.htableDescriptor.getFamiliesKeys()) {
+      for (byte[] family : this.htableDescriptor.getColumnFamilyNames()) {
         get.addFamily(family);
       }
     }
@@ -7472,7 +7482,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       final Mutation mutation, final Durability effectiveDurability, final long now,
       final List<Cell> deltas, final List<Cell> results)
   throws IOException {
-    byte [] columnFamily = store.getFamily().getName();
+    byte [] columnFamily = store.getColumnFamilyDescriptor().getName();
     List<Cell> toApply = new ArrayList<>(deltas.size());
     // Get previous values for all columns in this family.
     List<Cell> currentValues = get(mutation, store, deltas,
@@ -7642,7 +7652,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       get.setIsolationLevel(isolation);
     }
     for (Cell cell: coordinates) {
-      get.addColumn(store.getFamily().getName(), CellUtil.cloneQualifier(cell));
+      get.addColumn(store.getColumnFamilyDescriptor().getName(), CellUtil.cloneQualifier(cell));
     }
     // Increments carry time range. If an Increment instance, put it on the Get.
     if (tr != null) {
@@ -7665,7 +7675,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   void checkFamily(final byte [] family)
   throws NoSuchColumnFamilyException {
-    if (!this.htableDescriptor.hasFamily(family)) {
+    if (!this.htableDescriptor.hasColumnFamily(family)) {
       throw new NoSuchColumnFamilyException("Column family " +
           Bytes.toString(family) + " does not exist in region " + this
           + " in table " + this.htableDescriptor);
@@ -8204,7 +8214,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     buf.append(getRegionInfo().isMetaTable() ? " meta table " : " ");
     buf.append("stores: ");
     for (Store s : getStores()) {
-      buf.append(s.getFamily().getNameAsString());
+      buf.append(s.getColumnFamilyDescriptor().getNameAsString());
       buf.append(" size: ");
       buf.append(s.getSizeOfMemStore().getDataSize());
       buf.append(" ");
