@@ -60,18 +60,18 @@ def get_bad_tests(console_url):
     failed_tests_set = set()
     timeout_tests_set = set()
     for line in response.content.splitlines():
-        result1 = re.match("^Running org.apache.hadoop.hbase.(\\w*\\.)*(\\w*)", line)
-        if result1:
-            test_case = result1.group(2)
+        result1 = re.findall("Running org.apache.hadoop.hbase.(.*)", line)
+        if len(result1) == 1:
+            test_case = result1[0]
             if test_case in all_tests_set:
                 print ("ERROR! Multiple tests with same name '{}'. Might get wrong results "
                        "for this test.".format(test_case))
             else:
                 hanging_tests_set.add(test_case)
                 all_tests_set.add(test_case)
-        result2 = re.match("^Tests run:.*- in org.apache.hadoop.hbase.(\\w*\\.)*(\\w*)", line)
-        if result2:
-            test_case = result2.group(2)
+        result2 = re.findall("Tests run:.*?- in org.apache.hadoop.hbase.(.*)", line)
+        if len(result2) == 1:
+            test_case = result2[0]
             if "FAILURE!" in line:
                 failed_tests_set.add(test_case)
             if test_case not in hanging_tests_set:
