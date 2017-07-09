@@ -439,6 +439,21 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> drainRegionServers(List<ServerName> servers) {
+    return wrap(rawAdmin.drainRegionServers(servers));
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>> listDrainingRegionServers() {
+    return wrap(rawAdmin.listDrainingRegionServers());
+  }
+
+  @Override
+  public CompletableFuture<Void> removeDrainFromRegionServers(List<ServerName> servers) {
+    return wrap(rawAdmin.removeDrainFromRegionServers(servers));
+  }
+
+  @Override
   public CompletableFuture<ClusterStatus> getClusterStatus() {
     return wrap(rawAdmin.getClusterStatus());
   }

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Collection;
 import java.util.Map;
@@ -770,6 +769,24 @@ public interface AsyncAdmin {
    * @return procedure list wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<ProcedureInfo>> listProcedures();
+
+  /**
+   * Mark a region server as draining to prevent additional regions from getting assigned to it.
+   * @param servers
+   */
+  CompletableFuture<Void> drainRegionServers(List<ServerName> servers);
+
+  /**
+   * List region servers marked as draining to not get additional regions assigned to them.
+   * @return List of draining region servers wrapped by {@link CompletableFuture}
+   */
+  CompletableFuture<List<ServerName>> listDrainingRegionServers();
+
+  /**
+   * Remove drain from a region server to allow additional regions assignments.
+   * @param servers List of region servers to remove drain from.
+   */
+  CompletableFuture<Void> removeDrainFromRegionServers(List<ServerName> servers);
 
   /**
    * @return cluster status wrapped by {@link CompletableFuture}

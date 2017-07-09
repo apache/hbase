@@ -4036,19 +4036,11 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void drainRegionServers(List<ServerName> servers) throws IOException {
-    final List<HBaseProtos.ServerName> pbServers = new ArrayList<>(servers.size());
-    for (ServerName server : servers) {
-      // Parse to ServerName to do simple validation.
-      ServerName.parseServerName(server.toString());
-      pbServers.add(ProtobufUtil.toServerName(server));
-    }
-
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       public Void rpcCall() throws ServiceException {
-        DrainRegionServersRequest req =
-            DrainRegionServersRequest.newBuilder().addAllServerName(pbServers).build();
-        master.drainRegionServers(getRpcController(), req);
+        master.drainRegionServers(getRpcController(),
+          RequestConverter.buildDrainRegionServersRequest(servers));
         return null;
       }
     });
@@ -4073,17 +4065,10 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void removeDrainFromRegionServers(List<ServerName> servers) throws IOException {
-    final List<HBaseProtos.ServerName> pbServers = new ArrayList<>(servers.size());
-    for (ServerName server : servers) {
-      pbServers.add(ProtobufUtil.toServerName(server));
-    }
-
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       public Void rpcCall() throws ServiceException {
-        RemoveDrainFromRegionServersRequest req = RemoveDrainFromRegionServersRequest.newBuilder()
-            .addAllServerName(pbServers).build();
-        master.removeDrainFromRegionServers(getRpcController(), req);
+        master.removeDrainFromRegionServers(getRpcController(), RequestConverter.buildRemoveDrainFromRegionServersRequest(servers));
         return null;
       }
     });
