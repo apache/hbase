@@ -199,7 +199,7 @@ public class TestAsyncTable {
     char suffix = ':';
     AtomicLong suffixCount = new AtomicLong(0L);
     IntStream.range(0, count).forEachOrdered(
-      i -> table.append(new Append(row).add(FAMILY, QUALIFIER, Bytes.toBytes("" + i + suffix)))
+      i -> table.append(new Append(row).addColumn(FAMILY, QUALIFIER, Bytes.toBytes("" + i + suffix)))
           .thenAccept(r -> {
             suffixCount.addAndGet(Bytes.toString(r.getValue(FAMILY, QUALIFIER)).chars()
                 .filter(x -> x == suffix).count());

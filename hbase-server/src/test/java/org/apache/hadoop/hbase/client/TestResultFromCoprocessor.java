@@ -74,7 +74,7 @@ public class TestResultFromCoprocessor {
       t.put(put);
       assertRowAndValue(t.get(new Get(ROW)), ROW, VALUE);
       Append append = new Append(ROW);
-      append.add(FAMILY, QUAL, FIXED_VALUE);
+      append.addColumn(FAMILY, QUAL, FIXED_VALUE);
       assertRowAndValue(t.append(append), ROW, FIXED_VALUE);
       assertRowAndValue(t.get(new Get(ROW)), ROW, Bytes.add(VALUE, FIXED_VALUE));
     }

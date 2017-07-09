@@ -482,7 +482,7 @@ public class ThriftUtilities {
   public static Append appendFromThrift(TAppend append) throws IOException {
     Append out = new Append(append.getRow());
     for (TColumnValue column : append.getColumns()) {
-      out.add(column.getFamily(), column.getQualifier(), column.getValue());
+      out.addColumn(column.getFamily(), column.getQualifier(), column.getValue());
     }
 
     if (append.isSetAttributes()) {

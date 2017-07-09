@@ -196,7 +196,7 @@ public class TestHTableWrapper {
 
   private void checkAppend() throws IOException {
     final byte[] appendValue = Bytes.toBytes("append");
-    Append append = new Append(qualifierCol1).add(TEST_FAMILY, qualifierCol1, appendValue);
+    Append append = new Append(qualifierCol1).addColumn(TEST_FAMILY, qualifierCol1, appendValue);
     Result appendResult = hTableInterface.append(append);
     byte[] appendedRow = appendResult.getRow();
     checkRowValue(appendedRow, appendValue);

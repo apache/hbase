@@ -476,8 +476,8 @@ public class TestMultiParallel {
     inc.addColumn(BYTES_FAMILY, QUAL3, 1);
 
     Append a = new Append(ONE_ROW);
-    a.add(BYTES_FAMILY, QUAL1, Bytes.toBytes("def"));
-    a.add(BYTES_FAMILY, QUAL4, Bytes.toBytes("xyz"));
+    a.addColumn(BYTES_FAMILY, QUAL1, Bytes.toBytes("def"));
+    a.addColumn(BYTES_FAMILY, QUAL4, Bytes.toBytes("xyz"));
     List<Row> actions = new ArrayList<>();
     actions.add(inc);
     actions.add(a);

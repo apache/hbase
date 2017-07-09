@@ -186,7 +186,7 @@ public class TestAsyncTableBatch {
     actions.add(new Put(Bytes.toBytes(1)).addColumn(FAMILY, CQ, Bytes.toBytes((long) 2)));
     actions.add(new Delete(Bytes.toBytes(2)));
     actions.add(new Increment(Bytes.toBytes(3)).addColumn(FAMILY, CQ, 1));
-    actions.add(new Append(Bytes.toBytes(4)).add(FAMILY, CQ, Bytes.toBytes(4)));
+    actions.add(new Append(Bytes.toBytes(4)).addColumn(FAMILY, CQ, Bytes.toBytes(4)));
     List<Object> results = table.batchAll(actions).get();
     assertEquals(5, results.size());
     Result getResult = (Result) results.get(0);

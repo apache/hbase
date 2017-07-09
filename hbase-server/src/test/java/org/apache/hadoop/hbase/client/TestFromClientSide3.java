@@ -597,7 +597,7 @@ public class TestFromClientSide3 {
       ExecutorService appendService = Executors.newSingleThreadExecutor();
       appendService.execute(() -> {
         Append append = new Append(ROW);
-        append.add(FAMILY, QUALIFIER, VALUE);
+        append.addColumn(FAMILY, QUALIFIER, VALUE);
         try (Table table = con.getTable(tableName)) {
           table.append(append);
           fail("The APPEND should fail because the target lock is blocked by previous put");

@@ -1558,7 +1558,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(final int i) throws IOException {
       byte [] bytes = format(i);
       Append append = new Append(bytes);
-      append.add(FAMILY_NAME, getQualifier(), bytes);
+      append.addColumn(FAMILY_NAME, getQualifier(), bytes);
       updateValueSize(this.table.append(append));
     }
   }

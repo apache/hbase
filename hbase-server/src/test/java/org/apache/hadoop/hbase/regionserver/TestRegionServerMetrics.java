@@ -365,7 +365,7 @@ public class TestRegionServerMetrics {
 
     for(int count = 0; count< 73; count++) {
       Append append = new Append(row);
-      append.add(cf, qualifier, Bytes.toBytes(",Test"));
+      append.addColumn(cf, qualifier, Bytes.toBytes(",Test"));
       table.append(append);
     }
 

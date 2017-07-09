@@ -284,7 +284,7 @@ public class TestRegionServerReadRequestMetrics {
 
     // test for append
     append = new Append(ROW1);
-    append.add(CF1, COL2, VAL2);
+    append.addColumn(CF1, COL2, VAL2);
     result = table.append(append);
     resultCount = result.isEmpty() ? 0 : 1;
     testReadRequests(resultCount, 1, 0);

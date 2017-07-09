@@ -163,7 +163,7 @@ public class TestRpcControllerFactory {
     counter = verifyCount(counter);
 
     Append append = new Append(row);
-    append.add(fam1, fam1, Bytes.toBytes("val2"));
+    append.addColumn(fam1, fam1, Bytes.toBytes("val2"));
     table.append(append);
     counter = verifyCount(counter);
 

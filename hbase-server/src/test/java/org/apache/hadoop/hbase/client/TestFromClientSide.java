@@ -209,7 +209,7 @@ public class TestFromClientSide {
 
       try {
         Append append = new Append(ROW);
-        append.add(TEST_UTIL.fam1, QUALIFIER, VALUE);
+        append.addColumn(TEST_UTIL.fam1, QUALIFIER, VALUE);
         Result result = table.append(append);
 
         // Verify expected result
@@ -1463,7 +1463,7 @@ public class TestFromClientSide {
     table.delete(delete);
 
     Append append = new Append(ROW);
-    append.add(FAMILY, null, VALUE);
+    append.addColumn(FAMILY, null, VALUE);
     table.append(append);
     getTestNull(table, ROW, FAMILY, VALUE);
 
@@ -4625,10 +4625,10 @@ public class TestFromClientSide {
     Table table = TEST_UTIL.createTable(tableName, FAMILY);
     Append append1 = new Append(Bytes.toBytes("row1"));
     append1.setReturnResults(false);
-    append1.add(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value1"));
+    append1.addColumn(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value1"));
     Append append2 = new Append(Bytes.toBytes("row1"));
     append2.setReturnResults(false);
-    append2.add(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value2"));
+    append2.addColumn(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value2"));
     List<Append> appends = new ArrayList<>();
     appends.add(append1);
     appends.add(append2);
@@ -4653,15 +4653,15 @@ public class TestFromClientSide {
         Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("c")
     };
     Append a = new Append(ROW);
-    a.add(FAMILY, QUALIFIERS[0], v1);
-    a.add(FAMILY, QUALIFIERS[1], v2);
+    a.addColumn(FAMILY, QUALIFIERS[0], v1);
+    a.addColumn(FAMILY, QUALIFIERS[1], v2);
     a.setReturnResults(false);
     assertEmptyResult(t.append(a));
 
     a = new Append(ROW);
-    a.add(FAMILY, QUALIFIERS[0], v2);
-    a.add(FAMILY, QUALIFIERS[1], v1);
-    a.add(FAMILY, QUALIFIERS[2], v2);
+    a.addColumn(FAMILY, QUALIFIERS[0], v2);
+    a.addColumn(FAMILY, QUALIFIERS[1], v1);
+    a.addColumn(FAMILY, QUALIFIERS[2], v2);
     Result r = t.append(a);
     assertEquals(0, Bytes.compareTo(Bytes.add(v1, v2), r.getValue(FAMILY, QUALIFIERS[0])));
     assertEquals(0, Bytes.compareTo(Bytes.add(v2, v1), r.getValue(FAMILY, QUALIFIERS[1])));
@@ -4683,16 +4683,16 @@ public class TestFromClientSide {
     Put put_1 = new Put(row3);
     put_1.addColumn(FAMILY, qual, Bytes.toBytes("put"));
     Append append_0 = new Append(row1);
-    append_0.add(FAMILY, qual, Bytes.toBytes("i"));
+    append_0.addColumn(FAMILY, qual, Bytes.toBytes("i"));
     Append append_1 = new Append(row1);
-    append_1.add(FAMILY, qual, Bytes.toBytes("k"));
+    append_1.addColumn(FAMILY, qual, Bytes.toBytes("k"));
     Append append_2 = new Append(row1);
-    append_2.add(FAMILY, qual, Bytes.toBytes("e"));
+    append_2.addColumn(FAMILY, qual, Bytes.toBytes("e"));
     if (!walUsed) {
       append_2.setDurability(Durability.SKIP_WAL);
     }
     Append append_3 = new Append(row1);
-    append_3.add(FAMILY, qual, Bytes.toBytes("a"));
+    append_3.addColumn(FAMILY, qual, Bytes.toBytes("a"));
     Scan s = new Scan();
     s.setCaching(1);
     t.append(append_0);
@@ -6416,7 +6416,7 @@ public class TestFromClientSide {
         // expected
       }
       try {
-        t.append(new Append(ROW).add(FAMILY, QUALIFIER, new byte[10 * 1024]));
+        t.append(new Append(ROW).addColumn(FAMILY, QUALIFIER, new byte[10 * 1024]));
         fail("Oversize cell failed to trigger exception");
       } catch (IOException e) {
         // expected

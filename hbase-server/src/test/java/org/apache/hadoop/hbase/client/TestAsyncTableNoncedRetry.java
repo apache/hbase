@@ -103,9 +103,9 @@ public class TestAsyncTableNoncedRetry {
   @Test
   public void testAppend() throws InterruptedException, ExecutionException {
     RawAsyncTable table = ASYNC_CONN.getRawTable(TABLE_NAME);
-    Result result = table.append(new Append(row).add(FAMILY, QUALIFIER, VALUE)).get();
+    Result result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)).get();
     assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
-    result = table.append(new Append(row).add(FAMILY, QUALIFIER, VALUE)).get();
+    result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)).get();
     // the second call should have no effect as we always generate the same nonce.
     assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
     result = table.get(new Get(row)).get();

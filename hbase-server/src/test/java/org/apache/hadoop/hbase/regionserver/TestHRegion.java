@@ -1387,7 +1387,7 @@ public class TestHRegion {
     boolean exceptionCaught = false;
     Append append = new Append(Bytes.toBytes("somerow"));
     append.setDurability(Durability.SKIP_WAL);
-    append.add(Bytes.toBytes("somefamily"), Bytes.toBytes("somequalifier"),
+    append.addColumn(Bytes.toBytes("somefamily"), Bytes.toBytes("somequalifier"),
         Bytes.toBytes("somevalue"));
     try {
       region.append(append);
@@ -4364,7 +4364,7 @@ public class TestHRegion {
       int count = 0;
       while (count < appendCounter) {
         Append app = new Append(appendRow);
-        app.add(family, qualifier, CHAR);
+        app.addColumn(family, qualifier, CHAR);
         count++;
         try {
           region.append(app);
@@ -6167,7 +6167,7 @@ public class TestHRegion {
     edge.setValue(10);
     Append a = new Append(row);
     a.setDurability(Durability.SKIP_WAL);
-    a.add(fam1, qual1, qual1);
+    a.addColumn(fam1, qual1, qual1);
     region.append(a);
 
     Result result = region.get(new Get(row));

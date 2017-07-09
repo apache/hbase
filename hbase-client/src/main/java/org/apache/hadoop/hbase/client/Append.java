@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  * To append to a set of columns of a row, instantiate an Append object with the
  * row to append to. At least one column to append must be specified using the
- * {@link #add(byte[], byte[], byte[])} method.
+ * {@link #addColumn(byte[], byte[], byte[])} method.
  */
 @InterfaceAudience.Public
 public class Append extends Mutation {
@@ -104,8 +104,22 @@ public class Append extends Mutation {
    * @param qualifier column qualifier
    * @param value value to append to specified column
    * @return this
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #addColumn(byte[], byte[], byte[])} instead
    */
+  @Deprecated
   public Append add(byte [] family, byte [] qualifier, byte [] value) {
+    return this.addColumn(family, qualifier, value);
+  }
+
+  /**
+   * Add the specified column and value to this Append operation.
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param value value to append to specified column
+   * @return this
+   */
+  public Append addColumn(byte[] family, byte[] qualifier, byte[] value) {
     KeyValue kv = new KeyValue(this.row, family, qualifier, this.ts, KeyValue.Type.Put, value);
     return add(kv);
   }
