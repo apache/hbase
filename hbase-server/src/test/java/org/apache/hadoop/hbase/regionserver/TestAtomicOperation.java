@@ -131,12 +131,12 @@ public class TestAtomicOperation {
     String v2 = " is... 42.";
     Append a = new Append(row);
     a.setReturnResults(false);
-    a.add(fam1, qual1, Bytes.toBytes(v1));
-    a.add(fam1, qual2, Bytes.toBytes(v2));
+    a.addColumn(fam1, qual1, Bytes.toBytes(v1));
+    a.addColumn(fam1, qual2, Bytes.toBytes(v2));
     assertTrue(region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE).isEmpty());
     a = new Append(row);
-    a.add(fam1, qual1, Bytes.toBytes(v2));
-    a.add(fam1, qual2, Bytes.toBytes(v1));
+    a.addColumn(fam1, qual1, Bytes.toBytes(v2));
+    a.addColumn(fam1, qual2, Bytes.toBytes(v1));
     Result result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1+v2), result.getValue(fam1, qual1)));
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
@@ -147,8 +147,8 @@ public class TestAtomicOperation {
     initHRegion(tableName, name.getMethodName(), fam1);
     final String v1 = "Value";
     final Append a = new Append(row);
-    a.add(fam1, qual1, Bytes.toBytes(v1));
-    a.add(fam2, qual2, Bytes.toBytes(v1));
+    a.addColumn(fam1, qual1, Bytes.toBytes(v1));
+    a.addColumn(fam2, qual2, Bytes.toBytes(v1));
     Result result = null;
     try {
       result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
@@ -327,9 +327,9 @@ public class TestAtomicOperation {
           for (int i=0; i<numOps; i++) {
             try {
               Append a = new Append(row);
-              a.add(fam1, qual1, val);
-              a.add(fam1, qual2, val);
-              a.add(fam2, qual3, val);
+              a.addColumn(fam1, qual1, val);
+              a.addColumn(fam1, qual2, val);
+              a.addColumn(fam2, qual3, val);
               a.setDurability(Durability.ASYNC_WAL);
               region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
 

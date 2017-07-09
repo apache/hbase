@@ -228,7 +228,7 @@ public class ThriftUtilities {
 
     for (int i = 0; i < length; i++) {
       byte[][] famAndQf = KeyValue.parseColumn(getBytes(columns.get(i)));
-      append.add(famAndQf[0], famAndQf[1], getBytes(values.get(i)));
+      append.addColumn(famAndQf[0], famAndQf[1], getBytes(values.get(i)));
     }
     return append;
   }

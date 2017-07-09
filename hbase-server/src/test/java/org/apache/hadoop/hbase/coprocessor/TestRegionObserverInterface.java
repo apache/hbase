@@ -286,7 +286,7 @@ public class TestRegionObserverInterface {
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       Append app = new Append(Bytes.toBytes(0));
-      app.add(A, A, A);
+      app.addColumn(A, A, A);
 
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock" }, tableName,

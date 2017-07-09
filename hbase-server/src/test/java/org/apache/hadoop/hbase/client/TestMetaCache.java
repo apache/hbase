@@ -103,7 +103,7 @@ public class TestMetaCache {
       put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(10));
       Get get = new Get(row);
       Append append = new Append(row);
-      append.add(FAMILY, QUALIFIER, Bytes.toBytes(11));
+      append.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(11));
       Increment increment = new Increment(row);
       increment.addColumn(FAMILY, QUALIFIER, 10);
       Delete delete = new Delete(row);

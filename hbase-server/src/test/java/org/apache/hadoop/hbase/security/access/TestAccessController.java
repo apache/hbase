@@ -1163,7 +1163,7 @@ public class TestAccessController extends SecureTestUtil {
         Put put = new Put(row);
         put.addColumn(TEST_FAMILY, qualifier, Bytes.toBytes(1));
         Append append = new Append(row);
-        append.add(TEST_FAMILY, qualifier, Bytes.toBytes(2));
+        append.addColumn(TEST_FAMILY, qualifier, Bytes.toBytes(2));
         try(Connection conn = ConnectionFactory.createConnection(conf);
             Table t = conn.getTable(TEST_TABLE)) {
           t.put(put);

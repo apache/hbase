@@ -100,7 +100,7 @@ public class TestPutDeleteEtcCellIteration {
     Append a = new Append(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
-      a.add(bytes, bytes, bytes);
+      a.addColumn(bytes, bytes, bytes);
     }
     int index = 0;
     for (CellScanner cellScanner = a.cellScanner(); cellScanner.advance();) {

@@ -151,7 +151,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
               buf.setLength(0); // Clear the buffer
               buf.append("#").append(Bytes.toString(INCREMENT));
               buf.append(":").append(MutationType.INCREMENT.getNumber());
-              app.add(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
+              app.addColumn(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
               ++columnCount;
               if (!isBatchUpdate) {
                 mutate(table, inc, rowKeyBase);
@@ -220,9 +220,9 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                     break;
                   default:
                     buf.append(MutationType.APPEND.getNumber());
-                    app.add(cf, column, hashCodeBytes);
+                    app.addColumn(cf, column, hashCodeBytes);
                   }
-                  app.add(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
+                  app.addColumn(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
                   if (!isBatchUpdate) {
                     mutate(table, app, rowKeyBase);
                     numCols.addAndGet(1);

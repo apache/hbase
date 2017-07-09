@@ -456,7 +456,7 @@ public class TestTags {
       put.setAttribute("visibility", Bytes.toBytes("tag1"));
       table.put(put);
       Append append = new Append(row3);
-      append.add(f, q, Bytes.toBytes("b"));
+      append.addColumn(f, q, Bytes.toBytes("b"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
       scanner = table.getScanner(new Scan().setStartRow(row3));

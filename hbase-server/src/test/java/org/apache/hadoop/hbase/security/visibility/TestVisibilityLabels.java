@@ -636,12 +636,12 @@ public abstract class TestVisibilityLabels {
       Result result = table.get(get);
       assertTrue(result.isEmpty());
       Append append = new Append(row1);
-      append.add(fam, qual, Bytes.toBytes("b"));
+      append.addColumn(fam, qual, Bytes.toBytes("b"));
       table.append(append);
       result = table.get(get);
       assertTrue(result.isEmpty());
       append = new Append(row1);
-      append.add(fam, qual, Bytes.toBytes("c"));
+      append.addColumn(fam, qual, Bytes.toBytes("c"));
       append.setCellVisibility(new CellVisibility(SECRET));
       table.append(append);
       result = table.get(get);

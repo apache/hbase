@@ -132,7 +132,7 @@ public class TestSpaceQuotas {
   @Test
   public void testNoInsertsWithAppend() throws Exception {
     Append a = new Append(Bytes.toBytes("to_reject"));
-    a.add(
+    a.addColumn(
         Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
     writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_INSERTS, a);
   }
@@ -168,7 +168,7 @@ public class TestSpaceQuotas {
   @Test
   public void testNoWritesWithAppend() throws Exception {
     Append a = new Append(Bytes.toBytes("to_reject"));
-    a.add(
+    a.addColumn(
         Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
     writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES, a);
   }
