@@ -392,22 +392,26 @@ class AsyncNonMetaRegionLocator {
   // placed before it. Used for reverse scan. See the comment of
   // AsyncRegionLocator.getPreviousRegionLocation.
   private CompletableFuture<HRegionLocation> getRegionLocationInternal(TableName tableName,
-      byte[] row, RegionLocateType locateType) {
+      byte[] row, RegionLocateType locateType, boolean reload) {
     // AFTER should be convert to CURRENT before calling this method
     assert !locateType.equals(RegionLocateType.AFTER);
     TableCache tableCache = getTableCache(tableName);
-    HRegionLocation loc = locateInCache(tableCache, tableName, row, locateType);
-    if (loc != null) {
-      return CompletableFuture.completedFuture(loc);
+    if (!reload) {
+      HRegionLocation loc = locateInCache(tableCache, tableName, row, locateType);
+      if (loc != null) {
+        return CompletableFuture.completedFuture(loc);
+      }
     }
     CompletableFuture<HRegionLocation> future;
     LocateRequest req;
     boolean sendRequest = false;
     synchronized (tableCache) {
       // check again
-      loc = locateInCache(tableCache, tableName, row, locateType);
-      if (loc != null) {
-        return CompletableFuture.completedFuture(loc);
+      if (!reload) {
+        HRegionLocation loc = locateInCache(tableCache, tableName, row, locateType);
+        if (loc != null) {
+          return CompletableFuture.completedFuture(loc);
+        }
       }
       req = new LocateRequest(row, locateType);
       future = tableCache.allRequests.get(req);
@@ -427,16 +431,16 @@ class AsyncNonMetaRegionLocator {
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-      RegionLocateType locateType) {
+      RegionLocateType locateType, boolean reload) {
     if (locateType.equals(RegionLocateType.BEFORE)) {
-      return getRegionLocationInternal(tableName, row, locateType);
+      return getRegionLocationInternal(tableName, row, locateType, reload);
     } else {
       // as we know the exact row after us, so we can just create the new row, and use the same
       // algorithm to locate it.
       if (locateType.equals(RegionLocateType.AFTER)) {
         row = createClosestRowAfter(row);
       }
-      return getRegionLocationInternal(tableName, row, RegionLocateType.CURRENT);
+      return getRegionLocationInternal(tableName, row, RegionLocateType.CURRENT, reload);
     }
   }
 

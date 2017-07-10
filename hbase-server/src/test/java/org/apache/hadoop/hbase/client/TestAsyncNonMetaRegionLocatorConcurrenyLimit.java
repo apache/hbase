@@ -148,7 +148,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
   public void test() throws InterruptedException, ExecutionException {
     List<CompletableFuture<HRegionLocation>> futures =
         IntStream.range(0, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
-            .map(r -> LOCATOR.getRegionLocation(TABLE_NAME, r, RegionLocateType.CURRENT))
+            .map(r -> LOCATOR.getRegionLocation(TABLE_NAME, r, RegionLocateType.CURRENT, false))
             .collect(toList());
     assertLocs(futures);
     assertTrue(MAX_CONCURRENCY.get() <= MAX_ALLOWED);

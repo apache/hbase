@@ -79,23 +79,28 @@ class AsyncRegionLocator {
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-      RegionLocateType type, long timeoutNs) {
+      RegionLocateType type, boolean reload, long timeoutNs) {
     // meta region can not be split right now so we always call the same method.
     // Change it later if the meta table can have more than one regions.
     CompletableFuture<HRegionLocation> future =
-        tableName.equals(META_TABLE_NAME) ? metaRegionLocator.getRegionLocation()
-            : nonMetaRegionLocator.getRegionLocation(tableName, row, type);
+        tableName.equals(META_TABLE_NAME) ? metaRegionLocator.getRegionLocation(reload)
+            : nonMetaRegionLocator.getRegionLocation(tableName, row, type, reload);
     return withTimeout(future, timeoutNs,
-      () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
-          + "ms) waiting for region location for " + tableName + ", row='"
-          + Bytes.toStringBinary(row) + "'");
+      () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs) +
+          "ms) waiting for region location for " + tableName + ", row='" +
+          Bytes.toStringBinary(row) + "'");
+  }
+
+  CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
+      RegionLocateType type, long timeoutNs) {
+    return getRegionLocation(tableName, row, type, false, timeoutNs);
   }
 
   static boolean canUpdate(HRegionLocation loc, HRegionLocation oldLoc) {
     // Do not need to update if no such location, or the location is newer, or the location is not
     // same with us
-    return oldLoc != null && oldLoc.getSeqNum() <= loc.getSeqNum()
-        && oldLoc.getServerName().equals(loc.getServerName());
+    return oldLoc != null && oldLoc.getSeqNum() <= loc.getSeqNum() &&
+        oldLoc.getServerName().equals(loc.getServerName());
   }
 
   static void updateCachedLocation(HRegionLocation loc, Throwable exception,
