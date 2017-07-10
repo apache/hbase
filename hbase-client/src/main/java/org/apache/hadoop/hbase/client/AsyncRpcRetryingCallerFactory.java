@@ -378,7 +378,7 @@ class AsyncRpcRetryingCallerFactory {
     return new MasterRequestCallerBuilder<>();
   }
 
-  public class AdminRequestCallerBuilder<T> extends BuilderBase{
+  public class AdminRequestCallerBuilder<T> extends BuilderBase {
     // TODO: maybe we can reuse AdminRequestCallerBuild, MasterRequestCallerBuild etc.
 
     private AsyncAdminRequestRetryingCaller.Callable<T> callable;
@@ -437,5 +437,66 @@ class AsyncRpcRetryingCallerFactory {
 
   public <T> AdminRequestCallerBuilder<T> adminRequest(){
     return new AdminRequestCallerBuilder<>();
+  }
+
+  public class ServerRequestCallerBuilder<T> extends BuilderBase {
+
+    private AsyncServerRequestRpcRetryingCaller.Callable<T> callable;
+
+    private long operationTimeoutNs = -1L;
+
+    private long rpcTimeoutNs = -1L;
+
+    private ServerName serverName;
+
+    public ServerRequestCallerBuilder<T> action(
+        AsyncServerRequestRpcRetryingCaller.Callable<T> callable) {
+      this.callable = callable;
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> operationTimeout(long operationTimeout, TimeUnit unit) {
+      this.operationTimeoutNs = unit.toNanos(operationTimeout);
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> rpcTimeout(long rpcTimeout, TimeUnit unit) {
+      this.rpcTimeoutNs = unit.toNanos(rpcTimeout);
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> pause(long pause, TimeUnit unit) {
+      this.pauseNs = unit.toNanos(pause);
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> maxAttempts(int maxAttempts) {
+      this.maxAttempts = maxAttempts;
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> startLogErrorsCnt(int startLogErrorsCnt) {
+      this.startLogErrorsCnt = startLogErrorsCnt;
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> serverName(ServerName serverName) {
+      this.serverName = serverName;
+      return this;
+    }
+
+    public AsyncServerRequestRpcRetryingCaller<T> build() {
+      return new AsyncServerRequestRpcRetryingCaller<T>(retryTimer, conn, pauseNs, maxAttempts,
+          operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, serverName, checkNotNull(callable,
+            "action is null"));
+    }
+
+    public CompletableFuture<T> call() {
+      return build().call();
+    }
+  }
+
+  public <T> ServerRequestCallerBuilder<T> serverRequest() {
+    return new ServerRequestCallerBuilder<>();
   }
 }

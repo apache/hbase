@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallable;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
@@ -44,6 +46,8 @@ import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.protobuf.RpcChannel;
 
 /**
  * The implementation of AsyncAdmin.
@@ -616,5 +620,17 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Integer> runCatalogJanitor() {
     return wrap(rawAdmin.runCatalogJanitor());
+  }
+
+  @Override
+  public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
+      CoprocessorCallable<S, R> callable) {
+    return wrap(rawAdmin.coprocessorService(stubMaker, callable));
+  }
+
+  @Override
+  public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
+      CoprocessorCallable<S, R> callable, ServerName serverName) {
+    return wrap(rawAdmin.coprocessorService(stubMaker, callable, serverName));
   }
 }

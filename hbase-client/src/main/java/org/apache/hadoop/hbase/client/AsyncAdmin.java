@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -36,11 +37,14 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallable;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.protobuf.RpcChannel;
 
 /**
  * The asynchronous administrative API for HBase.
@@ -1060,4 +1064,49 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}
    */
   CompletableFuture<Integer> runCatalogJanitor();
+
+  /**
+   * Execute the given coprocessor call on the master.
+   * <p>
+   * The {@code stubMaker} is just a delegation to the {@code newStub} call. Usually it is only a
+   * one line lambda expression, like:
+   *
+   * <pre>
+   * <code>
+   * channel -> xxxService.newStub(channel)
+   * </code>
+   * </pre>
+   * @param stubMaker a delegation to the actual {@code newStub} call.
+   * @param callable a delegation to the actual protobuf rpc call. See the comment of
+   *          {@link CoprocessorCallable} for more details.
+   * @param <S> the type of the asynchronous stub
+   * @param <R> the type of the return value
+   * @return the return value of the protobuf rpc call, wrapped by a {@link CompletableFuture}.
+   * @see CoprocessorCallable
+   */
+  <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
+      CoprocessorCallable<S, R> callable);
+
+  /**
+   * Execute the given coprocessor call on the given region server.
+   * <p>
+   * The {@code stubMaker} is just a delegation to the {@code newStub} call. Usually it is only a
+   * one line lambda expression, like:
+   *
+   * <pre>
+   * <code>
+   * channel -> xxxService.newStub(channel)
+   * </code>
+   * </pre>
+   * @param stubMaker a delegation to the actual {@code newStub} call.
+   * @param callable a delegation to the actual protobuf rpc call. See the comment of
+   *          {@link CoprocessorCallable} for more details.
+   * @param serverName the given region server
+   * @param <S> the type of the asynchronous stub
+   * @param <R> the type of the return value
+   * @return the return value of the protobuf rpc call, wrapped by a {@link CompletableFuture}.
+   * @see CoprocessorCallable
+   */
+  <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
+    CoprocessorCallable<S, R> callable, ServerName serverName);
 }
