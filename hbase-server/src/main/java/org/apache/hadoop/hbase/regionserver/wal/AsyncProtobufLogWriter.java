@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import com.google.common.base.Throwables;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
 import java.io.IOException;
@@ -53,6 +54,8 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   private static final Log LOG = LogFactory.getLog(AsyncProtobufLogWriter.class);
 
   private final EventLoop eventLoop;
+
+  private final Class<? extends Channel> channelClass;
 
   private AsyncFSOutput output;
 
@@ -99,8 +102,9 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   private OutputStream asyncOutputWrapper;
 
-  public AsyncProtobufLogWriter(EventLoop eventLoop) {
+  public AsyncProtobufLogWriter(EventLoop eventLoop, Class<? extends Channel> channelClass) {
     this.eventLoop = eventLoop;
+    this.channelClass = channelClass;
   }
 
   @Override
@@ -151,7 +155,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
       short replication, long blockSize) throws IOException {
     this.output = AsyncFSOutputHelper.createOutput(fs, path, overwritable, false, replication,
-      blockSize, eventLoop);
+      blockSize, eventLoop, channelClass);
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }
 

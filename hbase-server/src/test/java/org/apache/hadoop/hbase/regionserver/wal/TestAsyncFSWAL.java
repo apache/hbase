@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.io.IOException;
 import java.util.List;
@@ -41,9 +43,12 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   private static EventLoopGroup GROUP;
 
+  private static Class<? extends Channel> CHANNEL_CLASS;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     GROUP = new NioEventLoopGroup(1, Threads.newDaemonThreadFactory("TestAsyncFSWAL"));
+    CHANNEL_CLASS = NioSocketChannel.class;
     AbstractTestFSWAL.setUpBeforeClass();
   }
 
@@ -58,7 +63,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix) throws IOException {
     return new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-        suffix, GROUP.next());
+        suffix, GROUP.next(), CHANNEL_CLASS);
   }
 
   @Override
@@ -67,7 +72,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
       boolean failIfWALExists, String prefix, String suffix, final Runnable action)
       throws IOException {
     return new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-        suffix, GROUP.next()) {
+        suffix, GROUP.next(), CHANNEL_CLASS) {
 
       @Override
       void atHeadOfRingBufferEventHandlerAppend() {

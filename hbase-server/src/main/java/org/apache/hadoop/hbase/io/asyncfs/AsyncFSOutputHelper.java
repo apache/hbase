@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.asyncfs;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
 import java.io.IOException;
@@ -54,11 +55,11 @@ public final class AsyncFSOutputHelper {
    * implementation for other {@link FileSystem} which wraps around a {@link FSDataOutputStream}.
    */
   public static AsyncFSOutput createOutput(FileSystem fs, Path f, boolean overwrite,
-      boolean createParent, short replication, long blockSize, final EventLoop eventLoop)
-      throws IOException {
+      boolean createParent, short replication, long blockSize, EventLoop eventLoop,
+      Class<? extends Channel> channelClass) throws IOException {
     if (fs instanceof DistributedFileSystem) {
       return FanOutOneBlockAsyncDFSOutputHelper.createOutput((DistributedFileSystem) fs, f,
-        overwrite, createParent, replication, blockSize, eventLoop);
+        overwrite, createParent, replication, blockSize, eventLoop, channelClass);
     }
     final FSDataOutputStream fsOut;
     int bufferSize = fs.getConf().getInt(CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
