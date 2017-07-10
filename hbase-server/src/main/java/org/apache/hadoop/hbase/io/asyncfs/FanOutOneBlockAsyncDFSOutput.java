@@ -26,6 +26,8 @@ import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHel
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.getStatus;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -37,6 +39,7 @@ import io.netty.handler.codec.protobuf.ProtobufDecoder;
 import io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 
@@ -70,8 +73,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PipelineAckProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.util.DataChecksum;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * An asynchronous HDFS output stream implementation which fans out data to datanode and only
@@ -461,8 +462,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       long nextSubPacketOffsetInBlock = nextPacketOffsetInBlock;
       for (int remaining = dataLen; remaining > 0;) {
         int toWriteDataLen = Math.min(remaining, maxDataLen);
-        combiner.add(flushBuffer(buf.readRetainedSlice(toWriteDataLen), nextSubPacketOffsetInBlock,
-          syncBlock));
+        combiner.add((Future<Void>) flushBuffer(buf.readRetainedSlice(toWriteDataLen),
+          nextSubPacketOffsetInBlock, syncBlock));
         nextSubPacketOffsetInBlock += toWriteDataLen;
         remaining -= toWriteDataLen;
       }

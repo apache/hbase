@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.asyncfs;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.CompletionHandler;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;

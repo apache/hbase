@@ -19,9 +19,12 @@ package org.apache.hadoop.hbase.wal;
 
 import com.google.common.base.Throwables;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.io.IOException;
 
@@ -36,7 +39,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncProtobufLogWriter;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * A WAL provider that use {@link AsyncFSWAL}.
@@ -52,31 +55,43 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
     void init(FileSystem fs, Path path, Configuration c, boolean overwritable) throws IOException;
   }
 
-  private EventLoopGroup eventLoopGroup = null;
+  private EventLoopGroup eventLoopGroup;
 
+  private Class<? extends Channel> channelClass;
   @Override
   protected AsyncFSWAL createWAL() throws IOException {
     return new AsyncFSWAL(FSUtils.getWALFileSystem(conf), FSUtils.getWALRootDir(conf),
         getWALDirectoryName(factory.factoryId), HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners,
         true, logPrefix, META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null,
-        eventLoopGroup.next());
+        eventLoopGroup.next(), channelClass);
   }
 
   @Override
   protected void doInit(Configuration conf) throws IOException {
-    eventLoopGroup = new NioEventLoopGroup(1, Threads.newDaemonThreadFactory("AsyncFSWAL"));
+    Pair<EventLoopGroup, Class<? extends Channel>> eventLoopGroupAndChannelClass =
+        NettyAsyncFSWALConfigHelper.getEventLoopConfig(conf);
+    if (eventLoopGroupAndChannelClass != null) {
+      eventLoopGroup = eventLoopGroupAndChannelClass.getFirst();
+      channelClass = eventLoopGroupAndChannelClass.getSecond();
+    } else {
+      eventLoopGroup = new NioEventLoopGroup(1,
+          new DefaultThreadFactory("AsyncFSWAL", true, Thread.MAX_PRIORITY));
+      channelClass = NioSocketChannel.class;
+    }
   }
 
   /**
    * public because of AsyncFSWAL. Should be package-private
    */
   public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
-      boolean overwritable, EventLoop eventLoop) throws IOException {
+      boolean overwritable, EventLoop eventLoop, Class<? extends Channel> channelClass)
+      throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends AsyncWriter> logWriterClass = conf.getClass(
       "hbase.regionserver.hlog.async.writer.impl", AsyncProtobufLogWriter.class, AsyncWriter.class);
     try {
-      AsyncWriter writer = logWriterClass.getConstructor(EventLoop.class).newInstance(eventLoop);
+      AsyncWriter writer = logWriterClass.getConstructor(EventLoop.class, Class.class)
+          .newInstance(eventLoop, channelClass);
       writer.init(fs, path, conf, overwritable);
       return writer;
     } catch (Exception e) {

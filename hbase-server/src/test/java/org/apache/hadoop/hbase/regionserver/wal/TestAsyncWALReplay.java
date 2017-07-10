@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.io.IOException;
 
@@ -40,9 +42,12 @@ public class TestAsyncWALReplay extends AbstractTestWALReplay {
 
   private static EventLoopGroup GROUP;
 
+  private static Class<? extends Channel> CHANNEL_CLASS;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     GROUP = new NioEventLoopGroup(1, Threads.newDaemonThreadFactory("TestAsyncWALReplay"));
+    CHANNEL_CLASS = NioSocketChannel.class;
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
     AbstractTestWALReplay.setUpBeforeClass();
@@ -57,6 +62,6 @@ public class TestAsyncWALReplay extends AbstractTestWALReplay {
   @Override
   protected WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
     return new AsyncFSWAL(FileSystem.get(c), hbaseRootDir, logName,
-        HConstants.HREGION_OLDLOGDIR_NAME, c, null, true, null, null, GROUP.next());
+        HConstants.HREGION_OLDLOGDIR_NAME, c, null, true, null, null, GROUP.next(), CHANNEL_CLASS);
   }
 }

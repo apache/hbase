@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -32,8 +33,8 @@ public class SecureAsyncProtobufLogWriter extends AsyncProtobufLogWriter {
 
   private Encryptor encryptor = null;
 
-  public SecureAsyncProtobufLogWriter(EventLoop eventLoop) {
-    super(eventLoop);
+  public SecureAsyncProtobufLogWriter(EventLoop eventLoop, Class<? extends Channel> channelClass) {
+    super(eventLoop, channelClass);
   }
 
   @Override

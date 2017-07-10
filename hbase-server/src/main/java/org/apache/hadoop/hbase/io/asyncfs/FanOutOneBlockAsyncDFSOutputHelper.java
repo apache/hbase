@@ -46,7 +46,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.protobuf.ProtobufDecoder;
 import io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -68,7 +67,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.Encryptor;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemLinkResolver;
 import org.apache.hadoop.fs.Path;
@@ -607,7 +605,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static List<Future<Channel>> connectToDataNodes(Configuration conf, DFSClient client,
       String clientName, LocatedBlock locatedBlock, long maxBytesRcvd, long latestGS,
-      BlockConstructionStage stage, DataChecksum summer, EventLoop eventLoop) {
+      BlockConstructionStage stage, DataChecksum summer, EventLoop eventLoop,
+      Class<? extends Channel> channelClass) {
     Enum<?>[] storageTypes = locatedBlock.getStorageTypes();
     DatanodeInfo[] datanodeInfos = locatedBlock.getLocations();
     boolean connectToDnViaHostname =
@@ -633,7 +632,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       Promise<Channel> promise = eventLoop.newPromise();
       futureList.add(promise);
       String dnAddr = dnInfo.getXferAddr(connectToDnViaHostname);
-      new Bootstrap().group(eventLoop).channel(NioSocketChannel.class)
+      new Bootstrap().group(eventLoop).channel(channelClass)
           .option(CONNECT_TIMEOUT_MILLIS, timeoutMs).handler(new ChannelInitializer<Channel>() {
 
             @Override
@@ -672,7 +671,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, String src,
       boolean overwrite, boolean createParent, short replication, long blockSize,
-      EventLoop eventLoop) throws IOException {
+      EventLoop eventLoop, Class<? extends Channel> channelClass) throws IOException {
     Configuration conf = dfs.getConf();
     FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
     DFSClient client = dfs.getClient();
@@ -701,7 +700,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         stat.getFileId(), null);
       List<Channel> datanodeList = new ArrayList<>();
       futureList = connectToDataNodes(conf, client, clientName, locatedBlock, 0L, 0L,
-        PIPELINE_SETUP_CREATE, summer, eventLoop);
+        PIPELINE_SETUP_CREATE, summer, eventLoop, channelClass);
       for (Future<Channel> future : futureList) {
         // fail the creation if there are connection failures since we are fail-fast. The upper
         // layer should retry itself if needed.
@@ -741,14 +740,14 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
    */
   public static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, Path f,
       boolean overwrite, boolean createParent, short replication, long blockSize,
-      EventLoop eventLoop) throws IOException {
+      EventLoop eventLoop, Class<? extends Channel> channelClass) throws IOException {
     return new FileSystemLinkResolver<FanOutOneBlockAsyncDFSOutput>() {
 
       @Override
       public FanOutOneBlockAsyncDFSOutput doCall(Path p)
           throws IOException, UnresolvedLinkException {
         return createOutput(dfs, p.toUri().getPath(), overwrite, createParent, replication,
-          blockSize, eventLoop);
+          blockSize, eventLoop, channelClass);
       }
 
       @Override

@@ -24,6 +24,7 @@ import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.Sequence;
 import com.lmax.disruptor.Sequencer;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
@@ -144,6 +145,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private final EventLoop eventLoop;
 
+  private final Class<? extends Channel> channelClass;
+
   private final Lock consumeLock = new ReentrantLock();
 
   private final Runnable consumer = this::consume;
@@ -192,10 +195,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   public AsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
-      String prefix, String suffix, EventLoop eventLoop)
+      String prefix, String suffix, EventLoop eventLoop, Class<? extends Channel> channelClass)
       throws FailedLogCloseException, IOException {
     super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
     this.eventLoop = eventLoop;
+    this.channelClass = channelClass;
     Supplier<Boolean> hasConsumerTask;
     if (eventLoop instanceof SingleThreadEventExecutor) {
 
@@ -607,7 +611,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     boolean overwrite = false;
     for (int retry = 0;; retry++) {
       try {
-        return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, overwrite, eventLoop);
+        return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, overwrite, eventLoop,
+          channelClass);
       } catch (RemoteException e) {
         LOG.warn("create wal log writer " + path + " failed, retry = " + retry, e);
         if (shouldRetryCreate(e)) {

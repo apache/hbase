@@ -31,9 +31,11 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIP
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.io.File;
 import java.io.IOException;
@@ -82,6 +84,8 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   private static DistributedFileSystem FS;
 
   private static EventLoopGroup EVENT_LOOP_GROUP;
+
+  private static Class<? extends Channel> CHANNEL_CLASS;
 
   private static int READ_TIMEOUT_MS = 200000;
 
@@ -166,6 +170,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
+    CHANNEL_CLASS = NioSocketChannel.class;
     TEST_UTIL.getConfiguration().setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT_MS);
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
@@ -242,8 +247,8 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   public void test() throws IOException, InterruptedException, ExecutionException {
     Path f = getTestFile();
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    final FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
-      true, false, (short) 1, FS.getDefaultBlockSize(), eventLoop);
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
+      false, (short) 1, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
     TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(eventLoop, FS, f, out);
   }
 }

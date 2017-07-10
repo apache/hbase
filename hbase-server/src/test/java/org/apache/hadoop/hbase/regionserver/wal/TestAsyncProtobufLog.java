@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import com.google.common.base.Throwables;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -42,9 +44,12 @@ public class TestAsyncProtobufLog extends AbstractTestProtobufLog<WALProvider.As
 
   private static EventLoopGroup EVENT_LOOP_GROUP;
 
+  private static Class<? extends Channel> CHANNEL_CLASS;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
+    CHANNEL_CLASS = NioSocketChannel.class;
     AbstractTestProtobufLog.setUpBeforeClass();
   }
 
@@ -57,7 +62,7 @@ public class TestAsyncProtobufLog extends AbstractTestProtobufLog<WALProvider.As
   @Override
   protected AsyncWriter createWriter(Path path) throws IOException {
     return AsyncFSWALProvider.createAsyncWriter(TEST_UTIL.getConfiguration(), fs, path, false,
-      EVENT_LOOP_GROUP.next());
+      EVENT_LOOP_GROUP.next(), CHANNEL_CLASS);
   }
 
   @Override
