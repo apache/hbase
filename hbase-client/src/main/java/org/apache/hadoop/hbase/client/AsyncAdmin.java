@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
@@ -32,9 +33,11 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Pair;
@@ -405,6 +408,34 @@ public interface AsyncAdmin {
   CompletableFuture<Void> majorCompactRegionServer(ServerName serverName);
 
   /**
+   * Turn the Merge switch on or off.
+   * @param on
+   * @return Previous switch value wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> setMergeOn(boolean on);
+
+  /**
+   * Query the current state of the Merge switch.
+   * @return true if the switch is on, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> isMergeOn();
+
+  /**
+   * Turn the Split switch on or off.
+   * @param on
+   * @return Previous switch value wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> setSplitOn(boolean on);
+
+  /**
+   * Query the current state of the Split switch.
+   * @return true if the switch is on, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> isSplitOn();
+
+  /**
    * Merge two regions.
    * @param nameOfRegionA encoded or full name of region a
    * @param nameOfRegionB encoded or full name of region b
@@ -771,6 +802,12 @@ public interface AsyncAdmin {
   CompletableFuture<List<ProcedureInfo>> listProcedures();
 
   /**
+   * List procedure locks.
+   * @return lock list wrapped by {@link CompletableFuture}
+   */
+  CompletableFuture<List<LockInfo>> listProcedureLocks();
+
+  /**
    * Mark a region server as draining to prevent additional regions from getting assigned to it.
    * @param servers
    */
@@ -852,6 +889,24 @@ public interface AsyncAdmin {
   CompletableFuture<Void> updateConfiguration();
 
   /**
+   * Roll the log writer. I.e. for filesystem based write ahead logs, start writing to a new file.
+   * <p>
+   * When the returned CompletableFuture is done, it only means the rollWALWriter request was sent
+   * to the region server and may need some time to finish the rollWALWriter operation. As a side
+   * effect of this call, the named region server may schedule store flushes at the request of the
+   * wal.
+   * @param serverName The servername of the region server.
+   */
+  CompletableFuture<Void> rollWALWriter(ServerName serverName);
+
+  /**
+   * Clear compacting queues on a region server.
+   * @param serverName
+   * @param queues the set of queue name
+   */
+  CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues);
+
+  /**
    * Get a list of {@link RegionLoad} of all regions hosted on a region seerver for a table.
    * @param serverName
    * @param tableName
@@ -902,6 +957,12 @@ public interface AsyncAdmin {
    * @return the last major compaction timestamp wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Optional<Long>> getLastMajorCompactionTimestampForRegion(byte[] regionName);
+
+  /**
+   * @return the list of supported security capabilities. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<List<SecurityCapability>> getSecurityCapabilities();
 
   /**
    * Turn the load balancer on or off.

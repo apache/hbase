@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
+import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -258,6 +261,26 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Boolean> setMergeOn(boolean on) {
+    return wrap(rawAdmin.setMergeOn(on));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isMergeOn() {
+    return wrap(rawAdmin.isMergeOn());
+  }
+
+  @Override
+  public CompletableFuture<Boolean> setSplitOn(boolean on) {
+    return wrap(rawAdmin.setSplitOn(on));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isSplitOn() {
+    return wrap(rawAdmin.isSplitOn());
+  }
+
+  @Override
   public CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
       boolean forcible) {
     return wrap(rawAdmin.mergeRegions(nameOfRegionA, nameOfRegionB, forcible));
@@ -439,6 +462,11 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<LockInfo>> listProcedureLocks() {
+    return wrap(rawAdmin.listProcedureLocks());
+  }
+
+  @Override
   public CompletableFuture<Void> drainRegionServers(List<ServerName> servers) {
     return wrap(rawAdmin.drainRegionServers(servers));
   }
@@ -481,6 +509,21 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> updateConfiguration() {
     return wrap(rawAdmin.updateConfiguration());
+  }
+
+  @Override
+  public CompletableFuture<Void> rollWALWriter(ServerName serverName) {
+    return wrap(rawAdmin.rollWALWriter(serverName));
+  }
+
+  @Override
+  public CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues) {
+    return wrap(rawAdmin.clearCompactionQueues(serverName, queues));
+  }
+
+  @Override
+  public CompletableFuture<List<SecurityCapability>> getSecurityCapabilities() {
+    return wrap(rawAdmin.getSecurityCapabilities());
   }
 
   @Override

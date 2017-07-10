@@ -355,6 +355,79 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   }
 
   @Test
+  public void testSplitSwitch() throws Exception {
+    createTableWithDefaultConf(tableName);
+    byte[][] families = { FAMILY };
+    loadData(tableName, families, 1000);
+
+    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    List<HRegionLocation> regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    int originalCount = regionLocations.size();
+
+    initSplitMergeSwitch();
+    assertTrue(admin.setSplitOn(false).get());
+    admin.split(tableName).join();
+    int count = admin.getTableRegions(tableName).get().size();
+    assertTrue(originalCount == count);
+
+    assertFalse(admin.setSplitOn(true).get());
+    admin.split(tableName).join();
+    while ((count = admin.getTableRegions(tableName).get().size()) == originalCount) {
+      Threads.sleep(100);
+    }
+    assertTrue(originalCount < count);
+  }
+
+  @Test
+  @Ignore
+  // It was ignored in TestSplitOrMergeStatus, too
+  public void testMergeSwitch() throws Exception {
+    createTableWithDefaultConf(tableName);
+    byte[][] families = { FAMILY };
+    loadData(tableName, families, 1000);
+
+    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    List<HRegionLocation> regionLocations =
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    int originalCount = regionLocations.size();
+
+    initSplitMergeSwitch();
+    admin.split(tableName).join();
+    int postSplitCount = originalCount;
+    while ((postSplitCount = admin.getTableRegions(tableName).get().size()) == originalCount) {
+      Threads.sleep(100);
+    }
+    assertTrue("originalCount=" + originalCount + ", postSplitCount=" + postSplitCount,
+      originalCount != postSplitCount);
+
+    // Merge switch is off so merge should NOT succeed.
+    assertTrue(admin.setMergeOn(false).get());
+    List<HRegionInfo> regions = admin.getTableRegions(tableName).get();
+    assertTrue(regions.size() > 1);
+    admin.mergeRegions(regions.get(0).getRegionName(), regions.get(1).getRegionName(), true).join();
+    int count = admin.getTableRegions(tableName).get().size();
+    assertTrue("postSplitCount=" + postSplitCount + ", count=" + count, postSplitCount == count);
+
+    // Merge switch is on so merge should succeed.
+    assertFalse(admin.setMergeOn(true).get());
+    admin.mergeRegions(regions.get(0).getRegionName(), regions.get(1).getRegionName(), true).join();
+    count = admin.getTableRegions(tableName).get().size();
+    assertTrue((postSplitCount / 2) == count);
+  }
+
+  private void initSplitMergeSwitch() throws Exception {
+    if (!admin.isSplitOn().get()) {
+      admin.setSplitOn(true).get();
+    }
+    if (!admin.isMergeOn().get()) {
+      admin.setMergeOn(true).get();
+    }
+    assertTrue(admin.isSplitOn().get());
+    assertTrue(admin.isMergeOn().get());
+  }
+
+  @Test
   public void testMergeRegions() throws Exception {
     byte[][] splitRows = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("6") };
     createTableWithDefaultConf(tableName, Optional.of(splitRows));
@@ -567,6 +640,11 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       count += region.getStoreFileList(families).size();
     }
     return count;
+  }
+
+  private static void loadData(final TableName tableName, final byte[][] families, final int rows)
+      throws IOException {
+    loadData(tableName, families, rows, 1);
   }
 
   private static void loadData(final TableName tableName, final byte[][] families, final int rows,

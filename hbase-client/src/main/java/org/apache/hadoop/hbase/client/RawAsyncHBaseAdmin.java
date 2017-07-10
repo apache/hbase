@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -71,8 +72,10 @@ import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.MasterReques
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
@@ -83,6 +86,8 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -95,6 +100,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
@@ -162,8 +169,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedur
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest;
@@ -192,6 +203,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalog
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetCleanerChoreRunningRequest;
@@ -200,6 +213,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormali
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRequest;
@@ -1031,6 +1046,51 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     checkAndGetTableName(encodeRegionNameA, tableNameRef, future);
     checkAndGetTableName(encodeRegionNameB, tableNameRef, future);
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> setMergeOn(boolean on) {
+    return setSplitOrMergeOn(on, MasterSwitchType.MERGE);
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isMergeOn() {
+    return isSplitOrMergeOn(MasterSwitchType.MERGE);
+  }
+
+  @Override
+  public CompletableFuture<Boolean> setSplitOn(boolean on) {
+    return setSplitOrMergeOn(on, MasterSwitchType.SPLIT);
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isSplitOn() {
+    return isSplitOrMergeOn(MasterSwitchType.SPLIT);
+  }
+
+  private CompletableFuture<Boolean> setSplitOrMergeOn(boolean on, MasterSwitchType switchType) {
+    SetSplitOrMergeEnabledRequest request =
+        RequestConverter.buildSetSplitOrMergeEnabledRequest(on, false, switchType);
+    return this
+        .<Boolean> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<SetSplitOrMergeEnabledRequest, SetSplitOrMergeEnabledResponse, Boolean> call(
+                controller, stub, request, (s, c, req, done) -> s.setSplitOrMergeEnabled(c, req,
+                  done), (resp) -> resp.getPrevValueList().get(0))).call();
+  }
+
+  private CompletableFuture<Boolean> isSplitOrMergeOn(MasterSwitchType switchType) {
+    IsSplitOrMergeEnabledRequest request =
+        RequestConverter.buildIsSplitOrMergeEnabledRequest(switchType);
+    return this
+        .<Boolean> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<IsSplitOrMergeEnabledRequest, IsSplitOrMergeEnabledResponse, Boolean> call(
+                controller, stub, request,
+                (s, c, req, done) -> s.isSplitOrMergeEnabled(c, req, done),
+                (resp) -> resp.getEnabled())).call();
   }
 
   @Override
@@ -1930,6 +1990,17 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<LockInfo>> listProcedureLocks() {
+    return this
+        .<List<LockInfo>> newMasterCaller()
+        .action(
+          (controller, stub) -> this.<ListLocksRequest, ListLocksResponse, List<LockInfo>> call(
+            controller, stub, ListLocksRequest.newBuilder().build(),
+            (s, c, req, done) -> s.listLocks(c, req, done), resp -> resp.getLockList().stream()
+                .map(ProtobufUtil::toLockInfo).collect(Collectors.toList()))).call();
+  }
+
+  @Override
   public CompletableFuture<Void> drainRegionServers(List<ServerName> servers) {
     return this
         .<Void> newMasterCaller()
@@ -2419,6 +2490,41 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
         }
       });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> rollWALWriter(ServerName serverName) {
+    return this
+        .<Void> newAdminCaller()
+        .action(
+          (controller, stub) -> this.<RollWALWriterRequest, RollWALWriterResponse, Void> adminCall(
+            controller, stub, RequestConverter.buildRollWALWriterRequest(),
+            (s, c, req, done) -> s.rollWALWriter(controller, req, done), resp -> null))
+        .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues) {
+    return this
+        .<Void> newAdminCaller()
+        .action(
+          (controller, stub) -> this
+              .<ClearCompactionQueuesRequest, ClearCompactionQueuesResponse, Void> adminCall(
+                controller, stub, RequestConverter.buildClearCompactionQueuesRequest(queues), (s,
+                    c, req, done) -> s.clearCompactionQueues(controller, req, done), resp -> null))
+        .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<List<SecurityCapability>> getSecurityCapabilities() {
+    return this
+        .<List<SecurityCapability>> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<SecurityCapabilitiesRequest, SecurityCapabilitiesResponse, List<SecurityCapability>> call(
+                controller, stub, SecurityCapabilitiesRequest.newBuilder().build(), (s, c, req,
+                    done) -> s.getSecurityCapabilities(c, req, done), (resp) -> ProtobufUtil
+                    .toSecurityCapabilityList(resp.getCapabilitiesList()))).call();
   }
 
   @Override
