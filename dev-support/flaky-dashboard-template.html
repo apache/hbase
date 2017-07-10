@@ -156,7 +156,8 @@ Legend : green: success, red: failed, yellow: timeout, blue: hanging
         <td align="middle">
             {{ failed|length }} / {{ timeout|length }} / {{ hanging|length }}
         </td>
-        {% set sparkline_id = "sparkline_" ~ test ~ "_" ~ url_counter  %}
+        {# Replace '.' in test names with '_' because dots are part of css selectors.  #}
+        {% set sparkline_id = "sparkline_" ~ test|replace(".","_") ~ "_" ~ url_counter  %}
         <td id="{{ sparkline_id }}" align="middle">
         </td>
         <script>sparkline("{{ sparkline_id }}", "{{ failed|join(',') }}", "{{ timeout|join(',') }}",
