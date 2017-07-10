@@ -34,14 +34,18 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -119,6 +123,92 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   private void restoreHBaseSiteXML() throws IOException {
     // restore hbase-site.xml
     Files.copy(cnf3Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
+  }
+
+  @Test
+  public void testRollWALWALWriter() throws Exception {
+    setUpforLogRolling();
+    String className = this.getClass().getName();
+    StringBuilder v = new StringBuilder(className);
+    while (v.length() < 1000) {
+      v.append(className);
+    }
+    byte[] value = Bytes.toBytes(v.toString());
+    HRegionServer regionServer = startAndWriteData(tableName, value);
+    LOG.info("after writing there are "
+        + AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
+
+    // flush all regions
+    for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+      r.flush(true);
+    }
+    admin.rollWALWriter(regionServer.getServerName()).join();
+    int count = AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));
+    LOG.info("after flushing all regions and rolling logs there are " +
+        count + " log files");
+    assertTrue(("actual count: " + count), count <= 2);
+  }
+
+  private void setUpforLogRolling() {
+    // Force a region split after every 768KB
+    TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE,
+        768L * 1024L);
+
+    // We roll the log after every 32 writes
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.maxlogentries", 32);
+
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.logroll.errors.tolerated", 2);
+    TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
+
+    // For less frequently updated regions flush after every 2 flushes
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.hregion.memstore.optionalflushcount", 2);
+
+    // We flush the cache after every 8192 bytes
+    TEST_UTIL.getConfiguration().setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
+        8192);
+
+    // Increase the amount of time between client retries
+    TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 10 * 1000);
+
+    // Reduce thread wake frequency so that other threads can get
+    // a chance to run.
+    TEST_UTIL.getConfiguration().setInt(HConstants.THREAD_WAKE_FREQUENCY,
+        2 * 1000);
+
+    /**** configuration for testLogRollOnDatanodeDeath ****/
+    // lower the namenode & datanode heartbeat so the namenode
+    // quickly detects datanode failures
+    TEST_UTIL.getConfiguration().setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
+    TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
+    // the namenode might still try to choose the recently-dead datanode
+    // for a pipeline, so try to a new pipeline multiple times
+    TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.hlog.tolerable.lowreplication", 2);
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.hlog.lowreplication.rolllimit", 3);
+  }
+
+  private HRegionServer startAndWriteData(TableName tableName, byte[] value) throws Exception {
+    createTableWithDefaultConf(tableName);
+    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
+    for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
+      Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
+      put.addColumn(FAMILY, null, value);
+      table.put(put).join();
+      if (i % 32 == 0) {
+        // After every 32 writes sleep to let the log roller run
+        try {
+          Thread.sleep(2000);
+        } catch (InterruptedException e) {
+          // continue
+        }
+      }
+    }
+    return regionServer;
   }
 
   @Test
