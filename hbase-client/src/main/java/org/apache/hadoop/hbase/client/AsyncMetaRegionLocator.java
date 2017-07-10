@@ -45,11 +45,13 @@ class AsyncMetaRegionLocator {
     this.registry = registry;
   }
 
-  CompletableFuture<HRegionLocation> getRegionLocation() {
+  CompletableFuture<HRegionLocation> getRegionLocation(boolean reload) {
     for (;;) {
-      HRegionLocation metaRegionLocation = this.metaRegionLocation.get();
-      if (metaRegionLocation != null) {
-        return CompletableFuture.completedFuture(metaRegionLocation);
+      if (!reload) {
+        HRegionLocation metaRegionLocation = this.metaRegionLocation.get();
+        if (metaRegionLocation != null) {
+          return CompletableFuture.completedFuture(metaRegionLocation);
+        }
       }
       if (LOG.isTraceEnabled()) {
         LOG.trace("Meta region location cache is null, try fetching from registry.");

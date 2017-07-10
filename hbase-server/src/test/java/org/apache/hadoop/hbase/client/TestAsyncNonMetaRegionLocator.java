@@ -51,6 +51,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncNonMetaRegionLocator {
@@ -108,7 +109,7 @@ public class TestAsyncNonMetaRegionLocator {
   public void testNoTable() throws InterruptedException {
     for (RegionLocateType locateType : RegionLocateType.values()) {
       try {
-        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType).get();
+        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get();
       } catch (ExecutionException e) {
         assertThat(e.getCause(), instanceOf(TableNotFoundException.class));
       }
@@ -121,7 +122,7 @@ public class TestAsyncNonMetaRegionLocator {
     TEST_UTIL.getAdmin().disableTable(TABLE_NAME);
     for (RegionLocateType locateType : RegionLocateType.values()) {
       try {
-        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType).get();
+        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get();
       } catch (ExecutionException e) {
         assertThat(e.getCause(), instanceOf(TableNotFoundException.class));
       }
@@ -143,13 +144,13 @@ public class TestAsyncNonMetaRegionLocator {
     ServerName serverName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
     for (RegionLocateType locateType : RegionLocateType.values()) {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
-        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType).get());
+        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get());
     }
     byte[] randKey = new byte[ThreadLocalRandom.current().nextInt(128)];
     ThreadLocalRandom.current().nextBytes(randKey);
     for (RegionLocateType locateType : RegionLocateType.values()) {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
-        LOCATOR.getRegionLocation(TABLE_NAME, randKey, locateType).get());
+        LOCATOR.getRegionLocation(TABLE_NAME, randKey, locateType, false).get());
     }
   }
 
@@ -191,8 +192,8 @@ public class TestAsyncNonMetaRegionLocator {
     IntStream.range(0, 2).forEach(n -> IntStream.range(0, startKeys.length).forEach(i -> {
       try {
         assertLocEquals(startKeys[i], i == startKeys.length - 1 ? EMPTY_END_ROW : startKeys[i + 1],
-          serverNames[i],
-          LOCATOR.getRegionLocation(TABLE_NAME, startKeys[i], RegionLocateType.CURRENT).get());
+          serverNames[i], LOCATOR
+              .getRegionLocation(TABLE_NAME, startKeys[i], RegionLocateType.CURRENT, false).get());
       } catch (InterruptedException | ExecutionException e) {
         throw new RuntimeException(e);
       }
@@ -203,7 +204,7 @@ public class TestAsyncNonMetaRegionLocator {
       try {
         assertLocEquals(startKeys[i], i == startKeys.length - 1 ? EMPTY_END_ROW : startKeys[i + 1],
           serverNames[i],
-          LOCATOR.getRegionLocation(TABLE_NAME, startKeys[i], RegionLocateType.AFTER).get());
+          LOCATOR.getRegionLocation(TABLE_NAME, startKeys[i], RegionLocateType.AFTER, false).get());
       } catch (InterruptedException | ExecutionException e) {
         throw new RuntimeException(e);
       }
@@ -214,7 +215,8 @@ public class TestAsyncNonMetaRegionLocator {
       n -> IntStream.range(0, endKeys.length).map(i -> endKeys.length - 1 - i).forEach(i -> {
         try {
           assertLocEquals(i == 0 ? EMPTY_START_ROW : endKeys[i - 1], endKeys[i], serverNames[i],
-            LOCATOR.getRegionLocation(TABLE_NAME, endKeys[i], RegionLocateType.BEFORE).get());
+            LOCATOR.getRegionLocation(TABLE_NAME, endKeys[i], RegionLocateType.BEFORE, false)
+                .get());
         } catch (InterruptedException | ExecutionException e) {
           throw new RuntimeException(e);
         }
@@ -225,8 +227,8 @@ public class TestAsyncNonMetaRegionLocator {
   public void testRegionMove() throws IOException, InterruptedException, ExecutionException {
     createSingleRegionTable();
     ServerName serverName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
-    HRegionLocation loc =
-        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT).get();
+    HRegionLocation loc = LOCATOR
+        .getRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false).get();
     assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName, loc);
     ServerName newServerName = TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
         .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName))
@@ -239,15 +241,15 @@ public class TestAsyncNonMetaRegionLocator {
       Thread.sleep(100);
     }
     // Should be same as it is in cache
-    assertSame(loc,
-      LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT).get());
+    assertSame(loc, LOCATOR
+        .getRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false).get());
     LOCATOR.updateCachedLocation(loc, null);
     // null error will not trigger a cache cleanup
-    assertSame(loc,
-      LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT).get());
+    assertSame(loc, LOCATOR
+        .getRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false).get());
     LOCATOR.updateCachedLocation(loc, new NotServingRegionException());
-    assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, newServerName,
-      LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT).get());
+    assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, newServerName, LOCATOR
+        .getRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false).get());
   }
 
   // usually locate after will return the same result, so we add a test to make it return different
@@ -259,12 +261,12 @@ public class TestAsyncNonMetaRegionLocator {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, new byte[][] { splitKey });
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     HRegionLocation currentLoc =
-        LOCATOR.getRegionLocation(TABLE_NAME, row, RegionLocateType.CURRENT).get();
+        LOCATOR.getRegionLocation(TABLE_NAME, row, RegionLocateType.CURRENT, false).get();
     ServerName currentServerName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
     assertLocEquals(EMPTY_START_ROW, splitKey, currentServerName, currentLoc);
 
     HRegionLocation afterLoc =
-        LOCATOR.getRegionLocation(TABLE_NAME, row, RegionLocateType.AFTER).get();
+        LOCATOR.getRegionLocation(TABLE_NAME, row, RegionLocateType.AFTER, false).get();
     ServerName afterServerName =
         TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
             .filter(rs -> rs.getOnlineRegions(TABLE_NAME).stream()
@@ -272,7 +274,8 @@ public class TestAsyncNonMetaRegionLocator {
             .findAny().get().getServerName();
     assertLocEquals(splitKey, EMPTY_END_ROW, afterServerName, afterLoc);
 
-    assertSame(afterLoc, LOCATOR.getRegionLocation(TABLE_NAME, row, RegionLocateType.AFTER).get());
+    assertSame(afterLoc,
+      LOCATOR.getRegionLocation(TABLE_NAME, row, RegionLocateType.AFTER, false).get());
   }
 
   // For HBASE-17402
@@ -286,12 +289,55 @@ public class TestAsyncNonMetaRegionLocator {
       LOCATOR.clearCache(TABLE_NAME);
       List<CompletableFuture<HRegionLocation>> futures = IntStream.range(0, 1000)
           .mapToObj(n -> String.format("%03d", n)).map(s -> Bytes.toBytes(s))
-          .map(r -> LOCATOR.getRegionLocation(TABLE_NAME, r, RegionLocateType.CURRENT))
+          .map(r -> LOCATOR.getRegionLocation(TABLE_NAME, r, RegionLocateType.CURRENT, false))
           .collect(toList());
       for (int j = 0; j < 1000; j++) {
         int index = Math.min(8, j / 111);
         assertLocEquals(startKeys[index], endKeys[index], serverNames[index], futures.get(j).get());
       }
+    }
+  }
+
+  @Test
+  public void testReload() throws Exception {
+    createSingleRegionTable();
+    ServerName serverName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
+    for (RegionLocateType locateType : RegionLocateType.values()) {
+      assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
+        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get());
+    }
+    ServerName newServerName = TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
+        .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName))
+        .findAny().get();
+    Admin admin = TEST_UTIL.getAdmin();
+    HRegionInfo region = admin.getTableRegions(TABLE_NAME).stream().findAny().get();
+    admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(newServerName.getServerName()));
+    TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
+
+      @Override
+      public boolean evaluate() throws Exception {
+        ServerName newServerName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
+        return newServerName != null && !newServerName.equals(serverName);
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return region.getRegionNameAsString() + " is still on " + serverName;
+      }
+
+    });
+    // The cached location will not change
+    for (RegionLocateType locateType : RegionLocateType.values()) {
+      assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
+        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get());
+    }
+    // should get the new location when reload = true
+    assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, newServerName,
+      LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, true).get());
+    // the cached location should be replaced
+    for (RegionLocateType locateType : RegionLocateType.values()) {
+      assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, newServerName,
+        LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get());
     }
   }
 }
