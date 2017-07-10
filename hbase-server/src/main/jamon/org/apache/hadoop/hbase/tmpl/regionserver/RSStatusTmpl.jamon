@@ -50,9 +50,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
     : masterAddressTracker.getMasterAddress();
   int infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getMasterInfoPort();
 </%java>
-<!--[if IE]>
 <!DOCTYPE html>
-<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
   <head>

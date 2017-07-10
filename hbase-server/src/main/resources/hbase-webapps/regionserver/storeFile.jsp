@@ -32,9 +32,7 @@
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   Configuration conf = rs.getConfiguration();
 %>
-<!--[if IE]>
 <!DOCTYPE html>
-<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
   <head>
