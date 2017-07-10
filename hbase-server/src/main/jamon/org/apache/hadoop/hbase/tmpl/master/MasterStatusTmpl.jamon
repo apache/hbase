@@ -93,9 +93,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
   }
 </%class>
 
-<!--[if IE]>
 <!DOCTYPE html>
-<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
   <head>
