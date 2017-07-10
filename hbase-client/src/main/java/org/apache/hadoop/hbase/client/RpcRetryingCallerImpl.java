@@ -109,7 +109,11 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
       } catch (Throwable t) {
         Throwable e = t.getCause();
         ExceptionUtil.rethrowIfInterrupt(t);
-
+        Throwable cause = t.getCause();
+        if (cause instanceof DoNotRetryIOException) {
+          // Fail fast
+          throw (DoNotRetryIOException) cause;
+        }
         // translateException throws exception when should not retry: i.e. when request is bad.
         interceptor.handleFailure(context, t);
         t = translateException(t);
