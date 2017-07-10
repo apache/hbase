@@ -702,8 +702,8 @@ public class MasterRpcServices extends RSRpcServices
       MasterProcedureManager mpm = master.getMasterProcedureManagerHost().getProcedureManager(
         desc.getSignature());
       if (mpm == null) {
-        throw new ServiceException("The procedure is not registered: "
-          + desc.getSignature());
+        throw new ServiceException(new DoNotRetryIOException("The procedure is not registered: "
+          + desc.getSignature()));
       }
 
       LOG.info(master.getClientIdAuditPrefix() + " procedure request for: "
