@@ -22,9 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
@@ -158,6 +156,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private final ReentrantLock flushLock = new ReentrantLock();
 
   protected final long readPt;
+  private boolean topChanged = false;
 
   // used by the injection framework to test race between StoreScanner construction and compaction
   enum StoreScannerCompactionRace {
@@ -606,6 +605,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       int cellSize = CellUtil.estimatedSerializedSizeOf(cell);
       bytesRead += cellSize;
       prevCell = cell;
+      topChanged = false;
       ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
       switch (qcode) {
         case INCLUDE:
@@ -692,10 +692,18 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           }
           matcher.clearCurrentRow();
           seekOrSkipToNextRow(cell);
+          NextState stateAfterSeekNextRow = needToReturn(outResult);
+          if (stateAfterSeekNextRow != null) {
+            return scannerContext.setScannerState(stateAfterSeekNextRow).hasMoreValues();
+          }
           break;
 
         case SEEK_NEXT_COL:
           seekOrSkipToNextColumn(cell);
+          NextState stateAfterSeekNextColumn = needToReturn(outResult);
+          if (stateAfterSeekNextColumn != null) {
+            return scannerContext.setScannerState(stateAfterSeekNextColumn).hasMoreValues();
+          }
           break;
 
         case SKIP:
@@ -706,6 +714,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           Cell nextKV = matcher.getNextKeyHint(cell);
           if (nextKV != null) {
             seekAsDirection(nextKV);
+            NextState stateAfterSeekByHint = needToReturn(outResult);
+            if (stateAfterSeekByHint != null) {
+              return scannerContext.setScannerState(stateAfterSeekByHint).hasMoreValues();
+            }
           } else {
             heap.next();
           }
@@ -723,6 +735,24 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // No more keys
     close(false);// Do all cleanup except heap.close()
     return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+  }
+
+  /**
+   * If the top cell won't be flushed into disk, the new top cell may be
+   * changed after #reopenAfterFlush. Because the older top cell only exist
+   * in the memstore scanner but the memstore scanner is replaced by hfile
+   * scanner after #reopenAfterFlush. If the row of top cell is changed,
+   * we should return the current cells. Otherwise, we may return
+   * the cells across different rows.
+   * @param outResult the cells which are visible for user scan
+   * @return null is the top cell doesn't change. Otherwise, the NextState
+   *         to return
+   */
+  private NextState needToReturn(List<Cell> outResult) {
+    if (!outResult.isEmpty() && topChanged) {
+      return heap.peek() == null ? NextState.NO_MORE_VALUES : NextState.MORE_VALUES;
+    }
+    return null;
   }
 
   private void seekOrSkipToNextRow(Cell cell) throws IOException {
@@ -901,13 +931,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     resetKVHeap(this.currentScanners, store.getComparator());
     resetQueryMatcher(lastTop);
     if (heap.peek() == null || store.getComparator().compareRows(lastTop, this.heap.peek()) != 0) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Storescanner.peek() is changed where before = " + lastTop.toString() +
-            ",and after = " + heap.peek());
-      }
-      return true;
+      LOG.info("Storescanner.peek() is changed where before = " + lastTop.toString() +
+          ",and after = " + heap.peek());
+      topChanged = true;
+    } else {
+      topChanged = false;
     }
-    return false;
+    return topChanged;
   }
 
   private void resetQueryMatcher(Cell lastTopKey) {
