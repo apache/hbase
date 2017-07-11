@@ -142,6 +142,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private ReentrantLock flushLock = new ReentrantLock();
 
   private final long readPt;
+  private boolean topChanged = false;
 
   // used by the injection framework to test race between StoreScanner construction and compaction
   enum StoreScannerCompactionRace {
@@ -547,7 +548,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if (prevCell != cell) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
       checkScanOrder(prevCell, cell, comparator);
       prevCell = cell;
-
+      topChanged = false;
       ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
       switch (qcode) {
         case INCLUDE:
@@ -644,10 +645,18 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           // another compareRow to say the current row is DONE
           matcher.clearCurrentRow();
           seekOrSkipToNextRow(cell);
+          NextState stateAfterSeekNextRow = needToReturn(outResult);
+          if (stateAfterSeekNextRow != null) {
+            return scannerContext.setScannerState(stateAfterSeekNextRow).hasMoreValues();
+          }
           break;
 
         case SEEK_NEXT_COL:
           seekOrSkipToNextColumn(cell);
+          NextState stateAfterSeekNextColumn = needToReturn(outResult);
+          if (stateAfterSeekNextColumn != null) {
+            return scannerContext.setScannerState(stateAfterSeekNextColumn).hasMoreValues();
+          }
           break;
 
         case SKIP:
@@ -658,6 +667,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           Cell nextKV = matcher.getNextKeyHint(cell);
           if (nextKV != null) {
             seekAsDirection(nextKV);
+            NextState stateAfterSeekByHint = needToReturn(outResult);
+            if (stateAfterSeekByHint != null) {
+              return scannerContext.setScannerState(stateAfterSeekByHint).hasMoreValues();
+            }
           } else {
             heap.next();
           }
@@ -675,6 +688,24 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // No more keys
     close();
     return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+  }
+
+  /**
+   * If the top cell won't be flushed into disk, the new top cell may be
+   * changed after #reopenAfterFlush. Because the older top cell only exist
+   * in the memstore scanner but the memstore scanner is replaced by hfile
+   * scanner after #reopenAfterFlush. If the row of top cell is changed,
+   * we should return the current cells. Otherwise, we may return
+   * the cells across different rows.
+   * @param outResult the cells which are visible for user scan
+   * @return null is the top cell doesn't change. Otherwise, the NextState
+   *         to return
+   */
+  private NextState needToReturn(List<Cell> outResult) {
+    if (!outResult.isEmpty() && topChanged) {
+      return heap.peek() == null ? NextState.NO_MORE_VALUES : NextState.MORE_VALUES;
+    }
+    return null;
   }
 
   private void seekOrSkipToNextRow(Cell cell) throws IOException {
@@ -846,14 +877,16 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       resetScannerStack(this.lastTop);
       if (this.heap.peek() == null
           || store.getComparator().compareRows(this.lastTop, this.heap.peek()) != 0) {
-        LOG.debug("Storescanner.peek() is changed where before = "
+        LOG.info("Storescanner.peek() is changed where before = "
             + this.lastTop.toString() + ",and after = " + this.heap.peek());
         this.lastTop = null;
+        topChanged = true;
         return true;
       }
       this.lastTop = null; // gone!
     }
     // else dont need to reseek
+    topChanged = false;
     return false;
   }
 
