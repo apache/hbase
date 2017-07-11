@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class SaslUtil {
   private static final Log log = LogFactory.getLog(SaslUtil.class);
   public static final String SASL_DEFAULT_REALM = "default";
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_MUTABLE_COLLECTION_PKGPROTECT",
+      justification="it is used in different package")
   public static final Map<String, String> SASL_PROPS =
       new TreeMap<String, String>();
   public static final int SWITCH_TO_SIMPLE_AUTH = -88;

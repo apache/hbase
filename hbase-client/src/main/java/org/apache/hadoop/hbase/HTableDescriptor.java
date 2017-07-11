@@ -957,7 +957,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     // step 1: set partitioning and pruning
     Set<ImmutableBytesWritable> reservedKeys = new TreeSet<ImmutableBytesWritable>();
     Set<ImmutableBytesWritable> userKeys = new TreeSet<ImmutableBytesWritable>();
-    for (ImmutableBytesWritable k : values.keySet()) {
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry : values.entrySet()) {
+      ImmutableBytesWritable k = entry.getKey();
       if (k == null || k.get() == null) continue;
       String key = Bytes.toString(k.get());
       // in this section, print out reserved keywords + coprocessor info
@@ -966,7 +967,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
         continue;
       }
       // only print out IS_ROOT/IS_META if true
-      String value = Bytes.toString(values.get(k).get());
+      String value = Bytes.toString(entry.getValue().get());
       if (key.equalsIgnoreCase(IS_ROOT) || key.equalsIgnoreCase(IS_META)) {
         if (Boolean.valueOf(value) == false) continue;
       }
@@ -1174,8 +1175,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       result = families.size() - other.families.size();
     }
     if (result == 0 && families.size() != other.families.size()) {
-      result = Integer.valueOf(families.size()).compareTo(
-          Integer.valueOf(other.families.size()));
+      result = Integer.compare(families.size(), other.families.size());
     }
     if (result == 0) {
       for (Iterator<HColumnDescriptor> it = families.values().iterator(),
