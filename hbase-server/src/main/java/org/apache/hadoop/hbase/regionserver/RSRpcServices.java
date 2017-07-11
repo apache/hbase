@@ -691,7 +691,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
       if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().postAppend(append, r);
+        r = region.getCoprocessorHost().postAppend(append, r);
       }
     }
     if (regionServer.metricsRegionServer != null) {
