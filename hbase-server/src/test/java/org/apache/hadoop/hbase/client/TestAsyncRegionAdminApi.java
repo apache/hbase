@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -65,8 +64,6 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
-
-  public static Random RANDOM = new Random(System.currentTimeMillis());
 
   @Test
   public void testCloseRegion() throws Exception {
@@ -358,7 +355,8 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   public void testSplitSwitch() throws Exception {
     createTableWithDefaultConf(tableName);
     byte[][] families = { FAMILY };
-    loadData(tableName, families, 1000);
+    final int rows = 10000;
+    loadData(tableName, families, rows);
 
     RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
@@ -367,12 +365,12 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
     initSplitMergeSwitch();
     assertTrue(admin.setSplitOn(false).get());
-    admin.split(tableName).join();
+    admin.split(tableName, Bytes.toBytes(rows / 2)).join();
     int count = admin.getTableRegions(tableName).get().size();
     assertTrue(originalCount == count);
 
     assertFalse(admin.setSplitOn(true).get());
-    admin.split(tableName).join();
+    admin.split(tableName, Bytes.toBytes(rows / 2)).join();
     while ((count = admin.getTableRegions(tableName).get().size()) == originalCount) {
       Threads.sleep(100);
     }
@@ -654,7 +652,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     byte[] qualifier = Bytes.toBytes("val");
     for (int i = 0; i < flushes; i++) {
       for (int k = 0; k < rows; k++) {
-        byte[] row = Bytes.toBytes(RANDOM.nextLong());
+        byte[] row = Bytes.add(Bytes.toBytes(k), Bytes.toBytes(i));
         Put p = new Put(row);
         for (int j = 0; j < families.length; ++j) {
           p.addColumn(families[j], qualifier, row);
