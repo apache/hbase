@@ -85,6 +85,8 @@ public class AsyncRpcChannel {
 
   private static final int MAX_SASL_RETRIES = 5;
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_MUTABLE_COLLECTION_PKGPROTECT",
+      justification="the rest of the system which live in the different package can use")
   protected final static Map<AuthenticationProtos.TokenIdentifier.Kind, TokenSelector<? extends
       TokenIdentifier>> tokenHandlers = new HashMap<>();
 

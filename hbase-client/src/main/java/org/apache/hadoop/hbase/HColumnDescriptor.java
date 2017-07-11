@@ -1176,13 +1176,14 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     boolean hasConfigKeys = false;
 
     // print all reserved keys first
-    for (ImmutableBytesWritable k : values.keySet()) {
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry : values.entrySet()) {
+      ImmutableBytesWritable k = entry.getKey();
       if (!RESERVED_KEYWORDS.contains(k)) {
         hasConfigKeys = true;
         continue;
       }
       String key = Bytes.toString(k.get());
-      String value = Bytes.toStringBinary(values.get(k).get());
+      String value = Bytes.toStringBinary(entry.getValue().get());
       if (printDefaults
           || !DEFAULT_VALUES.containsKey(key)
           || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
@@ -1199,12 +1200,13 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       s.append(HConstants.METADATA).append(" => ");
       s.append('{');
       boolean printComma = false;
-      for (ImmutableBytesWritable k : values.keySet()) {
+      for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry : values.entrySet()) {
+        ImmutableBytesWritable k = entry.getKey();
         if (RESERVED_KEYWORDS.contains(k)) {
           continue;
         }
         String key = Bytes.toString(k.get());
-        String value = Bytes.toStringBinary(values.get(k).get());
+        String value = Bytes.toStringBinary(entry.getValue().get());
         if (printComma) {
           s.append(", ");
         }
