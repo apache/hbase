@@ -520,7 +520,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         endNonceOperation(m, nonceGroup, success);
       }
       if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().postAppend(append, r);
+        r = region.getCoprocessorHost().postAppend(append, r);
       }
     }
     if (regionServer.metricsRegionServer != null) {
