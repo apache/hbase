@@ -133,8 +133,10 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.MasterSpaceQuotaObserver;
@@ -2525,6 +2527,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return info.getInfoPort();
   }
 
+  @Override
   public String getRegionServerVersion(final ServerName sn) {
     RegionServerInfo info = this.regionServerTracker.getRegionServerInfo(sn);
     if (info != null && info.hasVersionInfo()) {
@@ -2993,24 +2996,19 @@ public class HMaster extends HRegionServer implements MasterServices {
       cpHost.preListProcedures();
     }
 
-    final List<ProcedureInfo> procInfoList = this.procedureExecutor.listProcedures();
+    final List<Procedure> procList = this.procedureExecutor.listProcedures();
+    final List<ProcedureInfo> procInfoList = new ArrayList<>(procList.size());
+
+    for (Procedure proc : procList) {
+      ProcedureInfo procInfo = ProcedureUtil.convertToProcedureInfo(proc);
+      procInfoList.add(procInfo);
+    }
 
     if (cpHost != null) {
       cpHost.postListProcedures(procInfoList);
     }
 
     return procInfoList;
-  }
-
-  private Map<Long, ProcedureInfo> getProcedureInfos() {
-    final List<ProcedureInfo> list = procedureExecutor.listProcedures();
-    final Map<Long, ProcedureInfo> map = new HashMap<>();
-
-    for (ProcedureInfo procedureInfo : list) {
-      map.put(procedureInfo.getProcId(), procedureInfo);
-    }
-
-    return map;
   }
 
   @Override

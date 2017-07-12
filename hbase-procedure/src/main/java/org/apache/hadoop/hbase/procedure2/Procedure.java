@@ -183,7 +183,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * A lock can be anything, and it is up to the implementor. The Procedure
    * Framework will call this method just before it invokes {@link #execute(Object)}.
    * It calls {@link #releaseLock(Object)} after the call to execute.
-   * 
+   *
    * <p>If you need to hold the lock for the life of the Procdure -- i.e. you do not
    * want any other Procedure interfering while this Procedure is running, see
    * {@link #holdLock(Object)}.
@@ -466,6 +466,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     return rootProcId;
   }
 
+  public String getProcName() {
+    return toStringClass();
+  }
+
   public NonceKey getNonceKey() {
     return nonceKey;
   }
@@ -625,7 +629,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * @return true if the procedure is in a RUNNABLE state.
    */
-  protected synchronized boolean isRunnable() {
+  public synchronized boolean isRunnable() {
     return state == ProcedureState.RUNNABLE;
   }
 
@@ -677,7 +681,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   }
 
   @InterfaceAudience.Private
-  protected synchronized ProcedureState getState() {
+  public synchronized ProcedureState getState() {
     return state;
   }
 

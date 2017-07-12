@@ -25,8 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -98,9 +98,9 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
 
     // Second delete should fail with InvalidFamilyOperationException
-    ProcedureInfo result = procExec.getResult(procId2);
+    Procedure<?> result = procExec.getResult(procId2);
     assertTrue(result.isFailed());
-    LOG.debug("Delete online failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Delete online failed with exception: " + result.getException());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
 
@@ -113,7 +113,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Expect fail with InvalidFamilyOperationException
     result = procExec.getResult(procId2);
     assertTrue(result.isFailed());
-    LOG.debug("Delete offline failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Delete offline failed with exception: " + result.getException());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
   }
@@ -133,9 +133,9 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
 
-    ProcedureInfo result = procExec.getResult(procId1);
+    Procedure<?> result = procExec.getResult(procId1);
     assertTrue(result.isFailed());
-    LOG.debug("Delete failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Delete failed with exception: " + result.getException());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
   }

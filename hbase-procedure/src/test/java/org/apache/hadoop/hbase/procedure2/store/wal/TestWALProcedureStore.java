@@ -604,9 +604,9 @@ public class TestWALProcedureStore {
       @Override
       public void load(ProcedureIterator procIter) throws IOException {
         assertTrue(procIter.hasNext());
-        assertEquals(1, procIter.nextAsProcedureInfo().getProcId());
+        assertEquals(1, procIter.next().getProcId());
         assertTrue(procIter.hasNext());
-        assertEquals(2, procIter.nextAsProcedureInfo().getProcId());
+        assertEquals(2, procIter.next().getProcId());
         assertFalse(procIter.hasNext());
       }
 
@@ -660,16 +660,16 @@ public class TestWALProcedureStore {
       @Override
       public void load(ProcedureIterator procIter) throws IOException {
         assertTrue(procIter.hasNext());
-        assertEquals(4, procIter.nextAsProcedureInfo().getProcId());
+        assertEquals(4, procIter.next().getProcId());
         // TODO: This will be multiple call once we do fast-start
         //assertFalse(procIter.hasNext());
 
         assertTrue(procIter.hasNext());
-        assertEquals(1, procIter.nextAsProcedureInfo().getProcId());
+        assertEquals(1, procIter.next().getProcId());
         assertTrue(procIter.hasNext());
-        assertEquals(2, procIter.nextAsProcedureInfo().getProcId());
+        assertEquals(2, procIter.next().getProcId());
         assertTrue(procIter.hasNext());
-        assertEquals(3, procIter.nextAsProcedureInfo().getProcId());
+        assertEquals(3, procIter.next().getProcId());
         assertFalse(procIter.hasNext());
       }
 

@@ -31,8 +31,6 @@ import org.apache.commons.cli.Option;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -82,18 +80,14 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     @Override
     public void load(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
-        if (procIter.isNextFinished()) {
-          ProcedureInfo proc = procIter.nextAsProcedureInfo();
-        } else {
-          Procedure proc = procIter.nextAsProcedure();
-        }
+        procIter.next();
       }
     }
 
     @Override
     public void handleCorrupted(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
-        Procedure proc = procIter.nextAsProcedure();
+        procIter.next();
       }
     }
   }

@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
@@ -132,7 +131,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseReportResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
@@ -1013,28 +1011,33 @@ public class MasterRpcServices extends RSRpcServices
       master.checkInitialized();
       GetProcedureResultResponse.Builder builder = GetProcedureResultResponse.newBuilder();
 
-      Pair<ProcedureInfo, Procedure> v = master.getMasterProcedureExecutor()
+      Procedure<?> result = master.getMasterProcedureExecutor()
           .getResultOrProcedure(request.getProcId());
-      if (v.getFirst() != null) {
-        ProcedureInfo result = v.getFirst();
-        builder.setState(GetProcedureResultResponse.State.FINISHED);
+      if (result == null) {
+        builder.setState(GetProcedureResultResponse.State.NOT_FOUND);
+      } else {
+        boolean remove = false;
+
+        if (result.isFinished() || result.isFailed()) {
+          builder.setState(GetProcedureResultResponse.State.FINISHED);
+          remove = true;
+        } else {
+          builder.setState(GetProcedureResultResponse.State.RUNNING);
+        }
+
         builder.setSubmittedTime(result.getSubmittedTime());
         builder.setLastUpdate(result.getLastUpdate());
         if (result.isFailed()) {
-          builder.setException(ForeignExceptionUtil.toProtoForeignException(result.getException()));
+          IOException exception = result.getException().unwrapRemoteIOException();
+          builder.setException(ForeignExceptionUtil.toProtoForeignException(exception));
         }
-        if (result.hasResultData()) {
-          builder.setResult(UnsafeByteOperations.unsafeWrap(result.getResult()));
+        byte[] resultData = result.getResult();
+        if (resultData != null) {
+          builder.setResult(UnsafeByteOperations.unsafeWrap(resultData));
         }
-        master.getMasterProcedureExecutor().removeResult(request.getProcId());
-      } else {
-        Procedure<?> proc = v.getSecond();
-        if (proc == null) {
-          builder.setState(GetProcedureResultResponse.State.NOT_FOUND);
-        } else {
-          builder.setState(GetProcedureResultResponse.State.RUNNING);
-          builder.setSubmittedTime(proc.getSubmittedTime());
-          builder.setLastUpdate(proc.getLastUpdate());
+
+        if (remove) {
+          master.getMasterProcedureExecutor().removeResult(request.getProcId());
         }
       }
       return builder.build();

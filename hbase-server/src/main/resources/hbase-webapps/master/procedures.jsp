@@ -31,6 +31,7 @@
   import="org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv"
   import="org.apache.hadoop.hbase.ProcedureInfo"
   import="org.apache.hadoop.hbase.procedure2.LockInfo"
+  import="org.apache.hadoop.hbase.procedure2.Procedure"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
   import="org.apache.hadoop.hbase.procedure2.store.wal.ProcedureWALFile"
   import="org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore"
@@ -47,11 +48,11 @@
   long millisFromLastRoll = walStore.getMillisFromLastRoll();
   ArrayList<ProcedureWALFile> procedureWALFiles = walStore.getActiveLogs();
   Set<ProcedureWALFile> corruptedWALFiles = walStore.getCorruptedLogs();
-  List<ProcedureInfo> procedures = procExecutor.listProcedures();
-  Collections.sort(procedures, new Comparator<ProcedureInfo>() {
+  List<Procedure> procedures = procExecutor.listProcedures();
+  Collections.sort(procedures, new Comparator<Procedure>() {
     @Override
-    public int compare(ProcedureInfo lhs, ProcedureInfo rhs) {
-      long cmp = lhs.getParentId() - rhs.getParentId();
+    public int compare(Procedure lhs, Procedure rhs) {
+      long cmp = lhs.getParentProcId() - rhs.getParentProcId();
       cmp = cmp != 0 ? cmp : lhs.getProcId() - rhs.getProcId();
       return cmp < 0 ? -1 : cmp > 0 ? 1 : 0;
     }
@@ -118,16 +119,16 @@
         <th>Last Update</th>
         <th>Errors</th>
     </tr>
-    <% for (ProcedureInfo procInfo : procedures) { %>
+    <% for (Procedure<?> proc : procedures) { %>
       <tr>
-        <td><%= procInfo.getProcId() %></td>
-        <td><%= procInfo.hasParentId() ? procInfo.getParentId() : "" %></td>
-        <td><%= escapeXml(procInfo.getProcState().toString()) %></td>
-        <td><%= escapeXml(procInfo.getProcOwner()) %></td>
-        <td><%= escapeXml(procInfo.getProcName()) %></td>
-        <td><%= new Date(procInfo.getSubmittedTime()) %></td>
-        <td><%= new Date(procInfo.getLastUpdate()) %></td>
-        <td><%= escapeXml(procInfo.isFailed() ? procInfo.getException().getMessage() : "") %></td>
+        <td><%= proc.getProcId() %></td>
+        <td><%= proc.hasParent() ? proc.getParentProcId() : "" %></td>
+        <td><%= escapeXml(proc.getState().toString()) %></td>
+        <td><%= escapeXml(proc.getOwner()) %></td>
+        <td><%= escapeXml(proc.getProcName()) %></td>
+        <td><%= new Date(proc.getSubmittedTime()) %></td>
+        <td><%= new Date(proc.getLastUpdate()) %></td>
+        <td><%= escapeXml(proc.isFailed() ? proc.getException().unwrapRemoteIOException().getMessage() : "") %></td>
       </tr>
     <% } %>
   </table>

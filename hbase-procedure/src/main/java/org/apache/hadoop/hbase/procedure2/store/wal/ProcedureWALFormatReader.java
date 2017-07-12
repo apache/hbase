@@ -25,7 +25,6 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -362,10 +361,6 @@ public class ProcedureWALFormatReader {
       return procedure;
     }
 
-    public ProcedureInfo convertToInfo() {
-      return ProcedureUtil.convertToProcedureInfo(proto);
-    }
-
     @Override
     public String toString() {
       final StringBuilder sb = new StringBuilder();
@@ -410,18 +405,9 @@ public class ProcedureWALFormatReader {
     }
 
     @Override
-    public Procedure nextAsProcedure() throws IOException {
+    public Procedure next() throws IOException {
       try {
         return current.convert();
-      } finally {
-        current = current.replayNext;
-      }
-    }
-
-    @Override
-    public ProcedureInfo nextAsProcedureInfo() {
-      try {
-        return current.convertToInfo();
       } finally {
         current = current.replayNext;
       }

@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -173,7 +173,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     long procId3 =
         ProcedureTestingUtility.submitAndWait(procExec,
             new ModifyTableProcedure(procExec.getEnvironment(), htd3));
-    final ProcedureInfo result = procExec.getResult(procId3);
+    final Procedure<?> result = procExec.getResult(procId3);
     assertEquals(true, result.isFailed());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
     assertTrue("expected DoNotRetryIOException, got " + cause,

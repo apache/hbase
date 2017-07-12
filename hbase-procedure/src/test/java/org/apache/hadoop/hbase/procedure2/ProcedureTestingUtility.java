@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -259,45 +258,45 @@ public class ProcedureTestingUtility {
 
   public static <TEnv> void assertProcNotFailed(ProcedureExecutor<TEnv> procExecutor,
       long procId) {
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     assertTrue("expected procedure result", result != null);
     assertProcNotFailed(result);
   }
 
-  public static void assertProcNotFailed(final ProcedureInfo result) {
+  public static void assertProcNotFailed(final Procedure<?> result) {
     assertFalse("found exception: " + result.getException(), result.isFailed());
   }
 
   public static <TEnv> Throwable assertProcFailed(final ProcedureExecutor<TEnv> procExecutor,
       final long procId) {
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     assertTrue("expected procedure result", result != null);
     return assertProcFailed(result);
   }
 
-  public static Throwable assertProcFailed(final ProcedureInfo result) {
+  public static Throwable assertProcFailed(final Procedure<?> result) {
     assertEquals(true, result.isFailed());
     LOG.info("procId=" + result.getProcId() + " exception: " + result.getException().getMessage());
     return getExceptionCause(result);
   }
 
-  public static void assertIsAbortException(final ProcedureInfo result) {
+  public static void assertIsAbortException(final Procedure<?> result) {
     Throwable cause = assertProcFailed(result);
     assertTrue("expected abort exception, got "+ cause, cause instanceof ProcedureAbortedException);
   }
 
-  public static void assertIsTimeoutException(final ProcedureInfo result) {
+  public static void assertIsTimeoutException(final Procedure<?> result) {
     Throwable cause = assertProcFailed(result);
     assertTrue("expected TimeoutIOException, got " + cause, cause instanceof TimeoutIOException);
   }
 
-  public static void assertIsIllegalArgumentException(final ProcedureInfo result) {
+  public static void assertIsIllegalArgumentException(final Procedure<?> result) {
     Throwable cause = assertProcFailed(result);
     assertTrue("expected IllegalArgumentIOException, got " + cause,
       cause instanceof IllegalArgumentIOException);
   }
 
-  public static Throwable getExceptionCause(final ProcedureInfo procInfo) {
+  public static Throwable getExceptionCause(final Procedure<?> procInfo) {
     assert procInfo.isFailed();
     Throwable cause = procInfo.getException().getCause();
     return cause == null ? procInfo.getException() : cause;
@@ -447,7 +446,7 @@ public class ProcedureTestingUtility {
 
   public static class LoadCounter implements ProcedureStore.ProcedureLoader {
     private final ArrayList<Procedure> corrupted = new ArrayList<>();
-    private final ArrayList<ProcedureInfo> completed = new ArrayList<>();
+    private final ArrayList<Procedure> completed = new ArrayList<>();
     private final ArrayList<Procedure> runnable = new ArrayList<>();
 
     private Set<Long> procIds;
@@ -485,7 +484,7 @@ public class ProcedureTestingUtility {
       return runnable.size();
     }
 
-    public ArrayList<ProcedureInfo> getCompleted() {
+    public ArrayList<Procedure> getCompleted() {
       return completed;
     }
 
@@ -524,12 +523,12 @@ public class ProcedureTestingUtility {
       while (procIter.hasNext()) {
         long procId;
         if (procIter.isNextFinished()) {
-          ProcedureInfo proc = procIter.nextAsProcedureInfo();
+          Procedure<?> proc = procIter.next();
           procId = proc.getProcId();
           LOG.debug("loading completed procId=" + procId + ": " + proc);
           completed.add(proc);
         } else {
-          Procedure proc = procIter.nextAsProcedure();
+          Procedure proc = procIter.next();
           procId = proc.getProcId();
           LOG.debug("loading runnable procId=" + procId + ": " + proc);
           runnable.add(proc);
@@ -543,7 +542,7 @@ public class ProcedureTestingUtility {
     @Override
     public void handleCorrupted(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
-        Procedure proc = procIter.nextAsProcedure();
+        Procedure proc = procIter.next();
         LOG.debug("corrupted procId=" + proc.getProcId() + ": " + proc);
         corrupted.add(proc);
       }

@@ -31,9 +31,8 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.ProcedureState;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -47,8 +46,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
-import static org.junit.Assert.*;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestProcedureAdmin {
@@ -209,15 +206,15 @@ public class TestProcedureAdmin {
     // Wait for one step to complete
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
-    List<ProcedureInfo> listProcedures = procExec.listProcedures();
+    List<Procedure> listProcedures = procExec.listProcedures();
     assertTrue(listProcedures.size() >= 1);
     boolean found = false;
-    for (ProcedureInfo procInfo: listProcedures) {
-      if (procInfo.getProcId() == procId) {
-        assertTrue(procInfo.getProcState() == ProcedureState.RUNNABLE);
+    for (Procedure proc: listProcedures) {
+      if (proc.getProcId() == procId) {
+        assertTrue(proc.isRunnable());
         found = true;
       } else {
-        assertTrue(procInfo.getProcState() == ProcedureState.SUCCESS);
+        assertTrue(proc.isSuccess());
       }
     }
     assertTrue(found);
@@ -227,8 +224,8 @@ public class TestProcedureAdmin {
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     listProcedures = procExec.listProcedures();
-    for (ProcedureInfo procInfo: listProcedures) {
-      assertTrue(procInfo.getProcState() == ProcedureState.SUCCESS);
+    for (Procedure proc: listProcedures) {
+      assertTrue(proc.isSuccess());
     }
   }
 

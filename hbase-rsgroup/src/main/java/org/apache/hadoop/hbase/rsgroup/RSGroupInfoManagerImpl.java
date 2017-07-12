@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.DefaultVisitorBase;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -68,6 +67,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
@@ -762,9 +762,10 @@ class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       if(tries <= 0) {
         throw new IOException("Failed to create group table in a given time.");
       } else {
-        ProcedureInfo result = masterServices.getMasterProcedureExecutor().getResult(procId);
+        Procedure<?> result = masterServices.getMasterProcedureExecutor().getResult(procId);
         if (result != null && result.isFailed()) {
-          throw new IOException("Failed to create group table. " + result.getExceptionFullMessage());
+          throw new IOException("Failed to create group table. " +
+            result.getException().unwrapRemoteIOException());
         }
       }
     }

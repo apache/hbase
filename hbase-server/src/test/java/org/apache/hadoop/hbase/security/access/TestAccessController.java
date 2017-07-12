@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -633,18 +634,18 @@ public class TestAccessController extends SecureTestUtil {
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
     proc.setOwner(USER_OWNER);
-    final long procId = procExec.submitProcedure(proc);
-    final List<ProcedureInfo> procInfoList = procExec.listProcedures();
+    procExec.submitProcedure(proc);
+    final List<Procedure> procList = procExec.listProcedures();
 
     AccessTestAction listProceduresAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        List<ProcedureInfo> procInfoListClone = new ArrayList<>(procInfoList.size());
-        for(ProcedureInfo pi : procInfoList) {
-          procInfoListClone.add(pi.clone());
+        List<ProcedureInfo> procInfoList = new ArrayList<>(procList.size());
+        for(Procedure p : procList) {
+          procInfoList.add(ProcedureUtil.convertToProcedureInfo(p));
         }
         ACCESS_CONTROLLER
-        .postListProcedures(ObserverContext.createAndPrepare(CP_ENV, null), procInfoListClone);
+        .postListProcedures(ObserverContext.createAndPrepare(CP_ENV, null), procInfoList);
        return null;
       }
     };
