@@ -18,14 +18,16 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertTrue;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -36,8 +38,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
-import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
@@ -95,9 +95,9 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
 
     // Second delete should fail with TableNotFound
-    ProcedureInfo result = procExec.getResult(procId2);
+    Procedure<?> result = procExec.getResult(procId2);
     assertTrue(result.isFailed());
-    LOG.debug("Delete failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Delete failed with exception: " + result.getException());
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotFoundException);
   }
 

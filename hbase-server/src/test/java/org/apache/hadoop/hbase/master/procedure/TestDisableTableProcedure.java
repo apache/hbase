@@ -23,9 +23,9 @@ import static org.junit.Assert.assertTrue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -82,9 +82,9 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
         procExec.getEnvironment(), tableName, false));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureInfo result = procExec.getResult(procId2);
+    Procedure<?> result = procExec.getResult(procId2);
     assertTrue(result.isFailed());
-    LOG.debug("Disable failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Disable failed with exception: " + result.getException());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotEnabledException);
 

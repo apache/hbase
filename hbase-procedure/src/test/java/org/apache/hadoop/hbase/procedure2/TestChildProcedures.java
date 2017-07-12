@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -35,7 +34,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, SmallTests.class})
@@ -138,7 +136,7 @@ public class TestChildProcedures {
 
   private void assertProcFailed(long procId) {
     assertTrue("expected completed proc", procExecutor.isFinished(procId));
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     assertEquals(true, result.isFailed());
     LOG.info(result.getException().getMessage());
   }
@@ -146,6 +144,7 @@ public class TestChildProcedures {
   public static class TestRootProcedure extends SequentialProcedure<TestProcEnv> {
     public TestRootProcedure() {}
 
+    @Override
     public Procedure[] execute(TestProcEnv env) {
       if (env.toggleKillBeforeStoreUpdate) {
         ProcedureTestingUtility.toggleKillBeforeStoreUpdate(procExecutor);
@@ -153,6 +152,7 @@ public class TestChildProcedures {
       return new Procedure[] { new TestChildProcedure(), new TestChildProcedure() };
     }
 
+    @Override
     public void rollback(TestProcEnv env) {
     }
 
@@ -165,6 +165,7 @@ public class TestChildProcedures {
   public static class TestChildProcedure extends SequentialProcedure<TestProcEnv> {
     public TestChildProcedure() {}
 
+    @Override
     public Procedure[] execute(TestProcEnv env) {
       if (env.toggleKillBeforeStoreUpdate) {
         ProcedureTestingUtility.toggleKillBeforeStoreUpdate(procExecutor);
@@ -175,6 +176,7 @@ public class TestChildProcedures {
       return null;
     }
 
+    @Override
     public void rollback(TestProcEnv env) {
     }
 

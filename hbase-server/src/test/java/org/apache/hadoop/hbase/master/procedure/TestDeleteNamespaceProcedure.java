@@ -31,9 +31,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -117,9 +117,9 @@ public class TestDeleteNamespaceProcedure {
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     // Expect fail with NamespaceNotFoundException
-    ProcedureInfo result = procExec.getResult(procId);
+    Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Delete namespace failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Delete namespace failed with exception: " + result.getException());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof NamespaceNotFoundException);
   }
@@ -133,9 +133,9 @@ public class TestDeleteNamespaceProcedure {
       new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    ProcedureInfo result = procExec.getResult(procId);
+    Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Delete namespace failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Delete namespace failed with exception: " + result.getException());
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
@@ -153,9 +153,9 @@ public class TestDeleteNamespaceProcedure {
       new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    ProcedureInfo result = procExec.getResult(procId);
+    Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Delete namespace failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Delete namespace failed with exception: " + result.getException());
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 

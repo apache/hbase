@@ -31,17 +31,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -54,11 +52,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
@@ -173,9 +166,9 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
 
     long procId = ProcedureTestingUtility.submitAndWait(
       procExec, new RestoreSnapshotProcedure(procExec.getEnvironment(), newHTD, snapshot));
-    ProcedureInfo result = procExec.getResult(procId);
+    Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Restore snapshot failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Restore snapshot failed with exception: " + result.getException());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotFoundException);
   }
@@ -190,9 +183,9 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
       long procId = ProcedureTestingUtility.submitAndWait(
         procExec,
         new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot));
-      ProcedureInfo result = procExec.getResult(procId);
+      Procedure<?> result = procExec.getResult(procId);
       assertTrue(result.isFailed());
-      LOG.debug("Restore snapshot failed with exception: " + result.getExceptionFullMessage());
+      LOG.debug("Restore snapshot failed with exception: " + result.getException());
       assertTrue(
         ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotDisabledException);
     } finally {

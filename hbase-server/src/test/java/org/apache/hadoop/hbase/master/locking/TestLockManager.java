@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
@@ -95,8 +94,7 @@ public class TestLockManager {
 
   @After
   public void tearDown() throws Exception {
-    for (ProcedureInfo procInfo : getMasterProcedureExecutor().listProcedures()) {
-      Procedure proc = getMasterProcedureExecutor().getProcedure(procInfo.getProcId());
+    for (Procedure<?> proc : getMasterProcedureExecutor().listProcedures()) {
       if (proc instanceof LockProcedure) {
         ((LockProcedure) proc).unlock(getMasterProcedureExecutor().getEnvironment());
         ProcedureTestingUtility.waitProcedure(getMasterProcedureExecutor(), proc);

@@ -22,12 +22,15 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,7 +46,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
@@ -57,7 +59,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
@@ -111,6 +112,37 @@ public class ProcedureExecutor<TEnvironment> {
     void procedureFinished(long procId);
   }
 
+  private static class CompletedProcedureRetainer {
+    private final Procedure<?> procedure;
+    private long clientAckTime;
+
+    public CompletedProcedureRetainer(Procedure<?> procedure) {
+      this.procedure = procedure;
+      clientAckTime = -1;
+    }
+
+    public Procedure<?> getProcedure() {
+      return procedure;
+    }
+
+    public boolean hasClientAckTime() {
+      return clientAckTime != -1;
+    }
+
+    public long getClientAckTime() {
+      return clientAckTime;
+    }
+
+    public void setClientAckTime(long clientAckTime) {
+      this.clientAckTime = clientAckTime;
+    }
+
+    public boolean isExpired(long now, long evictTtl, long evictAckTtl) {
+      return (hasClientAckTime() && (now - getClientAckTime()) >= evictAckTtl) ||
+        (now - procedure.getLastUpdate()) >= evictTtl;
+    }
+  }
+
   /**
    * Internal cleaner that removes the completed procedure results after a TTL.
    * NOTE: This is a special case handled in timeoutLoop().
@@ -144,13 +176,13 @@ public class ProcedureExecutor<TEnvironment> {
     private static final String BATCH_SIZE_CONF_KEY = "hbase.procedure.cleaner.evict.batch.size";
     private static final int DEFAULT_BATCH_SIZE = 32;
 
-    private final Map<Long, ProcedureInfo> completed;
+    private final Map<Long, CompletedProcedureRetainer> completed;
     private final Map<NonceKey, Long> nonceKeysToProcIdsMap;
     private final ProcedureStore store;
     private Configuration conf;
 
     public CompletedProcedureCleaner(final Configuration conf, final ProcedureStore store,
-        final Map<Long, ProcedureInfo> completedMap,
+        final Map<Long, CompletedProcedureRetainer> completedMap,
         final Map<NonceKey, Long> nonceKeysToProcIdsMap) {
       // set the timeout interval that triggers the periodic-procedure
       super(conf.getInt(CLEANER_INTERVAL_CONF_KEY, DEFAULT_CLEANER_INTERVAL));
@@ -177,17 +209,17 @@ public class ProcedureExecutor<TEnvironment> {
       int batchCount = 0;
 
       final long now = EnvironmentEdgeManager.currentTime();
-      final Iterator<Map.Entry<Long, ProcedureInfo>> it = completed.entrySet().iterator();
+      final Iterator<Map.Entry<Long, CompletedProcedureRetainer>> it = completed.entrySet().iterator();
       final boolean debugEnabled = LOG.isDebugEnabled();
       while (it.hasNext() && store.isRunning()) {
-        final Map.Entry<Long, ProcedureInfo> entry = it.next();
-        final ProcedureInfo procInfo = entry.getValue();
+        final Map.Entry<Long, CompletedProcedureRetainer> entry = it.next();
+        final CompletedProcedureRetainer retainer = entry.getValue();
+        final Procedure<?> proc = retainer.getProcedure();
 
         // TODO: Select TTL based on Procedure type
-        if ((procInfo.hasClientAckTime() && (now - procInfo.getClientAckTime()) >= evictAckTtl) ||
-            (now - procInfo.getLastUpdate()) >= evictTtl) {
+        if (retainer.isExpired(now, evictTtl, evictAckTtl)) {
           if (debugEnabled) {
-            LOG.debug("Evict completed " + procInfo);
+            LOG.debug("Evict completed " + proc);
           }
           batchIds[batchCount++] = entry.getKey();
           if (batchCount == batchIds.length) {
@@ -196,7 +228,7 @@ public class ProcedureExecutor<TEnvironment> {
           }
           it.remove();
 
-          final NonceKey nonceKey = procInfo.getNonceKey();
+          final NonceKey nonceKey = proc.getNonceKey();
           if (nonceKey != null) {
             nonceKeysToProcIdsMap.remove(nonceKey);
           }
@@ -213,7 +245,7 @@ public class ProcedureExecutor<TEnvironment> {
    * Once a Root-Procedure completes (success or failure), the result will be added to this map.
    * The user of ProcedureExecutor should call getResult(procId) to get the result.
    */
-  private final ConcurrentHashMap<Long, ProcedureInfo> completed = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Long, CompletedProcedureRetainer> completed = new ConcurrentHashMap<>();
 
   /**
    * Map the the procId returned by submitProcedure(), the Root-ProcID, to the RootProcedureState.
@@ -296,7 +328,7 @@ public class ProcedureExecutor<TEnvironment> {
       public void handleCorrupted(ProcedureIterator procIter) throws IOException {
         int corruptedCount = 0;
         while (procIter.hasNext()) {
-          ProcedureInfo proc = procIter.nextAsProcedureInfo();
+          Procedure<?> proc = procIter.next();
           LOG.error("Corrupt " + proc);
           corruptedCount++;
         }
@@ -314,22 +346,17 @@ public class ProcedureExecutor<TEnvironment> {
     // 1. Build the rollback stack
     int runnablesCount = 0;
     while (procIter.hasNext()) {
-      final NonceKey nonceKey;
-      final long procId;
+      boolean finished = procIter.isNextFinished();
+      Procedure proc = procIter.next();
+      NonceKey nonceKey = proc.getNonceKey();
+      long procId = proc.getProcId();
 
-      if (procIter.isNextFinished()) {
-        ProcedureInfo proc = procIter.nextAsProcedureInfo();
-        nonceKey = proc.getNonceKey();
-        procId = proc.getProcId();
-        completed.put(proc.getProcId(), proc);
+      if (finished) {
+        completed.put(proc.getProcId(), new CompletedProcedureRetainer(proc));
         if (debugEnabled) {
           LOG.debug("Completed " + proc);
         }
       } else {
-        Procedure proc = procIter.nextAsProcedure();
-        nonceKey = proc.getNonceKey();
-        procId = proc.getProcId();
-
         if (!proc.hasParent()) {
           assert !proc.isFinished() : "unexpected finished procedure";
           rollbackStack.put(proc.getProcId(), new RootProcedureState());
@@ -360,7 +387,7 @@ public class ProcedureExecutor<TEnvironment> {
         continue;
       }
 
-      Procedure proc = procIter.nextAsProcedure();
+      Procedure proc = procIter.next();
       assert !(proc.isFinished() && !proc.hasParent()) : "unexpected completed proc=" + proc;
 
       if (debugEnabled) {
@@ -723,6 +750,49 @@ public class ProcedureExecutor<TEnvironment> {
     }
   }
 
+  private static class FailedProcedure<TEnvironment> extends Procedure<TEnvironment> {
+    private String procName;
+
+    public FailedProcedure(NonceKey nonceKey, String procName, User owner,
+        IOException exception) {
+      this.procName = procName;
+      setNonceKey(nonceKey);
+      setOwner(owner);
+      setFailure(Objects.toString(exception.getMessage(), ""), exception);
+    }
+
+    @Override
+    public String getProcName() {
+      return procName;
+    }
+
+    @Override
+    protected Procedure<TEnvironment>[] execute(TEnvironment env)
+        throws ProcedureYieldException, ProcedureSuspendedException,
+        InterruptedException {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void rollback(TEnvironment env)
+        throws IOException, InterruptedException {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean abort(TEnvironment env) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void serializeStateData(OutputStream stream) throws IOException {
+    }
+
+    @Override
+    protected void deserializeStateData(InputStream stream) throws IOException {
+    }
+  }
+
   /**
    * If the failure failed before submitting it, we may want to give back the
    * same error to the requests with the same nonceKey.
@@ -739,12 +809,8 @@ public class ProcedureExecutor<TEnvironment> {
     final Long procId = nonceKeysToProcIdsMap.get(nonceKey);
     if (procId == null || completed.containsKey(procId)) return;
 
-    final long currentTime = EnvironmentEdgeManager.currentTime();
-    final ProcedureInfo result = new ProcedureInfo(procId.longValue(),
-      procName, procOwner != null ? procOwner.getShortName() : null,
-      ProcedureUtil.convertToProcedureState(ProcedureState.ROLLEDBACK),
-      -1, nonceKey, exception, currentTime, currentTime, null);
-    completed.putIfAbsent(procId, result);
+    Procedure proc = new FailedProcedure(nonceKey, procName, procOwner, exception);
+    completed.putIfAbsent(procId, new CompletedProcedureRetainer(proc));
   }
 
   // ==========================================================================
@@ -893,8 +959,13 @@ public class ProcedureExecutor<TEnvironment> {
     return null;
   }
 
-  public ProcedureInfo getResult(final long procId) {
-    return completed.get(procId);
+  public Procedure getResult(final long procId) {
+    CompletedProcedureRetainer retainer = completed.get(procId);
+    if (retainer == null) {
+      return null;
+    } else {
+      return retainer.getProcedure();
+    }
   }
 
   /**
@@ -926,8 +997,8 @@ public class ProcedureExecutor<TEnvironment> {
    * @param procId the ID of the procedure to remove
    */
   public void removeResult(final long procId) {
-    final ProcedureInfo result = completed.get(procId);
-    if (result == null) {
+    CompletedProcedureRetainer retainer = completed.get(procId);
+    if (retainer == null) {
       assert !procedures.containsKey(procId) : "procId=" + procId + " is still running";
       if (LOG.isDebugEnabled()) {
         LOG.debug("procId=" + procId + " already removed by the cleaner.");
@@ -936,19 +1007,16 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // The CompletedProcedureCleaner will take care of deletion, once the TTL is expired.
-    result.setClientAckTime(EnvironmentEdgeManager.currentTime());
+    retainer.setClientAckTime(EnvironmentEdgeManager.currentTime());
   }
 
-  public Pair<ProcedureInfo, Procedure> getResultOrProcedure(final long procId) {
-    ProcedureInfo result = completed.get(procId);
-    Procedure proc = null;
-    if (result == null) {
-      proc = procedures.get(procId);
-      if (proc == null) {
-        result = completed.get(procId);
-      }
+  public Procedure getResultOrProcedure(final long procId) {
+    CompletedProcedureRetainer retainer = completed.get(procId);
+    if (retainer == null) {
+      return procedures.get(procId);
+    } else {
+      return retainer.getProcedure();
     }
-    return new Pair(result, proc);
   }
 
   /**
@@ -961,35 +1029,34 @@ public class ProcedureExecutor<TEnvironment> {
   public boolean isProcedureOwner(final long procId, final User user) {
     if (user == null) return false;
 
-    final Procedure proc = procedures.get(procId);
-    if (proc != null) {
-      return proc.getOwner().equals(user.getShortName());
+    final Procedure runningProc = procedures.get(procId);
+    if (runningProc != null) {
+      return runningProc.getOwner().equals(user.getShortName());
     }
 
-    final ProcedureInfo procInfo = completed.get(procId);
-    if (procInfo == null) {
-      // Procedure either does not exist or has already completed and got cleaned up.
-      // At this time, we cannot check the owner of the procedure
-      return false;
+    final CompletedProcedureRetainer retainer = completed.get(procId);
+    if (retainer != null) {
+      return retainer.getProcedure().getOwner().equals(user.getShortName());
     }
-    return ProcedureInfo.isProcedureOwner(procInfo, user);
+
+    // Procedure either does not exist or has already completed and got cleaned up.
+    // At this time, we cannot check the owner of the procedure
+    return false;
   }
 
   /**
    * List procedures.
    * @return the procedures in a list
    */
-  public List<ProcedureInfo> listProcedures() {
-    final List<ProcedureInfo> procedureLists = new ArrayList<>(procedures.size() + completed.size());
-    for (Map.Entry<Long, Procedure> p: procedures.entrySet()) {
-      procedureLists.add(ProcedureUtil.convertToProcedureInfo(p.getValue()));
-    }
-    for (Map.Entry<Long, ProcedureInfo> e: completed.entrySet()) {
-      // Note: The procedure could show up twice in the list with different state, as
-      // it could complete after we walk through procedures list and insert into
-      // procedureList - it is ok, as we will use the information in the ProcedureInfo
-      // to figure it out; to prevent this would increase the complexity of the logic.
-      procedureLists.add(e.getValue());
+  public List<Procedure> listProcedures() {
+    final List<Procedure> procedureLists = new ArrayList<>(procedures.size() + completed.size());
+    procedureLists.addAll(procedures.values());
+    // Note: The procedure could show up twice in the list with different state, as
+    // it could complete after we walk through procedures list and insert into
+    // procedureList - it is ok, as we will use the information in the ProcedureInfo
+    // to figure it out; to prevent this would increase the complexity of the logic.
+    for (CompletedProcedureRetainer retainer: completed.values()) {
+      procedureLists.add(retainer.getProcedure());
     }
     return procedureLists;
   }
@@ -1595,13 +1662,14 @@ public class ProcedureExecutor<TEnvironment> {
     // call the procedure completion cleanup handler
     execCompletionCleanup(proc);
 
+    CompletedProcedureRetainer retainer = new CompletedProcedureRetainer(proc);
+
     // update the executor internal state maps
-    final ProcedureInfo procInfo = ProcedureUtil.convertToProcedureInfo(proc, proc.getNonceKey());
     if (!proc.shouldWaitClientAck(getEnvironment())) {
-      procInfo.setClientAckTime(0);
+      retainer.setClientAckTime(0);
     }
 
-    completed.put(procInfo.getProcId(), procInfo);
+    completed.put(proc.getProcId(), retainer);
     rollbackStack.remove(proc.getProcId());
     procedures.remove(proc.getProcId());
 

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.*;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Pair;
 import org.hamcrest.core.IsInstanceOf;
 import org.hamcrest.core.StringStartsWith;
 import org.junit.rules.TestRule;
@@ -132,10 +130,8 @@ public class TestLockProcedure {
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     // Kill all running procedures.
-    for (ProcedureInfo procInfo : procExec.listProcedures()) {
-      Procedure proc = procExec.getProcedure(procInfo.getProcId());
-      if (proc == null) continue;
-      procExec.abort(procInfo.getProcId());
+    for (Procedure<?> proc : procExec.listProcedures()) {
+      procExec.abort(proc.getProcId());
       ProcedureTestingUtility.waitProcedure(procExec, proc);
     }
     assertEquals(0, procExec.getEnvironment().getProcedureScheduler().size());
@@ -440,8 +436,8 @@ public class TestLockProcedure {
     }
     assertEquals(true, procExec.isRunning());
     ProcedureTestingUtility.waitProcedure(procExec, lockProc.getProcId());
-    Pair<ProcedureInfo, Procedure> result = procExec.getResultOrProcedure(lockProc.getProcId());
-    assertTrue(result.getFirst() != null && !result.getFirst().isFailed());
+    Procedure<?> result = procExec.getResultOrProcedure(lockProc.getProcId());
+    assertTrue(result != null && !result.isFailed());
     ProcedureTestingUtility.assertProcNotFailed(procExec, lockProc.getProcId());
   }
 }

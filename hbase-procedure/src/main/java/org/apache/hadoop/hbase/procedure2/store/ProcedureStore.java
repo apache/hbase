@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -82,12 +81,7 @@ public interface ProcedureStore {
      * @throws IOException if there was an error fetching/deserializing the procedure
      * @return the next procedure in the iteration.
      */
-    Procedure nextAsProcedure() throws IOException;
-
-    /**
-     * @return the next procedure in the iteration as ProcedureInfo.
-     */
-    ProcedureInfo nextAsProcedureInfo();
+    Procedure next() throws IOException;
   }
 
   /**

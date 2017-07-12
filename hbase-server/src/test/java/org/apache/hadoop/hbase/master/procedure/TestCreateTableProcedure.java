@@ -23,9 +23,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -85,7 +85,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     long procId =
         ProcedureTestingUtility.submitAndWait(procExec,
             new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
-    final ProcedureInfo result = procExec.getResult(procId);
+    final Procedure<?> result = procExec.getResult(procId);
     assertEquals(true, result.isFailed());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
     assertTrue("expected DoNotRetryIOException, got " + cause,

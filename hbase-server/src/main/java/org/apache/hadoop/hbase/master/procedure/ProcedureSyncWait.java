@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -147,11 +146,11 @@ public final class ProcedureSyncWait {
       }
     );
 
-    ProcedureInfo result = procExec.getResult(procId);
+    Procedure result = procExec.getResult(procId);
     if (result != null) {
-      if (result.isFailed()) {
+      if (result.hasException()) {
         // If the procedure fails, we should always have an exception captured. Throw it.
-        throw result.getException();
+        throw result.getException().unwrapRemoteIOException();
       }
       return result.getResult();
     } else {

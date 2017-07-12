@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -44,7 +43,6 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureNonce {
@@ -105,7 +103,7 @@ public class TestProcedureNonce {
     // we should get back the old procId
     assertEquals(procId, procExecutor.registerNonce(nonceKey));
 
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
   }
 
@@ -140,7 +138,7 @@ public class TestProcedureNonce {
     // we should get back the old procId
     assertEquals(procId, procExecutor.registerNonce(nonceKey));
 
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
   }
 
@@ -157,7 +155,7 @@ public class TestProcedureNonce {
       new IOException("test failure"));
 
     final long procId = procExecutor.registerNonce(nonceKey);
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcFailed(result);
   }
 
