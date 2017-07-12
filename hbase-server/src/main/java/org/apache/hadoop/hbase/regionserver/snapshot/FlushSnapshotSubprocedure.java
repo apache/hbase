@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.snapshot;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -24,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager.SnapshotSubprocedurePool;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -51,6 +54,9 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
   private final SnapshotDescription snapshot;
   private final SnapshotSubprocedurePool taskManager;
   private boolean snapshotSkipFlush = false;
+
+  // the maximum number of attempts we flush
+  final static int MAX_RETRIES = 3;
 
   public FlushSnapshotSubprocedure(ProcedureMember member,
       ForeignExceptionDispatcher errorListener, long wakeFrequency, long timeout,
@@ -96,7 +102,30 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
           LOG.debug("take snapshot without flush memstore first");
         } else {
           LOG.debug("Flush Snapshotting region " + region.toString() + " started...");
-          region.flush(true);
+          boolean succeeded = false;
+          long readPt = region.getReadpoint(IsolationLevel.READ_COMMITTED);
+          for (int i = 0; i < MAX_RETRIES; i++) {
+            FlushResult res = region.flush(true);
+            if (res.getResult() == FlushResult.Result.CANNOT_FLUSH) {
+              if (region instanceof HRegion) {
+                HRegion hreg = (HRegion) region;
+                // CANNOT_FLUSH may mean that a flush is already on-going
+                // we need to wait for that flush to complete
+                hreg.waitForFlushes();
+              }
+              if (region.getMaxFlushedSeqId() >= readPt) {
+                // writes at the start of the snapshot have been persisted
+                succeeded = true;
+                break;
+              }
+            } else {
+              succeeded = true;
+              break;
+            }
+          }
+          if (!succeeded) {
+            throw new IOException("Unable to complete flush after " + MAX_RETRIES + " attempts");
+          }
         }
         ((HRegion)region).addRegionToSnapshot(snapshot, monitor);
         if (snapshotSkipFlush) {
