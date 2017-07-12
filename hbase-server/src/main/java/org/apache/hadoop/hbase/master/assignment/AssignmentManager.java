@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates.ServerState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.ServerStateNode;
 // TODO: why are they here?
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
@@ -160,6 +161,8 @@ public class AssignmentManager implements ServerListener {
   // TODO: why is this different from the listeners (carried over from the old AM)
   private RegionStateListener regionStateListener;
 
+  private RegionNormalizer regionNormalizer;
+
   private final MetricsAssignmentManager metrics;
   private final RegionInTransitionChore ritChore;
   private final MasterServices master;
@@ -203,6 +206,9 @@ public class AssignmentManager implements ServerListener {
     int ritChoreInterval = conf.getInt(RIT_CHORE_INTERVAL_MSEC_CONF_KEY,
         DEFAULT_RIT_CHORE_INTERVAL_MSEC);
     this.ritChore = new RegionInTransitionChore(ritChoreInterval);
+
+    // Used for region related procedure.
+    setRegionNormalizer(master.getRegionNormalizer());
   }
 
   public void start() throws IOException {
@@ -304,6 +310,14 @@ public class AssignmentManager implements ServerListener {
 
   public void setRegionStateListener(final RegionStateListener listener) {
     this.regionStateListener = listener;
+  }
+
+  public void setRegionNormalizer(final RegionNormalizer normalizer) {
+    this.regionNormalizer = normalizer;
+  }
+
+  public RegionNormalizer getRegionNormalizer() {
+    return regionNormalizer;
   }
 
   public RegionStates getRegionStates() {
@@ -826,16 +840,6 @@ public class AssignmentManager implements ServerListener {
       throw new UnsupportedOperationException(
         "unsupported split request with bad keys: parent=" + parent +
         " hriA=" + hriA + " hriB=" + hriB);
-    }
-
-    try {
-      if (regionStateListener != null) {
-        regionStateListener.onRegionSplit(parent);
-      }
-    } catch (QuotaExceededException e) {
-      // TODO: does this really belong here?
-      master.getRegionNormalizer().planSkipped(parent, PlanType.SPLIT);
-      throw e;
     }
 
     // Submit the Split procedure
