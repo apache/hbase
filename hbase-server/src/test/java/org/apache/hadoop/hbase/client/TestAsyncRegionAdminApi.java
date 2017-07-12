@@ -365,12 +365,16 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
     initSplitMergeSwitch();
     assertTrue(admin.setSplitOn(false).get());
-    admin.split(tableName, Bytes.toBytes(rows / 2)).join();
+    try {
+      admin.split(tableName, Bytes.toBytes(rows / 2)).join();
+    } catch (Exception e){
+      //Expected
+    }
     int count = admin.getTableRegions(tableName).get().size();
     assertTrue(originalCount == count);
 
     assertFalse(admin.setSplitOn(true).get());
-    admin.split(tableName, Bytes.toBytes(rows / 2)).join();
+    admin.split(tableName).join();
     while ((count = admin.getTableRegions(tableName).get().size()) == originalCount) {
       Threads.sleep(100);
     }
@@ -457,6 +461,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testSplitTable() throws Exception {
+    initSplitMergeSwitch();
     splitTest(TableName.valueOf("testSplitTable"), 3000, false, null);
     splitTest(TableName.valueOf("testSplitTableWithSplitPoint"), 3000, false, Bytes.toBytes("3"));
     splitTest(TableName.valueOf("testSplitTableRegion"), 3000, true, null);

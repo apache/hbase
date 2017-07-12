@@ -177,6 +177,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormali
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
@@ -1755,6 +1757,97 @@ public class HBaseAdmin implements Admin {
       return "MERGE_REGIONS";
     }
   }
+  /**
+   * Split one region. Synchronous operation.
+   * Note: It is not feasible to predict the length of split.
+   *   Therefore, this is for internal testing only.
+   * @param regionName encoded or full name of region
+   * @param splitPoint key where region splits
+   * @throws IOException
+   */
+  @VisibleForTesting
+  public void splitRegionSync(byte[] regionName, byte[] splitPoint) throws IOException {
+    splitRegionSync(regionName, splitPoint, syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+
+  /**
+   * Split one region. Synchronous operation.
+   * @param regionName region to be split
+   * @param splitPoint split point
+   * @param timeout how long to wait on split
+   * @param units time units
+   * @throws IOException
+   */
+  public void splitRegionSync(byte[] regionName, byte[] splitPoint,
+    final long timeout, final TimeUnit units) throws IOException {
+    get(
+        splitRegionAsync(regionName, splitPoint),
+        timeout,
+        units);
+  }
+
+  @Override
+  public Future<Void> splitRegionAsync(byte[] regionName, byte[] splitPoint)
+      throws IOException {
+    byte[] encodedNameofRegionToSplit = HRegionInfo.isEncodedRegionName(regionName) ?
+        regionName : HRegionInfo.encodeRegionName(regionName).getBytes();
+    Pair<HRegionInfo, ServerName> pair = getRegion(regionName);
+    if (pair != null) {
+      if (pair.getFirst() != null &&
+          pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        throw new IllegalArgumentException ("Can't invoke split on non-default regions directly");
+      }
+    } else {
+      throw new UnknownRegionException (
+          "Can't invoke merge on unknown region "
+              + Bytes.toStringBinary(encodedNameofRegionToSplit));
+    }
+
+    HRegionInfo hri = pair.getFirst();
+    return splitRegionAsync(hri, splitPoint);
+  }
+
+  Future<Void> splitRegionAsync(HRegionInfo hri, byte[] splitPoint) throws IOException {
+    TableName tableName = hri.getTable();
+    if (hri.getStartKey() != null && splitPoint != null &&
+        Bytes.compareTo(hri.getStartKey(), splitPoint) == 0) {
+      throw new IOException("should not give a splitkey which equals to startkey!");
+    }
+
+    SplitTableRegionResponse response = executeCallable(
+        new MasterCallable<SplitTableRegionResponse>(getConnection(), getRpcControllerFactory()) {
+          @Override
+          protected SplitTableRegionResponse rpcCall() throws Exception {
+            setPriority(tableName);
+            SplitTableRegionRequest request = RequestConverter
+                .buildSplitTableRegionRequest(hri, splitPoint, ng.getNonceGroup(), ng.newNonce());
+            return master.splitRegion(getRpcController(), request);
+          }
+        });
+    return new SplitTableRegionFuture(this, tableName, response);
+  }
+
+  private static class SplitTableRegionFuture extends TableFuture<Void> {
+    public SplitTableRegionFuture(final HBaseAdmin admin,
+        final TableName tableName,
+        final SplitTableRegionResponse response) {
+      super(admin, tableName,
+          (response != null && response.hasProcId()) ? response.getProcId() : null);
+    }
+
+    public SplitTableRegionFuture(
+        final HBaseAdmin admin,
+        final TableName tableName,
+        final Long procId) {
+      super(admin, tableName, procId);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "SPLIT_REGION";
+    }
+  }
 
   @Override
   public void split(final TableName tableName) throws IOException {
@@ -1766,9 +1859,6 @@ public class HBaseAdmin implements Admin {
     splitRegion(regionName, null);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void split(final TableName tableName, final byte [] splitPoint) throws IOException {
     ZooKeeperWatcher zookeeper = null;
@@ -1782,6 +1872,9 @@ public class HBaseAdmin implements Admin {
       } else {
         pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
       }
+      if (splitPoint == null) {
+        LOG.info("SplitPoint is null, will find bestSplitPoint from Region");
+      }
       for (Pair<HRegionInfo, ServerName> pair: pairs) {
         // May not be a server for a particular row
         if (pair.getSecond() == null) continue;
@@ -1791,8 +1884,8 @@ public class HBaseAdmin implements Admin {
         // if a split point given, only split that particular region
         if (r.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
            (splitPoint != null && !r.containsRow(splitPoint))) continue;
-        // call out to region server to do split now
-        split(pair.getSecond(), pair.getFirst(), splitPoint);
+        // call out to master to do split now
+        splitRegionAsync(pair.getFirst(), splitPoint);
       }
     } finally {
       if (zookeeper != null) {
@@ -1815,23 +1908,7 @@ public class HBaseAdmin implements Admin {
     if (regionServerPair.getSecond() == null) {
       throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
     }
-    split(regionServerPair.getSecond(), regionServerPair.getFirst(), splitPoint);
-  }
-
-  @VisibleForTesting
-  public void split(final ServerName sn, final HRegionInfo hri,
-      byte[] splitPoint) throws IOException {
-    if (hri.getStartKey() != null && splitPoint != null &&
-         Bytes.compareTo(hri.getStartKey(), splitPoint) == 0) {
-       throw new IOException("should not give a splitkey which equals to startkey!");
-    }
-    // TODO: There is no timeout on this controller. Set one!
-    HBaseRpcController controller = rpcControllerFactory.newController();
-    controller.setPriority(hri.getTable());
-
-    // TODO: this does not do retries, it should. Set priority and timeout in controller
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
-    ProtobufUtil.split(controller, admin, hri, splitPoint);
+    splitRegionAsync(regionServerPair.getFirst(), splitPoint);
   }
 
   @Override

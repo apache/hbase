@@ -124,7 +124,11 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "split should work" do
-      command(:split, 'hbase:meta', nil)
+      begin
+        command(:split, 'hbase:meta', nil)
+      rescue org.apache.hadoop.hbase.ipc.RemoteWithExtrasException => e
+        puts "can not split hbase:meta"
+      end
     end
 
     #-------------------------------------------------------------------------------
