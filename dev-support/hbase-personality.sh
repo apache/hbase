@@ -58,10 +58,10 @@ function personality_globals
     HBASE_HADOOP3_VERSIONS=""
   elif [[ ${PATCH_BRANCH} = branch-2* ]]; then
     HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-    HBASE_HADOOP3_VERSIONS="3.0.0-alpha3"
+    HBASE_HADOOP3_VERSIONS="3.0.0-alpha4"
   else # master or a feature branch
     HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-    HBASE_HADOOP3_VERSIONS="3.0.0-alpha3"
+    HBASE_HADOOP3_VERSIONS="3.0.0-alpha4"
   fi
 
   # TODO use PATCH_BRANCH to select jdk versions to use.
