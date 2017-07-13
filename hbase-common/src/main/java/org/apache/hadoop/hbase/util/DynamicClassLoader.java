@@ -179,8 +179,9 @@ public class DynamicClassLoader extends ClassLoaderBase {
 
   private synchronized void loadNewJars() {
     // Refresh local jar file lists
-    if (localDir != null) {
-      for (File file : localDir.listFiles()) {
+    File[] files = localDir == null ? null : localDir.listFiles();
+    if (files != null) {
+      for (File file : files) {
         String fileName = file.getName();
         if (jarModifiedTime.containsKey(fileName)) {
           continue;
