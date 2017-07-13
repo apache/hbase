@@ -461,7 +461,7 @@ public class OrderedBytes {
   static int lengthVaruint64(PositionedByteRange src, boolean comp) {
     int a0 = (comp ? DESCENDING : ASCENDING).apply(src.peek()) & 0xff;
     if (a0 <= 240) return 1;
-    if (a0 >= 241 && a0 <= 248) return 2;
+    if (a0 <= 248) return 2;
     if (a0 == 249) return 3;
     if (a0 == 250) return 4;
     if (a0 == 251) return 5;
