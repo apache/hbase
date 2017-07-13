@@ -86,6 +86,7 @@
     <module>hbase-archetypes</module>
     <module>hbase-metrics-api</module>
     <module>hbase-metrics</module>
+    <module>hbase-spark-it</module>
   </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
       e.g. surefire 2.18-SNAPSHOT-->
