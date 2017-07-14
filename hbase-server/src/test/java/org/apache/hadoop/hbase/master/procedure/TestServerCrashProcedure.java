@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category({MasterTests.class, LargeTests.class})
@@ -85,6 +86,7 @@ public class TestServerCrashProcedure {
   public void testCrashTargetRs() throws Exception {
   }
 
+  @Ignore  // HBASE-18366... To be enabled again.
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionOnRsWithMeta() throws Exception {
     testRecoveryAndDoubleExecution(true);
