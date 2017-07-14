@@ -40,6 +40,9 @@ any quoted values by ~10 to get what works for HBase: e.g. where it says individ
 to go smaller if you can -- and where it says a maximum of 100 column families in Cloud Bigtable, think ~10 when
 modeling on HBase.
 
+See also Robert Yokota's link:https://blogs.apache.org/hbase/entry/hbase-application-archetypes-redux[HBase Application Archetypes]
+(an update on work done by other HBasers), for a helpful categorization of use cases that do well on top of the HBase model.
+
 
 [[schema.creation]]
 ==  Schema Creation
