@@ -86,8 +86,10 @@ import java.util.Set;
  * This test mimic {@link IntegrationTestBulkLoad} in mapreduce.
  *
  * Usage on cluster:
+ *   First add hbase related jars and hbase-spark.jar into spark classpath.
+ *
  *   spark-submit --class org.apache.hadoop.hbase.spark.IntegrationTestSparkBulkLoad
- *                HBASE_HOME/lib/hbase-it-XXX-tests.jar -m slowDeterministic -Dhbase.spark.bulkload.chainlength=300
+ *                HBASE_HOME/lib/hbase-spark-it-XXX-tests.jar -m slowDeterministic -Dhbase.spark.bulkload.chainlength=300
  */
 public class IntegrationTestSparkBulkLoad extends IntegrationTestBase {
 
