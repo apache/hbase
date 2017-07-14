@@ -116,10 +116,13 @@ function personality_modules
   # tests respectively.
   if [[ ${testtype} = unit ]]; then
     extra="${extra} -PrunAllTests"
+    yetus_debug "EXCLUDE_TESTS_URL = ${EXCLUDE_TESTS_URL}"
+    yetus_debug "INCLUDE_TESTS_URL = ${INCLUDE_TESTS_URL}"
     if [[ -n "$EXCLUDE_TESTS_URL" ]]; then
         wget "$EXCLUDE_TESTS_URL" -O "excludes"
         if [[ $? -eq 0 ]]; then
           excludes=$(cat excludes)
+          yetus_debug "excludes=${excludes}"
           if [[ -n "${excludes}" ]]; then
             extra="${extra} -Dtest.exclude.pattern=${excludes}"
           fi
@@ -132,6 +135,7 @@ function personality_modules
         wget "$INCLUDE_TESTS_URL" -O "includes"
         if [[ $? -eq 0 ]]; then
           includes=$(cat includes)
+          yetus_debug "includes=${includes}"
           if [[ -n "${includes}" ]]; then
             extra="${extra} -Dtest=${includes}"
           fi
