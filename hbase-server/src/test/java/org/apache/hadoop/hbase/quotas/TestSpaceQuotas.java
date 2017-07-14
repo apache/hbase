@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -445,7 +446,7 @@ public class TestSpaceQuotas {
     Table table = conn.getTable(tn);
     final String bulkToken = new SecureBulkLoadClient(conf, table).prepareBulkLoad(conn);
     return new ClientServiceCallable<Void>(conn,
-        tn, Bytes.toBytes("row"), new RpcControllerFactory(conf).newController()) {
+        tn, Bytes.toBytes("row"), new RpcControllerFactory(conf).newController(), HConstants.PRIORITY_UNSET) {
       @Override
       public Void rpcCall() throws Exception {
         SecureBulkLoadClient secureClient = null;

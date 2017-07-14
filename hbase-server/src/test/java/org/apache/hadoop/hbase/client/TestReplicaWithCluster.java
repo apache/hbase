@@ -475,7 +475,7 @@ public class TestReplicaWithCluster {
         new SecureBulkLoadClient(HTU.getConfiguration(), table).prepareBulkLoad(conn);
     ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn,
         hdt.getTableName(), TestHRegionServerBulkLoad.rowkey(0),
-        new RpcControllerFactory(HTU.getConfiguration()).newController()) {
+        new RpcControllerFactory(HTU.getConfiguration()).newController(), HConstants.PRIORITY_UNSET) {
       @Override
       protected Void rpcCall() throws Exception {
         LOG.debug("Going to connect to server " + getLocation() + " for row "

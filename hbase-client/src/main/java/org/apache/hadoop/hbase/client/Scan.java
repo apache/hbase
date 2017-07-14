@@ -276,6 +276,7 @@ public class Scan extends Query {
     this.mvccReadPoint = scan.getMvccReadPoint();
     this.limit = scan.getLimit();
     this.needCursorResult = scan.isNeedCursorResult();
+    setPriority(scan.getPriority());
   }
 
   /**
@@ -306,6 +307,7 @@ public class Scan extends Query {
       setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
     this.mvccReadPoint = -1L;
+    setPriority(get.getPriority());
   }
 
   public boolean isGetScan() {
@@ -1058,6 +1060,11 @@ public class Scan extends Query {
   @Override
   public Scan setIsolationLevel(IsolationLevel level) {
     return (Scan) super.setIsolationLevel(level);
+  }
+
+  @Override
+  public Scan setPriority(int priority) {
+    return (Scan) super.setPriority(priority);
   }
 
   /**

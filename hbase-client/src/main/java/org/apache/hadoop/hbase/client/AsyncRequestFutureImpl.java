@@ -1267,6 +1267,6 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private MultiServerCallable createCallable(final ServerName server, TableName tableName,
       final MultiAction multi) {
     return new MultiServerCallable(asyncProcess.connection, tableName, server,
-        multi, asyncProcess.rpcFactory.newController(), rpcTimeout, tracker);
+        multi, asyncProcess.rpcFactory.newController(), rpcTimeout, tracker, multi.getPriority());
   }
 }

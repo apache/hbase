@@ -117,7 +117,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
    */
   public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
-    super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController());
+    super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController(), scan.getPriority());
     this.id = id;
     this.scan = scan;
     this.scanMetrics = scanMetrics;

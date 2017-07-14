@@ -20,11 +20,16 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
+import com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -102,5 +107,12 @@ public final class MultiAction {
 
   public long getNonceGroup() {
     return this.nonceGroup;
+  }
+
+  // returns the max priority of all the actions
+  public int getPriority() {
+    Optional<Action> result = actions.values().stream().flatMap(List::stream)
+        .max((action1, action2) -> Math.max(action1.getPriority(), action2.getPriority()));
+    return result.isPresent() ? result.get().getPriority() : HConstants.PRIORITY_UNSET;
   }
 }

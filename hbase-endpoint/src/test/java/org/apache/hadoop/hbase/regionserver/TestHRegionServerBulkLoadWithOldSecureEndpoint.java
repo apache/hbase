@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.TableName;
@@ -108,7 +109,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
       RpcControllerFactory rpcControllerFactory = new RpcControllerFactory(UTIL.getConfiguration());
       ClientServiceCallable<Void> callable =
           new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
-              rpcControllerFactory.newController()) {
+              rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
             @Override
             protected Void rpcCall() throws Exception {
               LOG.debug("Going to connect to server " + getLocation() + " for row " +
@@ -128,7 +129,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
       if (numBulkLoads.get() % 5 == 0) {
         // 5 * 50 = 250 open file handles!
         callable = new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
-            rpcControllerFactory.newController()) {
+            rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
           @Override
           protected Void rpcCall() throws Exception {
             LOG.debug("compacting " + getLocation() + " for row "

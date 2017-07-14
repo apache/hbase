@@ -84,6 +84,7 @@ public class Increment extends Mutation implements Comparable<Row> {
     for (Map.Entry<String, byte[]> entry : i.getAttributesMap().entrySet()) {
       this.setAttribute(entry.getKey(), entry.getValue());
     }
+    super.setPriority(i.getPriority());
   }
 
   /**
@@ -330,5 +331,10 @@ public class Increment extends Mutation implements Comparable<Row> {
   @Override
   public Increment setTTL(long ttl) {
     return (Increment) super.setTTL(ttl);
+  }
+
+  @Override
+  public Increment setPriority(int priority) {
+    return (Increment) super.setPriority(priority);
   }
 }

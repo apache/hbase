@@ -183,7 +183,7 @@ public class WALEditsReplaySink {
     ReplayServerCallable(final Connection connection, RpcControllerFactory rpcControllerFactory,
         final TableName tableName, final HRegionLocation regionLoc, final List<Entry> entries) {
       super(connection, tableName, HConstants.EMPTY_BYTE_ARRAY,
-          rpcControllerFactory.newController());
+          rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET);
       this.entries = entries;
       setLocation(regionLoc);
     }

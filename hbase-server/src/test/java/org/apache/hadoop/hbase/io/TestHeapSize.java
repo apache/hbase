@@ -494,6 +494,7 @@ public class TestHeapSize  {
     expected = ClassSize.estimateBase(cl, false);
     //The actual TreeMap is not included in the above calculation
     expected += ClassSize.align(ClassSize.TREEMAP);
+    expected += ClassSize.align(ClassSize.INTEGER); // priority
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
@@ -504,6 +505,7 @@ public class TestHeapSize  {
     expected  = ClassSize.estimateBase(cl, false);
     //The actual TreeMap is not included in the above calculation
     expected += ClassSize.align(ClassSize.TREEMAP);
+    expected += ClassSize.align(ClassSize.INTEGER); // priority
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);

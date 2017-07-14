@@ -147,6 +147,7 @@ public class Delete extends Mutation implements Comparable<Row> {
     for (Map.Entry<String, byte[]> entry : d.getAttributesMap().entrySet()) {
       this.setAttribute(entry.getKey(), entry.getValue());
     }
+    super.setPriority(d.getPriority());
   }
 
   /**
@@ -368,5 +369,10 @@ public class Delete extends Mutation implements Comparable<Row> {
   @Override
   public Delete setTTL(long ttl) {
     throw new UnsupportedOperationException("Setting TTLs on Deletes is not supported");
+  }
+
+  @Override
+  public Delete setPriority(int priority) {
+    return (Delete) super.setPriority(priority);
   }
 }
