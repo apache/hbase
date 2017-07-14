@@ -47,8 +47,8 @@ public abstract class NoncedRegionServerCallable<T> extends ClientServiceCallabl
    * @param row The row we want in <code>tableName</code>.
    */
   public NoncedRegionServerCallable(Connection connection, TableName tableName, byte [] row,
-      HBaseRpcController rpcController) {
-    super(connection, tableName, row, rpcController);
+      HBaseRpcController rpcController, int priority) {
+    super(connection, tableName, row, rpcController, priority);
     this.nonce = getConnection().getNonceGenerator().newNonce();
   }
 

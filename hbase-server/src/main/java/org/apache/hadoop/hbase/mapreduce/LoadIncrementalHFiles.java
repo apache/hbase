@@ -530,7 +530,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     return new ClientServiceCallable<byte[]>(conn,
-        tableName, first, rpcControllerFactory.newController()) {
+        tableName, first, rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
       @Override
       protected byte[] rpcCall() throws Exception {
         SecureBulkLoadClient secureClient = null;

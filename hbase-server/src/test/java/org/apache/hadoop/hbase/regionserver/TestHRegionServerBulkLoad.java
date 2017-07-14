@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -205,7 +206,7 @@ public class TestHRegionServerBulkLoad {
           prepareBulkLoad(conn);
       ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn,
           tableName, Bytes.toBytes("aaa"),
-          new RpcControllerFactory(UTIL.getConfiguration()).newController()) {
+          new RpcControllerFactory(UTIL.getConfiguration()).newController(), HConstants.PRIORITY_UNSET) {
         @Override
         public Void rpcCall() throws Exception {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
@@ -229,7 +230,7 @@ public class TestHRegionServerBulkLoad {
         // 5 * 50 = 250 open file handles!
         callable = new ClientServiceCallable<Void>(conn,
             tableName, Bytes.toBytes("aaa"),
-            new RpcControllerFactory(UTIL.getConfiguration()).newController()) {
+            new RpcControllerFactory(UTIL.getConfiguration()).newController(), HConstants.PRIORITY_UNSET) {
           @Override
           protected Void rpcCall() throws Exception {
             LOG.debug("compacting " + getLocation() + " for row "

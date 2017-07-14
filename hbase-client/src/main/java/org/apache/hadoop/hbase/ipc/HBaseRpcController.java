@@ -37,8 +37,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public interface HBaseRpcController extends RpcController, CellScannable {
 
-  static final int PRIORITY_UNSET = -1;
-
   /**
    * Only used to send cells to rpc server, the returned cells should be set by
    * {@link #setDone(CellScanner)}.

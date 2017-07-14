@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -66,6 +67,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * Can be null!
    */
   protected final RpcController rpcController;
+  private int priority = HConstants.NORMAL_QOS;
 
   /**
    * @param connection Connection to use.
@@ -75,11 +77,17 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    */
   public RegionServerCallable(Connection connection, TableName tableName, byte [] row,
       RpcController rpcController) {
+    this(connection, tableName, row, rpcController, HConstants.NORMAL_QOS);
+  }
+
+  public RegionServerCallable(Connection connection, TableName tableName, byte [] row,
+      RpcController rpcController, int priority) {
     super();
     this.connection = connection;
     this.tableName = tableName;
     this.row = row;
     this.rpcController = rpcController;
+    this.priority = priority;
   }
 
   protected RpcController getRpcController() {
@@ -111,6 +119,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
           // If it is an instance of HBaseRpcController, we can set priority on the controller based
           // off the tableName. Set call timeout too.
           hrc.setPriority(tableName);
+          hrc.setPriority(priority);
           hrc.setCallTimeout(callTimeout);
         }
       }
@@ -171,6 +180,8 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
   public byte [] getRow() {
     return this.row;
   }
+
+  protected int getPriority() { return this.priority;}
 
   public void throwable(Throwable t, boolean retrying) {
     if (location != null) {

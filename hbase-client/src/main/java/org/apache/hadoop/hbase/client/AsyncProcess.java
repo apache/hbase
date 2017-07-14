@@ -291,7 +291,12 @@ class AsyncProcess {
           LOG.error("Failed to get region location ", ex);
           // This action failed before creating ars. Retain it, but do not add to submit list.
           // We will then add it to ars in an already-failed state.
-          retainedActions.add(new Action(r, ++posInList));
+
+          int priority = HConstants.NORMAL_QOS;
+          if (r instanceof Mutation) {
+            priority = ((Mutation) r).getPriority();
+          }
+          retainedActions.add(new Action(r, ++posInList, priority));
           locationErrors.add(ex);
           locationErrorRows.add(posInList);
           it.remove();
@@ -302,7 +307,11 @@ class AsyncProcess {
           break;
         }
         if (code == ReturnCode.INCLUDE) {
-          Action action = new Action(r, ++posInList);
+          int priority = HConstants.NORMAL_QOS;
+          if (r instanceof Mutation) {
+            priority = ((Mutation) r).getPriority();
+          }
+          Action action = new Action(r, ++posInList, priority);
           setNonce(ng, r, action);
           retainedActions.add(action);
           // TODO: replica-get is not supported on this path
@@ -372,6 +381,7 @@ class AsyncProcess {
     // The position will be used by the processBatch to match the object array returned.
     int posInList = -1;
     NonceGenerator ng = this.connection.getNonceGenerator();
+    int highestPriority = HConstants.PRIORITY_UNSET;
     for (Row r : rows) {
       posInList++;
       if (r instanceof Put) {
@@ -379,8 +389,9 @@ class AsyncProcess {
         if (put.isEmpty()) {
           throw new IllegalArgumentException("No columns to insert for #" + (posInList+1)+ " item");
         }
+        highestPriority = Math.max(put.getPriority(), highestPriority);
       }
-      Action action = new Action(r, posInList);
+      Action action = new Action(r, posInList, highestPriority);
       setNonce(ng, r, action);
       actions.add(action);
     }

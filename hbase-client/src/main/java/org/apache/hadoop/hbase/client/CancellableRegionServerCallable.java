@@ -40,8 +40,8 @@ abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<
   private final RetryingTimeTracker tracker;
   private final int rpcTimeout;
   CancellableRegionServerCallable(Connection connection, TableName tableName, byte[] row,
-      RpcController rpcController, int rpcTimeout, RetryingTimeTracker tracker) {
-    super(connection, tableName, row, rpcController);
+      RpcController rpcController, int rpcTimeout, RetryingTimeTracker tracker, int priority) {
+    super(connection, tableName, row, rpcController, priority);
     this.rpcTimeout = rpcTimeout;
     this.tracker = tracker;
   }

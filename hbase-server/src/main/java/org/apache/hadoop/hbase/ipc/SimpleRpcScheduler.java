@@ -155,6 +155,9 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public boolean dispatch(CallRunner callTask) throws InterruptedException {
     RpcCall call = callTask.getRpcCall();
     int level = priority.getPriority(call.getHeader(), call.getParam(), call.getRequestUser());
+    if (level == HConstants.PRIORITY_UNSET) {
+      level = HConstants.NORMAL_QOS;
+    }
     if (priorityExecutor != null && level > highPriorityLevel) {
       return priorityExecutor.dispatch(callTask);
     } else if (replicationExecutor != null && level == HConstants.REPLICATION_QOS) {

@@ -55,8 +55,8 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
 
   MultiServerCallable(final ClusterConnection connection, final TableName tableName,
       final ServerName location, final MultiAction multi, RpcController rpcController,
-      int rpcTimeout, RetryingTimeTracker tracker) {
-    super(connection, tableName, null, rpcController, rpcTimeout, tracker);
+      int rpcTimeout, RetryingTimeTracker tracker, int priority) {
+    super(connection, tableName, null, rpcController, rpcTimeout, tracker, priority);
     this.multiAction = multi;
     // RegionServerCallable has HRegionLocation field, but this is a multi-region request.
     // Using region info from parent HRegionLocation would be a mistake for this class; so

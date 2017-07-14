@@ -415,7 +415,7 @@ public class HTable implements Table {
     if (get.getConsistency() == Consistency.STRONG) {
       final Get configuredGet = get;
       ClientServiceCallable<Result> callable = new ClientServiceCallable<Result>(this.connection, getName(),
-          get.getRow(), this.rpcControllerFactory.newController()) {
+          get.getRow(), this.rpcControllerFactory.newController(), get.getPriority()) {
         @Override
         protected Result rpcCall() throws Exception {
           ClientProtos.GetRequest request = RequestConverter.buildGetRequest(
@@ -547,7 +547,7 @@ public class HTable implements Table {
     CancellableRegionServerCallable<SingleResponse> callable =
         new CancellableRegionServerCallable<SingleResponse>(
             connection, getName(), delete.getRow(), this.rpcControllerFactory.newController(),
-            writeRpcTimeout, new RetryingTimeTracker().start()) {
+            writeRpcTimeout, new RetryingTimeTracker().start(), delete.getPriority()) {
       @Override
       protected SingleResponse rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
@@ -624,7 +624,7 @@ public class HTable implements Table {
   public void mutateRow(final RowMutations rm) throws IOException {
     CancellableRegionServerCallable<MultiResponse> callable =
       new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(), rm.getRow(),
-          rpcControllerFactory.newController(), writeRpcTimeout, new RetryingTimeTracker().start()){
+          rpcControllerFactory.newController(), writeRpcTimeout, new RetryingTimeTracker().start(), rm.getMaxPriority()){
       @Override
       protected MultiResponse rpcCall() throws Exception {
         RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
@@ -668,7 +668,7 @@ public class HTable implements Table {
     checkHasFamilies(append);
     NoncedRegionServerCallable<Result> callable =
         new NoncedRegionServerCallable<Result>(this.connection, getName(), append.getRow(),
-            this.rpcControllerFactory.newController()) {
+            this.rpcControllerFactory.newController(), append.getPriority()) {
       @Override
       protected Result rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
@@ -690,7 +690,7 @@ public class HTable implements Table {
     checkHasFamilies(increment);
     NoncedRegionServerCallable<Result> callable =
         new NoncedRegionServerCallable<Result>(this.connection, getName(), increment.getRow(),
-            this.rpcControllerFactory.newController()) {
+            this.rpcControllerFactory.newController(), increment.getPriority()) {
       @Override
       protected Result rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
@@ -734,7 +734,7 @@ public class HTable implements Table {
 
     NoncedRegionServerCallable<Long> callable =
         new NoncedRegionServerCallable<Long>(this.connection, getName(), row,
-            this.rpcControllerFactory.newController()) {
+            this.rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
       @Override
       protected Long rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildIncrementRequest(
@@ -758,7 +758,7 @@ public class HTable implements Table {
       final Put put)
   throws IOException {
     ClientServiceCallable<Boolean> callable = new ClientServiceCallable<Boolean>(this.connection, getName(), row,
-        this.rpcControllerFactory.newController()) {
+        this.rpcControllerFactory.newController(), put.getPriority()) {
       @Override
       protected Boolean rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
@@ -782,7 +782,7 @@ public class HTable implements Table {
   throws IOException {
     ClientServiceCallable<Boolean> callable =
         new ClientServiceCallable<Boolean>(this.connection, getName(), row,
-            this.rpcControllerFactory.newController()) {
+            this.rpcControllerFactory.newController(), put.getPriority()) {
       @Override
       protected Boolean rpcCall() throws Exception {
         CompareType compareType = CompareType.valueOf(compareOp.name());
@@ -817,7 +817,7 @@ public class HTable implements Table {
     CancellableRegionServerCallable<SingleResponse> callable =
         new CancellableRegionServerCallable<SingleResponse>(
             this.connection, getName(), row, this.rpcControllerFactory.newController(),
-            writeRpcTimeout, new RetryingTimeTracker().start()) {
+            writeRpcTimeout, new RetryingTimeTracker().start(), delete.getPriority()) {
       @Override
       protected SingleResponse rpcCall() throws Exception {
         CompareType compareType = CompareType.valueOf(compareOp.name());
@@ -858,7 +858,7 @@ public class HTable implements Table {
     throws IOException {
     CancellableRegionServerCallable<MultiResponse> callable =
       new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
-        rpcControllerFactory.newController(), writeRpcTimeout, new RetryingTimeTracker().start()) {
+        rpcControllerFactory.newController(), writeRpcTimeout, new RetryingTimeTracker().start(), rm.getMaxPriority()) {
         @Override
         protected MultiResponse rpcCall() throws Exception {
           CompareType compareType = CompareType.valueOf(compareOp.name());
