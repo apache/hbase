@@ -478,15 +478,13 @@ public class AssignmentManager implements ServerListener {
     new Thread(() -> {
       try {
         synchronized (checkIfShouldMoveSystemRegionLock) {
-          List<ServerName> serverList = master.getServerManager()
-              .createDestinationServersList(getExcludedServersForSystemTable());
           List<RegionPlan> plans = new ArrayList<>();
           for (ServerName server : getExcludedServersForSystemTable()) {
             List<HRegionInfo> regionsShouldMove = getCarryingSystemTables(server);
             if (!regionsShouldMove.isEmpty()) {
               for (HRegionInfo regionInfo : regionsShouldMove) {
-                RegionPlan plan = new RegionPlan(regionInfo, server,
-                    getBalancer().randomAssignment(regionInfo, serverList));
+                // null value for dest forces destination server to be selected by balancer
+                RegionPlan plan = new RegionPlan(regionInfo, server, null);
                 if (regionInfo.isMetaRegion()) {
                   // Must move meta region first.
                   moveAsync(plan);
@@ -1648,9 +1646,14 @@ public class AssignmentManager implements ServerListener {
     }
 
     // TODO: Optimize balancer. pass a RegionPlan?
-    final HashMap<HRegionInfo, ServerName> retainMap = new HashMap<HRegionInfo, ServerName>();
-    final List<HRegionInfo> rrList = new ArrayList<HRegionInfo>();
-    for (RegionStateNode regionNode: regions.values()) {
+    final HashMap<HRegionInfo, ServerName> retainMap = new HashMap<>();
+    final List<HRegionInfo> userRRList = new ArrayList<>();
+    // regions for system tables requiring reassignment
+    final List<HRegionInfo> sysRRList = new ArrayList<>();
+    for (RegionStateNode regionNode : regions.values()) {
+      boolean sysTable = regionNode.isSystemTable();
+      final List<HRegionInfo> rrList = sysTable ? sysRRList : userRRList;
+
       if (regionNode.getRegionLocation() != null) {
         retainMap.put(regionNode.getRegionInfo(), regionNode.getRegionLocation());
       } else {
@@ -1659,7 +1662,6 @@ public class AssignmentManager implements ServerListener {
     }
 
     // TODO: connect with the listener to invalidate the cache
-    final LoadBalancer balancer = getBalancer();
 
     // TODO use events
     List<ServerName> servers = master.getServerManager().createDestinationServersList();
@@ -1679,13 +1681,35 @@ public class AssignmentManager implements ServerListener {
       servers = master.getServerManager().createDestinationServersList();
     }
 
-    final boolean isTraceEnabled = LOG.isTraceEnabled();
+    if (!sysRRList.isEmpty()) {
+      // system table regions requiring reassignment are present, get region servers
+      // not available for system table regions
+      final List<ServerName> excludeServers = getExcludedServersForSystemTable();
+      List<ServerName> serversForSysTables = servers.stream()
+          .filter(s -> !excludeServers.contains(s)).collect(Collectors.toList());
+      if (serversForSysTables.isEmpty()) {
+        LOG.warn("No servers available for system table regions, considering all servers!");
+      }
+      LOG.debug("Processing assignment plans for System tables sysServersCount=" +
+          serversForSysTables.size() + ", allServersCount=" + servers.size());
+      processAssignmentPlans(regions, null, sysRRList,
+          serversForSysTables.isEmpty() ? servers : serversForSysTables);
+    }
+
+    processAssignmentPlans(regions, retainMap, userRRList, servers);
+  }
+
+  private void processAssignmentPlans(final HashMap<HRegionInfo, RegionStateNode> regions,
+      final HashMap<HRegionInfo, ServerName> retainMap, final List<HRegionInfo> rrList,
+      final List<ServerName> servers) {
+    boolean isTraceEnabled = LOG.isTraceEnabled();
     if (isTraceEnabled) {
       LOG.trace("available servers count=" + servers.size() + ": " + servers);
     }
 
+    final LoadBalancer balancer = getBalancer();
     // ask the balancer where to place regions
-    if (!retainMap.isEmpty()) {
+    if (retainMap != null && !retainMap.isEmpty()) {
       if (isTraceEnabled) {
         LOG.trace("retain assign regions=" + retainMap);
       }

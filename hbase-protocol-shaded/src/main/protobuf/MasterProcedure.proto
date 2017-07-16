@@ -387,7 +387,8 @@ enum MoveRegionState {
 message MoveRegionStateData {
   optional RegionInfo region_info = 1;
   required ServerName source_server = 2;
-  required ServerName destination_server = 3;
+  // if destination server not specified, its selected with load balancer
+  optional ServerName destination_server = 3;
 }
 
 enum GCRegionState {
