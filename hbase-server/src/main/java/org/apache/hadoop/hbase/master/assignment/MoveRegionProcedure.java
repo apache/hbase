@@ -54,7 +54,6 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
 
   public MoveRegionProcedure(final MasterProcedureEnv env, final RegionPlan plan) {
     super(env, plan.getRegionInfo());
-    assert plan.getDestination() != null: plan.toString();
     this.plan = plan;
   }
 
@@ -70,7 +69,10 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
         setNextState(MoveRegionState.MOVE_REGION_ASSIGN);
         break;
       case MOVE_REGION_ASSIGN:
-        addChildProcedure(new AssignProcedure(plan.getRegionInfo(), plan.getDestination()));
+        AssignProcedure assignProcedure = plan.getDestination() == null ?
+            new AssignProcedure(plan.getRegionInfo(), true) :
+            new AssignProcedure(plan.getRegionInfo(), plan.getDestination());
+        addChildProcedure(assignProcedure);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
@@ -127,8 +129,10 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
 
     final MoveRegionStateData.Builder state = MoveRegionStateData.newBuilder()
         // No need to serialize the HRegionInfo. The super class has the region.
-        .setSourceServer(ProtobufUtil.toServerName(plan.getSource()))
-        .setDestinationServer(ProtobufUtil.toServerName(plan.getDestination()));
+        .setSourceServer(ProtobufUtil.toServerName(plan.getSource()));
+    if (plan.getDestination() != null) {
+      state.setDestinationServer(ProtobufUtil.toServerName(plan.getDestination()));
+    }
     state.build().writeDelimitedTo(stream);
   }
 
@@ -139,7 +143,8 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
     final MoveRegionStateData state = MoveRegionStateData.parseDelimitedFrom(stream);
     final HRegionInfo regionInfo = getRegion(); // Get it from super class deserialization.
     final ServerName sourceServer = ProtobufUtil.toServerName(state.getSourceServer());
-    final ServerName destinationServer = ProtobufUtil.toServerName(state.getDestinationServer());
+    final ServerName destinationServer = state.hasDestinationServer() ?
+        ProtobufUtil.toServerName(state.getDestinationServer()) : null;
     this.plan = new RegionPlan(regionInfo, sourceServer, destinationServer);
   }
 }
