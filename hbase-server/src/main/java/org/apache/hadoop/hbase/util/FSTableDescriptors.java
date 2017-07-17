@@ -191,6 +191,7 @@ public class FSTableDescriptors implements TableDescriptors {
             .setCacheDataInL1(true))
           .addCoprocessor("org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
             null, Coprocessor.PRIORITY_SYSTEM, null)
+          .setClockType(HTableDescriptor.DEFAULT_META_CLOCK_TYPE)
           .build());
   }
 

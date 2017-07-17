@@ -71,6 +71,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final int DEFAULT_REGION_REPLICATION = TableDescriptorBuilder.DEFAULT_REGION_REPLICATION;
   public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION = TableDescriptorBuilder.DEFAULT_REGION_MEMSTORE_REPLICATION;
   public static final ClockType DEFAULT_CLOCK_TYPE = TableDescriptorBuilder.DEFAULT_CLOCK_TYPE;
+  public static final ClockType DEFAULT_META_CLOCK_TYPE =
+      TableDescriptorBuilder.DEFAULT_META_CLOCK_TYPE;
   protected final ModifyableTableDescriptor delegatee;
 
   /**

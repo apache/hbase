@@ -159,10 +159,15 @@ public class TableDescriptorBuilder {
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
 
   /**
-   * Default clock type for HTD is SYSTEM
+   * Default clock type for HTableDescriptor is SYSTEM
    */
   @InterfaceAudience.Private
   public static final ClockType DEFAULT_CLOCK_TYPE = ClockType.SYSTEM;
+
+  /**
+   * Default clock type for HTD is HLC
+   */
+  public static final ClockType DEFAULT_META_CLOCK_TYPE = ClockType.HLC;
 
   @InterfaceAudience.Private
   public static final String PRIORITY = "PRIORITY";

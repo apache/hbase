@@ -94,22 +94,22 @@ public class TestClockWithCluster {
   }
 
   @Test
-  public void testMetaTableClockTypeIsSystem() throws IOException {
+  public void testMetaTableClockTypeIsHLC() throws IOException {
     Admin admin = connection.getAdmin();
     Table table = connection.getTable(TableName.META_TABLE_NAME);
     ClockType clockType = admin.getTableDescriptor(TableName.META_TABLE_NAME).getClockType();
-    assertEquals(ClockType.SYSTEM, clockType);
+    assertEquals(ClockType.HLC, clockType);
   }
 
   @Test
-  public void testMetaTableTimestampsAreSystem() throws IOException {
+  public void testMetaTableTimestampsAreHLC() throws IOException {
     // Checks timestamps of whatever is present in meta table currently.
     // ToDo: Include complete meta table sample with all column families to check all paths of
     // meta table modification.
     Table table = connection.getTable(TableName.META_TABLE_NAME);
     Result result = table.getScanner(new Scan()).next();
     for (Cell cell : result.rawCells()) {
-      assertTrue(TimestampType.PHYSICAL.isLikelyOfType(cell.getTimestamp()));
+      assertTrue(TimestampType.HYBRID.isLikelyOfType(cell.getTimestamp()));
     }
   }
 }
