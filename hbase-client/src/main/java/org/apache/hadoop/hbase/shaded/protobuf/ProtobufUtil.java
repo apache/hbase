@@ -95,7 +95,6 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
 import org.apache.hadoop.hbase.quotas.QuotaType;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
@@ -2024,46 +2023,6 @@ public final class ProtobufUtil {
     }
   }
 
-  /**
-   * A helper to merge regions using admin protocol. Send request to
-   * regionserver.
-   * @param admin
-   * @param region_a
-   * @param region_b
-   * @param forcible true if do a compulsory merge, otherwise we will only merge
-   *          two adjacent regions
-   * @param user effective user
-   * @throws IOException
-   */
-  public static void mergeRegions(final RpcController controller,
-      final AdminService.BlockingInterface admin,
-      final HRegionInfo region_a, final HRegionInfo region_b,
-      final boolean forcible, final User user) throws IOException {
-    final MergeRegionsRequest request = ProtobufUtil.buildMergeRegionsRequest(
-        region_a.getRegionName(), region_b.getRegionName(),forcible);
-    if (user != null) {
-      try {
-        user.runAs(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            admin.mergeRegions(controller, request);
-            return null;
-          }
-        });
-      } catch (InterruptedException ie) {
-        InterruptedIOException iioe = new InterruptedIOException();
-        iioe.initCause(ie);
-        throw iioe;
-      }
-    } else {
-      try {
-        admin.mergeRegions(controller, request);
-      } catch (ServiceException se) {
-        throw ProtobufUtil.getRemoteException(se);
-      }
-    }
-  }
-
 // End helpers for Admin
 
   /*
@@ -3392,28 +3351,6 @@ public final class ProtobufUtil {
     }
     return builder.build();
   }
-
-   /**
-    * Create a MergeRegionsRequest for the given regions
-    * @param regionA name of region a
-    * @param regionB name of region b
-    * @param forcible true if it is a compulsory merge
-    * @return a MergeRegionsRequest
-    */
-   public static MergeRegionsRequest buildMergeRegionsRequest(
-       final byte[] regionA, final byte[] regionB, final boolean forcible) {
-     MergeRegionsRequest.Builder builder = MergeRegionsRequest.newBuilder();
-     RegionSpecifier regionASpecifier = RequestConverter.buildRegionSpecifier(
-         RegionSpecifierType.REGION_NAME, regionA);
-     RegionSpecifier regionBSpecifier = RequestConverter.buildRegionSpecifier(
-         RegionSpecifierType.REGION_NAME, regionB);
-     builder.setRegionA(regionASpecifier);
-     builder.setRegionB(regionBSpecifier);
-     builder.setForcible(forcible);
-     // send the master's wall clock time as well, so that the RS can refer to it
-     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
-     return builder.build();
-   }
 
   /**
    * Get a ServerName from the passed in data bytes.

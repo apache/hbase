@@ -273,22 +273,6 @@ message ExecuteProceduresResponse {
   repeated CloseRegionResponse close_region = 2;
 }
 
-/**
- * Merges the specified regions.
- * <p>
- * This method currently closes the regions and then merges them
- */
-message MergeRegionsRequest {
-  required RegionSpecifier region_a = 1;
-  required RegionSpecifier region_b = 2;
-  optional bool forcible = 3 [default = false];
-  // wall clock time from master
-  optional uint64 master_system_time = 4;
-}
-
-message MergeRegionsResponse {
-}
-
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -350,7 +334,4 @@ service AdminService {
 
   rpc ExecuteProcedures(ExecuteProceduresRequest)
     returns(ExecuteProceduresResponse);
-
-  rpc MergeRegions(MergeRegionsRequest)
-    returns(MergeRegionsResponse);
 }

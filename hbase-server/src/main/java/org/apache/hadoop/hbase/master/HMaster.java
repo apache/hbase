@@ -115,7 +115,6 @@ import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
-import org.apache.hadoop.hbase.master.procedure.DispatchMergingRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -1519,59 +1518,6 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public void setCatalogJanitorEnabled(final boolean b) {
     this.catalogJanitorChore.setEnabled(b);
-  }
-
-  @Override
-  public long dispatchMergingRegions(
-      final HRegionInfo regionInfoA,
-      final HRegionInfo regionInfoB,
-      final boolean forcible,
-      final long nonceGroup,
-      final long nonce) throws IOException {
-    checkInitialized();
-
-    TableName tableName = regionInfoA.getTable();
-    if (tableName == null || regionInfoB.getTable() == null) {
-      throw new UnknownRegionException ("Can't merge regions without table associated");
-    }
-
-    if (!tableName.equals(regionInfoB.getTable())) {
-      throw new IOException ("Cannot merge regions from two different tables");
-    }
-
-    if (regionInfoA.compareTo(regionInfoB) == 0) {
-      throw new MergeRegionException(
-        "Cannot merge a region to itself " + regionInfoA + ", " + regionInfoB);
-    }
-
-    final HRegionInfo [] regionsToMerge = new HRegionInfo[2];
-    regionsToMerge [0] = regionInfoA;
-    regionsToMerge [1] = regionInfoB;
-
-    return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
-      @Override
-      protected void run() throws IOException {
-        MasterCoprocessorHost mcph = getMaster().getMasterCoprocessorHost();
-        if (mcph != null) {
-          mcph.preDispatchMerge(regionInfoA, regionInfoB);
-        }
-
-        LOG.info(getClientIdAuditPrefix() + " Dispatch merge regions " +
-          regionsToMerge[0].getEncodedName() + " and " + regionsToMerge[1].getEncodedName());
-
-        submitProcedure(new DispatchMergingRegionsProcedure(
-            procedureExecutor.getEnvironment(), tableName, regionsToMerge, forcible));
-        if (mcph != null) {
-          mcph.postDispatchMerge(regionInfoA, regionInfoB);
-        }
-      }
-
-      @Override
-      protected String getDescription() {
-        return "DispatchMergingRegionsProcedure";
-      }
-    });
   }
 
   @Override
