@@ -564,7 +564,7 @@ public final class CellUtil {
     public long heapSize() {
       long sum = HEAP_SIZE_OVERHEAD + CellUtil.estimatedHeapSizeOf(cell);
       if (this.tags != null) {
-        sum += ClassSize.sizeOf(this.tags, this.tags.length);
+        sum += ClassSize.sizeOf(this.tags);
       }
       return sum;
     }
@@ -763,7 +763,7 @@ public final class CellUtil {
       long sum = HEAP_SIZE_OVERHEAD + CellUtil.estimatedHeapSizeOf(cell);
       // this.tags is on heap byte[]
       if (this.tags != null) {
-        sum += ClassSize.sizeOf(this.tags, this.tags.length);
+        sum += ClassSize.sizeOf(this.tags);
       }
       return sum;
     }
@@ -889,7 +889,7 @@ public final class CellUtil {
     public long heapSize() {
       long sum = ClassSize.REFERENCE + super.heapSize();
       if (this.value != null) {
-        sum += ClassSize.sizeOf(this.value, this.value.length);
+        sum += ClassSize.sizeOf(this.value);
       }
       return sum;
     }
@@ -989,7 +989,7 @@ public final class CellUtil {
     public long heapSize() {
       long sum = ClassSize.REFERENCE + super.heapSize();
       if (this.value != null) {
-        sum += ClassSize.sizeOf(this.value, this.value.length);
+        sum += ClassSize.sizeOf(this.value);
       }
       return sum;
     }

@@ -2608,8 +2608,8 @@ public class KeyValue implements ExtendedCell {
      */
     return ClassSize.align(sum) +
         (offset == 0
-          ? ClassSize.sizeOf(bytes, length) // count both length and object overhead
-          : length);                        // only count the number of bytes
+          ? ClassSize.sizeOfByteArray(length)  // count both length and object overhead
+          : length);                           // only count the number of bytes
   }
 
   /**

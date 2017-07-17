@@ -168,7 +168,7 @@ public class ClassSize {
       return  ((num + 7) >> 3) << 3;
     }
 
-    long sizeOf(byte[] b, int len) {
+    long sizeOfByteArray(int len) {
       return align(arrayHeaderSize() + len);
     }
   }
@@ -213,7 +213,7 @@ public class ClassSize {
 
     @Override
     @SuppressWarnings("static-access")
-    long sizeOf(byte[] b, int len) {
+    long sizeOfByteArray(int len) {
       return align(arrayHeaderSize() + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
     }
   }
@@ -463,8 +463,34 @@ public class ClassSize {
     return model != null && model.equals("32");
   }
 
-  public static long sizeOf(byte[] b, int len) {
-    return memoryLayout.sizeOf(b, len);
+  /**
+   * Calculate the memory consumption (in byte) of a byte array,
+   * including the array header and the whole backing byte array.
+   *
+   * If the whole byte array is occupied (not shared with other objects), please use this function.
+   * If not, please use {@link #sizeOfByteArray(int)} instead.
+   *
+   * @param b the byte array
+   * @return the memory consumption (in byte) of the whole byte array
+   */
+  public static long sizeOf(byte[] b) {
+    return memoryLayout.sizeOfByteArray(b.length);
+  }
+
+  /**
+   * Calculate the memory consumption (in byte) of a part of a byte array,
+   * including the array header and the part of the backing byte array.
+   *
+   * This function is used when the byte array backs multiple objects.
+   * For example, in {@link org.apache.hadoop.hbase.KeyValue},
+   * multiple KeyValue objects share a same backing byte array ({@link org.apache.hadoop.hbase.KeyValue#bytes}).
+   * Also see {@link org.apache.hadoop.hbase.KeyValue#heapSize()}.
+   *
+   * @param len the length (in byte) used partially in the backing byte array
+   * @return the memory consumption (in byte) of the part of the byte array
+   */
+  public static long sizeOfByteArray(int len) {
+    return memoryLayout.sizeOfByteArray(len);
   }
 
 }
