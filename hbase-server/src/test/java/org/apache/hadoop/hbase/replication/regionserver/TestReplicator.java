@@ -403,13 +403,6 @@ public class TestReplicator extends TestReplicationBase {
       throws ServiceException {
         return null;
       }
-
-      @Override
-      public MergeRegionsResponse mergeRegions(RpcController controller,
-                                               MergeRegionsRequest request)
-      throws ServiceException {
-        return null;
-      }
     }
 
     public class FailureInjectingReplicatorForTest extends ReplicatorForTest {

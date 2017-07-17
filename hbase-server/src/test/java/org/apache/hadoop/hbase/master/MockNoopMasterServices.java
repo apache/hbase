@@ -452,12 +452,6 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public long dispatchMergingRegions(HRegionInfo region_a, HRegionInfo region_b, boolean forcible, long nonceGroup,
-      long nonce) throws IOException {
-    return 0;
-  }
-
-  @Override
   public ProcedureEvent getInitializedEvent() {
     // TODO Auto-generated method stub
     return null;

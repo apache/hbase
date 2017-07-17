@@ -81,20 +81,6 @@ message MoveRegionRequest {
 message MoveRegionResponse {
 }
 
- /**
- * Dispatch merging the specified regions.
- */
-message DispatchMergingRegionsRequest {
-  required RegionSpecifier region_a = 1;
-  required RegionSpecifier region_b = 2;
-  optional bool forcible = 3 [default = false];
-  optional uint64 nonce_group = 4 [default = 0];
-  optional uint64 nonce = 5 [default = 0];
-}
-
-message DispatchMergingRegionsResponse {
-  optional uint64 proc_id = 1;
-}
 
 /**
  * Merging the specified regions in a table.
@@ -666,10 +652,6 @@ service MasterService {
   /** Modifies an existing column on the specified table. */
   rpc ModifyColumn(ModifyColumnRequest)
     returns(ModifyColumnResponse);
-
- /** Master dispatch merging the regions */
-  rpc DispatchMergingRegions(DispatchMergingRegionsRequest)
-    returns(DispatchMergingRegionsResponse);
 
   /** Move the region region to the destination server. */
   rpc MoveRegion(MoveRegionRequest)
