@@ -139,7 +139,6 @@ implements ServerProcedureInterface {
       switch (state) {
       case SERVER_CRASH_START:
         LOG.info("Start " + this);
-        start(env);
         // If carrying meta, process it first. Else, get list of regions on crashed server.
         if (this.carryingMeta) {
           setNextState(ServerCrashState.SERVER_CRASH_PROCESS_META);
@@ -205,13 +204,6 @@ implements ServerProcedureInterface {
     }
     return Flow.HAS_MORE_STATE;
   }
-
-  /**
-   * Start processing of crashed server. In here we'll just set configs. and return.
-   * @param env
-   * @throws IOException
-   */
-  private void start(final MasterProcedureEnv env) throws IOException {}
 
   /**
    * @param env
