@@ -39,6 +39,10 @@ class ConnectionId {
                const std::string &service_name)
       : user_(user), service_name_(service_name), host_(host), port_(port) {}
 
+  ConnectionId(const std::string &host, uint16_t port,
+               const std::string &service_name)
+        : user_(security::User::defaultUser()), service_name_(service_name), host_(host), port_(port) {}
+
   virtual ~ConnectionId() = default;
 
   std::shared_ptr<security::User> user() const { return user_; }
@@ -59,7 +63,7 @@ struct ConnectionIdEquals {
   bool operator()(const std::shared_ptr<ConnectionId> &lhs,
                   const std::shared_ptr<ConnectionId> &rhs) const {
     return userEquals(lhs->user(), rhs->user()) && lhs->host() == rhs->host() &&
-           lhs->port() == rhs->port();
+           lhs->port() == rhs->port() && lhs->service_name() == rhs->service_name();
   }
 
  private:
@@ -78,6 +82,7 @@ struct ConnectionIdHash {
     boost::hash_combine(h, ci->user() == nullptr ? 0 : ci->user()->user_name());
     boost::hash_combine(h, ci->host());
     boost::hash_combine(h, ci->port());
+    boost::hash_combine(h, ci->service_name());
     return h;
   }
 };
