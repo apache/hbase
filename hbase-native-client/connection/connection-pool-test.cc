@@ -101,3 +101,29 @@ TEST(TestConnectionPool, TestOnlyCreateMultipleDispose) {
   auto remote_id2 = std::make_shared<ConnectionId>(hostname_two, port);
   auto result_two = cp.GetConnection(remote_id2);
 }
+
+TEST(TestConnectionPool, TestCreateOneConnectionForOneService) {
+  std::string hostname{"hostname"};
+  uint32_t port{999};
+  std::string service1{"service1"};
+  std::string service2{"service2"};
+
+  auto mock_boot = std::make_shared<MockBootstrap>();
+  auto mock_service = std::make_shared<MockService>();
+  auto mock_cf = std::make_shared<MockConnectionFactory>();
+
+  EXPECT_CALL((*mock_cf), Connect(_, _, _)).Times(2).WillRepeatedly(Return(mock_service));
+  EXPECT_CALL((*mock_cf), MakeBootstrap()).Times(2).WillRepeatedly(Return(mock_boot));
+  ConnectionPool cp{mock_cf};
+
+  {
+    auto remote_id = std::make_shared<ConnectionId>(hostname, port, service1);
+    auto result_one = cp.GetConnection(remote_id);
+    auto remote_id2 = std::make_shared<ConnectionId>(hostname, port, service2);
+    auto result_two = cp.GetConnection(remote_id2);
+  }
+  auto remote_id = std::make_shared<ConnectionId>(hostname, port, service1);
+  auto result_one = cp.GetConnection(remote_id);
+  auto remote_id2 = std::make_shared<ConnectionId>(hostname, port, service2);
+  auto result_two = cp.GetConnection(remote_id2);
+}
