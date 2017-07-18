@@ -41,9 +41,9 @@ public class StripeCompactionScanQueryMatcher extends DropDeletesCompactionScanQ
   private DropDeletesInOutput dropDeletesInOutput = DropDeletesInOutput.BEFORE;
 
   public StripeCompactionScanQueryMatcher(ScanInfo scanInfo, DeleteTracker deletes,
-      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, long now,
-      byte[] dropDeletesFromRow, byte[] dropDeletesToRow) {
-    super(scanInfo, deletes, readPointToUse, earliestPutTs, oldestUnexpiredTS, now);
+      ColumnTracker columns, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
+      long now, byte[] dropDeletesFromRow, byte[] dropDeletesToRow) {
+    super(scanInfo, deletes, columns, readPointToUse, earliestPutTs, oldestUnexpiredTS, now);
     this.dropDeletesFromRow = dropDeletesFromRow;
     this.dropDeletesToRow = dropDeletesToRow;
   }

@@ -78,7 +78,7 @@ public interface ColumnTracker extends ShipperListener {
    * the {@link #checkColumn(Cell, byte)} method and perform all the operations in this
    * checkVersions method.
    * @param cell
-   * @param ttl The timeToLive to enforce.
+   * @param timestamp The timestamp of the cell.
    * @param type the type of the key value (Put/Delete)
    * @param ignoreCount indicates if the KV needs to be excluded while counting (used during
    *          compactions. We only count KV's that are older than all the scanners' read points.)
@@ -86,8 +86,8 @@ public interface ColumnTracker extends ShipperListener {
    * @throws IOException in case there is an internal consistency problem caused by a data
    *           corruption.
    */
-  ScanQueryMatcher.MatchCode checkVersions(Cell cell, long ttl, byte type, boolean ignoreCount)
-      throws IOException;
+  ScanQueryMatcher.MatchCode checkVersions(Cell cell, long timestamp, byte type,
+      boolean ignoreCount) throws IOException;
   /**
    * Resets the Matcher
    */

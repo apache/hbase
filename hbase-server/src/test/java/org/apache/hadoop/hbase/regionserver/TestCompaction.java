@@ -214,7 +214,7 @@ public class TestCompaction {
         ScanInfo old = store.getScanInfo();
         ScanInfo si = new ScanInfo(old.getConfiguration(), old.getFamily(), old.getMinVersions(),
             old.getMaxVersions(), ttl, old.getKeepDeletedCells(), HConstants.DEFAULT_BLOCKSIZE, 0,
-            old.getComparator());
+            old.getComparator(), old.isNewVersionBehavior());
         store.setScanInfo(si);
       }
       Thread.sleep(ttl);

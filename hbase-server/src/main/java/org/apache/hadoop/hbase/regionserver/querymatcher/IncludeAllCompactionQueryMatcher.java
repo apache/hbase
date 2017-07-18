@@ -20,43 +20,23 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 
 /**
- * Query matcher for minor compaction.
+ * A compaction query matcher that always return INCLUDE and drops nothing.
  */
 @InterfaceAudience.Private
-public class MinorCompactionScanQueryMatcher extends CompactionScanQueryMatcher {
+public class IncludeAllCompactionQueryMatcher extends MinorCompactionScanQueryMatcher{
 
-  public MinorCompactionScanQueryMatcher(ScanInfo scanInfo, DeleteTracker deletes,
+  public IncludeAllCompactionQueryMatcher(ScanInfo scanInfo, DeleteTracker deletes,
       ColumnTracker columns, long readPointToUse, long oldestUnexpiredTS, long now) {
     super(scanInfo, deletes, columns, readPointToUse, oldestUnexpiredTS, now);
   }
 
   @Override
   public MatchCode match(Cell cell) throws IOException {
-    MatchCode returnCode = preCheck(cell);
-    if (returnCode != null) {
-      return returnCode;
-    }
-    long mvccVersion = cell.getSequenceId();
-    byte typeByte = cell.getTypeByte();
-    if (CellUtil.isDelete(typeByte)) {
-      if (mvccVersion > maxReadPointToTrackVersions) {
-        // we should not use this delete marker to mask any cell yet.
-        return MatchCode.INCLUDE;
-      }
-      trackDelete(cell);
-      return MatchCode.INCLUDE;
-    }
-    returnCode = checkDeleted(deletes, cell);
-    if (returnCode != null) {
-      return returnCode;
-    }
-    // Skip checking column since we do not remove column during compaction.
-    return columns.checkVersions(cell, cell.getTimestamp(), typeByte,
-      mvccVersion > maxReadPointToTrackVersions);
+    return MatchCode.INCLUDE;
   }
+
 }

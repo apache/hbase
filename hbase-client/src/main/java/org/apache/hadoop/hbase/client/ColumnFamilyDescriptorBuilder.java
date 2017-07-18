@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
@@ -179,6 +180,9 @@ public class ColumnFamilyDescriptorBuilder {
   public static final String STORAGE_POLICY = "STORAGE_POLICY";
   private static final Bytes STORAGE_POLICY_BYTES = new Bytes(Bytes.toBytes(STORAGE_POLICY));
 
+  public static final String NEW_VERSION_BEHAVIOR = "NEW_VERSION_BEHAVIOR";
+  private static final Bytes NEW_VERSION_BEHAVIOR_BYTES = new Bytes(Bytes.toBytes(NEW_VERSION_BEHAVIOR));
+  public static final boolean DEFAULT_NEW_VERSION_BEHAVIOR = false;
   /**
    * Default compression type.
    */
@@ -308,6 +312,7 @@ public class ColumnFamilyDescriptorBuilder {
     DEFAULT_VALUES.put(CACHE_BLOOMS_ON_WRITE, String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
     DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
     DEFAULT_VALUES.put(PREFETCH_BLOCKS_ON_OPEN, String.valueOf(DEFAULT_PREFETCH_BLOCKS_ON_OPEN));
+    DEFAULT_VALUES.put(NEW_VERSION_BEHAVIOR, String.valueOf(DEFAULT_NEW_VERSION_BEHAVIOR));
     DEFAULT_VALUES.keySet().forEach(s -> RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(s))));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
@@ -887,6 +892,20 @@ public class ColumnFamilyDescriptorBuilder {
      */
     public ModifyableColumnFamilyDescriptor setKeepDeletedCells(KeepDeletedCells keepDeletedCells) {
       return setValue(KEEP_DELETED_CELLS_BYTES, keepDeletedCells.name());
+    }
+
+    /**
+     * By default, HBase only consider timestamp in versions. So a previous Delete with higher ts
+     * will mask a later Put with lower ts. Set this to true to enable new semantics of versions.
+     * We will also consider mvcc in versions. See HBASE-15968 for details.
+     */
+    public boolean isNewVersionBehavior() {
+      return getStringOrDefault(NEW_VERSION_BEHAVIOR_BYTES,
+          Boolean::parseBoolean, DEFAULT_NEW_VERSION_BEHAVIOR);
+    }
+
+    public ModifyableColumnFamilyDescriptor setNewVersionBehavior(boolean newVersionBehavior) {
+      return setValue(NEW_VERSION_BEHAVIOR_BYTES, Boolean.toString(newVersionBehavior));
     }
 
     @Override

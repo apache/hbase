@@ -300,7 +300,8 @@ public abstract class Compactor<T extends CellSink> {
         return new ArrayList<>();
       }
       boolean cleanSeqId = false;
-      if (fd.minSeqIdToKeep > 0) {
+      if (fd.minSeqIdToKeep > 0 && !store.getColumnFamilyDescriptor().isNewVersionBehavior()) {
+        // For mvcc-sensitive family, we never set mvcc to 0.
         smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
         cleanSeqId = true;
       }

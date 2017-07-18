@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Query matcher for user scan.
@@ -184,30 +185,18 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
   public static UserScanQueryMatcher create(Scan scan, ScanInfo scanInfo,
       NavigableSet<byte[]> columns, long oldestUnexpiredTS, long now,
       RegionCoprocessorHost regionCoprocessorHost) throws IOException {
-    int maxVersions = scan.isRaw() ? scan.getMaxVersions()
-        : Math.min(scan.getMaxVersions(), scanInfo.getMaxVersions());
-    boolean hasNullColumn;
-    ColumnTracker columnTracker;
-    if (columns == null || columns.isEmpty()) {
-      // there is always a null column in the wildcard column query.
-      hasNullColumn = true;
-      // use a specialized scan for wildcard column tracker.
-      columnTracker = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), maxVersions,
-          oldestUnexpiredTS);
-    } else {
-      // We can share the ExplicitColumnTracker, diff is we reset
-      // between rows, not between storefiles.
-      // whether there is null column in the explicit column query
-      hasNullColumn = columns.first().length == 0;
-      columnTracker = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(), maxVersions,
-          oldestUnexpiredTS);
-    }
+    boolean hasNullColumn =
+        !(columns != null && columns.size() != 0 && columns.first().length != 0);
+    Pair<DeleteTracker, ColumnTracker> trackers = getTrackers(regionCoprocessorHost, columns,
+        scanInfo, oldestUnexpiredTS, scan);
+    DeleteTracker deleteTracker = trackers.getFirst();
+    ColumnTracker columnTracker = trackers.getSecond();
     if (scan.isRaw()) {
       return RawScanQueryMatcher.create(scan, scanInfo, columnTracker, hasNullColumn,
         oldestUnexpiredTS, now);
     } else {
-      return NormalUserScanQueryMatcher.create(scan, scanInfo, columnTracker, hasNullColumn,
-        oldestUnexpiredTS, now, regionCoprocessorHost);
+      return NormalUserScanQueryMatcher.create(scan, scanInfo, columnTracker, deleteTracker,
+          hasNullColumn, oldestUnexpiredTS, now);
     }
   }
 }

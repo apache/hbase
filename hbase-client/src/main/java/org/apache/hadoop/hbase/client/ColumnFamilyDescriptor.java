@@ -215,4 +215,11 @@ public interface ColumnFamilyDescriptor {
    * @return Column family descriptor with only the customized attributes.
    */
   String toStringCustomizedValues();
+
+  /**
+   * By default, HBase only consider timestamp in versions. So a previous Delete with higher ts
+   * will mask a later Put with lower ts. Set this to true to enable new semantics of versions.
+   * We will also consider mvcc in versions. See HBASE-15968 for details.
+   */
+  boolean isNewVersionBehavior();
 }
