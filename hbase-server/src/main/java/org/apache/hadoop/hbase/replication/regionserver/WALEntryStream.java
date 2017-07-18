@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Streaming access to WAL entries. This class is given a queue of WAL {@link Path}, and continually
@@ -316,6 +317,15 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     }
   }
 
+  private void handleFileNotFound(Path path, FileNotFoundException fnfe) throws IOException {
+    // If the log was archived, continue reading from there
+    Path archivedLog = getArchivedLog(path);
+    if (!path.equals(archivedLog)) {
+      openReader(archivedLog);
+    } else {
+      throw fnfe;
+    }
+  }
   private void openReader(Path path) throws IOException {
     try {
       // Detect if this is a new file, if so get a new reader else
@@ -329,13 +339,11 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
         resetReader();
       }
     } catch (FileNotFoundException fnfe) {
-      // If the log was archived, continue reading from there
-      Path archivedLog = getArchivedLog(path);
-      if (!path.equals(archivedLog)) {
-        openReader(archivedLog);
-      } else {
-        throw fnfe;
-      }
+      handleFileNotFound(path, fnfe);
+    }  catch (RemoteException re) {
+      IOException ioe = re.unwrapRemoteException(FileNotFoundException.class);
+      if (!(ioe instanceof FileNotFoundException)) throw ioe;
+      handleFileNotFound(path, (FileNotFoundException)ioe);
     } catch (LeaseNotRecoveredException lnre) {
       // HBASE-15019 the WAL was not closed due to some hiccup.
       LOG.warn("Try to recover the WAL lease " + currentPath, lnre);
