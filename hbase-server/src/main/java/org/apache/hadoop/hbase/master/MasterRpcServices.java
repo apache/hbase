@@ -1303,7 +1303,7 @@ public class MasterRpcServices extends RSRpcServices
   public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
       RestoreSnapshotRequest request) throws ServiceException {
     try {
-      master.checkInitialized();
+      master.checkNamespaceManagerReady();
       master.snapshotManager.checkSnapshotSupport();
 
       // ensure namespace exists
@@ -1606,7 +1606,7 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public SetQuotaResponse setQuota(RpcController c, SetQuotaRequest req) throws ServiceException {
     try {
-      master.checkInitialized();
+      master.checkNamespaceManagerReady();
       return master.getMasterQuotaManager().setQuota(req);
     } catch (Exception e) {
       throw new ServiceException(e);

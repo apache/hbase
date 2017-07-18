@@ -222,7 +222,7 @@ public class TestRollbackFromClient {
     HColumnDescriptor col = new HColumnDescriptor(FAMILY);
     col.setMaxVersions(versions);
     desc.addFamily(col);
-    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    TEST_UTIL.createTable(tableName, FAMILY, versions);
     int expected;
     List<Cell> cells;
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
