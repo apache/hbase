@@ -96,7 +96,9 @@ public interface DeleteTracker extends ShipperListener {
     FAMILY_VERSION_DELETED, // The KeyValue is deleted by a delete family version.
     COLUMN_DELETED, // The KeyValue is deleted by a delete column.
     VERSION_DELETED, // The KeyValue is deleted by a version delete.
-    NOT_DELETED
+    NOT_DELETED,
+    VERSION_MASKED  // The KeyValue is masked by max number of versions which is considered as
+                    // deleted in strong semantics of versions(See MvccTracker)
   }
 
 }

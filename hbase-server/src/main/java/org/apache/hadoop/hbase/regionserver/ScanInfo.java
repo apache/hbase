@@ -50,10 +50,11 @@ public class ScanInfo {
   private boolean parallelSeekEnabled;
   private final long preadMaxBytes;
   private final Configuration conf;
+  private final boolean newVersionBehavior;
 
   public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
       + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_INT)
-      + (4 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_BOOLEAN));
+      + (4 * Bytes.SIZEOF_LONG) + (4 * Bytes.SIZEOF_BOOLEAN));
 
   /**
    * @param conf
@@ -66,7 +67,7 @@ public class ScanInfo {
   public ScanInfo(final Configuration conf, final ColumnFamilyDescriptor family, final long ttl,
       final long timeToPurgeDeletes, final CellComparator comparator) {
     this(conf, family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl,
-        family.getKeepDeletedCells(), family.getBlocksize(), timeToPurgeDeletes, comparator);
+        family.getKeepDeletedCells(), family.getBlocksize(), timeToPurgeDeletes, comparator, family.isNewVersionBehavior());
   }
 
   /**
@@ -83,7 +84,8 @@ public class ScanInfo {
    */
   public ScanInfo(final Configuration conf, final byte[] family, final int minVersions,
       final int maxVersions, final long ttl, final KeepDeletedCells keepDeletedCells,
-      final long blockSize, final long timeToPurgeDeletes, final CellComparator comparator) {
+      final long blockSize, final long timeToPurgeDeletes, final CellComparator comparator,
+      final boolean newVersionBehavior) {
     this.family = family;
     this.minVersions = minVersions;
     this.maxVersions = maxVersions;
@@ -103,6 +105,7 @@ public class ScanInfo {
       conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false);
     this.preadMaxBytes = conf.getLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 4 * blockSize);
     this.conf = conf;
+    this.newVersionBehavior = newVersionBehavior;
   }
 
   public Configuration getConfiguration() {
@@ -155,5 +158,9 @@ public class ScanInfo {
 
   long getPreadMaxBytes() {
     return preadMaxBytes;
+  }
+
+  public boolean isNewVersionBehavior() {
+    return newVersionBehavior;
   }
 }

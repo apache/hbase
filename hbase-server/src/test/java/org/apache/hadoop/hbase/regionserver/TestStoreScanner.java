@@ -69,7 +69,7 @@ public class TestStoreScanner {
   private static final byte [] CF = Bytes.toBytes(CF_STR);
   static Configuration CONF = HBaseConfiguration.create();
   private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
-      KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
+      KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR, false);
   private ScanType scanType = ScanType.USER_SCAN;
 
   /**
@@ -831,7 +831,7 @@ public class TestStoreScanner {
     Scan scan = new Scan();
     scan.setMaxVersions(1);
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
-        HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
+        HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR, false);
     ScanType scanType = ScanType.USER_SCAN;
     try (StoreScanner scanner = new StoreScanner(scan, scanInfo, scanType, null, scanners)) {
       List<Cell> results = new ArrayList<>();
@@ -904,7 +904,7 @@ public class TestStoreScanner {
     scan.setMaxVersions(1);
     // scanner with ttl equal to 500
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
-        HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
+        HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR, false);
     ScanType scanType = ScanType.USER_SCAN;
     try (StoreScanner scanner =
         new StoreScanner(scan, scanInfo, scanType, null, scanners)) {
@@ -971,7 +971,7 @@ public class TestStoreScanner {
         KeepDeletedCells.FALSE /* keepDeletedCells */,
         HConstants.DEFAULT_BLOCKSIZE /* block size */,
         200, /* timeToPurgeDeletes */
-        CellComparator.COMPARATOR);
+        CellComparator.COMPARATOR, false);
       try (StoreScanner scanner =
         new StoreScanner(scan, scanInfo,
           ScanType.COMPACT_DROP_DELETES, null, scanners,
@@ -1004,7 +1004,7 @@ public class TestStoreScanner {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scan = new Scan();
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
-        HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR);
+        HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR, false);
     StoreScanner storeScanner = new StoreScanner(scan, scanInfo, scanType, null, scanners);
     assertFalse(storeScanner.isScanUsePread());
   }

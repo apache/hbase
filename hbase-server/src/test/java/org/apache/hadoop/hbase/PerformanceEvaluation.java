@@ -1064,7 +1064,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     void updateValueSize(final Result r) throws IOException {
-      if (r == null || !isRandomValueSize()) return;
+      if (r == null ) return;
       int size = 0;
       for (CellScanner scanner = r.cellScanner(); scanner.advance();) {
         size += scanner.current().getValueLength();
@@ -1073,7 +1073,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     void updateValueSize(final int valueSize) {
-      if (!isRandomValueSize()) return;
       this.valueSizeHistogram.update(valueSize);
     }
 

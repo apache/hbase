@@ -31,8 +31,9 @@ import org.apache.hadoop.hbase.regionserver.ScanInfo;
 public class MajorCompactionScanQueryMatcher extends DropDeletesCompactionScanQueryMatcher {
 
   public MajorCompactionScanQueryMatcher(ScanInfo scanInfo, DeleteTracker deletes,
-      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, long now) {
-    super(scanInfo, deletes, readPointToUse, earliestPutTs, oldestUnexpiredTS, now);
+      ColumnTracker columns, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
+      long now) {
+    super(scanInfo, deletes, columns, readPointToUse, earliestPutTs, oldestUnexpiredTS, now);
   }
 
   @Override

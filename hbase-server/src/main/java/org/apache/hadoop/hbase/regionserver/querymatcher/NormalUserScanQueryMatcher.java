@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 
 /**
@@ -40,7 +39,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   private final boolean get;
 
   /** whether time range queries can see rows "behind" a delete */
-  private final boolean seePastDeleteMarkers;
+  protected final boolean seePastDeleteMarkers;
 
   protected NormalUserScanQueryMatcher(Scan scan, ScanInfo scanInfo, ColumnTracker columns,
       boolean hasNullColumn, DeleteTracker deletes, long oldestUnexpiredTS, long now) {
@@ -93,9 +92,8 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   }
 
   public static NormalUserScanQueryMatcher create(Scan scan, ScanInfo scanInfo,
-      ColumnTracker columns, boolean hasNullColumn, long oldestUnexpiredTS, long now,
-      RegionCoprocessorHost regionCoprocessorHost) throws IOException {
-    DeleteTracker deletes = instantiateDeleteTracker(regionCoprocessorHost);
+      ColumnTracker columns, DeleteTracker deletes, boolean hasNullColumn, long oldestUnexpiredTS,
+      long now) throws IOException {
     if (scan.isReversed()) {
       if (scan.includeStopRow()) {
         return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,

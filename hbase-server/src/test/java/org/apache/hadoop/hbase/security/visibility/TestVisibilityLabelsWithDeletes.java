@@ -41,9 +41,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -73,11 +75,11 @@ public class TestVisibilityLabelsWithDeletes {
   public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] row1 = Bytes.toBytes("row1");
   private static final byte[] row2 = Bytes.toBytes("row2");
-  private final static byte[] fam = Bytes.toBytes("info");
-  private final static byte[] qual = Bytes.toBytes("qual");
+  protected final static byte[] fam = Bytes.toBytes("info");
+  protected final static byte[] qual = Bytes.toBytes("qual");
   private final static byte[] qual1 = Bytes.toBytes("qual1");
   private final static byte[] qual2 = Bytes.toBytes("qual2");
-  private final static byte[] value = Bytes.toBytes("value");
+  protected final static byte[] value = Bytes.toBytes("value");
   private final static byte[] value1 = Bytes.toBytes("value1");
   public static Configuration conf;
 
@@ -111,13 +113,20 @@ public class TestVisibilityLabelsWithDeletes {
   public void tearDown() throws Exception {
   }
 
+  protected Table createTable(HColumnDescriptor fam) throws IOException {
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    HTableDescriptor table = new HTableDescriptor(tableName);
+    table.addFamily(fam);
+    TEST_UTIL.getHBaseAdmin().createTable(table);
+    return TEST_UTIL.getConnection().getTable(tableName);
+  }
+
   @Test
   public void testVisibilityLabelsWithDeleteColumns() throws Throwable {
     setAuths();
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
 
-    try (Table table = createTableAndWriteDataWithLabels(tableName,
-        SECRET + "&" + TOPSECRET, SECRET)) {
+    try (Table table = createTableAndWriteDataWithLabels(SECRET + "&" + TOPSECRET, SECRET)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
@@ -154,8 +163,7 @@ public class TestVisibilityLabelsWithDeletes {
   public void testVisibilityLabelsWithDeleteFamily() throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    try (Table table = createTableAndWriteDataWithLabels(tableName, SECRET,
-        CONFIDENTIAL + "|" + TOPSECRET);) {
+    try (Table table = createTableAndWriteDataWithLabels(SECRET, CONFIDENTIAL + "|" + TOPSECRET);) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
@@ -192,7 +200,7 @@ public class TestVisibilityLabelsWithDeletes {
     setAuths();
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     long[] ts = new long[] { 123l, 125l };
-    try (Table table = createTableAndWriteDataWithLabels(tableName, ts,
+    try (Table table = createTableAndWriteDataWithLabels(ts,
         CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
@@ -230,7 +238,7 @@ public class TestVisibilityLabelsWithDeletes {
     setAuths();
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     long[] ts = new long[] { 123l, 125l };
-    try (Table table = createTableAndWriteDataWithLabels(tableName, ts,
+    try (Table table = createTableAndWriteDataWithLabels(ts,
         CONFIDENTIAL + "|" + TOPSECRET, SECRET);) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
@@ -2230,7 +2238,7 @@ public class TestVisibilityLabelsWithDeletes {
     };
     VisibilityLabelsResponse response = SUPERUSER.runAs(action);
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    try (Table table = doPuts(tableName)){
+    try (Table table = doPuts(tableName)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
@@ -3220,10 +3228,10 @@ public class TestVisibilityLabelsWithDeletes {
     assertEquals(0, result.rawCells().length);
   }
 
-  public static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
+  public Table createTableAndWriteDataWithLabels(String... labelExps)
       throws Exception {
-    Table table = null;
-    table = TEST_UTIL.createTable(tableName, fam);
+    HColumnDescriptor cf = new HColumnDescriptor(fam);
+    Table table = createTable(cf);
     int i = 1;
     List<Put> puts = new ArrayList<>(labelExps.length);
     for (String labelExp : labelExps) {
@@ -3238,10 +3246,10 @@ public class TestVisibilityLabelsWithDeletes {
     return table;
   }
 
-  public static Table createTableAndWriteDataWithLabels(TableName tableName, long[] timestamp,
+  public Table createTableAndWriteDataWithLabels(long[] timestamp,
       String... labelExps) throws Exception {
-    Table table = null;
-    table = TEST_UTIL.createTable(tableName, fam);
+    HColumnDescriptor cf = new HColumnDescriptor(fam);
+    Table table = createTable(cf);
     int i = 1;
     List<Put> puts = new ArrayList<>(labelExps.length);
     for (String labelExp : labelExps) {
@@ -3250,7 +3258,7 @@ public class TestVisibilityLabelsWithDeletes {
       put.setCellVisibility(new CellVisibility(labelExp));
       puts.add(put);
       table.put(put);
-      TEST_UTIL.getAdmin().flush(tableName);
+      TEST_UTIL.getAdmin().flush(table.getName());
       i++;
     }
     return table;

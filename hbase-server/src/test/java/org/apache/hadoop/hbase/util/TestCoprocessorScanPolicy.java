@@ -249,7 +249,7 @@ public class TestCoprocessorScanPolicy {
       ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
           family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
+          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(), family.isNewVersionBehavior());
       Scan scan = new Scan();
       scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
       return new StoreScanner(store, scanInfo, scan, scanners,
@@ -269,7 +269,7 @@ public class TestCoprocessorScanPolicy {
       ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
           family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
+          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(), family.isNewVersionBehavior());
       Scan scan = new Scan();
       scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
       return new StoreScanner(store, scanInfo, scan, scanners, scanType,
@@ -289,7 +289,7 @@ public class TestCoprocessorScanPolicy {
         ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
             family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
             newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-            family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
+            family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(), family.isNewVersionBehavior());
         return new StoreScanner(store, scanInfo, scan, targetCols, readPt);
       } else {
         return s;
