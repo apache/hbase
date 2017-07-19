@@ -262,6 +262,9 @@ public class DumpReplicationQueues extends Configured implements Tool {
     Set<String> peerIds = new HashSet<String>(replicationPeers.getAllPeerIds());
     try {
       List<String> regionservers = queuesClient.getListOfReplicators();
+      if (regionservers == null || regionservers.isEmpty()) {
+        return sb.toString();
+      }
       for (String regionserver : regionservers) {
         List<String> queueIds = queuesClient.getAllQueues(regionserver);
         replicationQueues.init(regionserver);

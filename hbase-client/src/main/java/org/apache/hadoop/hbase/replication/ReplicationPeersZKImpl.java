@@ -570,6 +570,9 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     if (queuesClient == null) return;
     try {
       List<String> replicators = queuesClient.getListOfReplicators();
+      if (replicators == null || replicators.isEmpty()) {
+        return;
+      }
       for (String replicator : replicators) {
         List<String> queueIds = queuesClient.getAllQueues(replicator);
         for (String queueId : queueIds) {
