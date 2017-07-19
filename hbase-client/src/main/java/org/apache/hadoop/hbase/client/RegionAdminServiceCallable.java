@@ -54,8 +54,6 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
   protected final byte[] row;
   protected final int replicaId;
 
-  protected final static int MIN_WAIT_DEAD_SERVER = 10000;
-
   public RegionAdminServiceCallable(ClusterConnection connection,
       RpcControllerFactory rpcControllerFactory, TableName tableName, byte[] row) {
     this(connection, rpcControllerFactory, null, tableName, row);
@@ -153,12 +151,7 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
 
   @Override
   public long sleep(long pause, int tries) {
-    long sleep = ConnectionUtils.getPauseTime(pause, tries);
-    if (sleep < MIN_WAIT_DEAD_SERVER
-        && (location == null || connection.isDeadServer(location.getServerName()))) {
-      sleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
-    }
-    return sleep;
+    return ConnectionUtils.getPauseTime(pause, tries);
   }
 
   public static RegionLocations getRegionLocations(
