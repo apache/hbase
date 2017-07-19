@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <map>
 #include <memory>
 #include <string>
@@ -29,13 +30,13 @@
 namespace hbase {
 
 using ResultOrExceptionTuple =
-    std::tuple<std::shared_ptr<hbase::Result>, std::shared_ptr<std::exception>>;
+    std::tuple<std::shared_ptr<hbase::Result>, std::shared_ptr<folly::exception_wrapper>>;
 
 class RegionResult {
  public:
   RegionResult();
   void AddResultOrException(int32_t index, std::shared_ptr<hbase::Result> result,
-                            std::shared_ptr<std::exception> exc);
+                            std::shared_ptr<folly::exception_wrapper> exc);
 
   void set_stat(std::shared_ptr<pb::RegionLoadStats> stat);
 

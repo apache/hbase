@@ -44,8 +44,14 @@ class ServerRequest {
   void AddActionsByRegion(std::shared_ptr<RegionLocation> region_location,
                           std::shared_ptr<Action> action) {
     auto region_name = region_location->region_name();
-    auto itr = actions_by_region_.at(region_name);
-    itr->AddAction(action);
+    auto search = actions_by_region_.find(region_name);
+    if (search == actions_by_region_.end()) {
+      auto region_request = std::make_shared<RegionRequest>(region_location);
+      actions_by_region_[region_name] = region_request;
+      actions_by_region_[region_name]->AddAction(action);
+    } else {
+      search->second->AddAction(action);
+    }
   }
 
   const ActionsByRegion &actions_by_region() const { return actions_by_region_; }

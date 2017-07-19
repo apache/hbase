@@ -323,6 +323,17 @@ cxx_test(
         ":core",
     ],
     run_test_separately=True,)
+cxx_test(
+    name="multi-retry-test",
+    srcs=[
+        "async-batch-rpc-retrying-test.cc",
+    ],
+    deps=[
+        ":core",
+        "//test-util:test-util",
+        "//exceptions:exceptions",
+    ],
+    run_test_separately=True,)
 cxx_binary(
     name="simple-client",
     srcs=[

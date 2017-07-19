@@ -25,6 +25,7 @@
 #include "connection/response.h"
 #include "core/multi-response.h"
 #include "core/result.h"
+#include "core/server-request.h"
 #include "if/Client.pb.h"
 #include "serde/cell-scanner.h"
 
@@ -56,12 +57,15 @@ class ResponseConverter {
   static std::vector<std::shared_ptr<Result>> FromScanResponse(
       const std::shared_ptr<pb::ScanResponse> resp, std::shared_ptr<CellScanner> cell_scanner);
 
-  static std::unique_ptr<hbase::MultiResponse> GetResults(std::shared_ptr<Request> req,
-                                                          const Response& resp);
+  static std::unique_ptr<hbase::MultiResponse> GetResults(
+      std::shared_ptr<Request> req, const Response& resp,
+      const ServerRequest::ActionsByRegion& actions_by_region);
 
  private:
   // Constructor not required. We have all static methods to extract response from PB messages.
   ResponseConverter();
+  static std::shared_ptr<folly::exception_wrapper> GetRemoteException(
+      const hbase::pb::NameBytesPair& exc_resp);
 };
 
 } /* namespace hbase */

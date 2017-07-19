@@ -18,7 +18,6 @@
  */
 
 #include "core/response-converter.h"
-
 #include <glog/logging.h>
 #include <stdexcept>
 #include <string>
@@ -125,8 +124,9 @@ std::vector<std::shared_ptr<Result>> ResponseConverter::FromScanResponse(
   return results;
 }
 
-std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_ptr<Request> req,
-                                                                    const Response& resp) {
+std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(
+    std::shared_ptr<Request> req, const Response& resp,
+    const ServerRequest::ActionsByRegion& actions_by_region) {
   auto multi_req = std::static_pointer_cast<hbase::pb::MultiRequest>(req->req_msg());
   auto multi_resp = std::static_pointer_cast<hbase::pb::MultiResponse>(resp.resp_msg());
   VLOG(3) << "GetResults:" << multi_resp->ShortDebugString();
@@ -148,11 +148,10 @@ std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_
 
     auto region_name = rs.value();
     if (action_result.has_exception()) {
-      if (action_result.exception().has_value()) {
-        auto exc = std::make_shared<hbase::IOException>(action_result.exception().value());
-        VLOG(8) << "Store Region Exception:- " << exc->what();
-        multi_response->AddRegionException(region_name, exc);
-      }
+      auto ew = ResponseConverter::GetRemoteException(action_result.exception());
+      VLOG(8) << "Store Remote Region Exception:- " << ew->what().toStdString() << "; Region["
+              << region_name << "];";
+      multi_response->AddRegionException(region_name, ew);
       continue;
     }
 
@@ -163,14 +162,16 @@ std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_
                                " for region " + actions.region().value());
     }
 
+    auto multi_actions = actions_by_region.at(region_name)->actions();
+    uint64_t multi_actions_num = 0;
     for (hbase::pb::ResultOrException roe : action_result.resultorexception()) {
       std::shared_ptr<Result> result;
-      std::shared_ptr<std::exception> exc;
+      std::shared_ptr<folly::exception_wrapper> ew;
       if (roe.has_exception()) {
-        if (roe.exception().has_value()) {
-          exc = std::make_shared<hbase::IOException>(roe.exception().value());
-          VLOG(8) << "Store ResultOrException:- " << exc->what();
-        }
+        auto ew = ResponseConverter::GetRemoteException(roe.exception());
+        VLOG(8) << "Store Remote Region Exception:- " << ew->what().toStdString() << "; Region["
+                << region_name << "];";
+        multi_response->AddRegionException(region_name, ew);
       } else if (roe.has_result()) {
         result = ToResult(roe.result(), resp.cell_scanner());
       } else if (roe.has_service_result()) {
@@ -183,7 +184,11 @@ std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_
         result = std::make_shared<Result>(empty_cells, multi_resp->processed() ? true : false,
                                           false, false);
       }
-      multi_response->AddRegionResult(region_name, roe.index(), std::move(result), exc);
+      // We add the original index of the multi-action so that when populating the response back we
+      // do it as per the action index
+      multi_response->AddRegionResult(
+          region_name, multi_actions[multi_actions_num]->original_index(), std::move(result), ew);
+      multi_actions_num++;
     }
   }
 
@@ -195,5 +200,22 @@ std::unique_ptr<hbase::MultiResponse> ResponseConverter::GetResults(std::shared_
     }
   }
   return multi_response;
+}
+
+std::shared_ptr<folly::exception_wrapper> ResponseConverter::GetRemoteException(
+    const hbase::pb::NameBytesPair& exc_resp) {
+  std::string what;
+  std::string exception_class_name = exc_resp.has_name() ? exc_resp.name() : "";
+  std::string stack_trace = exc_resp.has_value() ? exc_resp.value() : "";
+
+  what.append(exception_class_name).append(stack_trace);
+  auto remote_exception = std::make_unique<RemoteException>(what);
+  remote_exception->set_exception_class_name(exception_class_name)
+      ->set_stack_trace(stack_trace)
+      ->set_hostname("")
+      ->set_port(0);
+
+  return std::make_shared<folly::exception_wrapper>(
+      folly::make_exception_wrapper<RemoteException>(*remote_exception));
 }
 } /* namespace hbase */

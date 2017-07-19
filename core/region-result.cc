@@ -30,7 +30,7 @@ RegionResult::RegionResult() {}
 RegionResult::~RegionResult() {}
 
 void RegionResult::AddResultOrException(int32_t index, std::shared_ptr<hbase::Result> result,
-                                        std::shared_ptr<std::exception> exc) {
+                                        std::shared_ptr<folly::exception_wrapper> exc) {
   auto index_found = result_or_excption_.find(index);
   if (index_found == result_or_excption_.end()) {
     result_or_excption_[index] = std::make_tuple(result ? result : nullptr, exc ? exc : nullptr);
