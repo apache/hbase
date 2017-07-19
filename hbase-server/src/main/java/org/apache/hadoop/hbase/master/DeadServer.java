@@ -134,11 +134,6 @@ public class DeadServer {
 
     assert numProcessing >= 0: "Number of dead servers in processing should always be non-negative";
 
-    if (numProcessing < 0) {
-      LOG.error("Number of dead servers in processing = " + numProcessing
-          + ". Something went wrong, this should always be non-negative.");
-      numProcessing = 0;
-    }
     if (numProcessing == 0) { processing = false; }
   }
 

@@ -816,7 +816,8 @@ public class HRegionServer extends HasThread implements
    * @throws IOException
    * @throws InterruptedException
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value={"RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", "RV_RETURN_VALUE_IGNORED"},
     justification="cluster Id znode read would give us correct response")
   private void initializeZooKeeper() throws IOException, InterruptedException {
     // Create the master address tracker, register with zk, and start it.  Then

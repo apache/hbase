@@ -1096,6 +1096,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected MetricsBalancer metricsBalancer = null;
   protected ClusterStatus clusterStatus = null;
   protected ServerName masterServerName;
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+  justification="The services is just assigned once when master start")
   protected MasterServices services;
 
   protected static String[] getTablesOnMaster(Configuration conf) {
