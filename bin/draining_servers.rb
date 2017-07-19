@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-# Add or remove servers from draining mode via zookeeper 
+# Add or remove servers from draining mode via zookeeper
 
 require 'optparse'
 include Java
@@ -29,13 +29,13 @@ java_import org.apache.commons.logging.Log
 java_import org.apache.commons.logging.LogFactory
 
 # Name of this script
-NAME = "draining_servers"
+NAME = 'draining_servers'.freeze
 
 # Do command-line parsing
 options = {}
 optparse = OptionParser.new do |opts|
   opts.banner = "Usage: ./hbase org.jruby.Main #{NAME}.rb [options] add|remove|list <hostname>|<host:port>|<servername> ..."
-  opts.separator 'Add remove or list servers in draining mode. Can accept either hostname to drain all region servers' +
+  opts.separator 'Add remove or list servers in draining mode. Can accept either hostname to drain all region servers' \
                  'in that host, a host:port pair or a host,port,startCode triplet. More than one server can be given separated by space'
   opts.on('-h', '--help', 'Display usage information') do
     puts opts
@@ -51,117 +51,117 @@ optparse.parse!
 # Return array of servernames where servername is hostname+port+startcode
 # comma-delimited
 def getServers(admin)
-  serverInfos = admin.getClusterStatus().getServers()
+  serverInfos = admin.getClusterStatus.getServers
   servers = []
   for server in serverInfos
-    servers << server.getServerName()
+    servers << server.getServerName
   end
-  return servers
+  servers
 end
 
 def getServerNames(hostOrServers, config)
   ret = []
   connection = ConnectionFactory.createConnection(config)
-  
+
   for hostOrServer in hostOrServers
     # check whether it is already serverName. No need to connect to cluster
     parts = hostOrServer.split(',')
-    if parts.size() == 3
+    if parts.size == 3
       ret << hostOrServer
-    else 
-      admin = connection.getAdmin() if not admin
+    else
+      admin = connection.getAdmin unless admin
       servers = getServers(admin)
 
-      hostOrServer = hostOrServer.gsub(/:/, ",")
-      for server in servers 
+      hostOrServer = hostOrServer.tr(':', ',')
+      for server in servers
         ret << server if server.start_with?(hostOrServer)
       end
     end
   end
-  
-  admin.close() if admin
-  connection.close()
-  return ret
+
+  admin.close if admin
+  connection.close
+  ret
 end
 
-def addServers(options, hostOrServers)
-  config = HBaseConfiguration.create()
+def addServers(_options, hostOrServers)
+  config = HBaseConfiguration.create
   servers = getServerNames(hostOrServers, config)
-  
-  zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(config, "draining_servers", nil)
+
+  zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(config, 'draining_servers', nil)
   parentZnode = zkw.znodePaths.drainingZNode
-  
+
   begin
     for server in servers
       node = ZKUtil.joinZNode(parentZnode, server)
       ZKUtil.createAndFailSilent(zkw, node)
     end
   ensure
-    zkw.close()
+    zkw.close
   end
 end
 
-def removeServers(options, hostOrServers)
-  config = HBaseConfiguration.create()
+def removeServers(_options, hostOrServers)
+  config = HBaseConfiguration.create
   servers = getServerNames(hostOrServers, config)
-  
-  zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(config, "draining_servers", nil)
+
+  zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(config, 'draining_servers', nil)
   parentZnode = zkw.znodePaths.drainingZNode
-  
+
   begin
     for server in servers
       node = ZKUtil.joinZNode(parentZnode, server)
       ZKUtil.deleteNodeFailSilent(zkw, node)
     end
   ensure
-    zkw.close()
+    zkw.close
   end
 end
 
 # list servers in draining mode
-def listServers(options)
-  config = HBaseConfiguration.create()
-  
-  zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(config, "draining_servers", nil)
+def listServers(_options)
+  config = HBaseConfiguration.create
+
+  zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(config, 'draining_servers', nil)
   parentZnode = zkw.znodePaths.drainingZNode
 
   servers = ZKUtil.listChildrenNoWatch(zkw, parentZnode)
-  servers.each {|server| puts server}
+  servers.each { |server| puts server }
 end
 
-hostOrServers = ARGV[1..ARGV.size()]
+hostOrServers = ARGV[1..ARGV.size]
 
 # Create a logger and disable the DEBUG-level annoying client logging
 def configureLogging(options)
   apacheLogger = LogFactory.getLog(NAME)
   # Configure log4j to not spew so much
-  unless (options[:debug]) 
-    logger = org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase")
+  unless options[:debug]
+    logger = org.apache.log4j.Logger.getLogger('org.apache.hadoop.hbase')
     logger.setLevel(org.apache.log4j.Level::WARN)
-    logger = org.apache.log4j.Logger.getLogger("org.apache.zookeeper")
+    logger = org.apache.log4j.Logger.getLogger('org.apache.zookeeper')
     logger.setLevel(org.apache.log4j.Level::WARN)
   end
-  return apacheLogger
+  apacheLogger
 end
 
 # Create a logger and save it to ruby global
 $LOG = configureLogging(options)
 case ARGV[0]
-  when 'add'
-    if ARGV.length < 2
-      puts optparse
-      exit 1
-    end
-    addServers(options, hostOrServers)
-  when 'remove'
-    if ARGV.length < 2
-      puts optparse
-      exit 1
-    end
-    removeServers(options, hostOrServers)
-  when 'list'
-    listServers(options)
-  else
+when 'add'
+  if ARGV.length < 2
     puts optparse
-    exit 3
+    exit 1
+  end
+  addServers(options, hostOrServers)
+when 'remove'
+  if ARGV.length < 2
+    puts optparse
+    exit 1
+  end
+  removeServers(options, hostOrServers)
+when 'list'
+  listServers(options)
+else
+  puts optparse
+  exit 3
 end

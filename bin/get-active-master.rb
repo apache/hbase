@@ -17,7 +17,7 @@
 
 # Prints the hostname of the machine running the active master.
 
-include Java 
+include Java
 java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher
@@ -32,7 +32,7 @@ config = HBaseConfiguration.create
 
 zk = ZooKeeperWatcher.new(config, 'get-active-master', nil)
 begin
-  puts MasterAddressTracker.getMasterAddress(zk).getHostname()
+  puts MasterAddressTracker.getMasterAddress(zk).getHostname
 ensure
-  zk.close()
+  zk.close
 end

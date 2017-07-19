@@ -20,5 +20,5 @@
 # not move a new region until successful confirm of region loading in new
 # location. Presumes balancer is disabled when we run (not harmful if its
 # on but this script and balancer will end up fighting each other).
-$BIN=File.dirname(__FILE__)
+$BIN = File.dirname(__FILE__)
 exec "#{$BIN}/hbase org.apache.hadoop.hbase.util.RegionMover #{ARGV.join(' ')}"

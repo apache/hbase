@@ -22,11 +22,10 @@
 #
 #  ${HBASE_HOME}/bin/hbase org.jruby.Main region_status.rb [wait] [--table <table_name>]
 
-
 require 'optparse'
 
-usage = 'Usage : ./hbase org.jruby.Main region_status.rb [wait]' +
-  '[--table <table_name>]\n'
+usage = 'Usage : ./hbase org.jruby.Main region_status.rb [wait]' \
+        '[--table <table_name>]\n'
 OptionParser.new do |o|
   o.banner = usage
   o.on('-t', '--table TABLENAME', 'Only process TABLENAME') do |tablename|
@@ -37,11 +36,10 @@ OptionParser.new do |o|
 end
 
 SHOULD_WAIT = ARGV[0] == 'wait'
-if ARGV[0] and not SHOULD_WAIT
+if ARGV[0] && !SHOULD_WAIT
   print usage
   exit 1
 end
-
 
 require 'java'
 
@@ -61,17 +59,17 @@ java_import org.apache.hadoop.hbase.client.ConnectionFactory
 
 # disable debug logging on this script for clarity
 log_level = org.apache.log4j.Level::ERROR
-org.apache.log4j.Logger.getLogger("org.apache.zookeeper").setLevel(log_level)
-org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase").setLevel(log_level)
+org.apache.log4j.Logger.getLogger('org.apache.zookeeper').setLevel(log_level)
+org.apache.log4j.Logger.getLogger('org.apache.hadoop.hbase').setLevel(log_level)
 
 config = HBaseConfiguration.create
 config.set 'fs.defaultFS', config.get(HConstants::HBASE_DIR)
 connection = ConnectionFactory.createConnection(config)
 # wait until the master is running
 admin = nil
-while true
+loop do
   begin
-    admin = connection.getAdmin()
+    admin = connection.getAdmin
     break
   rescue MasterNotRunningException => e
     print 'Waiting for master to start...\n'
@@ -99,7 +97,7 @@ REGION_INFO = 'regioninfo'.to_java_bytes
 scan.addColumn INFO, REGION_INFO
 table = nil
 iter = nil
-while true
+loop do
   begin
     table = connection.getTable(TableName.valueOf('hbase:meta'))
     scanner = table.getScanner(scan)
@@ -112,14 +110,14 @@ while true
 end
 while iter.hasNext
   result = iter.next
-  rowid = Bytes.toString(result.getRow())
+  rowid = Bytes.toString(result.getRow)
   rowidStr = java.lang.String.new(rowid)
-  if not $tablename.nil? and not rowidStr.startsWith(tableNameMetaPrefix)
+  if !$tablename.nil? && !rowidStr.startsWith(tableNameMetaPrefix)
     # Gone too far, break
     break
   end
-  region = MetaTableAccessor::getHRegionInfo(result)
-  if not region.isOffline
+  region = MetaTableAccessor.getHRegionInfo(result)
+  unless region.isOffline
     # only include regions that should be online
     meta_count += 1
   end
@@ -127,30 +125,26 @@ end
 scanner.close
 # If we're trying to see the status of all HBase tables, we need to include the
 # hbase:meta table, that is not included in our scan
-if $tablename.nil?
-  meta_count += 1
-end
+meta_count += 1 if $tablename.nil?
 
 # query the master to see how many regions are on region servers
-if not $tablename.nil?
-  $TableName = TableName.valueOf($tablename.to_java_bytes)
-end
-while true
+$TableName = TableName.valueOf($tablename.to_java_bytes) unless $tablename.nil?
+loop do
   if $tablename.nil?
-    server_count = admin.getClusterStatus().getRegionsCount()
+    server_count = admin.getClusterStatus.getRegionsCount
   else
-    connection = ConnectionFactory::createConnection(config);
-    server_count = MetaTableAccessor::allTableRegions(connection, $TableName).size()
+    connection = ConnectionFactory.createConnection(config)
+    server_count = MetaTableAccessor.allTableRegions(connection, $TableName).size
   end
   print "Region Status: #{server_count} / #{meta_count}\n"
-  if SHOULD_WAIT and server_count < meta_count
-    #continue this loop until server & meta count match
+  if SHOULD_WAIT && server_count < meta_count
+    # continue this loop until server & meta count match
     sleep 10
   else
     break
   end
 end
-admin.close()
-connection.close()
+admin.close
+connection.close
 
 exit server_count == meta_count ? 0 : 1
