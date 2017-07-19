@@ -1769,12 +1769,13 @@ public class WALSplitter {
       int maxSize = 0;
       List<Pair<HRegionLocation, Entry>> maxQueue = null;
       synchronized (this.serverToBufferQueueMap) {
-        for (String key : this.serverToBufferQueueMap.keySet()) {
-          List<Pair<HRegionLocation, Entry>> curQueue = this.serverToBufferQueueMap.get(key);
+        for (Map.Entry<String, List<Pair<HRegionLocation, Entry>>> entry:
+              serverToBufferQueueMap.entrySet()) {
+          List<Pair<HRegionLocation, Entry>> curQueue = entry.getValue();
           if (curQueue.size() > maxSize) {
             maxSize = curQueue.size();
             maxQueue = curQueue;
-            maxLocKey = key;
+            maxLocKey = entry.getKey();
           }
         }
         if (maxSize < minBatchSize
@@ -2065,8 +2066,10 @@ public class WALSplitter {
       int curSize = 0;
       List<Pair<HRegionLocation, Entry>> curQueue = null;
       synchronized (this.serverToBufferQueueMap) {
-        for (String locationKey : this.serverToBufferQueueMap.keySet()) {
-          curQueue = this.serverToBufferQueueMap.get(locationKey);
+        for (Map.Entry<String, List<Pair<HRegionLocation, Entry>>> entry :
+                serverToBufferQueueMap.entrySet()) {
+          String locationKey = entry.getKey();
+          curQueue = entry.getValue();
           if (!curQueue.isEmpty()) {
             curSize = curQueue.size();
             curLoc = locationKey;
@@ -2144,8 +2147,9 @@ public class WALSplitter {
           }
         } finally {
           synchronized (writers) {
-            for (String locationKey : writers.keySet()) {
-              RegionServerWriter tmpW = writers.get(locationKey);
+            for (Map.Entry<String, RegionServerWriter> entry : writers.entrySet()) {
+              String locationKey = entry.getKey();
+              RegionServerWriter tmpW = entry.getValue();
               try {
                 tmpW.close();
               } catch (IOException ioe) {
@@ -2157,8 +2161,10 @@ public class WALSplitter {
 
           // close connections
           synchronized (this.tableNameToHConnectionMap) {
-            for (TableName tableName : this.tableNameToHConnectionMap.keySet()) {
-              HConnection hconn = this.tableNameToHConnectionMap.get(tableName);
+            for (Map.Entry<TableName, HConnection> entry :
+                  tableNameToHConnectionMap.entrySet()) {
+              TableName tableName = entry.getKey();
+              HConnection hconn = entry.getValue();
               try {
                 hconn.clearRegionCache();
                 hconn.close();
