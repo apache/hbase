@@ -39,9 +39,11 @@ class ConnectionId {
                const std::string &service_name)
       : user_(user), service_name_(service_name), host_(host), port_(port) {}
 
-  ConnectionId(const std::string &host, uint16_t port,
-               const std::string &service_name)
-        : user_(security::User::defaultUser()), service_name_(service_name), host_(host), port_(port) {}
+  ConnectionId(const std::string &host, uint16_t port, const std::string &service_name)
+      : user_(security::User::defaultUser()),
+        service_name_(service_name),
+        host_(host),
+        port_(port) {}
 
   virtual ~ConnectionId() = default;
 
