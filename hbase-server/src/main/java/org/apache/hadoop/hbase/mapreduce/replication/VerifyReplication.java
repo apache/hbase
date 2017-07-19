@@ -97,6 +97,8 @@ public class VerifyReplication extends Configured implements Tool {
      * @param context  The current context.
      * @throws IOException When something is broken with the data.
      */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_ALWAYS_NULL",
+      justification="The replicatedScanner will be assigned when connect() is called")
     @Override
     public void map(ImmutableBytesWritable row, final Result value,
                     Context context)

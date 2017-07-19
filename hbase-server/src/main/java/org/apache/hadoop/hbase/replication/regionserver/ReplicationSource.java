@@ -422,7 +422,7 @@ public class ReplicationSource extends Thread
 
     @Override
     public int compare(Path o1, Path o2) {
-      return Long.valueOf(getTS(o1)).compareTo(getTS(o2));
+      return Long.compare(getTS(o1), getTS(o2));
     }
 
     /**

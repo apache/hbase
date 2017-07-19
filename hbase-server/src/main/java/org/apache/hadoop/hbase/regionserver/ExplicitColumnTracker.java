@@ -144,15 +144,13 @@ public class ExplicitColumnTracker implements ColumnTracker {
       // is interested in. That means there is no more data for the column
       // of interest. Advance the ExplicitColumnTracker state to next
       // column of interest, and check again.
-      if (ret <= -1) {
-        ++this.index;
-        if (done()) {
-          // No more to match, do not include, done with this row.
-          return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
-        }
-        // This is the recursive case.
-        this.column = this.columns[this.index];
+      ++this.index;
+      if (done()) {
+        // No more to match, do not include, done with this row.
+        return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
       }
+      // This is the recursive case.
+      this.column = this.columns[this.index];
     } while(true);
   }
 
