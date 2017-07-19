@@ -98,7 +98,7 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
     for (int retry = 0; ; retry++) {
       int v0 = getQueuesZNodeCversion();
       List<String> rss = getListOfReplicators();
-      if (rss == null) {
+      if (rss == null || rss.isEmpty()) {
         LOG.debug("Didn't find any region server that replicates, won't prevent any deletions.");
         return ImmutableSet.of();
       }
