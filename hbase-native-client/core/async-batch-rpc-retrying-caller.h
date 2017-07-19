@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/Format.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
@@ -107,36 +108,36 @@ class AsyncBatchRpcRetryingCaller {
   int64_t RemainingTimeNs();
 
   void LogException(int32_t tries, std::shared_ptr<RegionRequest> region_request,
-                    std::shared_ptr<std::exception> &error,
+                    const folly::exception_wrapper &ew,
                     std::shared_ptr<pb::ServerName> server_name);
 
-  void LogException(int32_t tries, std::vector<std::shared_ptr<RegionRequest>> &region_requests,
-                    std::shared_ptr<std::exception> &error,
+  void LogException(int32_t tries,
+                    const std::vector<std::shared_ptr<RegionRequest>> &region_requests,
+                    const folly::exception_wrapper &ew,
                     std::shared_ptr<pb::ServerName> server_name);
 
   const std::string GetExtraContextForError(std::shared_ptr<pb::ServerName> server_name);
 
-  void AddError(const std::shared_ptr<Action> &action, std::shared_ptr<std::exception> error,
+  void AddError(const std::shared_ptr<Action> &action, const folly::exception_wrapper &ew,
                 std::shared_ptr<pb::ServerName> server_name);
 
   void AddError(const std::vector<std::shared_ptr<Action>> &actions,
-                std::shared_ptr<std::exception> error, std::shared_ptr<pb::ServerName> server_name);
+                const folly::exception_wrapper &ew, std::shared_ptr<pb::ServerName> server_name);
 
   void FailOne(const std::shared_ptr<Action> &action, int32_t tries,
-               std::shared_ptr<std::exception> error, int64_t current_time,
-               const std::string extras);
+               const folly::exception_wrapper &ew, int64_t current_time, const std::string extras);
 
   void FailAll(const std::vector<std::shared_ptr<Action>> &actions, int32_t tries,
-               std::shared_ptr<std::exception> error, std::shared_ptr<pb::ServerName> server_name);
+               const folly::exception_wrapper &ew, std::shared_ptr<pb::ServerName> server_name);
 
   void FailAll(const std::vector<std::shared_ptr<Action>> &actions, int32_t tries);
 
   void AddAction2Error(uint64_t action_index, const ThrowableWithExtraContext &twec);
 
   void OnError(const ActionsByRegion &actions_by_region, int32_t tries,
-               std::shared_ptr<std::exception> exc, std::shared_ptr<pb::ServerName> server_name);
+               const folly::exception_wrapper &ew, std::shared_ptr<pb::ServerName> server_name);
 
-  void TryResubmit(std::vector<std::shared_ptr<Action>> actions, int32_t tries);
+  void TryResubmit(const std::vector<std::shared_ptr<Action>> &actions, int32_t tries);
 
   folly::Future<std::vector<folly::Try<std::shared_ptr<RegionLocation>>>> GetRegionLocations(
       const std::vector<std::shared_ptr<Action>> &actions, int64_t locate_timeout_ns);
@@ -146,7 +147,7 @@ class AsyncBatchRpcRetryingCaller {
   folly::Future<std::vector<folly::Try<std::unique_ptr<Response>>>> GetMultiResponse(
       const ActionsByServer &actions_by_server);
 
-  void Send(ActionsByServer &actions_by_server, int32_t tries);
+  void Send(const ActionsByServer &actions_by_server, int32_t tries);
 
   void OnComplete(const ActionsByRegion &actions_by_region, int32_t tries,
                   const std::shared_ptr<pb::ServerName> server_name,
@@ -179,7 +180,6 @@ class AsyncBatchRpcRetryingCaller {
   std::shared_ptr<RpcClient> rpc_client_ = nullptr;
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_pool_ = nullptr;
 
-  std::mutex multi_mutex_;
+  std::recursive_mutex multi_mutex_;
 };
-
-} /* namespace hbase */
+}  // namespace hbase

@@ -435,29 +435,27 @@ TEST_F(ClientTest, PutsWithTimestamp) {
   client.Close();
 }
 
-TEST_F(ClientTest, MultiGets) {
-  // Using TestUtil to populate test data
-  ClientTest::test_util->CreateTable("t", "d");
+void SetClientParams() {
+  ClientTest::test_util->conf()->SetInt("hbase.client.cpu.thread.pool.size", 6);
+  ClientTest::test_util->conf()->SetInt("hbase.client.operation.timeout", 600000);
+  ClientTest::test_util->conf()->SetInt("hbase.client.retries.number", 7);
+  ClientTest::test_util->conf()->SetInt("hbase.client.start.log.errors.counter", 1);
+}
 
-  // Create TableName and Row to be fetched from HBase
-  auto tn = folly::to<hbase::pb::TableName>("t");
-
-  // Create a client
-  hbase::Client client(*ClientTest::test_util->conf());
-
-  // Get connection to HBase Table
-  auto table = client.Table(tn);
+void PerformPuts(uint64_t num_rows, std::shared_ptr<hbase::Client> client,
+                 const std::string &table_name) {
+  auto tn = folly::to<hbase::pb::TableName>(table_name);
+  auto table = client->Table(tn);
   ASSERT_TRUE(table) << "Unable to get connection to Table.";
-
-  uint64_t num_rows = 10000;
   // Perform Puts
   for (uint64_t i = 0; i < num_rows; i++) {
     table->Put(Put{"test" + std::to_string(i)}.AddColumn("d", std::to_string(i),
                                                          "value" + std::to_string(i)));
   }
+}
 
+void MakeGets(uint64_t num_rows, const std::string &row_prefix, std::vector<hbase::Get> &gets) {
   // Perform the Gets
-  std::vector<hbase::Get> gets;
   for (uint64_t i = 0; i < num_rows; ++i) {
     auto row = "test" + std::to_string(i);
     hbase::Get get(row);
@@ -465,9 +463,10 @@ TEST_F(ClientTest, MultiGets) {
   }
   gets.push_back(hbase::Get("test2"));
   gets.push_back(hbase::Get("testextra"));
+}
 
-  auto results = table->Get(gets);
-
+void TestMultiResults(uint64_t num_rows, const std::vector<std::shared_ptr<hbase::Result>> &results,
+                      const std::vector<hbase::Get> &gets) {
   // Test the values, should be same as in put executed on hbase shell
   ASSERT_TRUE(!results.empty()) << "Result vector shouldn't be empty.";
 
@@ -483,6 +482,66 @@ TEST_F(ClientTest, MultiGets) {
 
   ++i;
   ASSERT_TRUE(results[i]->IsEmpty()) << "Result for Get " << gets[i].row() << " must be empty";
+}
+
+TEST_F(ClientTest, MultiGets) {
+  std::string table_name = "t";
+  // Using TestUtil to populate test data
+  ClientTest::test_util->CreateTable(table_name, "d");
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>(table_name);
+
+  SetClientParams();
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+
+  uint64_t num_rows = 50000;
+  PerformPuts(num_rows, std::make_shared<hbase::Client>(client), table_name);
+
+  // Get connection to HBase Table
+  auto table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  std::vector<hbase::Get> gets;
+  MakeGets(num_rows, "test", gets);
+
+  auto results = table->Get(gets);
+
+  TestMultiResults(num_rows, results, gets);
+
+  table->Close();
+  client.Close();
+}
+
+TEST_F(ClientTest, MultiGetsWithRegionSplits) {
+  // Using TestUtil to populate test data
+  std::vector<std::string> keys{"test0",   "test100", "test200", "test300", "test400",
+                                "test500", "test600", "test700", "test800", "test900"};
+  std::string table_name = "t";
+  ClientTest::test_util->CreateTable(table_name, "d", keys);
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>(table_name);
+
+  SetClientParams();
+
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+
+  uint64_t num_rows = 50000;
+  PerformPuts(num_rows, std::make_shared<hbase::Client>(client), table_name);
+
+  // Get connection to HBase Table
+  auto table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  std::vector<hbase::Get> gets;
+  MakeGets(num_rows, "test", gets);
+
+  auto results = table->Get(gets);
+
+  TestMultiResults(num_rows, results, gets);
 
   table->Close();
   client.Close();

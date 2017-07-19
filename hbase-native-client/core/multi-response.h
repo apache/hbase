@@ -20,6 +20,7 @@
 #pragma once
 
 #include <core/region-result.h>
+#include <folly/ExceptionWrapper.h>
 #include <exception>
 #include <map>
 #include <memory>
@@ -46,17 +47,18 @@ class MultiResponse {
    * @param resOrEx the result or error; will be empty for successful Put and Delete actions.
    */
   void AddRegionResult(const std::string& region_name, int32_t original_index,
-                       std::shared_ptr<Result> result, std::shared_ptr<std::exception> exc);
+                       std::shared_ptr<Result> result,
+                       std::shared_ptr<folly::exception_wrapper> exc);
 
   void AddRegionException(const std::string& region_name,
-                          std::shared_ptr<std::exception> exception);
+                          std::shared_ptr<folly::exception_wrapper> exception);
 
   /**
    * @return the exception for the region, if any. Null otherwise.
    */
-  std::shared_ptr<std::exception> RegionException(const std::string& region_name) const;
+  std::shared_ptr<folly::exception_wrapper> RegionException(const std::string& region_name) const;
 
-  const std::map<std::string, std::shared_ptr<std::exception>>& RegionExceptions() const;
+  const std::map<std::string, std::shared_ptr<folly::exception_wrapper>>& RegionExceptions() const;
 
   void AddStatistic(const std::string& region_name, std::shared_ptr<pb::RegionLoadStats> stat);
 
@@ -66,12 +68,12 @@ class MultiResponse {
 
  private:
   // map of regionName to map of Results by the original index for that Result
-  std::map<std::string, std::shared_ptr<hbase::RegionResult>> results_;
+  std::map<std::string, std::shared_ptr<RegionResult>> results_;
   /**
    * The server can send us a failure for the region itself, instead of individual failure.
    * It's a part of the protobuf definition.
    */
-  std::map<std::string, std::shared_ptr<std::exception>> exceptions_;
+  std::map<std::string, std::shared_ptr<folly::exception_wrapper>> exceptions_;
 };
 
 } /* namespace hbase */
