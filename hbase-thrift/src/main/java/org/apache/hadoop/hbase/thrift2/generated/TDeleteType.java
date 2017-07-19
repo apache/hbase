@@ -18,7 +18,9 @@ import org.apache.thrift.TEnum;
  */
 public enum TDeleteType implements org.apache.thrift.TEnum {
   DELETE_COLUMN(0),
-  DELETE_COLUMNS(1);
+  DELETE_COLUMNS(1),
+  DELETE_FAMILY(2),
+  DELETE_FAMILY_VERSION(3);
 
   private final int value;
 
@@ -43,6 +45,10 @@ public enum TDeleteType implements org.apache.thrift.TEnum {
         return DELETE_COLUMN;
       case 1:
         return DELETE_COLUMNS;
+      case 2:
+        return DELETE_FAMILY;
+      case 3:
+        return DELETE_FAMILY_VERSION;
       default:
         return null;
     }
