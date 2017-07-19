@@ -77,6 +77,9 @@ public class ReplicationZKNodeCleaner {
     Set<String> peerIds = new HashSet<>(this.replicationPeers.getAllPeerIds());
     try {
       List<String> replicators = this.queuesClient.getListOfReplicators();
+      if (replicators == null || replicators.isEmpty()) {
+        return undeletedQueues;
+      }
       for (String replicator : replicators) {
         List<String> queueIds = this.queuesClient.getAllQueues(replicator);
         for (String queueId : queueIds) {
