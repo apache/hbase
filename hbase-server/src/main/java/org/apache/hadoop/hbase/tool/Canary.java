@@ -1081,10 +1081,11 @@ public final class Canary implements Tool {
             }
           }
           Map<String, AtomicLong> actualReadTableLatency = regionSink.getReadLatencyMap();
-          for (String tableName : this.configuredReadTableTimeouts.keySet()) {
+          for (Map.Entry<String, Long> entry : configuredReadTableTimeouts.entrySet()) {
+            String tableName = entry.getKey();
             if (actualReadTableLatency.containsKey(tableName)) {
               Long actual = actualReadTableLatency.get(tableName).longValue();
-              Long configured = this.configuredReadTableTimeouts.get(tableName);
+              Long configured = entry.getValue();
               LOG.info("Read operation for " + tableName + " took " + actual +
                 " ms. The configured read timeout was " + configured + " ms.");
               if (actual > configured) {

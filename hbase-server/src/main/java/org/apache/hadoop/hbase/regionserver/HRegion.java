@@ -2858,7 +2858,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     checkResources();
     startRegionOperation(Operation.DELETE);
     try {
-      delete.getRow();
       // All edits for the given row (across all column families) must happen atomically.
       doBatchMutate(delete);
     } finally {
@@ -3192,9 +3191,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * In here we also handle replay of edits on region recover.
    * @return Change in size brought about by applying <code>batchOp</code>
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UL_UNRELEASED_LOCK",
-      justification="Findbugs seems to be confused on this.")
-  @SuppressWarnings("unchecked")
   // TODO: This needs a rewrite. Doesn't have to be this long. St.Ack 20160120
   private void doMiniBatchMutate(BatchOperation<?> batchOp) throws IOException {
     boolean replay = batchOp.isInReplay();

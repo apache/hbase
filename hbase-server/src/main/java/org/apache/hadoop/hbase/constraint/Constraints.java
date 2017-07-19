@@ -614,8 +614,8 @@ public final class Constraints {
     @Override
     public int compare(Constraint c1, Constraint c2) {
       // compare the priorities of the constraints stored in their configuration
-      return Long.valueOf(c1.getConf().getLong(PRIORITY_KEY, DEFAULT_PRIORITY))
-          .compareTo(c2.getConf().getLong(PRIORITY_KEY, DEFAULT_PRIORITY));
+      return Long.compare(c1.getConf().getLong(PRIORITY_KEY, DEFAULT_PRIORITY),
+          c2.getConf().getLong(PRIORITY_KEY, DEFAULT_PRIORITY));
     }
   };
 

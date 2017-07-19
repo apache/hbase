@@ -90,6 +90,9 @@ public class JarFinder {
   private static void zipDir(File dir, String relativePath, ZipOutputStream zos,
                              boolean start) throws IOException {
     String[] dirList = dir.list();
+    if (dirList == null) {
+      return;
+    }
     for (String aDirList : dirList) {
       File f = new File(dir, aDirList);
       if (!f.isHidden()) {
