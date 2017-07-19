@@ -2816,7 +2816,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     checkResources();
     startRegionOperation(Operation.DELETE);
     try {
-      delete.getRow();
       // All edits for the given row (across all column families) must happen atomically.
       doBatchMutate(delete);
     } finally {
@@ -3148,7 +3147,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @SuppressWarnings("unchecked")
   private long doMiniBatchMutation(BatchOperationInProgress<?> batchOp) throws IOException {
     boolean isInReplay = batchOp.isInReplay();
     // variable to note if all Put items are for the same CF -- metrics related
@@ -3402,7 +3400,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // They don't have to be, it will still work, just write more WALEdits than needed.
         if (nonceGroup != currentNonceGroup || nonce != currentNonce) {
           if (walEdit.size() > 0) {
-            assert isInReplay;
             if (!isInReplay) {
               throw new IOException("Multiple nonces per batch and not in replay");
             }
