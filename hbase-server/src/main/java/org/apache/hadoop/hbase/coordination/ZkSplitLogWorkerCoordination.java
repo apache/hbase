@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -572,7 +573,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
         getDataSetWatchFailure(path);
         return;
       }
-      data = watcher.getRecoverableZooKeeper().removeMetaData(data);
+      data = RecoverableZooKeeper.removeMetaData(data);
       getDataSetWatchSuccess(path, data);
     }
   }

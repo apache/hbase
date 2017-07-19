@@ -1026,12 +1026,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   protected List<LoadQueueItem> tryAtomicRegionLoad(ClientServiceCallable<byte[]> serviceCallable,
       final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis)
       throws IOException {
-    final List<Pair<byte[], String>> famPaths = new ArrayList<>(lqis.size());
-    for (LoadQueueItem lqi : lqis) {
-      if (!unmatchedFamilies.contains(Bytes.toString(lqi.family))) {
-        famPaths.add(Pair.newPair(lqi.family, lqi.hfilePath.toString()));
-      }
-    }
     try {
       List<LoadQueueItem> toRetry = new ArrayList<>();
       Configuration conf = getConf();
