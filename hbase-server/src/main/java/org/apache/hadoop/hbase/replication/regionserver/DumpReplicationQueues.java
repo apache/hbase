@@ -307,6 +307,9 @@ public class DumpReplicationQueues extends Configured implements Tool {
     // Loops each peer on each RS and dumps the queues
     try {
       List<String> regionservers = queuesClient.getListOfReplicators();
+      if (regionservers == null || regionservers.isEmpty()) {
+        return sb.toString();
+      }
       for (String regionserver : regionservers) {
         List<String> queueIds = queuesClient.getAllQueues(regionserver);
         replicationQueues.init(regionserver);
