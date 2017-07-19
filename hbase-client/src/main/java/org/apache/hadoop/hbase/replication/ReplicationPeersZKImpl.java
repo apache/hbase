@@ -560,5 +560,4 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     return ProtobufUtil.prependPBMagic(bytes);
   }
 
-
 }

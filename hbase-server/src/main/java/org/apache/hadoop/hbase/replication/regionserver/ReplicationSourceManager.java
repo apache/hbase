@@ -230,7 +230,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       addSource(id);
     }
     List<String> currentReplicators = this.replicationQueues.getListOfReplicators();
-    if (currentReplicators == null || currentReplicators.size() == 0) {
+    if (currentReplicators == null || currentReplicators.isEmpty()) {
       return;
     }
     List<String> otherRegionServers = replicationTracker.getListOfRegionServers();
