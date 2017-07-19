@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -53,5 +54,29 @@ public class TestByteBufferArray {
     // Read last byte
     subBuf.get();
     assertFalse(subBuf.hasRemaining());
+  }
+
+  @Test
+  public void testByteBufferCreation() throws Exception {
+    int capacity = 470 * 1021 * 1023;
+    ByteBufferAllocator allocator = new ByteBufferAllocator() {
+      @Override
+      public ByteBuffer allocate(long size, boolean directByteBuffer) throws IOException {
+        if (directByteBuffer) {
+          return ByteBuffer.allocateDirect((int) size);
+        } else {
+          return ByteBuffer.allocate((int) size);
+        }
+      }
+    };
+    ByteBufferArray array = new ByteBufferArray(capacity, false, allocator);
+    assertEquals(119, array.buffers.length);
+    for (int i = 0; i < array.buffers.length; i++) {
+      if (i == array.buffers.length - 1) {
+        assertEquals(array.buffers[i].capacity(), 0);
+      } else {
+        assertEquals(array.buffers[i].capacity(), ByteBufferArray.DEFAULT_BUFFER_SIZE);
+      }
+    }
   }
 }
