@@ -215,6 +215,15 @@ else
     require "irb/workspace"
     workspace = IRB::WorkSpace.new(binding())
     scanner = RubyLex.new
+
+    # RubyLex claims to take an IO but really wants an InputMethod
+    module IOExtensions
+      def encoding
+        external_encoding
+      end
+    end
+    IO.include IOExtensions
+
     scanner.set_input(STDIN)
     scanner.each_top_level_statement do |statement, linenum|
        puts(workspace.evaluate(nil, statement, 'stdin', linenum))
