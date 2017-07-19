@@ -58,7 +58,6 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * Some subclasses want to set their own location. Make it protected.
    */
   protected HRegionLocation location;
-  protected final static int MIN_WAIT_DEAD_SERVER = 10000;
   protected S stub;
 
   /**
@@ -185,12 +184,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
   }
 
   public long sleep(long pause, int tries) {
-    long sleep = ConnectionUtils.getPauseTime(pause, tries);
-    if (sleep < MIN_WAIT_DEAD_SERVER
-        && (location == null || getConnection().isDeadServer(location.getServerName()))) {
-      sleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
-    }
-    return sleep;
+    return ConnectionUtils.getPauseTime(pause, tries);
   }
 
   /**
