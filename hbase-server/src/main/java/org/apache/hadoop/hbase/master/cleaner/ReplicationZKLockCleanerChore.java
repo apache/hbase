@@ -76,7 +76,9 @@ public class ReplicationZKLockCleanerChore extends ScheduledChore {
       }
       Set<String> rsSet = new HashSet<String>(regionServers);
       List<String> replicators = queues.getListOfReplicators();
-
+      if (replicators == null || replicators.isEmpty()) {
+        return;
+      }
       for (String replicator: replicators) {
         try {
           String lockNode = queues.getLockZNode(replicator);
