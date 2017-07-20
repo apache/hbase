@@ -1,0 +1,198 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+pipeline {
+  agent {
+    node {
+      label 'Hadoop'
+    }
+  }
+  // work around for YETUS-508, requires maven outside of the dockerfile
+  tools {
+    maven 'Maven (latest)'
+  }
+  triggers {
+    cron('@daily')
+  }
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    timeout (time: 6, unit: 'HOURS')
+    timestamps()
+  }
+  environment {
+    TOOLS = "${env.WORKSPACE}/tools"
+    // where we check out to across stages
+    BASEDIR = "${env.WORKSPACE}/component"
+    YETUS_RELEASE = '0.5.0'
+    // where we'll write everything from different steps.
+    OUTPUT_RELATIVE = 'output'
+    OUTPUTDIR = "${env.WORKSPACE}/output"
+  }
+  parameters {
+    booleanParam(name: 'USE_YETUS_PRERELEASE', defaultValue: false, description: '''Check to use the current HEAD of apache/yetus rather than our configured release.
+
+    Should only be used manually when e.g. there is some non-work-aroundable issue in yetus we are checking a fix for.''')
+    booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
+  }
+  stages {
+    stage ('yetus check') {
+      environment {
+        PROJECT = 'hbase'
+        PROJECT_PERSONALITY = 'https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob_plain;f=dev-support/hbase-personality.sh;hb=refs/heads/master'
+        // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
+        AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc,dev-support/test-patch.sh'
+        WHITESPACE_IGNORE_LIST = '.*/generated/.*'
+        // output from surefire; sadly the archive function in yetus only works on file names.
+        ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*-output.txt,org.apache.h*.txt'
+// These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
+        TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop'
+        BRANCH_SPECIFIC_DOCKERFILE = "${env.BASEDIR}/dev-support/docker/Dockerfile"
+        EXCLUDE_TESTS_URL = 'https://builds.apache.org/job/HBase-Find-Flaky-Tests/lastSuccessfulBuild/artifact/excludes/'
+      }
+      steps {
+    // TODO we can move the yetus install into a different stage and then use stash to deploy it.
+        sh  '''#!/usr/bin/env bash
+printenv
+echo "Ensure we have a copy of Apache Yetus."
+if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
+  YETUS_DIR="${WORKSPACE}/yetus-${YETUS_RELEASE}"
+  echo "Checking for Yetus ${YETUS_RELEASE} in '${YETUS_DIR}'"
+  if [ ! -d "${YETUS_DIR}" ]; then
+    echo "New download of Apache Yetus version ${YETUS_RELEASE}."
+    rm -rf "${WORKSPACE}/.gpg"
+    mkdir -p "${WORKSPACE}/.gpg"
+    chmod -R 700 "${WORKSPACE}/.gpg"
+
+    echo "install yetus project KEYS"
+    curl -L --fail -o "${WORKSPACE}/KEYS_YETUS" https://dist.apache.org/repos/dist/release/yetus/KEYS
+    gpg --homedir "${WORKSPACE}/.gpg" --import "${WORKSPACE}/KEYS_YETUS"
+
+    echo "download yetus release ${YETUS_RELEASE}"
+    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/yetus-${YETUS_RELEASE}-bin.tar.gz"
+    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
+    echo "verifying yetus release"
+    gpg --homedir "${WORKSPACE}/.gpg" --verify "yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
+    mv "yetus-${YETUS_RELEASE}-bin.tar.gz" yetus.tar.gz
+  else
+    echo "Reusing cached download of Apache Yetus version ${YETUS_RELEASE}."
+  fi
+else
+  YETUS_DIR="${WORKSPACE}/yetus-git"
+  rm -rf "${YETUS_DIR}"
+  echo "downloading from github"
+  curl -L --fail https://api.github.com/repos/apache/yetus/tarball/HEAD -o yetus.tar.gz
+fi
+if [ ! -d "${YETUS_DIR}" ]; then
+  echo "unpacking yetus into '${YETUS_DIR}'"
+  mkdir -p "${YETUS_DIR}"
+  gunzip -c yetus.tar.gz | tar xpf - -C "${YETUS_DIR}" --strip-components 1
+fi
+        '''
+    // TODO we can move the personality install into a different stage and then use stash to deploy it.
+        dir ("${env.TOOLS}") {
+          sh """#!/usr/bin/env bash
+echo "Downloading Project personality."
+curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
+          """
+        }
+// TODO break this out into a script so we can run shellcheck on it.
+        sh '''#!/usr/bin/env bash
+YETUS_ARGS=()
+YETUS_ARGS=("--multijdktests=compile,findbugs,unit" "${YETUS_ARGS[@]}")
+# On branch-1* this should point to jdk8, since the default JAVA_HOME will be jdk7.
+# On branch-2* this should be skipped, since we dropped jdk7 and JAVA_HOME will be jdk8
+# On master this should be skipped, since JAVA_HOME will be jdk8
+#YETUS_ARGS=("--multijdkdirs=/usr/lib/jvm/java-8-oracle" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--personality=${TOOLS}/personality.sh" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--basedir=${BASEDIR}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--archive-list=${ARCHIVE_PATTERN_LIST}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--console-urls" "${YETUS_ARGS[@]}")
+# YETUS-532, repeat this twice in case the fix is to update args rather than docs
+YETUS_ARGS=("--build-url-patchdir=artifact/${OUTPUT_RELATIVE}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--build-url-artifacts=artifact/${OUTPUT_RELATIVE}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--docker" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--dockerfile=${BRANCH_SPECIFIC_DOCKERFILE}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--empty-patch" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--html-report-file=${OUTPUTDIR}/console-report.html" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--jenkins" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--mvn-custom-repos" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--patch-dir=${OUTPUTDIR}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--project=${PROJECT}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--resetrepo" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--author-ignore-list=${AUTHOR_IGNORE_LIST}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--whitespace-eol-ignore-list=${WHITESPACE_IGNORE_LIST}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--whitespace-tabs-ignore-list=${WHITESPACE_IGNORE_LIST}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--sentinel" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--branch=${BRANCH_NAME}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--tests-filter=${TESTS_FILTER}" "${YETUS_ARGS[@]}")
+
+if [[ true == "${DEBUG}" ]]; then
+  YETUS_ARGS=("--debug" "${YETUS_ARGS[@]}")
+fi
+
+rm -rf "${OUTPUTDIR}"
+mkdir -p "${OUTPUTDIR}"
+if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
+  YETUS_ARGS=("--shelldocs=${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/shelldocs" "${YETUS_ARGS[@]}")
+  TESTPATCHBIN="${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/test-patch"
+else
+  YETUS_ARGS=("--shelldocs=${WORKSPACE}/yetus-git/shelldocs/shelldocs.py" "${YETUS_ARGS[@]}")
+  TESTPATCHBIN="${WORKSPACE}/yetus-git/precommit/test-patch.sh"
+fi
+echo "Launching yetus with command line:"
+echo "${TESTPATCHBIN} ${YETUS_ARGS[*]}"
+
+/usr/bin/env bash "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
+        '''
+      }
+    }
+  }
+  post {
+    always {
+      // TODO confirm junit step accounts for multijdk results
+      junit 'output/**/target/**/TEST-*.xml'
+      // gzip surefire reports.
+      sh '''#!/bin/bash -e
+        if [ -d "${OUTPUTDIR}/archiver" ]; then
+          count=$(find "${OUTPUTDIR}/archiver" -type f | wc -l)
+          if [[ 0 -ne ${count} ]]; then
+            echo "zipping ${count} archived files"
+            zip -m -r "${OUTPUTDIR}/test_logs.zip" "${OUTPUTDIR}/archiver"
+          else
+            echo "No archived files, skipping compressing."
+          fi
+        else
+          echo "No archiver directory, skipping compressing."
+        fi
+'''
+      // env variables don't work in archive? or this has to be relative to WORKSPACE. :(
+      archive 'output/*'
+      archive 'output/**/*'
+      publishHTML target: [
+        allowMissing: true,
+        keepAll: true,
+        alwaysLinkToLastBuild: true,
+        // has to be relative to WORKSPACE :(
+        reportDir: 'output',
+        reportFiles: 'console-report.html',
+        reportName: 'Nightly Build Report'
+      ]
+    }
+    failure {
+      deleteDir()
+    }
+  }
+}
