@@ -584,7 +584,8 @@ public class CacheConfig {
    * @return Returns L2 block cache instance (for now it is BucketCache BlockCache all the time)
    * or null if not supposed to be a L2.
    */
-  private static BlockCache getL2(final Configuration c) {
+  @VisibleForTesting
+  static BlockCache getL2(final Configuration c) {
     final boolean useExternal = c.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Trying to use " + (useExternal?" External":" Internal") + " l2 cache");
@@ -594,10 +595,8 @@ public class CacheConfig {
     if (useExternal) {
       return getExternalBlockcache(c);
     }
-
     // otherwise use the bucket cache.
     return getBucketCache(c);
-
   }
 
   private static BlockCache getExternalBlockcache(Configuration c) {
@@ -651,7 +650,17 @@ public class CacheConfig {
     if (configuredBucketSizes != null) {
       bucketSizes = new int[configuredBucketSizes.length];
       for (int i = 0; i < configuredBucketSizes.length; i++) {
-        bucketSizes[i] = Integer.parseInt(configuredBucketSizes[i].trim());
+        int bucketSize = Integer.parseInt(configuredBucketSizes[i].trim());
+        if (bucketSize % 256 != 0) {
+          // We need all the bucket sizes to be multiples of 256. Having all the configured bucket
+          // sizes to be multiples of 256 will ensure that the block offsets within buckets,
+          // that are calculated, will also be multiples of 256.
+          // See BucketEntry where offset to each block is represented using 5 bytes (instead of 8
+          // bytes long). We would like to save heap overhead as less as possible.
+          throw new IllegalArgumentException("Illegal value: " + bucketSize + " configured for '"
+              + BUCKET_CACHE_BUCKETS_KEY + "'. All bucket sizes to be multiples of 256");
+        }
+        bucketSizes[i] = bucketSize;
       }
     }
     BucketCache bucketCache = null;
