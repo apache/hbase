@@ -79,4 +79,43 @@ public class TestByteBufferArray {
       }
     }
   }
+
+  @Test
+  public void testByteBufferCreation1() throws Exception {
+    ByteBufferAllocator allocator = new ByteBufferAllocator() {
+      @Override
+      public ByteBuffer allocate(long size, boolean directByteBuffer) throws IOException {
+        if (directByteBuffer) {
+          return ByteBuffer.allocateDirect((int) size);
+        } else {
+          return ByteBuffer.allocate((int) size);
+        }
+      }
+    };
+    ByteBufferArray array = new DummyByteBufferArray(7 * 1024 * 1024, false, allocator);
+    // overwrite
+    array.bufferCount = 25;
+    array.buffers = new ByteBuffer[array.bufferCount + 1];
+    array.createBuffers(true, allocator);
+    for (int i = 0; i < array.buffers.length; i++) {
+      if (i == array.buffers.length - 1) {
+        assertEquals(array.buffers[i].capacity(), 0);
+      } else {
+        assertEquals(array.buffers[i].capacity(), 458752);
+      }
+    }
+  }
+
+  private static class DummyByteBufferArray extends ByteBufferArray {
+
+    public DummyByteBufferArray(long capacity, boolean directByteBuffer,
+        ByteBufferAllocator allocator) throws IOException {
+      super(capacity, directByteBuffer, allocator);
+    }
+
+    @Override
+    int getThreadCount() {
+      return 16;
+    }
+  }
 }
