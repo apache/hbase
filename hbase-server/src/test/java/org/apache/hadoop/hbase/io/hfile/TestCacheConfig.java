@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -412,6 +413,19 @@ public class TestCacheConfig {
     cc.setCacheDataInL1(false);
     cacheDataBlock(cc, "3");
     assertDataBlockCount(lrubc, 1);
+  }
+
+  @Test
+  public void testL2CacheWithInvalidBucketSize() {
+    Configuration c = new Configuration(this.conf);
+    c.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+    c.set(CacheConfig.BUCKET_CACHE_BUCKETS_KEY, "256,512,1024,2048,4000,4096");
+    c.setFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 1024);
+    try {
+      CacheConfig.getL2(c);
+      fail("Should throw IllegalArgumentException when passing illegal value for bucket size");
+    } catch (IllegalArgumentException e) {
+    }
   }
 
   private void assertDataBlockCount(final LruBlockCache bc, final int expected) {
