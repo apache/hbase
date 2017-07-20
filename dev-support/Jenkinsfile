@@ -27,7 +27,6 @@ pipeline {
     buildDiscarder(logRotator(numToKeepStr: '30'))
     timeout (time: 6, unit: 'HOURS')
     timestamps()
-    skipDefaultCheckout()
   }
   environment {
     TOOLS = "${env.WORKSPACE}/tools"
@@ -60,13 +59,6 @@ pipeline {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
   stages {
-    stage ('scm checkout') {
-      steps {
-        dir('component') {
-          checkout scm
-        }
-      }
-    }
     stage ('yetus install') {
       steps {
         sh  '''#!/usr/bin/env bash
@@ -249,61 +241,10 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
         }
       }
     }
-    // This is meant to mimic what a release manager will do to create RCs.
-    // See http://hbase.apache.org/book.html#maven.release
-    stage ('create source tarball') {
-      tools {
-        maven 'Maven (latest)'
-        // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
-        jdk "JDK 1.7 (latest)"
-      }
-      steps {
-        sh 'mvn --version --offline'
-        dir ("component") {
-          sh '''#!/bin/bash -e
-            echo "Clean..."
-            mvn --batch-mode -DskipTests clean
-            echo "Step 3 Build the source tarball"
-            mvn -Prelease --batch-mode -Dmaven.repo.local="${WORKSPACE}/.m2-for-repo" install -DskipTests assembly:single -Dassembly.file=hbase-assembly/src/main/assembly/src.xml
-'''
-        }
-        dir ("unpacked_src_tarball") {
-          sh '''#!/bin/bash -e
-            echo "Unpack the source tarball"
-            tar --strip-components=1 -xzf ../component/hbase-assembly/target/hbase-*-src.tar.gz
-            echo "Building from source artifact."
-            mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${WORKSPACE}/.m2-for-src" clean install assembly:single
-            echo "Clean up after checking ability to build."
-            mvn -DskipTests --batch-mode clean
-'''
-        }
-        dir ("component") {
-          sh '''#!/bin/bash -e
-            echo "Clean up the source checkout"
-            mvn -DskipTests --batch-mode clean
-            echo "Diff against source tree"
-            diff --binary --recursive . ../unpacked_src_tarball >../diff_output || true
-'''
-        }
-        // expectation check largely based on HBASE-14952
-        sh '''#!/bin/bash -e
-          echo "Checking against things we don't expect to include in the source tarball (git related, hbase-native-client, etc.)"
-          cat >known_excluded <<END
-Only in .: .git
-Only in .: .gitattributes
-Only in .: .gitignore
-Only in .: hbase-native-client
-END
-          if ! diff known_excluded diff_output >/dev/null ; then
-            echo "Any output here are unexpected differences between the source artifact we'd make for an RC and the current branch."
-            echo "The expected differences are on the < side and the current differences are on the > side."
-            echo "In a given set of differences, '.' refers to the branch in the repo and 'unpacked_src_tarball' refers to what we pulled out of the tarball."
-            diff known_excluded diff_output
-          else
-            echo "Everything looks as expected."
-          fi
-'''
-      }
+  }
+  post {
+    failure {
+      deleteDir()
     }
   }
 }
