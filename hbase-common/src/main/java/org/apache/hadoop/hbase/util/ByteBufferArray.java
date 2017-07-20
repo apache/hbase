@@ -44,14 +44,15 @@ import com.google.common.annotations.VisibleForTesting;
  * reading/writing data from this large buffer with a position and offset
  */
 @InterfaceAudience.Private
-public final class ByteBufferArray {
+public class ByteBufferArray {
   private static final Log LOG = LogFactory.getLog(ByteBufferArray.class);
 
   public static final int DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
   @VisibleForTesting
   ByteBuffer buffers[];
   private int bufferSize;
-  private int bufferCount;
+  @VisibleForTesting
+  int bufferCount;
 
   /**
    * We allocate a number of byte buffers as the capacity. In order not to out
@@ -75,12 +76,13 @@ public final class ByteBufferArray {
     createBuffers(directByteBuffer, allocator);
   }
 
-  private void createBuffers(boolean directByteBuffer, ByteBufferAllocator allocator)
+  @VisibleForTesting
+  void createBuffers(boolean directByteBuffer, ByteBufferAllocator allocator)
       throws IOException {
-    int threadCount = Runtime.getRuntime().availableProcessors();
+    int threadCount = getThreadCount();
     ExecutorService service = new ThreadPoolExecutor(threadCount, threadCount, 0L,
         TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
-    int perThreadCount = Math.round((float) (bufferCount) / threadCount);
+    int perThreadCount = (int)Math.floor((double) (bufferCount) / threadCount);
     int lastThreadCount = bufferCount - (perThreadCount * (threadCount - 1));
     Future<ByteBuffer[]>[] futures = new Future[threadCount];
     try {
@@ -107,6 +109,11 @@ public final class ByteBufferArray {
     }
     // always create on heap empty dummy buffer at last
     this.buffers[bufferCount] = ByteBuffer.allocate(0);
+  }
+
+  @VisibleForTesting
+  int getThreadCount() {
+    return Runtime.getRuntime().availableProcessors();
   }
 
   /**
