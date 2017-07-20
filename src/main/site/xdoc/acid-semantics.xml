@@ -93,7 +93,7 @@ under the License.
       <section name="Atomicity">
 
         <ol>
-          <li>All mutations are atomic within a row. Any put will either wholely succeed or wholely fail.[3]</li>
+          <li>All mutations are atomic within a row. Any put will either wholly succeed or wholly fail.[3]</li>
           <ol>
             <li>An operation that returns a &quot;success&quot; code has completely succeeded.</li>
             <li>An operation that returns a &quot;failure&quot; code has completely failed.</li>
@@ -225,7 +225,7 @@ under the License.
       log. This does not actually imply an fsync() to magnetic media, but rather just that the data has been
       written to the OS cache on all replicas of the log. In the case of a full datacenter power loss, it is
       possible that the edits are not truly durable.</p>
-      <p>[3] Puts will either wholely succeed or wholely fail, provided that they are actually sent
+      <p>[3] Puts will either wholly succeed or wholly fail, provided that they are actually sent
       to the RegionServer.  If the writebuffer is used, Puts will not be sent until the writebuffer is filled
       or it is explicitly flushed.</p>
       
