@@ -6283,6 +6283,10 @@ public class TestHRegion {
 
   @Test
   public void testCloseRegionWrittenToWAL() throws Exception {
+
+    Path rootDir = new Path(dir + name.getMethodName());
+    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+
     final ServerName serverName = ServerName.valueOf("testCloseRegionWrittenToWAL", 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
@@ -6301,7 +6305,8 @@ public class TestHRegion {
     when(rss.getWAL((HRegionInfo) any())).thenReturn(wal);
 
 
-    // open a region first so that it can be closed later
+    // create and then open a region first so that it can be closed later
+    region = HRegion.createHRegion(hri, rootDir, TEST_UTIL.getConfiguration(), htd, rss.getWAL(hri));
     region = HRegion.openHRegion(hri, htd, rss.getWAL(hri),
       TEST_UTIL.getConfiguration(), rss, null);
 
