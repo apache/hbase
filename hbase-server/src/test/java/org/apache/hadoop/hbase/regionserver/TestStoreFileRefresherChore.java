@@ -167,6 +167,8 @@ public class TestStoreFileRefresherChore {
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
     HTableDescriptor htd = getTableDesc(TableName.valueOf("testIsStale"), families);
+    htd.setRegionReplication(2);
+
     Region primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
     Region replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);
