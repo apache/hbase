@@ -31,10 +31,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -127,11 +131,11 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   ConcurrentHashMap<String, NamespaceDescriptor> namespaceMap = new ConcurrentHashMap<>();
 
-  ConcurrentHashMap<TableName, HTableDescriptor> enabledTables = new ConcurrentHashMap<>();
+  ConcurrentHashMap<TableName, TableDescriptor> enabledTables = new ConcurrentHashMap<>();
 
-  ConcurrentHashMap<TableName, HTableDescriptor> disabledTables = new ConcurrentHashMap<>();
+  ConcurrentHashMap<TableName, TableDescriptor> disabledTables = new ConcurrentHashMap<>();
 
-  ConcurrentHashMap<TableName, HTableDescriptor> deletedTables = new ConcurrentHashMap<>();
+  ConcurrentHashMap<TableName, TableDescriptor> deletedTables = new ConcurrentHashMap<>();
 
   @Override
   public void setUpCluster() throws Exception {
@@ -384,7 +388,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   private abstract class TableAction extends  MasterAction{
     // TableAction has implemented selectTable() shared by multiple table Actions
-    protected HTableDescriptor selectTable(ConcurrentHashMap<TableName, HTableDescriptor> tableMap)
+    protected TableDescriptor selectTable(ConcurrentHashMap<TableName, TableDescriptor> tableMap)
     {
       // synchronization to prevent removal from multiple threads
       synchronized (tableMap){
@@ -394,10 +398,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         }
         ArrayList<TableName> tableList = new ArrayList<>(tableMap.keySet());
         TableName randomKey = tableList.get(RandomUtils.nextInt(tableList.size()));
-        HTableDescriptor randomHtd = tableMap.get(randomKey);
-        // remove from tableMap
-        tableMap.remove(randomKey);
-        return randomHtd;
+        TableDescriptor randomTd = tableMap.remove(randomKey);
+        return randomTd;
       }
     }
   }
@@ -408,8 +410,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     void perform() throws IOException {
       Admin admin = connection.getAdmin();
       try {
-        HTableDescriptor htd = createTableDesc();
-        TableName tableName = htd.getTableName();
+        TableDescriptor td = createTableDesc();
+        TableName tableName = td.getTableName();
         if ( admin.tableExists(tableName)){
           return;
         }
@@ -417,10 +419,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         numRegions = getConf().getInt(numRegionKey, DEFAULT_NUM_REGIONS);
         byte[] startKey = Bytes.toBytes("row-0000000000");
         byte[] endKey = Bytes.toBytes("row-" + Integer.MAX_VALUE);
-        LOG.info("Creating table:" + htd);
-        admin.createTable(htd, startKey, endKey, numRegions);
-        Assert.assertTrue("Table: " + htd + " was not created", admin.tableExists(tableName));
-        HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
+        LOG.info("Creating table:" + td);
+        admin.createTable(td, startKey, endKey, numRegions);
+        Assert.assertTrue("Table: " + td + " was not created", admin.tableExists(tableName));
+        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
         Assert.assertTrue(
           "After create, Table: " + tableName + " in not enabled", admin.isTableEnabled(tableName));
         enabledTables.put(tableName, freshTableDesc);
@@ -433,14 +435,12 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       }
     }
 
-    private HTableDescriptor createTableDesc() {
-      String tableName = "ittable-" + String.format("%010d",
-        RandomUtils.nextInt(Integer.MAX_VALUE));
+    private TableDescriptor createTableDesc() {
+      String tableName = String.format("ittable-%010d", RandomUtils.nextInt(Integer.MAX_VALUE));
       String familyName = "cf-" + Math.abs(RandomUtils.nextInt());
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-      // add random column family
-      htd.addFamily(new HColumnDescriptor(familyName));
-      return htd;
+      return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+          .addColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName))
+          .build();
     }
   }
 
@@ -449,7 +449,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     @Override
     void perform() throws IOException {
 
-      HTableDescriptor selected = selectTable(enabledTables);
+      TableDescriptor selected = selectTable(enabledTables);
       if (selected == null) {
         return;
       }
@@ -461,7 +461,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         admin.disableTable(tableName);
         Assert.assertTrue("Table: " + selected + " was not disabled",
             admin.isTableDisabled(tableName));
-        HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
         Assert.assertTrue(
           "After disable, Table: " + tableName + " is not disabled",
           admin.isTableDisabled(tableName));
@@ -498,7 +498,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     @Override
     void perform() throws IOException {
 
-      HTableDescriptor selected = selectTable(disabledTables);
+      TableDescriptor selected = selectTable(disabledTables);
       if (selected == null ) {
         return;
       }
@@ -510,7 +510,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         admin.enableTable(tableName);
         Assert.assertTrue("Table: " + selected + " was not enabled",
             admin.isTableEnabled(tableName));
-        HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
         Assert.assertTrue(
           "After enable, Table: " + tableName + " in not enabled", admin.isTableEnabled(tableName));
         enabledTables.put(tableName, freshTableDesc);
@@ -546,7 +546,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     @Override
     void perform() throws IOException {
 
-      HTableDescriptor selected = selectTable(disabledTables);
+      TableDescriptor selected = selectTable(disabledTables);
       if (selected == null) {
         return;
       }
@@ -572,16 +572,16 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   private abstract class ColumnAction extends TableAction{
     // ColumnAction has implemented selectFamily() shared by multiple family Actions
-    protected HColumnDescriptor selectFamily(HTableDescriptor htd) {
-      if (htd == null) {
+    protected ColumnFamilyDescriptor selectFamily(TableDescriptor td) {
+      if (td == null) {
         return null;
       }
-      HColumnDescriptor[] families = htd.getColumnFamilies();
+      ColumnFamilyDescriptor[] families = td.getColumnFamilies();
       if (families.length == 0){
-        LOG.info("No column families in table: " + htd);
+        LOG.info("No column families in table: " + td);
         return null;
       }
-      HColumnDescriptor randomCfd = families[RandomUtils.nextInt(families.length)];
+      ColumnFamilyDescriptor randomCfd = families[RandomUtils.nextInt(families.length)];
       return randomCfd;
     }
   }
@@ -590,26 +590,26 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
     @Override
     void perform() throws IOException {
-      HTableDescriptor selected = selectTable(disabledTables);
+      TableDescriptor selected = selectTable(disabledTables);
       if (selected == null) {
         return;
       }
 
       Admin admin = connection.getAdmin();
       try {
-        HColumnDescriptor cfd = createFamilyDesc();
-        if (selected.hasFamily(cfd.getName())){
+        ColumnFamilyDescriptor cfd = createFamilyDesc();
+        if (selected.hasColumnFamily(cfd.getName())){
           LOG.info(new String(cfd.getName()) + " already exists in table "
               + selected.getTableName());
           return;
         }
         TableName tableName = selected.getTableName();
         LOG.info("Adding column family: " + cfd + " to table: " + tableName);
-        admin.addColumn(tableName, cfd);
+        admin.addColumnFamily(tableName, cfd);
         // assertion
-        HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
         Assert.assertTrue("Column family: " + cfd + " was not added",
-            freshTableDesc.hasFamily(cfd.getName()));
+            freshTableDesc.hasColumnFamily(cfd.getName()));
         Assert.assertTrue(
           "After add column family, Table: " + tableName + " is not disabled",
           admin.isTableDisabled(tableName));
@@ -623,10 +623,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       }
     }
 
-    private HColumnDescriptor createFamilyDesc() {
-      String familyName = "cf-" + String.format("%010d", RandomUtils.nextInt(Integer.MAX_VALUE));
-      HColumnDescriptor cfd = new HColumnDescriptor(familyName);
-      return cfd;
+    private ColumnFamilyDescriptor createFamilyDesc() {
+      String familyName = String.format("cf-%010d", RandomUtils.nextInt(Integer.MAX_VALUE));
+      return ColumnFamilyDescriptorBuilder.of(familyName);
     }
   }
 
@@ -634,11 +633,11 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
     @Override
     void perform() throws IOException {
-      HTableDescriptor selected = selectTable(disabledTables);
+      TableDescriptor selected = selectTable(disabledTables);
       if (selected == null) {
         return;
       }
-      HColumnDescriptor columnDesc = selectFamily(selected);
+      ColumnFamilyDescriptor columnDesc = selectFamily(selected);
       if (columnDesc == null){
         return;
       }
@@ -649,12 +648,19 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         TableName tableName = selected.getTableName();
         LOG.info("Altering versions of column family: " + columnDesc + " to: " + versions +
             " in table: " + tableName);
-        columnDesc.setMinVersions(versions);
-        columnDesc.setMaxVersions(versions);
-        admin.modifyTable(tableName, selected);
+
+        ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(columnDesc)
+            .setMinVersions(versions)
+            .setMaxVersions(versions)
+            .build();
+        TableDescriptor td = TableDescriptorBuilder.newBuilder(selected)
+            .modifyColumnFamily(cfd)
+            .build();
+        admin.modifyTable(td);
+
         // assertion
-        HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
-        HColumnDescriptor freshColumnDesc = freshTableDesc.getFamily(columnDesc.getName());
+        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
+        ColumnFamilyDescriptor freshColumnDesc = freshTableDesc.getColumnFamily(columnDesc.getName());
         Assert.assertEquals("Column family: " + columnDesc + " was not altered",
             freshColumnDesc.getMaxVersions(), versions);
         Assert.assertEquals("Column family: " + freshColumnDesc + " was not altered",
@@ -678,11 +684,11 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
     @Override
     void perform() throws IOException {
-      HTableDescriptor selected = selectTable(disabledTables);
+      TableDescriptor selected = selectTable(disabledTables);
       if (selected == null) {
         return;
       }
-      HColumnDescriptor columnDesc = selectFamily(selected);
+      ColumnFamilyDescriptor columnDesc = selectFamily(selected);
       if (columnDesc == null){
         return;
       }
@@ -695,11 +701,18 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         short id = (short) possibleIds[RandomUtils.nextInt(possibleIds.length)];
         LOG.info("Altering encoding of column family: " + columnDesc + " to: " + id +
             " in table: " + tableName);
-        columnDesc.setDataBlockEncoding(DataBlockEncoding.getEncodingById(id));
-        admin.modifyTable(tableName, selected);
+
+        ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(columnDesc)
+            .setDataBlockEncoding(DataBlockEncoding.getEncodingById(id))
+            .build();
+        TableDescriptor td = TableDescriptorBuilder.newBuilder(selected)
+            .modifyColumnFamily(cfd)
+            .build();
+        admin.modifyTable(td);
+
         // assertion
-        HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
-        HColumnDescriptor freshColumnDesc = freshTableDesc.getFamily(columnDesc.getName());
+        TableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
+        ColumnFamilyDescriptor freshColumnDesc = freshTableDesc.getColumnFamily(columnDesc.getName());
         Assert.assertEquals("Encoding of column family: " + columnDesc + " was not altered",
             freshColumnDesc.getDataBlockEncoding().getId(), id);
         Assert.assertTrue(
@@ -721,8 +734,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
     @Override
     void perform() throws IOException {
-      HTableDescriptor selected = selectTable(disabledTables);
-      HColumnDescriptor cfd = selectFamily(selected);
+      TableDescriptor selected = selectTable(disabledTables);
+      ColumnFamilyDescriptor cfd = selectFamily(selected);
       if (selected == null || cfd == null) {
         return;
       }
@@ -737,9 +750,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         LOG.info("Deleting column family: " + cfd + " from table: " + tableName);
         admin.deleteColumnFamily(tableName, cfd.getName());
         // assertion
-        HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
         Assert.assertFalse("Column family: " + cfd + " was not added",
-            freshTableDesc.hasFamily(cfd.getName()));
+            freshTableDesc.hasColumnFamily(cfd.getName()));
         Assert.assertTrue(
           "After delete column family, Table: " + tableName + " is not disabled",
           admin.isTableDisabled(tableName));
@@ -758,7 +771,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     // populate tables
     @Override
     void perform() throws IOException {
-      HTableDescriptor selected = selectTable(enabledTables);
+      TableDescriptor selected = selectTable(enabledTables);
       if (selected == null ) {
         return;
       }
@@ -777,7 +790,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
           // nextInt(Integer.MAX_VALUE)) to return positive numbers only
           byte[] rowKey = Bytes.toBytes(
               "row-" + String.format("%010d", RandomUtils.nextInt(Integer.MAX_VALUE)));
-          HColumnDescriptor cfd = selectFamily(selected);
+          ColumnFamilyDescriptor cfd = selectFamily(selected);
           if (cfd == null){
             return;
           }
@@ -788,7 +801,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
           put.addColumn(family, qualifier, value);
           table.put(put);
         }
-        HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
         Assert.assertTrue(
           "After insert, Table: " + tableName + " in not enabled", admin.isTableEnabled(tableName));
         enabledTables.put(tableName, freshTableDesc);
