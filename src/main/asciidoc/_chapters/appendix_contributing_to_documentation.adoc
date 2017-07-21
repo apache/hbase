@@ -55,7 +55,7 @@ see <<developer,developer>>.
 If you spot an error in a string in a UI, utility, script, log message, or elsewhere,
 or you think something could be made more clear, or you think text needs to be added
 where it doesn't currently exist, the first step is to file a JIRA. Be sure to set
-the component to `Documentation` in addition any other involved components. Most
+the component to `Documentation` in addition to any other involved components. Most
 components have one or more default owners, who monitor new issues which come into
 those queues. Regardless of whether you feel able to fix the bug, you should still
 file bugs where you see them.
