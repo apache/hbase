@@ -432,6 +432,12 @@ public class RegionStates {
     serverMap.clear();
   }
 
+  @VisibleForTesting
+  public boolean isRegionInRegionStates(final HRegionInfo hri) {
+    return (regionsMap.containsKey(hri.getRegionName()) || regionInTransition.containsKey(hri)
+        || regionOffline.containsKey(hri));
+  }
+
   // ==========================================================================
   //  RegionStateNode helpers
   // ==========================================================================
