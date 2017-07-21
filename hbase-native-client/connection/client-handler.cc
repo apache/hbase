@@ -35,9 +35,10 @@ using google::protobuf::Message;
 namespace hbase {
 
 ClientHandler::ClientHandler(std::string user_name, std::shared_ptr<Codec> codec,
-                             const std::string &server)
+                             std::shared_ptr<Configuration> conf, const std::string &server)
     : user_name_(user_name),
       serde_(codec),
+      conf_(conf),
       server_(server),
       once_flag_(std::make_unique<std::once_flag>()),
       resp_msgs_(
@@ -115,13 +116,17 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<folly::IOBuf> buf) {
 }
 
 folly::Future<folly::Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
-  // We need to send the header once.
-  // So use call_once to make sure that only one thread wins this.
-  std::call_once((*once_flag_), [ctx, this]() {
-    VLOG(3) << "Writing RPC Header to server: " << server_;
-    auto header = serde_.Header(user_name_);
-    ctx->fireWrite(std::move(header));
-  });
+  /* for RPC test, there's no need to send connection header */
+  if (!conf_->GetBool(RpcSerde::HBASE_CLIENT_RPC_TEST_MODE,
+                      RpcSerde::DEFAULT_HBASE_CLIENT_RPC_TEST_MODE)) {
+    // We need to send the header once.
+    // So use call_once to make sure that only one thread wins this.
+    std::call_once((*once_flag_), [ctx, this]() {
+      VLOG(3) << "Writing RPC Header to server: " << server_;
+      auto header = serde_.Header(user_name_);
+      ctx->fireWrite(std::move(header));
+    });
+  }
 
   VLOG(3) << "Writing RPC Request:" << r->DebugString() << ", server: " << server_;
 

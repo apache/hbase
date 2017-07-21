@@ -30,7 +30,7 @@
 #include "connection/sasl-util.h"
 #include "connection/service.h"
 #include "security/user.h"
-#include "serde/rpc.h"
+#include "serde/rpc-serde.h"
 
 namespace hbase {
 

@@ -26,9 +26,10 @@
 #include <string>
 #include <utility>
 
+#include "core/configuration.h"
 #include "exceptions/exception.h"
 #include "serde/codec.h"
-#include "serde/rpc.h"
+#include "serde/rpc-serde.h"
 #include "utils/concurrent-map.h"
 
 // Forward decs.
@@ -60,7 +61,8 @@ class ClientHandler
    * Create the handler
    * @param user_name the user name of the user running this process.
    */
-  ClientHandler(std::string user_name, std::shared_ptr<Codec> codec, const std::string &server);
+  ClientHandler(std::string user_name, std::shared_ptr<Codec> codec,
+                std::shared_ptr<Configuration> conf, const std::string &server);
 
   /**
    * Get bytes from the wire.
@@ -79,6 +81,7 @@ class ClientHandler
   std::string user_name_;
   RpcSerde serde_;
   std::string server_;  // for logging
+  std::shared_ptr<Configuration> conf_;
 
   // in flight requests
   std::unique_ptr<concurrent_map<uint32_t, std::shared_ptr<google::protobuf::Message>>> resp_msgs_;

@@ -22,13 +22,13 @@ cxx_library(
         "cell-outputstream.h",
         "codec.h",
         "region-info.h",
-        "rpc.h",
+        "rpc-serde.h",
         "server-name.h",
         "table-name.h",
         "zk.h",
     ],
     srcs=[
-        "rpc.cc",
+        "rpc-serde.cc",
         "zk.cc",
     ],
     deps=[
