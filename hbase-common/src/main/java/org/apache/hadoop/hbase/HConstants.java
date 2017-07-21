@@ -1114,6 +1114,7 @@ public final class HConstants {
    * handled by high priority handlers.
    */
   // normal_QOS < QOS_threshold < replication_QOS < replay_QOS < admin_QOS < high_QOS
+  public static final int PRIORITY_UNSET = -1;
   public static final int NORMAL_QOS = 0;
   public static final int QOS_THRESHOLD = 10;
   public static final int HIGH_QOS = 200;

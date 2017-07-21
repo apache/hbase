@@ -56,7 +56,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
    * This is the ordained way of setting priorities going forward. We will be undoing the old
    * annotation-based mechanism.
    */
-  private int priority = PRIORITY_UNSET;
+  private int priority = HConstants.PRIORITY_UNSET;
 
   /**
    * They are optionally set on construction, cleared after we make the call, and then optionally
@@ -95,7 +95,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   @Override
   public void setPriority(int priority) {
-    this.priority = priority;
+    this.priority = Math.max(this.priority, priority);
   }
 
   @Override
@@ -106,7 +106,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   @Override
   public int getPriority() {
-    return priority;
+    return priority < 0 ? HConstants.NORMAL_QOS : priority;
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",

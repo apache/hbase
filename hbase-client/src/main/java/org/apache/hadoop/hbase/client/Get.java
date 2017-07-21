@@ -130,6 +130,7 @@ public class Get extends Query
       TimeRange tr = entry.getValue();
       setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
+    super.setPriority(get.getPriority());
   }
 
   public boolean isCheckExistenceOnly() {
@@ -509,6 +510,11 @@ public class Get extends Query
   @Override
   public Get setIsolationLevel(IsolationLevel level) {
       return (Get) super.setIsolationLevel(level);
+  }
+
+  @Override
+  public Get setPriority(int priority) {
+    return (Get) super.setPriority(priority);
   }
 
 }

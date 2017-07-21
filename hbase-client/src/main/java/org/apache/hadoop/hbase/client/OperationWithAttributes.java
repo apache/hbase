@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -36,6 +37,7 @@ public abstract class OperationWithAttributes extends Operation implements Attri
 
   // used for uniquely identifying an operation
   public static final String ID_ATRIBUTE = "_operation.attributes.id";
+  private int priority = HConstants.PRIORITY_UNSET;
 
   @Override
   public OperationWithAttributes setAttribute(String name, byte[] value) {
@@ -109,5 +111,14 @@ public abstract class OperationWithAttributes extends Operation implements Attri
   public String getId() {
     byte[] attr = getAttribute(ID_ATRIBUTE);
     return attr == null? null: Bytes.toString(attr);
+  }
+
+  public OperationWithAttributes setPriority(int priority) {
+    this.priority = priority;
+    return this;
+  }
+
+  public int getPriority() {
+    return priority;
   }
 }

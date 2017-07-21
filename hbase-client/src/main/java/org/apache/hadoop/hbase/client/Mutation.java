@@ -71,7 +71,10 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       // familyMap
       ClassSize.REFERENCE +
       // familyMap
-      ClassSize.TREEMAP);
+      ClassSize.TREEMAP +
+      // priority
+      ClassSize.INTEGER
+  );
 
   /**
    * The attribute for storing the list of clusters that have consumed the change.

@@ -104,4 +104,14 @@ public final class MultiAction<R> {
   public long getNonceGroup() {
     return this.nonceGroup;
   }
+
+  public int getPriority() {
+    int maxPriority = HConstants.PRIORITY_UNSET;
+    for (List<Action<R>> actionList : actions.values()) {
+      for (Action<R> action : actionList) {
+        maxPriority = Math.max(maxPriority, action.getPriority());
+      }
+    }
+    return maxPriority;
+  }
 }

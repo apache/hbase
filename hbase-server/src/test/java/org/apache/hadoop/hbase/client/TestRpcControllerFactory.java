@@ -20,13 +20,16 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.collect.Multiset;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
@@ -72,6 +75,7 @@ public class TestRpcControllerFactory {
 
   public static class CountingRpcController extends DelegatingHBaseRpcController {
 
+    private static Multiset<Integer> GROUPED_PRIORITY = ConcurrentHashMultiset.create();
     private static AtomicInteger INT_PRIORITY = new AtomicInteger();
     private static AtomicInteger TABLE_PRIORITY = new AtomicInteger();
 
@@ -81,8 +85,13 @@ public class TestRpcControllerFactory {
 
     @Override
     public void setPriority(int priority) {
+      int oldPriority = getPriority();
       super.setPriority(priority);
-      INT_PRIORITY.incrementAndGet();
+      int newPriority = getPriority();
+      if (newPriority != oldPriority) {
+        INT_PRIORITY.incrementAndGet();
+        GROUPED_PRIORITY.add(priority);
+      }
     }
 
     @Override
@@ -189,6 +198,14 @@ public class TestRpcControllerFactory {
     scanInfo.setSmall(false);
     counter = doScan(table, scanInfo, counter);
 
+    // make sure we have no priority count
+    verifyPriorityGroupCount(HConstants.ADMIN_QOS, 0);
+    // lets set a custom priority on a get
+    Get get = new Get(row);
+    get.setPriority(HConstants.ADMIN_QOS);
+    table.get(get);
+    verifyPriorityGroupCount(HConstants.ADMIN_QOS, 1);
+
     table.close();
   }
 
@@ -200,9 +217,13 @@ public class TestRpcControllerFactory {
   }
 
   int verifyCount(Integer counter) {
-    assertEquals(counter.intValue(), CountingRpcController.TABLE_PRIORITY.get());
+    assertTrue(CountingRpcController.TABLE_PRIORITY.get() >= counter);
     assertEquals(0, CountingRpcController.INT_PRIORITY.get());
-    return counter + 1;
+    return CountingRpcController.TABLE_PRIORITY.get() + 1;
+  }
+
+  void verifyPriorityGroupCount(int priorityLevel, int count) {
+    assertEquals(count, CountingRpcController.GROUPED_PRIORITY.count(priorityLevel));
   }
 
   @Test
