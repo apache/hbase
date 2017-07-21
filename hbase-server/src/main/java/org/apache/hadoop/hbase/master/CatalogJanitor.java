@@ -221,6 +221,11 @@ public class CatalogJanitor extends ScheduledChore {
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
       pe.submitProcedure(new GCMergedRegionsProcedure(pe.getEnvironment(),
           mergedRegion, regionA, regionB));
+      // Remove from in-memory states
+      this.services.getAssignmentManager().getRegionStates().deleteRegion(regionA);
+      this.services.getAssignmentManager().getRegionStates().deleteRegion(regionB);
+      this.services.getServerManager().removeRegion(regionA);
+      this.services.getServerManager().removeRegion(regionB);
       return true;
     }
     return false;
@@ -234,6 +239,7 @@ public class CatalogJanitor extends ScheduledChore {
    */
   int scan() throws IOException {
     int result = 0;
+
     try {
       if (!alreadyRunning.compareAndSet(false, true)) {
         LOG.debug("CatalogJanitor already running");
@@ -281,8 +287,8 @@ public class CatalogJanitor extends ScheduledChore {
         }
 
         if (!parentNotCleaned.contains(e.getKey().getEncodedName()) &&
-              cleanParent(e.getKey(), e.getValue())) {
-            result++;
+            cleanParent(e.getKey(), e.getValue())) {
+          result++;
         } else {
           // We could not clean the parent, so it's daughters should not be
           // cleaned either (HBASE-6160)
@@ -355,6 +361,9 @@ public class CatalogJanitor extends ScheduledChore {
         " -- no longer hold references");
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
       pe.submitProcedure(new GCRegionProcedure(pe.getEnvironment(), parent));
+      // Remove from in-memory states
+      this.services.getAssignmentManager().getRegionStates().deleteRegion(parent);
+      this.services.getServerManager().removeRegion(parent);
       return true;
     }
     return false;
