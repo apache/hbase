@@ -1000,7 +1000,7 @@ public class HBaseAdmin implements Admin {
   /**
    * {@inheritDoc}
    * @deprecated Since 2.0. Will be removed in 3.0. Use
-   *     {@link #addColumnFamily(TableName, HColumnDescriptor)} instead.
+   *     {@link #addColumnFamily(TableName, ColumnFamilyDescriptor)} instead.
    */
   @Override
   @Deprecated
@@ -1010,14 +1010,14 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void addColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
+  public void addColumnFamily(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
       throws IOException {
     get(addColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
   public Future<Void> addColumnFamilyAsync(final TableName tableName,
-      final HColumnDescriptor columnFamily) throws IOException {
+      final ColumnFamilyDescriptor columnFamily) throws IOException {
     AddColumnResponse response =
         executeCallable(new MasterCallable<AddColumnResponse>(getConnection(),
             getRpcControllerFactory()) {
@@ -1098,7 +1098,7 @@ public class HBaseAdmin implements Admin {
   /**
    * {@inheritDoc}
    * @deprecated As of 2.0. Will be removed in 3.0. Use
-   *     {@link #modifyColumnFamily(TableName, HColumnDescriptor)} instead.
+   *     {@link #modifyColumnFamily(TableName, ColumnFamilyDescriptor)} instead.
    */
   @Override
   @Deprecated
@@ -1109,13 +1109,13 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void modifyColumnFamily(final TableName tableName,
-      final HColumnDescriptor columnFamily) throws IOException {
+      final ColumnFamilyDescriptor columnFamily) throws IOException {
     get(modifyColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
   public Future<Void> modifyColumnFamilyAsync(final TableName tableName,
-      final HColumnDescriptor columnFamily) throws IOException {
+      final ColumnFamilyDescriptor columnFamily) throws IOException {
     ModifyColumnResponse response =
         executeCallable(new MasterCallable<ModifyColumnResponse>(getConnection(),
             getRpcControllerFactory()) {

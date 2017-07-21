@@ -714,7 +714,7 @@ public interface Admin extends Abortable, Closeable {
    * @deprecated As of release 2.0.0.
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
    *             This will be removed in HBase 3.0.0.
-   *             Use {@link #addColumnFamily(TableName, HColumnDescriptor)}.
+   *             Use {@link #addColumnFamily(TableName, ColumnFamilyDescriptor)}.
    */
   @Deprecated
   void addColumn(final TableName tableName, final HColumnDescriptor columnFamily)
@@ -727,7 +727,7 @@ public interface Admin extends Abortable, Closeable {
    * @param columnFamily column family descriptor of column family to be added
    * @throws IOException if a remote or network exception occurs
    */
-  void addColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
+  void addColumnFamily(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
     throws IOException;
 
   /**
@@ -743,7 +743,7 @@ public interface Admin extends Abortable, Closeable {
    * @return the result of the async add column family. You can use Future.get(long, TimeUnit) to
    *         wait on the operation to complete.
    */
-  Future<Void> addColumnFamilyAsync(final TableName tableName, final HColumnDescriptor columnFamily)
+  Future<Void> addColumnFamilyAsync(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
       throws IOException;
 
   /**
@@ -794,7 +794,7 @@ public interface Admin extends Abortable, Closeable {
    * @deprecated As of release 2.0.0.
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
    *             This will be removed in HBase 3.0.0.
-   *             Use {@link #modifyColumnFamily(TableName, HColumnDescriptor)}.
+   *             Use {@link #modifyColumnFamily(TableName, ColumnFamilyDescriptor)}.
    */
   @Deprecated
   void modifyColumn(final TableName tableName, final HColumnDescriptor columnFamily)
@@ -807,7 +807,7 @@ public interface Admin extends Abortable, Closeable {
    * @param columnFamily new column family descriptor to use
    * @throws IOException if a remote or network exception occurs
    */
-  void modifyColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
+  void modifyColumnFamily(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
       throws IOException;
 
   /**
@@ -823,7 +823,7 @@ public interface Admin extends Abortable, Closeable {
    * @return the result of the async modify column family. You can use Future.get(long, TimeUnit) to
    *         wait on the operation to complete.
    */
-  Future<Void> modifyColumnFamilyAsync(TableName tableName, HColumnDescriptor columnFamily)
+  Future<Void> modifyColumnFamilyAsync(TableName tableName, ColumnFamilyDescriptor columnFamily)
       throws IOException;
 
 
