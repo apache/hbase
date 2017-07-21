@@ -32,7 +32,6 @@ namespace hbase {
 RpcPipelineFactory::RpcPipelineFactory(std::shared_ptr<Codec> codec,
                                        std::shared_ptr<Configuration> conf)
     : user_util_(), codec_(codec), conf_(conf) {}
-
 SerializePipeline::Ptr RpcPipelineFactory::newPipeline(
     std::shared_ptr<folly::AsyncTransportWrapper> sock) {
   folly::SocketAddress addr;  // for logging
@@ -41,10 +40,15 @@ SerializePipeline::Ptr RpcPipelineFactory::newPipeline(
   auto pipeline = SerializePipeline::create();
   pipeline->addBack(wangle::AsyncSocketHandler{sock});
   pipeline->addBack(wangle::EventBaseHandler{});
-  auto secure = security::User::IsSecurityEnabled(*conf_);
-  pipeline->addBack(SaslHandler{user_util_.user_name(secure), conf_});
+  bool secure = false;
+  /* for RPC test, there's no need to setup Sasl */
+  if (!conf_->GetBool(RpcSerde::HBASE_CLIENT_RPC_TEST_MODE,
+                      RpcSerde::DEFAULT_HBASE_CLIENT_RPC_TEST_MODE)) {
+    secure = security::User::IsSecurityEnabled(*conf_);
+    pipeline->addBack(SaslHandler{user_util_.user_name(secure), conf_});
+  }
   pipeline->addBack(wangle::LengthFieldBasedFrameDecoder{});
-  pipeline->addBack(ClientHandler{user_util_.user_name(secure), codec_, addr.describe()});
+  pipeline->addBack(ClientHandler{user_util_.user_name(secure), codec_, conf_, addr.describe()});
   pipeline->finalize();
   return pipeline;
 }

@@ -33,6 +33,8 @@ cxx_library(
         "service.h",
         "rpc-client.h",
         "sasl-util.h",
+        "rpc-test-server.h",
+        "rpc-test-server-handler.h",
     ],
     srcs=[
         "client-dispatcher.cc",
@@ -44,6 +46,8 @@ cxx_library(
         "rpc-client.cc",
         "sasl-handler.cc",
         "sasl-util.cc",
+        "rpc-test-server.cc",
+        "rpc-test-server-handler.cc",
     ],
     deps=[
         "//if:if",
@@ -68,3 +72,12 @@ cxx_test(
     deps=[
         ":connection",
     ],)
+cxx_test(
+    name="rpc-test",
+    srcs=[
+        "rpc-test.cc",
+    ],
+    deps=[
+        ":connection",
+    ],
+    run_test_separately=True,)

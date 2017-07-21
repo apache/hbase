@@ -17,8 +17,6 @@
  *
  */
 
-#include "serde/rpc.h"
-
 #include <folly/Conv.h>
 #include <folly/Logging.h>
 #include <folly/io/Cursor.h>
@@ -30,6 +28,7 @@
 #include <utility>
 
 #include "if/RPC.pb.h"
+#include "rpc-serde.h"
 #include "utils/version.h"
 
 using folly::IOBuf;
@@ -82,6 +81,8 @@ int RpcSerde::ParseDelimited(const IOBuf *buf, Message *msg) {
 
   return coded_stream.CurrentPosition();
 }
+
+RpcSerde::RpcSerde() {}
 
 RpcSerde::RpcSerde(std::shared_ptr<Codec> codec) : codec_(codec) {}
 
@@ -158,6 +159,17 @@ std::unique_ptr<IOBuf> RpcSerde::Request(const uint32_t call_id, const std::stri
     auto ser_req = SerializeDelimited(*msg);
     ser_header->appendChain(std::move(ser_req));
   }
+
+  return PrependLength(std::move(ser_header));
+}
+
+std::unique_ptr<folly::IOBuf> RpcSerde::Response(const uint32_t call_id,
+                                                 const google::protobuf::Message *msg) {
+  pb::ResponseHeader rh;
+  rh.set_call_id(call_id);
+  auto ser_header = SerializeDelimited(rh);
+  auto ser_resp = SerializeDelimited(*msg);
+  ser_header->appendChain(std::move(ser_resp));
 
   return PrependLength(std::move(ser_header));
 }

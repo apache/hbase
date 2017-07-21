@@ -45,6 +45,7 @@ namespace hbase {
  */
 class RpcSerde {
  public:
+  RpcSerde();
   /**
    * Constructor assumes the default auth type.
    */
@@ -98,6 +99,17 @@ class RpcSerde {
                                         const google::protobuf::Message *msg);
 
   /**
+     * Serialize a response message into a protobuf.
+     * Request consists of:
+     *
+     * - Big endian length
+     * - ResponseHeader object
+     * - The passed in Message object
+     */
+  std::unique_ptr<folly::IOBuf> Response(const uint32_t call_id,
+                                         const google::protobuf::Message *msg);
+
+  /**
    * Serialize a message in the delimited format.
    * Delimited format consists of the following:
    *
@@ -116,6 +128,10 @@ class RpcSerde {
    * This involves no copies or moves of the passed in data.
    */
   std::unique_ptr<folly::IOBuf> PrependLength(std::unique_ptr<folly::IOBuf> msg);
+
+ public:
+  static constexpr const char *HBASE_CLIENT_RPC_TEST_MODE = "hbase.client.rpc.test.mode";
+  static constexpr const bool DEFAULT_HBASE_CLIENT_RPC_TEST_MODE = false;
 
  private:
   /* data */
