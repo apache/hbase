@@ -22,6 +22,62 @@
 
 using hbase::Configuration;
 
+TEST(Configuration, SetGetBool) {
+  Configuration conf;
+
+  /* test true/false */
+  conf.SetBool("bool_key1", true);
+  EXPECT_EQ(true, conf.GetBool("bool_key1", false));
+  conf.SetBool("bool_key2", false);
+  EXPECT_EQ(false, conf.GetBool("bool_key2", true));
+
+  /* test 1/0 */
+  conf.SetBool("bool_key3", 1);
+  EXPECT_EQ(true, conf.GetBool("bool_key3", false));
+  conf.SetBool("bool_key4", 0);
+  EXPECT_EQ(false, conf.GetBool("bool_key4", true));
+
+  /* test non zero integer */
+  conf.SetBool("bool_key5", 5);
+  EXPECT_EQ(true, conf.GetBool("bool_key5", false));
+  conf.SetBool("bool_key6", -1);
+  EXPECT_EQ(true, conf.GetBool("bool_key5", false));
+
+  /* test non zero float */
+  conf.SetBool("bool_key7", 5.1);
+  EXPECT_EQ(true, conf.GetBool("bool_key7", false));
+  conf.SetBool("bool_key8", -1.2);
+  EXPECT_EQ(true, conf.GetBool("bool_key8", false));
+}
+
+TEST(Configuration, SetGetForBool) {
+  Configuration conf;
+
+  /* test true/false */
+  conf.Set("bool_key1", "true");
+  EXPECT_EQ(true, conf.GetBool("bool_key1", false));
+  conf.Set("bool_key2", "false");
+  EXPECT_EQ(false, conf.GetBool("bool_key2", true));
+
+  /* test 1/0 */
+  conf.Set("bool_key3", "1");
+  EXPECT_EQ(true, conf.GetBool("bool_key3", false));
+  conf.Set("bool_key4", "0");
+  EXPECT_EQ(false, conf.GetBool("bool_key4", true));
+
+  /* test non zero integer */
+  conf.Set("bool_key5", "5");
+  EXPECT_THROW(conf.GetBool("bool_key5", false), std::runtime_error);
+  conf.Set("bool_key6", "-1");
+  EXPECT_THROW(conf.GetBool("bool_key6", false), std::runtime_error);
+
+  /* test non zero float */
+  conf.Set("bool_key7", "5.1");
+  EXPECT_THROW(conf.GetBool("bool_key7", false), std::runtime_error);
+  conf.Set("bool_key8", "-1.2");
+  EXPECT_THROW(conf.GetBool("bool_key8", false), std::runtime_error);
+}
+
 TEST(Configuration, SetGet) {
   Configuration conf;
 
@@ -54,7 +110,7 @@ TEST(Configuration, SetGetDouble) {
   EXPECT_EQ(conf.GetDouble("foo", 0), 42.0);
 }
 
-TEST(Configuration, SetGetBool) {
+TEST(Configuration, SetGetBoolBasic) {
   Configuration conf;
 
   EXPECT_EQ(conf.GetBool("foo", false), false);
