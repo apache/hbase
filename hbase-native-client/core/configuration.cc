@@ -25,6 +25,7 @@
 
 #include <glog/logging.h>
 #include <boost/lexical_cast.hpp>
+#include <boost/format.hpp>
 
 namespace hbase {
 
@@ -202,12 +203,15 @@ double Configuration::GetDouble(const std::string &key, double default_value) co
 optional<bool> Configuration::GetBool(const std::string &key) const {
   optional<std::string> raw = Get(key);
   if (raw) {
-    if (!strcasecmp((*raw).c_str(), "true")) {
+    if (!strcasecmp((*raw).c_str(), "true") || !strcasecmp((*raw).c_str(), "1")) {
       return std::experimental::make_optional(true);
-    } else if (!strcasecmp((*raw).c_str(), "false")) {
+    } else if (!strcasecmp((*raw).c_str(), "false") || !strcasecmp((*raw).c_str(), "0")) {
       return std::experimental::make_optional(false);
     } else {
-      throw std::runtime_error("Unexpected value found while conversion to bool.");
+      boost::format what("Unexpected value \"%s\" found being converted to bool for key \"%s\"");
+      what % (*raw);
+      what % key;
+      throw std::runtime_error(what.str());
     }
   }
   return optional<bool>();
