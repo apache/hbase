@@ -846,13 +846,14 @@ public class HTable implements HTableInterface, RegionLocator {
       // Good old call.
       final Get getReq = get;
       RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
-          getName(), get.getRow()) {
+          getName(), get.getRow(), get.getPriority()) {
         @Override
         public Result call(int callTimeout) throws IOException {
           ClientProtos.GetRequest request =
             RequestConverter.buildGetRequest(getLocation().getRegionInfo().getRegionName(), getReq);
           HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
+          controller.setPriority(getPriority());
           controller.setCallTimeout(callTimeout);
           try {
             ClientProtos.GetResponse response = getStub().get(controller, request);
@@ -973,11 +974,12 @@ public class HTable implements HTableInterface, RegionLocator {
   public void delete(final Delete delete)
   throws IOException {
     RegionServerCallable<Boolean> callable = new RegionServerCallable<Boolean>(connection,
-        tableName, delete.getRow()) {
+        tableName, delete.getRow(), delete.getPriority()) {
       @Override
       public Boolean call(int callTimeout) throws IOException {
         HBaseRpcController controller = rpcControllerFactory.newController();
         controller.setPriority(tableName);
+        controller.setPriority(getPriority());
         controller.setCallTimeout(callTimeout);
 
         try {
@@ -1055,6 +1057,7 @@ public class HTable implements HTableInterface, RegionLocator {
         public MultiResponse call(int callTimeout) throws IOException {
           controller.reset();
           controller.setPriority(tableName);
+          controller.setPriority(rm.getMaxPriority());
           int remainingTime = tracker.getRemainingTime(callTimeout);
           if (remainingTime == 0) {
             throw new DoNotRetryIOException("Timeout for mutate row");
@@ -1103,12 +1106,12 @@ public class HTable implements HTableInterface, RegionLocator {
     NonceGenerator ng = this.connection.getNonceGenerator();
     final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Result> callable =
-      new RegionServerCallable<Result>(this.connection, getName(), append.getRow()) {
+      new RegionServerCallable<Result>(this.connection, getName(), append.getRow(), append.getPriority()) {
         @Override
         public Result call(int callTimeout) throws IOException {
           HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(getTableName());
-          controller.setCallTimeout(callTimeout);
+          controller.setCallTimeout(getPriority());
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
               getLocation().getRegionInfo().getRegionName(), append, nonceGroup, nonce);
@@ -1136,11 +1139,12 @@ public class HTable implements HTableInterface, RegionLocator {
     NonceGenerator ng = this.connection.getNonceGenerator();
     final long nonceGroup = ng.getNonceGroup(), nonce = ng.newNonce();
     RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
-        getName(), increment.getRow()) {
+        getName(), increment.getRow(), increment.getPriority()) {
       @Override
       public Result call(int callTimeout) throws IOException {
         HBaseRpcController controller = rpcControllerFactory.newController();
         controller.setPriority(getTableName());
+        controller.setPriority(getPriority());
         controller.setCallTimeout(callTimeout);
         try {
           MutateRequest request = RequestConverter.buildMutateRequest(
@@ -1236,11 +1240,12 @@ public class HTable implements HTableInterface, RegionLocator {
       final Put put)
   throws IOException {
     RegionServerCallable<Boolean> callable =
-      new RegionServerCallable<Boolean>(connection, getName(), row) {
+      new RegionServerCallable<Boolean>(connection, getName(), row, put.getPriority()) {
         @Override
         public Boolean call(int callTimeout) throws IOException {
           HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
+          controller.setPriority(getPriority());
           controller.setCallTimeout(callTimeout);
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
@@ -1266,11 +1271,12 @@ public class HTable implements HTableInterface, RegionLocator {
       final Put put)
   throws IOException {
     RegionServerCallable<Boolean> callable =
-      new RegionServerCallable<Boolean>(connection, getName(), row) {
+      new RegionServerCallable<Boolean>(connection, getName(), row, put.getPriority()) {
         @Override
         public Boolean call(int callTimeout) throws IOException {
           HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
+          controller.setPriority(getPriority());
           controller.setCallTimeout(callTimeout);
           try {
             CompareType compareType = CompareType.valueOf(compareOp.name());
@@ -1297,11 +1303,12 @@ public class HTable implements HTableInterface, RegionLocator {
       final Delete delete)
   throws IOException {
     RegionServerCallable<Boolean> callable =
-      new RegionServerCallable<Boolean>(connection, getName(), row) {
+      new RegionServerCallable<Boolean>(connection, getName(), row, delete.getPriority()) {
         @Override
         public Boolean call(int callTimeout) throws IOException {
           HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
+          controller.setPriority(getPriority());
           controller.setCallTimeout(callTimeout);
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
@@ -1327,11 +1334,12 @@ public class HTable implements HTableInterface, RegionLocator {
       final Delete delete)
   throws IOException {
     RegionServerCallable<Boolean> callable =
-      new RegionServerCallable<Boolean>(connection, getName(), row) {
+      new RegionServerCallable<Boolean>(connection, getName(), row, delete.getPriority()) {
         @Override
         public Boolean call(int callTimeout) throws IOException {
           HBaseRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
+          controller.setPriority(getPriority());
           controller.setCallTimeout(callTimeout);
           try {
             CompareType compareType = CompareType.valueOf(compareOp.name());
@@ -1364,6 +1372,7 @@ public class HTable implements HTableInterface, RegionLocator {
         public MultiResponse call(int callTimeout) throws IOException {
           controller.reset();
           controller.setPriority(tableName);
+          controller.setPriority(rm.getMaxPriority());
           int remainingTime = tracker.getRemainingTime(callTimeout);
           if (remainingTime == 0) {
             throw new DoNotRetryIOException("Timeout for mutate row");

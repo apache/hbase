@@ -131,7 +131,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    */
   public ScannerCallable (ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
-    super(connection, tableName, scan.getStartRow());
+    super(connection, tableName, scan.getStartRow(), scan.getPriority());
     this.id = id;
     this.cConnection = connection;
     this.scan = scan;

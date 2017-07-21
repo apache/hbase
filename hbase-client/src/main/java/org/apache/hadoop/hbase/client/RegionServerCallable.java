@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -50,6 +51,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   protected final byte[] row;
   protected HRegionLocation location;
   private ClientService.BlockingInterface stub;
+  protected int priority;
 
   /**
    * @param connection Connection to use.
@@ -57,9 +59,14 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    * @param row The row we want in <code>tableName</code>.
    */
   public RegionServerCallable(Connection connection, TableName tableName, byte [] row) {
+    this(connection, tableName, row, HConstants.NORMAL_QOS);
+  }
+
+  public RegionServerCallable(Connection connection, TableName tableName, byte [] row, int priority) {
     this.connection = connection;
     this.tableName = tableName;
     this.row = row;
+    this.priority = priority;
   }
 
   /**
@@ -115,6 +122,10 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
 
   public byte [] getRow() {
     return this.row;
+  }
+
+  public int getPriority() {
+    return priority;
   }
 
   @Override

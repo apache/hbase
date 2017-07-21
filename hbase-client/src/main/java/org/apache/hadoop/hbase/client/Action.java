@@ -34,11 +34,17 @@ public class Action<R> implements Comparable<R> {
   private int originalIndex;
   private long nonce = HConstants.NO_NONCE;
   private int replicaId = RegionReplicaUtil.DEFAULT_REPLICA_ID;
+  private int priority;
 
   public Action(Row action, int originalIndex) {
+    this(action, originalIndex, HConstants.PRIORITY_UNSET);
+  }
+
+  public Action(Row action, int originalIndex, int priority) {
     super();
     this.action = action;
     this.originalIndex = originalIndex;
+    this.priority = priority;
   }
 
   /**
@@ -74,6 +80,8 @@ public class Action<R> implements Comparable<R> {
   public int getReplicaId() {
     return replicaId;
   }
+
+  public int getPriority() { return priority; }
 
   @SuppressWarnings("rawtypes")
   @Override

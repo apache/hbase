@@ -114,4 +114,12 @@ public class RowMutations implements Row {
   public List<Mutation> getMutations() {
     return Collections.unmodifiableList(mutations);
   }
+
+  public int getMaxPriority() {
+    int maxPriority = Integer.MIN_VALUE;
+    for (Mutation mutation : mutations) {
+      maxPriority = Math.max(maxPriority, mutation.getPriority());
+    }
+    return maxPriority;
+  }
 }

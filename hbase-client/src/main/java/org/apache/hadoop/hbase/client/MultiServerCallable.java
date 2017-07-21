@@ -57,8 +57,8 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
 
   MultiServerCallable(final ClusterConnection connection, final TableName tableName,
       final ServerName location, RpcControllerFactory rpcFactory, final MultiAction<R> multi,
-      int rpcTimeout, RetryingTimeTracker tracker) {
-    super(connection, tableName, null, rpcFactory);
+      int rpcTimeout, RetryingTimeTracker tracker, int priority) {
+    super(connection, tableName, null, rpcFactory, priority);
     this.multiAction = multi;
     // RegionServerCallable has HRegionLocation field, but this is a multi-region request.
     // Using region info from parent HRegionLocation would be a mistake for this class; so
@@ -130,6 +130,7 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
     controller.reset();
     if (cells != null) controller.setCellScanner(CellUtil.createCellScanner(cells));
     controller.setPriority(getTableName());
+    controller.setPriority(getPriority());
     controller.setCallTimeout(callTimeout);
     ClientProtos.MultiResponse responseProto;
     ClientProtos.MultiRequest requestProto = multiRequestBuilder.build();

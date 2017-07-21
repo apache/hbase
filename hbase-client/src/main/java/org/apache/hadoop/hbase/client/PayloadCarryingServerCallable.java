@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -31,8 +32,13 @@ public abstract class PayloadCarryingServerCallable<T>
   protected HBaseRpcController controller;
 
   public PayloadCarryingServerCallable(Connection connection, TableName tableName, byte[] row,
-    RpcControllerFactory rpcControllerFactory) {
-    super(connection, tableName, row);
+      RpcControllerFactory rpcControllerFactory) {
+    this(connection, tableName, row, rpcControllerFactory, HConstants.NORMAL_QOS);
+  }
+
+  public PayloadCarryingServerCallable(Connection connection, TableName tableName, byte[] row,
+    RpcControllerFactory rpcControllerFactory, int priority) {
+    super(connection, tableName, row, priority);
     this.controller = rpcControllerFactory.newController();
   }
 

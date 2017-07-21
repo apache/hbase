@@ -86,6 +86,7 @@ public class Append extends Mutation {
     for (Map.Entry<String, byte[]> entry : a.getAttributesMap().entrySet()) {
       this.setAttribute(entry.getKey(), entry.getValue());
     }
+    this.setPriority(a.getPriority());
   }
 
   /** Create a Append operation for the specified row.
@@ -181,6 +182,11 @@ public class Append extends Mutation {
   @Override
   public Append setACL(Map<String, Permission> perms) {
     return (Append) super.setACL(perms);
+  }
+
+  @Override
+  public Append setPriority(int priority) {
+    return (Append) super.setPriority(priority);
   }
 
   @Override
