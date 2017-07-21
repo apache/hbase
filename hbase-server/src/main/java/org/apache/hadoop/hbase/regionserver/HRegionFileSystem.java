@@ -893,9 +893,19 @@ public class HRegionFileSystem {
     // only should be sufficient. I don't want to read the file every time to check if it pb
     // serialized.
     byte[] content = getRegionInfoFileContent(regionInfoForFs);
+
+    // Verify if the region directory exists before opening a region. We need to do this since if
+    // the region directory doesn't exist we will re-create the region directory and a new HRI
+    // when HRegion.openHRegion() is called.
+    try {
+      FileStatus status = fs.getFileStatus(getRegionDir());
+    } catch (FileNotFoundException e) {
+      LOG.warn(getRegionDir() + " doesn't exist for region: " + regionInfoForFs.getEncodedName() +
+          " on table " + regionInfo.getTable());
+    }
+
     try {
       Path regionInfoFile = new Path(getRegionDir(), REGION_INFO_FILE);
-
       FileStatus status = fs.getFileStatus(regionInfoFile);
       if (status != null && status.getLen() == content.length) {
         // Then assume the content good and move on.
@@ -988,7 +998,13 @@ public class HRegionFileSystem {
     }
 
     // Write HRI to a file in case we need to recover hbase:meta
-    regionFs.writeRegionInfoOnFilesystem(false);
+    // Only primary replicas should write region info
+    if (regionInfo.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+      regionFs.writeRegionInfoOnFilesystem(false);
+    } else {
+      if (LOG.isDebugEnabled())
+        LOG.debug("Skipping creation of .regioninfo file for " + regionInfo);
+    }
     return regionFs;
   }
 
@@ -1018,8 +1034,15 @@ public class HRegionFileSystem {
       regionFs.cleanupSplitsDir();
       regionFs.cleanupMergesDir();
 
-      // if it doesn't exists, Write HRI to a file, in case we need to recover hbase:meta
-      regionFs.checkRegionInfoOnFilesystem();
+      // If it doesn't exists, Write HRI to a file, in case we need to recover hbase:meta
+      // Only create HRI if we are the default replica
+      if (regionInfo.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+        regionFs.checkRegionInfoOnFilesystem();
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping creation of .regioninfo file for " + regionInfo);
+        }
+      }
     }
 
     return regionFs;
