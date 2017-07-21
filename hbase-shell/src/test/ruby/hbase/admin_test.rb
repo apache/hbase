@@ -480,6 +480,36 @@ module Hbase
       assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
     end
 
+    define_test "alter should be able to remove a table configuration" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      key = "TestConf"
+      command(:alter, @test_name, CONFIGURATION => {key => 1})
+
+      # eval() is used to convert a string to regex
+      assert_match(eval("/" + key + "/"), admin.describe(@test_name))
+
+      command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => key)
+      assert_no_match(eval("/" + key + "/"), admin.describe(@test_name))
+    end
+
+    define_test "alter should be able to remove a list of table configuration" do
+      drop_test_table(@test_name)
+
+      key_1 = "TestConf1"
+      key_2 = "TestConf2"
+      command(:create, @test_name, { NAME => 'i'}, CONFIGURATION => { key_1 => 1, key_2 => 2 })
+
+      # eval() is used to convert a string to regex
+      assert_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+
+      command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => [ key_1, key_2 ])
+      assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+    end
+
     define_test "get_table should get a real table" do
       drop_test_table(@test_name)
       create_test_table(@test_name)

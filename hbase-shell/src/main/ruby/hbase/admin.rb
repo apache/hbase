@@ -657,6 +657,23 @@ module Hbase
               htd.remove(name)
             end
             hasTableUpdate = true
+          # Unset table configuration
+          elsif method == 'table_conf_unset'
+            raise(ArgumentError, 'NAME parameter missing for table_conf_unset method') unless name
+            if name.is_a?(Array)
+              name.each do |key|
+                if htd.getConfigurationValue(key).nil?
+                  raise ArgumentError, "Could not find configuration: #{key}"
+                end
+                htd.removeConfiguration(key)
+              end
+            else
+              if htd.getConfigurationValue(name).nil?
+                raise ArgumentError, "Could not find configuration: #{name}"
+              end
+              htd.removeConfiguration(name)
+            end
+            hasTableUpdate = true
           # Unknown method
           else
             raise ArgumentError, "Unknown method: #{method}"
