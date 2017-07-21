@@ -902,8 +902,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     // Write HRI to a file in case we need to recover hbase:meta
-    status.setStatus("Writing region info on filesystem");
-    fs.checkRegionInfoOnFilesystem();
+    // Only the primary replica should write .regioninfo
+    if (this.getRegionInfo().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+      status.setStatus("Writing region info on filesystem");
+      fs.checkRegionInfoOnFilesystem();
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skipping creation of .regioninfo file for " + this.getRegionInfo());
+      }
+    }
 
     // Initialize all the HStores
     status.setStatus("Initializing all the Stores");
