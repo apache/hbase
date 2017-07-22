@@ -66,7 +66,7 @@ public class TestAsyncDrainAdminApi extends TestAsyncAdminBase {
 
     // Try for 20 seconds to create table (new region). Will not complete because all RSs draining.
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
+    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     final Runnable createTable = new Thread() {
       @Override
       public void run() {

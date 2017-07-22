@@ -133,7 +133,7 @@ public abstract class TestAsyncAdminBase {
       byte[]... families) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     admin.createTable(builder.build(), splitKeys).join();
   }

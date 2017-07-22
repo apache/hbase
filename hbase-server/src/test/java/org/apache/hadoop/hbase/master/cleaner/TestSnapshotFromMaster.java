@@ -284,7 +284,7 @@ public class TestSnapshotFromMaster {
     // snapshot, the call after snapshot will be a no-op and checks will fail
     UTIL.deleteTable(TABLE_NAME);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAM).build())
+            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAM))
             .setCompactionEnabled(false)
             .build();
     UTIL.getAdmin().createTable(td);

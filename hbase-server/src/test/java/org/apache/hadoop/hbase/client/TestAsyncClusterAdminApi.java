@@ -284,7 +284,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   private void createAndLoadTable(TableName[] tables) {
     for (TableName table : tables) {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(table);
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
       admin.createTable(builder.build(), Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), 16).join();
       RawAsyncTable asyncTable = ASYNC_CONN.getRawTable(table);
       List<Put> puts = new ArrayList<>();

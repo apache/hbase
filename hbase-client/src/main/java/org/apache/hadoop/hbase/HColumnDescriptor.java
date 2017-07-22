@@ -104,6 +104,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and may not contain a <code>:</code>
+   * @deprecated use {@link ColumnFamilyDescriptorBuilder#of(String)}
    */
   public HColumnDescriptor(final String familyName) {
     this(Bytes.toBytes(familyName));
@@ -115,6 +116,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and may not contain a <code>:</code>
+   * @deprecated use {@link ColumnFamilyDescriptorBuilder#of(byte[])}
    */
   public HColumnDescriptor(final byte [] familyName) {
     this(new ModifyableColumnFamilyDescriptor(familyName));
@@ -125,6 +127,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    * Makes a deep copy of the supplied descriptor.
    * Can make a modifiable descriptor from an UnmodifyableHColumnDescriptor.
    * @param desc The descriptor.
+   * @deprecated use {@link ColumnFamilyDescriptorBuilder#copy(ColumnFamilyDescriptor)}
    */
   public HColumnDescriptor(HColumnDescriptor desc) {
     this(desc, true);
