@@ -81,11 +81,6 @@ public interface Clock {
   boolean isMonotonic();
 
   /**
-   * @return true if the clock implementation gives monotonically increasing timestamps else false.
-   */
-  boolean isMonotonicallyIncreasing();
-
-  /**
    * @return {@link org.apache.hadoop.hbase.TimestampType}
    */
   TimestampType getTimestampType();
@@ -95,6 +90,10 @@ public interface Clock {
    */
   ClockType getClockType();
 
+  /**
+   * @return {@link TimeUnit} of the physical time used by the clock.
+   */
+  TimeUnit getTimeUnit();
 
   /**
    * Indicates that Physical Time or Logical Time component has overflowed. This extends
@@ -107,41 +106,7 @@ public interface Clock {
     }
   }
 
-  //////////////////////////////////////////////////////////////////
-  // Physical Clock
-  //////////////////////////////////////////////////////////////////
-
-  interface PhysicalClock {
-    /**
-     * This is a method to get the current time.
-     *
-     * @return Timestamp of current time in 64 bit representation corresponding to the particular
-     * clock
-     */
-    long now() throws RuntimeException;
-
-    /**
-     * This is a method to get the unit of the physical time used by the clock
-     *
-     * @return A {@link TimeUnit}
-     */
-    TimeUnit getTimeUnit();
-  }
-
-  class JavaMillisPhysicalClock implements PhysicalClock {
-    @Override
-    public long now() {
-      return EnvironmentEdgeManager.currentTime();
-    }
-
-    @Override
-    public TimeUnit getTimeUnit() {
-      return TimeUnit.MILLISECONDS;
-    }
-  }
-
-  JavaMillisPhysicalClock DEFAULT_JAVA_MILLIS_PHYSICAL_CLOCK =
-      new JavaMillisPhysicalClock();
+  Clock SYSTEM_CLOCK = new System();
 
   //////////////////////////////////////////////////////////////////
   // Implementation of clocks
@@ -149,20 +114,18 @@ public interface Clock {
 
   /**
    * System clock is an implementation of clock which doesn't give any monotonic guarantees.
+   * Since it directly represents system's actual clock which cannot be changed, update() function
+   * is no-op.
    */
-  class System implements Clock, PhysicalClock {
-    private final PhysicalClock physicalClock = DEFAULT_JAVA_MILLIS_PHYSICAL_CLOCK;
-    private final ClockType clockType = ClockType.SYSTEM;
-    private final TimestampType timestampType = TimestampType.PHYSICAL;
-
+  class System implements Clock {
     @Override
     public long now() {
-      return physicalClock.now();
+      return EnvironmentEdgeManager.currentTime();
     }
 
     @Override
     public long update(long timestamp) {
-      return physicalClock.now();
+      return EnvironmentEdgeManager.currentTime();
     }
 
     @Override
@@ -171,52 +134,62 @@ public interface Clock {
     }
 
     @Override
-    public boolean isMonotonicallyIncreasing() {
-      return false;
-    }
-
     public TimeUnit getTimeUnit() {
-      return physicalClock.getTimeUnit();
+      return TimeUnit.MILLISECONDS;
     }
 
     @Override
-    public TimestampType getTimestampType() { return timestampType; }
+    public TimestampType getTimestampType() {
+      return TimestampType.PHYSICAL;
+    }
 
     @Override
-    public ClockType getClockType() { return clockType; }
+    public ClockType getClockType() {
+      return ClockType.SYSTEM;
+    }
   }
 
   /**
    * System clock is an implementation of clock which guarantees monotonically non-decreasing
    * timestamps.
    */
-  class SystemMonotonic implements Clock, PhysicalClock {
+  class SystemMonotonic implements Clock {
     private final long maxClockSkewInMs;
-    private final PhysicalClock physicalClock;
+    private final Clock systemClock;
     private final AtomicLong physicalTime = new AtomicLong();
-    private final ClockType clockType = ClockType.SYSTEM_MONOTONIC;
-    private final TimestampType timestampType = TimestampType.PHYSICAL;
 
-    public SystemMonotonic(PhysicalClock physicalClock, long maxClockSkewInMs) {
-      this.physicalClock = physicalClock;
+    public SystemMonotonic(long maxClockSkewInMs) {
+      this(SYSTEM_CLOCK, maxClockSkewInMs);
+    }
+
+    @VisibleForTesting
+    public SystemMonotonic() {
+      this(DEFAULT_MAX_CLOCK_SKEW_IN_MS);
+    }
+
+    @VisibleForTesting
+    public SystemMonotonic(Clock systemClock) {
+      this(systemClock, DEFAULT_MAX_CLOCK_SKEW_IN_MS);
+    }
+
+    @VisibleForTesting
+    public SystemMonotonic(Clock systemClock, long maxClockSkewInMs) {
+      this.systemClock = systemClock;
       this.maxClockSkewInMs = maxClockSkewInMs > 0 ?
           maxClockSkewInMs : DEFAULT_MAX_CLOCK_SKEW_IN_MS;
     }
 
-    public SystemMonotonic() {
-      this.physicalClock = DEFAULT_JAVA_MILLIS_PHYSICAL_CLOCK;
-      this.maxClockSkewInMs = DEFAULT_MAX_CLOCK_SKEW_IN_MS;
-    }
-
     @Override
     public long now() {
-      long systemTime = physicalClock.now();
-      updateMax(physicalTime, systemTime);
+      updateMax(physicalTime, systemClock.now());
       return physicalTime.get();
     }
 
+    /**
+     * @throws ClockException If timestamp exceeds max clock skew allowed.
+     */
     public long update(long targetTimestamp) throws ClockException {
-      final long systemTime = physicalClock.now();
+      final long systemTime = systemClock.now();
       if (maxClockSkewInMs > 0 && (targetTimestamp - systemTime) > maxClockSkewInMs) {
         throw new ClockException(
             "Received event with timestamp:" + getTimestampType().toString(targetTimestamp)
@@ -233,107 +206,96 @@ public interface Clock {
     }
 
     @Override
-    public boolean isMonotonicallyIncreasing() {
-      return false;
+    public TimeUnit getTimeUnit() {
+      return systemClock.getTimeUnit();
     }
 
-    public TimeUnit getTimeUnit() {
-      return physicalClock.getTimeUnit();
+    @Override
+    public TimestampType getTimestampType() {
+      return TimestampType.PHYSICAL;
+    }
+
+    @Override
+    public ClockType getClockType() {
+      return ClockType.SYSTEM_MONOTONIC;
+    }
+  }
+
+  /**
+   * HLC clock implementation.
+   * Monotonicity guarantee of physical component of time comes from {@link SystemMonotonic} clock.
+   */
+  class HLC implements Clock {
+    private static final TimestampType TIMESTAMP_TYPE = TimestampType.HYBRID;
+    private static final long MAX_PHYSICAL_TIME = TIMESTAMP_TYPE.getMaxPhysicalTime();
+    private static final long MAX_LOGICAL_TIME = TIMESTAMP_TYPE.getMaxLogicalTime();
+    private final Clock systemMonotonicClock;
+    private long currentPhysicalTime = 0;
+    private long currentLogicalTime = 0;
+
+    public HLC(long maxClockSkewInMs) {
+      this(new SystemMonotonic(maxClockSkewInMs));
     }
 
     @VisibleForTesting
-    void setPhysicalTime(long time) {
-      physicalTime.set(time);
-    }
-
-    @Override
-    public TimestampType getTimestampType() { return timestampType; }
-
-    @Override
-    public ClockType getClockType() { return clockType; }
-  }
-
-  class HLC implements Clock, PhysicalClock {
-    private final PhysicalClock physicalClock;
-    private final long maxClockSkew;
-    private final long maxPhysicalTime;
-    private final long maxLogicalTime;
-    private long physicalTime;
-    private long logicalTime;
-    private final ClockType clockType = ClockType.HLC;
-    private final TimestampType timestampType = TimestampType.HYBRID;
-
-    public HLC(PhysicalClock physicalClock, long maxClockSkew) {
-      this.physicalClock = physicalClock;
-      this.maxClockSkew = maxClockSkew > 0 ? maxClockSkew : DEFAULT_MAX_CLOCK_SKEW_IN_MS;
-      this.maxPhysicalTime = timestampType.getMaxPhysicalTime();
-      this.maxLogicalTime = timestampType.getMaxLogicalTime();
-      this.physicalTime = 0;
-      this.logicalTime = 0;
-    }
-
     public HLC() {
-      this.physicalClock = DEFAULT_JAVA_MILLIS_PHYSICAL_CLOCK;
-      this.maxClockSkew = DEFAULT_MAX_CLOCK_SKEW_IN_MS;
-      this.maxPhysicalTime = timestampType.getMaxPhysicalTime();
-      this.maxLogicalTime = timestampType.getMaxLogicalTime();
-      this.physicalTime = 0;
-      this.logicalTime = 0;
+      this(DEFAULT_MAX_CLOCK_SKEW_IN_MS);
+    }
+
+    /**
+     * @param systemMonotonicClock Clock to get physical component of time. Should be monotonic
+     *                             clock.
+     */
+    @VisibleForTesting
+    public HLC(Clock systemMonotonicClock) {
+      assert(systemMonotonicClock.isMonotonic());
+      this.systemMonotonicClock = systemMonotonicClock;
     }
 
     @Override
     public synchronized long now() throws ClockException {
-      final long systemTime = physicalClock.now();
-
-      checkPhysicalTimeOverflow(systemTime, maxPhysicalTime);
-      checkLogicalTimeOverflow(logicalTime, maxLogicalTime);
-
-      if (systemTime <= physicalTime) {
-        logicalTime++;
-      } else if (systemTime > physicalTime) {
-        logicalTime = 0;
-        physicalTime = systemTime;
+      final long newSystemTime = systemMonotonicClock.now();
+      if (newSystemTime <= currentPhysicalTime) {
+        currentLogicalTime++;
+      } else if (newSystemTime > currentPhysicalTime) {
+        currentLogicalTime = 0;
+        currentPhysicalTime = newSystemTime;
       }
+      checkPhysicalTimeOverflow(newSystemTime, MAX_PHYSICAL_TIME);
+      checkLogicalTimeOverflow(currentLogicalTime, MAX_LOGICAL_TIME);
 
       return toTimestamp();
     }
 
     /**
-     * Updates {@link HLC} with the given timestamp received from elsewhere (possibly
-     * some other node). Returned timestamp is strict greater than msgTimestamp and local
-     * timestamp.
+     * Updates {@link HLC} with the given time received from elsewhere (possibly some other node).
      *
-     * @param timestamp timestamp from the external message.
-     * @return a hybrid timestamp of HLC that is strictly greater than local timestamp and
-     * msgTimestamp
-     * @throws ClockException
+     * @param targetTime time from the external message.
+     * @return a hybrid timestamp of HLC that is strict greater than given {@code targetTime} and
+     * previously returned times.
+     * @throws ClockException If timestamp exceeds max clock skew allowed.
      */
     @Override
-    public synchronized long update(long timestamp)
+    public synchronized long update(long targetTime)
         throws ClockException {
-      final long targetPhysicalTime = timestampType.getPhysicalTime(timestamp);
-      final long targetLogicalTime = timestampType.getLogicalTime(timestamp);
-      final long oldPhysicalTime = physicalTime;
-      final long systemTime = physicalClock.now();
+      final long targetPhysicalTime = TIMESTAMP_TYPE.getPhysicalTime(targetTime);
+      final long targetLogicalTime = TIMESTAMP_TYPE.getLogicalTime(targetTime);
+      final long oldPhysicalTime = currentPhysicalTime;
+      currentPhysicalTime = systemMonotonicClock.update(targetPhysicalTime);
 
-      physicalTime = Math.max(Math.max(oldPhysicalTime, targetPhysicalTime), systemTime);
-      checkPhysicalTimeOverflow(systemTime, maxPhysicalTime);
+      checkPhysicalTimeOverflow(currentPhysicalTime, MAX_PHYSICAL_TIME);
 
-      if (targetPhysicalTime - systemTime > maxClockSkew) {
-        throw new ClockException("Received event with timestamp:" +
-            timestampType.toString(timestamp) + " which is greater than allowed clock skew");
-      }
-      if (physicalTime == oldPhysicalTime && oldPhysicalTime == targetPhysicalTime) {
-        logicalTime = Math.max(logicalTime, targetLogicalTime) + 1;
-      } else if (physicalTime == targetPhysicalTime) {
-        logicalTime = targetLogicalTime + 1;
-      } else if (physicalTime == oldPhysicalTime) {
-        logicalTime++;
+      if (currentPhysicalTime == targetPhysicalTime && currentPhysicalTime == oldPhysicalTime) {
+        currentLogicalTime = Math.max(currentLogicalTime, targetLogicalTime) + 1;
+      } else if (currentPhysicalTime == targetPhysicalTime) {
+        currentLogicalTime = targetLogicalTime + 1;
+      } else if (currentPhysicalTime == oldPhysicalTime) {
+        currentLogicalTime++;
       } else {
-        logicalTime = 0;
+        currentLogicalTime = 0;
       }
 
-      checkLogicalTimeOverflow(logicalTime, maxLogicalTime);
+      checkLogicalTimeOverflow(currentLogicalTime, MAX_LOGICAL_TIME);
       return toTimestamp();
     }
 
@@ -342,40 +304,30 @@ public interface Clock {
       return true;
     }
 
-    @Override
-    public boolean isMonotonicallyIncreasing() {
-      return true;
-    }
-
     public TimeUnit getTimeUnit() {
-      return physicalClock.getTimeUnit();
+      return systemMonotonicClock.getTimeUnit();
     }
 
     private long toTimestamp() {
-      return timestampType.toTimestamp(getTimeUnit(), physicalTime, logicalTime);
+      return TIMESTAMP_TYPE.toTimestamp(TimeUnit.MILLISECONDS, currentPhysicalTime,
+          currentLogicalTime);
     }
 
     @VisibleForTesting
-    synchronized void setLogicalTime(long logicalTime) {
-      this.logicalTime = logicalTime;
-    }
+    synchronized long getLogicalTime() { return currentLogicalTime; }
 
     @VisibleForTesting
-    synchronized void setPhysicalTime(long physicalTime) {
-      this.physicalTime = physicalTime;
-    }
-
-    @VisibleForTesting
-    synchronized long getLogicalTime() { return logicalTime; }
-
-    @VisibleForTesting
-    synchronized long getPhysicalTime() { return physicalTime; }
+    synchronized long getPhysicalTime() { return currentPhysicalTime; }
 
     @Override
-    public TimestampType getTimestampType() { return timestampType; }
+    public TimestampType getTimestampType() {
+      return TIMESTAMP_TYPE;
+    }
 
     @Override
-    public ClockType getClockType() { return clockType; }
+    public ClockType getClockType() {
+      return ClockType.HLC;
+    }
   }
 
   //////////////////////////////////////////////////////////////////

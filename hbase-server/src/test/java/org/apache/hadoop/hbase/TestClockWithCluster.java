@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -198,18 +199,19 @@ public class TestClockWithCluster {
     assertNotNull(regionMeta);
 
     // Inject physical clock that always returns same physical time into hybrid logical clock
-    long systemTime = Clock.DEFAULT_JAVA_MILLIS_PHYSICAL_CLOCK.now();
-    Clock.PhysicalClock physicalClock = mock(Clock.PhysicalClock.class);
-    when(physicalClock.now()).thenReturn(systemTime);
-    when(physicalClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
-    Clock.HLC clock = new Clock.HLC(physicalClock, Clock.DEFAULT_MAX_CLOCK_SKEW_IN_MS);
+    long systemTime = Clock.SYSTEM_CLOCK.now();
+    Clock mockSystemClock = mock(Clock.class);
+    when(mockSystemClock.now()).thenReturn(systemTime);
+    when(mockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
+    when(mockSystemClock.isMonotonic()).thenReturn(true);
+    Clock.HLC masterHLC = new Clock.HLC(new Clock.SystemMonotonic(mockSystemClock));
 
     // The region clock is used for setting timestamps for table mutations and the region server
     // clock is used for updating the clock on region assign/unassign events.
 
     // Set meta region clock so that region state transitions are timestamped with mocked clock
-    regionMeta.setClock(clock);
-    master.setClock(clock);
+    regionMeta.setClock(masterHLC);
+    master.setClock(masterHLC);
 
     HRegion userRegion = null;
     for (Region region : regions) {
@@ -221,13 +223,13 @@ public class TestClockWithCluster {
 
     // Only mock the region server clock because the region clock does not get used during
     // unassignment and assignment
-    rs.setClock(clock);
+    rs.setClock(masterHLC);
 
     // Repeatedly unassign and assign region while tracking the timestamps of the region state
     // transitions from the meta table
     List<Long> timestamps = new ArrayList<>();
     // Set expected logical time to 0 as initial clock.now() sets clock's logical time to 0
-    long expectedLogicalTime = TimestampType.HYBRID.getLogicalTime(clock.now());
+    long expectedLogicalTime = TimestampType.HYBRID.getLogicalTime(masterHLC.now());
     for (int i = 0; i < 10; i++) {
       admin.unassign(hriOnline.getRegionName(), false);
       assertEquals(RegionState.State.CLOSED, regionStates.getRegionState(hriOnline).getState());
@@ -243,8 +245,8 @@ public class TestClockWithCluster {
       // 8,9 [now]    Update hbase:meta
       expectedLogicalTime += 10;
 
-      assertEquals(expectedLogicalTime, clock.getLogicalTime());
-      timestamps.add(clock.getLogicalTime());
+      assertEquals(expectedLogicalTime, masterHLC.getLogicalTime());
+      timestamps.add(masterHLC.getLogicalTime());
 
       admin.assign(hriOnline.getRegionName());
       // clock.now() is called 7 times and clock.update() is called 2 times, each call increments
@@ -260,8 +262,8 @@ public class TestClockWithCluster {
       // gets the region info from assignment manager rather than meta table accessor
       expectedLogicalTime += 9;
       assertEquals(RegionState.State.OPEN, regionStates.getRegionState(hriOnline).getState());
-      assertEquals(expectedLogicalTime, clock.getLogicalTime());
-      timestamps.add(clock.getLogicalTime());
+      assertEquals(expectedLogicalTime, masterHLC.getLogicalTime());
+      timestamps.add(masterHLC.getLogicalTime());
     }
 
     // Ensure that the hybrid timestamps are strictly increasing
@@ -305,62 +307,63 @@ public class TestClockWithCluster {
     assertNotNull(regionMeta);
 
     // Instantiate two hybrid logical clocks with mocked physical clocks
-    long expectedPhysicalTime = Clock.DEFAULT_JAVA_MILLIS_PHYSICAL_CLOCK.now();
-    Clock.PhysicalClock masterPhysicalClock = mock(Clock.PhysicalClock.class);
-    when(masterPhysicalClock.now()).thenReturn(expectedPhysicalTime);
-    when(masterPhysicalClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
-    Clock.HLC masterClock = new Clock.HLC(masterPhysicalClock, Clock.DEFAULT_MAX_CLOCK_SKEW_IN_MS);
-    master.setClock(masterClock);
-    regionMeta.setClock(masterClock);
+    long expectedPhysicalTime = Clock.SYSTEM_CLOCK.now();
+    Clock masterMockSystemClock = mock(Clock.class);
+    when(masterMockSystemClock.now()).thenReturn(expectedPhysicalTime);
+    when(masterMockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
+    Clock.HLC masterHLC= new Clock.HLC(new Clock.SystemMonotonic(masterMockSystemClock));
+    master.setClock(masterHLC);
+    regionMeta.setClock(masterHLC);
 
-    Clock.PhysicalClock rsPhysicalClock = mock(Clock.PhysicalClock.class);
-    when(rsPhysicalClock.now()).thenReturn(expectedPhysicalTime);
-    when(rsPhysicalClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
-    Clock.HLC rsClock = new Clock.HLC(rsPhysicalClock, Clock.DEFAULT_MAX_CLOCK_SKEW_IN_MS);
+    Clock rsMockSystemClock = mock(Clock.class);
+    when(rsMockSystemClock.now()).thenReturn(expectedPhysicalTime);
+    when(rsMockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
+    when(rsMockSystemClock.isMonotonic()).thenReturn(true);
+    Clock.HLC rsHLC= new Clock.HLC(new Clock.SystemMonotonic(rsMockSystemClock));
     // We only mock the region server clock here because the region clock does not get used
     // during unassignment and assignment
-    rs.setClock(rsClock);
+    rs.setClock(rsHLC);
 
     // Increment master physical clock time
     expectedPhysicalTime += 1000;
-    when(masterPhysicalClock.now()).thenReturn(expectedPhysicalTime);
+    when(masterMockSystemClock.now()).thenReturn(expectedPhysicalTime);
 
     // Unassign region, region server should advance its clock upon receiving close region request
     admin.unassign(hriOnline.getRegionName(), false);
     assertEquals(RegionState.State.CLOSED, regionStates.getRegionState(hriOnline).getState());
     // Verify that region server clock time increased
     // Previous test has explanation for each event that increases logical time
-    assertHLCTime(masterClock, expectedPhysicalTime, 9);
-    assertHLCTime(rsClock, expectedPhysicalTime, 6);
+    assertHLCTime(masterHLC, expectedPhysicalTime, 9);
+    assertHLCTime(rsHLC, expectedPhysicalTime, 6);
 
     // Increase region server physical clock time
     expectedPhysicalTime += 1000;
-    when(rsPhysicalClock.now()).thenReturn(expectedPhysicalTime);
+    when(rsMockSystemClock.now()).thenReturn(expectedPhysicalTime);
     // Assign region, master server should advance its clock upon receiving close region response
     admin.assign(hriOnline.getRegionName());
     assertEquals(RegionState.State.OPEN, regionStates.getRegionState(hriOnline).getState());
     // Verify that master clock time increased
-    assertHLCTime(masterClock, expectedPhysicalTime, 4);
-    assertHLCTime(rsClock, expectedPhysicalTime, 1);
+    assertHLCTime(masterHLC, expectedPhysicalTime, 4);
+    assertHLCTime(rsHLC, expectedPhysicalTime, 1);
 
     // Increment region server physical clock time
     expectedPhysicalTime += 1000;
-    when(rsPhysicalClock.now()).thenReturn(expectedPhysicalTime);
+    when(rsMockSystemClock.now()).thenReturn(expectedPhysicalTime);
     // Unassign region, region server should advance its clock upon receiving close region request
     admin.unassign(hriOnline.getRegionName(), false);
     assertEquals(RegionState.State.CLOSED, regionStates.getRegionState(hriOnline).getState());
     // Verify that master server clock time increased
-    assertHLCTime(masterClock, expectedPhysicalTime, 4);
-    assertHLCTime(rsClock, expectedPhysicalTime, 1);
+    assertHLCTime(masterHLC, expectedPhysicalTime, 4);
+    assertHLCTime(rsHLC, expectedPhysicalTime, 1);
 
     // Increase master server physical clock time
     expectedPhysicalTime += 1000;
-    when(masterPhysicalClock.now()).thenReturn(expectedPhysicalTime);
+    when(masterMockSystemClock.now()).thenReturn(expectedPhysicalTime);
     // Assign region, master server should advance its clock upon receiving close region response
     admin.assign(hriOnline.getRegionName());
     assertEquals(RegionState.State.OPEN, regionStates.getRegionState(hriOnline).getState());
     // Verify that region server clock time increased
-    assertHLCTime(masterClock, expectedPhysicalTime, 8);
-    assertHLCTime(rsClock, expectedPhysicalTime, 5);
+    assertHLCTime(masterHLC, expectedPhysicalTime, 8);
+    assertHLCTime(rsHLC, expectedPhysicalTime, 5);
   }
 }

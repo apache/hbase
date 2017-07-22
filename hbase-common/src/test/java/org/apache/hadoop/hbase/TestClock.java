@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
 @Category(SmallTests.class)
 public class TestClock {
 
-  static final Clock.PhysicalClock PHYSICAL_CLOCK = mock(Clock.PhysicalClock.class);
+  static final Clock MOCK_CLOCK = mock(Clock.class);
   static final long MAX_CLOCK_SKEW_IN_MS = 1000;
 
   @Rule
@@ -84,7 +84,7 @@ public class TestClock {
 
   @Before
   public void setUp() {
-    when(PHYSICAL_CLOCK.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
+    when(MOCK_CLOCK.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
   }
 
   // All Clocks Tests
@@ -92,40 +92,47 @@ public class TestClock {
   @Test
   public void testSystemMonotonicNow() {
     MonotonicityCheckerClock systemMonotonic =
-        new MonotonicityCheckerClock(new Clock.SystemMonotonic(PHYSICAL_CLOCK, 30000), false);
+        new MonotonicityCheckerClock(new Clock.SystemMonotonic(MOCK_CLOCK), false);
 
     // case 1: Set time and assert
-    when(PHYSICAL_CLOCK.now()).thenReturn(100L);
+    when(MOCK_CLOCK.now()).thenReturn(100L);
     assertEquals(100, systemMonotonic.now());
 
     // case 2: Go back in time and check monotonic property.
-    when(PHYSICAL_CLOCK.now()).thenReturn(99L);
+    when(MOCK_CLOCK.now()).thenReturn(99L);
     assertEquals(100, systemMonotonic.now());
 
     // case 3: system time goes ahead compared to previous timestamp.
-    when(PHYSICAL_CLOCK.now()).thenReturn(101L);
+    when(MOCK_CLOCK.now()).thenReturn(101L);
     assertEquals(101, systemMonotonic.now());
 
     systemMonotonic.assertMonotonic();
   }
 
+  /**
+   * Tests that
+   * - Progressing mock clock progresses SystemMonotonic clock.
+   * - Skews in the clock are correctly updated/not changed on call to update(), depending on
+   * target time and clock's own time ( = system time + current skew).
+   */
   @Test
   public void testSystemMonotonicUpdate() {
+    Clock.SystemMonotonic systemMonotonicClock = new Clock.SystemMonotonic(MOCK_CLOCK);
     MonotonicityCheckerClock systemMonotonic =
-        new MonotonicityCheckerClock(new Clock.SystemMonotonic(PHYSICAL_CLOCK, 30000), false);
+        new MonotonicityCheckerClock(systemMonotonicClock, false);
 
     // Sets internal time
-    when(PHYSICAL_CLOCK.now()).thenReturn(99L);
+    when(MOCK_CLOCK.now()).thenReturn(99L);
     assertEquals(99, systemMonotonic.now());
 
     // case 1: Message timestamp is greater than current System Monotonic Time,
     // physical time at 100 still.
-    when(PHYSICAL_CLOCK.now()).thenReturn(100L);
+    when(MOCK_CLOCK.now()).thenReturn(100L);
     assertEquals(102, systemMonotonic.update(102));
 
     // case 2: Message timestamp is greater than current System Monotonic Time,
     // physical time at 100 still.
-    when(PHYSICAL_CLOCK.now()).thenReturn(100L);
+    when(MOCK_CLOCK.now()).thenReturn(100L);
     assertEquals(103, systemMonotonic.update(103));
 
     // case 3: Message timestamp is less than current System Monotonic Time, greater than current
@@ -137,11 +144,11 @@ public class TestClock {
     assertEquals(103, systemMonotonic.update(99));
 
     // case 5: Message timestamp<System monotonic time and both less than current Physical Time
-    when(PHYSICAL_CLOCK.now()).thenReturn(106L);
+    when(MOCK_CLOCK.now()).thenReturn(106L);
     assertEquals(106, systemMonotonic.update(102));
 
     // case 6: Message timestamp>System monotonic time and both less than current Physical Time
-    when(PHYSICAL_CLOCK.now()).thenReturn(109L);
+    when(MOCK_CLOCK.now()).thenReturn(109L);
     assertEquals(109, systemMonotonic.update(108));
 
     systemMonotonic.assertMonotonic();
@@ -151,10 +158,10 @@ public class TestClock {
   public void testSystemMonotonicUpdateMaxClockSkew() throws Clock.ClockException {
     final long time = 100L;
     Clock.SystemMonotonic systemMonotonic =
-        new Clock.SystemMonotonic(PHYSICAL_CLOCK, MAX_CLOCK_SKEW_IN_MS);
+        new Clock.SystemMonotonic(MOCK_CLOCK, MAX_CLOCK_SKEW_IN_MS);
 
     // Set Current Time.
-    when(PHYSICAL_CLOCK.now()).thenReturn(time);
+    when(MOCK_CLOCK.now()).thenReturn(time);
     systemMonotonic.now();
 
     // Shouldn't throw ClockException
@@ -173,28 +180,29 @@ public class TestClock {
 
   @Test
   public void testHLCNow() throws Clock.ClockException {
-    MonotonicityCheckerClock hybridLogicalClock =
-        new MonotonicityCheckerClock(new Clock.HLC(PHYSICAL_CLOCK, 30000), true);
+    MonotonicityCheckerClock hybridLogicalClock = new MonotonicityCheckerClock(
+        new Clock.HLC(new Clock.SystemMonotonic(MOCK_CLOCK)),
+        true);  // true for strict monotonicity
 
     // case 1: Test if it returns correct time based on current physical time.
     //         Remember, initially logical time = 0
-    when(PHYSICAL_CLOCK.now()).thenReturn(100L);
+    when(MOCK_CLOCK.now()).thenReturn(100L);
     assertHLCTime(hybridLogicalClock.now(), 100, 0);
 
     // case 2: physical time doesn't change, logical time should increment.
-    when(PHYSICAL_CLOCK.now()).thenReturn(100L);
+    when(MOCK_CLOCK.now()).thenReturn(100L);
     assertHLCTime(hybridLogicalClock.now(), 100, 1);
 
     // case 3: physical time doesn't change still, logical time should increment again
-    when(PHYSICAL_CLOCK.now()).thenReturn(100L);
+    when(MOCK_CLOCK.now()).thenReturn(100L);
     assertHLCTime(hybridLogicalClock.now(), 100, 2);
 
     // case 4: physical time moves forward, logical time should reset to 0.
-    when(PHYSICAL_CLOCK.now()).thenReturn(101L);
+    when(MOCK_CLOCK.now()).thenReturn(101L);
     assertHLCTime(hybridLogicalClock.now(), 101, 0);
 
     // case 5: Monotonic increasing check, physical time goes back.
-    when(PHYSICAL_CLOCK.now()).thenReturn(99L);
+    when(MOCK_CLOCK.now()).thenReturn(99L);
     assertHLCTime(hybridLogicalClock.now(), 101, 1);
 
     hybridLogicalClock.assertMonotonic();
@@ -202,55 +210,57 @@ public class TestClock {
 
   @Test
   public void testHLCNowLogicalTimeOverFlow() {
-    Clock.HLC hybridLogicalClock = new Clock.HLC(PHYSICAL_CLOCK, 100);
+    Clock.HLC hybridLogicalClock = new Clock.HLC(new Clock.SystemMonotonic(MOCK_CLOCK));
 
-    // Set Current Time.
-    when(PHYSICAL_CLOCK.now()).thenReturn(100L);
-    hybridLogicalClock.setPhysicalTime(100);
-    hybridLogicalClock.setLogicalTime(TimestampType.HYBRID.getMaxLogicalTime());
-
+    when(MOCK_CLOCK.now()).thenReturn(100L);
+    hybridLogicalClock.now();  // current time (100, 0)
+    for (int i = 0; i < TimestampType.HYBRID.getMaxLogicalTime() - 1; i++) {
+      hybridLogicalClock.now();
+    }
     exception.expect(Clock.ClockException.class);
     hybridLogicalClock.now();
   }
 
+  // No need to check skews in this test, since they are member of SystemMonotonic and not HLC.
   @Test
   public void testHLCUpdate() throws Clock.ClockException {
     long messageTimestamp;
-    MonotonicityCheckerClock hybridLogicalClock =
-        new MonotonicityCheckerClock(new Clock.HLC(PHYSICAL_CLOCK, 100), true);
+    MonotonicityCheckerClock hybridLogicalClock = new MonotonicityCheckerClock(
+        new Clock.HLC(new Clock.SystemMonotonic(MOCK_CLOCK)),
+        true);  // true for strictly increasing check
 
     // Set Current Time.
-    when(PHYSICAL_CLOCK.now()).thenReturn(100L);
+    when(MOCK_CLOCK.now()).thenReturn(100L);
     hybridLogicalClock.now();
 
     // case 1: Message physical timestamp is lower than current physical time.
     messageTimestamp = TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS, 99, 1);
-    when(PHYSICAL_CLOCK.now()).thenReturn(101L);
+    when(MOCK_CLOCK.now()).thenReturn(101L);
     assertHLCTime(hybridLogicalClock.update(messageTimestamp), 101, 0);
 
     // case 2: Message physical timestamp is greater than HLC physical time.
     messageTimestamp = TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS, 105 , 3);
-    when(PHYSICAL_CLOCK.now()).thenReturn(102L);
+    when(MOCK_CLOCK.now()).thenReturn(102L);
     assertHLCTime(hybridLogicalClock.update(messageTimestamp), 105, 4);
 
     // case 3: Message timestamp is less than HLC timestamp
     messageTimestamp = TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS, 104 , 4);
-    when(PHYSICAL_CLOCK.now()).thenReturn(103L);
+    when(MOCK_CLOCK.now()).thenReturn(103L);
     assertHLCTime(hybridLogicalClock.update(messageTimestamp), 105, 5);
 
     //case 4: Message timestamp with same physical time as HLC, but lower logical time
     messageTimestamp = TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS, 105 , 2);
-    when(PHYSICAL_CLOCK.now()).thenReturn(101L);
+    when(MOCK_CLOCK.now()).thenReturn(101L);
     assertHLCTime(hybridLogicalClock.update(messageTimestamp), 105, 6);
 
     //case 5: Message timestamp with same physical time as HLC, but higher logical time
     messageTimestamp = TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS, 105 , 8);
-    when(PHYSICAL_CLOCK.now()).thenReturn(102L);
+    when(MOCK_CLOCK.now()).thenReturn(102L);
     assertHLCTime(hybridLogicalClock.update(messageTimestamp), 105, 9);
 
     //case 6: Actual Physical Time greater than message physical timestamp and HLC physical time.
     messageTimestamp = TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS, 105 , 10);
-    when(PHYSICAL_CLOCK.now()).thenReturn(110L);
+    when(MOCK_CLOCK.now()).thenReturn(110L);
     assertHLCTime(hybridLogicalClock.update(messageTimestamp), 110, 0);
 
     hybridLogicalClock.assertMonotonic();
@@ -259,10 +269,10 @@ public class TestClock {
   @Test
   public void testHLCUpdateLogicalTimeOverFlow() throws Clock.ClockException {
     long messageTimestamp;
-    Clock.HLC hybridLogicalClock = new Clock.HLC(PHYSICAL_CLOCK, 100);
+    Clock.HLC hybridLogicalClock = new Clock.HLC(new Clock.SystemMonotonic(MOCK_CLOCK));
 
     // Set Current Time.
-    when(PHYSICAL_CLOCK.now()).thenReturn(100L);
+    when(MOCK_CLOCK.now()).thenReturn(100L);
     hybridLogicalClock.now();
 
     messageTimestamp = TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS, 100,
@@ -275,10 +285,11 @@ public class TestClock {
   public void testHLCUpdateMaxClockSkew() throws Clock.ClockException {
     final long time = 100;
     long messageTimestamp;
-    Clock.HLC hybridLogicalClock = new Clock.HLC(PHYSICAL_CLOCK, MAX_CLOCK_SKEW_IN_MS);
+    Clock.HLC hybridLogicalClock = new Clock.HLC(
+        new Clock.SystemMonotonic(MOCK_CLOCK, MAX_CLOCK_SKEW_IN_MS));
 
     // Set Current Time.
-    when(PHYSICAL_CLOCK.now()).thenReturn(time);
+    when(MOCK_CLOCK.now()).thenReturn(time);
     hybridLogicalClock.now();
 
     messageTimestamp = TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS,

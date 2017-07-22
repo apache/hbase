@@ -598,8 +598,10 @@ public class HRegionServer extends HasThread implements
     this.abortRequested = false;
     this.stopped = false;
 
-    this.hybridLogicalClock = new Clock.HLC();
-    this.systemMonotonicClock = new Clock.SystemMonotonic();
+    final long maxClockSkew =
+        conf.getLong("hbase.max.clock.skew.in.ms", Clock.DEFAULT_MAX_CLOCK_SKEW_IN_MS);
+    this.hybridLogicalClock = new Clock.HLC(maxClockSkew);
+    this.systemMonotonicClock = new Clock.SystemMonotonic(maxClockSkew);
     this.systemClock = new Clock.System();
 
     rpcServices = createRpcServices();
