@@ -268,4 +268,12 @@ public class TestBucketCache {
 
     TEST_UTIL.cleanupTestDir();
   }
+
+  @Test
+  public void testBucketAllocatorLargeBuckets() throws BucketAllocatorException {
+    long availableSpace = 20 * 1024L * 1024 * 1024;
+    int[] bucketSizes = new int[] { 1024, 1024 * 1024, 1024 * 1024 * 1024 };
+    BucketAllocator allocator = new BucketAllocator(availableSpace, bucketSizes);
+    assertTrue(allocator.getBuckets().length > 0);
+  }
 }

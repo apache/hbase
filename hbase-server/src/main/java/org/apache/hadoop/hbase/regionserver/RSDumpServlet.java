@@ -55,52 +55,53 @@ public class RSDumpServlet extends StateDumpServlet {
     }
 
     OutputStream os = response.getOutputStream();
-    PrintWriter out = new PrintWriter(os);
+    try (PrintWriter out = new PrintWriter(os)) {
 
-    out.println("RegionServer status for " + hrs.getServerName()
+      out.println("RegionServer status for " + hrs.getServerName()
         + " as of " + new Date());
 
-    out.println("\n\nVersion Info:");
-    out.println(LINE);
-    dumpVersionInfo(out);
+      out.println("\n\nVersion Info:");
+      out.println(LINE);
+      dumpVersionInfo(out);
 
-    out.println("\n\nTasks:");
-    out.println(LINE);
-    TaskMonitor.get().dumpAsText(out);
+      out.println("\n\nTasks:");
+      out.println(LINE);
+      TaskMonitor.get().dumpAsText(out);
 
-    out.println("\n\nRowLocks:");
-    out.println(LINE);
-    dumpRowLock(hrs, out);
+      out.println("\n\nRowLocks:");
+      out.println(LINE);
+      dumpRowLock(hrs, out);
 
-    out.println("\n\nExecutors:");
-    out.println(LINE);
-    dumpExecutors(hrs.getExecutorService(), out);
+      out.println("\n\nExecutors:");
+      out.println(LINE);
+      dumpExecutors(hrs.getExecutorService(), out);
 
-    out.println("\n\nStacks:");
-    out.println(LINE);
-    PrintStream ps = new PrintStream(response.getOutputStream(), false, "UTF-8");
-    Threads.printThreadInfo(ps, "");
-    ps.flush();
+      out.println("\n\nStacks:");
+      out.println(LINE);
+      PrintStream ps = new PrintStream(response.getOutputStream(), false, "UTF-8");
+      Threads.printThreadInfo(ps, "");
+      ps.flush();
 
-    out.println("\n\nRS Configuration:");
-    out.println(LINE);
-    Configuration conf = hrs.getConfiguration();
-    out.flush();
-    conf.writeXml(os);
-    os.flush();
+      out.println("\n\nRS Configuration:");
+      out.println(LINE);
+      Configuration conf = hrs.getConfiguration();
+      out.flush();
+      conf.writeXml(os);
+      os.flush();
 
-    out.println("\n\nLogs");
-    out.println(LINE);
-    long tailKb = getTailKbParam(request);
-    LogMonitoring.dumpTailOfLogs(out, tailKb);
+      out.println("\n\nLogs");
+      out.println(LINE);
+      long tailKb = getTailKbParam(request);
+      LogMonitoring.dumpTailOfLogs(out, tailKb);
 
-    out.println("\n\nRS Queue:");
-    out.println(LINE);
-    if(isShowQueueDump(conf)) {
-      dumpQueue(hrs, out);
+      out.println("\n\nRS Queue:");
+      out.println(LINE);
+      if (isShowQueueDump(conf)) {
+        dumpQueue(hrs, out);
+      }
+
+      out.flush();
     }
-
-    out.flush();
   }
 
   public static void dumpRowLock(HRegionServer hrs, PrintWriter out) {

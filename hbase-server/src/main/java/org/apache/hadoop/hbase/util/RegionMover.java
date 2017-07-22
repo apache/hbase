@@ -427,7 +427,7 @@ public class RegionMover extends AbstractHBaseTool {
     moveRegionsPool.shutdown();
     long timeoutInSeconds =
         regionsToMove.size()
-            * admin.getConfiguration().getInt(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);
+            * admin.getConfiguration().getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);
     try {
       if (!moveRegionsPool.awaitTermination(timeoutInSeconds, TimeUnit.SECONDS)) {
         moveRegionsPool.shutdownNow();
@@ -501,7 +501,7 @@ public class RegionMover extends AbstractHBaseTool {
       moveRegionsPool.shutdown();
       long timeoutInSeconds =
           regionsToMove.size()
-              * admin.getConfiguration().getInt(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);
+              * admin.getConfiguration().getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);
       try {
         if (!moveRegionsPool.awaitTermination(timeoutInSeconds, TimeUnit.SECONDS)) {
           moveRegionsPool.shutdownNow();

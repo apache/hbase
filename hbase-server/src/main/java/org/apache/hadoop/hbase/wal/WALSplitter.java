@@ -711,7 +711,8 @@ public class WALSplitter {
         for (FileStatus status : files) {
           String fileName = status.getPath().getName();
           try {
-            Long tmpSeqId = Long.parseLong(fileName.substring(0, fileName.length()
+            long tmpSeqId =
+                Long.parseLong(fileName.substring(0, fileName.length()
                 - SEQUENCE_ID_FILE_SUFFIX_LENGTH));
             maxSeqId = Math.max(tmpSeqId, maxSeqId);
           } catch (NumberFormatException ex) {
