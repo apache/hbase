@@ -91,21 +91,22 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
         : sizeWithoutCellBlock;
     ByteBuf buf = ctx.alloc().buffer(sizeWithoutCellBlock + 4);
     buf.writeInt(totalSize);
-    ByteBufOutputStream bbos = new ByteBufOutputStream(buf);
-    requestHeader.writeDelimitedTo(bbos);
-    if (call.param != null) {
-      call.param.writeDelimitedTo(bbos);
-    }
-    if (cellBlock != null) {
-      ChannelPromise withoutCellBlockPromise = ctx.newPromise();
-      ctx.write(buf, withoutCellBlockPromise);
-      ChannelPromise cellBlockPromise = ctx.newPromise();
-      ctx.write(cellBlock, cellBlockPromise);
-      PromiseCombiner combiner = new PromiseCombiner();
-      combiner.addAll(withoutCellBlockPromise, cellBlockPromise);
-      combiner.finish(promise);
-    } else {
-      ctx.write(buf, promise);
+    try (ByteBufOutputStream bbos = new ByteBufOutputStream(buf)) {
+      requestHeader.writeDelimitedTo(bbos);
+      if (call.param != null) {
+        call.param.writeDelimitedTo(bbos);
+      }
+      if (cellBlock != null) {
+        ChannelPromise withoutCellBlockPromise = ctx.newPromise();
+        ctx.write(buf, withoutCellBlockPromise);
+        ChannelPromise cellBlockPromise = ctx.newPromise();
+        ctx.write(cellBlock, cellBlockPromise);
+        PromiseCombiner combiner = new PromiseCombiner();
+        combiner.addAll(withoutCellBlockPromise, cellBlockPromise);
+        combiner.finish(promise);
+      } else {
+        ctx.write(buf, promise);
+      }
     }
   }
 

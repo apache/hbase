@@ -1291,7 +1291,7 @@ public class MasterRpcServices extends RSRpcServices
     throws ServiceException {
     try {
       master.checkInitialized();
-      Boolean result = master.getHFileCleaner().runCleaner() && master.getLogCleaner().runCleaner();
+      boolean result = master.getHFileCleaner().runCleaner() && master.getLogCleaner().runCleaner();
       return ResponseConverter.buildRunCleanerChoreResponse(result);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);

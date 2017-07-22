@@ -101,10 +101,9 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
     long currentTime = EnvironmentEdgeManager.currentTime();
     for(StoreFile sf: files){
       // Check MIN_VERSIONS is in HStore removeUnneededFiles
-      Long maxTs = sf.getReader().getMaxTimestamp();
+      long maxTs = sf.getReader().getMaxTimestamp();
       long maxTtl = storeConfigInfo.getStoreFileTtl();
-      if(maxTs == null 
-          || maxTtl == Long.MAX_VALUE
+      if (maxTtl == Long.MAX_VALUE
           || (currentTime - maxTtl < maxTs)){
         continue; 
       } else{
@@ -120,10 +119,9 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
     Collection<StoreFile> expiredStores = new ArrayList<>();
     for(StoreFile sf: files){
       // Check MIN_VERSIONS is in HStore removeUnneededFiles
-      Long maxTs = sf.getReader().getMaxTimestamp();
+      long maxTs = sf.getReader().getMaxTimestamp();
       long maxTtl = storeConfigInfo.getStoreFileTtl();
-      if(maxTs == null 
-          || maxTtl == Long.MAX_VALUE
+      if (maxTtl == Long.MAX_VALUE
           || (currentTime - maxTtl < maxTs)){
         continue; 
       } else if(filesCompacting == null || filesCompacting.contains(sf) == false){

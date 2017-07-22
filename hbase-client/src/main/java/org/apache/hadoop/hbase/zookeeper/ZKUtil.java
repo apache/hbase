@@ -1930,21 +1930,21 @@ public class ZKUtil {
       socket.connect(sockAddr, timeout);
 
       socket.setSoTimeout(timeout);
-      PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-      BufferedReader in = new BufferedReader(new InputStreamReader(
-        socket.getInputStream()));
-      out.println("stat");
-      out.flush();
-      ArrayList<String> res = new ArrayList<>();
-      while (true) {
-        String line = in.readLine();
-        if (line != null) {
-          res.add(line);
-        } else {
-          break;
+      try (PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+          BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+        out.println("stat");
+        out.flush();
+        ArrayList<String> res = new ArrayList<>();
+        while (true) {
+          String line = in.readLine();
+          if (line != null) {
+            res.add(line);
+          } else {
+            break;
+          }
         }
+        return res.toArray(new String[res.size()]);
       }
-      return res.toArray(new String[res.size()]);
     }
   }
 
