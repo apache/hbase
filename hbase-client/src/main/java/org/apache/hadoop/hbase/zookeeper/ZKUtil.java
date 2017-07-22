@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.CreateAndFailSilent;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.DeleteNodeFailSilent;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.SetData;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
@@ -907,6 +908,12 @@ public class ZKUtil {
       ArrayList<ACL> acls = new ArrayList<>();
       // add permission to hbase supper user
       String[] superUsers = zkw.getConfiguration().getStrings(Superusers.SUPERUSER_CONF_KEY);
+      String hbaseUser = null;
+      try {
+        hbaseUser = UserGroupInformation.getCurrentUser().getShortUserName();
+      } catch (IOException e) {
+        LOG.debug("Could not acquire current User.", e);
+      }
       if (superUsers != null) {
         List<String> groups = new ArrayList<>();
         for (String user : superUsers) {
@@ -914,7 +921,9 @@ public class ZKUtil {
             // TODO: Set node ACL for groups when ZK supports this feature
             groups.add(user);
           } else {
-            acls.add(new ACL(Perms.ALL, new Id("sasl", user)));
+            if(!user.equals(hbaseUser)) {
+              acls.add(new ACL(Perms.ALL, new Id("sasl", user)));
+            }
           }
         }
         if (!groups.isEmpty()) {
