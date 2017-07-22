@@ -92,7 +92,7 @@ public class TestColumnFamilyDescriptorBuilder {
   public void testHColumnDescriptorShouldThrowIAEWhenFamiliyNameEmpty()
       throws Exception {
     try {
-      ColumnFamilyDescriptorBuilder.newBuilder("".getBytes()).build();
+      ColumnFamilyDescriptorBuilder.of("");
     } catch (IllegalArgumentException e) {
       assertEquals("Column Family name can not be empty", e.getLocalizedMessage());
     }

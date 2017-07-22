@@ -188,7 +188,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       throws IOException, InterruptedException, ExecutionException {
     TableDescriptor desc =
         TableDescriptorBuilder.newBuilder(tableName)
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build();
+            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5).get();
 
     // wait till the table is assigned

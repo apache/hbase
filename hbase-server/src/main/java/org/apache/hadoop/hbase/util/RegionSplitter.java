@@ -382,7 +382,7 @@ public class RegionSplitter {
 
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (String cf : columnFamilies) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf)).build());
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(cf));
     }
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       Admin admin = connection.getAdmin();

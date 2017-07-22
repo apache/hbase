@@ -56,7 +56,7 @@ public class TestResultFromCoprocessor {
     TEST_UTIL.startMiniCluster(3);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
             .addCoprocessor(MyObserver.class.getName())
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build())
+            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
             .build();
     TEST_UTIL.getAdmin().createTable(desc);
   }

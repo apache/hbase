@@ -376,6 +376,14 @@ public class ColumnFamilyDescriptorBuilder {
     return new ModifyableColumnFamilyDescriptor(desc);
   }
 
+  public static ColumnFamilyDescriptor of(String name) {
+    return of(Bytes.toBytes(name));
+  }
+
+  public static ColumnFamilyDescriptor of(byte[] name) {
+    return newBuilder(name).build();
+  }
+
   private ColumnFamilyDescriptorBuilder(final byte[] name) {
     this.desc = new ModifyableColumnFamilyDescriptor(name);
   }
