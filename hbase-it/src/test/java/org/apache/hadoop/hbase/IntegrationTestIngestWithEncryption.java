@@ -24,6 +24,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
@@ -73,7 +76,7 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
     try {
       EncryptionTest.testEncryption(conf, "AES", null);
     } catch (Exception e) {
-      LOG.warn("Encryption configuration test did not pass, skipping test");
+      LOG.warn("Encryption configuration test did not pass, skipping test", e);
       return;
     }
     super.setUpCluster();
@@ -94,14 +97,14 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
     // Update the test table schema so HFiles from this point will be written with
     // encryption features enabled.
     final Admin admin = util.getAdmin();
-    HTableDescriptor tableDescriptor =
-        new HTableDescriptor(admin.getTableDescriptor(getTablename()));
-    for (HColumnDescriptor columnDescriptor: tableDescriptor.getColumnFamilies()) {
-      columnDescriptor.setEncryptionType("AES");
-      LOG.info("Updating CF schema for " + getTablename() + "." +
-        columnDescriptor.getNameAsString());
+    TableDescriptor tableDescriptor = admin.getDescriptor(getTablename());
+    for (ColumnFamilyDescriptor columnDescriptor : tableDescriptor.getColumnFamilies()) {
+      ColumnFamilyDescriptor updatedColumn = ColumnFamilyDescriptorBuilder
+          .newBuilder(columnDescriptor).setEncryptionType("AES").build();
+      LOG.info(
+        "Updating CF schema for " + getTablename() + "." + columnDescriptor.getNameAsString());
       admin.disableTable(getTablename());
-      admin.modifyColumnFamily(getTablename(), columnDescriptor);
+      admin.modifyColumnFamily(getTablename(), updatedColumn);
       admin.enableTable(getTablename());
       util.waitFor(30000, 1000, true, new Predicate<IOException>() {
         @Override
