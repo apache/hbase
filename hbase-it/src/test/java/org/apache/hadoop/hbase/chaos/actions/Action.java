@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
@@ -30,12 +32,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -235,6 +243,45 @@ public class Action {
 
   public Configuration getConf() {
     return cluster.getConf();
+  }
+
+  /**
+   * Apply a transform to all columns in a given table. If there are no columns in a table or if the context is stopping does nothing.
+   * @param tableName the table to modify
+   * @param transform the modification to perform. Callers will have the column name as a string and a column family builder available to them
+   */
+  protected void modifyAllTableColumns(TableName tableName, BiConsumer<String, ColumnFamilyDescriptorBuilder> transform) throws IOException {
+    HBaseTestingUtility util = this.context.getHBaseIntegrationTestingUtility();
+    Admin admin = util.getAdmin();
+
+    TableDescriptor tableDescriptor = admin.listTableDescriptor(tableName);
+    ColumnFamilyDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
+
+    if (columnDescriptors == null || columnDescriptors.length == 0) {
+      return;
+    }
+
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
+    for (ColumnFamilyDescriptor descriptor : columnDescriptors) {
+      ColumnFamilyDescriptorBuilder cfd = ColumnFamilyDescriptorBuilder.newBuilder(descriptor);
+      transform.accept(descriptor.getNameAsString(), cfd);
+      builder.modifyColumnFamily(cfd.build());
+    }
+
+    // Don't try the modify if we're stopping
+    if (this.context.isStopping()) {
+      return;
+    }
+    admin.modifyTable(builder.build());
+  }
+
+  /**
+   * Apply a transform to all columns in a given table. If there are no columns in a table or if the context is stopping does nothing.
+   * @param tableName the table to modify
+   * @param transform the modification to perform on each column family descriptor builder
+   */
+  protected void modifyAllTableColumns(TableName tableName, Consumer<ColumnFamilyDescriptorBuilder> transform) throws IOException {
+    modifyAllTableColumns(tableName, (name, cfd) -> transform.accept(cfd));
   }
 
   /**

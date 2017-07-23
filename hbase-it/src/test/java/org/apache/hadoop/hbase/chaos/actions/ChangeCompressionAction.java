@@ -18,24 +18,19 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import java.io.IOException;
-import java.util.Random;
-
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.io.compress.Compressor;
+
+import java.io.IOException;
+import java.util.Random;
 
 /**
  * Action that changes the compression algorithm on a column family from a list of tables.
  */
 public class ChangeCompressionAction extends Action {
   private final TableName tableName;
-
-  private Admin admin;
-  private Random random;
+  private final Random random;
 
   public ChangeCompressionAction(TableName tableName) {
     this.tableName = tableName;
@@ -43,20 +38,7 @@ public class ChangeCompressionAction extends Action {
   }
 
   @Override
-  public void init(ActionContext context) throws IOException {
-    super.init(context);
-    this.admin = context.getHBaseIntegrationTestingUtility().getAdmin();
-  }
-
-  @Override
-  public void perform() throws Exception {
-    HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
-    HColumnDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
-
-    if (columnDescriptors == null || columnDescriptors.length == 0) {
-      return;
-    }
-
+  public void perform() throws IOException {
     // Possible compression algorithms. If an algorithm is not supported,
     // modifyTable will fail, so there is no harm.
     Algorithm[] possibleAlgos = Algorithm.values();
@@ -79,25 +61,19 @@ public class ChangeCompressionAction extends Action {
         break;
       } catch (Throwable t) {
         LOG.info("Performing action: Changing compression algorithms to " + algo +
-                " is not supported, pick another one");
+            " is not supported, pick another one");
       }
     } while (true);
 
+    final Algorithm chosenAlgo = algo; // for use in lambda
     LOG.debug("Performing action: Changing compression algorithms on "
-      + tableName.getNameAsString() + " to " + algo);
-    for (HColumnDescriptor descriptor : columnDescriptors) {
+      + tableName.getNameAsString() + " to " + chosenAlgo);
+    modifyAllTableColumns(tableName, columnFamilyDescriptorBuilder -> {
       if (random.nextBoolean()) {
-        descriptor.setCompactionCompressionType(algo);
+        columnFamilyDescriptorBuilder.setCompactionCompressionType(chosenAlgo);
       } else {
-        descriptor.setCompressionType(algo);
+        columnFamilyDescriptorBuilder.setCompressionType(chosenAlgo);
       }
-    }
-
-    // Don't try the modify if we're stopping
-    if (context.isStopping()) {
-      return;
-    }
-
-    admin.modifyTable(tableName, tableDescriptor);
+    });
   }
 }
