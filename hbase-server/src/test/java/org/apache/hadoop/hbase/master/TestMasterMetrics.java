@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -83,44 +82,44 @@ public class TestMasterMetrics {
     }
   }
 
-  @Ignore @Test(timeout = 300000)
+  @Test(timeout = 300000)
   public void testClusterRequests() throws Exception {
 
     // sending fake request to master to see how metric value has changed
+
     RegionServerStatusProtos.RegionServerReportRequest.Builder request =
         RegionServerStatusProtos.RegionServerReportRequest.newBuilder();
     ServerName serverName = cluster.getMaster(0).getServerName();
     request.setServer(ProtobufUtil.toServerName(serverName));
+    long expectedRequestNumber = 10000;
 
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
-                                           .setTotalNumberOfRequests(10000)
+                                           .setTotalNumberOfRequests(expectedRequestNumber)
                                            .build();
-    masterSource.init();
     request.setLoad(sl);
-    master.getMasterRpcServices().regionServerReport(null, request.build());
 
-    metricsHelper.assertCounter("cluster_requests", 10000, masterSource);
+    master.getMasterRpcServices().regionServerReport(null, request.build());
+    metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
+
+    expectedRequestNumber = 15000;
 
     sl = ClusterStatusProtos.ServerLoad.newBuilder()
-        .setTotalNumberOfRequests(15000)
+        .setTotalNumberOfRequests(expectedRequestNumber)
         .build();
     request.setLoad(sl);
-    master.getMasterRpcServices().regionServerReport(null, request.build());
-
-    metricsHelper.assertCounter("cluster_requests", 15000, masterSource);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
+    metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
 
-    metricsHelper.assertCounter("cluster_requests", 15000, masterSource);
     master.stopMaster();
   }
 
-  @Ignore @Test
+  @Test
   public void testDefaultMasterMetrics() throws Exception {
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     metricsHelper.assertGauge( "numRegionServers", 2, masterSource);
-    metricsHelper.assertGauge( "averageLoad", 2, masterSource);
+    metricsHelper.assertGauge( "averageLoad", 1, masterSource);
     metricsHelper.assertGauge( "numDeadRegionServers", 0, masterSource);
 
     metricsHelper.assertGauge("masterStartTime", master.getMasterStartTime(), masterSource);
