@@ -340,3 +340,9 @@ cxx_binary(
         "simple-client.cc",
     ],
     deps=[":core", "//connection:connection"],)
+cxx_binary(
+    name="load-client",
+    srcs=[
+        "load-client.cc",
+    ],
+    deps=[":core", "//connection:connection"],)
