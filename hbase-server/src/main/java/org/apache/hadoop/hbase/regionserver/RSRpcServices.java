@@ -233,7 +233,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   /**
    * Default value of {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
    */
-  static final int BATCH_ROWS_THRESHOLD_DEFAULT = 1000;
+  static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
   // Request counter. (Includes requests that are not serviced by regions.)
   final Counter requestCount = new Counter();
