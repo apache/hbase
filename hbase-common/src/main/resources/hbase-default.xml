@@ -1545,7 +1545,7 @@ possible configurations would overwhelm and obscure the important.
    </property>
    <property>
     <name>hbase.rpc.rows.warning.threshold</name>
-    <value>1000</value>
+    <value>5000</value>
     <description>
       Number of rows in a batch operation above which a warning will be logged.
     </description>
