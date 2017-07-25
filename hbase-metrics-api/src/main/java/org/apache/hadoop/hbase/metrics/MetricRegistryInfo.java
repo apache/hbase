@@ -107,6 +107,6 @@ public class MetricRegistryInfo {
         .append(metricsDescription)
         .append(metricsContext)
         .append(metricsJmxContext)
-        .hashCode();
+        .toHashCode();
   }
 }
