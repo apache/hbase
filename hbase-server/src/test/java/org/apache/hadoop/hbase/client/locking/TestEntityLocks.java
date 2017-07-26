@@ -192,6 +192,9 @@ public class TestEntityLocks {
     lock.requestLock();
     lock.await();
     assertTrue(waitLockTimeOut(lock, 100 * workerSleepTime));
+    while (lock.getWorker().isAlive()) {
+      TimeUnit.MILLISECONDS.sleep(100);
+    }
     verify(abortable, times(1)).abort(any(), isA(HBaseIOException.class));
     assertFalse(lock.getWorker().isAlive());
   }
