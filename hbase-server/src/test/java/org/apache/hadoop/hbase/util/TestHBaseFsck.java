@@ -880,6 +880,36 @@ public class TestHBaseFsck {
     }
   }
 
+  /*
+   * This creates a table with region_replica > 1 and verifies hbck can fix replica region showing
+   * up as key in meta table.
+   */
+  @Test
+  public void testHbckReplicaRegionAsKeyInMeta() throws Exception {
+    TableName table = TableName.valueOf("testHbckReplicaRegionAsKeyInMeta");
+    try {
+      setupTableWithRegionReplica(table, 2);
+      TEST_UTIL.getHBaseAdmin().flush(table.getName());
+
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      HRegionInfo hri = new HRegionInfo(table, SPLITS[0], SPLITS[2], false, 1500328224175L, 1);
+      Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
+      meta.put(put);
+
+      assertErrors(doFsck(conf, false),
+          new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+              HBaseFsck.ErrorReporter.ERROR_CODE.EMPTY_META_CELL });
+
+      // fix the problem
+      doFsck(conf, true);
+
+      // run hbck again to make sure we don't see any errors
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      cleanupTable(table);
+    }
+  }
+
   @Test
   public void testHbckWithFewerReplica() throws Exception {
     TableName table =
