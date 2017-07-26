@@ -75,9 +75,7 @@ struct TResult {
  */
 enum TDeleteType {
   DELETE_COLUMN = 0,
-  DELETE_COLUMNS = 1,
-  DELETE_FAMILY = 2,
-  DELETE_FAMILY_VERSION = 3
+  DELETE_COLUMNS = 1
 }
 
 /**
