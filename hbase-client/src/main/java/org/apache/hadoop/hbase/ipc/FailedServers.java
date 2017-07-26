@@ -23,6 +23,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -36,6 +38,7 @@ public class FailedServers {
   private final Map<String, Long> failedServers = new HashMap<String, Long>();
   private long latestExpiry = 0;
   private final int recheckServersTimeout;
+  private static final Log LOG = LogFactory.getLog(FailedServers.class);
 
   public FailedServers(Configuration conf) {
     this.recheckServersTimeout = conf.getInt(
@@ -45,10 +48,15 @@ public class FailedServers {
   /**
    * Add an address to the list of the failed servers list.
    */
-  public synchronized void addToFailedServers(InetSocketAddress address) {
+  public synchronized void addToFailedServers(InetSocketAddress address, Throwable throwable) {
     final long expiry = EnvironmentEdgeManager.currentTime() + recheckServersTimeout;
     this.failedServers.put(address.toString(), expiry);
     this.latestExpiry = expiry;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+        "Added failed server with address " + address.toString() + " to list caused by "
+            + throwable.toString());
+    }
   }
 
   /**

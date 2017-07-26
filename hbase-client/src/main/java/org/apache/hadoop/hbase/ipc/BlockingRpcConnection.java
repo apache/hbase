@@ -488,7 +488,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       closeSocket();
       IOException e = ExceptionUtil.asInterrupt(t);
       if (e == null) {
-        this.rpcClient.failedServers.addToFailedServers(remoteId.address);
+        this.rpcClient.failedServers.addToFailedServers(remoteId.address, t);
         if (t instanceof LinkageError) {
           // probably the hbase hadoop version does not match the running hadoop version
           e = new DoNotRetryIOException(t);
