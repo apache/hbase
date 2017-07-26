@@ -153,6 +153,12 @@
   </mailingLists>
   <developers>
     <developer>
+      <id>achouhan</id>
+      <name>Abhishek Singh Chouhan</name>
+      <email>achouhan@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
       <id>acube123</id>
       <name>Amitanand S. Aiyer</name>
       <email>acube123@apache.org</email>
