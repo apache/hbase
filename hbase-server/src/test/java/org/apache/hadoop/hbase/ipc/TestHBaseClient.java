@@ -36,6 +36,7 @@ public class TestHBaseClient {
     ManualEnvironmentEdge ee = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(  ee );
     FailedServers fs = new FailedServers(new Configuration());
+    Throwable testThrowable = new Throwable();//throwable already tested in TestFailedServers.java
 
     InetSocketAddress ia = InetSocketAddress.createUnresolved("bad", 12);
     InetSocketAddress ia2 = InetSocketAddress.createUnresolved("bad", 12);  // same server as ia
@@ -45,7 +46,7 @@ public class TestHBaseClient {
 
     Assert.assertFalse( fs.isFailedServer(ia) );
 
-    fs.addToFailedServers(ia);
+    fs.addToFailedServers(ia,testThrowable);
     Assert.assertTrue( fs.isFailedServer(ia) );
     Assert.assertTrue( fs.isFailedServer(ia2) );
 
@@ -57,9 +58,9 @@ public class TestHBaseClient {
     Assert.assertFalse( fs.isFailedServer(ia) );
     Assert.assertFalse( fs.isFailedServer(ia2) );
 
-    fs.addToFailedServers(ia);
-    fs.addToFailedServers(ia3);
-    fs.addToFailedServers(ia4);
+    fs.addToFailedServers(ia,testThrowable);
+    fs.addToFailedServers(ia3,testThrowable);
+    fs.addToFailedServers(ia4,testThrowable);
 
     Assert.assertTrue( fs.isFailedServer(ia) );
     Assert.assertTrue( fs.isFailedServer(ia2) );
@@ -73,7 +74,7 @@ public class TestHBaseClient {
     Assert.assertFalse( fs.isFailedServer(ia4) );
 
 
-    fs.addToFailedServers(ia3);
+    fs.addToFailedServers(ia3,testThrowable);
     Assert.assertFalse( fs.isFailedServer(ia4) );
   }
 }

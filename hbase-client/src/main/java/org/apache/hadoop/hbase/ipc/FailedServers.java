@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-
-import java.net.InetSocketAddress;
-import java.util.Iterator;
-import java.util.LinkedList;
 
 /**
  * A class to manage a list of servers that failed recently.
@@ -34,6 +38,7 @@ public class FailedServers {
   private final LinkedList<Pair<Long, String>> failedServers = new
       LinkedList<Pair<Long, String>>();
   private final int recheckServersTimeout;
+  private static final Log LOG = LogFactory.getLog(FailedServers.class);
 
   public FailedServers(Configuration conf) {
     this.recheckServersTimeout = conf.getInt(
@@ -43,9 +48,14 @@ public class FailedServers {
   /**
    * Add an address to the list of the failed servers list.
    */
-  public synchronized void addToFailedServers(InetSocketAddress address) {
+  public synchronized void addToFailedServers(InetSocketAddress address, Throwable throwable) {
     final long expiry = EnvironmentEdgeManager.currentTime() + recheckServersTimeout;
     failedServers.addFirst(new Pair<Long, String>(expiry, address.toString()));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+        "Added failed server with address " + address.toString() + " to list caused by "
+            + throwable.toString());
+    }
   }
 
   /**

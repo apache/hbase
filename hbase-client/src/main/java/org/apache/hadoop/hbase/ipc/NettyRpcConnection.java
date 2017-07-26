@@ -233,7 +233,7 @@ class NettyRpcConnection extends RpcConnection {
             Channel ch = future.channel();
             if (!future.isSuccess()) {
               failInit(ch, toIOE(future.cause()));
-              rpcClient.failedServers.addToFailedServers(remoteId.address);
+              rpcClient.failedServers.addToFailedServers(remoteId.address, future.cause());
               return;
             }
             ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());
