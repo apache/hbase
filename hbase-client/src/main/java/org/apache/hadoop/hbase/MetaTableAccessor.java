@@ -751,7 +751,7 @@ public class MetaTableAccessor {
     List<HRegionLocation> locations = new ArrayList<HRegionLocation>(1);
     NavigableMap<byte[],NavigableMap<byte[],byte[]>> familyMap = r.getNoVersionMap();
 
-    locations.add(getRegionLocation(r, regionInfo, 0));
+    locations.add(getRegionLocation(r, regionInfo, regionInfo.getReplicaId()));
 
     NavigableMap<byte[], byte[]> infoMap = familyMap.get(getFamily());
     if (infoMap == null) return new RegionLocations(locations);
@@ -1461,10 +1461,14 @@ public class MetaTableAccessor {
 
     // region replicas are kept in the primary region's row
     Put put = new Put(getMetaKeyForRegion(regionInfo), time);
-    addRegionInfo(put, regionInfo);
+    HRegionInfo defaultRegionInfo = regionInfo;
+    if (regionInfo.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+      defaultRegionInfo = new HRegionInfo(regionInfo, HRegionInfo.DEFAULT_REPLICA_ID);
+    }
+    addRegionInfo(put, defaultRegionInfo);
     addLocation(put, sn, openSeqNum, time, regionInfo.getReplicaId());
     putToMetaTable(connection, put);
-    LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
+    LOG.info("Updated row " + defaultRegionInfo.getRegionNameAsString() +
       " with server=" + sn);
   }
 
