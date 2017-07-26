@@ -23,7 +23,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Format.h>
 #include <folly/Logging.h>
-#include <folly/futures/Unit.h>
+#include <folly/Unit.h>
 
 #include "connection/rpc-client.h"
 #include "core/async-connection.h"
@@ -94,9 +94,10 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::LocateThenCall() {
       .then([this](std::shared_ptr<RegionLocation> loc) { Call(*loc); })
       .onError([this](const exception_wrapper& e) {
         OnError(e,
-                [this]() -> std::string {
+                [this, e]() -> std::string {
                   return "Locate '" + row_ + "' in " + table_name_->namespace_() + "::" +
-                         table_name_->qualifier() + " failed, tries = " + std::to_string(tries_) +
+                         table_name_->qualifier() + " failed with e.what()=" +
+                         e.what().toStdString() + ", tries = " + std::to_string(tries_) +
                          ", maxAttempts = " + std::to_string(max_attempts_) + ", timeout = " +
                          TimeUtil::ToMillisStr(operation_timeout_nanos_) + " ms, time elapsed = " +
                          TimeUtil::ElapsedMillisStr(this->start_ns_) + " ms";
@@ -114,6 +115,12 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::OnError(
   if (!ExceptionUtil::ShouldRetry(error) || tries_ >= max_retries_) {
     CompleteExceptionally();
     return;
+  }
+
+  if (tries_ > start_log_errors_count_) {
+    LOG(WARNING) << err_msg();
+  } else {
+    VLOG(1) << err_msg();
   }
 
   int64_t delay_ns;
@@ -174,21 +181,21 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::Call(const RegionLocation& loc) 
   callable_(controller_, loc_ptr, rpc_client)
       .then([loc_ptr, this](const RESP& resp) { this->promise_->setValue(std::move(resp)); })
       .onError([&, loc_ptr, this](const exception_wrapper& e) {
-        OnError(e,
-                [&, this]() -> std::string {
-                  return "Call to " + folly::sformat("{0}:{1}", loc_ptr->server_name().host_name(),
-                                                     loc_ptr->server_name().port()) +
-                         " for '" + row_ + "' in " + loc_ptr->DebugString() + " of " +
-                         table_name_->namespace_() + "::" + table_name_->qualifier() +
-                         " failed, tries = " + std::to_string(tries_) + ", maxAttempts = " +
-                         std::to_string(max_attempts_) + ", timeout = " +
-                         TimeUtil::ToMillisStr(this->operation_timeout_nanos_) +
-                         " ms, time elapsed = " + TimeUtil::ElapsedMillisStr(this->start_ns_) +
-                         " ms";
-                },
-                [&, this](const exception_wrapper& error) {
-                  conn_->region_locator()->UpdateCachedLocation(*loc_ptr, error);
-                });
+        OnError(
+            e,
+            [&, this, e]() -> std::string {
+              return "Call to " + folly::sformat("{0}:{1}", loc_ptr->server_name().host_name(),
+                                                 loc_ptr->server_name().port()) +
+                     " for '" + row_ + "' in " + loc_ptr->DebugString() + " of " +
+                     table_name_->namespace_() + "::" + table_name_->qualifier() +
+                     " failed with e.what()=" + e.what().toStdString() + ", tries = " +
+                     std::to_string(tries_) + ", maxAttempts = " + std::to_string(max_attempts_) +
+                     ", timeout = " + TimeUtil::ToMillisStr(this->operation_timeout_nanos_) +
+                     " ms, time elapsed = " + TimeUtil::ElapsedMillisStr(this->start_ns_) + " ms";
+            },
+            [&, this](const exception_wrapper& error) {
+              conn_->region_locator()->UpdateCachedLocation(*loc_ptr, error);
+            });
       });
 }
 

@@ -120,9 +120,9 @@ std::vector<std::shared_ptr<hbase::Result>> Table::Get(const std::vector<hbase::
     if (tresult.hasValue()) {
       results.push_back(tresult.value());
     } else if (tresult.hasException()) {
-      LOG(ERROR) << "Caught exception:- " << tresult.exception().getCopied()->what() << " for "
+      LOG(ERROR) << "Caught exception:- " << tresult.exception().what() << " for "
                  << gets[num++].row();
-      throw tresult.exception().getCopied();
+      throw tresult.exception();
     }
   }
   return results;

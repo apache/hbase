@@ -84,6 +84,39 @@ RUN git clone https://github.com/google/protobuf.git /usr/src/protobuf && \
   make clean && \
   ldconfig
 
+# Update folly
+RUN cd /usr/src/ && \
+  ver=2017.06.19.00 && \
+  wget https://github.com/facebook/folly/archive/v$ver.tar.gz && \
+  tar zxf v$ver.tar.gz && \
+  rm -rf v$ver.tar.gz && \
+  cd folly-$ver/folly/test && \
+  rm -rf gtest && \
+  wget https://github.com/google/googletest/archive/release-1.8.0.tar.gz && \
+  tar zxf release-1.8.0.tar.gz && \
+  rm -f release-1.8.0.tar.gz && \
+  mv googletest-release-1.8.0 gtest && \
+  cd ../ && \
+  ldconfig && \
+  autoreconf -ivf && \
+  ./configure && \
+  make && \
+  make check && \
+  make install
+
+# Update wangle
+RUN cd /usr/src/ && \
+  ver=2017.06.26.00 && \
+  wget https://github.com/facebook/wangle/archive/v$ver.tar.gz && \
+  tar zxf v$ver.tar.gz && \
+  rm -rf v$ver.tar.gz && \
+  cd wangle-$ver/wangle && \
+  ldconfig && \
+  cmake . -DBUILD_TESTS=OFF  && \
+  make && \
+  ctest && \
+  make install
+
 ENTRYPOINT /usr/sbin/krb5kdc -P /var/run/krb5kdc.pid && /bin/bash
 
 WORKDIR /usr/src/hbase/hbase-native-client
