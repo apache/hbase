@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -67,7 +66,6 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.ServerState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.ServerStateNode;
 // TODO: why are they here?
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
@@ -78,7 +76,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
@@ -858,8 +855,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   private void updateRegionMergeTransition(final ServerName serverName, final TransitionCode state,
-      final HRegionInfo merged, final HRegionInfo hriA, final HRegionInfo hriB)
-      throws PleaseHoldException, UnexpectedStateException, IOException {
+      final HRegionInfo merged, final HRegionInfo hriA, final HRegionInfo hriB) throws IOException {
     checkFailoverCleanupCompleted(merged);
 
     if (state != TransitionCode.READY_TO_MERGE) {
@@ -1090,7 +1086,7 @@ public class AssignmentManager implements ServerListener {
 
     public boolean isRegionOverThreshold(final HRegionInfo regionInfo) {
       Map<String, RegionState> m = this.ritsOverThreshold;
-      return m != null? m.containsKey(regionInfo.getEncodedName()): false;
+      return m != null && m.containsKey(regionInfo.getEncodedName());
     }
 
     public boolean isRegionTwiceOverThreshold(final HRegionInfo regionInfo) {
@@ -1311,7 +1307,7 @@ public class AssignmentManager implements ServerListener {
       " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
   }
 
-  public void offlineRegion(final HRegionInfo regionInfo) throws IOException {
+  public void offlineRegion(final HRegionInfo regionInfo) {
     // TODO used by MasterRpcServices ServerCrashProcedure
     final RegionStateNode node = regionStates.getRegionNode(regionInfo);
     if (node != null) node.offline();
@@ -1336,8 +1332,7 @@ public class AssignmentManager implements ServerListener {
    * @return Pair indicating the status of the alter command (pending/total)
    * @throws IOException
    */
-  public Pair<Integer, Integer> getReopenStatus(TableName tableName)
-      throws IOException {
+  public Pair<Integer, Integer> getReopenStatus(TableName tableName) {
     if (isTableDisabled(tableName)) return new Pair<Integer, Integer>(0, 0);
 
     final List<RegionState> states = regionStates.getTableRegionStates(tableName);
@@ -1483,7 +1478,7 @@ public class AssignmentManager implements ServerListener {
     metrics.incrementOperationCounter();
   }
 
-  public void undoRegionAsClosing(final RegionStateNode regionNode) throws IOException {
+  public void undoRegionAsClosing(final RegionStateNode regionNode) {
     // TODO: Metrics. Do opposite of metrics.incrementOperationCounter();
     // There is nothing to undo?
   }
