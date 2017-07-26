@@ -31,11 +31,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Delete;
@@ -78,8 +75,10 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -439,92 +438,6 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(1, result.getColumnValuesSize());
     // the older timestamp should remain.
     assertEquals(timestamp1, result.getColumnValues().get(0).getTimestamp());
-  }
-
-  @Test
-  public void testDeleteFamily() throws Exception {
-    ThriftHBaseServiceHandler handler = createHandler();
-    byte[] rowName = "testDeleteFamily".getBytes();
-    ByteBuffer table = wrap(tableAname);
-
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
-
-    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
-    TColumnValue columnValueA =
-        new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname));
-    columnValueA.setTimestamp(timestamp1);
-    columnValues.add(columnValueA);
-    TPut put = new TPut(wrap(rowName), columnValues);
-
-    put.setColumnValues(columnValues);
-
-    handler.put(table, put);
-    columnValueA.setTimestamp(timestamp2);
-    handler.put(table, put);
-
-    TGet get = new TGet(wrap(rowName));
-    get.setMaxVersions(2);
-    TResult result = handler.get(table, get);
-    assertEquals(2, result.getColumnValuesSize());
-
-    TDelete delete = new TDelete(wrap(rowName));
-    List<TColumn> deleteColumns = new ArrayList<TColumn>();
-    TColumn deleteColumn = new TColumn(wrap(familyAname));
-    deleteColumns.add(deleteColumn);
-    delete.setColumns(deleteColumns);
-    delete.setDeleteType(TDeleteType.DELETE_FAMILY);
-
-    handler.deleteSingle(table, delete);
-
-    get = new TGet(wrap(rowName));
-    result = handler.get(table, get);
-    assertArrayEquals(null, result.getRow());
-    assertEquals(0, result.getColumnValuesSize());
-  }
-
-  @Test
-  public void testDeleteFamilyVersion() throws Exception {
-    ThriftHBaseServiceHandler handler = createHandler();
-    byte[] rowName = "testDeleteFamilyVersion".getBytes();
-    ByteBuffer table = wrap(tableAname);
-
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
-
-    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
-    TColumnValue columnValueA =
-        new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname));
-    columnValueA.setTimestamp(timestamp1);
-    columnValues.add(columnValueA);
-    TPut put = new TPut(wrap(rowName), columnValues);
-
-    put.setColumnValues(columnValues);
-
-    handler.put(table, put);
-    columnValueA.setTimestamp(timestamp2);
-    handler.put(table, put);
-
-    TGet get = new TGet(wrap(rowName));
-    get.setMaxVersions(2);
-    TResult result = handler.get(table, get);
-    assertEquals(2, result.getColumnValuesSize());
-
-    TDelete delete = new TDelete(wrap(rowName));
-    List<TColumn> deleteColumns = new ArrayList<TColumn>();
-    TColumn deleteColumn = new TColumn(wrap(familyAname));
-    deleteColumn.setTimestamp(timestamp1);
-    deleteColumns.add(deleteColumn);
-    delete.setColumns(deleteColumns);
-    delete.setDeleteType(TDeleteType.DELETE_FAMILY_VERSION);
-
-    handler.deleteSingle(table, delete);
-
-    get = new TGet(wrap(rowName));
-    result = handler.get(table, get);
-    assertArrayEquals(rowName, result.getRow());
-    assertEquals(1, result.getColumnValuesSize());
-    assertEquals(timestamp2, result.getColumnValues().get(0).getTimestamp());
   }
 
   @Test

@@ -268,40 +268,27 @@ public class ThriftUtilities {
     if (in.isSetColumns()) {
       out = new Delete(in.getRow());
       for (TColumn column : in.getColumns()) {
-        if (in.isSetDeleteType()) {
-          switch (in.getDeleteType()) {
-          case DELETE_COLUMN:
-            if (column.isSetTimestamp()) {
-              out.addColumn(column.getFamily(), column.getQualifier(), column.getTimestamp());
-            } else {
-              out.addColumn(column.getFamily(), column.getQualifier());
-            }
-            break;
-          case DELETE_COLUMNS:
-            if (column.isSetTimestamp()) {
+        if (column.isSetQualifier()) {
+          if (column.isSetTimestamp()) {
+            if (in.isSetDeleteType() &&
+                in.getDeleteType().equals(TDeleteType.DELETE_COLUMNS))
               out.addColumns(column.getFamily(), column.getQualifier(), column.getTimestamp());
-            } else {
+            else
+              out.addColumn(column.getFamily(), column.getQualifier(), column.getTimestamp());
+          } else {
+            if (in.isSetDeleteType() &&
+                in.getDeleteType().equals(TDeleteType.DELETE_COLUMNS))
               out.addColumns(column.getFamily(), column.getQualifier());
-            }
-            break;
-          case DELETE_FAMILY:
-            if (column.isSetTimestamp()) {
-              out.addFamily(column.getFamily(), column.getTimestamp());
-            } else {
-              out.addFamily(column.getFamily());
-            }
-            break;
-          case DELETE_FAMILY_VERSION:
-            if (column.isSetTimestamp()) {
-              out.addFamilyVersion(column.getFamily(), column.getTimestamp());
-            } else {
-              throw new IllegalArgumentException(
-                  "Timestamp is required for TDelete with DeleteFamilyVersion type");
-            }
-            break;
+            else
+              out.addColumn(column.getFamily(), column.getQualifier());
           }
+
         } else {
-          throw new IllegalArgumentException("DeleteType is required for TDelete");
+          if (column.isSetTimestamp()) {
+            out.addFamily(column.getFamily(), column.getTimestamp());
+          } else {
+            out.addFamily(column.getFamily());
+          }
         }
       }
     } else {
