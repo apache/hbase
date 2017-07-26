@@ -207,7 +207,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     } catch(KeeperException.NoNodeException nne) {
       return;
     } catch(InterruptedException ie) {
-      interruptedException(ie);
+      interruptedExceptionNoThrow(ie, false);
     } catch (IOException|KeeperException e) {
       LOG.warn("Received exception while checking and setting zookeeper ACLs", e);
     }
@@ -587,20 +587,26 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   /**
    * Handles InterruptedExceptions in client calls.
-   * <p>
-   * This may be temporary but for now this gives one place to deal with these.
-   * <p>
-   * TODO: Currently, this method does nothing.
-   *       Is this ever expected to happen?  Do we abort or can we let it run?
-   *       Maybe this should be logged as WARN?  It shouldn't happen?
-   * <p>
-   * @param ie
+   * @param ie the InterruptedException instance thrown
+   * @throws KeeperException the exception to throw, transformed from the InterruptedException
    */
-  public void interruptedException(InterruptedException ie) {
-    LOG.debug(prefix("Received InterruptedException, doing nothing here"), ie);
-    // At least preserver interrupt.
+  public void interruptedException(InterruptedException ie) throws KeeperException {
+    interruptedExceptionNoThrow(ie, true);
+    // Throw a system error exception to let upper level handle it
+    throw new KeeperException.SystemErrorException();
+  }
+
+  /**
+   * Log the InterruptedException and interrupt current thread
+   * @param ie The IterruptedException to log
+   * @param throwLater Whether we will throw the exception latter
+   */
+  public void interruptedExceptionNoThrow(InterruptedException ie, boolean throwLater) {
+    LOG.debug(prefix("Received InterruptedException, will interrupt current thread"
+        + (throwLater ? " and rethrow a SystemErrorException" : "")),
+      ie);
+    // At least preserve interrupt.
     Thread.currentThread().interrupt();
-    // no-op
   }
 
   /**
