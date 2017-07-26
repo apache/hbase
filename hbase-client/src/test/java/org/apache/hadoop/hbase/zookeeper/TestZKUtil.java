@@ -107,9 +107,9 @@ public class TestZKUtil {
       }
     };
     Mockito.doThrow(new InterruptedException()).when(recoverableZk)
-        .getChildren(zkw.znodePaths.baseZNode, null);
+        .getChildren(zkw.assignmentZNode, null);
     try {
-      ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.baseZNode);
+      ZKUtil.listChildrenNoWatch(zkw, zkw.assignmentZNode);
     } catch (KeeperException.SystemErrorException e) {
       // expected
       return;
