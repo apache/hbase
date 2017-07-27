@@ -4434,6 +4434,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               continue;
             }
             CellUtil.setSequenceId(cell, currentReplaySeqId);
+            clock.update(cell.getTimestamp());
 
             restoreEdit(store, cell, memstoreSize);
             editsCount++;

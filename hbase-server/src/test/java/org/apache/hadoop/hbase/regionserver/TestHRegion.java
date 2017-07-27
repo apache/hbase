@@ -720,6 +720,114 @@ public class TestHRegion {
     }
   }
 
+  public void verifyClockUpdatesOnRecoveryEditReplay(Clock clock, List<Long> seqIds,
+      List<Long> editTimestamps, long recoverSeqId, long expectedTimestamp) throws Exception {
+    byte[] family = Bytes.toBytes("family");
+    region = initHRegion(tableName, method, CONF, family);
+    final WALFactory wals = new WALFactory(CONF, null, method);
+    region.setClock(clock);
+
+    try {
+      Path regiondir = region.getRegionFileSystem().getRegionDir();
+      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+
+      for (int i = 0; i < seqIds.size(); i++) {
+        long editTimestamp = editTimestamps.get(i);
+        long seqId = seqIds.get(i);
+
+        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", seqId));
+        fs.create(recoveredEdits);
+        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+
+        WALEdit edit = new WALEdit();
+        edit.add(new KeyValue(row, family, Bytes.toBytes(seqId), editTimestamp, KeyValue.Type.Put,
+            Bytes.toBytes(seqId)));
+        writer.append(new WAL.Entry(new WALKey(regionName, tableName, seqId, editTimestamp,
+            HConstants.DEFAULT_CLUSTER_ID), edit));
+
+        writer.close();
+      }
+      MonitoredTask status = TaskMonitor.get().createStatus(method);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      for (Store store : region.getStores()) {
+        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
+      }
+
+      region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
+
+      assertEquals(expectedTimestamp, clock.now());
+
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+      wals.close();
+    }
+  }
+
+  @Test
+  public void testHybridLogicalClockUpdatesOnRecoveryEditReplay() throws Exception {
+    long systemTime = Clock.SYSTEM_CLOCK.now();
+    Clock mockSystemClock = mock(Clock.class);
+    when(mockSystemClock.now()).thenReturn(systemTime);
+    when(mockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
+    when(mockSystemClock.isMonotonic()).thenReturn(true);
+    Clock hlClock = new Clock.HLC(new Clock.SystemMonotonic(mockSystemClock));
+
+    long maxSeqId = 1050;
+    long minSeqId = 1000;
+    List<Long> seqIds = new ArrayList<>();
+    List<Long> editTimestamps = new ArrayList<>();
+
+    // Add edits with timestamps that are less than or equal to systemTime
+    for (long i = minSeqId; i <= maxSeqId; i += 10) {
+      seqIds.add(i);
+      editTimestamps.add(TimestampType.HYBRID
+          .fromEpochTimeMillisToTimestamp(systemTime - (maxSeqId - i)));
+    }
+
+    // Recover edits at sequence id 1030, 1040, and 1050
+    //
+    // Clock is updated three times with each update incrementing the logical time by one
+    // (from 0, 1, then 2). Then memstore gets flushed and clock.now() is called when
+    // constructing the StoreScanner for determining which rows to flush, incrementing
+    // the logical time from 2 to 3. Logical time advances by one again from 3 to 4 when
+    // calling clock.now() to assert that it equals the expected timestamp
+    verifyClockUpdatesOnRecoveryEditReplay(hlClock, seqIds, editTimestamps,
+        1030L, TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS, systemTime, 4));
+  }
+
+  @Test
+  public void testSystemMonotonicClockUpdatesOnRecoveryEditReplay() throws Exception {
+    long systemTime = Clock.SYSTEM_CLOCK.now();
+    Clock mockSystemClock = mock(Clock.class);
+    when(mockSystemClock.now()).thenReturn(systemTime);
+    when(mockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
+    when(mockSystemClock.isMonotonic()).thenReturn(true);
+    Clock systemMonotonicClock = new Clock.SystemMonotonic(mockSystemClock);
+
+    long maxSeqId = 1050;
+    long minSeqId = 1000;
+    List<Long> seqIds = new ArrayList<>();
+    List<Long> editTimestamps = new ArrayList<>();
+    // All edits except the last have timestamps less than systemTime
+    // Last edit will have a timestamp 5 ms greater than systemTime
+    for (long i = minSeqId; i <= maxSeqId; i += 10) {
+      seqIds.add(i);
+      editTimestamps.add(TimestampType.PHYSICAL
+          .fromEpochTimeMillisToTimestamp(systemTime - (maxSeqId - i) + 5));
+    }
+
+    // Recover edits at sequence id 1030, 1040, and 1050
+    //
+    // The clock's physical time will remain the same for the first two edits since their
+    // timestamps are in the past. Last edit has a timestamp 5 ms ahead of systemTime so the
+    // clock will advance forward.
+    verifyClockUpdatesOnRecoveryEditReplay(systemMonotonicClock, seqIds, editTimestamps,
+        1030L, systemTime + 5);
+  }
+
   @Test
   public void testSkipRecoveredEditsReplaySomeIgnored() throws Exception {
     byte[] family = Bytes.toBytes("family");

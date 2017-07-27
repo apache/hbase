@@ -16,6 +16,7 @@
 
 package org.apache.hadoop.hbase;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.commons.lang.time.FastDateFormat;
@@ -105,7 +106,8 @@ public enum TimestampType {
       return timestamp >>> BITS_FOR_LOGICAL_TIME; // assume unsigned timestamp
     }
 
-    long getLogicalTime(long timestamp) {
+    @VisibleForTesting
+    public long getLogicalTime(long timestamp) {
       return timestamp & LOGICAL_TIME_MAX_VALUE;
     }
 
@@ -200,7 +202,8 @@ public enum TimestampType {
       return timestamp;
     }
 
-    long getLogicalTime(long timestamp) {
+    @VisibleForTesting
+    public long getLogicalTime(long timestamp) {
       return 0;
     }
 
@@ -281,7 +284,8 @@ public enum TimestampType {
    * @param timestamp {@link #HYBRID} or {@link #PHYSICAL} Timestamp
    * @return logical time
    */
-  abstract long getLogicalTime(long timestamp);
+  @VisibleForTesting
+  abstract public long getLogicalTime(long timestamp);
 
   /**
    * @return the maximum possible physical time in {@link TimeUnit#MILLISECONDS}
