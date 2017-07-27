@@ -2288,6 +2288,16 @@ public class HBaseFsck extends Configured implements Closeable {
           return;
         }
       }
+
+      // For Replica region, we need to do a similar check. If replica is not split successfully,
+      // error is going to be reported against primary daughter region.
+      if (hbi.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        LOG.info("Region " + descriptiveName + " is a split parent in META, in HDFS, "
+            + "and not deployed on any region server. This may be transient.");
+        hbi.setSkipChecks(true);
+        return;
+      }
+
       errors.reportError(ERROR_CODE.LINGERING_SPLIT_PARENT, "Region "
           + descriptiveName + " is a split parent in META, in HDFS, "
           + "and not deployed on any region server. This could be transient, "

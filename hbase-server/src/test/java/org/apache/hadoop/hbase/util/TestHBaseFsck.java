@@ -206,6 +206,31 @@ public class TestHBaseFsck {
     EnvironmentEdgeManager.reset();
   }
 
+  /*
+ * This creates a table with region_replica > 1, do a split, check
+ * that hbck will not report split replica parent as lingering split parent
+ */
+  @Test public void testHbckReportReplicaLingeringSplitParent() throws Exception {
+    TableName table = TableName.valueOf("testHbckReportReplicaLingeringSplitParent");
+
+    try {
+      setupTableWithRegionReplica(table, 2);
+      TEST_UTIL.getHBaseAdmin().flush(table.getName());
+
+      // disable catalog janitor
+      TEST_UTIL.getHBaseAdmin().enableCatalogJanitor(false);
+      admin.split(table, Bytes.toBytes("A1"));
+
+      Thread.sleep(1000);
+      // run hbck again to make sure we don't see any errors
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      cleanupTable(table);
+      // enable catalog janitor
+      TEST_UTIL.getHBaseAdmin().enableCatalogJanitor(true);
+    }
+  }
+
   @Test (timeout=180000)
   public void testHBaseFsck() throws Exception {
     assertNoErrors(doFsck(conf, false));
