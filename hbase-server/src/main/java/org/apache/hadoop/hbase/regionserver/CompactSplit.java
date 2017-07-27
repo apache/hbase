@@ -344,6 +344,7 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
     ThreadPoolExecutor pool = (selectNow && s.throttleCompaction(compaction.getRequest().getSize()))
       ? longCompactions : shortCompactions;
     pool.execute(new CompactionRunner(s, r, compaction, pool, user));
+    ((HRegion)r).incrementCompactionsQueuedCount();
     if (LOG.isDebugEnabled()) {
       String type = (pool == shortCompactions) ? "Small " : "Large ";
       LOG.debug(type + "Compaction requested: " + (selectNow ? compaction.toString() : "system")
@@ -484,9 +485,13 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
         } catch (IOException ex) {
           LOG.error("Compaction selection failed " + this, ex);
           server.checkFileSystem();
+          region.decrementCompactionsQueuedCount();
           return;
         }
-        if (this.compaction == null) return; // nothing to do
+        if (this.compaction == null) {
+          region.decrementCompactionsQueuedCount();
+          return; // nothing to do
+        }
         // Now see if we are in correct pool for the size; if not, go to the correct one.
         // We might end up waiting for a while, so cancel the selection.
         assert this.compaction.hasSelection();
@@ -539,6 +544,7 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
         region.reportCompactionRequestFailure();
         server.checkFileSystem();
       } finally {
+        region.decrementCompactionsQueuedCount();
         LOG.debug("CompactSplitThread Status: " + CompactSplit.this);
       }
       this.compaction.getRequest().afterExecute();
@@ -549,6 +555,7 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
       Preconditions.checkNotNull(server);
       if (server.isStopped()
           || (region.getTableDescriptor() != null && !region.getTableDescriptor().isCompactionEnabled())) {
+        region.decrementCompactionsQueuedCount();
         return;
       }
       doCompaction(user);

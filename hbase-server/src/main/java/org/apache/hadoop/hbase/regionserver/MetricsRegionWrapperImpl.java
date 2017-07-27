@@ -52,6 +52,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long minStoreFileAge;
   private long avgStoreFileAge;
   private long numReferenceFiles;
+  private long maxFlushQueueSize;
+  private long maxCompactionQueueSize;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -163,6 +165,26 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
+  public long getNumCompactionsQueued() {
+    return this.region.compactionsQueued.get();
+  }
+
+  @Override
+  public long getNumFlushesQueued() {
+    return this.region.flushesQueued.get();
+  }
+
+  @Override
+  public long getMaxCompactionQueueSize() {
+    return maxCompactionQueueSize;
+  }
+
+  @Override
+  public long getMaxFlushQueueSize() {
+    return maxFlushQueueSize;
+  }
+
+  @Override
   public long getMaxStoreFileAge() {
     return maxStoreFileAge;
   }
@@ -197,6 +219,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempMaxStoreFileAge = 0;
       long tempMinStoreFileAge = Long.MAX_VALUE;
       long tempNumReferenceFiles = 0;
+      long tempMaxCompactionQueueSize = 0;
+      long tempMaxFlushQueueSize = 0;
 
       long avgAgeNumerator = 0;
       long numHFiles = 0;
@@ -234,6 +258,14 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       }
 
       numReferenceFiles = tempNumReferenceFiles;
+      tempMaxCompactionQueueSize = getNumCompactionsQueued();
+      tempMaxFlushQueueSize = getNumFlushesQueued();
+      if (tempMaxCompactionQueueSize > maxCompactionQueueSize) {
+        maxCompactionQueueSize = tempMaxCompactionQueueSize;
+      }
+      if (tempMaxFlushQueueSize > maxFlushQueueSize) {
+        maxFlushQueueSize = tempMaxFlushQueueSize;
+      }
     }
   }
 
