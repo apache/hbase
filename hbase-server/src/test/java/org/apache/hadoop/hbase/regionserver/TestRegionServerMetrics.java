@@ -260,7 +260,7 @@ public class TestRegionServerMetrics {
     assertCounter("writeRequestCount", writeRequests + 30);
 
     assertRegionMetrics("getCount", 10);
-    assertRegionMetrics("mutateCount", 31);
+    assertRegionMetrics("putCount", 31);
 
     doNGets(10, true);  // true = batch
 
