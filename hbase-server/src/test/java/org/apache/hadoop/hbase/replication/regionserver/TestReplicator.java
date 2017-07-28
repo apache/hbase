@@ -320,12 +320,6 @@ public class TestReplicator extends TestReplicationBase {
       }
 
       @Override
-      public SplitRegionResponse splitRegion(RpcController controller, SplitRegionRequest request)
-          throws ServiceException {
-        return delegate.splitRegion(controller, request);
-      }
-
-      @Override
       public CompactRegionResponse compactRegion(RpcController controller,
           CompactRegionRequest request) throws ServiceException {
         return delegate.compactRegion(controller, request);

@@ -129,7 +129,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFil
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -2003,26 +2002,6 @@ public final class ProtobufUtil {
     }
   }
 
-  /**
-   * A helper to split a region using admin protocol.
-   *
-   * @param admin
-   * @param hri
-   * @param splitPoint
-   * @throws IOException
-   */
-  public static void split(final RpcController controller,
-      final AdminService.BlockingInterface admin, final HRegionInfo hri, byte[] splitPoint)
-          throws IOException {
-    SplitRegionRequest request =
-      ProtobufUtil.buildSplitRegionRequest(hri.getRegionName(), splitPoint);
-    try {
-      admin.splitRegion(controller, request);
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
-    }
-  }
-
 // End helpers for Admin
 
   /*
@@ -3311,35 +3290,6 @@ public final class ProtobufUtil {
      }
      return builder.build();
    }
-
-  /**
-   * Create a SplitRegionRequest for a given region name
-   * @param regionName the name of the region to split
-   * @param splitPoint the split point
-   * @return a SplitRegionRequest
-   * @deprecated Use {@link #buildSplitRegionRequest(byte[], Optional)} instead.
-   */
-  @Deprecated
-  public static SplitRegionRequest buildSplitRegionRequest(final byte[] regionName,
-      final byte[] splitPoint) {
-    return buildSplitRegionRequest(regionName, Optional.ofNullable(splitPoint));
-  }
-
-  /**
-   * Create a SplitRegionRequest for a given region name
-   * @param regionName the name of the region to split
-   * @param splitPoint the split point
-   * @return a SplitRegionRequest
-   */
-  public static SplitRegionRequest buildSplitRegionRequest(byte[] regionName,
-      Optional<byte[]> splitPoint) {
-    SplitRegionRequest.Builder builder = SplitRegionRequest.newBuilder();
-    RegionSpecifier region =
-        RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
-    builder.setRegion(region);
-    splitPoint.ifPresent(sp -> builder.setSplitPoint(UnsafeByteOperations.unsafeWrap(sp)));
-    return builder.build();
-  }
 
   public static ProcedureDescription buildProcedureDescription(String signature, String instance,
       Map<String, String> props) {

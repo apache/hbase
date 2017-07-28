@@ -207,8 +207,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       for (HRegionInfo hri :
           ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices())) {
         if (hri.getTable().equals(table)) {
-          // splitRegion doesn't work if startkey/endkey are null
-          ProtobufUtil.split(null, hrs.getRSRpcServices(), hri, rowkey(ROWCOUNT / 2));
+          util.getAdmin().splitRegionAsync(hri.getRegionName(), rowkey(ROWCOUNT / 2));
+          //ProtobufUtil.split(null, hrs.getRSRpcServices(), hri, rowkey(ROWCOUNT / 2));
         }
       }
 
