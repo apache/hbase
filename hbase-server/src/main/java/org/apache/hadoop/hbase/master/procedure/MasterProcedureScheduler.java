@@ -212,6 +212,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
 
     final Procedure pollResult = rq.peek();
+    if (pollResult == null) {
+      return null;
+    }
     final boolean xlockReq = rq.requireExclusiveLock(pollResult);
     if (xlockReq && rq.getLockStatus().isLocked() && !rq.getLockStatus().hasLockAccess(pollResult)) {
       // someone is already holding the lock (e.g. shared lock). avoid a yield
@@ -586,6 +589,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // ============================================================================
   //  Table Locking Helpers
   // ============================================================================
+  /**
+   * @param proc must not be null
+   */
   private static boolean requireTableExclusiveLock(TableProcedureInterface proc) {
     switch (proc.getTableOperationType()) {
       case CREATE:
@@ -1007,6 +1013,10 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // ============================================================================
   private static abstract class Queue<TKey extends Comparable<TKey>>
       extends AvlLinkedNode<Queue<TKey>> {
+
+    /**
+     * @param proc must not be null
+     */
     abstract boolean requireExclusiveLock(Procedure proc);
 
     private final TKey key;
