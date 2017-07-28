@@ -111,10 +111,10 @@ extends RetriesExhaustedException {
     Set<String> uniqAddr = new HashSet<>();
     uniqAddr.addAll(hostnamePort);
 
-    for(String addr : uniqAddr) {
+    for (String addr : uniqAddr) {
       addrs.append(addr).append(", ");
     }
-    return addrs.toString();
+    return uniqAddr.size() > 0 ? addrs.substring(0, addrs.length() - 2) : addrs.toString();
   }
 
   public String getExhaustiveDescription() {
