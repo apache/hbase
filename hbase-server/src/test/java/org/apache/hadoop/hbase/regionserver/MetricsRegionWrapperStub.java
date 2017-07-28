@@ -137,4 +137,24 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   public int getReplicaId() {
     return replicaid;
   }
+
+  @Override
+  public long getNumCompactionsQueued() {
+    return 4;
+  }
+
+  @Override
+  public long getNumFlushesQueued() {
+    return 6;
+  }
+
+  @Override
+  public long getMaxCompactionQueueSize() {
+    return 4;
+  }
+
+  @Override
+  public long getMaxFlushQueueSize() {
+    return 6;
+  }
 }
