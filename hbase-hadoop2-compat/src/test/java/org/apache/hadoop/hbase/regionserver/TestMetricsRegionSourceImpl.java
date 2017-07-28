@@ -171,5 +171,25 @@ public class TestMetricsRegionSourceImpl {
     public int getReplicaId() {
       return 0;
     }
+
+    @Override
+    public long getNumCompactionsQueued() {
+      return 0;
+    }
+
+    @Override
+    public long getNumFlushesQueued() {
+      return 0;
+    }
+
+    @Override
+    public long getMaxCompactionQueueSize() {
+      return 0;
+    }
+
+    @Override
+    public long getMaxFlushQueueSize() {
+      return 0;
+    }
   }
 }

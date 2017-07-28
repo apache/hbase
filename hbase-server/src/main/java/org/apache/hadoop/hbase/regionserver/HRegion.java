@@ -297,6 +297,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final AtomicLong compactionsFailed = new AtomicLong(0L);
   final AtomicLong compactionNumFilesCompacted = new AtomicLong(0L);
   final AtomicLong compactionNumBytesCompacted = new AtomicLong(0L);
+  final AtomicLong compactionsQueued = new AtomicLong(0L);
+  final AtomicLong flushesQueued = new AtomicLong(0L);
 
   private final WAL wal;
   private final HRegionFileSystem fs;
@@ -2086,6 +2088,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (coprocessorHost != null) {
           status.setStatus("Running post-flush coprocessor hooks");
           coprocessorHost.postFlush();
+        }
+
+        if(fs.isFlushSucceeded()) {
+          flushesQueued.set(0L);
         }
 
         status.markComplete("Flush successful");
@@ -8141,7 +8147,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      46 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
+      48 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 
@@ -8721,6 +8727,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public void reportCompactionRequestFailure() {
     compactionsFailed.incrementAndGet();
+  }
+
+  public void incrementCompactionsQueuedCount() {
+    compactionsQueued.incrementAndGet();
+  }
+
+  public void decrementCompactionsQueuedCount() {
+    compactionsQueued.decrementAndGet();
+  }
+
+  public void incrementFlushesQueuedCount() {
+    flushesQueued.incrementAndGet();
   }
 
   /**

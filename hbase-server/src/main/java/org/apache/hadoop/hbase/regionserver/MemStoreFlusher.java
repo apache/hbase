@@ -361,6 +361,7 @@ class MemStoreFlusher implements FlushRequester {
 
   @Override
   public void requestFlush(Region r, boolean forceFlushAllStores) {
+    ((HRegion)r).incrementFlushesQueuedCount();
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has no delay so it will be added at the top of the flush
@@ -374,6 +375,7 @@ class MemStoreFlusher implements FlushRequester {
 
   @Override
   public void requestDelayedFlush(Region r, long delay, boolean forceFlushAllStores) {
+    ((HRegion)r).incrementFlushesQueuedCount();
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has some delay
