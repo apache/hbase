@@ -111,8 +111,8 @@ public class TestMetricsRegionServer {
       rsm.updateAppend(1002);
     }
     for (int i=0; i < 13; i ++) {
-      rsm.updateDelete(13);
-      rsm.updateDelete(1003);
+      rsm.updateDeleteBatch(13);
+      rsm.updateDeleteBatch(1003);
     }
     for (int i=0; i < 14; i ++) {
       rsm.updateGet(14);
@@ -123,15 +123,26 @@ public class TestMetricsRegionServer {
       rsm.updateIncrement(1005);
     }
     for (int i=0; i < 16; i ++) {
-      rsm.updatePut(16);
-      rsm.updatePut(1006);
+      rsm.updatePutBatch(16);
+      rsm.updatePutBatch(1006);
+    }
+
+    for (int i=0; i < 17; i ++) {
+      rsm.updatePut(17);
+      rsm.updateDelete(17);
+      rsm.updateCheckAndDelete(17);
+      rsm.updateCheckAndPut(17);
     }
 
     HELPER.assertCounter("appendNumOps", 24, serverSource);
-    HELPER.assertCounter("deleteNumOps", 26, serverSource);
+    HELPER.assertCounter("deleteBatchNumOps", 26, serverSource);
     HELPER.assertCounter("getNumOps", 28, serverSource);
     HELPER.assertCounter("incrementNumOps", 30, serverSource);
-    HELPER.assertCounter("mutateNumOps", 32, serverSource);
+    HELPER.assertCounter("putBatchNumOps", 32, serverSource);
+    HELPER.assertCounter("putNumOps", 17, serverSource);
+    HELPER.assertCounter("deleteNumOps", 17, serverSource);
+    HELPER.assertCounter("checkAndDeleteNumOps", 17, serverSource);
+    HELPER.assertCounter("checkAndPutNumOps", 17, serverSource);
 
 
     HELPER.assertCounter("slowAppendCount", 12, serverSource);

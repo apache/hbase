@@ -71,18 +71,34 @@ public class MetricsRegionServer {
     return regionServerWrapper;
   }
 
-  public void updatePut(long t) {
+  public void updatePutBatch(long t) {
     if (t > 1000) {
       serverSource.incrSlowPut();
     }
+    serverSource.updatePutBatch(t);
+  }
+
+  public void updatePut(long t) {
     serverSource.updatePut(t);
   }
 
   public void updateDelete(long t) {
+    serverSource.updateDelete(t);
+  }
+
+  public void updateDeleteBatch(long t) {
     if (t > 1000) {
       serverSource.incrSlowDelete();
     }
-    serverSource.updateDelete(t);
+    serverSource.updateDeleteBatch(t);
+  }
+
+  public void updateCheckAndDelete(long t) {
+    serverSource.updateCheckAndDelete(t);
+  }
+
+  public void updateCheckAndPut(long t) {
+    serverSource.updateCheckAndPut(t);
   }
 
   public void updateGet(long t) {
