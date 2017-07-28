@@ -46,16 +46,17 @@ void RpcTestServerSerializeHandler::read(Context* ctx, std::unique_ptr<folly::IO
 }
 
 folly::Future<folly::Unit> RpcTestServerSerializeHandler::write(Context* ctx,
-                                                                std::unique_ptr<Response> r) {
+                                                                std::unique_ptr<Response> resp) {
   VLOG(3) << "Writing RPC Request";
   // Send the data down the pipeline.
-  return ctx->fireWrite(serde_.Response(r->call_id(), r->resp_msg().get()));
+  return ctx->fireWrite(
+      serde_.Response(resp->call_id(), resp->resp_msg().get(), resp->exception()));
 }
 
 std::unique_ptr<Request> RpcTestServerSerializeHandler::CreateReceivedRequest(
     const std::string& method_name) {
   std::unique_ptr<Request> result = nullptr;
-  ;
+
   if (method_name == "ping") {
     result = std::make_unique<Request>(std::make_shared<EmptyRequestProto>(),
                                        std::make_shared<EmptyResponseProto>(), method_name);

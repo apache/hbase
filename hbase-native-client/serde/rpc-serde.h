@@ -21,10 +21,12 @@
 #include <memory>
 #include <string>
 
+#include <folly/ExceptionWrapper.h>
 #include "if/HBase.pb.h"
 #include "serde/cell-scanner.h"
 #include "serde/codec.h"
 
+using namespace folly;
 // Forward
 namespace folly {
 class IOBuf;
@@ -108,6 +110,18 @@ class RpcSerde {
      */
   std::unique_ptr<folly::IOBuf> Response(const uint32_t call_id,
                                          const google::protobuf::Message *msg);
+
+  /**
+   * Serialize a response message into a protobuf.
+   * Request consists of:
+   *
+   * - Big endian length
+   * - ResponseHeader object
+   * - The passed in hbase::Response object
+   */
+  std::unique_ptr<folly::IOBuf> Response(const uint32_t call_id,
+                                         const google::protobuf::Message *msg,
+                                         const folly::exception_wrapper &exception);
 
   /**
    * Serialize a message in the delimited format.

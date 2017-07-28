@@ -30,17 +30,33 @@ namespace hbase {
 
 RpcTestServerSerializePipeline::Ptr RpcTestServerPipelineFactory::newPipeline(
     std::shared_ptr<AsyncTransportWrapper> sock) {
+  if (service_ == nullptr) {
+    initService(sock);
+  }
+  CHECK(service_ != nullptr);
+
   auto pipeline = RpcTestServerSerializePipeline::create();
   pipeline->addBack(AsyncSocketHandler(sock));
   // ensure we can write from any thread
   pipeline->addBack(EventBaseHandler());
   pipeline->addBack(LengthFieldBasedFrameDecoder());
   pipeline->addBack(RpcTestServerSerializeHandler());
-  pipeline->addBack(
-      MultiplexServerDispatcher<std::unique_ptr<Request>, std::unique_ptr<Response>>(&service_));
+  pipeline->addBack(MultiplexServerDispatcher<std::unique_ptr<Request>, std::unique_ptr<Response>>(
+      service_.get()));
   pipeline->finalize();
 
   return pipeline;
+}
+
+void RpcTestServerPipelineFactory::initService(std::shared_ptr<AsyncTransportWrapper> sock) {
+  /* get server address */
+  SocketAddress localAddress;
+  sock->getLocalAddress(&localAddress);
+
+  /* init service with server address */
+  service_ = std::make_shared<ExecutorFilter<std::unique_ptr<Request>, std::unique_ptr<Response>>>(
+      std::make_shared<CPUThreadPoolExecutor>(1),
+      std::make_shared<RpcTestService>(std::make_shared<SocketAddress>(localAddress)));
 }
 
 Future<std::unique_ptr<Response>> RpcTestService::operator()(std::unique_ptr<Request> request) {
@@ -54,11 +70,20 @@ Future<std::unique_ptr<Response>> RpcTestService::operator()(std::unique_ptr<Req
     response->set_resp_msg(pb_resp_msg);
   } else if (method_name == "echo") {
     auto pb_resp_msg = std::make_shared<EchoResponseProto>();
+    /* get msg from client */
     auto pb_req_msg = std::static_pointer_cast<EchoRequestProto>(request->req_msg());
     pb_resp_msg->set_message(pb_req_msg->message());
     response->set_resp_msg(pb_resp_msg);
+    VLOG(1) << "RPC server:"
+            << " echo called, " << pb_req_msg->message();
+
   } else if (method_name == "error") {
-    // TODO:
+    auto pb_resp_msg = std::make_shared<EmptyResponseProto>();
+    response->set_resp_msg(pb_resp_msg);
+    VLOG(1) << "RPC server:"
+            << " error called.";
+    response->set_exception(folly::make_exception_wrapper<RpcTestException>("server error!"));
+
   } else if (method_name == "pause") {
     // TODO:
   } else if (method_name == "addr") {
