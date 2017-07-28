@@ -30,6 +30,7 @@
 #include <boost/thread.hpp>
 
 #include "connection/rpc-client.h"
+#include "exceptions/exception.h"
 #include "if/test.pb.h"
 #include "rpc-test-server.h"
 #include "security/user.h"
@@ -40,46 +41,114 @@ using namespace folly;
 using namespace hbase;
 
 DEFINE_int32(port, 0, "test server port");
+typedef ServerBootstrap<RpcTestServerSerializePipeline> ServerTestBootstrap;
+typedef std::shared_ptr<ServerTestBootstrap> ServerPtr;
 
-TEST(RpcTestServer, echo) {
-  /* create conf */
+class RpcTest : public ::testing::Test {
+ public:
+  static void SetUpTestCase() { google::InstallFailureSignalHandler(); }
+};
+
+std::shared_ptr<Configuration> CreateConf() {
   auto conf = std::make_shared<Configuration>();
   conf->Set(RpcSerde::HBASE_CLIENT_RPC_TEST_MODE, "true");
+  return conf;
+}
 
+ServerPtr CreateRpcServer() {
   /* create rpc test server */
-  auto server = std::make_shared<ServerBootstrap<RpcTestServerSerializePipeline>>();
+  auto server = std::make_shared<ServerTestBootstrap>();
   server->childPipeline(std::make_shared<RpcTestServerPipelineFactory>());
   server->bind(FLAGS_port);
-  folly::SocketAddress server_addr;
-  server->getSockets()[0]->getAddress(&server_addr);
+  return server;
+}
 
-  /* create RpcClient */
+std::shared_ptr<folly::SocketAddress> GetRpcServerAddress(ServerPtr server) {
+  auto addr = std::make_shared<folly::SocketAddress>();
+  server->getSockets()[0]->getAddress(addr.get());
+  return addr;
+}
+
+std::shared_ptr<RpcClient> CreateRpcClient(std::shared_ptr<Configuration> conf) {
   auto io_executor = std::make_shared<wangle::IOThreadPoolExecutor>(1);
+  auto client = std::make_shared<RpcClient>(io_executor, nullptr, conf);
+  return client;
+}
 
-  auto rpc_client = std::make_shared<RpcClient>(io_executor, nullptr, conf);
+std::shared_ptr<RpcClient> CreateRpcClient(std::shared_ptr<Configuration> conf,
+                                           std::chrono::nanoseconds connect_timeout) {
+  auto io_executor = std::make_shared<wangle::IOThreadPoolExecutor>(1);
+  auto client = std::make_shared<RpcClient>(io_executor, nullptr, conf, connect_timeout);
+  return client;
+}
 
-  /**
-   * test echo
-   */
-  try {
-    std::string greetings = "hello, hbase server!";
-    auto request = std::make_unique<Request>(std::make_shared<EchoRequestProto>(),
-                                             std::make_shared<EchoResponseProto>(), "echo");
-    auto pb_msg = std::static_pointer_cast<EchoRequestProto>(request->req_msg());
-    pb_msg->set_message(greetings);
+/**
+ * test echo
+ */
+TEST_F(RpcTest, Echo) {
+  auto conf = CreateConf();
+  auto server = CreateRpcServer();
+  auto server_addr = GetRpcServerAddress(server);
+  auto client = CreateRpcClient(conf);
 
-    /* sending out request */
-    rpc_client
-        ->AsyncCall(server_addr.getAddressStr(), server_addr.getPort(), std::move(request),
-                    hbase::security::User::defaultUser())
-        .then([=](std::unique_ptr<Response> response) {
-          auto pb_resp = std::static_pointer_cast<EchoResponseProto>(response->resp_msg());
-          VLOG(1) << "message returned: " + pb_resp->message();
-          EXPECT_EQ(greetings, pb_resp->message());
-        });
-  } catch (const std::exception& e) {
-    throw e;
-  }
+  std::string greetings = "hello, hbase server!";
+  auto request = std::make_unique<Request>(std::make_shared<EchoRequestProto>(),
+                                           std::make_shared<EchoResponseProto>(), "echo");
+  auto pb_msg = std::static_pointer_cast<EchoRequestProto>(request->req_msg());
+  pb_msg->set_message(greetings);
+
+  /* sending out request */
+  client
+      ->AsyncCall(server_addr->getAddressStr(), server_addr->getPort(), std::move(request),
+                  hbase::security::User::defaultUser())
+      .then([=](std::unique_ptr<Response> response) {
+        auto pb_resp = std::static_pointer_cast<EchoResponseProto>(response->resp_msg());
+        EXPECT_TRUE(pb_resp != nullptr);
+        VLOG(1) << "RPC echo returned: " + pb_resp->message();
+        EXPECT_EQ(greetings, pb_resp->message());
+      })
+      .onError([](const folly::exception_wrapper& ew) {
+        FAIL() << "Shouldn't get here, no exception is expected for RPC echo.";
+      });
+
+  server->stop();
+  server->join();
+}
+
+/**
+ * test error
+ */
+TEST_F(RpcTest, error) {
+  auto conf = CreateConf();
+  auto server = CreateRpcServer();
+  auto server_addr = GetRpcServerAddress(server);
+  auto client = CreateRpcClient(conf);
+
+  auto request = std::make_unique<Request>(std::make_shared<EmptyRequestProto>(),
+                                           std::make_shared<EmptyResponseProto>(), "error");
+  /* sending out request */
+  client
+      ->AsyncCall(server_addr->getAddressStr(), server_addr->getPort(), std::move(request),
+                  hbase::security::User::defaultUser())
+      .then([=](std::unique_ptr<Response> response) {
+        FAIL() << "Shouldn't get here, exception is expected for RPC error.";
+      })
+      .onError([](const folly::exception_wrapper& ew) {
+        VLOG(1) << "RPC error returned with exception.";
+        std::string kRemoteException = demangle(typeid(hbase::RemoteException)).toStdString();
+        std::string kRpcTestException = demangle(typeid(hbase::RpcTestException)).toStdString();
+
+        /* verify exception_wrapper */
+        EXPECT_TRUE(bool(ew));
+        EXPECT_EQ(kRemoteException, ew.class_name());
+
+        /* verify RemoteException */
+        EXPECT_TRUE(ew.with_exception([&](const hbase::RemoteException& re) {
+          /* verify  DoNotRetryIOException*/
+          EXPECT_EQ(kRpcTestException, re.exception_class_name());
+          EXPECT_EQ(kRpcTestException + ": server error!", re.stack_trace());
+        }));
+      });
 
   server->stop();
   server->join();

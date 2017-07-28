@@ -36,7 +36,7 @@ class RpcTestServerSerializeHandler
 
   void read(Context* ctx, std::unique_ptr<folly::IOBuf> buf) override;
 
-  folly::Future<folly::Unit> write(Context* ctx, std::unique_ptr<Response> r) override;
+  folly::Future<folly::Unit> write(Context* ctx, std::unique_ptr<Response> resp) override;
 
  private:
   std::unique_ptr<Request> CreateReceivedRequest(const std::string& method_name);

@@ -17,12 +17,14 @@
  *
  */
 #pragma once
+#include <folly/SocketAddress.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/service/ExecutorFilter.h>
 #include <wangle/service/Service.h>
 
 #include "connection/request.h"
 #include "connection/response.h"
+#include "exceptions/exception.h"
 
 using namespace hbase;
 using namespace folly;
@@ -31,11 +33,24 @@ using namespace wangle;
 namespace hbase {
 using RpcTestServerSerializePipeline = wangle::Pipeline<IOBufQueue&, std::unique_ptr<Response>>;
 
+class RpcTestException : public IOException {
+ public:
+  RpcTestException() {}
+  RpcTestException(const std::string& what) : IOException(what) {}
+  RpcTestException(const std::string& what, const folly::exception_wrapper& cause)
+      : IOException(what, cause) {}
+  RpcTestException(const folly::exception_wrapper& cause) : IOException("", cause) {}
+};
+
 class RpcTestService : public Service<std::unique_ptr<Request>, std::unique_ptr<Response>> {
  public:
-  RpcTestService() {}
+  RpcTestService(std::shared_ptr<folly::SocketAddress> socket_address)
+      : socket_address_(socket_address) {}
   virtual ~RpcTestService() = default;
   Future<std::unique_ptr<Response>> operator()(std::unique_ptr<Request> request) override;
+
+ private:
+  std::shared_ptr<folly::SocketAddress> socket_address_;
 };
 
 class RpcTestServerPipelineFactory : public PipelineFactory<RpcTestServerSerializePipeline> {
@@ -44,7 +59,10 @@ class RpcTestServerPipelineFactory : public PipelineFactory<RpcTestServerSeriali
       std::shared_ptr<AsyncTransportWrapper> sock) override;
 
  private:
-  ExecutorFilter<std::unique_ptr<Request>, std::unique_ptr<Response>> service_{
-      std::make_shared<CPUThreadPoolExecutor>(1), std::make_shared<RpcTestService>()};
+  void initService(std::shared_ptr<AsyncTransportWrapper> sock);
+
+ private:
+  std::shared_ptr<ExecutorFilter<std::unique_ptr<Request>, std::unique_ptr<Response>>> service_{
+      nullptr};
 };
 }  // end of namespace hbase

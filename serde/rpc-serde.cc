@@ -40,6 +40,8 @@ using google::protobuf::io::CodedInputStream;
 using google::protobuf::io::CodedOutputStream;
 using google::protobuf::io::ZeroCopyOutputStream;
 
+using namespace hbase::pb;
+
 namespace hbase {
 
 static const std::string PREAMBLE = "HBas";
@@ -171,6 +173,31 @@ std::unique_ptr<folly::IOBuf> RpcSerde::Response(const uint32_t call_id,
   auto ser_resp = SerializeDelimited(*msg);
   ser_header->appendChain(std::move(ser_resp));
 
+  return PrependLength(std::move(ser_header));
+}
+
+std::unique_ptr<folly::IOBuf> RpcSerde::Response(const uint32_t call_id,
+                                                 const google::protobuf::Message *msg,
+                                                 const folly::exception_wrapper &exception) {
+  /* create ResponseHeader */
+  pb::ResponseHeader rh;
+  rh.set_call_id(call_id);
+
+  /* create ExceptionResponse */
+  if (bool(exception)) {
+    VLOG(1) << "packing ExceptionResponse";
+    auto exception_response = new pb::ExceptionResponse();
+    exception_response->set_exception_class_name(exception.class_name().c_str());
+    exception_response->set_stack_trace(exception.what().c_str());
+    rh.set_allocated_exception(exception_response);
+  }
+
+  /* serialize Response header and body */
+  auto ser_header = SerializeDelimited(rh);
+  auto ser_resp = SerializeDelimited(*msg);
+  ser_header->appendChain(std::move(ser_resp));
+
+  VLOG(3) << "Converted hbase::Response to folly::IOBuf";
   return PrependLength(std::move(ser_header));
 }
 
