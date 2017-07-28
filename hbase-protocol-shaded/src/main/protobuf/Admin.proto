@@ -144,21 +144,6 @@ message FlushRegionResponse {
 }
 
 /**
- * Splits the specified region.
- * <p>
- * This method currently flushes the region and then forces a compaction which
- * will then trigger a split.  The flush is done synchronously but the
- * compaction is asynchronous.
- */
-message SplitRegionRequest {
-  required RegionSpecifier region = 1;
-  optional bytes split_point = 2;
-}
-
-message SplitRegionResponse {
-}
-
-/**
  * Compacts the specified region.  Performs a major compaction if specified.
  * <p>
  * This method is asynchronous.
@@ -294,9 +279,6 @@ service AdminService {
 
   rpc FlushRegion(FlushRegionRequest)
     returns(FlushRegionResponse);
-
-  rpc SplitRegion(SplitRegionRequest)
-    returns(SplitRegionResponse);
 
   rpc CompactRegion(CompactRegionRequest)
     returns(CompactRegionResponse);

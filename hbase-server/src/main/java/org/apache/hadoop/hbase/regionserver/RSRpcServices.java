@@ -157,8 +157,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
@@ -2211,43 +2209,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  /**
-   * Split a region on the region server.
-   *
-   * @param controller the RPC controller
-   * @param request the request
-   * @throws ServiceException
-   */
-  @Override
-  @QosPriority(priority=HConstants.ADMIN_QOS)
-  public SplitRegionResponse splitRegion(final RpcController controller,
-      final SplitRegionRequest request) throws ServiceException {
-    try {
-      checkOpen();
-      requestCount.increment();
-      Region region = getRegion(request.getRegion());
-      region.startRegionOperation(Operation.SPLIT_REGION);
-      if (region.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
-        throw new IOException("Can't split replicas directly. "
-            + "Replicas are auto-split when their primary is split.");
-      }
-      LOG.info("Splitting " + region.getRegionInfo().getRegionNameAsString());
-      region.flush(true);
-      byte[] splitPoint = null;
-      if (request.hasSplitPoint()) {
-        splitPoint = request.getSplitPoint().toByteArray();
-      }
-      ((HRegion)region).forceSplit(splitPoint);
-      regionServer.compactSplitThread.requestSplit(region, ((HRegion)region).checkSplit(),
-        RpcServer.getRequestUser());
-      return SplitRegionResponse.newBuilder().build();
-    } catch (DroppedSnapshotException ex) {
-      regionServer.abort("Replay of WAL required. Forcing server shutdown", ex);
-      throw new ServiceException(ex);
-    } catch (IOException ie) {
-      throw new ServiceException(ie);
-    }
-  }
 
   /**
    * Stop the region server.

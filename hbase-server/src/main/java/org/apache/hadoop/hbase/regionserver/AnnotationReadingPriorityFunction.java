@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
@@ -84,7 +83,6 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
       GetStoreFileRequest.class,
       CloseRegionRequest.class,
       FlushRegionRequest.class,
-      SplitRegionRequest.class,
       CompactRegionRequest.class,
       GetRequest.class,
       MutateRequest.class,
