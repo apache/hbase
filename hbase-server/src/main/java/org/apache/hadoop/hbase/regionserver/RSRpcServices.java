@@ -925,10 +925,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (regionServer.metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
       if (batchContainsPuts) {
-        regionServer.metricsRegionServer.updatePut(after - before);
+        regionServer.metricsRegionServer.updatePutBatch(after - before);
       }
       if (batchContainsDelete) {
-        regionServer.metricsRegionServer.updateDelete(after - before);
+        regionServer.metricsRegionServer.updateDeleteBatch(after - before);
       }
     }
   }
@@ -1000,10 +1000,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (regionServer.metricsRegionServer != null) {
         long after = EnvironmentEdgeManager.currentTime();
           if (batchContainsPuts) {
-          regionServer.metricsRegionServer.updatePut(after - before);
+          regionServer.metricsRegionServer.updatePutBatch(after - before);
         }
         if (batchContainsDelete) {
-          regionServer.metricsRegionServer.updateDelete(after - before);
+          regionServer.metricsRegionServer.updateDeleteBatch(after - before);
         }
       }
     }
@@ -2426,6 +2426,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     CellScanner cellScanner = controller != null ? controller.cellScanner() : null;
     OperationQuota quota = null;
     RpcCallContext context = RpcServer.getCurrentCall();
+    MutationType type = null;
+    long before = EnvironmentEdgeManager.currentTime();
     // Clear scanner so we are not holding on to reference across call.
     if (controller != null) {
       controller.setCellScanner(null);
@@ -2443,7 +2445,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
       Result r = null;
       Boolean processed = null;
-      MutationType type = mutation.getMutateType();
+      type = mutation.getMutateType();
       long mutationSize = 0;
       quota = getQuotaManager().checkQuota(region, OperationQuota.OperationType.MUTATE);
       switch (type) {
@@ -2532,6 +2534,29 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } finally {
       if (quota != null) {
         quota.close();
+      }
+      // Update metrics
+      if (regionServer.metricsRegionServer != null && type != null) {
+        long after = EnvironmentEdgeManager.currentTime();
+        switch (type) {
+        case DELETE:
+          if (request.hasCondition()) {
+            regionServer.metricsRegionServer.updateCheckAndDelete(after - before);
+          } else {
+            regionServer.metricsRegionServer.updateDelete(after - before);
+          }
+          break;
+        case PUT:
+          if (request.hasCondition()) {
+            regionServer.metricsRegionServer.updateCheckAndPut(after - before);
+          } else {
+            regionServer.metricsRegionServer.updatePut(after - before);
+          }
+          break;
+        default:
+          break;
+
+        }
       }
     }
   }

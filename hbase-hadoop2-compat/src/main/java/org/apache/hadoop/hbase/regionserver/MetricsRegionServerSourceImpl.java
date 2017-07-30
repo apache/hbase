@@ -37,7 +37,11 @@ public class MetricsRegionServerSourceImpl
 
   final MetricsRegionServerWrapper rsWrap;
   private final MetricHistogram putHisto;
+  private final MetricHistogram putBatchHisto;
   private final MetricHistogram deleteHisto;
+  private final MetricHistogram deleteBatchHisto;
+  private final MetricHistogram checkAndDeleteHisto;
+  private final MetricHistogram checkAndPutHisto;
   private final MetricHistogram getHisto;
   private final MetricHistogram incrementHisto;
   private final MetricHistogram appendHisto;
@@ -97,11 +101,16 @@ public class MetricsRegionServerSourceImpl
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
     this.rsWrap = rsWrap;
 
-    putHisto = getMetricsRegistry().newTimeHistogram(MUTATE_KEY);
-    slowPut = getMetricsRegistry().newCounter(SLOW_MUTATE_KEY, SLOW_MUTATE_DESC, 0L);
+    putHisto = getMetricsRegistry().newTimeHistogram(PUT_KEY);
+    putBatchHisto = getMetricsRegistry().newTimeHistogram(PUT_BATCH_KEY);
+    slowPut = getMetricsRegistry().newCounter(SLOW_PUT_KEY, SLOW_PUT_DESC, 0L);
 
     deleteHisto = getMetricsRegistry().newTimeHistogram(DELETE_KEY);
     slowDelete = getMetricsRegistry().newCounter(SLOW_DELETE_KEY, SLOW_DELETE_DESC, 0L);
+
+    deleteBatchHisto = getMetricsRegistry().newTimeHistogram(DELETE_BATCH_KEY);
+    checkAndDeleteHisto = getMetricsRegistry().newTimeHistogram(CHECK_AND_DELETE_KEY);
+    checkAndPutHisto = getMetricsRegistry().newTimeHistogram(CHECK_AND_PUT_KEY);
 
     getHisto = getMetricsRegistry().newTimeHistogram(GET_KEY);
     slowGet = getMetricsRegistry().newCounter(SLOW_GET_KEY, SLOW_GET_DESC, 0L);
@@ -499,5 +508,25 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void updatePauseTimeWithoutGc(long t) {
     pausesWithoutGc.add(t);
+  }
+
+  @Override
+  public void updateDeleteBatch(long t) {
+    deleteBatchHisto.add(t);
+  }
+
+  @Override
+  public void updateCheckAndDelete(long t) {
+    checkAndDeleteHisto.add(t);
+  }
+
+  @Override
+  public void updateCheckAndPut(long t) {
+    checkAndPutHisto.add(t);
+  }
+
+  @Override
+  public void updatePutBatch(long t) {
+    putBatchHisto.add(t);
   }
 }
