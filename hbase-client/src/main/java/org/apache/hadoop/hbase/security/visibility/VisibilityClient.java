@@ -261,9 +261,7 @@ public class VisibilityClient {
    */
   public static ListLabelsResponse listLabels(Connection connection, final String regex)
       throws Throwable {
-    Table table = null;
-    try {
-      table = connection.getTable(LABELS_TABLE_NAME);
+    try (Table table = connection.getTable(LABELS_TABLE_NAME)) {
       Batch.Call<VisibilityLabelsService, ListLabelsResponse> callable =
           new Batch.Call<VisibilityLabelsService, ListLabelsResponse>() {
             ServerRpcController controller = new ServerRpcController();
@@ -290,14 +288,6 @@ public class VisibilityClient {
             HConstants.EMPTY_BYTE_ARRAY, callable);
       return result.values().iterator().next(); // There will be exactly one region for labels
       // table and so one entry in result Map.
-    }
-    finally {
-      if (table != null) {
-        table.close();
-      }
-      if (connection != null) {
-        connection.close();
-      }
     }
   }
 
