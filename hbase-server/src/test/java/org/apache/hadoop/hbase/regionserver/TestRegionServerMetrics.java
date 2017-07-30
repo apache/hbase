@@ -158,7 +158,7 @@ public class TestRegionServerMetrics {
             "_region_" + i.getEncodedName()+
             "_metric";
         metricsHelper.assertCounter(prefix + "_getCount", 10, agg);
-        metricsHelper.assertCounter(prefix + "_mutateCount", 31, agg);
+        metricsHelper.assertCounter(prefix + "_putCount", 31, agg);
       }
     }
     List<Get> gets = new ArrayList<Get>();

@@ -108,7 +108,7 @@ public class TestRemoveRegionMetrics {
           "_region_" + regionInfo.getEncodedName()+
           "_metric";
 
-      metricsHelper.assertCounter(prefix + "_mutateCount", 1, currentAgg);
+      metricsHelper.assertCounter(prefix + "_putCount", 1, currentAgg);
 
 
       try {
@@ -123,7 +123,7 @@ public class TestRemoveRegionMetrics {
             .getMetrics()
             .getSource()
             .getAggregateSource();
-        metricsHelper.assertCounter(prefix + "_mutateCount", 0, destAgg);
+        metricsHelper.assertCounter(prefix + "_putCount", 0, destAgg);
       }
     }
 

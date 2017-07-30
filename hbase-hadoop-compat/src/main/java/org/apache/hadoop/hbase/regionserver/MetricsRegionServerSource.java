@@ -54,11 +54,35 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void updatePut(long t);
 
   /**
+   * Update the PutBatch time histogram if a batch contains a Put op
+   * @param t
+   */
+  void updatePutBatch(long t);
+
+  /**
    * Update the Delete time histogram
    *
    * @param t time it took
    */
   void updateDelete(long t);
+
+  /**
+   * Update the Delete time histogram if a batch contains a delete op
+   * @param t time it took
+   */
+  void updateDeleteBatch(long t);
+
+  /**
+   * Update checkAndDelete histogram
+   * @param t time it took
+   */
+  void updateCheckAndDelete(long t);
+
+  /**
+   * Update checkAndPut histogram
+   * @param t time it took
+   */
+  void updateCheckAndPut(long t);
 
   /**
    * Update the Get time histogram .
@@ -330,25 +354,29 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String UPDATES_BLOCKED_DESC =
       "Number of MS updates have been blocked so that the memstore can be flushed.";
   String DELETE_KEY = "delete";
+  String CHECK_AND_DELETE_KEY = "checkAndDelete";
+  String CHECK_AND_PUT_KEY = "checkAndPut";
+  String DELETE_BATCH_KEY = "deleteBatch";
   String GET_SIZE_KEY = "getSize";
   String GET_KEY = "get";
   String INCREMENT_KEY = "increment";
-  String MUTATE_KEY = "mutate";
+  String PUT_KEY = "put";
+  String PUT_BATCH_KEY = "putBatch";
   String APPEND_KEY = "append";
   String REPLAY_KEY = "replay";
   String SCAN_KEY = "scan";
   String SCAN_SIZE_KEY = "scanSize";
   String SCAN_TIME_KEY = "scanTime";
 
-  String SLOW_MUTATE_KEY = "slowPutCount";
+  String SLOW_PUT_KEY = "slowPutCount";
   String SLOW_GET_KEY = "slowGetCount";
   String SLOW_DELETE_KEY = "slowDeleteCount";
   String SLOW_INCREMENT_KEY = "slowIncrementCount";
   String SLOW_APPEND_KEY = "slowAppendCount";
-  String SLOW_MUTATE_DESC =
-      "The number of Multis that took over 1000ms to complete";
+  String SLOW_PUT_DESC =
+      "The number of batches containing puts that took over 1000ms to complete";
   String SLOW_DELETE_DESC =
-      "The number of Deletes that took over 1000ms to complete";
+      "The number of batches containing delete(s) that took over 1000ms to complete";
   String SLOW_GET_DESC = "The number of Gets that took over 1000ms to complete";
   String SLOW_INCREMENT_DESC =
       "The number of Increments that took over 1000ms to complete";
