@@ -1408,6 +1408,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       mutator.mutate(put);
+      if (opts.autoFlush) {
+        mutator.flush();
+      }
     }
   }
 
@@ -1605,6 +1608,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       mutator.mutate(put);
+      if (opts.autoFlush) {
+        mutator.flush();
+      }
     }
   }
 
