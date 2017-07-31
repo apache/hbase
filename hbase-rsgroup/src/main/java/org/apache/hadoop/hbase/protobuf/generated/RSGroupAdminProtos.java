@@ -532,12 +532,12 @@ public final class RSGroupAdminProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_name = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> 
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> 
         getTableNameList();
     /**
      * <code>repeated .hbase.pb.TableName table_name = 1;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName(int index);
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName(int index);
     /**
      * <code>repeated .hbase.pb.TableName table_name = 1;</code>
      */
@@ -545,12 +545,12 @@ public final class RSGroupAdminProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_name = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
         getTableNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.TableName table_name = 1;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder(
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder(
         int index);
   }
   /**
@@ -606,10 +606,10 @@ public final class RSGroupAdminProtos {
             }
             case 10: {
               if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-                tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName>();
+                tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName>();
                 mutable_bitField0_ |= 0x00000001;
               }
-              tableName_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry));
+              tableName_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry));
               break;
             }
           }
@@ -656,17 +656,17 @@ public final class RSGroupAdminProtos {
 
     // repeated .hbase.pb.TableName table_name = 1;
     public static final int TABLE_NAME_FIELD_NUMBER = 1;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> tableName_;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> tableName_;
     /**
      * <code>repeated .hbase.pb.TableName table_name = 1;</code>
      */
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> getTableNameList() {
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> getTableNameList() {
       return tableName_;
     }
     /**
      * <code>repeated .hbase.pb.TableName table_name = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
         getTableNameOrBuilderList() {
       return tableName_;
     }
@@ -679,13 +679,13 @@ public final class RSGroupAdminProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_name = 1;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName(int index) {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName(int index) {
       return tableName_.get(index);
     }
     /**
      * <code>repeated .hbase.pb.TableName table_name = 1;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder(
         int index) {
       return tableName_.get(index);
     }
@@ -996,22 +996,22 @@ public final class RSGroupAdminProtos {
       private int bitField0_;
 
       // repeated .hbase.pb.TableName table_name = 1;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> tableName_ =
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> tableName_ =
         java.util.Collections.emptyList();
       private void ensureTableNameIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName>(tableName_);
+          tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName>(tableName_);
           bitField0_ |= 0x00000001;
          }
       }
 
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
 
       /**
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> getTableNameList() {
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> getTableNameList() {
         if (tableNameBuilder_ == null) {
           return java.util.Collections.unmodifiableList(tableName_);
         } else {
@@ -1031,7 +1031,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName(int index) {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName(int index) {
         if (tableNameBuilder_ == null) {
           return tableName_.get(index);
         } else {
@@ -1042,7 +1042,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1059,7 +1059,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           tableName_.set(index, builderForValue.build());
@@ -1072,7 +1072,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
-      public Builder addTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder addTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1089,7 +1089,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder addTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1106,7 +1106,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder addTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           tableName_.add(builderForValue.build());
@@ -1120,7 +1120,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder addTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           tableName_.add(index, builderForValue.build());
@@ -1134,7 +1134,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder addAllTableName(
-          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> values) {
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> values) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           super.addAll(values, tableName_);
@@ -1173,14 +1173,14 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder(
           int index) {
         return getTableNameFieldBuilder().getBuilder(index);
       }
       /**
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder(
           int index) {
         if (tableNameBuilder_ == null) {
           return tableName_.get(index);  } else {
@@ -1190,7 +1190,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
            getTableNameOrBuilderList() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilderList();
@@ -1201,31 +1201,31 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder addTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder addTableNameBuilder() {
         return getTableNameFieldBuilder().addBuilder(
-            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance());
+            org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance());
       }
       /**
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder addTableNameBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder addTableNameBuilder(
           int index) {
         return getTableNameFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance());
+            index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance());
       }
       /**
        * <code>repeated .hbase.pb.TableName table_name = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder> 
            getTableNameBuilderList() {
         return getTableNameFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   ((bitField0_ & 0x00000001) == 0x00000001),
                   getParentForChildren(),
@@ -2331,11 +2331,11 @@ public final class RSGroupAdminProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.GetRSGroupInfoOfTableRequest}
@@ -2389,11 +2389,11 @@ public final class RSGroupAdminProtos {
               break;
             }
             case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
               if (((bitField0_ & 0x00000001) == 0x00000001)) {
                 subBuilder = tableName_.toBuilder();
               }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(tableName_);
                 tableName_ = subBuilder.buildPartial();
@@ -2443,7 +2443,7 @@ public final class RSGroupAdminProtos {
     private int bitField0_;
     // required .hbase.pb.TableName table_name = 1;
     public static final int TABLE_NAME_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
@@ -2453,18 +2453,18 @@ public final class RSGroupAdminProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
       return tableName_;
     }
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
     private void initFields() {
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2658,7 +2658,7 @@ public final class RSGroupAdminProtos {
       public Builder clear() {
         super.clear();
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
@@ -2754,9 +2754,9 @@ public final class RSGroupAdminProtos {
       private int bitField0_;
 
       // required .hbase.pb.TableName table_name = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
@@ -2766,7 +2766,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
         } else {
@@ -2776,7 +2776,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -2793,7 +2793,7 @@ public final class RSGroupAdminProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           tableName_ = builderForValue.build();
           onChanged();
@@ -2806,12 +2806,12 @@ public final class RSGroupAdminProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
             tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
           } else {
             tableName_ = value;
           }
@@ -2827,7 +2827,7 @@ public final class RSGroupAdminProtos {
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
           onChanged();
         } else {
           tableNameBuilder_.clear();
@@ -2838,7 +2838,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
@@ -2846,7 +2846,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
         } else {
@@ -2857,11 +2857,11 @@ public final class RSGroupAdminProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   getParentForChildren(),
                   isClean());
@@ -4695,12 +4695,12 @@ public final class RSGroupAdminProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_name = 2;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> 
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> 
         getTableNameList();
     /**
      * <code>repeated .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName(int index);
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName(int index);
     /**
      * <code>repeated .hbase.pb.TableName table_name = 2;</code>
      */
@@ -4708,12 +4708,12 @@ public final class RSGroupAdminProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_name = 2;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
         getTableNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder(
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder(
         int index);
   }
   /**
@@ -4774,10 +4774,10 @@ public final class RSGroupAdminProtos {
             }
             case 18: {
               if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
-                tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName>();
+                tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName>();
                 mutable_bitField0_ |= 0x00000002;
               }
-              tableName_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry));
+              tableName_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry));
               break;
             }
           }
@@ -4868,17 +4868,17 @@ public final class RSGroupAdminProtos {
 
     // repeated .hbase.pb.TableName table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> tableName_;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> tableName_;
     /**
      * <code>repeated .hbase.pb.TableName table_name = 2;</code>
      */
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> getTableNameList() {
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> getTableNameList() {
       return tableName_;
     }
     /**
      * <code>repeated .hbase.pb.TableName table_name = 2;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
         getTableNameOrBuilderList() {
       return tableName_;
     }
@@ -4891,13 +4891,13 @@ public final class RSGroupAdminProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName(int index) {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName(int index) {
       return tableName_.get(index);
     }
     /**
      * <code>repeated .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder(
         int index) {
       return tableName_.get(index);
     }
@@ -5320,22 +5320,22 @@ public final class RSGroupAdminProtos {
       }
 
       // repeated .hbase.pb.TableName table_name = 2;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> tableName_ =
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> tableName_ =
         java.util.Collections.emptyList();
       private void ensureTableNameIsMutable() {
         if (!((bitField0_ & 0x00000002) == 0x00000002)) {
-          tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName>(tableName_);
+          tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName>(tableName_);
           bitField0_ |= 0x00000002;
          }
       }
 
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
 
       /**
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> getTableNameList() {
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> getTableNameList() {
         if (tableNameBuilder_ == null) {
           return java.util.Collections.unmodifiableList(tableName_);
         } else {
@@ -5355,7 +5355,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName(int index) {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName(int index) {
         if (tableNameBuilder_ == null) {
           return tableName_.get(index);
         } else {
@@ -5366,7 +5366,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -5383,7 +5383,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           tableName_.set(index, builderForValue.build());
@@ -5396,7 +5396,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder addTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder addTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -5413,7 +5413,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder addTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -5430,7 +5430,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder addTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           tableName_.add(builderForValue.build());
@@ -5444,7 +5444,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder addTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           tableName_.add(index, builderForValue.build());
@@ -5458,7 +5458,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder addAllTableName(
-          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> values) {
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> values) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           super.addAll(values, tableName_);
@@ -5497,14 +5497,14 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder(
           int index) {
         return getTableNameFieldBuilder().getBuilder(index);
       }
       /**
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder(
           int index) {
         if (tableNameBuilder_ == null) {
           return tableName_.get(index);  } else {
@@ -5514,7 +5514,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
            getTableNameOrBuilderList() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilderList();
@@ -5525,31 +5525,31 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder addTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder addTableNameBuilder() {
         return getTableNameFieldBuilder().addBuilder(
-            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance());
+            org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance());
       }
       /**
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder addTableNameBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder addTableNameBuilder(
           int index) {
         return getTableNameFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance());
+            index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance());
       }
       /**
        * <code>repeated .hbase.pb.TableName table_name = 2;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder> 
            getTableNameBuilderList() {
         return getTableNameFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   ((bitField0_ & 0x00000002) == 0x00000002),
                   getParentForChildren(),
@@ -10801,12 +10801,12 @@ public final class RSGroupAdminProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_name = 3;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> 
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> 
         getTableNameList();
     /**
      * <code>repeated .hbase.pb.TableName table_name = 3;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName(int index);
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName(int index);
     /**
      * <code>repeated .hbase.pb.TableName table_name = 3;</code>
      */
@@ -10814,12 +10814,12 @@ public final class RSGroupAdminProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_name = 3;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
         getTableNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.TableName table_name = 3;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder(
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder(
         int index);
   }
   /**
@@ -10888,10 +10888,10 @@ public final class RSGroupAdminProtos {
             }
             case 26: {
               if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
-                tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName>();
+                tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName>();
                 mutable_bitField0_ |= 0x00000004;
               }
-              tableName_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry));
+              tableName_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry));
               break;
             }
           }
@@ -11021,17 +11021,17 @@ public final class RSGroupAdminProtos {
 
     // repeated .hbase.pb.TableName table_name = 3;
     public static final int TABLE_NAME_FIELD_NUMBER = 3;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> tableName_;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> tableName_;
     /**
      * <code>repeated .hbase.pb.TableName table_name = 3;</code>
      */
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> getTableNameList() {
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> getTableNameList() {
       return tableName_;
     }
     /**
      * <code>repeated .hbase.pb.TableName table_name = 3;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
         getTableNameOrBuilderList() {
       return tableName_;
     }
@@ -11044,13 +11044,13 @@ public final class RSGroupAdminProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_name = 3;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName(int index) {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName(int index) {
       return tableName_.get(index);
     }
     /**
      * <code>repeated .hbase.pb.TableName table_name = 3;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder(
         int index) {
       return tableName_.get(index);
     }
@@ -11781,22 +11781,22 @@ public final class RSGroupAdminProtos {
       }
 
       // repeated .hbase.pb.TableName table_name = 3;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> tableName_ =
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> tableName_ =
         java.util.Collections.emptyList();
       private void ensureTableNameIsMutable() {
         if (!((bitField0_ & 0x00000004) == 0x00000004)) {
-          tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName>(tableName_);
+          tableName_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName>(tableName_);
           bitField0_ |= 0x00000004;
          }
       }
 
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
 
       /**
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> getTableNameList() {
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> getTableNameList() {
         if (tableNameBuilder_ == null) {
           return java.util.Collections.unmodifiableList(tableName_);
         } else {
@@ -11816,7 +11816,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName(int index) {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName(int index) {
         if (tableNameBuilder_ == null) {
           return tableName_.get(index);
         } else {
@@ -11827,7 +11827,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
       public Builder setTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -11844,7 +11844,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
       public Builder setTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           tableName_.set(index, builderForValue.build());
@@ -11857,7 +11857,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
-      public Builder addTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder addTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -11874,7 +11874,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
       public Builder addTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -11891,7 +11891,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
       public Builder addTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           tableName_.add(builderForValue.build());
@@ -11905,7 +11905,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
       public Builder addTableName(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           tableName_.add(index, builderForValue.build());
@@ -11919,7 +11919,7 @@ public final class RSGroupAdminProtos {
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
       public Builder addAllTableName(
-          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName> values) {
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName> values) {
         if (tableNameBuilder_ == null) {
           ensureTableNameIsMutable();
           super.addAll(values, tableName_);
@@ -11958,14 +11958,14 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder(
           int index) {
         return getTableNameFieldBuilder().getBuilder(index);
       }
       /**
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder(
           int index) {
         if (tableNameBuilder_ == null) {
           return tableName_.get(index);  } else {
@@ -11975,7 +11975,7 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
            getTableNameOrBuilderList() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilderList();
@@ -11986,31 +11986,31 @@ public final class RSGroupAdminProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder addTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder addTableNameBuilder() {
         return getTableNameFieldBuilder().addBuilder(
-            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance());
+            org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance());
       }
       /**
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder addTableNameBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder addTableNameBuilder(
           int index) {
         return getTableNameFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance());
+            index, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance());
       }
       /**
        * <code>repeated .hbase.pb.TableName table_name = 3;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder> 
            getTableNameBuilderList() {
         return getTableNameFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   ((bitField0_ & 0x00000004) == 0x00000004),
                   getParentForChildren(),
@@ -13359,64 +13359,64 @@ public final class RSGroupAdminProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\022RSGroupAdmin.proto\022\010hbase.pb\032\013HBase.pr" +
-      "oto\032\rRSGroup.proto\"4\n\032ListTablesOfRSGrou" +
-      "pRequest\022\026\n\016r_s_group_name\030\001 \002(\t\"F\n\033List" +
-      "TablesOfRSGroupResponse\022\'\n\ntable_name\030\001 " +
-      "\003(\0132\023.hbase.pb.TableName\"/\n\025GetRSGroupIn" +
-      "foRequest\022\026\n\016r_s_group_name\030\001 \002(\t\"G\n\026Get" +
-      "RSGroupInfoResponse\022-\n\016r_s_group_info\030\001 " +
-      "\001(\0132\025.hbase.pb.RSGroupInfo\"G\n\034GetRSGroup" +
-      "InfoOfTableRequest\022\'\n\ntable_name\030\001 \002(\0132\023" +
-      ".hbase.pb.TableName\"N\n\035GetRSGroupInfoOfT",
-      "ableResponse\022-\n\016r_s_group_info\030\001 \001(\0132\025.h" +
-      "base.pb.RSGroupInfo\"Q\n\022MoveServersReques" +
-      "t\022\024\n\014target_group\030\001 \002(\t\022%\n\007servers\030\003 \003(\013" +
-      "2\024.hbase.pb.ServerName\"\025\n\023MoveServersRes" +
-      "ponse\"R\n\021MoveTablesRequest\022\024\n\014target_gro" +
-      "up\030\001 \002(\t\022\'\n\ntable_name\030\002 \003(\0132\023.hbase.pb." +
-      "TableName\"\024\n\022MoveTablesResponse\"+\n\021AddRS" +
-      "GroupRequest\022\026\n\016r_s_group_name\030\001 \002(\t\"\024\n\022" +
-      "AddRSGroupResponse\".\n\024RemoveRSGroupReque" +
-      "st\022\026\n\016r_s_group_name\030\001 \002(\t\"\027\n\025RemoveRSGr",
-      "oupResponse\"/\n\025BalanceRSGroupRequest\022\026\n\016" +
-      "r_s_group_name\030\001 \002(\t\",\n\026BalanceRSGroupRe" +
-      "sponse\022\022\n\nbalanceRan\030\001 \002(\010\"\031\n\027ListRSGrou" +
-      "pInfosRequest\"I\n\030ListRSGroupInfosRespons" +
-      "e\022-\n\016r_s_group_info\030\001 \003(\0132\025.hbase.pb.RSG" +
-      "roupInfo\"E\n\035GetRSGroupInfoOfServerReques" +
-      "t\022$\n\006server\030\002 \002(\0132\024.hbase.pb.ServerName\"" +
-      "O\n\036GetRSGroupInfoOfServerResponse\022-\n\016r_s" +
-      "_group_info\030\001 \001(\0132\025.hbase.pb.RSGroupInfo" +
-      "\"\203\001\n\033MoveServersAndTablesRequest\022\024\n\014targ",
-      "et_group\030\001 \002(\t\022%\n\007servers\030\002 \003(\0132\024.hbase." +
-      "pb.ServerName\022\'\n\ntable_name\030\003 \003(\0132\023.hbas" +
-      "e.pb.TableName\"\036\n\034MoveServersAndTablesRe" +
-      "sponse2\210\007\n\023RSGroupAdminService\022S\n\016GetRSG" +
-      "roupInfo\022\037.hbase.pb.GetRSGroupInfoReques" +
-      "t\032 .hbase.pb.GetRSGroupInfoResponse\022h\n\025G" +
-      "etRSGroupInfoOfTable\022&.hbase.pb.GetRSGro" +
-      "upInfoOfTableRequest\032\'.hbase.pb.GetRSGro" +
-      "upInfoOfTableResponse\022k\n\026GetRSGroupInfoO" +
-      "fServer\022\'.hbase.pb.GetRSGroupInfoOfServe",
-      "rRequest\032(.hbase.pb.GetRSGroupInfoOfServ" +
-      "erResponse\022J\n\013MoveServers\022\034.hbase.pb.Mov" +
-      "eServersRequest\032\035.hbase.pb.MoveServersRe" +
-      "sponse\022G\n\nMoveTables\022\033.hbase.pb.MoveTabl" +
-      "esRequest\032\034.hbase.pb.MoveTablesResponse\022" +
-      "G\n\nAddRSGroup\022\033.hbase.pb.AddRSGroupReque" +
-      "st\032\034.hbase.pb.AddRSGroupResponse\022P\n\rRemo" +
-      "veRSGroup\022\036.hbase.pb.RemoveRSGroupReques" +
-      "t\032\037.hbase.pb.RemoveRSGroupResponse\022S\n\016Ba" +
-      "lanceRSGroup\022\037.hbase.pb.BalanceRSGroupRe",
-      "quest\032 .hbase.pb.BalanceRSGroupResponse\022" +
-      "Y\n\020ListRSGroupInfos\022!.hbase.pb.ListRSGro" +
-      "upInfosRequest\032\".hbase.pb.ListRSGroupInf" +
-      "osResponse\022e\n\024MoveServersAndTables\022%.hba" +
-      "se.pb.MoveServersAndTablesRequest\032&.hbas" +
-      "e.pb.MoveServersAndTablesResponseBH\n*org" +
-      ".apache.hadoop.hbase.protobuf.generatedB" +
-      "\022RSGroupAdminProtosH\001\210\001\001\240\001\001"
+      "\n\022RSGroupAdmin.proto\022\010hbase.pb\032\013Table.pr" +
+      "oto\032\013HBase.proto\032\rRSGroup.proto\"4\n\032ListT" +
+      "ablesOfRSGroupRequest\022\026\n\016r_s_group_name\030" +
+      "\001 \002(\t\"F\n\033ListTablesOfRSGroupResponse\022\'\n\n" +
+      "table_name\030\001 \003(\0132\023.hbase.pb.TableName\"/\n" +
+      "\025GetRSGroupInfoRequest\022\026\n\016r_s_group_name" +
+      "\030\001 \002(\t\"G\n\026GetRSGroupInfoResponse\022-\n\016r_s_" +
+      "group_info\030\001 \001(\0132\025.hbase.pb.RSGroupInfo\"" +
+      "G\n\034GetRSGroupInfoOfTableRequest\022\'\n\ntable" +
+      "_name\030\001 \002(\0132\023.hbase.pb.TableName\"N\n\035GetR",
+      "SGroupInfoOfTableResponse\022-\n\016r_s_group_i" +
+      "nfo\030\001 \001(\0132\025.hbase.pb.RSGroupInfo\"Q\n\022Move" +
+      "ServersRequest\022\024\n\014target_group\030\001 \002(\t\022%\n\007" +
+      "servers\030\003 \003(\0132\024.hbase.pb.ServerName\"\025\n\023M" +
+      "oveServersResponse\"R\n\021MoveTablesRequest\022" +
+      "\024\n\014target_group\030\001 \002(\t\022\'\n\ntable_name\030\002 \003(" +
+      "\0132\023.hbase.pb.TableName\"\024\n\022MoveTablesResp" +
+      "onse\"+\n\021AddRSGroupRequest\022\026\n\016r_s_group_n" +
+      "ame\030\001 \002(\t\"\024\n\022AddRSGroupResponse\".\n\024Remov" +
+      "eRSGroupRequest\022\026\n\016r_s_group_name\030\001 \002(\t\"",
+      "\027\n\025RemoveRSGroupResponse\"/\n\025BalanceRSGro" +
+      "upRequest\022\026\n\016r_s_group_name\030\001 \002(\t\",\n\026Bal" +
+      "anceRSGroupResponse\022\022\n\nbalanceRan\030\001 \002(\010\"" +
+      "\031\n\027ListRSGroupInfosRequest\"I\n\030ListRSGrou" +
+      "pInfosResponse\022-\n\016r_s_group_info\030\001 \003(\0132\025" +
+      ".hbase.pb.RSGroupInfo\"E\n\035GetRSGroupInfoO" +
+      "fServerRequest\022$\n\006server\030\002 \002(\0132\024.hbase.p" +
+      "b.ServerName\"O\n\036GetRSGroupInfoOfServerRe" +
+      "sponse\022-\n\016r_s_group_info\030\001 \001(\0132\025.hbase.p" +
+      "b.RSGroupInfo\"\203\001\n\033MoveServersAndTablesRe",
+      "quest\022\024\n\014target_group\030\001 \002(\t\022%\n\007servers\030\002" +
+      " \003(\0132\024.hbase.pb.ServerName\022\'\n\ntable_name" +
+      "\030\003 \003(\0132\023.hbase.pb.TableName\"\036\n\034MoveServe" +
+      "rsAndTablesResponse2\210\007\n\023RSGroupAdminServ" +
+      "ice\022S\n\016GetRSGroupInfo\022\037.hbase.pb.GetRSGr" +
+      "oupInfoRequest\032 .hbase.pb.GetRSGroupInfo" +
+      "Response\022h\n\025GetRSGroupInfoOfTable\022&.hbas" +
+      "e.pb.GetRSGroupInfoOfTableRequest\032\'.hbas" +
+      "e.pb.GetRSGroupInfoOfTableResponse\022k\n\026Ge" +
+      "tRSGroupInfoOfServer\022\'.hbase.pb.GetRSGro",
+      "upInfoOfServerRequest\032(.hbase.pb.GetRSGr" +
+      "oupInfoOfServerResponse\022J\n\013MoveServers\022\034" +
+      ".hbase.pb.MoveServersRequest\032\035.hbase.pb." +
+      "MoveServersResponse\022G\n\nMoveTables\022\033.hbas" +
+      "e.pb.MoveTablesRequest\032\034.hbase.pb.MoveTa" +
+      "blesResponse\022G\n\nAddRSGroup\022\033.hbase.pb.Ad" +
+      "dRSGroupRequest\032\034.hbase.pb.AddRSGroupRes" +
+      "ponse\022P\n\rRemoveRSGroup\022\036.hbase.pb.Remove" +
+      "RSGroupRequest\032\037.hbase.pb.RemoveRSGroupR" +
+      "esponse\022S\n\016BalanceRSGroup\022\037.hbase.pb.Bal",
+      "anceRSGroupRequest\032 .hbase.pb.BalanceRSG" +
+      "roupResponse\022Y\n\020ListRSGroupInfos\022!.hbase" +
+      ".pb.ListRSGroupInfosRequest\032\".hbase.pb.L" +
+      "istRSGroupInfosResponse\022e\n\024MoveServersAn" +
+      "dTables\022%.hbase.pb.MoveServersAndTablesR" +
+      "equest\032&.hbase.pb.MoveServersAndTablesRe" +
+      "sponseBH\n*org.apache.hadoop.hbase.protob" +
+      "uf.generatedB\022RSGroupAdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -13561,6 +13561,7 @@ public final class RSGroupAdminProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos.getDescriptor(),
         }, assigner);

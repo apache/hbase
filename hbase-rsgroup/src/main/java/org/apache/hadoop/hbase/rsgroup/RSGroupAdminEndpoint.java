@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesR
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
+import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
@@ -168,7 +169,7 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
       MoveTablesResponse.Builder builder = MoveTablesResponse.newBuilder();
       try {
         Set<TableName> tables = new HashSet<>(request.getTableNameList().size());
-        for (HBaseProtos.TableName tableName : request.getTableNameList()) {
+        for (TableProtos.TableName tableName : request.getTableNameList()) {
           tables.add(ProtobufUtil.toTableName(tableName));
         }
         groupAdminServer.moveTables(tables, request.getTargetGroup());
@@ -257,7 +258,7 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
           hostPorts.add(Address.fromParts(el.getHostName(), el.getPort()));
         }
         Set<TableName> tables = new HashSet<>(request.getTableNameList().size());
-        for (HBaseProtos.TableName tableName : request.getTableNameList()) {
+        for (TableProtos.TableName tableName : request.getTableNameList()) {
           tables.add(ProtobufUtil.toTableName(tableName));
         }
         groupAdminServer.moveServersAndTables(hostPorts, tables, request.getTargetGroup());

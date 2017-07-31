@@ -982,7 +982,7 @@ public final class QuotaProtos {
 
       public final boolean isInitialized() {
         if (!hasTimeUnit()) {
-
+          
           return false;
         }
         return true;
@@ -2009,37 +2009,37 @@ public final class QuotaProtos {
       public final boolean isInitialized() {
         if (hasReqNum()) {
           if (!getReqNum().isInitialized()) {
-
+            
             return false;
           }
         }
         if (hasReqSize()) {
           if (!getReqSize().isInitialized()) {
-
+            
             return false;
           }
         }
         if (hasWriteNum()) {
           if (!getWriteNum().isInitialized()) {
-
+            
             return false;
           }
         }
         if (hasWriteSize()) {
           if (!getWriteSize().isInitialized()) {
-
+            
             return false;
           }
         }
         if (hasReadNum()) {
           if (!getReadNum().isInitialized()) {
-
+            
             return false;
           }
         }
         if (hasReadSize()) {
           if (!getReadSize().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -2169,7 +2169,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota req_num = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getReqNumFieldBuilder() {
         if (reqNumBuilder_ == null) {
           reqNumBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2286,7 +2286,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota req_size = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getReqSizeFieldBuilder() {
         if (reqSizeBuilder_ == null) {
           reqSizeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2403,7 +2403,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota write_num = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getWriteNumFieldBuilder() {
         if (writeNumBuilder_ == null) {
           writeNumBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2520,7 +2520,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota write_size = 4;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getWriteSizeFieldBuilder() {
         if (writeSizeBuilder_ == null) {
           writeSizeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2637,7 +2637,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota read_num = 5;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getReadNumFieldBuilder() {
         if (readNumBuilder_ == null) {
           readNumBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2754,7 +2754,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota read_size = 6;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getReadSizeFieldBuilder() {
         if (readSizeBuilder_ == null) {
           readSizeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -3244,7 +3244,7 @@ public final class QuotaProtos {
       public final boolean isInitialized() {
         if (hasTimedQuota()) {
           if (!getTimedQuota().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -3410,7 +3410,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota timed_quota = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getTimedQuotaFieldBuilder() {
         if (timedQuotaBuilder_ == null) {
           timedQuotaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -3978,7 +3978,7 @@ public final class QuotaProtos {
       public final boolean isInitialized() {
         if (hasThrottle()) {
           if (!getThrottle().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -4141,7 +4141,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.Throttle throttle = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleOrBuilder> 
           getThrottleFieldBuilder() {
         if (throttleBuilder_ == null) {
           throttleBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -4258,7 +4258,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder> 
           getSpaceFieldBuilder() {
         if (spaceBuilder_ == null) {
           spaceBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -5876,7 +5876,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder> 
           getQuotaFieldBuilder() {
         if (quotaBuilder_ == null) {
           quotaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -7088,7 +7088,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.SpaceQuotaStatus quota_status = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaStatus, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaStatus, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaStatus.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaStatusOrBuilder> 
           getQuotaStatusFieldBuilder() {
         if (quotaStatusBuilder_ == null) {
           quotaStatusBuilder_ = new com.google.protobuf.SingleFieldBuilder<

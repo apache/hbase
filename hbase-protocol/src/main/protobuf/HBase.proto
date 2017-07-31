@@ -24,14 +24,7 @@ option java_outer_classname = "HBaseProtos";
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-
-/**
- * Table Name
- */
-message TableName {
-  required bytes namespace = 1;
-  required bytes qualifier = 2;
-}
+import "Table.proto";
 
 /**
  * Table Schema

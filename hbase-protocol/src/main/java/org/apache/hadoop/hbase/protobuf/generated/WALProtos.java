@@ -8813,11 +8813,11 @@ public final class WALProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
 
     // required bytes encoded_region_name = 2;
     /**
@@ -8921,11 +8921,11 @@ public final class WALProtos {
               break;
             }
             case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
               if (((bitField0_ & 0x00000001) == 0x00000001)) {
                 subBuilder = tableName_.toBuilder();
               }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(tableName_);
                 tableName_ = subBuilder.buildPartial();
@@ -8996,7 +8996,7 @@ public final class WALProtos {
     private int bitField0_;
     // required .hbase.pb.TableName table_name = 1;
     public static final int TABLE_NAME_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
@@ -9006,13 +9006,13 @@ public final class WALProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
       return tableName_;
     }
     /**
      * <code>required .hbase.pb.TableName table_name = 1;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
@@ -9085,7 +9085,7 @@ public final class WALProtos {
     }
 
     private void initFields() {
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
       stores_ = java.util.Collections.emptyList();
       bulkloadSeqNum_ = 0L;
@@ -9347,7 +9347,7 @@ public final class WALProtos {
       public Builder clear() {
         super.clear();
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
@@ -9516,9 +9516,9 @@ public final class WALProtos {
       private int bitField0_;
 
       // required .hbase.pb.TableName table_name = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
@@ -9528,7 +9528,7 @@ public final class WALProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
         } else {
@@ -9538,7 +9538,7 @@ public final class WALProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -9555,7 +9555,7 @@ public final class WALProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           tableName_ = builderForValue.build();
           onChanged();
@@ -9568,12 +9568,12 @@ public final class WALProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
             tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
           } else {
             tableName_ = value;
           }
@@ -9589,7 +9589,7 @@ public final class WALProtos {
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
           onChanged();
         } else {
           tableNameBuilder_.clear();
@@ -9600,7 +9600,7 @@ public final class WALProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
@@ -9608,7 +9608,7 @@ public final class WALProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
         } else {
@@ -9619,11 +9619,11 @@ public final class WALProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   getParentForChildren(),
                   isClean());
@@ -11978,56 +11978,56 @@ public final class WALProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tWAL.proto\022\010hbase.pb\032\013HBase.proto\"\217\001\n\tW" +
-      "ALHeader\022\027\n\017has_compression\030\001 \001(\010\022\026\n\016enc" +
-      "ryption_key\030\002 \001(\014\022\033\n\023has_tag_compression" +
-      "\030\003 \001(\010\022\027\n\017writer_cls_name\030\004 \001(\t\022\033\n\023cell_" +
-      "codec_cls_name\030\005 \001(\t\"\273\002\n\006WALKey\022\033\n\023encod" +
-      "ed_region_name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002(\014" +
-      "\022\033\n\023log_sequence_number\030\003 \002(\004\022\022\n\nwrite_t" +
-      "ime\030\004 \002(\004\022&\n\ncluster_id\030\005 \001(\0132\016.hbase.pb" +
-      ".UUIDB\002\030\001\022%\n\006scopes\030\006 \003(\0132\025.hbase.pb.Fam" +
-      "ilyScope\022\032\n\022following_kv_count\030\007 \001(\r\022#\n\013",
-      "cluster_ids\030\010 \003(\0132\016.hbase.pb.UUID\022\022\n\nnon" +
-      "ceGroup\030\t \001(\004\022\r\n\005nonce\030\n \001(\004\022\034\n\024orig_seq" +
-      "uence_number\030\013 \001(\004\"F\n\013FamilyScope\022\016\n\006fam" +
-      "ily\030\001 \002(\014\022\'\n\nscope_type\030\002 \002(\0162\023.hbase.pb" +
-      ".ScopeType\"\276\001\n\024CompactionDescriptor\022\022\n\nt" +
-      "able_name\030\001 \002(\014\022\033\n\023encoded_region_name\030\002" +
-      " \002(\014\022\023\n\013family_name\030\003 \002(\014\022\030\n\020compaction_" +
-      "input\030\004 \003(\t\022\031\n\021compaction_output\030\005 \003(\t\022\026" +
-      "\n\016store_home_dir\030\006 \002(\t\022\023\n\013region_name\030\007 " +
-      "\001(\014\"\244\003\n\017FlushDescriptor\0225\n\006action\030\001 \002(\0162",
-      "%.hbase.pb.FlushDescriptor.FlushAction\022\022" +
-      "\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_region_nam" +
-      "e\030\003 \002(\014\022\035\n\025flush_sequence_number\030\004 \001(\004\022E" +
-      "\n\rstore_flushes\030\005 \003(\0132..hbase.pb.FlushDe" +
-      "scriptor.StoreFlushDescriptor\022\023\n\013region_" +
-      "name\030\006 \001(\014\032Y\n\024StoreFlushDescriptor\022\023\n\013fa" +
-      "mily_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t\022" +
-      "\024\n\014flush_output\030\003 \003(\t\"S\n\013FlushAction\022\017\n\013" +
-      "START_FLUSH\020\000\022\020\n\014COMMIT_FLUSH\020\001\022\017\n\013ABORT" +
-      "_FLUSH\020\002\022\020\n\014CANNOT_FLUSH\020\003\"q\n\017StoreDescr",
-      "iptor\022\023\n\013family_name\030\001 \002(\014\022\026\n\016store_home" +
-      "_dir\030\002 \002(\t\022\022\n\nstore_file\030\003 \003(\t\022\035\n\025store_" +
-      "file_size_bytes\030\004 \001(\004\"\237\001\n\022BulkLoadDescri" +
-      "ptor\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.Tabl" +
-      "eName\022\033\n\023encoded_region_name\030\002 \002(\014\022)\n\006st" +
-      "ores\030\003 \003(\0132\031.hbase.pb.StoreDescriptor\022\030\n" +
-      "\020bulkload_seq_num\030\004 \002(\003\"\272\002\n\025RegionEventD" +
-      "escriptor\022=\n\nevent_type\030\001 \002(\0162).hbase.pb" +
-      ".RegionEventDescriptor.EventType\022\022\n\ntabl" +
-      "e_name\030\002 \002(\014\022\033\n\023encoded_region_name\030\003 \002(",
-      "\014\022\033\n\023log_sequence_number\030\004 \001(\004\022)\n\006stores" +
-      "\030\005 \003(\0132\031.hbase.pb.StoreDescriptor\022$\n\006ser" +
-      "ver\030\006 \001(\0132\024.hbase.pb.ServerName\022\023\n\013regio" +
-      "n_name\030\007 \001(\014\".\n\tEventType\022\017\n\013REGION_OPEN" +
-      "\020\000\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWALTrailer*d\n\tSc" +
-      "opeType\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030" +
-      "REPLICATION_SCOPE_GLOBAL\020\001\022\034\n\030REPLICATIO" +
-      "N_SCOPE_SERIAL\020\002B?\n*org.apache.hadoop.hb" +
-      "ase.protobuf.generatedB\tWALProtosH\001\210\001\000\240\001" +
-      "\001"
+      "\n\tWAL.proto\022\010hbase.pb\032\013Table.proto\032\013HBas" +
+      "e.proto\"\217\001\n\tWALHeader\022\027\n\017has_compression" +
+      "\030\001 \001(\010\022\026\n\016encryption_key\030\002 \001(\014\022\033\n\023has_ta" +
+      "g_compression\030\003 \001(\010\022\027\n\017writer_cls_name\030\004" +
+      " \001(\t\022\033\n\023cell_codec_cls_name\030\005 \001(\t\"\273\002\n\006WA" +
+      "LKey\022\033\n\023encoded_region_name\030\001 \002(\014\022\022\n\ntab" +
+      "le_name\030\002 \002(\014\022\033\n\023log_sequence_number\030\003 \002" +
+      "(\004\022\022\n\nwrite_time\030\004 \002(\004\022&\n\ncluster_id\030\005 \001" +
+      "(\0132\016.hbase.pb.UUIDB\002\030\001\022%\n\006scopes\030\006 \003(\0132\025" +
+      ".hbase.pb.FamilyScope\022\032\n\022following_kv_co",
+      "unt\030\007 \001(\r\022#\n\013cluster_ids\030\010 \003(\0132\016.hbase.p" +
+      "b.UUID\022\022\n\nnonceGroup\030\t \001(\004\022\r\n\005nonce\030\n \001(" +
+      "\004\022\034\n\024orig_sequence_number\030\013 \001(\004\"F\n\013Famil" +
+      "yScope\022\016\n\006family\030\001 \002(\014\022\'\n\nscope_type\030\002 \002" +
+      "(\0162\023.hbase.pb.ScopeType\"\276\001\n\024CompactionDe" +
+      "scriptor\022\022\n\ntable_name\030\001 \002(\014\022\033\n\023encoded_" +
+      "region_name\030\002 \002(\014\022\023\n\013family_name\030\003 \002(\014\022\030" +
+      "\n\020compaction_input\030\004 \003(\t\022\031\n\021compaction_o" +
+      "utput\030\005 \003(\t\022\026\n\016store_home_dir\030\006 \002(\t\022\023\n\013r" +
+      "egion_name\030\007 \001(\014\"\244\003\n\017FlushDescriptor\0225\n\006",
+      "action\030\001 \002(\0162%.hbase.pb.FlushDescriptor." +
+      "FlushAction\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encod" +
+      "ed_region_name\030\003 \002(\014\022\035\n\025flush_sequence_n" +
+      "umber\030\004 \001(\004\022E\n\rstore_flushes\030\005 \003(\0132..hba" +
+      "se.pb.FlushDescriptor.StoreFlushDescript" +
+      "or\022\023\n\013region_name\030\006 \001(\014\032Y\n\024StoreFlushDes" +
+      "criptor\022\023\n\013family_name\030\001 \002(\014\022\026\n\016store_ho" +
+      "me_dir\030\002 \002(\t\022\024\n\014flush_output\030\003 \003(\t\"S\n\013Fl" +
+      "ushAction\022\017\n\013START_FLUSH\020\000\022\020\n\014COMMIT_FLU" +
+      "SH\020\001\022\017\n\013ABORT_FLUSH\020\002\022\020\n\014CANNOT_FLUSH\020\003\"",
+      "q\n\017StoreDescriptor\022\023\n\013family_name\030\001 \002(\014\022" +
+      "\026\n\016store_home_dir\030\002 \002(\t\022\022\n\nstore_file\030\003 " +
+      "\003(\t\022\035\n\025store_file_size_bytes\030\004 \001(\004\"\237\001\n\022B" +
+      "ulkLoadDescriptor\022\'\n\ntable_name\030\001 \002(\0132\023." +
+      "hbase.pb.TableName\022\033\n\023encoded_region_nam" +
+      "e\030\002 \002(\014\022)\n\006stores\030\003 \003(\0132\031.hbase.pb.Store" +
+      "Descriptor\022\030\n\020bulkload_seq_num\030\004 \002(\003\"\272\002\n" +
+      "\025RegionEventDescriptor\022=\n\nevent_type\030\001 \002" +
+      "(\0162).hbase.pb.RegionEventDescriptor.Even" +
+      "tType\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_reg",
+      "ion_name\030\003 \002(\014\022\033\n\023log_sequence_number\030\004 " +
+      "\001(\004\022)\n\006stores\030\005 \003(\0132\031.hbase.pb.StoreDesc" +
+      "riptor\022$\n\006server\030\006 \001(\0132\024.hbase.pb.Server" +
+      "Name\022\023\n\013region_name\030\007 \001(\014\".\n\tEventType\022\017" +
+      "\n\013REGION_OPEN\020\000\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWAL" +
+      "Trailer*d\n\tScopeType\022\033\n\027REPLICATION_SCOP" +
+      "E_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL\020\001\022" +
+      "\034\n\030REPLICATION_SCOPE_SERIAL\020\002B?\n*org.apa" +
+      "che.hadoop.hbase.protobuf.generatedB\tWAL" +
+      "ProtosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12100,6 +12100,7 @@ public final class WALProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
         }, assigner);
   }

@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
+import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -1707,13 +1708,13 @@ public final class ProtobufUtil {
         ", type=" + proto.getMutateType().toString();
   }
 
-  public static TableName toTableName(HBaseProtos.TableName tableNamePB) {
+  public static TableName toTableName(TableProtos.TableName tableNamePB) {
     return TableName.valueOf(tableNamePB.getNamespace().asReadOnlyByteBuffer(),
         tableNamePB.getQualifier().asReadOnlyByteBuffer());
   }
 
-  public static HBaseProtos.TableName toProtoTableName(TableName tableName) {
-    return HBaseProtos.TableName.newBuilder()
+  public static TableProtos.TableName toProtoTableName(TableName tableName) {
+    return TableProtos.TableName.newBuilder()
         .setNamespace(ByteStringer.wrap(tableName.getNamespace()))
         .setQualifier(ByteStringer.wrap(tableName.getQualifier())).build();
   }

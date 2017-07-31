@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
+import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 
 @InterfaceAudience.Private
 class RSGroupProtobufUtil {
@@ -35,14 +36,14 @@ class RSGroupProtobufUtil {
     for(HBaseProtos.ServerName el: proto.getServersList()) {
       RSGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
     }
-    for(HBaseProtos.TableName pTableName: proto.getTablesList()) {
+    for(TableProtos.TableName pTableName: proto.getTablesList()) {
       RSGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
     }
     return RSGroupInfo;
   }
 
   static RSGroupProtos.RSGroupInfo toProtoGroupInfo(RSGroupInfo pojo) {
-    List<HBaseProtos.TableName> tables = new ArrayList<>(pojo.getTables().size());
+    List<TableProtos.TableName> tables = new ArrayList<>(pojo.getTables().size());
     for(TableName arg: pojo.getTables()) {
       tables.add(ProtobufUtil.toProtoTableName(arg));
     }
