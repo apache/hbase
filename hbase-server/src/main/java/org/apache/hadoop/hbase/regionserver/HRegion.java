@@ -5404,6 +5404,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       traceScope.getSpan().addTimelineAnnotation("Getting a " + (readLock?"readLock":"writeLock"));
     }
 
+    boolean success = false;
     try {
       // Keep trying until we have a lock or error out.
       // TODO: do we need to add a time component here?
@@ -5434,8 +5435,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           traceScope.getSpan().addTimelineAnnotation("Failed to get row lock");
         }
         result = null;
-        // Clean up the counts just in case this was the thing keeping the context alive.
-        rowLockContext.cleanUp();
         String message = "Timed out waiting for lock for row: " + rowKey + " in region "
             + getRegionInfo().getEncodedName();
         if (reachDeadlineFirst) {
@@ -5446,6 +5445,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
       rowLockContext.setThreadName(Thread.currentThread().getName());
+      success = true;
       return result;
     } catch (InterruptedException ie) {
       LOG.warn("Thread interrupted waiting for lock on row: " + rowKey);
@@ -5457,6 +5457,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Thread.currentThread().interrupt();
       throw iie;
     } finally {
+      // Clean up the counts just in case this was the thing keeping the context alive.
+      if (!success && rowLockContext != null) {
+        rowLockContext.cleanUp();
+      }
       if (traceScope != null) {
         traceScope.close();
       }
@@ -5519,7 +5523,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       long c = count.decrementAndGet();
       if (c <= 0) {
         synchronized (lock) {
-          if (count.get() <= 0){
+          if (count.get() <= 0 && usable.get()){ // Don't attempt to remove row if already removed
             usable.set(false);
             RowLockContext removed = lockedRows.remove(row);
             assert removed == this: "we should never remove a different context";
