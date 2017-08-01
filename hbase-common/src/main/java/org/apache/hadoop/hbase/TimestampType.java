@@ -149,8 +149,8 @@ public enum TimestampType {
       final long physicalTime = getPhysicalTime(timestamp);
       final long logicalTime = getLogicalTime(timestamp);
 
-      // heuristic 1: Up until year 2016 (1451635200000), lt component cannot be non-zero.
-      if (physicalTime < 1451635200000L && logicalTime != 0) {
+      // heuristic 1: Up until year 2016 (1451606400000), lt component cannot be non-zero.
+      if (physicalTime < 1451606400000L && logicalTime != 0) {
         return false;
       } else if (physicalTime < 31536000000L) {
         // heuristic 2: Even if logical time = 0, physical time after left shifting by 20 bits,

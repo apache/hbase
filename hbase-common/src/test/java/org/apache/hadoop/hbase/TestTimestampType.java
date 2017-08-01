@@ -117,7 +117,10 @@ public class TestTimestampType {
 
     // test timestamps of Hybrid type from year 2016 to 2348 where lt > 0
     for (int year = 2016; year <= 2248; year += 1) {
-      date = date.withYear(year);
+      // Timestamps from first half of the first day of 1970 fail the HYBRID#isLikelyOfType check
+      // since the result after converting to a hybrid timestamp is very small so we offset by the
+      // second day
+      date = date.withDayOfYear(2).withYear(year);
 
       // Hybrid type ts with pt = date and lt = 123
       long ts = TimestampType.HYBRID.toTimestamp(TimeUnit.SECONDS, date.toEpochSecond(), 123);
@@ -182,12 +185,13 @@ public class TestTimestampType {
 
   @Test
   public void testPhysicalIsLikelyOfType() throws ParseException {
-    final ZonedDateTime date = LocalDateTime.of(1970, 1, 1, 1, 1).atZone(ZoneId.of("UTC"));
+    ZonedDateTime date = LocalDateTime.of(1970, 1, 1, 1, 1).atZone(ZoneId.of("UTC"));
 
     // test that timestamps from 1970 to 3K epoch are of Physical type
     for (int year = 1970; year < 3000 ;year += 10) {
       // Start date 1970 to 10000
-      date.withYear(year);
+      date = date.withYear(year);
+
       final long ts = date.toEpochSecond() * 1000;
       assertTrue("Year = " + year, TimestampType.PHYSICAL.isLikelyOfType(ts));
     }
@@ -198,7 +202,10 @@ public class TestTimestampType {
 
     // test timestamps of Hybrid type from year 1970 to 2248 are not of Physical type
     for (int year = 1970; year <= 2248; year += 1) {
-      date.withYear(year);
+      // Timestamps from first half of the first day of 1970 fail the HYBRID#isLikelyOfType check
+      // since the result after converting to a hybrid timestamp is very small so we offset by the
+      // second day
+      date = date.withDayOfYear(2).withYear(year);
       // Hybrid type ts with pt = date and lt = 0
       long ts = TimestampType.HYBRID.toTimestamp(TimeUnit.SECONDS, date.toEpochSecond(), 0);
       assertFalse(TimestampType.PHYSICAL.isLikelyOfType(ts));
