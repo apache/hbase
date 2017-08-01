@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -311,8 +312,7 @@ public class TestAdmin2 {
   }
 
   @Test (timeout=300000)
-  public void testShouldCloseTheRegionBasedOnTheEncodedRegionName()
-      throws Exception {
+  public void testShouldUnassignTheRegion() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     createTableWithDefaultConf(tableName);
 
@@ -322,8 +322,7 @@ public class TestAdmin2 {
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.getTable().isSystemTable()) {
         info = regionInfo;
-        admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(), rs
-            .getServerName().getServerName());
+        admin.unassign(regionInfo.getRegionName(), true);
       }
     }
     boolean isInList = ProtobufUtil.getOnlineRegions(
@@ -353,9 +352,8 @@ public class TestAdmin2 {
         if (regionInfo.getRegionNameAsString().contains(name)) {
           info = regionInfo;
           try {
-            admin.closeRegionWithEncodedRegionName("sample", rs.getServerName()
-              .getServerName());
-          } catch (NotServingRegionException nsre) {
+            admin.unassign(Bytes.toBytes("sample"), true);
+          } catch (UnknownRegionException nsre) {
             // expected, ignore it
           }
         }
@@ -376,11 +374,9 @@ public class TestAdmin2 {
     List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
-
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion2")) {
           info = regionInfo;
-          admin.closeRegion(regionInfo.getRegionNameAsString(), rs
-              .getServerName().getServerName());
+          admin.unassign(regionInfo.getRegionName(), true);
         }
       }
     }
@@ -396,79 +392,6 @@ public class TestAdmin2 {
 
     assertFalse("The region should not be present in online regions list.",
       isInList);
-  }
-
-  @Test (timeout=300000)
-  public void testCloseRegionWhenServerNameIsNull() throws Exception {
-    final byte[] tableName = Bytes.toBytes(name.getMethodName());
-    createTableWithDefaultConf(tableName);
-
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(tableName));
-
-    try {
-      List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-      for (HRegionInfo regionInfo : onlineRegions) {
-        if (!regionInfo.isMetaTable()) {
-          if (regionInfo.getRegionNameAsString()
-              .contains(name.getMethodName())) {
-            admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(),
-                null);
-          }
-        }
-      }
-      fail("The test should throw exception if the servername passed is null.");
-    } catch (IllegalArgumentException e) {
-    }
-  }
-
-  @Test (timeout=300000)
-  public void testCloseRegionWhenServerNameIsEmpty() throws Exception {
-    final byte[] tableName = Bytes.toBytes(name.getMethodName());
-    createTableWithDefaultConf(tableName);
-
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(tableName));
-
-    try {
-      List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-      for (HRegionInfo regionInfo : onlineRegions) {
-        if (!regionInfo.isMetaTable()) {
-          if (regionInfo.getRegionNameAsString()
-              .contains(name.getMethodName())) {
-            admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(),
-                " ");
-          }
-        }
-      }
-      fail("The test should throw exception if the servername passed is empty.");
-    } catch (IllegalArgumentException e) {
-    }
-  }
-
-  @Test (timeout=300000)
-  public void testCloseRegionWhenEncodedRegionNameIsNotGiven() throws Exception {
-    final byte[] tableName = Bytes.toBytes(name.getMethodName());
-    createTableWithDefaultConf(tableName);
-
-    HRegionInfo info = null;
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(tableName));
-
-    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    for (HRegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaTable()) {
-        if (regionInfo.getRegionNameAsString().contains(name.getMethodName())) {
-          info = regionInfo;
-          try {
-            admin.closeRegionWithEncodedRegionName(regionInfo
-              .getRegionNameAsString(), rs.getServerName().getServerName());
-          } catch (NotServingRegionException nsre) {
-            // expected, ignore it.
-          }
-        }
-      }
-    }
-    onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    assertTrue("The region should be present in online regions list.",
-        onlineRegions.contains(info));
   }
 
   private HBaseAdmin createTable(TableName tableName) throws IOException {

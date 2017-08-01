@@ -3030,23 +3030,31 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
 
   /**
-   * Closes the named region.
+   * Unassign the named region.
    *
-   * @param regionName  The region to close.
-   * @throws IOException
+   * @param regionName  The region to unassign.
    */
-  public void closeRegion(String regionName) throws IOException {
-    closeRegion(Bytes.toBytes(regionName));
+  public void unassignRegion(String regionName) throws IOException {
+    unassignRegion(Bytes.toBytes(regionName));
   }
 
   /**
-   * Closes the named region.
+   * Unassign the named region.
    *
-   * @param regionName  The region to close.
-   * @throws IOException
+   * @param regionName  The region to unassign.
    */
-  public void closeRegion(byte[] regionName) throws IOException {
-    getAdmin().closeRegion(regionName, null);
+  public void unassignRegion(byte[] regionName) throws IOException {
+    getAdmin().unassign(regionName, true);
+  }
+
+  /**
+   * Closes the region containing the given row.
+   *
+   * @param row  The row to find the containing region.
+   * @param table  The table to find the region.
+   */
+  public void unassignRegionByRow(String row, RegionLocator table) throws IOException {
+    unassignRegionByRow(Bytes.toBytes(row), table);
   }
 
   /**
@@ -3056,20 +3064,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param table  The table to find the region.
    * @throws IOException
    */
-  public void closeRegionByRow(String row, RegionLocator table) throws IOException {
-    closeRegionByRow(Bytes.toBytes(row), table);
-  }
-
-  /**
-   * Closes the region containing the given row.
-   *
-   * @param row  The row to find the containing region.
-   * @param table  The table to find the region.
-   * @throws IOException
-   */
-  public void closeRegionByRow(byte[] row, RegionLocator table) throws IOException {
+  public void unassignRegionByRow(byte[] row, RegionLocator table) throws IOException {
     HRegionLocation hrl = table.getRegionLocation(row);
-    closeRegion(hrl.getRegionInfo().getRegionName());
+    unassignRegion(hrl.getRegionInfo().getRegionName());
   }
 
   /*

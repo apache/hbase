@@ -178,7 +178,7 @@ public class TestQuotaObserverChoreRegionReports {
     List<HRegionInfo> regions = admin.getTableRegions(tn);
     assertEquals(1, regions.size());
     HRegionInfo hri = regions.get(0);
-    admin.closeRegion(TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName(), hri);
+    admin.unassign(hri.getRegionName(), true);
 
     // We should see this table move out of violation after the report expires.
     Waiter.waitFor(TEST_UTIL.getConfiguration(), 30000, 1000, new Waiter.Predicate<Exception>() {

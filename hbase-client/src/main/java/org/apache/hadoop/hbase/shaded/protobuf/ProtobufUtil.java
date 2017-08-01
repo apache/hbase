@@ -116,7 +116,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -1847,30 +1846,6 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A helper to close a region given a region name
-   * using admin protocol.
-   *
-   * @param admin
-   * @param regionName
-   * @return true if the region is closed
-   * @throws IOException
-   */
-  public static boolean closeRegion(final RpcController controller,
-      final AdminService.BlockingInterface admin,
-      final ServerName server, final byte[] regionName,
-      final ServerName destinationServer) throws IOException {
-    CloseRegionRequest closeRegionRequest =
-      ProtobufUtil.buildCloseRegionRequest(server,
-        regionName, destinationServer);
-    try {
-      CloseRegionResponse response = admin.closeRegion(controller, closeRegionRequest);
-      return ResponseConverter.isClosed(response);
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
-  /**
    * A helper to warmup a region given a region name
    * using admin protocol
    *
@@ -3271,25 +3246,6 @@ public final class ProtobufUtil {
     }
     return builder.build();
   }
-
-  /**
-    * Create a CloseRegionRequest for a given encoded region name
-    *
-    * @param encodedRegionName the name of the region to close
-    * @return a CloseRegionRequest
-    */
-   public static CloseRegionRequest
-       buildCloseRegionRequest(ServerName server, final String encodedRegionName) {
-     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
-     RegionSpecifier region = RequestConverter.buildRegionSpecifier(
-       RegionSpecifierType.ENCODED_REGION_NAME,
-       Bytes.toBytes(encodedRegionName));
-     builder.setRegion(region);
-     if (server != null) {
-       builder.setServerStartCode(server.getStartcode());
-     }
-     return builder.build();
-   }
 
   public static ProcedureDescription buildProcedureDescription(String signature, String instance,
       Map<String, String> props) {

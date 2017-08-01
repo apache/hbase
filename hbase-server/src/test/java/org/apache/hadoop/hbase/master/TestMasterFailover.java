@@ -62,7 +62,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({FlakeyTests.class, LargeTests.class})
-@Ignore // Needs to be rewritten for AMv2. Uses tricks not ordained when up on AMv2.
+//@Ignore // Needs to be rewritten for AMv2. Uses tricks not ordained when up on AMv2.
 public class TestMasterFailover {
   private static final Log LOG = LogFactory.getLog(TestMasterFailover.class);
 
@@ -426,7 +426,7 @@ public class TestMasterFailover {
     log("Master has aborted");
 
     rs.getRSRpcServices().closeRegion(null, ProtobufUtil.buildCloseRegionRequest(
-      rs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO.getEncodedName()));
+      rs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO.getRegionName()));
 
     // Start up a new master
     log("Starting up a new master");

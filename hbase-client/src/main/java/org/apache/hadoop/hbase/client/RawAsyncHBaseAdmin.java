@@ -726,38 +726,16 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> serverName) {
+  public CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> unused) {
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    getRegionLocation(regionName).whenComplete((location, err) -> {
+    unassign(regionName, true).whenComplete((result, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
-        return;
-      }
-      ServerName server = serverName.isPresent() ? serverName.get() : location.getServerName();
-      if (server == null) {
-        future.completeExceptionally(new NotServingRegionException(regionName));
       } else {
-        closeRegion(location.getRegionInfo(), server).whenComplete((result, err2) -> {
-          if (err2 != null) {
-            future.completeExceptionally(err2);
-          } else {
-            future.complete(result);
-          }
-        });
+        future.complete(true);
       }
     });
     return future;
-  }
-
-  private CompletableFuture<Boolean> closeRegion(HRegionInfo hri, ServerName serverName) {
-    return this
-        .<Boolean> newAdminCaller()
-        .action(
-          (controller, stub) -> this.<CloseRegionRequest, CloseRegionResponse, Boolean> adminCall(
-            controller, stub,
-            ProtobufUtil.buildCloseRegionRequest(serverName, hri.getRegionName()),
-            (s, c, req, done) -> s.closeRegion(controller, req, done), resp -> resp.getClosed()))
-        .serverName(serverName).call();
   }
 
   @Override

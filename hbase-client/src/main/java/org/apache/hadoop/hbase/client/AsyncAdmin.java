@@ -293,11 +293,9 @@ public interface AsyncAdmin {
    * Close a region. For expert-admins Runs close on the regionserver. The master will not be
    * informed of the close.
    * @param regionName region name to close
-   * @param serverName The servername of the regionserver. If not present, we will use servername
-   *          found in the hbase:meta table. A server name is made of host, port and startcode. Here
-   *          is an example: <code> host187.example.com,60020,1289493121758</code>
-   * @return true if the region was closed, false if not. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   * @param serverName Deprecated. Not used anymore after deprecation.
+   * @return Deprecated. Always returns true now.
+   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
    */
   CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> serverName);
 

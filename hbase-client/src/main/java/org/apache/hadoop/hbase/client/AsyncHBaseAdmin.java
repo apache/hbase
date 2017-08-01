@@ -215,8 +215,8 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> serverName) {
-    return wrap(rawAdmin.closeRegion(regionName, serverName));
+  public CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> unused) {
+    return wrap(rawAdmin.closeRegion(regionName, unused));
   }
 
   @Override

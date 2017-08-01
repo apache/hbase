@@ -92,8 +92,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -129,7 +127,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
@@ -168,7 +165,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyName
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
@@ -1144,66 +1140,30 @@ public class HBaseAdmin implements Admin {
     }
   }
 
+  @Deprecated
   @Override
-  public void closeRegion(final String regionname, final String serverName) throws IOException {
-    closeRegion(Bytes.toBytes(regionname), serverName);
+  public void closeRegion(final String regionName, final String unused) throws IOException {
+    unassign(Bytes.toBytes(regionName), true);
   }
 
+  @Deprecated
   @Override
-  public void closeRegion(final byte [] regionname, final String serverName) throws IOException {
-    if (serverName != null) {
-      Pair<HRegionInfo, ServerName> pair = MetaTableAccessor.getRegion(connection, regionname);
-      if (pair == null || pair.getFirst() == null) {
-        throw new UnknownRegionException(Bytes.toStringBinary(regionname));
-      } else {
-        closeRegion(ServerName.valueOf(serverName), pair.getFirst());
-      }
-    } else {
-      Pair<HRegionInfo, ServerName> pair = MetaTableAccessor.getRegion(connection, regionname);
-      if (pair == null) {
-        throw new UnknownRegionException(Bytes.toStringBinary(regionname));
-      } else if (pair.getSecond() == null) {
-        throw new NoServerForRegionException(Bytes.toStringBinary(regionname));
-      } else {
-        closeRegion(pair.getSecond(), pair.getFirst());
-      }
-    }
+  public void closeRegion(final byte [] regionName, final String unused) throws IOException {
+    unassign(regionName, true);
   }
 
+  @Deprecated
   @Override
   public boolean closeRegionWithEncodedRegionName(final String encodedRegionName,
-      final String serverName)
-  throws IOException {
-    if (null == serverName || ("").equals(serverName.trim())) {
-      throw new IllegalArgumentException("The servername cannot be null or empty.");
-    }
-    ServerName sn = ServerName.valueOf(serverName);
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
-    // Close the region without updating zk state.
-    CloseRegionRequest request =
-      ProtobufUtil.buildCloseRegionRequest(sn, encodedRegionName);
-    // TODO: There is no timeout on this controller. Set one!
-    HBaseRpcController controller = this.rpcControllerFactory.newController();
-    try {
-      CloseRegionResponse response = admin.closeRegion(controller, request);
-      boolean closed = response.getClosed();
-      if (false == closed) {
-        LOG.error("Not able to close the region " + encodedRegionName + ".");
-      }
-      return closed;
-    } catch (Exception e) {
-      throw ProtobufUtil.handleRemoteException(e);
-    }
+      final String unused) throws IOException {
+    unassign(Bytes.toBytes(encodedRegionName), true);
+    return true;
   }
 
+  @Deprecated
   @Override
-  public void closeRegion(final ServerName sn, final HRegionInfo hri) throws IOException {
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
-    // TODO: There is no timeout on this controller. Set one!
-    HBaseRpcController controller = rpcControllerFactory.newController();
-
-    // Close the region without updating zk state.
-    ProtobufUtil.closeRegion(controller, admin, sn, hri.getRegionName());
+  public void closeRegion(final ServerName unused, final HRegionInfo hri) throws IOException {
+    unassign(hri.getRegionName(), true);
   }
 
   @Override
@@ -1444,8 +1404,7 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void unassign(final byte [] regionName, final boolean force)
-  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+  public void unassign(final byte [] regionName, final boolean force) throws IOException {
     final byte[] toBeUnassigned = getRegionName(regionName);
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
