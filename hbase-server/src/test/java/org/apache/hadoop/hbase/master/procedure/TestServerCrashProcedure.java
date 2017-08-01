@@ -87,7 +87,6 @@ public class TestServerCrashProcedure {
     testRecoveryAndDoubleExecution(false, false);
   }
 
-  @Ignore  // HBASE-18366... To be enabled again.
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionOnRsWithMeta() throws Exception {
     testRecoveryAndDoubleExecution(true, true);
