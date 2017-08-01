@@ -161,9 +161,12 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       return false;
     }
 
-    // if the server is down, mark the operation as complete
+    // if the server is down, mark the operation as failed. region cannot be unassigned
+    // if server is down
     if (serverCrashed.get() || !isServerOnline(env, regionNode)) {
-      LOG.info("Server already down: " + this + "; " + regionNode.toShortString());
+      LOG.warn("Server already down: " + this + "; " + regionNode.toShortString());
+      setFailure("source region server not online",
+          new ServerCrashException(getProcId(), regionNode.getRegionLocation()));
       return false;
     }
 
