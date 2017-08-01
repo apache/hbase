@@ -84,17 +84,20 @@ folly::Future<ServerName> LocationCache::LocateMeta() {
   }
   return meta_promise_->getFuture().onError([&](const folly::exception_wrapper &ew) {
     auto promise = InvalidateMeta();
-    promise->setException(ew);
+    if (promise) {
+      promise->setException(ew);
+    }
+    throw ew;
     return ServerName{};
   });
 }
 
-std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> LocationCache::InvalidateMeta() {
+std::shared_ptr<folly::SharedPromise<hbase::pb::ServerName>> LocationCache::InvalidateMeta() {
   VLOG(2) << "Invalidating meta location";
   std::lock_guard<std::recursive_mutex> g(meta_lock_);
   if (meta_promise_ != nullptr) {
     // return the unique_ptr back to the caller.
-    std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> ret = nullptr;
+    std::shared_ptr<folly::SharedPromise<hbase::pb::ServerName>> ret = nullptr;
     std::swap(ret, meta_promise_);
     return ret;
   } else {
@@ -102,10 +105,13 @@ std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> LocationCache::Inva
   }
 }
 
-/// MUST hold the meta_lock_
 void LocationCache::RefreshMetaLocation() {
-  meta_promise_ = std::make_unique<folly::SharedPromise<ServerName>>();
-  cpu_executor_->add([&] { meta_promise_->setWith([&] { return this->ReadMetaLocation(); }); });
+  meta_promise_ = std::make_shared<folly::SharedPromise<ServerName>>();
+  auto p = meta_promise_;
+  cpu_executor_->add([this, p] {
+    std::lock_guard<std::recursive_mutex> g(meta_lock_);
+    p->setWith([&] { return this->ReadMetaLocation(); });
+  });
 }
 
 // Note: this is a blocking call to zookeeper

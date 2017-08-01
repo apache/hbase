@@ -137,7 +137,7 @@ class LocationCache : public AsyncRegionLocator {
   /**
    * Remove the cached location of meta.
    */
-  std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> InvalidateMeta();
+  std::shared_ptr<folly::SharedPromise<hbase::pb::ServerName>> InvalidateMeta();
 
   /**
    * Return cached region location corresponding to this row,
@@ -201,7 +201,7 @@ class LocationCache : public AsyncRegionLocator {
   std::shared_ptr<hbase::Configuration> conf_;
   std::string zk_quorum_;
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
-  std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;
+  std::shared_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;
   std::recursive_mutex meta_lock_;
   MetaUtil meta_util_;
   std::shared_ptr<ConnectionPool> cp_;
