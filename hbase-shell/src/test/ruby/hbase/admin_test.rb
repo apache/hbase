@@ -334,17 +334,13 @@ module Hbase
       shutdown
     end
 
-    define_test "close_region should allow encoded & non-encoded region names" do
+    define_test "unassign should allow encoded & non-encoded region names" do
       region = command(:locate_region, @test_name, '')
-      serverName = region.getServerName().getServerName()
       regionName = region.getRegionInfo().getRegionNameAsString()
       encodedRegionName = region.getRegionInfo().getEncodedName()
 
-      # Close region with just region name.
-      command(:close_region, regionName, nil)
-      # Close region with region name and server.
-      command(:close_region, regionName, serverName)
-      command(:close_region, encodedRegionName, serverName)
+      command(:unassign, regionName, true)
+      command(:unassign, encodedRegionName, true)
     end
   end
 
