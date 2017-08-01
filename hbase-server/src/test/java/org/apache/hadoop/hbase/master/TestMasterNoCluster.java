@@ -213,10 +213,6 @@ public class TestMasterNoCluster {
         ServerManager sm = super.createServerManager(master);
         // Spy on the created servermanager
         ServerManager spy = Mockito.spy(sm);
-        // Fake a successful close.
-        Mockito.doReturn(true).when(spy).
-          sendRegionClose((ServerName)Mockito.any(), (HRegionInfo)Mockito.any(),
-            (ServerName)Mockito.any());
         return spy;
       }
 

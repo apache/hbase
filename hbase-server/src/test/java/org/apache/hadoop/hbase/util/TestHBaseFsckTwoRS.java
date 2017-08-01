@@ -111,7 +111,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
   @Test(timeout=180000)
   public void testFixAssignmentsWhenMETAinTransition() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    admin.closeRegion(cluster.getServerHoldingMeta(), HRegionInfo.FIRST_META_REGIONINFO);
+    admin.unassign(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), true);
     assignmentManager.offlineRegion(HRegionInfo.FIRST_META_REGIONINFO);
     new MetaTableLocator().deleteMetaLocation(cluster.getMaster().getZooKeeper());
     assertFalse(regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));

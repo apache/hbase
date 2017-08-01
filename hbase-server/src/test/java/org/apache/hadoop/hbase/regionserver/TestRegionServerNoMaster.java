@@ -176,7 +176,7 @@ public class TestRegionServerNoMaster {
   public static void closeRegion(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
       throws Exception {
     AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
-      rs.getServerName(), hri.getEncodedName());
+      rs.getServerName(), hri.getRegionName());
     AdminProtos.CloseRegionResponse responseClose = rs.rpcServices.closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
     checkRegionIsClosed(HTU, rs, hri);

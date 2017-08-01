@@ -826,56 +826,46 @@ public interface Admin extends Abortable, Closeable {
   Future<Void> modifyColumnFamilyAsync(TableName tableName, ColumnFamilyDescriptor columnFamily)
       throws IOException;
 
-
   /**
-   * Close a region. For expert-admins.  Runs close on the regionserver.  The master will not be
-   * informed of the close.
+   * Uses {@link #unassign(byte[], boolean)} to unassign the region. For expert-admins.
    *
    * @param regionname region name to close
-   * @param serverName If supplied, we'll use this location rather than the one currently in
-   * <code>hbase:meta</code>
+   * @param serverName Deprecated. Not used.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
    */
   void closeRegion(final String regionname, final String serverName) throws IOException;
 
   /**
-   * Close a region.  For expert-admins  Runs close on the regionserver.  The master will not be
-   * informed of the close.
+   * Uses {@link #unassign(byte[], boolean)} to unassign the region. For expert-admins.
    *
    * @param regionname region name to close
-   * @param serverName The servername of the regionserver.  If passed null we will use servername
-   * found in the hbase:meta table. A server name is made of host, port and startcode.  Here is an
-   * example: <code> host187.example.com,60020,1289493121758</code>
+   * @param serverName Deprecated. Not used.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
    */
   void closeRegion(final byte[] regionname, final String serverName) throws IOException;
 
   /**
-   * For expert-admins. Runs close on the regionserver. Closes a region based on the encoded region
-   * name. The region server name is mandatory. If the servername is provided then based on the
-   * online regions in the specified regionserver the specified region will be closed. The master
-   * will not be informed of the close. Note that the regionname is the encoded regionname.
+   * Uses {@link #unassign(byte[], boolean)} to unassign the region. For expert-admins.
    *
    * @param encodedRegionName The encoded region name; i.e. the hash that makes up the region name
    * suffix: e.g. if regionname is
    * <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
    * then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
-   * @param serverName The servername of the regionserver. A server name is made of host, port and
-   * startcode. This is mandatory. Here is an example:
-   * <code> host187.example.com,60020,1289493121758</code>
-   * @return true if the region was closed, false if not.
+   * @param serverName Deprecated. Not used.
+   * @return Deprecated. Returns true always.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
    */
   boolean closeRegionWithEncodedRegionName(final String encodedRegionName, final String serverName)
       throws IOException;
 
   /**
-   * Close a region.  For expert-admins  Runs close on the regionserver.  The master will not be
-   * informed of the close.
+   * Used {@link #unassign(byte[], boolean)} to unassign the region. For expert-admins.
    *
-   * @param sn
-   * @param hri
-   * @throws IOException
+   * @param sn Deprecated. Not used.
+   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
    */
   void closeRegion(final ServerName sn, final HRegionInfo hri) throws IOException;
 

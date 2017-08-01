@@ -838,35 +838,6 @@ public class ServerManager {
   }
 
   /**
-   * Sends an CLOSE RPC to the specified server to close the specified region.
-   * <p>
-   * A region server could reject the close request because it either does not
-   * have the specified region or the region is being split.
-   * @param server server to open a region
-   * @param region region to open
-   * @param dest - if the region is moved to another server, the destination server. null otherwise.
-   * @throws IOException
-   */
-  public boolean sendRegionClose(ServerName server, HRegionInfo region,
-      ServerName dest) throws IOException {
-    if (server == null) throw new NullPointerException("Passed server is null");
-    AdminService.BlockingInterface admin = getRsAdmin(server);
-    if (admin == null) {
-      throw new IOException("Attempting to send CLOSE RPC to server " +
-        server.toString() + " for region " +
-        region.getRegionNameAsString() +
-        " failed because no RPC connection found to this server");
-    }
-    HBaseRpcController controller = newRpcController();
-    return ProtobufUtil.closeRegion(controller, admin, server, region.getRegionName(), dest);
-  }
-
-  public boolean sendRegionClose(ServerName server,
-      HRegionInfo region) throws IOException {
-    return sendRegionClose(server, region, null);
-  }
-
-  /**
    * Sends a WARMUP RPC to the specified server to warmup the specified region.
    * <p>
    * A region server could reject the close request because it either does not

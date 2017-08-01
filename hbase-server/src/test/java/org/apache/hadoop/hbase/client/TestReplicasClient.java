@@ -248,7 +248,7 @@ public class TestReplicasClient {
 
   private void closeRegion(HRegionInfo hri) throws Exception {
     AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
-      getRS().getServerName(), hri.getEncodedName());
+      getRS().getServerName(), hri.getRegionName());
     AdminProtos.CloseRegionResponse responseClose = getRS()
         .getRSRpcServices().closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
