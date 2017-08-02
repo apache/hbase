@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -56,7 +57,7 @@ public class TestBucketWriterThread {
       int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration)
       throws FileNotFoundException, IOException {
       super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
-        persistencePath, ioErrorsTolerationDuration);
+        persistencePath, ioErrorsTolerationDuration, HBaseConfiguration.create());
     }
 
     @Override

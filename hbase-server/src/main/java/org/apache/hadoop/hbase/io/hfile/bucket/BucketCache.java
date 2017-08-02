@@ -51,8 +51,11 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -96,14 +99,23 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class BucketCache implements BlockCache, HeapSize {
   private static final Log LOG = LogFactory.getLog(BucketCache.class);
 
-  /** Priority buckets */
-  private static final float DEFAULT_SINGLE_FACTOR = 0.25f;
-  private static final float DEFAULT_MULTI_FACTOR = 0.50f;
-  private static final float DEFAULT_MEMORY_FACTOR = 0.25f;
-  private static final float DEFAULT_EXTRA_FREE_FACTOR = 0.10f;
+  /** Priority buckets config */
+  static final String SINGLE_FACTOR_CONFIG_NAME = "hbase.bucketcache.single.factor";
+  static final String MULTI_FACTOR_CONFIG_NAME = "hbase.bucketcache.multi.factor";
+  static final String MEMORY_FACTOR_CONFIG_NAME = "hbase.bucketcache.memory.factor";
+  static final String EXTRA_FREE_FACTOR_CONFIG_NAME = "hbase.bucketcache.extrafreefactor";
+  static final String ACCEPT_FACTOR_CONFIG_NAME = "hbase.bucketcache.acceptfactor";
+  static final String MIN_FACTOR_CONFIG_NAME = "hbase.bucketcache.minfactor";
 
+  /** Priority buckets */
+  @VisibleForTesting
+  static final float DEFAULT_SINGLE_FACTOR = 0.25f;
+  static final float DEFAULT_MULTI_FACTOR = 0.50f;
+  static final float DEFAULT_MEMORY_FACTOR = 0.25f;
+  static final float DEFAULT_MIN_FACTOR = 0.85f;
+
+  private static final float DEFAULT_EXTRA_FREE_FACTOR = 0.10f;
   private static final float DEFAULT_ACCEPT_FACTOR = 0.95f;
-  private static final float DEFAULT_MIN_FACTOR = 0.85f;
 
   // Number of blocks to clear for each of the bucket size that is full
   private static final int DEFAULT_FREE_ENTIRE_BLOCK_FACTOR = 2;
@@ -212,15 +224,34 @@ public class BucketCache implements BlockCache, HeapSize {
   // Allocate or free space for the block
   private BucketAllocator bucketAllocator;
 
+  /** Acceptable size of cache (no evictions if size < acceptable) */
+  private float acceptableFactor;
+
+  /** Minimum threshold of cache (when evicting, evict until size < min) */
+  private float minFactor;
+
+  /** Free this floating point factor of extra blocks when evicting. For example free the number of blocks requested * (1 + extraFreeFactor) */
+  private float extraFreeFactor;
+
+  /** Single access bucket size */
+  private float singleFactor;
+
+  /** Multiple access bucket size */
+  private float multiFactor;
+
+  /** In-memory bucket size */
+  private float memoryFactor;
+
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath) throws FileNotFoundException,
       IOException {
     this(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
-      persistencePath, DEFAULT_ERROR_TOLERATION_DURATION);
+      persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, HBaseConfiguration.create());
   }
 
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
-      int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration)
+                     int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
+                     Configuration conf)
       throws FileNotFoundException, IOException {
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity);
     this.writerThreads = new WriterThread[writerThreadNum];
@@ -229,6 +260,19 @@ public class BucketCache implements BlockCache, HeapSize {
       // Enough for about 32TB of cache!
       throw new IllegalArgumentException("Cache capacity is too large, only support 32TB now");
     }
+
+    this.acceptableFactor = conf.getFloat(ACCEPT_FACTOR_CONFIG_NAME, DEFAULT_ACCEPT_FACTOR);
+    this.minFactor = conf.getFloat(MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR);
+    this.extraFreeFactor = conf.getFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, DEFAULT_EXTRA_FREE_FACTOR);
+    this.singleFactor = conf.getFloat(SINGLE_FACTOR_CONFIG_NAME, DEFAULT_SINGLE_FACTOR);
+    this.multiFactor = conf.getFloat(MULTI_FACTOR_CONFIG_NAME, DEFAULT_MULTI_FACTOR);
+    this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
+
+    sanityCheckConfigs();
+
+    LOG.info("Instantiating BucketCache with acceptableFactor: " + acceptableFactor + ", minFactor: " + minFactor +
+        ", extraFreeFactor: " + extraFreeFactor + ", singleFactor: " + singleFactor + ", multiFactor: " + multiFactor +
+        ", memoryFactor: " + memoryFactor);
 
     this.cacheCapacity = capacity;
     this.persistencePath = persistencePath;
@@ -274,6 +318,18 @@ public class BucketCache implements BlockCache, HeapSize {
       ", blockSize=" + StringUtils.byteDesc(blockSize) + ", writerThreadNum=" +
         writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath=" +
       persistencePath + ", bucketAllocator=" + this.bucketAllocator.getClass().getName());
+  }
+
+  private void sanityCheckConfigs() {
+    Preconditions.checkArgument(acceptableFactor <= 1 && acceptableFactor >= 0, ACCEPT_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument(minFactor <= 1 && minFactor >= 0, MIN_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument(minFactor <= acceptableFactor, MIN_FACTOR_CONFIG_NAME + " must be <= " + ACCEPT_FACTOR_CONFIG_NAME);
+    Preconditions.checkArgument(extraFreeFactor >= 0, EXTRA_FREE_FACTOR_CONFIG_NAME + " must be greater than 0.0");
+    Preconditions.checkArgument(singleFactor <= 1 && singleFactor >= 0, SINGLE_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument(multiFactor <= 1 && multiFactor >= 0, MULTI_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument(memoryFactor <= 1 && memoryFactor >= 0, MEMORY_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument((singleFactor + multiFactor + memoryFactor) == 1, SINGLE_FACTOR_CONFIG_NAME + ", " +
+        MULTI_FACTOR_CONFIG_NAME + ", and " + MEMORY_FACTOR_CONFIG_NAME + " segments must add up to 1.0");
   }
 
   /**
@@ -557,26 +613,16 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private long acceptableSize() {
-    return (long) Math.floor(bucketAllocator.getTotalSize() * DEFAULT_ACCEPT_FACTOR);
+    return (long) Math.floor(bucketAllocator.getTotalSize() * acceptableFactor);
   }
 
-  private long singleSize() {
-    return (long) Math.floor(bucketAllocator.getTotalSize()
-        * DEFAULT_SINGLE_FACTOR * DEFAULT_MIN_FACTOR);
-  }
-
-  private long multiSize() {
-    return (long) Math.floor(bucketAllocator.getTotalSize() * DEFAULT_MULTI_FACTOR
-        * DEFAULT_MIN_FACTOR);
-  }
-
-  private long memorySize() {
-    return (long) Math.floor(bucketAllocator.getTotalSize() * DEFAULT_MEMORY_FACTOR
-        * DEFAULT_MIN_FACTOR);
+  @VisibleForTesting
+  long getPartitionSize(float partitionFactor) {
+    return (long) Math.floor(bucketAllocator.getTotalSize() * partitionFactor * minFactor);
   }
 
   /**
-   * Return the count of bucketSizeinfos still needf ree space
+   * Return the count of bucketSizeinfos still need free space
    */
   private int bucketSizesAboveThresholdCount(float minFactor) {
     BucketAllocator.IndexStatistics[] stats = bucketAllocator.getIndexStatistics();
@@ -640,7 +686,7 @@ public class BucketCache implements BlockCache, HeapSize {
       long[] bytesToFreeForBucket = new long[stats.length];
       for (int i = 0; i < stats.length; i++) {
         bytesToFreeForBucket[i] = 0;
-        long freeGoal = (long) Math.floor(stats[i].totalCount() * (1 - DEFAULT_MIN_FACTOR));
+        long freeGoal = (long) Math.floor(stats[i].totalCount() * (1 - minFactor));
         freeGoal = Math.max(freeGoal, 1);
         if (stats[i].freeCount() < freeGoal) {
           bytesToFreeForBucket[i] = stats[i].itemSize() * (freeGoal - stats[i].freeCount());
@@ -667,15 +713,15 @@ public class BucketCache implements BlockCache, HeapSize {
       }
 
       long bytesToFreeWithExtra = (long) Math.floor(bytesToFreeWithoutExtra
-          * (1 + DEFAULT_EXTRA_FREE_FACTOR));
+          * (1 + extraFreeFactor));
 
       // Instantiate priority buckets
       BucketEntryGroup bucketSingle = new BucketEntryGroup(bytesToFreeWithExtra,
-          blockSize, singleSize());
+          blockSize, getPartitionSize(singleFactor));
       BucketEntryGroup bucketMulti = new BucketEntryGroup(bytesToFreeWithExtra,
-          blockSize, multiSize());
+          blockSize, getPartitionSize(multiFactor));
       BucketEntryGroup bucketMemory = new BucketEntryGroup(bytesToFreeWithExtra,
-          blockSize, memorySize());
+          blockSize, getPartitionSize(memoryFactor));
 
       // Scan entire map putting bucket entry into appropriate bucket entry
       // group
@@ -717,7 +763,7 @@ public class BucketCache implements BlockCache, HeapSize {
       }
 
       // Check and free if there are buckets that still need freeing of space
-      if (bucketSizesAboveThresholdCount(DEFAULT_MIN_FACTOR) > 0) {
+      if (bucketSizesAboveThresholdCount(minFactor) > 0) {
         bucketQueue.clear();
         remainingBuckets = 3;
 
@@ -1434,5 +1480,29 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public BlockCache[] getBlockCaches() {
     return null;
+  }
+
+  float getAcceptableFactor() {
+    return acceptableFactor;
+  }
+
+  float getMinFactor() {
+    return minFactor;
+  }
+
+  float getExtraFreeFactor() {
+    return extraFreeFactor;
+  }
+
+  float getSingleFactor() {
+    return singleFactor;
+  }
+
+  float getMultiFactor() {
+    return multiFactor;
+  }
+
+  float getMemoryFactor() {
+    return memoryFactor;
   }
 }
