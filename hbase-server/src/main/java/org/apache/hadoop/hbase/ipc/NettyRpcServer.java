@@ -17,21 +17,21 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.FixedLengthFrameDecoder;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.concurrent.GlobalEventExecutor;
+import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.ServerBootstrap;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelInitializer;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOption;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPipeline;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ServerChannel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.group.ChannelGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.group.DefaultChannelGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioServerSocketChannel;
+import org.apache.hadoop.hbase.shaded.io.netty.handler.codec.FixedLengthFrameDecoder;
+import org.apache.hadoop.hbase.shaded.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.DefaultThreadFactory;
+import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;

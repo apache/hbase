@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.util.Timeout;
+import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;

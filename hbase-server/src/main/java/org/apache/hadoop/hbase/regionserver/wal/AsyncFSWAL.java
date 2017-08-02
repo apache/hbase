@@ -24,9 +24,9 @@ import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.Sequence;
 import com.lmax.disruptor.Sequencer;
 
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
+import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;

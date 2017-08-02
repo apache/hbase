@@ -21,21 +21,21 @@
 package org.apache.hadoop.hbase.master;
 
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ChannelFactory;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.util.internal.StringUtil;
+import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.Bootstrap;
+import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.ChannelFactory;
+import org.apache.hadoop.hbase.shaded.io.netty.buffer.Unpooled;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelException;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOption;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramChannel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramPacket;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.InternetProtocolFamily;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioDatagramChannel;
+import org.apache.hadoop.hbase.shaded.io.netty.handler.codec.MessageToMessageEncoder;
+import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
 
 import java.io.Closeable;
 import java.io.IOException;

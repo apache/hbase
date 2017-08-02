@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;

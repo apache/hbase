@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
+import org.apache.hadoop.hbase.shaded.io.netty.util.HashedWheelTimer;
+import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
+import org.apache.hadoop.hbase.shaded.io.netty.util.TimerTask;
 
 import java.io.IOException;
 import java.net.UnknownHostException;

@@ -30,8 +30,8 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.updateServerSideMet
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timeout;
+import org.apache.hadoop.hbase.shaded.io.netty.util.HashedWheelTimer;
+import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;

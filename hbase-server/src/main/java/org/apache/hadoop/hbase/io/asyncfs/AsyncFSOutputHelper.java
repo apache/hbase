@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.io.asyncfs;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;

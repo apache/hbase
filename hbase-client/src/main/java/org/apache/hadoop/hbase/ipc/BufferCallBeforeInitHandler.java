@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelDuplexHandler;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPromise;
 
 import java.io.IOException;
 import java.util.HashMap;
