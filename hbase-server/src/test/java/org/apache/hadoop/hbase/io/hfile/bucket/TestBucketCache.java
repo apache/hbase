@@ -19,17 +19,25 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
@@ -272,8 +280,112 @@ public class TestBucketCache {
   @Test
   public void testBucketAllocatorLargeBuckets() throws BucketAllocatorException {
     long availableSpace = 20 * 1024L * 1024 * 1024;
-    int[] bucketSizes = new int[] { 1024, 1024 * 1024, 1024 * 1024 * 1024 };
+    int[] bucketSizes = new int[]{1024, 1024 * 1024, 1024 * 1024 * 1024};
     BucketAllocator allocator = new BucketAllocator(availableSpace, bucketSizes);
     assertTrue(allocator.getBuckets().length > 0);
+  }
+
+  @Test
+  public void testGetPartitionSize() throws IOException {
+    //Test default values
+    validateGetPartitionSize(cache, BucketCache.DEFAULT_SINGLE_FACTOR, BucketCache.DEFAULT_MIN_FACTOR);
+
+    Configuration conf = HBaseConfiguration.create();
+    conf.setFloat(BucketCache.MIN_FACTOR_CONFIG_NAME, 0.5f);
+    conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
+    conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
+    conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
+
+    BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
+
+    validateGetPartitionSize(cache, 0.1f, 0.5f);
+    validateGetPartitionSize(cache, 0.7f, 0.5f);
+    validateGetPartitionSize(cache, 0.2f, 0.5f);
+  }
+
+  @Test
+  public void testValidBucketCacheConfigs() throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setFloat(BucketCache.ACCEPT_FACTOR_CONFIG_NAME, 0.9f);
+    conf.setFloat(BucketCache.MIN_FACTOR_CONFIG_NAME, 0.5f);
+    conf.setFloat(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME, 0.5f);
+    conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
+    conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
+    conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
+
+    BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
+
+    assertEquals(BucketCache.ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getAcceptableFactor(), 0.9f, 0);
+    assertEquals(BucketCache.MIN_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getMinFactor(), 0.5f, 0);
+    assertEquals(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getExtraFreeFactor(), 0.5f, 0);
+    assertEquals(BucketCache.SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getSingleFactor(), 0.1f, 0);
+    assertEquals(BucketCache.MULTI_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getMultiFactor(), 0.7f, 0);
+    assertEquals(BucketCache.MEMORY_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getMemoryFactor(), 0.2f, 0);
+  }
+
+  @Test
+  public void testInvalidAcceptFactorConfig() throws IOException {
+    float[] configValues = {-1f, 0.2f, 0.86f, 1.05f};
+    boolean[] expectedOutcomes = {false, false, true, false};
+    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.ACCEPT_FACTOR_CONFIG_NAME, configValues);
+    Configuration conf = HBaseConfiguration.create();
+    checkConfigValues(conf, configMappings, expectedOutcomes);
+  }
+
+  @Test
+  public void testInvalidMinFactorConfig() throws IOException {
+    float[] configValues = {-1f, 0f, 0.96f, 1.05f};
+    //throws due to <0, in expected range, minFactor > acceptableFactor, > 1.0
+    boolean[] expectedOutcomes = {false, true, false, false};
+    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.MIN_FACTOR_CONFIG_NAME, configValues);
+    Configuration conf = HBaseConfiguration.create();
+    checkConfigValues(conf, configMappings, expectedOutcomes);
+  }
+
+  @Test
+  public void testInvalidExtraFreeFactorConfig() throws IOException {
+    float[] configValues = {-1f, 0f, 0.2f, 1.05f};
+    //throws due to <0, in expected range, in expected range, config can be > 1.0
+    boolean[] expectedOutcomes = {false, true, true, true};
+    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME, configValues);
+    Configuration conf = HBaseConfiguration.create();
+    checkConfigValues(conf, configMappings, expectedOutcomes);
+  }
+
+  @Test
+  public void testInvalidCacheSplitFactorConfig() throws IOException {
+    float[] singleFactorConfigValues = {0.2f, 0f, -0.2f, 1f};
+    float[] multiFactorConfigValues = {0.4f, 0f, 1f, .05f};
+    float[] memoryFactorConfigValues = {0.4f, 0f, 0.2f, .5f};
+    // All configs add up to 1.0 and are between 0 and 1.0, configs don't add to 1.0, configs can't be negative, configs don't add to 1.0
+    boolean[] expectedOutcomes = {true, false, false, false};
+    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.SINGLE_FACTOR_CONFIG_NAME,
+        singleFactorConfigValues, BucketCache.MULTI_FACTOR_CONFIG_NAME, multiFactorConfigValues,
+        BucketCache.MEMORY_FACTOR_CONFIG_NAME, memoryFactorConfigValues);
+    Configuration conf = HBaseConfiguration.create();
+    checkConfigValues(conf, configMappings, expectedOutcomes);
+  }
+
+  private void checkConfigValues(Configuration conf, Map<String, float[]> configMap, boolean[] expectSuccess) throws IOException {
+    Set<String> configNames = configMap.keySet();
+    for (int i = 0; i < expectSuccess.length; i++) {
+      try {
+        for (String configName : configNames) {
+          conf.setFloat(configName, configMap.get(configName)[i]);
+        }
+        BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+            constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
+        assertTrue("Created BucketCache and expected it to succeed: " + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);
+      } catch (IllegalArgumentException e) {
+        assertFalse("Created BucketCache and expected it to succeed: " + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);
+      }
+    }
+  }
+
+  private void validateGetPartitionSize(BucketCache bucketCache, float partitionFactor, float minFactor) {
+    long expectedOutput = (long) Math.floor(bucketCache.getAllocator().getTotalSize() * partitionFactor * minFactor);
+    assertEquals(expectedOutput, bucketCache.getPartitionSize(partitionFactor));
   }
 }
