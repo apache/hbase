@@ -184,7 +184,6 @@
           <artifactId>netty</artifactId>
         </exclusion>
         <exclusion>
->>>>>>> 7a6de1bd42... HBASE-17056 Remove checked in PB generated files
           <groupId>com.google.code.findbugs</groupId>
           <artifactId>jsr305</artifactId>
         </exclusion>
