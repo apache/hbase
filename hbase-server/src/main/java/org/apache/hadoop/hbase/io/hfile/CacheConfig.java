@@ -671,7 +671,7 @@ public class CacheConfig {
       // Bucket cache logs its stats on creation internal to the constructor.
       bucketCache = new BucketCache(bucketCacheIOEngineName,
         bucketCacheSize, blockSize, bucketSizes, writerThreads, writerQueueLen, persistentPath,
-        ioErrorsTolerationDuration);
+        ioErrorsTolerationDuration, c);
     } catch (IOException ioex) {
       LOG.error("Can't instantiate bucket cache", ioex); throw new RuntimeException(ioex);
     }
