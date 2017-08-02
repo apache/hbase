@@ -305,25 +305,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
       }
     };
   }
-  /**
-   * This is used for legacy purposes in {@link HTable#setWriteBufferSize(long)} only. This ought
-   * not be called for production uses.
-   * If the new buffer size is smaller than the stored data, the {@link BufferedMutatorImpl#flush()}
-   * will be called.
-   * @param writeBufferSize The max size of internal buffer where data is stored.
-   * @throws org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException
-   * if an I/O error occurs and there are too many retries.
-   * @throws java.io.InterruptedIOException if the I/O task is interrupted.
-   * @deprecated Going away when we drop public support for {@link HTable}.
-   */
-  @Deprecated
-  public void setWriteBufferSize(long writeBufferSize) throws RetriesExhaustedWithDetailsException,
-      InterruptedIOException {
-    this.writeBufferSize = writeBufferSize;
-    if (currentWriteBufferSize.get() > writeBufferSize) {
-      flush();
-    }
-  }
 
   /**
    * {@inheritDoc}

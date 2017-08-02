@@ -140,11 +140,8 @@ public class TestMultiSlaveReplication {
     utility2.getAdmin().createTable(table);
     utility3.getAdmin().createTable(table);
     Table htable1 = utility1.getConnection().getTable(tableName);
-    htable1.setWriteBufferSize(1024);
     Table htable2 = utility2.getConnection().getTable(tableName);
-    htable2.setWriteBufferSize(1024);
     Table htable3 = utility3.getConnection().getTable(tableName);
-    htable3.setWriteBufferSize(1024);
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());

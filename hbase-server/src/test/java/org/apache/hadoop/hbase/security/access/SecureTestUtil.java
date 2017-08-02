@@ -64,9 +64,9 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
+
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.ServiceException;
 

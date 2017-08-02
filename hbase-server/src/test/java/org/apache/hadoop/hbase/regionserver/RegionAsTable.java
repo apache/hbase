@@ -303,16 +303,6 @@ public class RegionAsTable implements Table {
   }
 
   @Override
-  public long getWriteBufferSize() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void setWriteBufferSize(long writeBufferSize) throws IOException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public <R extends Message> Map<byte[], R> batchCoprocessorService(MethodDescriptor
       methodDescriptor, Message request,
       byte[] startKey, byte[] endKey, R responsePrototype)

@@ -124,13 +124,8 @@ public class TestConstraint {
     try {
       table.put(put);
       fail("This put should not have suceeded - AllFailConstraint was not run!");
-    } catch (RetriesExhaustedWithDetailsException e) {
-      List<Throwable> causes = e.getCauses();
-      assertEquals(
-          "More than one failure cause - should only be the failure constraint exception",
-          1, causes.size());
-      Throwable t = causes.get(0);
-      assertEquals(ConstraintException.class, t.getClass());
+    } catch (ConstraintException e) {
+      // expected
     }
     table.close();
   }

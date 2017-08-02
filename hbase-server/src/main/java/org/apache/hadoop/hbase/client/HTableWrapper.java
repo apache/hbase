@@ -271,16 +271,6 @@ public final class HTableWrapper implements Table {
   }
 
   @Override
-  public long getWriteBufferSize() {
-     return table.getWriteBufferSize();
-  }
-
-  @Override
-  public void setWriteBufferSize(long writeBufferSize) throws IOException {
-    table.setWriteBufferSize(writeBufferSize);
-  }
-
-  @Override
   public <R extends Message> Map<byte[], R> batchCoprocessorService(
       MethodDescriptor methodDescriptor, Message request, byte[] startKey, byte[] endKey,
       R responsePrototype) throws ServiceException, Throwable {

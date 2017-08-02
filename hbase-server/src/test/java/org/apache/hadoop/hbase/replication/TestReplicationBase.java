@@ -160,7 +160,6 @@ public class TestReplicationBase {
     utility1.waitUntilAllRegionsAssigned(tableName);
     utility2.waitUntilAllRegionsAssigned(tableName);
     htable1 = connection1.getTable(tableName);
-    htable1.setWriteBufferSize(1024);
     htable2 = connection2.getTable(tableName);
   }
 

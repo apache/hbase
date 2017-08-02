@@ -426,7 +426,6 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       put.addColumn(famName, row, row);
       puts.add(put);
     }
-    htable1.setWriteBufferSize(1024);
     // The puts will be iterated through and flushed only when the buffer
     // size is reached.
     htable1.put(puts);

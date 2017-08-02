@@ -145,6 +145,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
         User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
     // TODO: other table perms
 
+    UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     UTIL.startMiniCluster();
     // Wait for the ACL table to become available
     UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME.getName(), 30 * 1000);

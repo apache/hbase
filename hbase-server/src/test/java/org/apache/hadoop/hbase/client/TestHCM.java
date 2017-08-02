@@ -85,7 +85,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -442,7 +441,7 @@ public class TestHCM {
       table.setOperationTimeout(30 * 1000);
       table.put(new Put(FAM_NAM).addColumn(FAM_NAM, FAM_NAM, FAM_NAM));
       Assert.fail("We expect an exception here");
-    } catch (RetriesExhaustedWithDetailsException e) {
+    } catch (SocketTimeoutException e) {
       // The client has a CallTimeout class, but it's not shared.We're not very clean today,
       //  in the general case you can expect the call to stop, but the exception may vary.
       // In this test however, we're sure that it will be a socket timeout.
