@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 
-import io.netty.util.HashedWheelTimer;
+import org.apache.hadoop.hbase.shaded.io.netty.util.HashedWheelTimer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

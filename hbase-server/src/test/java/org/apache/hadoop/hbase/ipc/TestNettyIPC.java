@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollSocketChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.epoll.EpollEventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.epoll.EpollSocketChannel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.util.ArrayList;
 import java.util.Collection;

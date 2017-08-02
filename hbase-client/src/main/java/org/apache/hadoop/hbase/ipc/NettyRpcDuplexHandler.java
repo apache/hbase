@@ -21,14 +21,14 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message.Builder;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.util.concurrent.PromiseCombiner;
+import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBuf;
+import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBufInputStream;
+import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBufOutputStream;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelDuplexHandler;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPromise;
+import org.apache.hadoop.hbase.shaded.io.netty.handler.timeout.IdleStateEvent;
+import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.PromiseCombiner;
 
 import java.io.IOException;
 import java.util.HashMap;

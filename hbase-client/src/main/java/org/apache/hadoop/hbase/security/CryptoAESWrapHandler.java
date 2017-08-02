@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.hbase.security;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.CoalescingBufferQueue;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.PromiseCombiner;
+import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBuf;
+import org.apache.hadoop.hbase.shaded.io.netty.buffer.Unpooled;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOutboundHandlerAdapter;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPromise;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.CoalescingBufferQueue;
+import org.apache.hadoop.hbase.shaded.io.netty.util.ReferenceCountUtil;
+import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.PromiseCombiner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 

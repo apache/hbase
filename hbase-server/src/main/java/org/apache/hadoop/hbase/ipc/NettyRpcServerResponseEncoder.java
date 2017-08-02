@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import org.apache.hadoop.hbase.shaded.io.netty.buffer.Unpooled;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOutboundHandlerAdapter;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPromise;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 

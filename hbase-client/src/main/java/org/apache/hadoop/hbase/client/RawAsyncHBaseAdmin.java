@@ -42,8 +42,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcChannel;
 
-import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
+import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
+import org.apache.hadoop.hbase.shaded.io.netty.util.TimerTask;
 
 import java.util.stream.Stream;
 

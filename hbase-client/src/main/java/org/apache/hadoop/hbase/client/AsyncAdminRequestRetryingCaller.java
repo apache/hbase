@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
-import io.netty.util.HashedWheelTimer;
+import org.apache.hadoop.hbase.shaded.io.netty.util.HashedWheelTimer;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;

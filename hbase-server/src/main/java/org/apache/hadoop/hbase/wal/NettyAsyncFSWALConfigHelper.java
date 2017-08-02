@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.wal;
 
 import com.google.common.base.Preconditions;
 
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
 
 import java.util.HashMap;
 import java.util.Map;

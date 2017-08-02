@@ -792,7 +792,7 @@ public class TableMapReduceUtil {
       prefixTreeCodecClass, //  hbase-prefix-tree (if null will be skipped)
       // pull necessary dependencies
       org.apache.zookeeper.ZooKeeper.class,
-      io.netty.channel.Channel.class,
+      org.apache.hadoop.hbase.shaded.io.netty.channel.Channel.class,
       com.google.protobuf.Message.class,
       org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists.class,
       org.apache.htrace.Trace.class,
