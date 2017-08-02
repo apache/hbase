@@ -107,9 +107,6 @@ public class HTable implements Table {
   private final TableName tableName;
   private final Configuration configuration;
   private final ConnectionConfiguration connConfiguration;
-  @VisibleForTesting
-  volatile BufferedMutatorImpl mutator;
-  private final Object mutatorLock = new Object();
   private boolean closed = false;
   private final int scannerCaching;
   private final long scannerMaxResultSize;
@@ -120,7 +117,6 @@ public class HTable implements Table {
   private int writeRpcTimeout; // timeout for each write rpc request
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final HRegionLocator locator;
-  private final long writeBufferSize;
 
   /** The Async process for batch */
   @VisibleForTesting
@@ -194,38 +190,12 @@ public class HTable implements Table {
     this.rpcTimeout = builder.rpcTimeout;
     this.readRpcTimeout = builder.readRpcTimeout;
     this.writeRpcTimeout = builder.writeRpcTimeout;
-    this.writeBufferSize = builder.writeBufferSize;
     this.scannerCaching = connConfiguration.getScannerCaching();
     this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
 
     // puts need to track errors globally due to how the APIs currently work.
     multiAp = this.connection.getAsyncProcess();
     this.locator = new HRegionLocator(tableName, connection);
-  }
-
-  /**
-   * For internal testing. Uses Connection provided in {@code params}.
-   * @throws IOException
-   */
-  @VisibleForTesting
-  protected HTable(ClusterConnection conn, BufferedMutatorImpl mutator) throws IOException {
-    connection = conn;
-    this.tableName = mutator.getName();
-    this.configuration = connection.getConfiguration();
-    connConfiguration = connection.getConnectionConfiguration();
-    cleanupPoolOnClose = false;
-    this.mutator = mutator;
-    this.operationTimeout = connConfiguration.getOperationTimeout();
-    this.rpcTimeout = connConfiguration.getRpcTimeout();
-    this.readRpcTimeout = connConfiguration.getReadRpcTimeout();
-    this.writeRpcTimeout = connConfiguration.getWriteRpcTimeout();
-    this.scannerCaching = connConfiguration.getScannerCaching();
-    this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
-    this.writeBufferSize = connConfiguration.getWriteBufferSize();
-    this.rpcControllerFactory = null;
-    this.rpcCallerFactory = null;
-    this.pool = mutator.getPool();
-    this.locator = null;
   }
 
   /**
@@ -603,8 +573,21 @@ public class HTable implements Table {
    */
   @Override
   public void put(final Put put) throws IOException {
-    getBufferedMutator().mutate(put);
-    flushCommits();
+    validatePut(put);
+    ClientServiceCallable<Void> callable =
+        new ClientServiceCallable<Void>(this.connection, getName(), put.getRow(),
+            this.rpcControllerFactory.newController(), put.getPriority()) {
+          @Override
+          protected Void rpcCall() throws Exception {
+            MutateRequest request =
+                RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(),
+                  put);
+            doMutate(request);
+            return null;
+          }
+        };
+    rpcCallerFactory.<Void> newCaller(this.writeRpcTimeout).callWithRetries(callable,
+      this.operationTimeout);
   }
 
   /**
@@ -613,8 +596,15 @@ public class HTable implements Table {
    */
   @Override
   public void put(final List<Put> puts) throws IOException {
-    getBufferedMutator().mutate(puts);
-    flushCommits();
+    for (Put put : puts) {
+      validatePut(put);
+    }
+    Object[] results = new Object[puts.size()];
+    try {
+      batch(puts, results, writeRpcTimeout);
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+    }
   }
 
   /**
@@ -948,17 +938,6 @@ public class HTable implements Table {
   }
 
   /**
-   * @throws IOException
-   */
-  void flushCommits() throws IOException {
-    if (mutator == null) {
-      // nothing to flush if there's no mutator; don't bother creating one.
-      return;
-    }
-    getBufferedMutator().flush();
-  }
-
-  /**
    * Process a mixed batch of Get, Put and Delete actions. All actions for a
    * RegionServer are forwarded in one RPC call. Queries are executed in parallel.
    *
@@ -979,11 +958,6 @@ public class HTable implements Table {
   public void close() throws IOException {
     if (this.closed) {
       return;
-    }
-    flushCommits();
-    if (mutator != null) {
-      mutator.close();
-      mutator = null;
     }
     if (cleanupPoolOnClose) {
       this.pool.shutdown();
@@ -1020,37 +994,6 @@ public class HTable implements Table {
         }
       }
     }
-  }
-
-  /**
-   * Returns the maximum size in bytes of the write buffer for this HTable.
-   * <p>
-   * The default value comes from the configuration parameter
-   * {@code hbase.client.write.buffer}.
-   * @return The size of the write buffer in bytes.
-   */
-  @Override
-  public long getWriteBufferSize() {
-    if (mutator == null) {
-      return connConfiguration.getWriteBufferSize();
-    } else {
-      return mutator.getWriteBufferSize();
-    }
-  }
-
-  /**
-   * Sets the size of the buffer in bytes.
-   * <p>
-   * If the new size is less than the current amount of data in the
-   * write buffer, the buffer gets flushed.
-   * @param writeBufferSize The new write buffer size, in bytes.
-   * @throws IOException if a remote or network exception occurs.
-   */
-  @Override
-  @Deprecated
-  public void setWriteBufferSize(long writeBufferSize) throws IOException {
-    getBufferedMutator();
-    mutator.setWriteBufferSize(writeBufferSize);
   }
 
   /**
@@ -1154,9 +1097,6 @@ public class HTable implements Table {
   @Deprecated
   public void setOperationTimeout(int operationTimeout) {
     this.operationTimeout = operationTimeout;
-    if (mutator != null) {
-      mutator.setOperationTimeout(operationTimeout);
-    }
   }
 
   @Override
@@ -1186,9 +1126,6 @@ public class HTable implements Table {
   @Deprecated
   public void setWriteRpcTimeout(int writeRpcTimeout) {
     this.writeRpcTimeout = writeRpcTimeout;
-    if (mutator != null) {
-      mutator.setRpcTimeout(writeRpcTimeout);
-    }
   }
 
   @Override
@@ -1317,20 +1254,5 @@ public class HTable implements Table {
 
   public RegionLocator getRegionLocator() {
     return this.locator;
-  }
-
-  @VisibleForTesting
-  BufferedMutator getBufferedMutator() throws IOException {
-    if (mutator == null) {
-      synchronized (mutatorLock) {
-        if (mutator == null) {
-          this.mutator = (BufferedMutatorImpl) connection.getBufferedMutator(
-            new BufferedMutatorParams(tableName).pool(pool).writeBufferSize(writeBufferSize)
-                .maxKeyValueSize(connConfiguration.getMaxKeyValueSize())
-                .opertationTimeout(operationTimeout).rpcTimeout(writeRpcTimeout));
-        }
-      }
-    }
-    return mutator;
   }
 }

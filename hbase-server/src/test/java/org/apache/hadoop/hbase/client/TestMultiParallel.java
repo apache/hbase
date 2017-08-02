@@ -266,7 +266,6 @@ public class TestMultiParallel {
     // Load the data
     LOG.info("get new table");
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
-    table.setWriteBufferSize(10 * 1024 * 1024);
 
     LOG.info("constructPutRequests");
     List<Put> puts = constructPutRequests();

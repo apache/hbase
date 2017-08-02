@@ -57,12 +57,6 @@ public interface TableBuilder {
   TableBuilder setWriteRpcTimeout(int timeout);
 
   /**
-   * Set the write buffer size which by default is specified by the
-   * {@code hbase.client.write.buffer} setting.
-   */
-  TableBuilder setWriteBufferSize(long writeBufferSize);
-
-  /**
    * Create the {@link Table} instance.
    */
   Table build();

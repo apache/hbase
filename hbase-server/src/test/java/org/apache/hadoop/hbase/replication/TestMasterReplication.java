@@ -558,7 +558,6 @@ public class TestMasterReplication {
     Table[] htables = new Table[numClusters];
     for (int i = 0; i < numClusters; i++) {
       Table htable = ConnectionFactory.createConnection(configurations[i]).getTable(tableName);
-      htable.setWriteBufferSize(1024);
       htables[i] = htable;
     }
     return htables;

@@ -4068,8 +4068,8 @@ public class TestFromClientSide {
       Put p = new Put(ROW);
       p.addColumn(BAD_FAM, QUALIFIER, VAL);
       table.put(p);
-    } catch (RetriesExhaustedWithDetailsException e) {
-      caughtNSCFE = e.getCause(0) instanceof NoSuchColumnFamilyException;
+    } catch (Exception e) {
+      caughtNSCFE = e instanceof NoSuchColumnFamilyException;
     }
     assertTrue("Should throw NoSuchColumnFamilyException", caughtNSCFE);
 
@@ -4110,7 +4110,6 @@ public class TestFromClientSide {
     final int NB_BATCH_ROWS = 10;
     Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
         new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY });
-    table.setWriteBufferSize(10);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
       byte[] row = Bytes.toBytes("row" + i);

@@ -93,7 +93,7 @@ public class TestClientPushback {
     Configuration conf = UTIL.getConfiguration();
 
     ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
-    Table table = conn.getTable(tableName);
+    BufferedMutatorImpl mutator = (BufferedMutatorImpl) conn.getBufferedMutator(tableName);
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
     Region region = rs.getOnlineRegions(tableName).get(0);
@@ -102,7 +102,8 @@ public class TestClientPushback {
     // write some data
     Put p = new Put(Bytes.toBytes("row"));
     p.addColumn(family, qualifier, Bytes.toBytes("value1"));
-    table.put(p);
+    mutator.mutate(p);
+    mutator.flush();
 
     // get the current load on RS. Hopefully memstore isn't flushed since we wrote the the data
     int load = (int) ((((HRegion) region).addAndGetMemstoreSize(new MemstoreSize(0, 0)) * 100)
@@ -138,7 +139,6 @@ public class TestClientPushback {
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicLong endTime = new AtomicLong();
     long startTime = EnvironmentEdgeManager.currentTime();
-    BufferedMutatorImpl mutator = ((HTable) table).mutator;
     Batch.Callback<Result> callback = (byte[] r, byte[] row, Result result) -> {
         endTime.set(EnvironmentEdgeManager.currentTime());
         latch.countDown();

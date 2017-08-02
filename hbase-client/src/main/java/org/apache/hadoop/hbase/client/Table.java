@@ -209,13 +209,8 @@ public interface Table extends Closeable {
   /**
    * Puts some data in the table, in batch.
    * <p>
-   * This can be used for group commit, or for submitting user defined
-   * batches.  The writeBuffer will be periodically inspected while the List
-   * is processed, so depending on the List size the writeBuffer may flush
-   * not at all, or more than once.
-   * @param puts The list of mutations to apply. The batch put is done by
-   * aggregating the iteration of the Puts over the write buffer
-   * at the client-side for a single RPC call.
+   * This can be used for group commit, or for submitting user defined batches.
+   * @param puts The list of mutations to apply.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
@@ -481,30 +476,6 @@ public interface Table extends Closeable {
   <T extends Service, R> void coprocessorService(final Class<T> service,
     byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
     final Batch.Callback<R> callback) throws ServiceException, Throwable;
-
-  /**
-   * Returns the maximum size in bytes of the write buffer for this HTable.
-   * <p>
-   * The default value comes from the configuration parameter
-   * {@code hbase.client.write.buffer}.
-   * @return The size of the write buffer in bytes.
-    * @deprecated as of 1.0.1 (should not have been in 1.0.0). Replaced by {@link BufferedMutator#getWriteBufferSize()}
-   */
-  @Deprecated
-  long getWriteBufferSize();
-
-  /**
-   * Sets the size of the buffer in bytes.
-   * <p>
-   * If the new size is less than the current amount of data in the
-   * write buffer, the buffer gets flushed.
-   * @param writeBufferSize The new write buffer size, in bytes.
-   * @throws IOException if a remote or network exception occurs.
-   * @deprecated as of 1.0.1 (should not have been in 1.0.0). Replaced by {@link BufferedMutator} and
-   * {@link BufferedMutatorParams#writeBufferSize(long)}
-   */
-  @Deprecated
-  void setWriteBufferSize(long writeBufferSize) throws IOException;
 
   /**
    * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table

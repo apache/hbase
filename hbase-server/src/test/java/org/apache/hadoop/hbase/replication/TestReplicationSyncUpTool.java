@@ -198,15 +198,11 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
 
     // Get HTable from Master
     ht1Source = connection1.getTable(t1_su);
-    ht1Source.setWriteBufferSize(1024);
     ht2Source = connection1.getTable(t2_su);
-    ht1Source.setWriteBufferSize(1024);
 
     // Get HTable from Peer1
     ht1TargetAtPeer1 = connection2.getTable(t1_su);
-    ht1TargetAtPeer1.setWriteBufferSize(1024);
     ht2TargetAtPeer1 = connection2.getTable(t2_su);
-    ht2TargetAtPeer1.setWriteBufferSize(1024);
 
     /**
      * set M-S : Master: utility1 Slave1: utility2

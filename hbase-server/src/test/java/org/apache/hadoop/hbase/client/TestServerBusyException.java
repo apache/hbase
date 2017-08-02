@@ -141,12 +141,10 @@ public class TestServerBusyException {
     public void run() {
       try {
         Put p = new Put(ROW);
-        p.addColumn(FAM_NAM, new byte[]{0}, new byte[]{0});
+        p.addColumn(FAM_NAM, new byte[] { 0 }, new byte[] { 0 });
         table.put(p);
-      } catch (RetriesExhaustedWithDetailsException e) {
-        if (e.exceptions.get(0) instanceof ServerTooBusyException) {
-          getServerBusyException = 1;
-        }
+      } catch (ServerTooBusyException e) {
+        getServerBusyException = 1;
       } catch (IOException ignore) {
       }
     }

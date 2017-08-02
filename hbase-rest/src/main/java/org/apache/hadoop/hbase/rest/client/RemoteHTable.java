@@ -822,16 +822,6 @@ public class RemoteHTable implements Table {
   }
 
   @Override
-  public long getWriteBufferSize() {
-    throw new UnsupportedOperationException("getWriteBufferSize not implemented");
-  }
-
-  @Override
-  public void setWriteBufferSize(long writeBufferSize) throws IOException {
-    throw new IOException("setWriteBufferSize not supported");
-  }
-
-  @Override
   public <R extends Message> Map<byte[], R> batchCoprocessorService(
       Descriptors.MethodDescriptor method, Message request,
       byte[] startKey, byte[] endKey, R responsePrototype) throws ServiceException, Throwable {

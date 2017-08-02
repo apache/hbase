@@ -1231,6 +1231,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   static abstract class BufferedMutatorTest extends Test {
     protected BufferedMutator mutator;
+    protected Table table;
 
     BufferedMutatorTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -1239,11 +1240,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void onStartup() throws IOException {
       this.mutator = connection.getBufferedMutator(TableName.valueOf(opts.tableName));
+      this.table = connection.getTable(TableName.valueOf(opts.tableName));
     }
 
     @Override
     void onTakedown() throws IOException {
       mutator.close();
+      table.close();
     }
   }
 
@@ -1465,9 +1468,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      mutator.mutate(put);
       if (opts.autoFlush) {
-        mutator.flush();
+        table.put(put);
+      } else {
+        mutator.mutate(put);
       }
     }
   }
@@ -1666,9 +1670,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      mutator.mutate(put);
       if (opts.autoFlush) {
-        mutator.flush();
+        table.put(put);
+      } else {
+        mutator.mutate(put);
       }
     }
   }

@@ -148,7 +148,6 @@ public class TestHTableWrapper {
   private void checkHTableInterfaceMethods() throws Exception {
     checkConf();
     checkNameAndDescriptor();
-    checkBufferSize();
     checkExists();
     checkAppend();
     checkPutsAndDeletes();
@@ -173,13 +172,6 @@ public class TestHTableWrapper {
   private void checkNameAndDescriptor() throws IOException {
     assertEquals(TEST_TABLE, hTableInterface.getName());
     assertEquals(table.getTableDescriptor(), hTableInterface.getTableDescriptor());
-  }
-
-  private void checkBufferSize() throws IOException {
-    long initialWriteBufferSize = hTableInterface.getWriteBufferSize();
-    hTableInterface.setWriteBufferSize(12345L);
-    assertEquals(12345L, hTableInterface.getWriteBufferSize());
-    hTableInterface.setWriteBufferSize(initialWriteBufferSize);
   }
 
   private void checkExists() throws IOException {

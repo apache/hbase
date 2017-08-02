@@ -79,7 +79,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-
 @Category({ClientTests.class, MediumTests.class})
 public class TestAsyncProcess {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
@@ -257,8 +256,6 @@ public class TestAsyncProcess {
 
 
   }
-
-
 
   static class MyAsyncRequestFutureImpl<Res> extends AsyncRequestFutureImpl<Res> {
     private final Map<ServerName, List<Long>> heapSizesByServer = new HashMap<>();
@@ -650,10 +647,9 @@ public class TestAsyncProcess {
 
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF, true);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
-    BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
-    try (HTable ht = new HTable(conn, mutator)) {
-      Assert.assertEquals(0L, ht.mutator.getCurrentWriteBufferSize());
-      ht.put(puts);
+    try (BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);) {
+      mutator.mutate(puts);
+      mutator.flush();
       List<AsyncRequestFuture> reqs = ap.allReqs;
 
       int actualSnReqCount = 0;
@@ -1095,54 +1091,6 @@ public class TestAsyncProcess {
     assertFalse(ap.service.isShutdown());
   }
 
-  private void doHTableFailedPut(boolean bufferOn) throws Exception {
-    ClusterConnection conn = createHConnection();
-    MyAsyncProcess ap = new MyAsyncProcess(conn, CONF, true);
-    BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
-    if (bufferOn) {
-      bufferParam.writeBufferSize(1024L * 1024L);
-    } else {
-      bufferParam.writeBufferSize(0L);
-    }
-    BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
-    HTable ht = new HTable(conn, mutator);
-
-    Put put = createPut(1, false);
-
-    Assert.assertEquals(0L, ht.mutator.getCurrentWriteBufferSize());
-    try {
-      ht.put(put);
-      if (bufferOn) {
-        ht.flushCommits();
-      }
-      Assert.fail();
-    } catch (RetriesExhaustedException expected) {
-    }
-    Assert.assertEquals(0L, ht.mutator.getCurrentWriteBufferSize());
-    // The table should have sent one request, maybe after multiple attempts
-    AsyncRequestFuture ars = null;
-    for (AsyncRequestFuture someReqs : ap.allReqs) {
-      if (someReqs.getResults().length == 0) continue;
-      Assert.assertTrue(ars == null);
-      ars = someReqs;
-    }
-    Assert.assertTrue(ars != null);
-    verifyResult(ars, false);
-
-    // This should not raise any exception, puts have been 'received' before by the catch.
-    ht.close();
-  }
-
-  @Test
-  public void testHTableFailedPutWithBuffer() throws Exception {
-    doHTableFailedPut(true);
-  }
-
-  @Test
-  public void testHTableFailedPutWithoutBuffer() throws Exception {
-    doHTableFailedPut(false);
-  }
-
   @Test
   public void testHTableFailedPutAndNewPut() throws Exception {
     ClusterConnection conn = createHConnection();
@@ -1193,10 +1141,7 @@ public class TestAsyncProcess {
   @Test
   public void testBatch() throws IOException, InterruptedException {
     ClusterConnection conn = new MyConnectionImpl(CONF);
-    MyAsyncProcess ap = new MyAsyncProcess(conn, CONF, true);
-    BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
-    BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
-    HTable ht = new HTable(conn, mutator);
+    HTable ht = (HTable) conn.getTable(DUMMY_TABLE);
     ht.multiAp = new MyAsyncProcess(conn, CONF, false);
 
     List<Put> puts = new ArrayList<>(7);
@@ -1258,9 +1203,7 @@ public class TestAsyncProcess {
     ClusterConnection conn = createHConnection();
     Mockito.when(conn.getConfiguration()).thenReturn(copyConf);
     MyAsyncProcess ap = new MyAsyncProcess(conn, copyConf, true);
-    BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
-    BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
-    try (HTable ht = new HTable(conn, mutator)) {
+    try (HTable ht = (HTable) conn.getTable(DUMMY_TABLE)) {
       ht.multiAp = ap;
       List<Get> gets = new LinkedList<>();
       gets.add(new Get(DUMMY_BYTES_1));
@@ -1350,9 +1293,7 @@ public class TestAsyncProcess {
 
     MyConnectionImpl2 con = new MyConnectionImpl2(hrls);
     MyAsyncProcess ap = new MyAsyncProcess(con, CONF, con.nbThreads);
-    BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
-    BufferedMutatorImpl mutator = new BufferedMutatorImpl(con , bufferParam, ap);
-    HTable ht = new HTable(con, mutator);
+    HTable ht = (HTable) con.getTable(DUMMY_TABLE, ap.service);
     ht.multiAp = ap;
     ht.batch(gets, null);
 
