@@ -279,6 +279,27 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   }
 
   @Test
+  public void testCostAfterUndoAction() {
+    final int runs = 10;
+    loadBalancer.setConf(conf);
+    for (int[] mockCluster : clusterStateMocks) {
+      BaseLoadBalancer.Cluster cluster = mockCluster(mockCluster);
+      loadBalancer.initCosts(cluster);
+      for (int i = 0; i != runs; ++i) {
+        final double expectedCost = loadBalancer.computeCost(cluster, Double.MAX_VALUE);
+        Cluster.Action action = loadBalancer.nextAction(cluster);
+        cluster.doAction(action);
+        loadBalancer.updateCostsWithAction(cluster, action);
+        Cluster.Action undoAction = action.undoAction();
+        cluster.doAction(undoAction);
+        loadBalancer.updateCostsWithAction(cluster, undoAction);
+        final double actualCost = loadBalancer.computeCost(cluster, Double.MAX_VALUE);
+        assertEquals(expectedCost, actualCost, 0);
+      }
+    }
+  }
+
+  @Test
   public void testTableSkewCost() {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFunction
