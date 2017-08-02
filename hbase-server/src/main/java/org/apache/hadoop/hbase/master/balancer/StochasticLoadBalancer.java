@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
@@ -215,6 +216,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return false;
   }
 
+  @VisibleForTesting
+  Cluster.Action nextAction(Cluster cluster) {
+    return candidateGenerators[(RANDOM.nextInt(candidateGenerators.length))]
+            .generate(cluster);
+  }
+
   /**
    * Given the cluster state this will try and approach an optimal balance. This
    * should always approach the optimal state given enough steps.
@@ -266,9 +273,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long step;
 
     for (step = 0; step < computedMaxSteps; step++) {
-      int generatorIdx = RANDOM.nextInt(candidateGenerators.length);
-      CandidateGenerator p = candidateGenerators[generatorIdx];
-      Cluster.Action action = p.generate(cluster);
+      Cluster.Action action = nextAction(cluster);
 
       if (action.type == Type.NULL) {
         continue;
