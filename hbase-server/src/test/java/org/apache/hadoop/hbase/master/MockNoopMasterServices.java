@@ -91,9 +91,6 @@ public class MockNoopMasterServices implements MasterServices, Server {
   public Clock getClock(ClockType clockType) { return null; };
 
   @Override
-  public long updateClock(long timestamp) { return 0; }
-
-  @Override
   public AssignmentManager getAssignmentManager() {
     return null;
   }

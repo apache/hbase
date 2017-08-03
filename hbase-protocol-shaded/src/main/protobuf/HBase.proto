@@ -237,9 +237,14 @@ message RegionServerInfo {
 }
 
 /**
- * Used to send timestamp of node. The timestamp can be interpreted as either a physical or hybrid
- * timestamp using TimestampType.
+ * Used to send timestamps from each clock of a master or region server
  */
 message NodeTime {
-  optional uint64 time = 1;
+  enum ClockType {
+    SYSTEM = 0;
+    SYSTEM_MONOTONIC = 1;
+    HLC = 2;
+  }
+  optional ClockType clockType = 1;
+  optional uint64 timestamp = 2;
 }

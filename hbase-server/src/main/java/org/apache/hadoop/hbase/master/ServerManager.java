@@ -42,6 +42,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -845,8 +846,8 @@ public class ServerManager {
    * @return a list of region opening states
    */
   public List<RegionOpeningState> sendRegionOpen(ServerName server,
-      List<Pair<HRegionInfo, List<ServerName>>> regionOpenInfos, Long masterClockTime)
-  throws IOException {
+      List<Pair<HRegionInfo, List<ServerName>>> regionOpenInfos,
+      List<Pair<ClockType, Long>> nodeTimes) throws IOException {
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
       throw new IOException("Attempting to send OPEN RPC to server " + server.toString() +
@@ -854,7 +855,7 @@ public class ServerManager {
     }
 
     OpenRegionRequest request =
-        RequestConverter.buildOpenRegionRequest(server, regionOpenInfos, false, masterClockTime);
+        RequestConverter.buildOpenRegionRequest(server, regionOpenInfos, false, nodeTimes);
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningStateList(response);
@@ -879,7 +880,7 @@ public class ServerManager {
    * @throws IOException
    */
   public boolean sendRegionClose(ServerName server, HRegionInfo region,
-      ServerName dest, Long masterClockTime) throws IOException {
+      ServerName dest, List<Pair<ClockType, Long>> nodeTimes) throws IOException {
     if (server == null) throw new NullPointerException("Passed server is null");
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
@@ -889,12 +890,8 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
     }
     HBaseRpcController controller = newRpcController();
-    return ProtobufUtil.closeRegion(controller, admin, server, region.getRegionName(), dest, masterClockTime);
-  }
-
-  public boolean sendRegionClose(ServerName server,
-      HRegionInfo region, Long masterClockTime) throws IOException {
-    return sendRegionClose(server, region, masterClockTime);
+    return ProtobufUtil.closeRegion(controller, admin, server, region.getRegionName(), dest,
+        nodeTimes);
   }
 
   /**

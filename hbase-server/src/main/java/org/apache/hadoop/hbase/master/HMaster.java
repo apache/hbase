@@ -578,25 +578,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public Clock getClock(ClockType clockType) {
-    return super.getClock(clockType);
-  }
-
-  @Override
-  public long updateClock(long timestamp) {
-    return super.updateClock(timestamp);
-  }
-
-  /**
-   * Only for the purpose of testing
-   * @param clock
-   */
-  @VisibleForTesting
-  public void setClock(Clock clock) {
-    super.setClock(clock);
-  }
-
-  @Override
   protected TableDescriptors getFsTableDescriptors() throws IOException {
     return super.getFsTableDescriptors();
   }

@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -216,7 +217,7 @@ public class TestMasterNoCluster {
         // Fake a successful close.
         Mockito.doReturn(true).when(spy).
           sendRegionClose((ServerName)Mockito.any(), (HRegionInfo)Mockito.any(),
-            (ServerName)Mockito.any(), (Long)Mockito.any());
+            (ServerName)Mockito.any(), Mockito.any());
         return spy;
       }
 

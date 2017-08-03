@@ -19002,19 +19002,27 @@ public final class HBaseProtos {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>optional uint64 time = 1;</code>
+     * <code>optional .hbase.pb.NodeTime.ClockType clockType = 1;</code>
      */
-    boolean hasTime();
+    boolean hasClockType();
     /**
-     * <code>optional uint64 time = 1;</code>
+     * <code>optional .hbase.pb.NodeTime.ClockType clockType = 1;</code>
      */
-    long getTime();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType getClockType();
+
+    /**
+     * <code>optional uint64 timestamp = 2;</code>
+     */
+    boolean hasTimestamp();
+    /**
+     * <code>optional uint64 timestamp = 2;</code>
+     */
+    long getTimestamp();
   }
   /**
    * <pre>
    **
-   * Used to send timestamp of node. The timestamp can be interpreted as either a physical or hybrid
-   * timestamp using TimestampType.
+   * Used to send timestamps from each clock of a master or region server
    * </pre>
    *
    * Protobuf type {@code hbase.pb.NodeTime}
@@ -19028,7 +19036,8 @@ public final class HBaseProtos {
       super(builder);
     }
     private NodeTime() {
-      time_ = 0L;
+      clockType_ = 0;
+      timestamp_ = 0L;
     }
 
     @java.lang.Override
@@ -19060,8 +19069,19 @@ public final class HBaseProtos {
               break;
             }
             case 8: {
-              bitField0_ |= 0x00000001;
-              time_ = input.readUInt64();
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType value = org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                clockType_ = rawValue;
+              }
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              timestamp_ = input.readUInt64();
               break;
             }
           }
@@ -19088,20 +19108,135 @@ public final class HBaseProtos {
               org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.class, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder.class);
     }
 
-    private int bitField0_;
-    public static final int TIME_FIELD_NUMBER = 1;
-    private long time_;
     /**
-     * <code>optional uint64 time = 1;</code>
+     * Protobuf enum {@code hbase.pb.NodeTime.ClockType}
      */
-    public boolean hasTime() {
+    public enum ClockType
+        implements org.apache.hadoop.hbase.shaded.com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>SYSTEM = 0;</code>
+       */
+      SYSTEM(0),
+      /**
+       * <code>SYSTEM_MONOTONIC = 1;</code>
+       */
+      SYSTEM_MONOTONIC(1),
+      /**
+       * <code>HLC = 2;</code>
+       */
+      HLC(2),
+      ;
+
+      /**
+       * <code>SYSTEM = 0;</code>
+       */
+      public static final int SYSTEM_VALUE = 0;
+      /**
+       * <code>SYSTEM_MONOTONIC = 1;</code>
+       */
+      public static final int SYSTEM_MONOTONIC_VALUE = 1;
+      /**
+       * <code>HLC = 2;</code>
+       */
+      public static final int HLC_VALUE = 2;
+
+
+      public final int getNumber() {
+        return value;
+      }
+
+      /**
+       * @deprecated Use {@link #forNumber(int)} instead.
+       */
+      @java.lang.Deprecated
+      public static ClockType valueOf(int value) {
+        return forNumber(value);
+      }
+
+      public static ClockType forNumber(int value) {
+        switch (value) {
+          case 0: return SYSTEM;
+          case 1: return SYSTEM_MONOTONIC;
+          case 2: return HLC;
+          default: return null;
+        }
+      }
+
+      public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<ClockType>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<
+          ClockType> internalValueMap =
+            new org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<ClockType>() {
+              public ClockType findValueByNumber(int number) {
+                return ClockType.forNumber(number);
+              }
+            };
+
+      public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(ordinal());
+      }
+      public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final ClockType[] VALUES = values();
+
+      public static ClockType valueOf(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int value;
+
+      private ClockType(int value) {
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:hbase.pb.NodeTime.ClockType)
+    }
+
+    private int bitField0_;
+    public static final int CLOCKTYPE_FIELD_NUMBER = 1;
+    private int clockType_;
+    /**
+     * <code>optional .hbase.pb.NodeTime.ClockType clockType = 1;</code>
+     */
+    public boolean hasClockType() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional uint64 time = 1;</code>
+     * <code>optional .hbase.pb.NodeTime.ClockType clockType = 1;</code>
      */
-    public long getTime() {
-      return time_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType getClockType() {
+      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType result = org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType.valueOf(clockType_);
+      return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType.SYSTEM : result;
+    }
+
+    public static final int TIMESTAMP_FIELD_NUMBER = 2;
+    private long timestamp_;
+    /**
+     * <code>optional uint64 timestamp = 2;</code>
+     */
+    public boolean hasTimestamp() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional uint64 timestamp = 2;</code>
+     */
+    public long getTimestamp() {
+      return timestamp_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -19117,7 +19252,10 @@ public final class HBaseProtos {
     public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt64(1, time_);
+        output.writeEnum(1, clockType_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt64(2, timestamp_);
       }
       unknownFields.writeTo(output);
     }
@@ -19129,7 +19267,11 @@ public final class HBaseProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(1, time_);
+          .computeEnumSize(1, clockType_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, timestamp_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -19148,10 +19290,14 @@ public final class HBaseProtos {
       org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime other = (org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime) obj;
 
       boolean result = true;
-      result = result && (hasTime() == other.hasTime());
-      if (hasTime()) {
-        result = result && (getTime()
-            == other.getTime());
+      result = result && (hasClockType() == other.hasClockType());
+      if (hasClockType()) {
+        result = result && clockType_ == other.clockType_;
+      }
+      result = result && (hasTimestamp() == other.hasTimestamp());
+      if (hasTimestamp()) {
+        result = result && (getTimestamp()
+            == other.getTimestamp());
       }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
@@ -19164,10 +19310,14 @@ public final class HBaseProtos {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
-      if (hasTime()) {
-        hash = (37 * hash) + TIME_FIELD_NUMBER;
+      if (hasClockType()) {
+        hash = (37 * hash) + CLOCKTYPE_FIELD_NUMBER;
+        hash = (53 * hash) + clockType_;
+      }
+      if (hasTimestamp()) {
+        hash = (37 * hash) + TIMESTAMP_FIELD_NUMBER;
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
-            getTime());
+            getTimestamp());
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -19254,8 +19404,7 @@ public final class HBaseProtos {
     /**
      * <pre>
      **
-     * Used to send timestamp of node. The timestamp can be interpreted as either a physical or hybrid
-     * timestamp using TimestampType.
+     * Used to send timestamps from each clock of a master or region server
      * </pre>
      *
      * Protobuf type {@code hbase.pb.NodeTime}
@@ -19293,8 +19442,10 @@ public final class HBaseProtos {
       }
       public Builder clear() {
         super.clear();
-        time_ = 0L;
+        clockType_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
+        timestamp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -19322,7 +19473,11 @@ public final class HBaseProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        result.time_ = time_;
+        result.clockType_ = clockType_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.timestamp_ = timestamp_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -19365,8 +19520,11 @@ public final class HBaseProtos {
 
       public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime other) {
         if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance()) return this;
-        if (other.hasTime()) {
-          setTime(other.getTime());
+        if (other.hasClockType()) {
+          setClockType(other.getClockType());
+        }
+        if (other.hasTimestamp()) {
+          setTimestamp(other.getTimestamp());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -19396,34 +19554,70 @@ public final class HBaseProtos {
       }
       private int bitField0_;
 
-      private long time_ ;
+      private int clockType_ = 0;
       /**
-       * <code>optional uint64 time = 1;</code>
+       * <code>optional .hbase.pb.NodeTime.ClockType clockType = 1;</code>
        */
-      public boolean hasTime() {
+      public boolean hasClockType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional uint64 time = 1;</code>
+       * <code>optional .hbase.pb.NodeTime.ClockType clockType = 1;</code>
        */
-      public long getTime() {
-        return time_;
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType getClockType() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType result = org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType.valueOf(clockType_);
+        return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType.SYSTEM : result;
       }
       /**
-       * <code>optional uint64 time = 1;</code>
+       * <code>optional .hbase.pb.NodeTime.ClockType clockType = 1;</code>
        */
-      public Builder setTime(long value) {
+      public Builder setClockType(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.ClockType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
         bitField0_ |= 0x00000001;
-        time_ = value;
+        clockType_ = value.getNumber();
         onChanged();
         return this;
       }
       /**
-       * <code>optional uint64 time = 1;</code>
+       * <code>optional .hbase.pb.NodeTime.ClockType clockType = 1;</code>
        */
-      public Builder clearTime() {
+      public Builder clearClockType() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        time_ = 0L;
+        clockType_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private long timestamp_ ;
+      /**
+       * <code>optional uint64 timestamp = 2;</code>
+       */
+      public boolean hasTimestamp() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional uint64 timestamp = 2;</code>
+       */
+      public long getTimestamp() {
+        return timestamp_;
+      }
+      /**
+       * <code>optional uint64 timestamp = 2;</code>
+       */
+      public Builder setTimestamp(long value) {
+        bitField0_ |= 0x00000002;
+        timestamp_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 timestamp = 2;</code>
+       */
+      public Builder clearTimestamp() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        timestamp_ = 0L;
         onChanged();
         return this;
       }
@@ -19659,15 +19853,18 @@ public final class HBaseProtos {
       "\t\022\025\n\rversion_major\030\007 \001(\r\022\025\n\rversion_mino" +
       "r\030\010 \001(\r\"Q\n\020RegionServerInfo\022\020\n\010infoPort\030" +
       "\001 \001(\005\022+\n\014version_info\030\002 \001(\0132\025.hbase.pb.V" +
-      "ersionInfo\"\030\n\010NodeTime\022\014\n\004time\030\001 \001(\004*r\n\013",
-      "CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001" +
-      "\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR" +
-      "_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*n\n\010Time" +
-      "Unit\022\017\n\013NANOSECONDS\020\001\022\020\n\014MICROSECONDS\020\002\022" +
-      "\020\n\014MILLISECONDS\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINUTE" +
-      "S\020\005\022\t\n\005HOURS\020\006\022\010\n\004DAYS\020\007BE\n1org.apache.h" +
-      "adoop.hbase.shaded.protobuf.generatedB\013H" +
-      "BaseProtosH\001\240\001\001"
+      "ersionInfo\"\206\001\n\010NodeTime\022/\n\tclockType\030\001 \001",
+      "(\0162\034.hbase.pb.NodeTime.ClockType\022\021\n\ttime" +
+      "stamp\030\002 \001(\004\"6\n\tClockType\022\n\n\006SYSTEM\020\000\022\024\n\020" +
+      "SYSTEM_MONOTONIC\020\001\022\007\n\003HLC\020\002*r\n\013CompareTy" +
+      "pe\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL" +
+      "\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022" +
+      "\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013N" +
+      "ANOSECONDS\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLIS" +
+      "ECONDS\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HO" +
+      "URS\020\006\022\010\n\004DAYS\020\007BE\n1org.apache.hadoop.hba" +
+      "se.shaded.protobuf.generatedB\013HBaseProto",
+      "sH\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -19830,7 +20027,7 @@ public final class HBaseProtos {
     internal_static_hbase_pb_NodeTime_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_NodeTime_descriptor,
-        new java.lang.String[] { "Time", });
+        new java.lang.String[] { "ClockType", "Timestamp", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

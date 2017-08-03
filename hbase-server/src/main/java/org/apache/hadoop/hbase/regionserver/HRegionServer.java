@@ -2125,14 +2125,6 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public long updateClock(long timestamp) {
-    if (TimestampType.HYBRID.isLikelyOfType(timestamp)) {
-      return this.hybridLogicalClock.update(timestamp);
-    }
-    return this.systemMonotonicClock.update(timestamp);
-  }
-
-  @Override
   public Connection getConnection() {
     return getClusterConnection();
   }

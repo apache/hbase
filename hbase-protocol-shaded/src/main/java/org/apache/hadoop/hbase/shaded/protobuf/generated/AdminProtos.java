@@ -4542,28 +4542,47 @@ public final class AdminProtos {
 
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    boolean hasNodeTime();
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> 
+        getNodeTimesList();
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index);
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder();
+    int getNodeTimesCount();
+    /**
+     * <pre>
+     * timestamps from each clock on master
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+        getNodeTimesOrBuilderList();
+    /**
+     * <pre>
+     * timestamps from each clock on master
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code hbase.pb.OpenRegionRequest}
@@ -4580,6 +4599,7 @@ public final class AdminProtos {
       openInfo_ = java.util.Collections.emptyList();
       serverStartCode_ = 0L;
       masterSystemTime_ = 0L;
+      nodeTimes_ = java.util.Collections.emptyList();
     }
 
     @java.lang.Override
@@ -4630,16 +4650,12 @@ public final class AdminProtos {
               break;
             }
             case 50: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000004) == 0x00000004)) {
-                subBuilder = nodeTime_.toBuilder();
+              if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+                nodeTimes_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime>();
+                mutable_bitField0_ |= 0x00000008;
               }
-              nodeTime_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(nodeTime_);
-                nodeTime_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000004;
+              nodeTimes_.add(
+                  input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry));
               break;
             }
           }
@@ -4652,6 +4668,9 @@ public final class AdminProtos {
       } finally {
         if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
           openInfo_ = java.util.Collections.unmodifiableList(openInfo_);
+        }
+        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+          nodeTimes_ = java.util.Collections.unmodifiableList(nodeTimes_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -5928,37 +5947,59 @@ public final class AdminProtos {
       return masterSystemTime_;
     }
 
-    public static final int NODETIME_FIELD_NUMBER = 6;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_;
+    public static final int NODETIMES_FIELD_NUMBER = 6;
+    private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> nodeTimes_;
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    public boolean hasNodeTime() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+    public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> getNodeTimesList() {
+      return nodeTimes_;
     }
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
-      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+        getNodeTimesOrBuilderList() {
+      return nodeTimes_;
     }
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
-      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    public int getNodeTimesCount() {
+      return nodeTimes_.size();
+    }
+    /**
+     * <pre>
+     * timestamps from each clock on master
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index) {
+      return nodeTimes_.get(index);
+    }
+    /**
+     * <pre>
+     * timestamps from each clock on master
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+        int index) {
+      return nodeTimes_.get(index);
     }
 
     private byte memoizedIsInitialized = -1;
@@ -5988,8 +6029,8 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeUInt64(5, masterSystemTime_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeMessage(6, getNodeTime());
+      for (int i = 0; i < nodeTimes_.size(); i++) {
+        output.writeMessage(6, nodeTimes_.get(i));
       }
       unknownFields.writeTo(output);
     }
@@ -6011,9 +6052,9 @@ public final class AdminProtos {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeUInt64Size(5, masterSystemTime_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      for (int i = 0; i < nodeTimes_.size(); i++) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(6, getNodeTime());
+          .computeMessageSize(6, nodeTimes_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -6044,11 +6085,8 @@ public final class AdminProtos {
         result = result && (getMasterSystemTime()
             == other.getMasterSystemTime());
       }
-      result = result && (hasNodeTime() == other.hasNodeTime());
-      if (hasNodeTime()) {
-        result = result && getNodeTime()
-            .equals(other.getNodeTime());
-      }
+      result = result && getNodeTimesList()
+          .equals(other.getNodeTimesList());
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -6074,9 +6112,9 @@ public final class AdminProtos {
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
             getMasterSystemTime());
       }
-      if (hasNodeTime()) {
-        hash = (37 * hash) + NODETIME_FIELD_NUMBER;
-        hash = (53 * hash) + getNodeTime().hashCode();
+      if (getNodeTimesCount() > 0) {
+        hash = (37 * hash) + NODETIMES_FIELD_NUMBER;
+        hash = (53 * hash) + getNodeTimesList().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -6193,7 +6231,7 @@ public final class AdminProtos {
         if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
           getOpenInfoFieldBuilder();
-          getNodeTimeFieldBuilder();
+          getNodeTimesFieldBuilder();
         }
       }
       public Builder clear() {
@@ -6208,12 +6246,12 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         masterSystemTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000004);
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = null;
+        if (nodeTimesBuilder_ == null) {
+          nodeTimes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
         } else {
-          nodeTimeBuilder_.clear();
+          nodeTimesBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -6255,13 +6293,14 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.masterSystemTime_ = masterSystemTime_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        if (nodeTimeBuilder_ == null) {
-          result.nodeTime_ = nodeTime_;
+        if (nodeTimesBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008)) {
+            nodeTimes_ = java.util.Collections.unmodifiableList(nodeTimes_);
+            bitField0_ = (bitField0_ & ~0x00000008);
+          }
+          result.nodeTimes_ = nodeTimes_;
         } else {
-          result.nodeTime_ = nodeTimeBuilder_.build();
+          result.nodeTimes_ = nodeTimesBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -6337,8 +6376,31 @@ public final class AdminProtos {
         if (other.hasMasterSystemTime()) {
           setMasterSystemTime(other.getMasterSystemTime());
         }
-        if (other.hasNodeTime()) {
-          mergeNodeTime(other.getNodeTime());
+        if (nodeTimesBuilder_ == null) {
+          if (!other.nodeTimes_.isEmpty()) {
+            if (nodeTimes_.isEmpty()) {
+              nodeTimes_ = other.nodeTimes_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+            } else {
+              ensureNodeTimesIsMutable();
+              nodeTimes_.addAll(other.nodeTimes_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.nodeTimes_.isEmpty()) {
+            if (nodeTimesBuilder_.isEmpty()) {
+              nodeTimesBuilder_.dispose();
+              nodeTimesBuilder_ = null;
+              nodeTimes_ = other.nodeTimes_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+              nodeTimesBuilder_ = 
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getNodeTimesFieldBuilder() : null;
+            } else {
+              nodeTimesBuilder_.addAllMessages(other.nodeTimes_);
+            }
+          }
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -6709,158 +6771,316 @@ public final class AdminProtos {
         return this;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_ = null;
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimeBuilder_;
-      /**
-       * <pre>
-       * physical or hybrid timestamp from master clock
-       * </pre>
-       *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
-       */
-      public boolean hasNodeTime() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+      private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> nodeTimes_ =
+        java.util.Collections.emptyList();
+      private void ensureNodeTimesIsMutable() {
+        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
+          nodeTimes_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime>(nodeTimes_);
+          bitField0_ |= 0x00000008;
+         }
       }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimesBuilder_;
+
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
-        if (nodeTimeBuilder_ == null) {
-          return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> getNodeTimesList() {
+        if (nodeTimesBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(nodeTimes_);
         } else {
-          return nodeTimeBuilder_.getMessage();
+          return nodeTimesBuilder_.getMessageList();
         }
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public Builder setNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
-        if (nodeTimeBuilder_ == null) {
+      public int getNodeTimesCount() {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.size();
+        } else {
+          return nodeTimesBuilder_.getCount();
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index) {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.get(index);
+        } else {
+          return nodeTimesBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public Builder setNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          nodeTime_ = value;
+          ensureNodeTimesIsMutable();
+          nodeTimes_.set(index, value);
           onChanged();
         } else {
-          nodeTimeBuilder_.setMessage(value);
+          nodeTimesBuilder_.setMessage(index, value);
         }
-        bitField0_ |= 0x00000008;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public Builder setNodeTime(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = builderForValue.build();
+      public Builder setNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.set(index, builderForValue.build());
           onChanged();
         } else {
-          nodeTimeBuilder_.setMessage(builderForValue.build());
+          nodeTimesBuilder_.setMessage(index, builderForValue.build());
         }
-        bitField0_ |= 0x00000008;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public Builder mergeNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
-        if (nodeTimeBuilder_ == null) {
-          if (((bitField0_ & 0x00000008) == 0x00000008) &&
-              nodeTime_ != null &&
-              nodeTime_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance()) {
-            nodeTime_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.newBuilder(nodeTime_).mergeFrom(value).buildPartial();
-          } else {
-            nodeTime_ = value;
+      public Builder addNodeTimes(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
           }
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(value);
           onChanged();
         } else {
-          nodeTimeBuilder_.mergeFrom(value);
+          nodeTimesBuilder_.addMessage(value);
         }
-        bitField0_ |= 0x00000008;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public Builder clearNodeTime() {
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = null;
+      public Builder addNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(index, value);
           onChanged();
         } else {
-          nodeTimeBuilder_.clear();
+          nodeTimesBuilder_.addMessage(index, value);
         }
-        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimeBuilder() {
-        bitField0_ |= 0x00000008;
-        onChanged();
-        return getNodeTimeFieldBuilder().getBuilder();
+      public Builder addNodeTimes(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(builderForValue.build());
+          onChanged();
+        } else {
+          nodeTimesBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
-        if (nodeTimeBuilder_ != null) {
-          return nodeTimeBuilder_.getMessageOrBuilder();
+      public Builder addNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(index, builderForValue.build());
+          onChanged();
         } else {
-          return nodeTime_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+          nodeTimesBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public Builder addAllNodeTimes(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> values) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, nodeTimes_);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public Builder clearNodeTimes() {
+        if (nodeTimesBuilder_ == null) {
+          nodeTimes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public Builder removeNodeTimes(int index) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.remove(index);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimesBuilder(
+          int index) {
+        return getNodeTimesFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+          int index) {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.get(index);  } else {
+          return nodeTimesBuilder_.getMessageOrBuilder(index);
         }
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+           getNodeTimesOrBuilderList() {
+        if (nodeTimesBuilder_ != null) {
+          return nodeTimesBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(nodeTimes_);
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder addNodeTimesBuilder() {
+        return getNodeTimesFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance());
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder addNodeTimesBuilder(
+          int index) {
+        return getNodeTimesFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance());
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder> 
+           getNodeTimesBuilderList() {
+        return getNodeTimesFieldBuilder().getBuilderList();
+      }
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
-          getNodeTimeFieldBuilder() {
-        if (nodeTimeBuilder_ == null) {
-          nodeTimeBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          getNodeTimesFieldBuilder() {
+        if (nodeTimesBuilder_ == null) {
+          nodeTimesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
               org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder>(
-                  getNodeTime(),
+                  nodeTimes_,
+                  ((bitField0_ & 0x00000008) == 0x00000008),
                   getParentForChildren(),
                   isClean());
-          nodeTime_ = null;
+          nodeTimes_ = null;
         }
-        return nodeTimeBuilder_;
+        return nodeTimesBuilder_;
       }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -6930,28 +7150,47 @@ public final class AdminProtos {
 
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    boolean hasNodeTime();
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> 
+        getNodeTimesList();
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index);
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder();
+    int getNodeTimesCount();
+    /**
+     * <pre>
+     * timestamps from each clock on region server
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+        getNodeTimesOrBuilderList();
+    /**
+     * <pre>
+     * timestamps from each clock on region server
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code hbase.pb.OpenRegionResponse}
@@ -6966,6 +7205,7 @@ public final class AdminProtos {
     }
     private OpenRegionResponse() {
       openingState_ = java.util.Collections.emptyList();
+      nodeTimes_ = java.util.Collections.emptyList();
     }
 
     @java.lang.Override
@@ -7030,16 +7270,12 @@ public final class AdminProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
-                subBuilder = nodeTime_.toBuilder();
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                nodeTimes_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime>();
+                mutable_bitField0_ |= 0x00000002;
               }
-              nodeTime_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(nodeTime_);
-                nodeTime_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000001;
+              nodeTimes_.add(
+                  input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry));
               break;
             }
           }
@@ -7052,6 +7288,9 @@ public final class AdminProtos {
       } finally {
         if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
           openingState_ = java.util.Collections.unmodifiableList(openingState_);
+        }
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          nodeTimes_ = java.util.Collections.unmodifiableList(nodeTimes_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -7168,7 +7407,6 @@ public final class AdminProtos {
       // @@protoc_insertion_point(enum_scope:hbase.pb.OpenRegionResponse.RegionOpeningState)
     }
 
-    private int bitField0_;
     public static final int OPENING_STATE_FIELD_NUMBER = 1;
     private java.util.List<java.lang.Integer> openingState_;
     private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.ListAdapter.Converter<
@@ -7200,37 +7438,59 @@ public final class AdminProtos {
       return openingState_converter_.convert(openingState_.get(index));
     }
 
-    public static final int NODETIME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_;
+    public static final int NODETIMES_FIELD_NUMBER = 2;
+    private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> nodeTimes_;
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    public boolean hasNodeTime() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+    public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> getNodeTimesList() {
+      return nodeTimes_;
     }
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
-      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+        getNodeTimesOrBuilderList() {
+      return nodeTimes_;
     }
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
-      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    public int getNodeTimesCount() {
+      return nodeTimes_.size();
+    }
+    /**
+     * <pre>
+     * timestamps from each clock on region server
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index) {
+      return nodeTimes_.get(index);
+    }
+    /**
+     * <pre>
+     * timestamps from each clock on region server
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+        int index) {
+      return nodeTimes_.get(index);
     }
 
     private byte memoizedIsInitialized = -1;
@@ -7248,8 +7508,8 @@ public final class AdminProtos {
       for (int i = 0; i < openingState_.size(); i++) {
         output.writeEnum(1, openingState_.get(i));
       }
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(2, getNodeTime());
+      for (int i = 0; i < nodeTimes_.size(); i++) {
+        output.writeMessage(2, nodeTimes_.get(i));
       }
       unknownFields.writeTo(output);
     }
@@ -7268,9 +7528,9 @@ public final class AdminProtos {
         size += dataSize;
         size += 1 * openingState_.size();
       }
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      for (int i = 0; i < nodeTimes_.size(); i++) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, getNodeTime());
+          .computeMessageSize(2, nodeTimes_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -7290,11 +7550,8 @@ public final class AdminProtos {
 
       boolean result = true;
       result = result && openingState_.equals(other.openingState_);
-      result = result && (hasNodeTime() == other.hasNodeTime());
-      if (hasNodeTime()) {
-        result = result && getNodeTime()
-            .equals(other.getNodeTime());
-      }
+      result = result && getNodeTimesList()
+          .equals(other.getNodeTimesList());
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -7310,9 +7567,9 @@ public final class AdminProtos {
         hash = (37 * hash) + OPENING_STATE_FIELD_NUMBER;
         hash = (53 * hash) + openingState_.hashCode();
       }
-      if (hasNodeTime()) {
-        hash = (37 * hash) + NODETIME_FIELD_NUMBER;
-        hash = (53 * hash) + getNodeTime().hashCode();
+      if (getNodeTimesCount() > 0) {
+        hash = (37 * hash) + NODETIMES_FIELD_NUMBER;
+        hash = (53 * hash) + getNodeTimesList().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -7428,19 +7685,19 @@ public final class AdminProtos {
       private void maybeForceBuilderInitialization() {
         if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
-          getNodeTimeFieldBuilder();
+          getNodeTimesFieldBuilder();
         }
       }
       public Builder clear() {
         super.clear();
         openingState_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = null;
+        if (nodeTimesBuilder_ == null) {
+          nodeTimes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
         } else {
-          nodeTimeBuilder_.clear();
+          nodeTimesBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -7464,21 +7721,20 @@ public final class AdminProtos {
       public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse buildPartial() {
         org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse result = new org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse(this);
         int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           openingState_ = java.util.Collections.unmodifiableList(openingState_);
           bitField0_ = (bitField0_ & ~0x00000001);
         }
         result.openingState_ = openingState_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        if (nodeTimeBuilder_ == null) {
-          result.nodeTime_ = nodeTime_;
+        if (nodeTimesBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            nodeTimes_ = java.util.Collections.unmodifiableList(nodeTimes_);
+            bitField0_ = (bitField0_ & ~0x00000002);
+          }
+          result.nodeTimes_ = nodeTimes_;
         } else {
-          result.nodeTime_ = nodeTimeBuilder_.build();
+          result.nodeTimes_ = nodeTimesBuilder_.build();
         }
-        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -7530,8 +7786,31 @@ public final class AdminProtos {
           }
           onChanged();
         }
-        if (other.hasNodeTime()) {
-          mergeNodeTime(other.getNodeTime());
+        if (nodeTimesBuilder_ == null) {
+          if (!other.nodeTimes_.isEmpty()) {
+            if (nodeTimes_.isEmpty()) {
+              nodeTimes_ = other.nodeTimes_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+            } else {
+              ensureNodeTimesIsMutable();
+              nodeTimes_.addAll(other.nodeTimes_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.nodeTimes_.isEmpty()) {
+            if (nodeTimesBuilder_.isEmpty()) {
+              nodeTimesBuilder_.dispose();
+              nodeTimesBuilder_ = null;
+              nodeTimes_ = other.nodeTimes_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+              nodeTimesBuilder_ = 
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getNodeTimesFieldBuilder() : null;
+            } else {
+              nodeTimesBuilder_.addAllMessages(other.nodeTimes_);
+            }
+          }
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -7635,158 +7914,316 @@ public final class AdminProtos {
         return this;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_ = null;
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimeBuilder_;
-      /**
-       * <pre>
-       * physical or hybrid timestamp from region server clock
-       * </pre>
-       *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
-       */
-      public boolean hasNodeTime() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+      private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> nodeTimes_ =
+        java.util.Collections.emptyList();
+      private void ensureNodeTimesIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          nodeTimes_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime>(nodeTimes_);
+          bitField0_ |= 0x00000002;
+         }
       }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimesBuilder_;
+
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
-        if (nodeTimeBuilder_ == null) {
-          return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> getNodeTimesList() {
+        if (nodeTimesBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(nodeTimes_);
         } else {
-          return nodeTimeBuilder_.getMessage();
+          return nodeTimesBuilder_.getMessageList();
         }
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public Builder setNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
-        if (nodeTimeBuilder_ == null) {
+      public int getNodeTimesCount() {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.size();
+        } else {
+          return nodeTimesBuilder_.getCount();
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index) {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.get(index);
+        } else {
+          return nodeTimesBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public Builder setNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          nodeTime_ = value;
+          ensureNodeTimesIsMutable();
+          nodeTimes_.set(index, value);
           onChanged();
         } else {
-          nodeTimeBuilder_.setMessage(value);
+          nodeTimesBuilder_.setMessage(index, value);
         }
-        bitField0_ |= 0x00000002;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public Builder setNodeTime(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = builderForValue.build();
+      public Builder setNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.set(index, builderForValue.build());
           onChanged();
         } else {
-          nodeTimeBuilder_.setMessage(builderForValue.build());
+          nodeTimesBuilder_.setMessage(index, builderForValue.build());
         }
-        bitField0_ |= 0x00000002;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public Builder mergeNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
-        if (nodeTimeBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              nodeTime_ != null &&
-              nodeTime_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance()) {
-            nodeTime_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.newBuilder(nodeTime_).mergeFrom(value).buildPartial();
-          } else {
-            nodeTime_ = value;
+      public Builder addNodeTimes(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
           }
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(value);
           onChanged();
         } else {
-          nodeTimeBuilder_.mergeFrom(value);
+          nodeTimesBuilder_.addMessage(value);
         }
-        bitField0_ |= 0x00000002;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public Builder clearNodeTime() {
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = null;
+      public Builder addNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(index, value);
           onChanged();
         } else {
-          nodeTimeBuilder_.clear();
+          nodeTimesBuilder_.addMessage(index, value);
         }
-        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimeBuilder() {
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return getNodeTimeFieldBuilder().getBuilder();
+      public Builder addNodeTimes(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(builderForValue.build());
+          onChanged();
+        } else {
+          nodeTimesBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
-        if (nodeTimeBuilder_ != null) {
-          return nodeTimeBuilder_.getMessageOrBuilder();
+      public Builder addNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(index, builderForValue.build());
+          onChanged();
         } else {
-          return nodeTime_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+          nodeTimesBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public Builder addAllNodeTimes(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> values) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, nodeTimes_);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public Builder clearNodeTimes() {
+        if (nodeTimesBuilder_ == null) {
+          nodeTimes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public Builder removeNodeTimes(int index) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.remove(index);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimesBuilder(
+          int index) {
+        return getNodeTimesFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+          int index) {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.get(index);  } else {
+          return nodeTimesBuilder_.getMessageOrBuilder(index);
         }
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+           getNodeTimesOrBuilderList() {
+        if (nodeTimesBuilder_ != null) {
+          return nodeTimesBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(nodeTimes_);
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder addNodeTimesBuilder() {
+        return getNodeTimesFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance());
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder addNodeTimesBuilder(
+          int index) {
+        return getNodeTimesFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance());
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder> 
+           getNodeTimesBuilderList() {
+        return getNodeTimesFieldBuilder().getBuilderList();
+      }
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
-          getNodeTimeFieldBuilder() {
-        if (nodeTimeBuilder_ == null) {
-          nodeTimeBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          getNodeTimesFieldBuilder() {
+        if (nodeTimesBuilder_ == null) {
+          nodeTimesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
               org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder>(
-                  getNodeTime(),
+                  nodeTimes_,
+                  ((bitField0_ & 0x00000002) == 0x00000002),
                   getParentForChildren(),
                   isClean());
-          nodeTime_ = null;
+          nodeTimes_ = null;
         }
-        return nodeTimeBuilder_;
+        return nodeTimesBuilder_;
       }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -8869,28 +9306,47 @@ public final class AdminProtos {
 
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    boolean hasNodeTime();
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> 
+        getNodeTimesList();
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index);
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder();
+    int getNodeTimesCount();
+    /**
+     * <pre>
+     * timestamps from each clock on master
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+        getNodeTimesOrBuilderList();
+    /**
+     * <pre>
+     * timestamps from each clock on master
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+        int index);
   }
   /**
    * <pre>
@@ -8913,6 +9369,7 @@ public final class AdminProtos {
       versionOfClosingNode_ = 0;
       transitionInZK_ = true;
       serverStartCode_ = 0L;
+      nodeTimes_ = java.util.Collections.emptyList();
     }
 
     @java.lang.Override
@@ -8985,16 +9442,12 @@ public final class AdminProtos {
               break;
             }
             case 50: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000020) == 0x00000020)) {
-                subBuilder = nodeTime_.toBuilder();
+              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+                nodeTimes_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime>();
+                mutable_bitField0_ |= 0x00000020;
               }
-              nodeTime_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(nodeTime_);
-                nodeTime_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000020;
+              nodeTimes_.add(
+                  input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry));
               break;
             }
           }
@@ -9005,6 +9458,9 @@ public final class AdminProtos {
         throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
+        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+          nodeTimes_ = java.util.Collections.unmodifiableList(nodeTimes_);
+        }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
@@ -9117,37 +9573,59 @@ public final class AdminProtos {
       return serverStartCode_;
     }
 
-    public static final int NODETIME_FIELD_NUMBER = 6;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_;
+    public static final int NODETIMES_FIELD_NUMBER = 6;
+    private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> nodeTimes_;
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    public boolean hasNodeTime() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+    public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> getNodeTimesList() {
+      return nodeTimes_;
     }
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
-      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+        getNodeTimesOrBuilderList() {
+      return nodeTimes_;
     }
     /**
      * <pre>
-     * physical or hybrid timestamp from master clock
+     * timestamps from each clock on master
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
-      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    public int getNodeTimesCount() {
+      return nodeTimes_.size();
+    }
+    /**
+     * <pre>
+     * timestamps from each clock on master
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index) {
+      return nodeTimes_.get(index);
+    }
+    /**
+     * <pre>
+     * timestamps from each clock on master
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+        int index) {
+      return nodeTimes_.get(index);
     }
 
     private byte memoizedIsInitialized = -1;
@@ -9191,8 +9669,8 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeUInt64(5, serverStartCode_);
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeMessage(6, getNodeTime());
+      for (int i = 0; i < nodeTimes_.size(); i++) {
+        output.writeMessage(6, nodeTimes_.get(i));
       }
       unknownFields.writeTo(output);
     }
@@ -9222,9 +9700,9 @@ public final class AdminProtos {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeUInt64Size(5, serverStartCode_);
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      for (int i = 0; i < nodeTimes_.size(); i++) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(6, getNodeTime());
+          .computeMessageSize(6, nodeTimes_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -9268,11 +9746,8 @@ public final class AdminProtos {
         result = result && (getServerStartCode()
             == other.getServerStartCode());
       }
-      result = result && (hasNodeTime() == other.hasNodeTime());
-      if (hasNodeTime()) {
-        result = result && getNodeTime()
-            .equals(other.getNodeTime());
-      }
+      result = result && getNodeTimesList()
+          .equals(other.getNodeTimesList());
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -9306,9 +9781,9 @@ public final class AdminProtos {
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
             getServerStartCode());
       }
-      if (hasNodeTime()) {
-        hash = (37 * hash) + NODETIME_FIELD_NUMBER;
-        hash = (53 * hash) + getNodeTime().hashCode();
+      if (getNodeTimesCount() > 0) {
+        hash = (37 * hash) + NODETIMES_FIELD_NUMBER;
+        hash = (53 * hash) + getNodeTimesList().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -9432,7 +9907,7 @@ public final class AdminProtos {
                 .alwaysUseFieldBuilders) {
           getRegionFieldBuilder();
           getDestinationServerFieldBuilder();
-          getNodeTimeFieldBuilder();
+          getNodeTimesFieldBuilder();
         }
       }
       public Builder clear() {
@@ -9455,12 +9930,12 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000008);
         serverStartCode_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000010);
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = null;
+        if (nodeTimesBuilder_ == null) {
+          nodeTimes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000020);
         } else {
-          nodeTimeBuilder_.clear();
+          nodeTimesBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -9513,13 +9988,14 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000010;
         }
         result.serverStartCode_ = serverStartCode_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000020;
-        }
-        if (nodeTimeBuilder_ == null) {
-          result.nodeTime_ = nodeTime_;
+        if (nodeTimesBuilder_ == null) {
+          if (((bitField0_ & 0x00000020) == 0x00000020)) {
+            nodeTimes_ = java.util.Collections.unmodifiableList(nodeTimes_);
+            bitField0_ = (bitField0_ & ~0x00000020);
+          }
+          result.nodeTimes_ = nodeTimes_;
         } else {
-          result.nodeTime_ = nodeTimeBuilder_.build();
+          result.nodeTimes_ = nodeTimesBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -9578,8 +10054,31 @@ public final class AdminProtos {
         if (other.hasServerStartCode()) {
           setServerStartCode(other.getServerStartCode());
         }
-        if (other.hasNodeTime()) {
-          mergeNodeTime(other.getNodeTime());
+        if (nodeTimesBuilder_ == null) {
+          if (!other.nodeTimes_.isEmpty()) {
+            if (nodeTimes_.isEmpty()) {
+              nodeTimes_ = other.nodeTimes_;
+              bitField0_ = (bitField0_ & ~0x00000020);
+            } else {
+              ensureNodeTimesIsMutable();
+              nodeTimes_.addAll(other.nodeTimes_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.nodeTimes_.isEmpty()) {
+            if (nodeTimesBuilder_.isEmpty()) {
+              nodeTimesBuilder_.dispose();
+              nodeTimesBuilder_ = null;
+              nodeTimes_ = other.nodeTimes_;
+              bitField0_ = (bitField0_ & ~0x00000020);
+              nodeTimesBuilder_ = 
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getNodeTimesFieldBuilder() : null;
+            } else {
+              nodeTimesBuilder_.addAllMessages(other.nodeTimes_);
+            }
+          }
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -9968,158 +10467,316 @@ public final class AdminProtos {
         return this;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_ = null;
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimeBuilder_;
-      /**
-       * <pre>
-       * physical or hybrid timestamp from master clock
-       * </pre>
-       *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
-       */
-      public boolean hasNodeTime() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+      private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> nodeTimes_ =
+        java.util.Collections.emptyList();
+      private void ensureNodeTimesIsMutable() {
+        if (!((bitField0_ & 0x00000020) == 0x00000020)) {
+          nodeTimes_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime>(nodeTimes_);
+          bitField0_ |= 0x00000020;
+         }
       }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimesBuilder_;
+
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
-        if (nodeTimeBuilder_ == null) {
-          return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> getNodeTimesList() {
+        if (nodeTimesBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(nodeTimes_);
         } else {
-          return nodeTimeBuilder_.getMessage();
+          return nodeTimesBuilder_.getMessageList();
         }
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public Builder setNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
-        if (nodeTimeBuilder_ == null) {
+      public int getNodeTimesCount() {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.size();
+        } else {
+          return nodeTimesBuilder_.getCount();
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index) {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.get(index);
+        } else {
+          return nodeTimesBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public Builder setNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          nodeTime_ = value;
+          ensureNodeTimesIsMutable();
+          nodeTimes_.set(index, value);
           onChanged();
         } else {
-          nodeTimeBuilder_.setMessage(value);
+          nodeTimesBuilder_.setMessage(index, value);
         }
-        bitField0_ |= 0x00000020;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public Builder setNodeTime(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = builderForValue.build();
+      public Builder setNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.set(index, builderForValue.build());
           onChanged();
         } else {
-          nodeTimeBuilder_.setMessage(builderForValue.build());
+          nodeTimesBuilder_.setMessage(index, builderForValue.build());
         }
-        bitField0_ |= 0x00000020;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public Builder mergeNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
-        if (nodeTimeBuilder_ == null) {
-          if (((bitField0_ & 0x00000020) == 0x00000020) &&
-              nodeTime_ != null &&
-              nodeTime_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance()) {
-            nodeTime_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.newBuilder(nodeTime_).mergeFrom(value).buildPartial();
-          } else {
-            nodeTime_ = value;
+      public Builder addNodeTimes(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
           }
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(value);
           onChanged();
         } else {
-          nodeTimeBuilder_.mergeFrom(value);
+          nodeTimesBuilder_.addMessage(value);
         }
-        bitField0_ |= 0x00000020;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public Builder clearNodeTime() {
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = null;
+      public Builder addNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(index, value);
           onChanged();
         } else {
-          nodeTimeBuilder_.clear();
+          nodeTimesBuilder_.addMessage(index, value);
         }
-        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimeBuilder() {
-        bitField0_ |= 0x00000020;
-        onChanged();
-        return getNodeTimeFieldBuilder().getBuilder();
+      public Builder addNodeTimes(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(builderForValue.build());
+          onChanged();
+        } else {
+          nodeTimesBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
-        if (nodeTimeBuilder_ != null) {
-          return nodeTimeBuilder_.getMessageOrBuilder();
+      public Builder addNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(index, builderForValue.build());
+          onChanged();
         } else {
-          return nodeTime_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+          nodeTimesBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public Builder addAllNodeTimes(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> values) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, nodeTimes_);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public Builder clearNodeTimes() {
+        if (nodeTimesBuilder_ == null) {
+          nodeTimes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000020);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public Builder removeNodeTimes(int index) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.remove(index);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimesBuilder(
+          int index) {
+        return getNodeTimesFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+          int index) {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.get(index);  } else {
+          return nodeTimesBuilder_.getMessageOrBuilder(index);
         }
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from master clock
+       * timestamps from each clock on master
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 6;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
        */
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+           getNodeTimesOrBuilderList() {
+        if (nodeTimesBuilder_ != null) {
+          return nodeTimesBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(nodeTimes_);
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder addNodeTimesBuilder() {
+        return getNodeTimesFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance());
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder addNodeTimesBuilder(
+          int index) {
+        return getNodeTimesFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance());
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on master
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 6;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder> 
+           getNodeTimesBuilderList() {
+        return getNodeTimesFieldBuilder().getBuilderList();
+      }
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
-          getNodeTimeFieldBuilder() {
-        if (nodeTimeBuilder_ == null) {
-          nodeTimeBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          getNodeTimesFieldBuilder() {
+        if (nodeTimesBuilder_ == null) {
+          nodeTimesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
               org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder>(
-                  getNodeTime(),
+                  nodeTimes_,
+                  ((bitField0_ & 0x00000020) == 0x00000020),
                   getParentForChildren(),
                   isClean());
-          nodeTime_ = null;
+          nodeTimes_ = null;
         }
-        return nodeTimeBuilder_;
+        return nodeTimesBuilder_;
       }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -10185,28 +10842,47 @@ public final class AdminProtos {
 
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    boolean hasNodeTime();
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> 
+        getNodeTimesList();
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index);
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder();
+    int getNodeTimesCount();
+    /**
+     * <pre>
+     * timestamps from each clock on region server
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+        getNodeTimesOrBuilderList();
+    /**
+     * <pre>
+     * timestamps from each clock on region server
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code hbase.pb.CloseRegionResponse}
@@ -10221,6 +10897,7 @@ public final class AdminProtos {
     }
     private CloseRegionResponse() {
       closed_ = false;
+      nodeTimes_ = java.util.Collections.emptyList();
     }
 
     @java.lang.Override
@@ -10257,16 +10934,12 @@ public final class AdminProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000002) == 0x00000002)) {
-                subBuilder = nodeTime_.toBuilder();
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                nodeTimes_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime>();
+                mutable_bitField0_ |= 0x00000002;
               }
-              nodeTime_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(nodeTime_);
-                nodeTime_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000002;
+              nodeTimes_.add(
+                  input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.PARSER, extensionRegistry));
               break;
             }
           }
@@ -10277,6 +10950,9 @@ public final class AdminProtos {
         throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          nodeTimes_ = java.util.Collections.unmodifiableList(nodeTimes_);
+        }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
@@ -10309,37 +10985,59 @@ public final class AdminProtos {
       return closed_;
     }
 
-    public static final int NODETIME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_;
+    public static final int NODETIMES_FIELD_NUMBER = 2;
+    private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> nodeTimes_;
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    public boolean hasNodeTime() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+    public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> getNodeTimesList() {
+      return nodeTimes_;
     }
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
-      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+        getNodeTimesOrBuilderList() {
+      return nodeTimes_;
     }
     /**
      * <pre>
-     * physical or hybrid timestamp from region server clock
+     * timestamps from each clock on region server
      * </pre>
      *
-     * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
-      return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+    public int getNodeTimesCount() {
+      return nodeTimes_.size();
+    }
+    /**
+     * <pre>
+     * timestamps from each clock on region server
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index) {
+      return nodeTimes_.get(index);
+    }
+    /**
+     * <pre>
+     * timestamps from each clock on region server
+     * </pre>
+     *
+     * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+        int index) {
+      return nodeTimes_.get(index);
     }
 
     private byte memoizedIsInitialized = -1;
@@ -10361,8 +11059,8 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeBool(1, closed_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeMessage(2, getNodeTime());
+      for (int i = 0; i < nodeTimes_.size(); i++) {
+        output.writeMessage(2, nodeTimes_.get(i));
       }
       unknownFields.writeTo(output);
     }
@@ -10376,9 +11074,9 @@ public final class AdminProtos {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeBoolSize(1, closed_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      for (int i = 0; i < nodeTimes_.size(); i++) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, getNodeTime());
+          .computeMessageSize(2, nodeTimes_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -10402,11 +11100,8 @@ public final class AdminProtos {
         result = result && (getClosed()
             == other.getClosed());
       }
-      result = result && (hasNodeTime() == other.hasNodeTime());
-      if (hasNodeTime()) {
-        result = result && getNodeTime()
-            .equals(other.getNodeTime());
-      }
+      result = result && getNodeTimesList()
+          .equals(other.getNodeTimesList());
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -10423,9 +11118,9 @@ public final class AdminProtos {
         hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
             getClosed());
       }
-      if (hasNodeTime()) {
-        hash = (37 * hash) + NODETIME_FIELD_NUMBER;
-        hash = (53 * hash) + getNodeTime().hashCode();
+      if (getNodeTimesCount() > 0) {
+        hash = (37 * hash) + NODETIMES_FIELD_NUMBER;
+        hash = (53 * hash) + getNodeTimesList().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -10541,19 +11236,19 @@ public final class AdminProtos {
       private void maybeForceBuilderInitialization() {
         if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
-          getNodeTimeFieldBuilder();
+          getNodeTimesFieldBuilder();
         }
       }
       public Builder clear() {
         super.clear();
         closed_ = false;
         bitField0_ = (bitField0_ & ~0x00000001);
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = null;
+        if (nodeTimesBuilder_ == null) {
+          nodeTimes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
         } else {
-          nodeTimeBuilder_.clear();
+          nodeTimesBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -10582,13 +11277,14 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000001;
         }
         result.closed_ = closed_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        if (nodeTimeBuilder_ == null) {
-          result.nodeTime_ = nodeTime_;
+        if (nodeTimesBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            nodeTimes_ = java.util.Collections.unmodifiableList(nodeTimes_);
+            bitField0_ = (bitField0_ & ~0x00000002);
+          }
+          result.nodeTimes_ = nodeTimes_;
         } else {
-          result.nodeTime_ = nodeTimeBuilder_.build();
+          result.nodeTimes_ = nodeTimesBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -10635,8 +11331,31 @@ public final class AdminProtos {
         if (other.hasClosed()) {
           setClosed(other.getClosed());
         }
-        if (other.hasNodeTime()) {
-          mergeNodeTime(other.getNodeTime());
+        if (nodeTimesBuilder_ == null) {
+          if (!other.nodeTimes_.isEmpty()) {
+            if (nodeTimes_.isEmpty()) {
+              nodeTimes_ = other.nodeTimes_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+            } else {
+              ensureNodeTimesIsMutable();
+              nodeTimes_.addAll(other.nodeTimes_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.nodeTimes_.isEmpty()) {
+            if (nodeTimesBuilder_.isEmpty()) {
+              nodeTimesBuilder_.dispose();
+              nodeTimesBuilder_ = null;
+              nodeTimes_ = other.nodeTimes_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+              nodeTimesBuilder_ = 
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getNodeTimesFieldBuilder() : null;
+            } else {
+              nodeTimesBuilder_.addAllMessages(other.nodeTimes_);
+            }
+          }
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -10701,158 +11420,316 @@ public final class AdminProtos {
         return this;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime nodeTime_ = null;
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimeBuilder_;
-      /**
-       * <pre>
-       * physical or hybrid timestamp from region server clock
-       * </pre>
-       *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
-       */
-      public boolean hasNodeTime() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+      private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> nodeTimes_ =
+        java.util.Collections.emptyList();
+      private void ensureNodeTimesIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          nodeTimes_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime>(nodeTimes_);
+          bitField0_ |= 0x00000002;
+         }
       }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> nodeTimesBuilder_;
+
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTime() {
-        if (nodeTimeBuilder_ == null) {
-          return nodeTime_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> getNodeTimesList() {
+        if (nodeTimesBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(nodeTimes_);
         } else {
-          return nodeTimeBuilder_.getMessage();
+          return nodeTimesBuilder_.getMessageList();
         }
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public Builder setNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
-        if (nodeTimeBuilder_ == null) {
+      public int getNodeTimesCount() {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.size();
+        } else {
+          return nodeTimesBuilder_.getCount();
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime getNodeTimes(int index) {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.get(index);
+        } else {
+          return nodeTimesBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public Builder setNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          nodeTime_ = value;
+          ensureNodeTimesIsMutable();
+          nodeTimes_.set(index, value);
           onChanged();
         } else {
-          nodeTimeBuilder_.setMessage(value);
+          nodeTimesBuilder_.setMessage(index, value);
         }
-        bitField0_ |= 0x00000002;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public Builder setNodeTime(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = builderForValue.build();
+      public Builder setNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.set(index, builderForValue.build());
           onChanged();
         } else {
-          nodeTimeBuilder_.setMessage(builderForValue.build());
+          nodeTimesBuilder_.setMessage(index, builderForValue.build());
         }
-        bitField0_ |= 0x00000002;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public Builder mergeNodeTime(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
-        if (nodeTimeBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              nodeTime_ != null &&
-              nodeTime_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance()) {
-            nodeTime_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.newBuilder(nodeTime_).mergeFrom(value).buildPartial();
-          } else {
-            nodeTime_ = value;
+      public Builder addNodeTimes(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
           }
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(value);
           onChanged();
         } else {
-          nodeTimeBuilder_.mergeFrom(value);
+          nodeTimesBuilder_.addMessage(value);
         }
-        bitField0_ |= 0x00000002;
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public Builder clearNodeTime() {
-        if (nodeTimeBuilder_ == null) {
-          nodeTime_ = null;
+      public Builder addNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime value) {
+        if (nodeTimesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(index, value);
           onChanged();
         } else {
-          nodeTimeBuilder_.clear();
+          nodeTimesBuilder_.addMessage(index, value);
         }
-        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimeBuilder() {
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return getNodeTimeFieldBuilder().getBuilder();
+      public Builder addNodeTimes(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(builderForValue.build());
+          onChanged();
+        } else {
+          nodeTimesBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimeOrBuilder() {
-        if (nodeTimeBuilder_ != null) {
-          return nodeTimeBuilder_.getMessageOrBuilder();
+      public Builder addNodeTimes(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder builderForValue) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.add(index, builderForValue.build());
+          onChanged();
         } else {
-          return nodeTime_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance() : nodeTime_;
+          nodeTimesBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public Builder addAllNodeTimes(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime> values) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, nodeTimes_);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public Builder clearNodeTimes() {
+        if (nodeTimesBuilder_ == null) {
+          nodeTimes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public Builder removeNodeTimes(int index) {
+        if (nodeTimesBuilder_ == null) {
+          ensureNodeTimesIsMutable();
+          nodeTimes_.remove(index);
+          onChanged();
+        } else {
+          nodeTimesBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder getNodeTimesBuilder(
+          int index) {
+        return getNodeTimesFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder getNodeTimesOrBuilder(
+          int index) {
+        if (nodeTimesBuilder_ == null) {
+          return nodeTimes_.get(index);  } else {
+          return nodeTimesBuilder_.getMessageOrBuilder(index);
         }
       }
       /**
        * <pre>
-       * physical or hybrid timestamp from region server clock
+       * timestamps from each clock on region server
        * </pre>
        *
-       * <code>optional .hbase.pb.NodeTime nodeTime = 2;</code>
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
        */
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
+           getNodeTimesOrBuilderList() {
+        if (nodeTimesBuilder_ != null) {
+          return nodeTimesBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(nodeTimes_);
+        }
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder addNodeTimesBuilder() {
+        return getNodeTimesFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance());
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder addNodeTimesBuilder(
+          int index) {
+        return getNodeTimesFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.getDefaultInstance());
+      }
+      /**
+       * <pre>
+       * timestamps from each clock on region server
+       * </pre>
+       *
+       * <code>repeated .hbase.pb.NodeTime nodeTimes = 2;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder> 
+           getNodeTimesBuilderList() {
+        return getNodeTimesFieldBuilder().getBuilderList();
+      }
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder> 
-          getNodeTimeFieldBuilder() {
-        if (nodeTimeBuilder_ == null) {
-          nodeTimeBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          getNodeTimesFieldBuilder() {
+        if (nodeTimesBuilder_ == null) {
+          nodeTimesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
               org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTimeOrBuilder>(
-                  getNodeTime(),
+                  nodeTimes_,
+                  ((bitField0_ & 0x00000002) == 0x00000002),
                   getParentForChildren(),
                   isClean());
-          nodeTime_ = null;
+          nodeTimes_ = null;
         }
-        return nodeTimeBuilder_;
+        return nodeTimesBuilder_;
       }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -31486,129 +32363,129 @@ public final class AdminProtos {
       "ponse\022\022\n\nstore_file\030\001 \003(\t\"\030\n\026GetOnlineRe" +
       "gionRequest\"D\n\027GetOnlineRegionResponse\022)" +
       "\n\013region_info\030\001 \003(\0132\024.hbase.pb.RegionInf" +
-      "o\"\331\002\n\021OpenRegionRequest\022=\n\topen_info\030\001 \003" +
+      "o\"\332\002\n\021OpenRegionRequest\022=\n\topen_info\030\001 \003" +
       "(\0132*.hbase.pb.OpenRegionRequest.RegionOp",
       "enInfo\022\027\n\017serverStartCode\030\002 \001(\004\022\032\n\022maste" +
-      "r_system_time\030\005 \001(\004\022$\n\010nodeTime\030\006 \001(\0132\022." +
-      "hbase.pb.NodeTime\032\251\001\n\016RegionOpenInfo\022$\n\006" +
-      "region\030\001 \002(\0132\024.hbase.pb.RegionInfo\022\037\n\027ve" +
-      "rsion_of_offline_node\030\002 \001(\r\022+\n\rfavored_n" +
-      "odes\030\003 \003(\0132\024.hbase.pb.ServerName\022#\n\033open" +
-      "ForDistributedLogReplay\030\004 \001(\010\"\314\001\n\022OpenRe" +
-      "gionResponse\022F\n\ropening_state\030\001 \003(\0162/.hb" +
-      "ase.pb.OpenRegionResponse.RegionOpeningS" +
-      "tate\022$\n\010nodeTime\030\002 \001(\0132\022.hbase.pb.NodeTi",
-      "me\"H\n\022RegionOpeningState\022\n\n\006OPENED\020\000\022\022\n\016" +
-      "ALREADY_OPENED\020\001\022\022\n\016FAILED_OPENING\020\002\"?\n\023" +
-      "WarmupRegionRequest\022(\n\nregionInfo\030\001 \002(\0132" +
-      "\024.hbase.pb.RegionInfo\"\026\n\024WarmupRegionRes" +
-      "ponse\"\361\001\n\022CloseRegionRequest\022)\n\006region\030\001" +
-      " \002(\0132\031.hbase.pb.RegionSpecifier\022\037\n\027versi" +
-      "on_of_closing_node\030\002 \001(\r\022\036\n\020transition_i" +
-      "n_ZK\030\003 \001(\010:\004true\0220\n\022destination_server\030\004" +
-      " \001(\0132\024.hbase.pb.ServerName\022\027\n\017serverStar" +
-      "tCode\030\005 \001(\004\022$\n\010nodeTime\030\006 \001(\0132\022.hbase.pb",
-      ".NodeTime\"K\n\023CloseRegionResponse\022\016\n\006clos" +
-      "ed\030\001 \002(\010\022$\n\010nodeTime\030\002 \001(\0132\022.hbase.pb.No" +
-      "deTime\"y\n\022FlushRegionRequest\022)\n\006region\030\001" +
-      " \002(\0132\031.hbase.pb.RegionSpecifier\022\030\n\020if_ol" +
-      "der_than_ts\030\002 \001(\004\022\036\n\026write_flush_wal_mar" +
-      "ker\030\003 \001(\010\"_\n\023FlushRegionResponse\022\027\n\017last" +
-      "_flush_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\022\036\n\026wr" +
-      "ote_flush_wal_marker\030\003 \001(\010\"T\n\022SplitRegio" +
-      "nRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Regi" +
-      "onSpecifier\022\023\n\013split_point\030\002 \001(\014\"\025\n\023Spli",
-      "tRegionResponse\"`\n\024CompactRegionRequest\022" +
-      ")\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifi" +
-      "er\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(\014\"\027\n\025Com" +
-      "pactRegionResponse\"\315\001\n\031UpdateFavoredNode" +
-      "sRequest\022I\n\013update_info\030\001 \003(\01324.hbase.pb" +
-      ".UpdateFavoredNodesRequest.RegionUpdateI" +
-      "nfo\032e\n\020RegionUpdateInfo\022$\n\006region\030\001 \002(\0132" +
-      "\024.hbase.pb.RegionInfo\022+\n\rfavored_nodes\030\002" +
-      " \003(\0132\024.hbase.pb.ServerName\".\n\032UpdateFavo" +
-      "redNodesResponse\022\020\n\010response\030\001 \001(\r\"a\n\010WA",
-      "LEntry\022\035\n\003key\030\001 \002(\0132\020.hbase.pb.WALKey\022\027\n" +
-      "\017key_value_bytes\030\002 \003(\014\022\035\n\025associated_cel" +
-      "l_count\030\003 \001(\005\"\242\001\n\030ReplicateWALEntryReque" +
-      "st\022!\n\005entry\030\001 \003(\0132\022.hbase.pb.WALEntry\022\034\n" +
-      "\024replicationClusterId\030\002 \001(\t\022\"\n\032sourceBas" +
-      "eNamespaceDirPath\030\003 \001(\t\022!\n\031sourceHFileAr" +
-      "chiveDirPath\030\004 \001(\t\"\033\n\031ReplicateWALEntryR" +
-      "esponse\"\026\n\024RollWALWriterRequest\"0\n\025RollW" +
-      "ALWriterResponse\022\027\n\017region_to_flush\030\001 \003(" +
-      "\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 \002(\t\"\024",
-      "\n\022StopServerResponse\"\026\n\024GetServerInfoReq" +
-      "uest\"K\n\nServerInfo\022)\n\013server_name\030\001 \002(\0132" +
-      "\024.hbase.pb.ServerName\022\022\n\nwebui_port\030\002 \001(" +
-      "\r\"B\n\025GetServerInfoResponse\022)\n\013server_inf" +
-      "o\030\001 \002(\0132\024.hbase.pb.ServerInfo\"\034\n\032UpdateC" +
-      "onfigurationRequest\"\035\n\033UpdateConfigurati" +
-      "onResponse\"?\n\024GetRegionLoadRequest\022\'\n\nta" +
-      "ble_name\030\001 \001(\0132\023.hbase.pb.TableName\"C\n\025G" +
-      "etRegionLoadResponse\022*\n\014region_loads\030\001 \003" +
-      "(\0132\024.hbase.pb.RegionLoad\"2\n\034ClearCompact",
-      "ionQueuesRequest\022\022\n\nqueue_name\030\001 \003(\t\"\037\n\035" +
-      "ClearCompactionQueuesResponse\"\200\001\n\030Execut" +
-      "eProceduresRequest\0220\n\013open_region\030\001 \003(\0132" +
-      "\033.hbase.pb.OpenRegionRequest\0222\n\014close_re" +
-      "gion\030\002 \003(\0132\034.hbase.pb.CloseRegionRequest" +
-      "\"\203\001\n\031ExecuteProceduresResponse\0221\n\013open_r" +
-      "egion\030\001 \003(\0132\034.hbase.pb.OpenRegionRespons" +
-      "e\0223\n\014close_region\030\002 \003(\0132\035.hbase.pb.Close" +
-      "RegionResponse\"\244\001\n\023MergeRegionsRequest\022+" +
-      "\n\010region_a\030\001 \002(\0132\031.hbase.pb.RegionSpecif",
-      "ier\022+\n\010region_b\030\002 \002(\0132\031.hbase.pb.RegionS" +
-      "pecifier\022\027\n\010forcible\030\003 \001(\010:\005false\022\032\n\022mas" +
-      "ter_system_time\030\004 \001(\004\"\026\n\024MergeRegionsRes" +
-      "ponse2\216\016\n\014AdminService\022P\n\rGetRegionInfo\022" +
-      "\036.hbase.pb.GetRegionInfoRequest\032\037.hbase." +
-      "pb.GetRegionInfoResponse\022M\n\014GetStoreFile" +
-      "\022\035.hbase.pb.GetStoreFileRequest\032\036.hbase." +
-      "pb.GetStoreFileResponse\022V\n\017GetOnlineRegi" +
-      "on\022 .hbase.pb.GetOnlineRegionRequest\032!.h" +
-      "base.pb.GetOnlineRegionResponse\022G\n\nOpenR",
-      "egion\022\033.hbase.pb.OpenRegionRequest\032\034.hba" +
-      "se.pb.OpenRegionResponse\022M\n\014WarmupRegion" +
-      "\022\035.hbase.pb.WarmupRegionRequest\032\036.hbase." +
-      "pb.WarmupRegionResponse\022J\n\013CloseRegion\022\034" +
-      ".hbase.pb.CloseRegionRequest\032\035.hbase.pb." +
-      "CloseRegionResponse\022J\n\013FlushRegion\022\034.hba" +
-      "se.pb.FlushRegionRequest\032\035.hbase.pb.Flus" +
-      "hRegionResponse\022J\n\013SplitRegion\022\034.hbase.p" +
-      "b.SplitRegionRequest\032\035.hbase.pb.SplitReg" +
-      "ionResponse\022P\n\rCompactRegion\022\036.hbase.pb.",
-      "CompactRegionRequest\032\037.hbase.pb.CompactR" +
-      "egionResponse\022\\\n\021ReplicateWALEntry\022\".hba" +
-      "se.pb.ReplicateWALEntryRequest\032#.hbase.p" +
-      "b.ReplicateWALEntryResponse\022Q\n\006Replay\022\"." +
-      "hbase.pb.ReplicateWALEntryRequest\032#.hbas" +
-      "e.pb.ReplicateWALEntryResponse\022P\n\rRollWA" +
-      "LWriter\022\036.hbase.pb.RollWALWriterRequest\032" +
-      "\037.hbase.pb.RollWALWriterResponse\022P\n\rGetS" +
-      "erverInfo\022\036.hbase.pb.GetServerInfoReques" +
-      "t\032\037.hbase.pb.GetServerInfoResponse\022G\n\nSt",
-      "opServer\022\033.hbase.pb.StopServerRequest\032\034." +
-      "hbase.pb.StopServerResponse\022_\n\022UpdateFav" +
-      "oredNodes\022#.hbase.pb.UpdateFavoredNodesR" +
-      "equest\032$.hbase.pb.UpdateFavoredNodesResp" +
-      "onse\022b\n\023UpdateConfiguration\022$.hbase.pb.U" +
-      "pdateConfigurationRequest\032%.hbase.pb.Upd" +
-      "ateConfigurationResponse\022P\n\rGetRegionLoa" +
-      "d\022\036.hbase.pb.GetRegionLoadRequest\032\037.hbas" +
-      "e.pb.GetRegionLoadResponse\022h\n\025ClearCompa" +
-      "ctionQueues\022&.hbase.pb.ClearCompactionQu",
-      "euesRequest\032\'.hbase.pb.ClearCompactionQu" +
-      "euesResponse\022k\n\026GetSpaceQuotaSnapshots\022\'" +
-      ".hbase.pb.GetSpaceQuotaSnapshotsRequest\032" +
-      "(.hbase.pb.GetSpaceQuotaSnapshotsRespons" +
-      "e\022\\\n\021ExecuteProcedures\022\".hbase.pb.Execut" +
-      "eProceduresRequest\032#.hbase.pb.ExecutePro" +
-      "ceduresResponse\022M\n\014MergeRegions\022\035.hbase." +
-      "pb.MergeRegionsRequest\032\036.hbase.pb.MergeR" +
-      "egionsResponseBH\n1org.apache.hadoop.hbas" +
-      "e.shaded.protobuf.generatedB\013AdminProtos",
-      "H\001\210\001\001\240\001\001"
+      "r_system_time\030\005 \001(\004\022%\n\tnodeTimes\030\006 \003(\0132\022" +
+      ".hbase.pb.NodeTime\032\251\001\n\016RegionOpenInfo\022$\n" +
+      "\006region\030\001 \002(\0132\024.hbase.pb.RegionInfo\022\037\n\027v" +
+      "ersion_of_offline_node\030\002 \001(\r\022+\n\rfavored_" +
+      "nodes\030\003 \003(\0132\024.hbase.pb.ServerName\022#\n\033ope" +
+      "nForDistributedLogReplay\030\004 \001(\010\"\315\001\n\022OpenR" +
+      "egionResponse\022F\n\ropening_state\030\001 \003(\0162/.h" +
+      "base.pb.OpenRegionResponse.RegionOpening" +
+      "State\022%\n\tnodeTimes\030\002 \003(\0132\022.hbase.pb.Node",
+      "Time\"H\n\022RegionOpeningState\022\n\n\006OPENED\020\000\022\022" +
+      "\n\016ALREADY_OPENED\020\001\022\022\n\016FAILED_OPENING\020\002\"?" +
+      "\n\023WarmupRegionRequest\022(\n\nregionInfo\030\001 \002(" +
+      "\0132\024.hbase.pb.RegionInfo\"\026\n\024WarmupRegionR" +
+      "esponse\"\362\001\n\022CloseRegionRequest\022)\n\006region" +
+      "\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\037\n\027ver" +
+      "sion_of_closing_node\030\002 \001(\r\022\036\n\020transition" +
+      "_in_ZK\030\003 \001(\010:\004true\0220\n\022destination_server" +
+      "\030\004 \001(\0132\024.hbase.pb.ServerName\022\027\n\017serverSt" +
+      "artCode\030\005 \001(\004\022%\n\tnodeTimes\030\006 \003(\0132\022.hbase",
+      ".pb.NodeTime\"L\n\023CloseRegionResponse\022\016\n\006c" +
+      "losed\030\001 \002(\010\022%\n\tnodeTimes\030\002 \003(\0132\022.hbase.p" +
+      "b.NodeTime\"y\n\022FlushRegionRequest\022)\n\006regi" +
+      "on\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\030\n\020i" +
+      "f_older_than_ts\030\002 \001(\004\022\036\n\026write_flush_wal" +
+      "_marker\030\003 \001(\010\"_\n\023FlushRegionResponse\022\027\n\017" +
+      "last_flush_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\022\036" +
+      "\n\026wrote_flush_wal_marker\030\003 \001(\010\"T\n\022SplitR" +
+      "egionRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb." +
+      "RegionSpecifier\022\023\n\013split_point\030\002 \001(\014\"\025\n\023",
+      "SplitRegionResponse\"`\n\024CompactRegionRequ" +
+      "est\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpe" +
+      "cifier\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(\014\"\027\n" +
+      "\025CompactRegionResponse\"\315\001\n\031UpdateFavored" +
+      "NodesRequest\022I\n\013update_info\030\001 \003(\01324.hbas" +
+      "e.pb.UpdateFavoredNodesRequest.RegionUpd" +
+      "ateInfo\032e\n\020RegionUpdateInfo\022$\n\006region\030\001 " +
+      "\002(\0132\024.hbase.pb.RegionInfo\022+\n\rfavored_nod" +
+      "es\030\002 \003(\0132\024.hbase.pb.ServerName\".\n\032Update" +
+      "FavoredNodesResponse\022\020\n\010response\030\001 \001(\r\"a",
+      "\n\010WALEntry\022\035\n\003key\030\001 \002(\0132\020.hbase.pb.WALKe" +
+      "y\022\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025associated" +
+      "_cell_count\030\003 \001(\005\"\242\001\n\030ReplicateWALEntryR" +
+      "equest\022!\n\005entry\030\001 \003(\0132\022.hbase.pb.WALEntr" +
+      "y\022\034\n\024replicationClusterId\030\002 \001(\t\022\"\n\032sourc" +
+      "eBaseNamespaceDirPath\030\003 \001(\t\022!\n\031sourceHFi" +
+      "leArchiveDirPath\030\004 \001(\t\"\033\n\031ReplicateWALEn" +
+      "tryResponse\"\026\n\024RollWALWriterRequest\"0\n\025R" +
+      "ollWALWriterResponse\022\027\n\017region_to_flush\030" +
+      "\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 \002",
+      "(\t\"\024\n\022StopServerResponse\"\026\n\024GetServerInf" +
+      "oRequest\"K\n\nServerInfo\022)\n\013server_name\030\001 " +
+      "\002(\0132\024.hbase.pb.ServerName\022\022\n\nwebui_port\030" +
+      "\002 \001(\r\"B\n\025GetServerInfoResponse\022)\n\013server" +
+      "_info\030\001 \002(\0132\024.hbase.pb.ServerInfo\"\034\n\032Upd" +
+      "ateConfigurationRequest\"\035\n\033UpdateConfigu" +
+      "rationResponse\"?\n\024GetRegionLoadRequest\022\'" +
+      "\n\ntable_name\030\001 \001(\0132\023.hbase.pb.TableName\"" +
+      "C\n\025GetRegionLoadResponse\022*\n\014region_loads" +
+      "\030\001 \003(\0132\024.hbase.pb.RegionLoad\"2\n\034ClearCom",
+      "pactionQueuesRequest\022\022\n\nqueue_name\030\001 \003(\t" +
+      "\"\037\n\035ClearCompactionQueuesResponse\"\200\001\n\030Ex" +
+      "ecuteProceduresRequest\0220\n\013open_region\030\001 " +
+      "\003(\0132\033.hbase.pb.OpenRegionRequest\0222\n\014clos" +
+      "e_region\030\002 \003(\0132\034.hbase.pb.CloseRegionReq" +
+      "uest\"\203\001\n\031ExecuteProceduresResponse\0221\n\013op" +
+      "en_region\030\001 \003(\0132\034.hbase.pb.OpenRegionRes" +
+      "ponse\0223\n\014close_region\030\002 \003(\0132\035.hbase.pb.C" +
+      "loseRegionResponse\"\244\001\n\023MergeRegionsReque" +
+      "st\022+\n\010region_a\030\001 \002(\0132\031.hbase.pb.RegionSp",
+      "ecifier\022+\n\010region_b\030\002 \002(\0132\031.hbase.pb.Reg" +
+      "ionSpecifier\022\027\n\010forcible\030\003 \001(\010:\005false\022\032\n" +
+      "\022master_system_time\030\004 \001(\004\"\026\n\024MergeRegion" +
+      "sResponse2\216\016\n\014AdminService\022P\n\rGetRegionI" +
+      "nfo\022\036.hbase.pb.GetRegionInfoRequest\032\037.hb" +
+      "ase.pb.GetRegionInfoResponse\022M\n\014GetStore" +
+      "File\022\035.hbase.pb.GetStoreFileRequest\032\036.hb" +
+      "ase.pb.GetStoreFileResponse\022V\n\017GetOnline" +
+      "Region\022 .hbase.pb.GetOnlineRegionRequest" +
+      "\032!.hbase.pb.GetOnlineRegionResponse\022G\n\nO",
+      "penRegion\022\033.hbase.pb.OpenRegionRequest\032\034" +
+      ".hbase.pb.OpenRegionResponse\022M\n\014WarmupRe" +
+      "gion\022\035.hbase.pb.WarmupRegionRequest\032\036.hb" +
+      "ase.pb.WarmupRegionResponse\022J\n\013CloseRegi" +
+      "on\022\034.hbase.pb.CloseRegionRequest\032\035.hbase" +
+      ".pb.CloseRegionResponse\022J\n\013FlushRegion\022\034" +
+      ".hbase.pb.FlushRegionRequest\032\035.hbase.pb." +
+      "FlushRegionResponse\022J\n\013SplitRegion\022\034.hba" +
+      "se.pb.SplitRegionRequest\032\035.hbase.pb.Spli" +
+      "tRegionResponse\022P\n\rCompactRegion\022\036.hbase",
+      ".pb.CompactRegionRequest\032\037.hbase.pb.Comp" +
+      "actRegionResponse\022\\\n\021ReplicateWALEntry\022\"" +
+      ".hbase.pb.ReplicateWALEntryRequest\032#.hba" +
+      "se.pb.ReplicateWALEntryResponse\022Q\n\006Repla" +
+      "y\022\".hbase.pb.ReplicateWALEntryRequest\032#." +
+      "hbase.pb.ReplicateWALEntryResponse\022P\n\rRo" +
+      "llWALWriter\022\036.hbase.pb.RollWALWriterRequ" +
+      "est\032\037.hbase.pb.RollWALWriterResponse\022P\n\r" +
+      "GetServerInfo\022\036.hbase.pb.GetServerInfoRe" +
+      "quest\032\037.hbase.pb.GetServerInfoResponse\022G",
+      "\n\nStopServer\022\033.hbase.pb.StopServerReques" +
+      "t\032\034.hbase.pb.StopServerResponse\022_\n\022Updat" +
+      "eFavoredNodes\022#.hbase.pb.UpdateFavoredNo" +
+      "desRequest\032$.hbase.pb.UpdateFavoredNodes" +
+      "Response\022b\n\023UpdateConfiguration\022$.hbase." +
+      "pb.UpdateConfigurationRequest\032%.hbase.pb" +
+      ".UpdateConfigurationResponse\022P\n\rGetRegio" +
+      "nLoad\022\036.hbase.pb.GetRegionLoadRequest\032\037." +
+      "hbase.pb.GetRegionLoadResponse\022h\n\025ClearC" +
+      "ompactionQueues\022&.hbase.pb.ClearCompacti",
+      "onQueuesRequest\032\'.hbase.pb.ClearCompacti" +
+      "onQueuesResponse\022k\n\026GetSpaceQuotaSnapsho" +
+      "ts\022\'.hbase.pb.GetSpaceQuotaSnapshotsRequ" +
+      "est\032(.hbase.pb.GetSpaceQuotaSnapshotsRes" +
+      "ponse\022\\\n\021ExecuteProcedures\022\".hbase.pb.Ex" +
+      "ecuteProceduresRequest\032#.hbase.pb.Execut" +
+      "eProceduresResponse\022M\n\014MergeRegions\022\035.hb" +
+      "ase.pb.MergeRegionsRequest\032\036.hbase.pb.Me" +
+      "rgeRegionsResponseBH\n1org.apache.hadoop." +
+      "hbase.shaded.protobuf.generatedB\013AdminPr",
+      "otosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -31667,7 +32544,7 @@ public final class AdminProtos {
     internal_static_hbase_pb_OpenRegionRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_OpenRegionRequest_descriptor,
-        new java.lang.String[] { "OpenInfo", "ServerStartCode", "MasterSystemTime", "NodeTime", });
+        new java.lang.String[] { "OpenInfo", "ServerStartCode", "MasterSystemTime", "NodeTimes", });
     internal_static_hbase_pb_OpenRegionRequest_RegionOpenInfo_descriptor =
       internal_static_hbase_pb_OpenRegionRequest_descriptor.getNestedTypes().get(0);
     internal_static_hbase_pb_OpenRegionRequest_RegionOpenInfo_fieldAccessorTable = new
@@ -31679,7 +32556,7 @@ public final class AdminProtos {
     internal_static_hbase_pb_OpenRegionResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_OpenRegionResponse_descriptor,
-        new java.lang.String[] { "OpeningState", "NodeTime", });
+        new java.lang.String[] { "OpeningState", "NodeTimes", });
     internal_static_hbase_pb_WarmupRegionRequest_descriptor =
       getDescriptor().getMessageTypes().get(8);
     internal_static_hbase_pb_WarmupRegionRequest_fieldAccessorTable = new
@@ -31697,13 +32574,13 @@ public final class AdminProtos {
     internal_static_hbase_pb_CloseRegionRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_CloseRegionRequest_descriptor,
-        new java.lang.String[] { "Region", "VersionOfClosingNode", "TransitionInZK", "DestinationServer", "ServerStartCode", "NodeTime", });
+        new java.lang.String[] { "Region", "VersionOfClosingNode", "TransitionInZK", "DestinationServer", "ServerStartCode", "NodeTimes", });
     internal_static_hbase_pb_CloseRegionResponse_descriptor =
       getDescriptor().getMessageTypes().get(11);
     internal_static_hbase_pb_CloseRegionResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_CloseRegionResponse_descriptor,
-        new java.lang.String[] { "Closed", "NodeTime", });
+        new java.lang.String[] { "Closed", "NodeTimes", });
     internal_static_hbase_pb_FlushRegionRequest_descriptor =
       getDescriptor().getMessageTypes().get(12);
     internal_static_hbase_pb_FlushRegionRequest_fieldAccessorTable = new

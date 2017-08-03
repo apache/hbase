@@ -22,6 +22,7 @@ import com.google.common.collect.ArrayListMultimap;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
@@ -29,13 +30,15 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.ClockType;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
@@ -231,7 +234,6 @@ public class RSProcedureDispatcher
     final MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
     final ArrayListMultimap<Class<?>, RemoteOperation> reqsByType =
       buildAndGroupRequestByType(env, serverName, operations);
-
     final List<RegionOpenOperation> openOps = fetchType(reqsByType, RegionOpenOperation.class);
     if (!openOps.isEmpty()) resolver.dispatchOpenRequests(env, openOps);
 
@@ -269,14 +271,17 @@ public class RSProcedureDispatcher
 
       try {
         final ExecuteProceduresResponse response = sendRequest(getServerName(), request.build());
+        // TODO: consider updating clock with just top timestamp from both loops
         for (OpenRegionResponse orr : response.getOpenRegionList()) {
-          if (orr.hasNodeTime()) {
-            env.getMasterServices().updateClock(orr.getNodeTime().getTime());
+          for (NodeTime nodeTime : orr.getNodeTimesList()) {
+            env.getMasterServices().getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
+                .update(nodeTime.getTimestamp());
           }
         }
         for (CloseRegionResponse crr : response.getCloseRegionList()) {
-          if (crr.hasNodeTime()) {
-            env.getMasterServices().updateClock(crr.getNodeTime().getTime());
+          for (NodeTime nodeTime : crr.getNodeTimesList()) {
+            env.getMasterServices().getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
+                .update(nodeTime.getTimestamp());
           }
         }
         remoteCallCompleted(env, response);
@@ -340,11 +345,12 @@ public class RSProcedureDispatcher
     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
 
     // Set master clock time for send event
-    // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta table,
-    // but in the future we would intend to sync both HLC and system monotonic clocks
-    Clock clock = env.getMasterServices()
-        .getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE);
-    builder.setNodeTime(HBaseProtos.NodeTime.newBuilder().setTime(clock.now()));
+    builder.addNodeTimesBuilder()
+        .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
+        .setTimestamp(env.getMasterServices().getClock(ClockType.SYSTEM_MONOTONIC).now());
+    builder.addNodeTimesBuilder()
+        .setClockType(ProtobufUtil.toClockType(ClockType.HLC))
+        .setTimestamp(env.getMasterServices().getClock(ClockType.HLC).now());
 
     for (RegionOpenOperation op: operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
@@ -364,13 +370,14 @@ public class RSProcedureDispatcher
     @Override
     public Void call() {
       final MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
-      final OpenRegionRequest request = buildOpenRegionRequest(env, getServerName(), operations);
 
       try {
+        final OpenRegionRequest request = buildOpenRegionRequest(env, getServerName(), operations);
         OpenRegionResponse response = sendRequest(getServerName(), request);
-        if (response.hasNodeTime()) {
+        for (NodeTime nodeTime : response.getNodeTimesList()) {
           // Update master clock upon receiving open region response from region server
-          env.getMasterServices().updateClock(response.getNodeTime().getTime());
+          env.getMasterServices().getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
+              .update(nodeTime.getTimestamp());
         }
         remoteCallCompleted(env, response);
       } catch (IOException e) {
@@ -425,13 +432,10 @@ public class RSProcedureDispatcher
       final CloseRegionRequest request = operation.buildCloseRegionRequest(env, getServerName());
       try {
         CloseRegionResponse response = sendRequest(getServerName(), request);
-        if (response.hasNodeTime()) {
+        for (NodeTime nodeTime : response.getNodeTimesList()) {
           // Update master clock upon receiving close region response from region server
-          // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta
-          // table, but in the future we would intend to sync both HLC and system monotonic clocks
-          Clock clock = env.getMasterServices()
-              .getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE);
-          clock.update(response.getNodeTime().getTime());
+          env.getMasterServices().getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
+              .update(nodeTime.getTimestamp());
         }
         remoteCallCompleted(env, response);
       } catch (IOException e) {
@@ -572,11 +576,13 @@ public class RSProcedureDispatcher
     public CloseRegionRequest buildCloseRegionRequest(final MasterProcedureEnv env,
         final ServerName serverName) {
       // Set master clock time for send event
-      // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta table,
-      // but in the future we would intend to sync both HLC and system monotonic clocks
-      Clock clock = env.getMasterServices().getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE);
+      List<Pair<ClockType, Long>> nodeTimes = new ArrayList<>();
+      nodeTimes.add(new Pair<>(ClockType.SYSTEM_MONOTONIC,
+          env.getMasterServices().getClock(ClockType.SYSTEM_MONOTONIC).now()));
+      nodeTimes.add(new Pair<>(ClockType.HLC,
+          env.getMasterServices().getClock(ClockType.HLC).now()));
       return ProtobufUtil.buildCloseRegionRequest(serverName,
-        getRegionInfo().getRegionName(), getDestinationServer(), clock.now());
+        getRegionInfo().getRegionName(), getDestinationServer(), nodeTimes);
     }
   }
 }

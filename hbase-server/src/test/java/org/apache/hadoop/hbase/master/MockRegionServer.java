@@ -587,14 +587,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public long updateClock(long timestamp) {
-    if (TimestampType.HYBRID.isLikelyOfType(timestamp)) {
-      return new Clock.HLC().update(timestamp);
-    }
-    return new Clock.SystemMonotonic().update(timestamp);
-  }
-
-  @Override
   public ExecutorService getExecutorService() {
     return null;
   }

@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -204,6 +205,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Reg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -1514,8 +1516,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
 
-      if (request.hasNodeTime()) {
-        this.regionServer.updateClock(request.getNodeTime().getTime());
+      for (NodeTime nodeTime : request.getNodeTimesList()) {
+        // Update master clock upon receiving open region response from region server
+        regionServer.getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
+            .update(nodeTime.getTimestamp());
       }
 
       requestCount.increment();
@@ -1525,14 +1529,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         LOG.info("Close " + encodedRegionName + ", moving to " + sn);
       }
       boolean closed = regionServer.closeRegion(encodedRegionName, false, sn);
-      // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta table,
-      // but in the future we would intend to sync both HLC and system monotonic clocks
-      long regionServerClockTime = this.regionServer
-          .getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE).now();
 
       CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder()
           .setClosed(closed)
-          .setNodeTime(HBaseProtos.NodeTime.newBuilder().setTime(regionServerClockTime));
+          .addNodeTimes(NodeTime.newBuilder()
+            .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
+            .setTimestamp(regionServer.getClock(ClockType.SYSTEM_MONOTONIC).now()).build())
+          .addNodeTimes(NodeTime.newBuilder()
+            .setClockType(ProtobufUtil.toClockType(ClockType.HLC))
+            .setTimestamp(regionServer.getClock(ClockType.HLC).now()).build());
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -1907,9 +1912,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
 
-    // Update region server clock on receive event
-    if (request.hasNodeTime()) {
-      this.regionServer.updateClock(request.getNodeTime().getTime());
+    for (NodeTime nodeTime : request.getNodeTimesList()) {
+      // Update region server clock on receive event
+      regionServer.getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
+          .update(nodeTime.getTimestamp());
     }
 
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
@@ -2018,10 +2024,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
 
     // Set clock for send event
-    // TODO: For now we only sync meta's clock in order to verify HLC functionality on meta table,
-    // but in the future we would intend to sync both HLC and system monotonic clocks
-    Clock clock = this.regionServer.getClock(HTableDescriptor.DEFAULT_META_CLOCK_TYPE);
-    builder.setNodeTime(HBaseProtos.NodeTime.newBuilder().setTime(clock.now()));
+    builder.addNodeTimes(NodeTime.newBuilder()
+        .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
+        .setTimestamp(regionServer.getClock(ClockType.SYSTEM_MONOTONIC).now()).build())
+      .addNodeTimes(NodeTime.newBuilder()
+        .setClockType(ProtobufUtil.toClockType(ClockType.HLC))
+        .setTimestamp(regionServer.getClock(ClockType.HLC).now()).build());
 
     return builder.build();
   }

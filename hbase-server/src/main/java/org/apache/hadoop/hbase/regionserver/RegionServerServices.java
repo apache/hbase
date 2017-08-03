@@ -66,12 +66,6 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    */
   Clock getClock(ClockType clockType);
 
-  /**
-   * @param timestamp The timestamp
-   * @return The current physical or hybrid time of the clock after it is updated
-   */
-  long updateClock(long timestamp);
-
   /** @return the List of WALs that are used by this server
    *  Doesn't include the meta WAL
    */

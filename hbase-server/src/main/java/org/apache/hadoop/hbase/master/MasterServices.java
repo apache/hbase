@@ -66,12 +66,6 @@ public interface MasterServices extends Server {
   Clock getClock(ClockType clockType);
 
   /**
-   * @param timestamp The timestamp
-   * @return The current physical or hybrid time of the clock after it is updated
-   */
-  long updateClock(long timestamp);
-
-  /**
    * @return the underlying snapshot manager
    */
   SnapshotManager getSnapshotManager();
