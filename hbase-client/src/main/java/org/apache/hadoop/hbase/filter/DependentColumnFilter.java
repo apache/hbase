@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -153,14 +152,7 @@ public class DependentColumnFilter extends CompareFilter {
 
   @Override
   public void filterRowCells(List<Cell> kvs) {
-    Iterator<? extends Cell> it = kvs.iterator();
-    Cell kv;
-    while(it.hasNext()) {
-      kv = it.next();
-      if(!stampSet.contains(kv.getTimestamp())) {
-        it.remove();
-      }
-    }
+    kvs.removeIf(kv -> !stampSet.contains(kv.getTimestamp()));
   }
 
   @Override
