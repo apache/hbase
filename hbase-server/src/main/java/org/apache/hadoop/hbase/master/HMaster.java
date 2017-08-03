@@ -530,6 +530,17 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
+  // Main run loop. Calls through to the regionserver run loop.
+  @Override
+  public void run() {
+    try {
+      super.run();
+    } finally {
+      // If on way out, then we are no longer active master.
+      this.activeMaster = false;
+    }
+  }
+
   // return the actual infoPort, -1 means disable info server.
   private int putUpJettyServer() throws IOException {
     if (!conf.getBoolean("hbase.master.infoserver.redirect", true)) {
@@ -604,9 +615,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   @Override
   protected void waitForMasterActive(){
-    boolean tablesOnMaster = BaseLoadBalancer.tablesOnMaster(conf);
-    while (!(tablesOnMaster && activeMaster)
-        && !isStopped() && !isAborted()) {
+    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(conf);
+    while (!(tablesOnMaster && activeMaster) && !isStopped() && !isAborted()) {
       sleeper.sleep();
     }
   }
@@ -644,7 +654,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   protected void configureInfoServer() {
     infoServer.addServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.setAttribute(MASTER, this);
-    if (BaseLoadBalancer.tablesOnMaster(conf)) {
+    if (LoadBalancer.isTablesOnMaster(conf)) {
       super.configureInfoServer();
     }
   }
@@ -796,14 +806,16 @@ public class HMaster extends HRegionServer implements MasterServices {
     sleeper.skipSleepCycle();
 
     // Wait for region servers to report in
-    status.setStatus("Wait for region servers to report in");
+    String statusStr = "Wait for region servers to report in";
+    status.setStatus(statusStr);
+    LOG.info(status);
     waitForRegionServers(status);
 
     if (this.balancer instanceof FavoredNodesPromoter) {
       favoredNodesManager = new FavoredNodesManager(this);
     }
     // Wait for regionserver to finish initialization.
-    if (BaseLoadBalancer.tablesOnMaster(conf)) {
+    if (LoadBalancer.isTablesOnMaster(conf)) {
       waitForServerOnline();
     }
 
@@ -1643,11 +1655,11 @@ public class HMaster extends HRegionServer implements MasterServices {
         LOG.debug("Unable to determine a plan to assign " + hri);
         return;
       }
+      // TODO: What is this? I don't get it.
       if (dest.equals(serverName) && balancer instanceof BaseLoadBalancer
           && !((BaseLoadBalancer)balancer).shouldBeOnMaster(hri)) {
         // To avoid unnecessary region moving later by balancer. Don't put user
-        // regions on master. Regions on master could be put on other region
-        // server intentionally by test however.
+        // regions on master.
         LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
           + " to avoid unnecessary region moving later by load balancer,"
           + " because it should not be on master");

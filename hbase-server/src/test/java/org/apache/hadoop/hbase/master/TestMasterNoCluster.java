@@ -26,7 +26,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -65,6 +64,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
@@ -82,6 +82,7 @@ import org.mockito.Mockito;
 public class TestMasterNoCluster {
   private static final Log LOG = LogFactory.getLog(TestMasterNoCluster.class);
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
+
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
@@ -149,7 +150,7 @@ public class TestMasterNoCluster {
    * @throws InterruptedException
    * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException 
    */
-  @Test
+  @Ignore @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
   public void testFailover() throws Exception {
     final long now = System.currentTimeMillis();
     // Names for our three servers.  Make the port numbers match hostname.
@@ -253,7 +254,7 @@ public class TestMasterNoCluster {
     }
   }
 
-  @Test
+  @Ignore @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
   public void testNotPullingDeadRegionServerFromZK()
       throws IOException, KeeperException, InterruptedException {
     final Configuration conf = TESTUTIL.getConfiguration();

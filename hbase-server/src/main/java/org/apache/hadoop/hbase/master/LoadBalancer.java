@@ -18,9 +18,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.UnmodifiableIterator;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -33,6 +34,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -50,6 +54,18 @@ import edu.umd.cs.findbugs.annotations.Nullable;
  */
 @InterfaceAudience.Private
 public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObserver {
+  /**
+   * Master can carry regions as of hbase-2.0.0.
+   * By default, it carries no tables.
+   * TODO: Add any | system as flags to indicate what it can do.
+   */
+  public static final String TABLES_ON_MASTER = "hbase.balancer.tablesOnMaster";
+
+  /**
+   * Master carries system tables.
+   */
+  public static final String SYSTEM_TABLES_ON_MASTER =
+    "hbase.balancer.tablesOnMaster.systemTablesOnly";
 
   // Used to signal to the caller that the region(s) cannot be assigned
   // We deliberately use 'localhost' so the operation will fail fast
@@ -147,4 +163,15 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param conf
    */
   void onConfigurationChange(Configuration conf);
+
+  /**
+   * @return true if Master carries regions
+   */
+  static boolean isTablesOnMaster(Configuration conf) {
+    return conf.getBoolean(TABLES_ON_MASTER, false);
+  }
+
+  static boolean isSystemTablesOnlyOnMaster(Configuration conf) {
+    return conf.getBoolean(SYSTEM_TABLES_ON_MASTER, false);
+  }
 }

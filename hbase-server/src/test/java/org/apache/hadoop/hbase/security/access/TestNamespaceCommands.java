@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -150,9 +151,15 @@ public class TestNamespaceCommands extends SecureTestUtil {
     // Wait for the ACL table to become available
     UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME.getName(), 30 * 1000);
 
-    ACCESS_CONTROLLER = (AccessController) UTIL.getMiniHBaseCluster().getMaster()
-      .getRegionServerCoprocessorHost()
-        .findCoprocessor(AccessController.class.getName());
+    // Find the Access Controller CP. Could be on master or if master is not serving regions, is
+    // on an arbitrary server.
+    for (JVMClusterUtil.RegionServerThread rst:
+        UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
+      ACCESS_CONTROLLER = (AccessController)rst.getRegionServer().getRegionServerCoprocessorHost().
+        findCoprocessor(AccessController.class.getName());
+      if (ACCESS_CONTROLLER != null) break;
+    }
+    if (ACCESS_CONTROLLER == null) throw new NullPointerException();
 
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE).build());
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE2).build());

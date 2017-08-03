@@ -100,7 +100,13 @@ public class TestMasterMetrics {
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
-    metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
+    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
+    if (tablesOnMaster) {
+      metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
+    } else {
+      metricsHelper.assertCounterGt("cluster_requests", expectedRequestNumber, masterSource);
+
+    }
 
     expectedRequestNumber = 15000;
 
@@ -110,7 +116,11 @@ public class TestMasterMetrics {
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
-    metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
+    if (tablesOnMaster) {
+      metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
+    } else {
+      metricsHelper.assertCounterGt("cluster_requests", expectedRequestNumber, masterSource);
+    }
 
     master.stopMaster();
   }
@@ -118,8 +128,9 @@ public class TestMasterMetrics {
   @Test
   public void testDefaultMasterMetrics() throws Exception {
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
-    metricsHelper.assertGauge( "numRegionServers", 2, masterSource);
-    metricsHelper.assertGauge( "averageLoad", 1, masterSource);
+    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
+    metricsHelper.assertGauge( "numRegionServers",1 + (tablesOnMaster? 1: 0), masterSource);
+    metricsHelper.assertGauge( "averageLoad", 1 + (tablesOnMaster? 0: 1), masterSource);
     metricsHelper.assertGauge( "numDeadRegionServers", 0, masterSource);
 
     metricsHelper.assertGauge("masterStartTime", master.getMasterStartTime(), masterSource);

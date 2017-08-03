@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -154,9 +155,9 @@ public class TestClientClusterStatus {
     Assert.assertNotNull(status);
     Assert.assertNotNull(status.getServers());
     // exclude a dead region server
-    Assert.assertEquals(SLAVES - 1, numRs);
+    Assert.assertEquals(SLAVES, numRs);
     // live servers = primary master + nums of regionservers
-    Assert.assertEquals(status.getServers().size() - 1, numRs);
+    Assert.assertEquals(status.getServers().size() + 1 /*Master*/, numRs);
     Assert.assertTrue(status.getRegionsCount() > 0);
     Assert.assertNotNull(status.getDeadServerNames());
     Assert.assertEquals(1, status.getDeadServersSize());

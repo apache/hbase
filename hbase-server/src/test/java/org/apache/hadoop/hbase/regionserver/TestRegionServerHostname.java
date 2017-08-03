@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -101,7 +102,8 @@ public class TestRegionServerHostname {
           ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
           List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
           // there would be NUM_RS+1 children - one for the master
-          assertTrue(servers.size() == NUM_RS+1);
+          assertTrue(servers.size() ==
+            NUM_RS + (LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration())? 1: 0));
           for (String server : servers) {
             assertTrue("From zookeeper: " + server + " hostname: " + hostName,
               server.startsWith(hostName.toLowerCase(Locale.ROOT)+","));
@@ -153,11 +155,14 @@ public class TestRegionServerHostname {
 
   @Test(timeout=30000)
   public void testRegionServerHostnameReportedToMaster() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
+    TEST_UTIL.getConfiguration().setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY,
+    true);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
+    int expectedRS = NUM_RS + (tablesOnMaster? 1: 0);
     try (ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher()) {
       List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
-      assertEquals("should be NUM_RS+1 children - one for master", NUM_RS + 1, servers.size());
+      assertEquals(expectedRS, servers.size());
     }
   }
 }

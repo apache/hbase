@@ -665,7 +665,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * @return List of region server threads.
+   * @return List of region server threads. Does not return the master even though it is also
+   * a region server.
    */
   public List<JVMClusterUtil.RegionServerThread> getRegionServerThreads() {
     return this.hbaseCluster.getRegionServers();

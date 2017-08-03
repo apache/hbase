@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
 import org.apache.commons.logging.Log;
@@ -109,7 +110,7 @@ public class ServerManager {
   private static final Log LOG = LogFactory.getLog(ServerManager.class);
 
   // Set if we are to shutdown the cluster.
-  private volatile boolean clusterShutdown = false;
+  private AtomicBoolean clusterShutdown = new AtomicBoolean(false);
 
   /**
    * The last flushed sequence id for a region.
@@ -423,7 +424,6 @@ public class ServerManager {
   /**
    * Adds the onlineServers list. onlineServers should be locked.
    * @param serverName The remote servers name.
-   * @param sl
    */
   @VisibleForTesting
   void recordNewServerWithLock(final ServerName serverName, final ServerLoad sl) {
@@ -583,7 +583,7 @@ public class ServerManager {
 
     // If cluster is going down, yes, servers are going to be expiring; don't
     // process as a dead server
-    if (this.clusterShutdown) {
+    if (this.clusterShutdown.get()) {
       LOG.info("Cluster shutdown set; " + serverName +
         " expired; onlineServers=" + this.onlineServers.size());
       if (this.onlineServers.isEmpty()) {
@@ -591,7 +591,7 @@ public class ServerManager {
       }
       return;
     }
-
+    LOG.info("Processing expiration of " + serverName + " on " + this.master.getServerName());
     master.getAssignmentManager().submitServerCrash(serverName, true);
 
     // Tell our listeners that a server was removed
@@ -790,12 +790,12 @@ public class ServerManager {
   private int getMinToStart() {
     // One server should be enough to get us off the ground.
     int requiredMinToStart = 1;
-    if (BaseLoadBalancer.tablesOnMaster(master.getConfiguration())) {
-      if (!BaseLoadBalancer.userTablesOnMaster(master.getConfiguration())) {
-        // If Master is carrying regions but NOT user-space regions (the current default),
-        // since the Master shows as a 'server', we need at least one more server to check
-        // in before we can start up so up defaultMinToStart to 2.
-        requiredMinToStart = 2;
+    if (LoadBalancer.isTablesOnMaster(master.getConfiguration())) {
+      if (LoadBalancer.isSystemTablesOnlyOnMaster(master.getConfiguration())) {
+        // If Master is carrying regions but NOT user-space regions, it
+        // still shows as a 'server'. We need at least one more server to check
+        // in before we can start up so set defaultMinToStart to 2.
+        requiredMinToStart = requiredMinToStart + 1;
       }
     }
     int minToStart = this.master.getConfiguration().getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
@@ -944,12 +944,14 @@ public class ServerManager {
   }
 
   public void shutdownCluster() {
-    this.clusterShutdown = true;
-    this.master.stop("Cluster shutdown requested");
+    String statusStr = "Cluster shutdown requested of master=" + this.master.getServerName();
+    LOG.info(statusStr);
+    this.clusterShutdown.set(true);
+    this.master.stop(statusStr);
   }
 
   public boolean isClusterShutdown() {
-    return this.clusterShutdown;
+    return this.clusterShutdown.get();
   }
 
   /**
@@ -973,7 +975,7 @@ public class ServerManager {
   public List<ServerName> createDestinationServersList(final List<ServerName> serversToExclude){
     final List<ServerName> destServers = getOnlineServersList();
 
-    if (serversToExclude != null){
+    if (serversToExclude != null) {
       destServers.removeAll(serversToExclude);
     }
 

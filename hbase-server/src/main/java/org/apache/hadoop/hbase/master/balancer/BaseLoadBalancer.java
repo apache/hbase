@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * The base class for load balancers. It provides the the functions used to by
@@ -991,69 +992,22 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   // slop for regions
   protected float slop;
-  // overallSlop to controll simpleLoadBalancer's cluster level threshold
+  // overallSlop to control simpleLoadBalancer's cluster level threshold
   protected float overallSlop;
   protected Configuration config;
   protected RackManager rackManager;
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
-
-  // Regions of these tables are put on the master by default.
-  private static final String[] DEFAULT_TABLES_ON_MASTER =
-    new String[] {AccessControlLists.ACL_TABLE_NAME.getNameAsString(),
-      TableName.NAMESPACE_TABLE_NAME.getNameAsString(),
-      TableName.META_TABLE_NAME.getNameAsString()};
-
-  public static final String TABLES_ON_MASTER =
-    "hbase.balancer.tablesOnMaster";
-
-  protected final Set<String> tablesOnMaster = new HashSet<>();
   protected MetricsBalancer metricsBalancer = null;
   protected ClusterStatus clusterStatus = null;
   protected ServerName masterServerName;
   protected MasterServices services;
-
-  /**
-   * By default, regions of some small system tables such as meta,
-   * namespace, and acl are assigned to the active master. If you don't
-   * want to assign any region to the active master, you need to
-   * configure "hbase.balancer.tablesOnMaster" to "none".
-   */
-  protected static String[] getTablesOnMaster(Configuration conf) {
-    String valueString = conf.get(TABLES_ON_MASTER);
-    if (valueString == null) {
-      return DEFAULT_TABLES_ON_MASTER;
-    }
-    valueString = valueString.trim();
-    if (valueString.equalsIgnoreCase("none")) {
-      return null;
-    }
-    return StringUtils.getStrings(valueString);
-  }
-
-  /**
-   * Check if configured to put any tables on the active master
-   */
-  public static boolean tablesOnMaster(Configuration conf) {
-    String[] tables = getTablesOnMaster(conf);
-    return tables != null && tables.length > 0;
-  }
-
-  public static boolean userTablesOnMaster(Configuration conf) {
-    String[] tables = getTablesOnMaster(conf);
-    if (tables == null || tables.length == 0) {
-      return false;
-    }
-    for (String tn:tables) {
-      if (!tn.startsWith("hbase:")) {
-        return true;
-      }
-    }
-    return false;
-  }
+  protected boolean tablesOnMaster;
+  protected boolean onlySystemTablesOnMaster;
 
   @Override
   public void setConf(Configuration conf) {
+    this.config = conf;
     setSlop(conf);
     if (slop < 0) slop = 0;
     else if (slop > 1) slop = 1;
@@ -1061,13 +1015,18 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     if (overallSlop < 0) overallSlop = 0;
     else if (overallSlop > 1) overallSlop = 1;
 
-    this.config = conf;
-    String[] tables = getTablesOnMaster(conf);
-    if (tables != null && tables.length > 0) {
-      Collections.addAll(tablesOnMaster, tables);
+    this.tablesOnMaster = LoadBalancer.isTablesOnMaster(this.config);
+    this.onlySystemTablesOnMaster = LoadBalancer.isSystemTablesOnlyOnMaster(this.config);
+    // If system tables on master, implies tablesOnMaster = true.
+    if (this.onlySystemTablesOnMaster && !this.tablesOnMaster) {
+      LOG.warn("Set " + TABLES_ON_MASTER + "=true because " + SYSTEM_TABLES_ON_MASTER + "=true");
+      this.tablesOnMaster = true;
     }
     this.rackManager = new RackManager(getConf());
     regionFinder.setConf(conf);
+    // Print out base configs. Don't print overallSlop since it for simple balancer exclusively.
+    LOG.info("slop=" + this.slop + ", tablesOnMaster=" + this.tablesOnMaster +
+      ", systemTablesOnMaster=" + this.onlySystemTablesOnMaster);
   }
 
   protected void setSlop(Configuration conf) {
@@ -1076,21 +1035,18 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   /**
-   * Check if a region belongs to some small system table.
+   * Check if a region belongs to some system table.
    * If so, the primary replica may be expected to be put on the master regionserver.
    */
   public boolean shouldBeOnMaster(HRegionInfo region) {
-    return tablesOnMaster.contains(region.getTable().getNameAsString())
-        && region.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID;
+    return this.onlySystemTablesOnMaster && region.isSystemTable();
   }
 
   /**
    * Balance the regions that should be on master regionserver.
    */
-  protected List<RegionPlan> balanceMasterRegions(
-      Map<ServerName, List<HRegionInfo>> clusterMap) {
-    if (masterServerName == null
-        || clusterMap == null || clusterMap.size() <= 1) return null;
+  protected List<RegionPlan> balanceMasterRegions(Map<ServerName, List<HRegionInfo>> clusterMap) {
+    if (masterServerName == null || clusterMap == null || clusterMap.size() <= 1) return null;
     List<RegionPlan> plans = null;
     List<HRegionInfo> regions = clusterMap.get(masterServerName);
     if (regions != null) {
@@ -1135,19 +1091,22 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   /**
-   * Assign the regions that should be on master regionserver.
+   * If master is configured to carry system tables only, in here is
+   * where we figure what to assign it.
    */
-  protected Map<ServerName, List<HRegionInfo>> assignMasterRegions(
+  protected Map<ServerName, List<HRegionInfo>> assignMasterSystemRegions(
       Collection<HRegionInfo> regions, List<ServerName> servers) {
     if (servers == null || regions == null || regions.isEmpty()) {
       return null;
     }
     Map<ServerName, List<HRegionInfo>> assignments = new TreeMap<>();
-    if (masterServerName != null && servers.contains(masterServerName)) {
-      assignments.put(masterServerName, new ArrayList<>());
-      for (HRegionInfo region: regions) {
-        if (shouldBeOnMaster(region)) {
-          assignments.get(masterServerName).add(region);
+    if (this.onlySystemTablesOnMaster) {
+      if (masterServerName != null && servers.contains(masterServerName)) {
+        assignments.put(masterServerName, new ArrayList<>());
+        for (HRegionInfo region : regions) {
+          if (shouldBeOnMaster(region)) {
+            assignments.get(masterServerName).add(region);
+          }
         }
       }
     }
@@ -1243,7 +1202,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   public Map<ServerName, List<HRegionInfo>> roundRobinAssignment(List<HRegionInfo> regions,
       List<ServerName> servers) throws HBaseIOException {
     metricsBalancer.incrMiscInvocations();
-    Map<ServerName, List<HRegionInfo>> assignments = assignMasterRegions(regions, servers);
+    Map<ServerName, List<HRegionInfo>> assignments = assignMasterSystemRegions(regions, servers);
     if (assignments != null && !assignments.isEmpty()) {
       servers = new ArrayList<>(servers);
       // Guarantee not to put other regions on master
@@ -1350,9 +1309,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       if (shouldBeOnMaster(regionInfo)) {
         return masterServerName;
       }
-      servers = new ArrayList<>(servers);
-      // Guarantee not to put other regions on master
-      servers.remove(masterServerName);
+      if (!LoadBalancer.isTablesOnMaster(getConf())) {
+        // Guarantee we do not put any regions on master
+        servers = new ArrayList<>(servers);
+        servers.remove(masterServerName);
+      }
     }
 
     int numServers = servers == null ? 0 : servers.size();
@@ -1396,8 +1357,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       List<ServerName> servers) throws HBaseIOException {
     // Update metrics
     metricsBalancer.incrMiscInvocations();
-    Map<ServerName, List<HRegionInfo>> assignments
-      = assignMasterRegions(regions.keySet(), servers);
+    Map<ServerName, List<HRegionInfo>> assignments = assignMasterSystemRegions(regions.keySet(), servers);
     if (assignments != null && !assignments.isEmpty()) {
       servers = new ArrayList<>(servers);
       // Guarantee not to put other regions on master

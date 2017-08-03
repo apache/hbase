@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -103,11 +104,13 @@ public class TestRegionServerMetrics {
   private static byte[] qualifier = Bytes.toBytes("qual");
   private static byte[] val = Bytes.toBytes("val");
   private static Admin admin;
+  private static boolean TABLES_ON_MASTER;
 
   @BeforeClass
   public static void startCluster() throws Exception {
     metricsHelper = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
     TEST_UTIL = new HBaseTestingUtility();
+    TABLES_ON_MASTER = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
     conf = TEST_UTIL.getConfiguration();
     conf.getLong("hbase.splitlog.max.resubmit", 0);
     // Make the failure test faster
@@ -241,7 +244,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testRegionCount() throws Exception {
-    metricsHelper.assertGauge("regionCount", 1, serverSource);
+    metricsHelper.assertGauge("regionCount", TABLES_ON_MASTER? 1: 3, serverSource);
   }
 
   @Test
@@ -283,32 +286,42 @@ public class TestRegionServerMetrics {
     doNGets(10, true);  // true = batch
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 41);
-    assertCounter("totalRowActionRequestCount", rowActionRequests + 50);
-    assertCounter("readRequestCount", readRequests + 20);
+    if (TABLES_ON_MASTER) {
+      assertCounter("totalRequestCount", requests + 41);
+      assertCounter("totalRowActionRequestCount", rowActionRequests + 50);
+      assertCounter("readRequestCount", readRequests + 20);
+    }
+
+
     assertCounter("writeRequestCount", writeRequests + 30);
 
     doNPuts(30, true);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 42);
-    assertCounter("totalRowActionRequestCount", rowActionRequests + 80);
-    assertCounter("readRequestCount", readRequests + 20);
+    if (TABLES_ON_MASTER) {
+      assertCounter("totalRequestCount", requests + 42);
+      assertCounter("totalRowActionRequestCount", rowActionRequests + 80);
+      assertCounter("readRequestCount", readRequests + 20);
+    }
     assertCounter("writeRequestCount", writeRequests + 60);
 
     doScan(10, false); // test after batch put so we have enough lines
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 52);
-    assertCounter("totalRowActionRequestCount", rowActionRequests + 90);
-    assertCounter("readRequestCount", readRequests + 30);
+    if (TABLES_ON_MASTER) {
+      assertCounter("totalRequestCount", requests + 52);
+      assertCounter("totalRowActionRequestCount", rowActionRequests + 90);
+      assertCounter("readRequestCount", readRequests + 30);
+    }
     assertCounter("writeRequestCount", writeRequests + 60);
     numScanNext += 10;
 
     doScan(10, true); // true = caching
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 53);
-    assertCounter("totalRowActionRequestCount", rowActionRequests + 100);
-    assertCounter("readRequestCount", readRequests + 40);
+    if (TABLES_ON_MASTER) {
+      assertCounter("totalRequestCount", requests + 53);
+      assertCounter("totalRowActionRequestCount", rowActionRequests + 100);
+      assertCounter("readRequestCount", readRequests + 40);
+    }
     assertCounter("writeRequestCount", writeRequests + 60);
     numScanNext += 1;
   }
@@ -341,7 +354,7 @@ public class TestRegionServerMetrics {
     TEST_UTIL.getAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertGauge("storeCount", 1);
+    assertGauge("storeCount", TABLES_ON_MASTER? 1: 7);
     assertGauge("storeFileCount", 1);
   }
 
@@ -424,7 +437,9 @@ public class TestRegionServerMetrics {
     }
     numScanNext += NUM_SCAN_NEXT;
     assertRegionMetrics("scanCount", NUM_SCAN_NEXT);
-    assertCounter("ScanSize_num_ops", numScanNext);
+    if (TABLES_ON_MASTER) {
+      assertCounter("ScanSize_num_ops", numScanNext);
+    }
   }
 
   @Test
@@ -442,7 +457,9 @@ public class TestRegionServerMetrics {
     }
     numScanNext += NUM_SCAN_NEXT;
     assertRegionMetrics("scanCount", NUM_SCAN_NEXT);
-    assertCounter("ScanTime_num_ops", numScanNext);
+    if (TABLES_ON_MASTER) {
+      assertCounter("ScanTime_num_ops", numScanNext);
+    }
   }
 
   @Test
@@ -456,11 +473,15 @@ public class TestRegionServerMetrics {
     for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
       Result result = resultScanners.next();
       assertNotNull(result);
-      assertEquals(1, result.size());
+      if (TABLES_ON_MASTER) {
+        assertEquals(1, result.size());
+      }
     }
     numScanNext += NUM_SCAN_NEXT;
     assertRegionMetrics("scanCount", NUM_SCAN_NEXT);
-    assertCounter("ScanSize_num_ops", numScanNext);
+    if (TABLES_ON_MASTER) {
+      assertCounter("ScanSize_num_ops", numScanNext);
+    }
   }
 
   @Test

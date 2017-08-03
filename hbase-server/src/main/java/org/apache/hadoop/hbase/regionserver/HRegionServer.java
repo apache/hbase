@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobCacheConfig;
@@ -2899,8 +2900,8 @@ public class HRegionServer extends HasThread implements
   static private void createNewReplicationInstance(Configuration conf,
     HRegionServer server, FileSystem walFs, Path walDir, Path oldWALDir) throws IOException{
 
-    if ((server instanceof HMaster) &&
-        (!BaseLoadBalancer.userTablesOnMaster(conf))) {
+    if ((server instanceof HMaster) && (!LoadBalancer.isTablesOnMaster(conf) ||
+        LoadBalancer.isSystemTablesOnlyOnMaster(conf))) {
       return;
     }
 
