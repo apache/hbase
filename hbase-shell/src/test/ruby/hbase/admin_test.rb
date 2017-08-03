@@ -177,7 +177,7 @@ module Hbase
         command(:create, @create_test_name)
       end
     end
-    
+
     define_test "create should fail without columns when called with options" do
       drop_test_table(@create_test_name)
       assert_raise(ArgumentError) do
@@ -241,7 +241,7 @@ module Hbase
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/987654321/, admin.describe(@create_test_name))
     end
-    
+
     define_test "create should work with SPLITALGO" do
       drop_test_table(@create_test_name)
       command(:create, @create_test_name, 'a', 'b',
@@ -334,12 +334,15 @@ module Hbase
       shutdown
     end
 
-    define_test "unassign should allow encoded & non-encoded region names" do
+    define_test "unassign should allow encoded region names" do
       region = command(:locate_region, @test_name, '')
       regionName = region.getRegionInfo().getRegionNameAsString()
-      encodedRegionName = region.getRegionInfo().getEncodedName()
-
       command(:unassign, regionName, true)
+    end
+
+    define_test "unassign should allow non-encoded region names" do
+      region = command(:locate_region, @test_name, '')
+      encodedRegionName = region.getRegionInfo().getEncodedName()
       command(:unassign, encodedRegionName, true)
     end
   end
@@ -428,7 +431,7 @@ module Hbase
       command(:alter, @test_name, 'MAX_FILESIZE' => 12345678)
       assert_match(/12345678/, admin.describe(@test_name))
     end
-    
+
     define_test "alter should be able to change coprocessor attributes" do
       drop_test_table(@test_name)
       create_test_table(@test_name)
