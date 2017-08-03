@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
@@ -112,7 +113,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     metricsBalancer.incrMiscInvocations();
 
     Set<HRegionInfo> regionSet = Sets.newHashSet(regions);
-    Map<ServerName, List<HRegionInfo>> assignmentMap = assignMasterRegions(regions, servers);
+    Map<ServerName, List<HRegionInfo>> assignmentMap = assignMasterSystemRegions(regions, servers);
     if (assignmentMap != null && !assignmentMap.isEmpty()) {
       servers = new ArrayList<>(servers);
       // Guarantee not to put other regions on master
@@ -311,9 +312,11 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         metricsBalancer.incrMiscInvocations();
         return masterServerName;
       }
-      servers = new ArrayList<>(servers);
-      // Guarantee not to put other regions on master
-      servers.remove(masterServerName);
+      if (!LoadBalancer.isTablesOnMaster(getConf())) {
+        // Guarantee we do not put any regions on master
+        servers = new ArrayList<>(servers);
+        servers.remove(masterServerName);
+      }
     }
 
     ServerName destination = null;

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -94,16 +95,19 @@ public class TestRegionServerAbort {
 
   @After
   public void tearDown() throws Exception {
+    String className = StopBlockingRegionObserver.class.getName();
     for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
       HRegionServer rs = t.getRegionServer();
       RegionServerCoprocessorHost cpHost = rs.getRegionServerCoprocessorHost();
-      StopBlockingRegionObserver cp = (StopBlockingRegionObserver)
-          cpHost.findCoprocessor(StopBlockingRegionObserver.class.getName());
+      StopBlockingRegionObserver cp = (StopBlockingRegionObserver)cpHost.findCoprocessor(className);
       cp.setStopAllowed(true);
     }
-    ((StopBlockingRegionObserver) cluster.getMaster().getRegionServerCoprocessorHost().findCoprocessor(
-        StopBlockingRegionObserver.class.getName()
-    )).setStopAllowed(true);
+    HMaster master = cluster.getMaster();
+    RegionServerCoprocessorHost host = master.getRegionServerCoprocessorHost();
+    if (host != null) {
+      StopBlockingRegionObserver obs = (StopBlockingRegionObserver) host.findCoprocessor(className);
+      if (obs != null) obs.setStopAllowed(true);
+    }
     testUtil.shutdownMiniCluster();
   }
 

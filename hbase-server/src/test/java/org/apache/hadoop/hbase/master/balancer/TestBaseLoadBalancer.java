@@ -107,7 +107,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   public static class MockBalancer extends BaseLoadBalancer {
-
     @Override
     public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState) {
       return null;
@@ -118,7 +117,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
         Map<ServerName, List<HRegionInfo>> clusterState) throws HBaseIOException {
       return null;
     }
-
   }
 
   /**
@@ -149,8 +147,10 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     hris.add(HRegionInfo.FIRST_META_REGIONINFO);
     tmp.add(master);
     Map<ServerName, List<HRegionInfo>> plans = loadBalancer.roundRobinAssignment(hris, tmp);
-    assertTrue(plans.get(master).contains(HRegionInfo.FIRST_META_REGIONINFO));
-    assertEquals(1, plans.get(master).size());
+    if (LoadBalancer.isTablesOnMaster(loadBalancer.getConf())) {
+      assertTrue(plans.get(master).contains(HRegionInfo.FIRST_META_REGIONINFO));
+      assertEquals(1, plans.get(master).size());
+    }
     int totalRegion = 0;
     for (List<HRegionInfo> regions: plans.values()) {
       totalRegion += regions.size();

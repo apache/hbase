@@ -83,8 +83,7 @@ public class TestRegionOpen {
     final TableName tableName = TableName.valueOf(TestRegionOpen.class.getSimpleName());
     ThreadPoolExecutor exec = getRS().getExecutorService()
         .getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
-
-    assertEquals(0, exec.getCompletedTaskCount());
+    long completed = exec.getCompletedTaskCount();
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setPriority(HConstants.HIGH_QOS);
@@ -94,7 +93,7 @@ public class TestRegionOpen {
       admin.createTable(htd);
     }
 
-    assertEquals(1, exec.getCompletedTaskCount());
+    assertEquals(completed + 1, exec.getCompletedTaskCount());
   }
 
   @Test(timeout = 60000)

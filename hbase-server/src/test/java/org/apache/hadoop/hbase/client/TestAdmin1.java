@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -596,7 +597,8 @@ public class TestAdmin1 {
       }
       regs.add(loc.getRegionInfo());
     }
-    if (numRS >= 2) {
+    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
+    if (tablesOnMaster) {
       // Ignore the master region server,
       // which contains less regions by intention.
       numRS--;
@@ -605,7 +607,9 @@ public class TestAdmin1 {
     int min = (int)Math.floor(average);
     int max = (int)Math.ceil(average);
     for (List<HRegionInfo> regionList : server2Regions.values()) {
-      assertTrue(regionList.size() == min || regionList.size() == max);
+      assertTrue("numRS=" + numRS + ", min=" + min + ", max=" + max +
+        ", size=" + regionList.size() + ", tablesOnMaster=" + tablesOnMaster,
+      regionList.size() == min || regionList.size() == max);
     }
   }
 

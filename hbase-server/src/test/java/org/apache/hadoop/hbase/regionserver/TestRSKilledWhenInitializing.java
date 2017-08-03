@@ -39,8 +39,10 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -74,7 +76,7 @@ public class TestRSKilledWhenInitializing {
   private static final int NUM_RS = 2;
 
   /**
-   * Test verifies whether a region server is removing from online servers list in master if it went
+   * Test verifies whether a region server is removed from online servers list in master if it went
    * down after registering with master. Test will TIMEOUT if an error!!!!
    * @throws Exception
    */
@@ -98,18 +100,18 @@ public class TestRSKilledWhenInitializing {
       for (int i = 0; i < NUM_RS; i++) {
         cluster.getRegionServers().get(i).start();
       }
-      // Now wait on master to see NUM_RS + 1 servers as being online, thats NUM_RS plus
-      // the Master itself (because Master hosts hbase:meta and checks in as though it a RS).
+      // Expected total regionservers depends on whether Master can host regions or not.
+      int expectedTotalRegionServers = NUM_RS + (LoadBalancer.isTablesOnMaster(conf)? 1: 0);
       List<ServerName> onlineServersList = null;
       do {
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
-      } while (onlineServersList.size() < (NUM_RS + 1));
+      } while (onlineServersList.size() < expectedTotalRegionServers);
       // Wait until killedRS is set. Means RegionServer is starting to go down.
       while (killedRS.get() == null) {
         Threads.sleep(1);
       }
       // Wait on the RegionServer to fully die.
-      while (cluster.getLiveRegionServers().size() > NUM_RS) {
+      while (cluster.getLiveRegionServers().size() >= expectedTotalRegionServers) {
         Threads.sleep(1);
       }
       // Make sure Master is fully up before progressing. Could take a while if regions
@@ -134,7 +136,8 @@ public class TestRSKilledWhenInitializing {
       }
       // Try moving region to the killed server. It will fail. As by-product, we will
       // remove the RS from Master online list because no corresponding znode.
-      assertEquals(NUM_RS + 1, master.getMaster().getServerManager().getOnlineServersList().size());
+      assertEquals(expectedTotalRegionServers,
+        master.getMaster().getServerManager().getOnlineServersList().size());
       LOG.info("Move " + hri.getEncodedName() + " to " + killedRS.get());
       master.getMaster().move(hri.getEncodedNameAsBytes(),
           Bytes.toBytes(killedRS.get().toString()));
