@@ -114,7 +114,7 @@ extends RetriesExhaustedException {
     for (String addr : uniqAddr) {
       addrs.append(addr).append(", ");
     }
-    return uniqAddr.size() > 0 ? addrs.substring(0, addrs.length() - 2) : addrs.toString();
+    return uniqAddr.isEmpty() ? addrs.toString() : addrs.substring(0, addrs.length() - 2);
   }
 
   public String getExhaustiveDescription() {
