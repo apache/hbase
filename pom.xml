@@ -411,6 +411,12 @@
       <timezone>0</timezone>
     </developer>
     <developer>
+      <id>mdrob</id>
+      <name>Mike Drob</name>
+      <email>mdrob@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
       <id>misty</id>
       <name>Misty Stanley-Jones</name>
       <email>misty@apache.org</email>
