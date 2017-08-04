@@ -754,6 +754,7 @@ public class TestScannersFromClientSide {
       result = Result.create(kvListScan);
       verifyResult(result, kvListExp, toLog, "Testing async scan");
     }
+
     TEST_UTIL.deleteTable(table);
   }
 
