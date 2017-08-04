@@ -72,7 +72,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   protected Result lastResult = null;
   protected final long maxScannerResultSize;
   private final ClusterConnection connection;
-  private final TableName tableName;
+  protected final TableName tableName;
   protected final int scannerTimeout;
   protected boolean scanMetricsPublished = false;
   protected RpcRetryingCaller<Result[]> caller;
@@ -412,6 +412,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // This is possible if we just stopped at the boundary of a region in the previous call.
     if (callable == null) {
       if (!moveToNextRegion()) {
+        closed = true;
         return;
       }
     }
@@ -478,7 +479,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
         assert newLimit >= 0;
         scan.setLimit(newLimit);
       }
-      if (scanExhausted(values)) {
+      if (scan.getLimit() == 0 || scanExhausted(values)) {
         closeScanner();
         closed = true;
         break;
@@ -532,6 +533,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
       // we are done with the current region
       if (regionExhausted) {
         if (!moveToNextRegion()) {
+          closed = true;
           break;
         }
       }
