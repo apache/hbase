@@ -608,17 +608,10 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
 
-    Set<TableName> disabledOrDisablingOrEnabling = null;
     Map<HRegionInfo, ServerName> allRegions = null;
-
     if (!failover) {
-      disabledOrDisablingOrEnabling = tableStateManager.getTablesInStates(
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING,
-        ZooKeeperProtos.Table.State.ENABLING);
-
-      // Clean re/start, mark all user regions closed before reassignment
-      allRegions = regionStates.closeAllUserRegions(
-        disabledOrDisablingOrEnabling);
+      // Retrieve user regions except tables region that are in disabled/disabling/enabling states.
+      allRegions = getUserRegionsToAssign();
     }
 
     // Now region states are restored
@@ -630,6 +623,15 @@ public class AssignmentManager extends ZooKeeperListener {
       // Process list of dead servers and regions in RIT.
       // See HBASE-4580 for more information.
       processDeadServersAndRecoverLostRegions(deadServers);
+
+      // Handle the scenario when meta is rebuild by OfflineMetaRepair tool.
+      // In this scenario, meta will have only info:regioninfo entries (won't contain info:server)
+      // which lead SSH/SCP to skip holding region assignment.
+      if (!MetaTableAccessor.infoServerExists(server.getConnection())) {
+        // Need to assign the user region as a fresh startup, otherwise user region assignment will
+        // never happen
+        assignRegionsOnSSHCompletion();
+      }
     }
 
     if (!failover && useZKForAssignment) {
@@ -657,6 +659,52 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     replicasToClose.clear();
     return failover;
+  }
+
+  /*
+   * At cluster clean re/start, mark all user regions closed except those of tables that are
+   * excluded, such as disabled/disabling/enabling tables. All user regions and their previous
+   * locations are returned.
+   */
+  private Map<HRegionInfo, ServerName> getUserRegionsToAssign()
+      throws InterruptedIOException, CoordinatedStateException {
+    Set<TableName> disabledOrDisablingOrEnabling =
+        tableStateManager.getTablesInStates(ZooKeeperProtos.Table.State.DISABLED,
+          ZooKeeperProtos.Table.State.DISABLING, ZooKeeperProtos.Table.State.ENABLING);
+
+    // Clean re/start, mark all user regions closed before reassignment
+    return regionStates.closeAllUserRegions(disabledOrDisablingOrEnabling);
+  }
+
+  /*
+   * Wait for SSH completion and assign user region which are not in disabled/disabling/enabling
+   * table states.
+   */
+  private void assignRegionsOnSSHCompletion() {
+    LOG.info("Meta is rebuild by OfflineMetaRepair tool, assigning all user regions.");
+    Thread regionAssignerThread = new Thread("RegionAssignerOnMetaRebuild") {
+      public void run() {
+        // Wait until all dead server processing finish
+        while (serverManager.areDeadServersInProgress()) {
+          try {
+            Thread.sleep(100);
+          } catch (InterruptedException e) {
+            LOG.warn("RegionAssignerOnMetaRebuild got interrupted.", e);
+            Thread.currentThread().interrupt();
+            return;
+          }
+        }
+        LOG.info("SSH has been completed for all dead servers, assigning user regions.");
+        try {
+          // Assign the regions
+          assignAllUserRegions(getUserRegionsToAssign());
+        } catch (CoordinatedStateException | IOException | InterruptedException e) {
+          LOG.error("Exception occured while assigning user regions.", e);
+        }
+      };
+    };
+    regionAssignerThread.setDaemon(true);
+    regionAssignerThread.start();
   }
 
   /**
