@@ -1111,12 +1111,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
 
-  // Regions of these tables are put on the master by default.
-  private static final String[] DEFAULT_TABLES_ON_MASTER =
-    new String[] {AccessControlLists.ACL_TABLE_NAME.getNameAsString(),
-      TableName.NAMESPACE_TABLE_NAME.getNameAsString(),
-      TableName.META_TABLE_NAME.getNameAsString()};
-
+  // Master carries no regions by default.
+  private static final String[] DEFAULT_TABLES_ON_MASTER = new String[] {};
   public static final String TABLES_ON_MASTER =
     "hbase.balancer.tablesOnMaster";
 
@@ -1127,18 +1123,18 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected MasterServices services;
 
   /**
-   * By default, regions of some small system tables such as meta,
-   * namespace, and acl are assigned to the active master. If you don't
-   * want to assign any region to the active master, you need to
-   * configure "hbase.balancer.tablesOnMaster" to "none".
+   * By default, master carries no regions. This method returns null.
+   * If you want master to carry system tables say, then set
+   * TABLES_ON_MASTER to AccessControlLists.ACL_TABLE_NAME.getNameAsString(),
+   * TableName.NAMESPACE_TABLE_NAME.getNameAsString(),
+   * TableName.META_TABLE_NAME.getNameAsString()
    */
   protected static String[] getTablesOnMaster(Configuration conf) {
     String valueString = conf.get(TABLES_ON_MASTER);
     if (valueString == null) {
       return DEFAULT_TABLES_ON_MASTER;
     }
-    valueString = valueString.trim();
-    if (valueString.equalsIgnoreCase("none")) {
+    if (valueString == null || valueString.trim().isEmpty()) {
       return null;
     }
     return StringUtils.getStrings(valueString);
