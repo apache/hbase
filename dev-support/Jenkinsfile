@@ -27,6 +27,7 @@ pipeline {
     buildDiscarder(logRotator(numToKeepStr: '30'))
     timeout (time: 6, unit: 'HOURS')
     timestamps()
+    skipDefaultCheckout()
   }
   environment {
     TOOLS = "${env.WORKSPACE}/tools"
@@ -59,6 +60,13 @@ pipeline {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
   stages {
+    stage ('scm checkout') {
+      steps {
+        dir('component') {
+          checkout scm
+        }
+      }
+    }
     stage ('yetus install') {
       steps {
         sh  '''#!/usr/bin/env bash
@@ -296,11 +304,6 @@ END
           fi
 '''
       }
-    }
-  }
-  post {
-    failure {
-      deleteDir()
     }
   }
 }
