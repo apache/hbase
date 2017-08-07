@@ -579,7 +579,7 @@ public final class ProtobufUtil {
           delete =
             new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
         }
-        delete.addDeleteMarker(cell);
+        delete.add(cell);
       }
     } else {
       if (delete == null) {

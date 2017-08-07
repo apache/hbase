@@ -548,7 +548,7 @@ public class TestRowProcessorEndpoint {
             KeyValue kvDelete =
                 new KeyValue(rows[i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), 
                     kv.getTimestamp(), KeyValue.Type.Delete);
-            d.addDeleteMarker(kvDelete);
+            d.add(kvDelete);
             Put p = new Put(rows[1 - i]);
             KeyValue kvAdd =
                 new KeyValue(rows[1 - i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),

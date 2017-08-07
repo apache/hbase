@@ -400,7 +400,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
                 p.add(cell);
               } else if (m instanceof Delete) {
                 Delete d = (Delete) m;
-                d.addDeleteMarker(cell);
+                d.add(cell);
               }
             }
           }

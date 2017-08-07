@@ -2376,7 +2376,7 @@ public class WALSplitter {
         }
       }
       if (CellUtil.isDelete(cell)) {
-        ((Delete) m).addDeleteMarker(cell);
+        ((Delete) m).add(cell);
       } else {
         ((Put) m).add(cell);
       }

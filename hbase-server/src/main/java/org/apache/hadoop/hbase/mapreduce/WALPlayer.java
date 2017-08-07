@@ -182,7 +182,7 @@ public class WALPlayer extends Configured implements Tool {
                 }
               }
               if (CellUtil.isDelete(cell)) {
-                del.addDeleteMarker(cell);
+                del.add(cell);
               } else {
                 put.add(cell);
               }

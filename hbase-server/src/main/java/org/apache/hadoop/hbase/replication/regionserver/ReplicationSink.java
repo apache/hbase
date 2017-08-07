@@ -191,7 +191,7 @@ public class ReplicationSink {
               addToHashMultiMap(rowMap, table, clusterIds, m);
             }
             if (CellUtil.isDelete(cell)) {
-              ((Delete) m).addDeleteMarker(cell);
+              ((Delete) m).add(cell);
             } else {
               ((Put) m).add(cell);
             }
