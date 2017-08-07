@@ -24,8 +24,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -68,7 +68,7 @@ public class ExampleMasterObserverWithMetrics implements MasterObserver {
 
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                             HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+                             TableDescriptor desc, HRegionInfo[] regions) throws IOException {
     // we rely on the fact that there is only 1 instance of our MasterObserver. We keep track of
     // when the operation starts before the operation is executing.
     this.createTableStartTime = System.currentTimeMillis();
@@ -76,7 +76,7 @@ public class ExampleMasterObserverWithMetrics implements MasterObserver {
 
   @Override
   public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                              HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+                              TableDescriptor desc, HRegionInfo[] regions) throws IOException {
     if (this.createTableStartTime > 0) {
       long time = System.currentTimeMillis() - this.createTableStartTime;
       LOG.info("Create table took: " + time);

@@ -30,11 +30,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
@@ -81,7 +81,7 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
 
     @Override
     public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException
     {
        if (failures.contains(Failure.PRE_SNAPSHOT_FAILURE)) {

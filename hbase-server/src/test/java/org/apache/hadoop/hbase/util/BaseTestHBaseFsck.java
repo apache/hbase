@@ -55,9 +55,9 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -598,7 +598,7 @@ public class BaseTestHBaseFsck {
     @Override
     public void postCompletedCreateTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HTableDescriptor desc,
+        final TableDescriptor desc,
         final HRegionInfo[] regions) throws IOException {
       // the AccessController test, some times calls only and directly the
       // postCompletedCreateTableAction()

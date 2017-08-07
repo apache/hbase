@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
@@ -856,13 +857,13 @@ public class MasterRpcServices extends RSRpcServices
         }
       }
 
-      List<HTableDescriptor> descriptors = master.listTableDescriptors(namespace, regex,
+      List<TableDescriptor> descriptors = master.listTableDescriptors(namespace, regex,
           tableNameList, req.getIncludeSysTables());
 
       GetTableDescriptorsResponse.Builder builder = GetTableDescriptorsResponse.newBuilder();
       if (descriptors != null && descriptors.size() > 0) {
         // Add the table descriptors to the response
-        for (HTableDescriptor htd: descriptors) {
+        for (TableDescriptor htd: descriptors) {
           builder.addTableSchema(ProtobufUtil.convertToTableSchema(htd));
         }
       }
@@ -1114,7 +1115,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       ListTableDescriptorsByNamespaceResponse.Builder b =
           ListTableDescriptorsByNamespaceResponse.newBuilder();
-      for (HTableDescriptor htd : master
+      for (TableDescriptor htd : master
           .listTableDescriptorsByNamespace(request.getNamespaceName())) {
         b.addTableSchema(ProtobufUtil.convertToTableSchema(htd));
       }

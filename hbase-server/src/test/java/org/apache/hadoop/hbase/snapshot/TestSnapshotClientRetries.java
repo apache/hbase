@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -80,7 +80,7 @@ public class TestSnapshotClientRetries {
 
     @Override
     public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       if (snapshotCount != null) {
         snapshotCount.incrementAndGet();
@@ -89,7 +89,7 @@ public class TestSnapshotClientRetries {
 
     @Override
     public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       if (cloneCount != null) {
         cloneCount.incrementAndGet();

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.logging.Log;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -1259,7 +1261,7 @@ public class MasterCoprocessorHost
   }
 
   public boolean preGetTableDescriptors(final List<TableName> tableNamesList,
-      final List<HTableDescriptor> descriptors, final String regex) throws IOException {
+      final List<TableDescriptor> descriptors, final String regex) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -1270,7 +1272,7 @@ public class MasterCoprocessorHost
   }
 
   public void postGetTableDescriptors(final List<TableName> tableNamesList,
-      final List<HTableDescriptor> descriptors, final String regex) throws IOException {
+      final List<TableDescriptor> descriptors, final String regex) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -1280,7 +1282,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preGetTableNames(final List<HTableDescriptor> descriptors,
+  public boolean preGetTableNames(final List<TableDescriptor> descriptors,
       final String regex) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -1291,7 +1293,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postGetTableNames(final List<HTableDescriptor> descriptors,
+  public void postGetTableNames(final List<TableDescriptor> descriptors,
       final String regex) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override

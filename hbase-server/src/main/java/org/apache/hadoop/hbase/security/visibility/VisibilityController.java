@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -215,7 +217,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
 
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HTableDescriptor htd) throws IOException {
+      TableName tableName, TableDescriptor htd) throws IOException {
     if (!authorizationEnabled) {
       return;
     }
@@ -226,7 +228,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
 
   @Override
   public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 TableName tableName, HColumnDescriptor columnFamily)
+                                 TableName tableName, ColumnFamilyDescriptor columnFamily)
       throws IOException {
     if (!authorizationEnabled) {
       return;
@@ -238,7 +240,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
 
   @Override
   public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
+      TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {
     if (!authorizationEnabled) {
       return;
     }

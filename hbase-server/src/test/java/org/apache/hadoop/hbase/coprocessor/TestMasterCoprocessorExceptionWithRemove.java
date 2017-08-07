@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -81,7 +82,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     @SuppressWarnings("null")
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+        TableDescriptor desc, HRegionInfo[] regions) throws IOException {
       // Cause a NullPointerException and don't catch it: this should cause the
       // master to throw an o.apache.hadoop.hbase.DoNotRetryIOException to the
       // client.

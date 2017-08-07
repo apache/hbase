@@ -53,6 +53,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -2966,7 +2967,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
+  public List<TableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
     checkInitialized();
     return listTableDescriptors(name, null, null, true);
   }
@@ -3033,10 +3034,10 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @param includeSysTables False to match only against userspace tables
    * @return the list of table descriptors
    */
-  public List<HTableDescriptor> listTableDescriptors(final String namespace, final String regex,
+  public List<TableDescriptor> listTableDescriptors(final String namespace, final String regex,
       final List<TableName> tableNameList, final boolean includeSysTables)
   throws IOException {
-    List<HTableDescriptor> htds = new ArrayList<>();
+    List<TableDescriptor> htds = new ArrayList<>();
     boolean bypass = cpHost != null?
         cpHost.preGetTableDescriptors(tableNameList, htds, regex): false;
     if (!bypass) {
@@ -3057,14 +3058,14 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public List<TableName> listTableNames(final String namespace, final String regex,
       final boolean includeSysTables) throws IOException {
-    List<HTableDescriptor> htds = new ArrayList<>();
+    List<TableDescriptor> htds = new ArrayList<>();
     boolean bypass = cpHost != null? cpHost.preGetTableNames(htds, regex): false;
     if (!bypass) {
       htds = getTableDescriptors(htds, namespace, regex, null, includeSysTables);
       if (cpHost != null) cpHost.postGetTableNames(htds, regex);
     }
     List<TableName> result = new ArrayList<>(htds.size());
-    for (HTableDescriptor htd: htds) result.add(htd.getTableName());
+    for (TableDescriptor htd: htds) result.add(htd.getTableName());
     return result;
   }
 
@@ -3073,7 +3074,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    *    tables, etc.
    * @throws IOException
    */
-  private List<HTableDescriptor> getTableDescriptors(final List<HTableDescriptor> htds,
+  private List<TableDescriptor> getTableDescriptors(final List<TableDescriptor> htds,
       final String namespace, final String regex, final List<TableName> tableNameList,
       final boolean includeSysTables)
   throws IOException {
@@ -3114,12 +3115,12 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @param descriptors list of table descriptors to filter
    * @param pattern the regex to use
    */
-  private static void filterTablesByRegex(final Collection<HTableDescriptor> descriptors,
+  private static void filterTablesByRegex(final Collection<TableDescriptor> descriptors,
       final Pattern pattern) {
     final String defaultNS = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
-    Iterator<HTableDescriptor> itr = descriptors.iterator();
+    Iterator<TableDescriptor> itr = descriptors.iterator();
     while (itr.hasNext()) {
-      HTableDescriptor htd = itr.next();
+      TableDescriptor htd = itr.next();
       String tableName = htd.getTableName().getNameAsString();
       boolean matched = pattern.matcher(tableName).matches();
       if (!matched && htd.getTableName().getNamespaceAsString().equals(defaultNS)) {

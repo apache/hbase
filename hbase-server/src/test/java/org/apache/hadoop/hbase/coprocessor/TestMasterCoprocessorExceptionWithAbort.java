@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -104,7 +105,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
 
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+        TableDescriptor desc, HRegionInfo[] regions) throws IOException {
       // cause a NullPointerException and don't catch it: this will cause the
       // master to abort().
       Integer i;

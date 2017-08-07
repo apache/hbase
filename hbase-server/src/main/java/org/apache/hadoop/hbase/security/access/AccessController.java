@@ -43,10 +43,8 @@ import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -57,6 +55,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -68,6 +67,7 @@ import org.apache.hadoop.hbase.client.Query;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
@@ -134,7 +134,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -988,8 +987,8 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-    Set<byte[]> families = desc.getFamiliesKeys();
+      TableDescriptor desc, HRegionInfo[] regions) throws IOException {
+    Set<byte[]> families = desc.getColumnFamilyNames();
     Map<byte[], Set<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] family: families) {
       familyMap.put(family, null);
@@ -1001,7 +1000,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   @Override
   public void postCompletedCreateTableAction(
       final ObserverContext<MasterCoprocessorEnvironment> c,
-      final HTableDescriptor desc,
+      final TableDescriptor desc,
       final HRegionInfo[] regions) throws IOException {
     // When AC is used, it should be configured as the 1st CP.
     // In Master, the table operations like create, are handled by a Thread pool but the max size
@@ -1108,14 +1107,14 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
-      HTableDescriptor htd) throws IOException {
+      TableDescriptor htd) throws IOException {
     requirePermission(getActiveUser(c), "modifyTable", tableName, null, null,
         Action.ADMIN, Action.CREATE);
   }
 
   @Override
   public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, final HTableDescriptor htd) throws IOException {
+      TableName tableName, final TableDescriptor htd) throws IOException {
     final Configuration conf = c.getEnvironment().getConfiguration();
     // default the table owner to current user, if not specified.
     final String owner = (htd.getOwnerString() != null) ? htd.getOwnerString() :
@@ -1134,7 +1133,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 TableName tableName, HColumnDescriptor columnFamily)
+                                 TableName tableName, ColumnFamilyDescriptor columnFamily)
       throws IOException {
     requireTablePermission(getActiveUser(ctx), "addColumn", tableName, columnFamily.getName(), null,
         Action.ADMIN, Action.CREATE);
@@ -1142,7 +1141,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                    TableName tableName, HColumnDescriptor columnFamily)
+                                    TableName tableName, ColumnFamilyDescriptor columnFamily)
       throws IOException {
     requirePermission(getActiveUser(ctx), "modifyColumn", tableName, columnFamily.getName(), null,
         Action.ADMIN, Action.CREATE);
@@ -1318,7 +1317,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {
     requirePermission(getActiveUser(ctx), "snapshot " + snapshot.getName(), hTableDescriptor.getTableName(), null, null,
       Permission.Action.ADMIN);
@@ -1340,11 +1339,11 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {
     User user = getActiveUser(ctx);
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, user)
-        && hTableDescriptor.getNameAsString().equals(snapshot.getTable())) {
+        && hTableDescriptor.getTableName().getNameAsString().equals(snapshot.getTable())) {
       // Snapshot owner is allowed to create a table with the same name as the snapshot he took
       AuthResult result = AuthResult.allow("cloneSnapshot " + snapshot.getName(),
         "Snapshot owner check allowed", user, null, hTableDescriptor.getTableName(), null);
@@ -1356,7 +1355,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {
     User user = getActiveUser(ctx);
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, user)) {
@@ -2521,7 +2520,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-       List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+       List<TableName> tableNamesList, List<TableDescriptor> descriptors,
        String regex) throws IOException {
     // We are delegating the authorization check to postGetTableDescriptors as we don't have
     // any concrete set of table names when a regex is present or the full list is requested.
@@ -2541,7 +2540,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      List<TableName> tableNamesList, List<TableDescriptor> descriptors,
       String regex) throws IOException {
     // Skipping as checks in this case are already done by preGetTableDescriptors.
     if (regex == null && tableNamesList != null && !tableNamesList.isEmpty()) {
@@ -2550,9 +2549,9 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
     // Retains only those which passes authorization checks, as the checks weren't done as part
     // of preGetTableDescriptors.
-    Iterator<HTableDescriptor> itr = descriptors.iterator();
+    Iterator<TableDescriptor> itr = descriptors.iterator();
     while (itr.hasNext()) {
-      HTableDescriptor htd = itr.next();
+      TableDescriptor htd = itr.next();
       try {
         requirePermission(getActiveUser(ctx), "getTableDescriptors", htd.getTableName(), null, null,
             Action.ADMIN, Action.CREATE);
@@ -2564,11 +2563,11 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void postGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<HTableDescriptor> descriptors, String regex) throws IOException {
+      List<TableDescriptor> descriptors, String regex) throws IOException {
     // Retains only those which passes authorization checks.
-    Iterator<HTableDescriptor> itr = descriptors.iterator();
+    Iterator<TableDescriptor> itr = descriptors.iterator();
     while (itr.hasNext()) {
-      HTableDescriptor htd = itr.next();
+      TableDescriptor htd = itr.next();
       try {
         requireAccess(getActiveUser(ctx), "getTableNames", htd.getTableName(), Action.values());
       } catch (AccessDeniedException e) {
