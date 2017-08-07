@@ -35,8 +35,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -83,21 +85,21 @@ public interface MasterObserver extends Coprocessor {
    * table RPC call.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
-   * @param desc the HTableDescriptor for the table
+   * @param desc the TableDescriptor for the table
    * @param regions the initial regions created for the table
    */
   default void preCreateTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {}
+      TableDescriptor desc, HRegionInfo[] regions) throws IOException {}
 
   /**
    * Called after the createTable operation has been requested.  Called as part
    * of create table RPC call.
    * @param ctx the environment to interact with the framework and master
-   * @param desc the HTableDescriptor for the table
+   * @param desc the TableDescriptor for the table
    * @param regions the initial regions created for the table
    */
   default void postCreateTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {}
+      TableDescriptor desc, HRegionInfo[] regions) throws IOException {}
 
   /**
    * Called before a new table is created by
@@ -109,7 +111,7 @@ public interface MasterObserver extends Coprocessor {
    * @param regions the initial regions created for the table
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *     (<a href="https://issues.apache.org/jira/browse/HBASE-15575">HBASE-15575</a>).
-   *     Use {@link #preCreateTableAction(ObserverContext, HTableDescriptor, HRegionInfo[])}.
+   *     Use {@link #preCreateTableAction(ObserverContext, TableDescriptor, HRegionInfo[])}.
    */
   @Deprecated
   default void preCreateTableHandler(final ObserverContext<MasterCoprocessorEnvironment>
@@ -124,7 +126,7 @@ public interface MasterObserver extends Coprocessor {
    * @param regions the initial regions created for the table
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *   (<a href="https://issues.apache.org/jira/browse/HBASE-15575">HBASE-15575</a>).
-   *   Use {@link #postCompletedCreateTableAction(ObserverContext, HTableDescriptor, HRegionInfo[])}
+   *   Use {@link #postCompletedCreateTableAction(ObserverContext, TableDescriptor, HRegionInfo[])}
    */
   @Deprecated
   default void postCreateTableHandler(final ObserverContext<MasterCoprocessorEnvironment>
@@ -141,12 +143,12 @@ public interface MasterObserver extends Coprocessor {
    * Make sure to implement only one of the two as both are called.
    *
    * @param ctx the environment to interact with the framework and master
-   * @param desc the HTableDescriptor for the table
+   * @param desc the TableDescriptor for the table
    * @param regions the initial regions created for the table
    */
   default void preCreateTableAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final HTableDescriptor desc,
+      final TableDescriptor desc,
       final HRegionInfo[] regions) throws IOException {}
 
   /**
@@ -159,12 +161,12 @@ public interface MasterObserver extends Coprocessor {
    * Make sure to implement only one of the two as both are called.
    *
    * @param ctx the environment to interact with the framework and master
-   * @param desc the HTableDescriptor for the table
+   * @param desc the TableDescriptor for the table
    * @param regions the initial regions created for the table
    */
   default void postCompletedCreateTableAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final HTableDescriptor desc,
+      final TableDescriptor desc,
       final HRegionInfo[] regions) throws IOException {}
 
   /**
@@ -345,20 +347,20 @@ public interface MasterObserver extends Coprocessor {
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param htd the HTableDescriptor
+   * @param htd the TableDescriptor
    */
   default void preModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, HTableDescriptor htd) throws IOException {}
+      final TableName tableName, TableDescriptor htd) throws IOException {}
 
   /**
    * Called after the modifyTable operation has been requested.  Called as part
    * of modify table RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param htd the HTableDescriptor
+   * @param htd the TableDescriptor
    */
   default void postModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, HTableDescriptor htd) throws IOException {}
+      final TableName tableName, TableDescriptor htd) throws IOException {}
 
   /**
    * Called prior to modifying a table's properties.  Called as part of modify
@@ -369,7 +371,7 @@ public interface MasterObserver extends Coprocessor {
    * @param htd the HTableDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *     (<a href="https://issues.apache.org/jira/browse/HBASE-15575">HBASE-15575</a>).
-   *     Use {@link #preModifyTableAction(ObserverContext, TableName, HTableDescriptor)}.
+   *     Use {@link #preModifyTableAction(ObserverContext, TableName, TableDescriptor)}.
    */
   @Deprecated
   default void preModifyTableHandler(
@@ -385,7 +387,7 @@ public interface MasterObserver extends Coprocessor {
    * @param htd the HTableDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *     (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
-   *     Use {@link #postCompletedModifyTableAction(ObserverContext, TableName, HTableDescriptor)}.
+   *     Use {@link #postCompletedModifyTableAction(ObserverContext, TableName, TableDescriptor)}.
    */
   @Deprecated
   default void postModifyTableHandler(
@@ -403,12 +405,12 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param htd the HTableDescriptor
+   * @param htd the TableDescriptor
    */
   default void preModifyTableAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName,
-      final HTableDescriptor htd) throws IOException {}
+      final TableDescriptor htd) throws IOException {}
 
   /**
    * Called after to modifying a table's properties.  Called as part of modify
@@ -421,12 +423,12 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param htd the HTableDescriptor
+   * @param htd the TableDescriptor
    */
   default void postCompletedModifyTableAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName,
-      final HTableDescriptor htd) throws IOException {}
+      final TableDescriptor htd) throws IOException {}
 
   /**
    * Called prior to adding a new column family to the table.  Called as part of
@@ -436,7 +438,7 @@ public interface MasterObserver extends Coprocessor {
    * @param columnFamily the HColumnDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
-   *             Use {@link #preAddColumnFamily(ObserverContext, TableName, HColumnDescriptor)}.
+   *             Use {@link #preAddColumnFamily(ObserverContext, TableName, ColumnFamilyDescriptor)}.
    */
   @Deprecated
   default void preAddColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -452,10 +454,10 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param columnFamily the HColumnDescriptor
+   * @param columnFamily the ColumnFamilyDescriptor
    */
   default void preAddColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor columnFamily) throws IOException {}
+      TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {}
 
   /**
    * Called after the new column family has been created.  Called as part of
@@ -465,7 +467,7 @@ public interface MasterObserver extends Coprocessor {
    * @param columnFamily the HColumnDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
-   *             Use {@link #postAddColumnFamily(ObserverContext, TableName, HColumnDescriptor)}.
+   *             Use {@link #postAddColumnFamily(ObserverContext, TableName, ColumnFamilyDescriptor)}.
    */
   @Deprecated
   default void postAddColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -481,10 +483,10 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param columnFamily the HColumnDescriptor
+   * @param columnFamily the ColumnFamilyDescriptor
    */
   default void postAddColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor columnFamily) throws IOException {}
+      TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {}
 
   /**
    * Called prior to adding a new column family to the table.  Called as part of
@@ -494,7 +496,7 @@ public interface MasterObserver extends Coprocessor {
    * @param columnFamily the HColumnDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *          (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>). Use
-   *          {@link #preAddColumnFamilyAction(ObserverContext, TableName, HColumnDescriptor)}.
+   *          {@link #preAddColumnFamilyAction(ObserverContext, TableName, ColumnFamilyDescriptor)}.
    */
   @Deprecated
   default void preAddColumnHandler(
@@ -511,12 +513,12 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param columnFamily the HColumnDescriptor
+   * @param columnFamily the ColumnFamilyDescriptor
    */
   default void preAddColumnFamilyAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName,
-      final HColumnDescriptor columnFamily) throws IOException {}
+      final ColumnFamilyDescriptor columnFamily) throws IOException {}
 
   /**
    * Called after the new column family has been created.  Called as part of
@@ -526,7 +528,7 @@ public interface MasterObserver extends Coprocessor {
    * @param columnFamily the HColumnDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *     (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>). Use
-   *     {@link #postCompletedAddColumnFamilyAction(ObserverContext, TableName, HColumnDescriptor)}.
+   *     {@link #postCompletedAddColumnFamilyAction(ObserverContext, TableName, ColumnFamilyDescriptor)}.
    */
   @Deprecated
   default void postAddColumnHandler(
@@ -543,12 +545,12 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param columnFamily the HColumnDescriptor
+   * @param columnFamily the ColumnFamilyDescriptor
    */
   default void postCompletedAddColumnFamilyAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName,
-      final HColumnDescriptor columnFamily) throws IOException {}
+      final ColumnFamilyDescriptor columnFamily) throws IOException {}
 
   /**
    * Called prior to modifying a column family's attributes.  Called as part of
@@ -558,7 +560,7 @@ public interface MasterObserver extends Coprocessor {
    * @param columnFamily the HColumnDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
-   *             Use {@link #preModifyColumnFamily(ObserverContext, TableName, HColumnDescriptor)}.
+   *             Use {@link #preModifyColumnFamily(ObserverContext, TableName, ColumnFamilyDescriptor)}.
    */
   @Deprecated
   default void preModifyColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -574,10 +576,10 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param columnFamily the HColumnDescriptor
+   * @param columnFamily the ColumnFamilyDescriptor
    */
   default void preModifyColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor columnFamily) throws IOException {}
+      TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {}
 
   /**
    * Called after the column family has been updated.  Called as part of modify
@@ -587,7 +589,7 @@ public interface MasterObserver extends Coprocessor {
    * @param columnFamily the HColumnDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
-   *             Use {@link #postModifyColumnFamily(ObserverContext, TableName, HColumnDescriptor)}.
+   *             Use {@link #postModifyColumnFamily(ObserverContext, TableName, ColumnFamilyDescriptor)}.
    */
   @Deprecated
   default void postModifyColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -603,10 +605,10 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param columnFamily the HColumnDescriptor
+   * @param columnFamily the ColumnFamilyDescriptor
    */
   default void postModifyColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor columnFamily) throws IOException {}
+      TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {}
 
   /**
    * Called prior to modifying a column family's attributes.  Called as part of
@@ -616,7 +618,7 @@ public interface MasterObserver extends Coprocessor {
    * @param columnFamily the HColumnDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *     (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
-   *     Use {@link #preModifyColumnFamilyAction(ObserverContext, TableName, HColumnDescriptor)}.
+   *     Use {@link #preModifyColumnFamilyAction(ObserverContext, TableName, ColumnFamilyDescriptor)}.
    */
   @Deprecated
   default void preModifyColumnHandler(
@@ -633,12 +635,12 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param columnFamily the HColumnDescriptor
+   * @param columnFamily the ColumnFamilyDescriptor
    */
   default void preModifyColumnFamilyAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName,
-      final HColumnDescriptor columnFamily) throws IOException {}
+      final ColumnFamilyDescriptor columnFamily) throws IOException {}
 
   /**
    * Called after the column family has been updated.  Called as part of modify
@@ -648,7 +650,7 @@ public interface MasterObserver extends Coprocessor {
    * @param columnFamily the HColumnDescriptor
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *   (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>). Use
-   *   {@link #postCompletedModifyColumnFamilyAction(ObserverContext,TableName,HColumnDescriptor)}.
+   *   {@link #postCompletedModifyColumnFamilyAction(ObserverContext,TableName,ColumnFamilyDescriptor)}.
    */
   @Deprecated
   default void postModifyColumnHandler(
@@ -665,12 +667,12 @@ public interface MasterObserver extends Coprocessor {
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param columnFamily the HColumnDescriptor
+   * @param columnFamily the ColumnFamilyDescriptor
    */
   default void postCompletedModifyColumnFamilyAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName,
-      final HColumnDescriptor columnFamily) throws IOException {}
+      final ColumnFamilyDescriptor columnFamily) throws IOException {}
 
   /**
    * Called prior to deleting the entire column family.  Called as part of
@@ -1282,10 +1284,10 @@ public interface MasterObserver extends Coprocessor {
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor for the snapshot
-   * @param hTableDescriptor the hTableDescriptor of the table to snapshot
+   * @param hTableDescriptor the TableDescriptor of the table to snapshot
    */
   default void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {}
 
   /**
@@ -1293,10 +1295,10 @@ public interface MasterObserver extends Coprocessor {
    * Called as part of snapshot RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor for the snapshot
-   * @param hTableDescriptor the hTableDescriptor of the table to snapshot
+   * @param hTableDescriptor the TableDescriptor of the table to snapshot
    */
   default void postSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {}
 
   /**
@@ -1323,10 +1325,10 @@ public interface MasterObserver extends Coprocessor {
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor for the snapshot
-   * @param hTableDescriptor the hTableDescriptor of the table to create
+   * @param hTableDescriptor the TableDescriptor of the table to create
    */
   default void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {}
 
   /**
@@ -1334,10 +1336,10 @@ public interface MasterObserver extends Coprocessor {
    * Called as part of restoreSnapshot RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor for the snapshot
-   * @param hTableDescriptor the hTableDescriptor of the table to create
+   * @param hTableDescriptor the v of the table to create
    */
   default void postCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {}
 
   /**
@@ -1346,10 +1348,10 @@ public interface MasterObserver extends Coprocessor {
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor for the snapshot
-   * @param hTableDescriptor the hTableDescriptor of the table to restore
+   * @param hTableDescriptor the TableDescriptor of the table to restore
    */
   default void preRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {}
 
   /**
@@ -1357,10 +1359,10 @@ public interface MasterObserver extends Coprocessor {
    * Called as part of restoreSnapshot RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor for the snapshot
-   * @param hTableDescriptor the hTableDescriptor of the table to restore
+   * @param hTableDescriptor the TableDescriptor of the table to restore
    */
   default void postRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {}
 
   /**
@@ -1390,7 +1392,7 @@ public interface MasterObserver extends Coprocessor {
    * @param regex regular expression used for filtering the table names
    */
   default void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      List<TableName> tableNamesList, List<TableDescriptor> descriptors,
       String regex) throws IOException {}
 
   /**
@@ -1401,7 +1403,7 @@ public interface MasterObserver extends Coprocessor {
    * @param regex regular expression used for filtering the table names
    */
   default void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      List<TableName> tableNamesList, List<TableDescriptor> descriptors,
       String regex) throws IOException {}
 
   /**
@@ -1411,7 +1413,7 @@ public interface MasterObserver extends Coprocessor {
    * @param regex regular expression used for filtering the table names
    */
   default void preGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<HTableDescriptor> descriptors, String regex) throws IOException {}
+      List<TableDescriptor> descriptors, String regex) throws IOException {}
 
   /**
    * Called after a getTableNames request has been processed.
@@ -1420,7 +1422,7 @@ public interface MasterObserver extends Coprocessor {
    * @param regex regular expression used for filtering the table names
    */
   default void postGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<HTableDescriptor> descriptors, String regex) throws IOException {}
+      List<TableDescriptor> descriptors, String regex) throws IOException {}
 
 
 

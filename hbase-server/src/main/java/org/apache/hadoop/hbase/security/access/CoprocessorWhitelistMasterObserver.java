@@ -19,10 +19,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
-import java.net.URI;
-import java.nio.file.PathMatcher;
 import java.util.Collection;
-import java.util.List;
 import java.util.regex.Matcher;
 
 import org.apache.commons.io.FilenameUtils;
@@ -39,9 +36,9 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -58,13 +55,13 @@ public class CoprocessorWhitelistMasterObserver implements MasterObserver {
 
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HTableDescriptor htd) throws IOException {
+      TableName tableName, TableDescriptor htd) throws IOException {
     verifyCoprocessors(ctx, htd);
   }
 
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor htd, HRegionInfo[] regions) throws IOException {
+      TableDescriptor htd, HRegionInfo[] regions) throws IOException {
     verifyCoprocessors(ctx, htd);
   }
 
@@ -143,7 +140,7 @@ public class CoprocessorWhitelistMasterObserver implements MasterObserver {
    * @param  htd         as passed in from the coprocessor
    */
   private void verifyCoprocessors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor htd) throws IOException {
+      TableDescriptor htd) throws IOException {
 
     MasterServices services = ctx.getEnvironment().getMasterServices();
     Configuration conf = services.getConfiguration();
@@ -152,9 +149,8 @@ public class CoprocessorWhitelistMasterObserver implements MasterObserver {
         conf.getStringCollection(
             CP_COPROCESSOR_WHITELIST_PATHS_KEY);
 
-    List<String> coprocs = htd.getCoprocessors();
+    Collection<String> coprocs = htd.getCoprocessors();
     for (int i = 0; i < coprocs.size(); i++) {
-      String coproc = coprocs.get(i);
 
       String coprocSpec = Bytes.toString(htd.getValue(
           Bytes.toBytes("coprocessor$" + (i + 1))));

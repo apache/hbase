@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
@@ -365,7 +366,7 @@ public class AccessControlLists {
   /**
    * Returns {@code true} if the given table is {@code _acl_} metadata table.
    */
-  static boolean isAclTable(HTableDescriptor desc) {
+  static boolean isAclTable(TableDescriptor desc) {
     return ACL_TABLE_NAME.equals(desc.getTableName());
   }
 

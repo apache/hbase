@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.locking.LockManager;
@@ -381,7 +382,7 @@ public interface MasterServices extends Server {
    * @return descriptors
    * @throws IOException
    */
-  public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException;
+  public List<TableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException;
 
   /**
    * Get list of table names by namespace

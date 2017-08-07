@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -268,7 +269,7 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
     }
   }
 
-  void assignTableToGroup(HTableDescriptor desc) throws IOException {
+  void assignTableToGroup(TableDescriptor desc) throws IOException {
     String groupName =
         master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString())
                 .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
@@ -293,7 +294,7 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
   // Assign table to default RSGroup.
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+      TableDescriptor desc, HRegionInfo[] regions) throws IOException {
     assignTableToGroup(desc);
   }
 
@@ -330,7 +331,7 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
 
   @Override
   public void preCloneSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot, HTableDescriptor desc) throws IOException {
+      SnapshotDescription snapshot, TableDescriptor desc) throws IOException {
     assignTableToGroup(desc);
   }
 

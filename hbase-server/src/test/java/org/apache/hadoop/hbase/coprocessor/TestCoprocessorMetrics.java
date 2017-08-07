@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Metric;
@@ -101,14 +102,14 @@ public class TestCoprocessorMetrics {
 
     @Override
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                               HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+                               TableDescriptor desc, HRegionInfo[] regions) throws IOException {
       // we rely on the fact that there is only 1 instance of our MasterObserver
       this.start = System.currentTimeMillis();
     }
 
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+                                TableDescriptor desc, HRegionInfo[] regions) throws IOException {
       if (this.start > 0) {
         long time = System.currentTimeMillis() - start;
         LOG.info("Create table took: " + time);

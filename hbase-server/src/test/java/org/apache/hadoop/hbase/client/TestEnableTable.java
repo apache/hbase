@@ -197,7 +197,7 @@ public class TestEnableTable {
     @Override
     public void postCompletedCreateTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HTableDescriptor desc,
+        final TableDescriptor desc,
         final HRegionInfo[] regions) throws IOException {
       // the AccessController test, some times calls only and directly the
       // postCompletedCreateTableAction()

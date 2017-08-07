@@ -46,12 +46,14 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -316,7 +318,7 @@ public class TestMasterObserver {
 
     @Override
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+        TableDescriptor desc, HRegionInfo[] regions) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -325,7 +327,7 @@ public class TestMasterObserver {
 
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+        TableDescriptor desc, HRegionInfo[] regions) throws IOException {
       postCreateTableCalled = true;
     }
 
@@ -396,7 +398,7 @@ public class TestMasterObserver {
 
     @Override
     public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableName tableName, HTableDescriptor htd) throws IOException {
+        TableName tableName, TableDescriptor htd) throws IOException {
       if (bypass) {
         env.bypass();
       }else{
@@ -407,7 +409,7 @@ public class TestMasterObserver {
 
     @Override
     public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableName tableName, HTableDescriptor htd) throws IOException {
+        TableName tableName, TableDescriptor htd) throws IOException {
       postModifyTableCalled = true;
     }
 
@@ -537,7 +539,7 @@ public class TestMasterObserver {
 
     @Override
     public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, HColumnDescriptor columnFamily
+        TableName tableName, ColumnFamilyDescriptor columnFamily
     ) throws IOException {
       if (bypass) {
         ctx.bypass();
@@ -556,7 +558,7 @@ public class TestMasterObserver {
 
     @Override
     public void postAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, HColumnDescriptor columnFamily) throws IOException {
+        TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {
       postAddColumnCalled = true;
     }
 
@@ -576,7 +578,7 @@ public class TestMasterObserver {
 
     @Override
     public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, HColumnDescriptor columnFamily) throws IOException {
+        TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {
       if (bypass) {
         ctx.bypass();
       }
@@ -591,7 +593,7 @@ public class TestMasterObserver {
 
     @Override
     public void postModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, HColumnDescriptor columnFamily) throws IOException {
+        TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {
       postModifyColumnCalled = true;
     }
 
@@ -941,14 +943,14 @@ public class TestMasterObserver {
 
     @Override
     public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       preSnapshotCalled = true;
     }
 
     @Override
     public void postSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       postSnapshotCalled = true;
     }
@@ -975,14 +977,14 @@ public class TestMasterObserver {
 
     @Override
     public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       preCloneSnapshotCalled = true;
     }
 
     @Override
     public void postCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       postCloneSnapshotCalled = true;
     }
@@ -993,14 +995,14 @@ public class TestMasterObserver {
 
     @Override
     public void preRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       preRestoreSnapshotCalled = true;
     }
 
     @Override
     public void postRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       postRestoreSnapshotCalled = true;
     }
@@ -1035,7 +1037,7 @@ public class TestMasterObserver {
     @Override
     public void preCreateTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> env,
-        final HTableDescriptor desc,
+        final TableDescriptor desc,
         final HRegionInfo[] regions) throws IOException {
       if (bypass) {
         env.bypass();
@@ -1053,7 +1055,7 @@ public class TestMasterObserver {
     @Override
     public void postCompletedCreateTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HTableDescriptor desc,
+        final TableDescriptor desc,
         final HRegionInfo[] regions) throws IOException {
       postCompletedCreateTableActionCalled = true;
       tableCreationLatch.countDown();
@@ -1167,7 +1169,7 @@ public class TestMasterObserver {
     public void preModifyTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> env,
         final TableName tableName,
-        final HTableDescriptor htd) throws IOException {
+        final TableDescriptor htd) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -1178,7 +1180,7 @@ public class TestMasterObserver {
     public void postCompletedModifyTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> env,
         final TableName tableName,
-        final HTableDescriptor htd) throws IOException {
+        final TableDescriptor htd) throws IOException {
       postCompletedModifyTableActionCalled = true;
     }
 
@@ -1201,7 +1203,7 @@ public class TestMasterObserver {
     public void preAddColumnFamilyAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final TableName tableName,
-        final HColumnDescriptor columnFamily) throws IOException {
+        final ColumnFamilyDescriptor columnFamily) throws IOException {
       if (bypass) {
         ctx.bypass();
       }
@@ -1219,7 +1221,7 @@ public class TestMasterObserver {
     public void postCompletedAddColumnFamilyAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final TableName tableName,
-        final HColumnDescriptor columnFamily) throws IOException {
+        final ColumnFamilyDescriptor columnFamily) throws IOException {
       postCompletedAddColumnFamilyActionCalled = true;
     }
 
@@ -1242,7 +1244,7 @@ public class TestMasterObserver {
     public void preModifyColumnFamilyAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final TableName tableName,
-        final HColumnDescriptor columnFamily) throws IOException {
+        final ColumnFamilyDescriptor columnFamily) throws IOException {
       if (bypass) {
         ctx.bypass();
       }
@@ -1259,7 +1261,7 @@ public class TestMasterObserver {
     @Override
     public void postCompletedModifyColumnFamilyAction(
         ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-        HColumnDescriptor columnFamily) throws IOException {
+        ColumnFamilyDescriptor columnFamily) throws IOException {
       postCompletedModifyColumnFamilyActionCalled = true;
     }
 
@@ -1390,14 +1392,14 @@ public class TestMasterObserver {
 
     @Override
     public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<TableName> tableNamesList, List<HTableDescriptor> descriptors, String regex)
+        List<TableName> tableNamesList, List<TableDescriptor> descriptors, String regex)
         throws IOException {
       preGetTableDescriptorsCalled = true;
     }
 
     @Override
     public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+        List<TableName> tableNamesList, List<TableDescriptor> descriptors,
         String regex) throws IOException {
       postGetTableDescriptorsCalled = true;
     }
@@ -1408,13 +1410,13 @@ public class TestMasterObserver {
 
     @Override
     public void preGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<HTableDescriptor> descriptors, String regex) throws IOException {
+        List<TableDescriptor> descriptors, String regex) throws IOException {
       preGetTableNamesCalled = true;
     }
 
     @Override
     public void postGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<HTableDescriptor> descriptors, String regex) throws IOException {
+        List<TableDescriptor> descriptors, String regex) throws IOException {
       postGetTableNamesCalled = true;
     }
 

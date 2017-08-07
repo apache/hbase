@@ -192,7 +192,7 @@ code, see the {@link org.apache.hadoop.hbase.client.coprocessor} package documen
 
 <h2><a name="load">Coprocessor loading</a></h2>
 A customized coprocessor can be loaded by two different ways, by configuration,
-or by <code>HTableDescriptor</code> for a newly created table.
+or by <code>TableDescriptor</code> for a newly created table.
 <p>
 (Currently we don't really have an on demand coprocessor loading mechanism for
 opened regions.)
@@ -255,13 +255,14 @@ policy implementations, perhaps) ahead of observers.
     "TestClassloading.jar");
 
   // create a table that references the jar
-  HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(getClass().getTableName()));
-  htd.addFamily(new HColumnDescriptor("test"));
-  htd.setValue("Coprocessor$1",
-    path.toString() +
-    ":" + classFullName +
-    ":" + Coprocessor.Priority.USER);
-  HBaseAdmin admin = new HBaseAdmin(this.conf);
+  TableDescriptor htd = TableDescriptorBuilder
+                        .newBuilder(TableName.valueOf(getClass().getTableName()))
+                        .addColumnFamily(ColumnFamilyDescriptorBuilder.of("test"))
+                        .setValue(Bytes.toBytes("Coprocessor$1", path.toString()+
+                          ":" + classFullName +
+                          ":" + Coprocessor.Priority.USER))
+                        .build();
+  Admin admin = connection.getAdmin();
   admin.createTable(htd);
 </pre></blockquote>
 <h3>Chain of RegionObservers</h3>
