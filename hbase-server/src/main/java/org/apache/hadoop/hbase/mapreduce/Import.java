@@ -354,7 +354,7 @@ public class Import extends Configured implements Tool {
          */
         if (CellUtil.isDeleteFamily(kv)) {
           Delete deleteFamily = new Delete(key.get());
-          deleteFamily.addDeleteMarker(kv);
+          deleteFamily.add(kv);
           if (durability != null) {
             deleteFamily.setDurability(durability);
           }
@@ -364,7 +364,7 @@ public class Import extends Configured implements Tool {
           if (delete == null) {
             delete = new Delete(key.get());
           }
-          delete.addDeleteMarker(kv);
+          delete.add(kv);
         } else {
           if (put == null) {
             put = new Put(key.get());

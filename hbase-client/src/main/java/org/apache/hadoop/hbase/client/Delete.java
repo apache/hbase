@@ -151,15 +151,26 @@ public class Delete extends Mutation implements Comparable<Row> {
   }
 
   /**
-   * Advanced use only.
+   * Advanced use only. Add an existing delete marker to this Delete object.
+   * @param kv An existing KeyValue of type "delete".
+   * @return this for invocation chaining
+   * @throws IOException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link #add(Cell)}
+   *             instead
+   */
+  @SuppressWarnings("unchecked")
+  @Deprecated
+  public Delete addDeleteMarker(Cell kv) throws IOException {
+    return this.add(kv);
+  }
+
+  /**
    * Add an existing delete marker to this Delete object.
    * @param kv An existing KeyValue of type "delete".
    * @return this for invocation chaining
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
-  public Delete addDeleteMarker(Cell kv) throws IOException {
-    // TODO: Deprecate and rename 'add' so it matches how we add KVs to Puts.
+  public Delete add(Cell kv) throws IOException {
     if (!CellUtil.isDelete(kv)) {
       throw new IOException("The recently added KeyValue is not of type "
           + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
@@ -177,7 +188,6 @@ public class Delete extends Mutation implements Comparable<Row> {
     familyMap.put(family, list);
     return this;
   }
-
 
   /**
    * Delete all versions of all columns of the specified family.
