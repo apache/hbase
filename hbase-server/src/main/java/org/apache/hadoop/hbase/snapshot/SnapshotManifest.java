@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -112,6 +113,7 @@ public final class SnapshotManifest {
       final Path workingDir, final SnapshotDescription desc,
       final ForeignExceptionSnare monitor) {
     return new SnapshotManifest(conf, fs, workingDir, desc, monitor);
+
   }
 
   /**
@@ -162,9 +164,15 @@ public final class SnapshotManifest {
   }
 
   public void addMobRegion(HRegionInfo regionInfo) throws IOException {
-    // 0. Get the ManifestBuilder/RegionVisitor
+    // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
 
+    // Visit the region and add it to the manifest
+    addMobRegion(regionInfo, visitor);
+  }
+
+  @VisibleForTesting
+  protected void addMobRegion(HRegionInfo regionInfo, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     LOG.debug("Storing mob region '" + regionInfo + "' region-info for snapshot.");
     Object regionData = visitor.regionOpen(regionInfo);
@@ -203,9 +211,15 @@ public final class SnapshotManifest {
    * This is used by the "online snapshot" when the table is enabled.
    */
   public void addRegion(final HRegion region) throws IOException {
-    // 0. Get the ManifestBuilder/RegionVisitor
+    // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
 
+    // Visit the region and add it to the manifest
+    addRegion(region, visitor);
+  }
+
+  @VisibleForTesting
+  protected void addRegion(final HRegion region, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     LOG.debug("Storing '" + region + "' region-info for snapshot.");
     Object regionData = visitor.regionOpen(region.getRegionInfo());
@@ -216,7 +230,8 @@ public final class SnapshotManifest {
 
     for (Store store : region.getStores()) {
       // 2.1. build the snapshot reference for the store
-      Object familyData = visitor.familyOpen(regionData, store.getColumnFamilyDescriptor().getName());
+      Object familyData = visitor.familyOpen(regionData,
+          store.getColumnFamilyDescriptor().getName());
       monitor.rethrowException();
 
       List<StoreFile> storeFiles = new ArrayList<>(store.getStorefiles());
@@ -243,9 +258,16 @@ public final class SnapshotManifest {
    * This is used by the "offline snapshot" when the table is disabled.
    */
   public void addRegion(final Path tableDir, final HRegionInfo regionInfo) throws IOException {
-    // 0. Get the ManifestBuilder/RegionVisitor
+    // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
 
+    // Visit the region and add it to the manifest
+    addRegion(tableDir, regionInfo, visitor);
+  }
+
+  @VisibleForTesting
+  protected void addRegion(final Path tableDir, final HRegionInfo regionInfo, RegionVisitor visitor)
+      throws IOException {
     boolean isMobRegion = MobUtils.isMobRegionInfo(regionInfo);
     try {
       Path baseDir = tableDir;

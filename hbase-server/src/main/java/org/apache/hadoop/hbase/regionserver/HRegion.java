@@ -7922,7 +7922,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       case DELETE:
       case BATCH_MUTATE:
       case COMPACT_REGION:
-        // when a region is in recovering state, no read, split or merge is allowed
+      case SNAPSHOT:
+        // when a region is in recovering state, no read, split, merge or snapshot is allowed
         if (isRecovering() && (this.disallowWritesInRecovering ||
               (op != Operation.PUT && op != Operation.DELETE && op != Operation.BATCH_MUTATE))) {
           throw new RegionInRecoveryException(getRegionInfo().getRegionNameAsString() +
@@ -7946,6 +7947,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       lock.readLock().unlock();
       throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closed");
     }
+    // The unit for snapshot is a region. So, all stores for this region must be
+    // prepared for snapshot operation before proceeding.
+    if (op == Operation.SNAPSHOT) {
+      for (Store store : stores.values()) {
+        if (store instanceof HStore) {
+          ((HStore)store).preSnapshotOperation();
+        }
+      }
+    }
     try {
       if (coprocessorHost != null) {
         coprocessorHost.postStartRegionOperation(op);
@@ -7961,12 +7971,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     closeRegionOperation(Operation.ANY);
   }
 
-  /**
-   * Closes the lock. This needs to be called in the finally block corresponding
-   * to the try block of {@link #startRegionOperation(Operation)}
-   * @throws IOException
-   */
+  @Override
   public void closeRegionOperation(Operation operation) throws IOException {
+    if (operation == Operation.SNAPSHOT) {
+      for (Store store: stores.values()) {
+        if (store instanceof HStore) {
+          ((HStore)store).postSnapshotOperation();
+        }
+      }
+    }
     lock.readLock().unlock();
     if (coprocessorHost != null) {
       coprocessorHost.postCloseRegionOperation(operation);
