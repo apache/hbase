@@ -76,7 +76,7 @@ public class RowResource extends ResourceBase {
     this.tableResource = tableResource;
     this.rowspec = new RowSpec(rowspec);
     if (versions != null) {
-      this.rowspec.setMaxVersions(Integer.valueOf(versions));
+      this.rowspec.setMaxVersions(Integer.parseInt(versions));
     }
     this.check = check;
   }
@@ -271,7 +271,7 @@ public class RowResource extends ResourceBase {
       }
       vals = headers.getRequestHeader("X-Timestamp");
       if (vals != null && !vals.isEmpty()) {
-        timestamp = Long.valueOf(vals.get(0));
+        timestamp = Long.parseLong(vals.get(0));
       }
       if (column == null) {
         servlet.getMetrics().incrementFailedPutRequests(1);
