@@ -221,7 +221,7 @@ public interface Region extends ConfigurationObserver {
    */
   enum Operation {
     ANY, GET, PUT, DELETE, SCAN, APPEND, INCREMENT, SPLIT_REGION, MERGE_REGION, BATCH_MUTATE,
-    REPLAY_BATCH_MUTATE, COMPACT_REGION, REPLAY_EVENT
+    REPLAY_BATCH_MUTATE, COMPACT_REGION, REPLAY_EVENT, SNAPSHOT
   }
 
   /**
@@ -250,6 +250,13 @@ public interface Region extends ConfigurationObserver {
    * @throws IOException
    */
   void closeRegionOperation() throws IOException;
+
+  /**
+   * Closes the region operation lock. This needs to be called in the finally block corresponding
+   * to the try block of {@link #startRegionOperation(Operation)}
+   * @throws IOException
+   */
+  void closeRegionOperation(Operation op) throws IOException;
 
   // Row write locks
 

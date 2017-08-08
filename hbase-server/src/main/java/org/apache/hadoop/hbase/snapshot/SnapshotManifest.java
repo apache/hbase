@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -110,6 +111,7 @@ public final class SnapshotManifest {
       final Path workingDir, final SnapshotDescription desc,
       final ForeignExceptionSnare monitor) {
     return new SnapshotManifest(conf, fs, workingDir, desc, monitor);
+
   }
 
   /**
@@ -163,9 +165,15 @@ public final class SnapshotManifest {
    * This is used by the "online snapshot" when the table is enabled.
    */
   public void addRegion(final HRegion region) throws IOException {
-    // 0. Get the ManifestBuilder/RegionVisitor
+    // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
 
+    // Visit the region and add it to the manifest
+    addRegion(region, visitor);
+  }
+
+  @VisibleForTesting
+  protected void addRegion(final HRegion region, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     LOG.debug("Storing '" + region + "' region-info for snapshot.");
     Object regionData = visitor.regionOpen(region.getRegionInfo());
@@ -203,12 +211,20 @@ public final class SnapshotManifest {
    * This is used by the "offline snapshot" when the table is disabled.
    */
   public void addRegion(final Path tableDir, final HRegionInfo regionInfo) throws IOException {
-    // 0. Get the ManifestBuilder/RegionVisitor
+    // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
+
+    // Visit the region and add it to the manifest
+    addRegion(tableDir, regionInfo, visitor);
+  }
+
+  @VisibleForTesting
+  protected void addRegion(final Path tableDir, final HRegionInfo regionInfo, RegionVisitor visitor)
+      throws IOException {
 
     // Open the RegionFS
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-          tableDir, regionInfo, true);
+        tableDir, regionInfo, true);
     monitor.rethrowException();
 
     // 1. dump region meta info into the snapshot directory

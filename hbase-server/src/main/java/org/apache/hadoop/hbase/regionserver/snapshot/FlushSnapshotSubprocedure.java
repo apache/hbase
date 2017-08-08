@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescrip
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
+import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager.SnapshotSubprocedurePool;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 
@@ -74,10 +75,18 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
   /**
    * Callable for adding files to snapshot manifest working dir.  Ready for multithreading.
    */
-  private class RegionSnapshotTask implements Callable<Void> {
-    Region region;
-    RegionSnapshotTask(Region region) {
+  public static class RegionSnapshotTask implements Callable<Void> {
+    private Region region;
+    private boolean skipFlush;
+    private ForeignExceptionDispatcher monitor;
+    private SnapshotDescription snapshotDesc;
+
+    public RegionSnapshotTask(Region region, SnapshotDescription snapshotDesc,
+        boolean skipFlush, ForeignExceptionDispatcher monitor) {
       this.region = region;
+      this.skipFlush = skipFlush;
+      this.monitor = monitor;
+      this.snapshotDesc = snapshotDesc;
     }
 
     @Override
@@ -87,10 +96,10 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
       // snapshots that involve multiple regions and regionservers.  It is still possible to have
       // an interleaving such that globally regions are missing, so we still need the verification
       // step.
-      LOG.debug("Starting region operation on " + region);
-      region.startRegionOperation();
+      LOG.debug("Starting snapshot operation on " + region);
+      region.startRegionOperation(Operation.SNAPSHOT);
       try {
-        if (snapshotSkipFlush) {
+        if (skipFlush) {
         /*
          * This is to take an online-snapshot without force a coordinated flush to prevent pause
          * The snapshot type is defined inside the snapshot description. FlushSnapshotSubprocedure
@@ -123,15 +132,15 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
             throw new IOException("Unable to complete flush after " + MAX_RETRIES + " attempts");
           }
         }
-        ((HRegion)region).addRegionToSnapshot(snapshot, monitor);
-        if (snapshotSkipFlush) {
+        ((HRegion)region).addRegionToSnapshot(snapshotDesc, monitor);
+        if (skipFlush) {
           LOG.debug("... SkipFlush Snapshotting region " + region.toString() + " completed.");
         } else {
           LOG.debug("... Flush Snapshotting region " + region.toString() + " completed.");
         }
       } finally {
-        LOG.debug("Closing region operation on " + region);
-        region.closeRegionOperation();
+        LOG.debug("Closing snapshot operation on " + region);
+        region.closeRegionOperation(Operation.SNAPSHOT);
       }
       return null;
     }
@@ -155,7 +164,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
     // Add all hfiles already existing in region.
     for (Region region : regions) {
       // submit one task per region for parallelize by region.
-      taskManager.submitTask(new RegionSnapshotTask(region));
+      taskManager.submitTask(new RegionSnapshotTask(region, snapshot, snapshotSkipFlush, monitor));
       monitor.rethrowException();
     }
 
