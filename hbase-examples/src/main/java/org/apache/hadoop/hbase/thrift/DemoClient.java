@@ -60,13 +60,14 @@ public class DemoClient {
     CharsetDecoder decoder = null;
 
     private static boolean secure = false;
+    private static String serverPrincipal = "hbase";
 
     public static void main(String[] args) throws Exception {
 
-        if (args.length < 2 || args.length > 3) {
+        if (args.length < 2 || args.length > 4 || (args.length > 2 && !isBoolean(args[2]))) {
 
             System.out.println("Invalid arguments!");
-            System.out.println("Usage: DemoClient host port [secure=false]");
+            System.out.println("Usage: DemoClient host port [secure=false [server-principal=hbase] ]");
 
             System.exit(-1);
         }
@@ -75,6 +76,10 @@ public class DemoClient {
         host = args[0];
         if (args.length > 2) {
           secure = Boolean.parseBoolean(args[2]);
+        }
+
+        if (args.length == 4) {
+          serverPrincipal = args[3];
         }
 
         final DemoClient client = new DemoClient();
@@ -86,6 +91,10 @@ public class DemoClient {
               return null;
             }
           });
+    }
+
+    private static boolean isBoolean(String s){
+      return Boolean.TRUE.toString().equalsIgnoreCase(s) || Boolean.FALSE.toString().equalsIgnoreCase(s);
     }
 
     DemoClient() {
@@ -123,7 +132,7 @@ public class DemoClient {
            * The HBase cluster must be secure, allow proxy user.
            */
           transport = new TSaslClientTransport("GSSAPI", null,
-            "hbase", // Thrift server user name, should be an authorized proxy user.
+            serverPrincipal, // Thrift server user name, should be an authorized proxy user.
             host, // Thrift server domain
             saslProperties, null, transport);
         }
