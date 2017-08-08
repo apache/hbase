@@ -396,6 +396,16 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     @Override
+    public void start() {
+      startAsync();
+    }
+
+    @Override
+    public void stop() {
+      stopAsync();
+    }
+
+    @Override
     protected void doStart() {
       startedCount.incrementAndGet();
       notifyStarted();
