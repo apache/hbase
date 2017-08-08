@@ -2486,6 +2486,22 @@ public class HStore implements Store {
 	   return getRegionInfo().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID;
   }
 
+  /**
+   * Sets the store up for a region level snapshot operation.
+   * @see #postSnapshotOperation()
+   */
+  public void preSnapshotOperation() {
+    archiveLock.lock();
+  }
+
+  /**
+   * Perform tasks needed after the completion of snapshot operation.
+   * @see #preSnapshotOperation()
+   */
+  public void postSnapshotOperation() {
+    archiveLock.unlock();
+  }
+
   @Override
   public synchronized void closeAndArchiveCompactedFiles() throws IOException {
     // ensure other threads do not attempt to archive the same files on close()
