@@ -66,6 +66,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
     }
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION")
   @GET
   @Produces({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
   public Response get(final @Context UriInfo uriInfo) {

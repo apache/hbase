@@ -119,6 +119,7 @@ public class TableResource extends ResourceBase {
     return new RowResource(this, suffixglobbingspec, versions, check);
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION")
   @Path("{scanspec: .*[*]$}")
   public TableScanResource  getScanResource(
       final @Context UriInfo uriInfo,
