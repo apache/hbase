@@ -125,9 +125,6 @@ public class RESTServer implements Constants {
   static void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
     restCSRFEnabled = conf.getBoolean(REST_CSRF_ENABLED_KEY, REST_CSRF_ENABLED_DEFAULT);
     if (restCSRFEnabled) {
-      Set<String> restCsrfMethodsToIgnore = new HashSet<>();
-      restCsrfMethodsToIgnore.addAll(getTrimmedStringList(conf,
-          REST_CSRF_METHODS_TO_IGNORE_KEY, REST_CSRF_METHODS_TO_IGNORE_DEFAULT));
       Map<String, String> restCsrfParams = RestCsrfPreventionFilter
           .getFilterParams(conf, "hbase.rest-csrf.");
       FilterHolder holder = new FilterHolder();
