@@ -28,7 +28,8 @@ Example code.
       2. If HBase server is not secure, or authentication is not enabled for the Thrift server, execute:
       {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port>}
       3. If HBase server is secure, and authentication is enabled for the Thrift server, run kinit at first, then execute:
-      {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port> true}
+      {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port> true <server-principal>}
+      <server-principal> should only be specified when the client connects to a secure cluster. It's default value is "hbase".
       4. Here is a lazy example that just pulls in all hbase dependency jars and that goes against default location on localhost.
       It should work with a standalone hbase instance started by doing ./bin/start-hbase.sh:
       {java -cp ./hbase-examples/target/hbase-examples-2.0.0-SNAPSHOT.jar:`./bin/hbase classpath` org.apache.hadoop.hbase.thrift.DemoClient localhost 9090}
