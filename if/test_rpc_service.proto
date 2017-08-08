@@ -32,4 +32,5 @@ service TestProtobufRpcProto {
   rpc error(EmptyRequestProto) returns (EmptyResponseProto);
   rpc pause(PauseRequestProto) returns (EmptyResponseProto);
   rpc addr(EmptyRequestProto) returns (AddrResponseProto);
+  rpc socketNotOpen(EmptyRequestProto) returns (EmptyResponseProto);
 }

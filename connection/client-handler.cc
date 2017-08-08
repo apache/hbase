@@ -21,8 +21,8 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/Likely.h>
+#include <folly/io/async/AsyncSocketException.h>
 #include <glog/logging.h>
-
 #include <string>
 
 #include "connection/request.h"
@@ -95,7 +95,7 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<folly::IOBuf> buf) {
                                              : "";
       std::string stack_trace =
           exceptionResponse.has_stack_trace() ? exceptionResponse.stack_trace() : "";
-      what.append(exception_class_name).append(stack_trace);
+      what.append(stack_trace);
 
       auto remote_exception = std::make_unique<RemoteException>(what);
       remote_exception->set_exception_class_name(exception_class_name)
@@ -133,7 +133,13 @@ folly::Future<folly::Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Re
   // Now store the call id to response.
   resp_msgs_->insert(std::make_pair(r->call_id(), r->resp_msg()));
 
-  // Send the data down the pipeline.
-  return ctx->fireWrite(serde_.Request(r->call_id(), r->method(), r->req_msg().get()));
+  try {
+    // Send the data down the pipeline.
+    return ctx->fireWrite(serde_.Request(r->call_id(), r->method(), r->req_msg().get()));
+  } catch (const folly::AsyncSocketException &e) {
+    /* clear protobuf::Message to avoid overflow. */
+    resp_msgs_->erase(r->call_id());
+    throw e;
+  }
 }
 }  // namespace hbase

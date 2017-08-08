@@ -20,10 +20,12 @@
 #include <wangle/bootstrap/ClientBootstrap.h>
 #include <wangle/channel/Handler.h>
 
+#include <folly/Format.h>
 #include <folly/Logging.h>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/io/async/AsyncSocketException.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
@@ -41,6 +43,9 @@ using namespace folly;
 using namespace hbase;
 
 DEFINE_int32(port, 0, "test server port");
+DEFINE_string(result_format, "RPC {} returned: {}.", "output format of RPC result");
+DEFINE_string(fail_format, "Shouldn't get here, exception is expected for RPC {}.",
+              "output format of enforcing fail");
 typedef ServerBootstrap<RpcTestServerSerializePipeline> ServerTestBootstrap;
 typedef std::shared_ptr<ServerTestBootstrap> ServerPtr;
 
@@ -91,9 +96,10 @@ TEST_F(RpcTest, Echo) {
   auto server_addr = GetRpcServerAddress(server);
   auto client = CreateRpcClient(conf);
 
-  std::string greetings = "hello, hbase server!";
+  auto method = "echo";
+  auto greetings = "hello, hbase server!";
   auto request = std::make_unique<Request>(std::make_shared<EchoRequestProto>(),
-                                           std::make_shared<EchoResponseProto>(), "echo");
+                                           std::make_shared<EchoResponseProto>(), method);
   auto pb_msg = std::static_pointer_cast<EchoRequestProto>(request->req_msg());
   pb_msg->set_message(greetings);
 
@@ -101,14 +107,14 @@ TEST_F(RpcTest, Echo) {
   client
       ->AsyncCall(server_addr->getAddressStr(), server_addr->getPort(), std::move(request),
                   hbase::security::User::defaultUser())
-      .then([=](std::unique_ptr<Response> response) {
+      .then([&](std::unique_ptr<Response> response) {
         auto pb_resp = std::static_pointer_cast<EchoResponseProto>(response->resp_msg());
         EXPECT_TRUE(pb_resp != nullptr);
-        VLOG(1) << "RPC echo returned: " + pb_resp->message();
+        VLOG(1) << folly::sformat(FLAGS_result_format, method, pb_resp->message());
         EXPECT_EQ(greetings, pb_resp->message());
       })
-      .onError([](const folly::exception_wrapper& ew) {
-        FAIL() << "Shouldn't get here, no exception is expected for RPC echo.";
+      .onError([&](const folly::exception_wrapper& ew) {
+        FAIL() << folly::sformat(FLAGS_fail_format, method);
       });
 
   server->stop();
@@ -118,23 +124,24 @@ TEST_F(RpcTest, Echo) {
 /**
  * test error
  */
-TEST_F(RpcTest, error) {
+TEST_F(RpcTest, Error) {
   auto conf = CreateConf();
   auto server = CreateRpcServer();
   auto server_addr = GetRpcServerAddress(server);
   auto client = CreateRpcClient(conf);
 
+  auto method = "error";
   auto request = std::make_unique<Request>(std::make_shared<EmptyRequestProto>(),
-                                           std::make_shared<EmptyResponseProto>(), "error");
+                                           std::make_shared<EmptyResponseProto>(), method);
   /* sending out request */
   client
       ->AsyncCall(server_addr->getAddressStr(), server_addr->getPort(), std::move(request),
                   hbase::security::User::defaultUser())
-      .then([=](std::unique_ptr<Response> response) {
-        FAIL() << "Shouldn't get here, exception is expected for RPC error.";
+      .then([&](std::unique_ptr<Response> response) {
+        FAIL() << folly::sformat(FLAGS_fail_format, method);
       })
-      .onError([](const folly::exception_wrapper& ew) {
-        VLOG(1) << "RPC error returned with exception.";
+      .onError([&](const folly::exception_wrapper& ew) {
+        VLOG(1) << folly::sformat(FLAGS_result_format, method, ew.what());
         std::string kRemoteException = demangle(typeid(hbase::RemoteException)).toStdString();
         std::string kRpcTestException = demangle(typeid(hbase::RpcTestException)).toStdString();
 
@@ -142,14 +149,57 @@ TEST_F(RpcTest, error) {
         EXPECT_TRUE(bool(ew));
         EXPECT_EQ(kRemoteException, ew.class_name());
 
-        /* verify RemoteException */
-        EXPECT_TRUE(ew.with_exception([&](const hbase::RemoteException& re) {
-          /* verify  DoNotRetryIOException*/
-          EXPECT_EQ(kRpcTestException, re.exception_class_name());
-          EXPECT_EQ(kRpcTestException + ": server error!", re.stack_trace());
+        /* verify exception */
+        EXPECT_TRUE(ew.with_exception([&](const hbase::RemoteException& e) {
+          EXPECT_EQ(kRpcTestException, e.exception_class_name());
+          EXPECT_EQ(kRpcTestException + ": server error!", e.stack_trace());
         }));
       });
 
   server->stop();
   server->join();
+}
+
+TEST_F(RpcTest, SocketNotOpen) {
+  auto conf = CreateConf();
+  auto server = CreateRpcServer();
+  auto server_addr = GetRpcServerAddress(server);
+  auto client = CreateRpcClient(conf);
+
+  auto method = "socketNotOpen";
+  auto request = std::make_unique<Request>(std::make_shared<EmptyRequestProto>(),
+                                           std::make_shared<EmptyResponseProto>(), method);
+
+  server->stop();
+  server->join();
+
+  /* sending out request */
+  client
+      ->AsyncCall(server_addr->getAddressStr(), server_addr->getPort(), std::move(request),
+                  hbase::security::User::defaultUser())
+      .then([&](std::unique_ptr<Response> response) {
+        FAIL() << folly::sformat(FLAGS_fail_format, method);
+      })
+      .onError([&](const folly::exception_wrapper& ew) {
+        VLOG(1) << folly::sformat(FLAGS_result_format, method, ew.what());
+        std::string kConnectionException =
+            demangle(typeid(hbase::ConnectionException)).toStdString();
+        std::string kAsyncSocketException =
+            demangle(typeid(folly::AsyncSocketException)).toStdString();
+
+        /* verify exception_wrapper */
+        EXPECT_TRUE(bool(ew));
+        EXPECT_EQ(kConnectionException, ew.class_name());
+
+        /* verify exception */
+        EXPECT_TRUE(ew.with_exception([&](const hbase::ConnectionException& e) {
+          EXPECT_TRUE(bool(e.cause()));
+          EXPECT_EQ(kAsyncSocketException, e.cause().class_name());
+          VLOG(1) << folly::sformat(FLAGS_result_format, method, e.cause().what());
+          e.cause().with_exception([&](const folly::AsyncSocketException& ase) {
+            EXPECT_EQ(AsyncSocketException::AsyncSocketExceptionType::NOT_OPEN, ase.getType());
+            EXPECT_EQ(111 /*ECONNREFUSED*/, ase.getErrno());
+          });
+        }));
+      });
 }

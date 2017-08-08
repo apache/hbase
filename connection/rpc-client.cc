@@ -19,9 +19,12 @@
 
 #include "connection/rpc-client.h"
 
+#include <folly/Format.h>
 #include <folly/Logging.h>
+#include <folly/futures/Future.h>
 #include <unistd.h>
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
+#include "exceptions/exception.h"
 
 using hbase::security::User;
 using std::chrono::nanoseconds;
@@ -55,7 +58,7 @@ folly::Future<std::unique_ptr<Response>> RpcClient::AsyncCall(const std::string&
                                                               std::unique_ptr<Request> req,
                                                               std::shared_ptr<User> ticket) {
   auto remote_id = std::make_shared<ConnectionId>(host, port, ticket);
-  return GetConnection(remote_id)->SendRequest(std::move(req));
+  return SendRequest(remote_id, std::move(req));
 }
 
 folly::Future<std::unique_ptr<Response>> RpcClient::AsyncCall(const std::string& host,
@@ -64,7 +67,49 @@ folly::Future<std::unique_ptr<Response>> RpcClient::AsyncCall(const std::string&
                                                               std::shared_ptr<User> ticket,
                                                               const std::string& service_name) {
   auto remote_id = std::make_shared<ConnectionId>(host, port, ticket, service_name);
-  return GetConnection(remote_id)->SendRequest(std::move(req));
+  return SendRequest(remote_id, std::move(req));
+}
+
+/**
+ * There are two cases for ConnectionException:
+ * 1. The first time connection
+ * establishment, i.e. GetConnection(remote_id), AsyncSocketException being a cause.
+ * 2. Writing request down the pipeline, i.e. RpcConnection::SendRequest, AsyncSocketException being
+ * a cause as well.
+ */
+folly::Future<std::unique_ptr<Response>> RpcClient::SendRequest(
+    std::shared_ptr<ConnectionId> remote_id, std::unique_ptr<Request> req) {
+  try {
+    return GetConnection(remote_id)
+        ->SendRequest(std::move(req))
+        .onError([&, this](const folly::exception_wrapper& ew) {
+          VLOG(3) << folly::sformat("RpcClient Exception: {}", ew.what());
+          ew.with_exception([&, this](const hbase::ConnectionException& re) {
+            /* bad connection, remove it from pool. */
+            cp_->Close(remote_id);
+          });
+          return GetFutureWithException(ew);
+        });
+  } catch (const ConnectionException& e) {
+    CHECK(e.cause().get_exception() != nullptr);
+    VLOG(3) << folly::sformat("RpcClient Exception: {}", e.cause().what());
+    /* bad connection, remove it from pool. */
+    cp_->Close(remote_id);
+    return GetFutureWithException(e);
+  }
+}
+
+template <typename EXCEPTION>
+folly::Future<std::unique_ptr<Response>> RpcClient::GetFutureWithException(const EXCEPTION& e) {
+  return GetFutureWithException(folly::exception_wrapper{e});
+}
+
+folly::Future<std::unique_ptr<Response>> RpcClient::GetFutureWithException(
+    const folly::exception_wrapper& ew) {
+  folly::Promise<std::unique_ptr<Response>> promise;
+  auto future = promise.getFuture();
+  promise.setException(ew);
+  return future;
 }
 
 std::shared_ptr<RpcConnection> RpcClient::GetConnection(std::shared_ptr<ConnectionId> remote_id) {

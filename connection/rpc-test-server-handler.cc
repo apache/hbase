@@ -72,6 +72,9 @@ std::unique_ptr<Request> RpcTestServerSerializeHandler::CreateReceivedRequest(
   } else if (method_name == "addr") {
     result = std::make_unique<Request>(std::make_shared<EmptyRequestProto>(),
                                        std::make_shared<AddrResponseProto>(), method_name);
+  } else if (method_name == "socketNotOpen") {
+    result = std::make_unique<Request>(std::make_shared<EmptyRequestProto>(),
+                                       std::make_shared<EmptyResponseProto>(), method_name);
   }
   return result;
 }

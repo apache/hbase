@@ -18,8 +18,10 @@
  */
 #include "connection/client-dispatcher.h"
 #include <folly/ExceptionWrapper.h>
-
+#include <folly/Format.h>
+#include <folly/io/async/AsyncSocketException.h>
 #include <utility>
+#include "exceptions/exception.h"
 
 using std::unique_ptr;
 
@@ -30,6 +32,9 @@ ClientDispatcher::ClientDispatcher() : current_call_id_(9), requests_(5000) {}
 void ClientDispatcher::read(Context *ctx, unique_ptr<Response> in) {
   auto call_id = in->call_id();
   auto p = requests_.find_and_erase(call_id);
+
+  VLOG(3) << folly::sformat("Read hbase::Response, call_id: {}, hasException: {}, what: {}",
+                            in->call_id(), bool(in->exception()), in->exception().what());
 
   if (in->exception()) {
     p.setException(in->exception());
@@ -51,7 +56,14 @@ folly::Future<unique_ptr<Response>> ClientDispatcher::operator()(unique_ptr<Requ
     LOG(ERROR) << "e = " << call_id;
     this->requests_.erase(call_id);
   });
-  this->pipeline_->write(std::move(arg));
+
+  try {
+    this->pipeline_->write(std::move(arg));
+  } catch (const folly::AsyncSocketException &e) {
+    p.setException(folly::exception_wrapper{ConnectionException{folly::exception_wrapper{e}}});
+    /* clear folly::Promise to avoid overflow. */
+    requests_.erase(call_id);
+  }
 
   return f;
 }
