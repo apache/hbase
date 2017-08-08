@@ -137,8 +137,8 @@ public class ColumnSchemaModel implements Serializable {
    */
   public boolean __getBlockcache() {
     Object o = attrs.get(BLOCKCACHE);
-    return o != null ? 
-      Boolean.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_BLOCKCACHE;
+    return o != null ?
+      Boolean.parseBoolean(o.toString()) : HColumnDescriptor.DEFAULT_BLOCKCACHE;
   }
 
   /**
@@ -146,8 +146,8 @@ public class ColumnSchemaModel implements Serializable {
    */
   public int __getBlocksize() {
     Object o = attrs.get(BLOCKSIZE);
-    return o != null ? 
-      Integer.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_BLOCKSIZE;
+    return o != null ?
+      Integer.parseInt(o.toString()) : HColumnDescriptor.DEFAULT_BLOCKSIZE;
   }
 
   /**
@@ -171,8 +171,8 @@ public class ColumnSchemaModel implements Serializable {
    */
   public boolean __getInMemory() {
     Object o = attrs.get(IN_MEMORY);
-    return o != null ? 
-      Boolean.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_IN_MEMORY;
+    return o != null ?
+      Boolean.parseBoolean(o.toString()) : HColumnDescriptor.DEFAULT_IN_MEMORY;
   }
 
   /**
@@ -180,8 +180,8 @@ public class ColumnSchemaModel implements Serializable {
    */
   public int __getTTL() {
     Object o = attrs.get(TTL);
-    return o != null ? 
-      Integer.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_TTL;
+    return o != null ?
+      Integer.parseInt(o.toString()) : HColumnDescriptor.DEFAULT_TTL;
   }
 
   /**
@@ -189,8 +189,8 @@ public class ColumnSchemaModel implements Serializable {
    */
   public int __getVersions() {
     Object o = attrs.get(VERSIONS);
-    return o != null ? 
-      Integer.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_VERSIONS;
+    return o != null ?
+      Integer.parseInt(o.toString()) : HColumnDescriptor.DEFAULT_VERSIONS;
   }
 
   /**
