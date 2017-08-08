@@ -79,6 +79,16 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
+  public void start() {
+    startAsync();
+  }
+
+  @Override
+  public void stop() {
+    stopAsync();
+  }
+
+  @Override
   protected void doStart() {
     try {
       reloadZkWatcher();

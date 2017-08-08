@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ListenableFuture;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -130,6 +128,11 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
 
   private AtomicLong totalBufferUsed;
 
+  public static final String WAIT_ON_ENDPOINT_SECONDS =
+    "hbase.replication.wait.on.endpoint.seconds";
+  public static final int DEFAULT_WAIT_ON_ENDPOINT_SECONDS = 30;
+  private int waitOnEndpointSeconds = -1;
+
   /**
    * Instantiation method used by region servers
    *
@@ -152,6 +155,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           throws IOException {
     this.stopper = stopper;
     this.conf = HBaseConfiguration.create(conf);
+    this.waitOnEndpointSeconds =
+      this.conf.getInt(WAIT_ON_ENDPOINT_SECONDS, DEFAULT_WAIT_ON_ENDPOINT_SECONDS);
     decorateConf();
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
@@ -245,17 +250,11 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     this.sourceRunning = true;
     try {
       // start the endpoint, connect to the cluster
-      Service service = replicationEndpoint.startAsync();
-      final int waitTime = 10;
-      service.awaitRunning(waitTime, TimeUnit.SECONDS);
-      if (!service.isRunning()) {
-        LOG.warn("ReplicationEndpoint was not started after waiting " + waitTime +
-          " + seconds. Exiting");
-        uninitialize();
-        return;
-      }
+      this.replicationEndpoint.start();
+      this.replicationEndpoint.awaitRunning(this.waitOnEndpointSeconds, TimeUnit.SECONDS);
     } catch (Exception ex) {
       LOG.warn("Error starting ReplicationEndpoint, exiting", ex);
+      uninitialize();
       throw new RuntimeException(ex);
     }
 
@@ -383,14 +382,12 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   private void uninitialize() {
     LOG.debug("Source exiting " + this.peerId);
     metrics.clear();
-    if (replicationEndpoint.state() == Service.State.STARTING
-        || replicationEndpoint.state() == Service.State.RUNNING) {
-      replicationEndpoint.stopAsync();
-      final int waitTime = 10;
+    if (this.replicationEndpoint.isRunning() || this.replicationEndpoint.isStarting()) {
+      this.replicationEndpoint.stop();
       try {
-        replicationEndpoint.awaitTerminated(waitTime, TimeUnit.SECONDS);
+        this.replicationEndpoint.awaitTerminated(this.waitOnEndpointSeconds, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
-        LOG.warn("Failed termination after " + waitTime + " seconds.");
+        LOG.warn("Failed termination after " + this.waitOnEndpointSeconds + " seconds.");
       }
     }
   }
@@ -463,18 +460,17 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       worker.entryReader.interrupt();
       worker.interrupt();
     }
-    Service service = null;
     if (this.replicationEndpoint != null) {
-      service = this.replicationEndpoint.stopAsync();
+      this.replicationEndpoint.stop();
     }
     if (join) {
       for (ReplicationSourceShipper worker : workers) {
         Threads.shutdown(worker, this.sleepForRetries);
         LOG.info("ReplicationSourceWorker " + worker.getName() + " terminated");
       }
-      if (service != null) {
+      if (this.replicationEndpoint != null) {
         try {
-          service.awaitTerminated(sleepForRetries * maxRetriesMultiplier, TimeUnit.MILLISECONDS);
+          this.replicationEndpoint.awaitTerminated(sleepForRetries * maxRetriesMultiplier, TimeUnit.MILLISECONDS);
         } catch (TimeoutException te) {
           LOG.warn("Got exception while waiting for endpoint to shutdown for replication source :"
               + this.peerClusterZnode,

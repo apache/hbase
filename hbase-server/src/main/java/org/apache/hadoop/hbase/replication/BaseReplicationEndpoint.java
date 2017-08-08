@@ -24,15 +24,16 @@ import java.util.ArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.AbstractService;
+
 /**
- * A Base implementation for {@link ReplicationEndpoint}s. Users should consider extending this
- * class rather than implementing {@link ReplicationEndpoint} directly for better backwards
- * compatibility.
+ * A Base implementation for {@link ReplicationEndpoint}s. For internal use. Uses our internal
+ * Guava.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
+// This class has been made InterfaceAudience.Private in 2.0.0. It used to be
+// LimitedPrivate. See HBASE-15982.
+@InterfaceAudience.Private
 public abstract class BaseReplicationEndpoint extends AbstractService
   implements ReplicationEndpoint {
 
@@ -108,5 +109,10 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   @Override
   public boolean canReplicateToSameCluster() {
     return false;
+  }
+
+  @Override
+  public boolean isStarting() {
+    return state() == State.STARTING;
   }
 }
