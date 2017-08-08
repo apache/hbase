@@ -22,11 +22,16 @@
 
 #include <chrono>
 
+#include <folly/ExceptionWrapper.h>
+#include <folly/SocketAddress.h>
+#include <folly/io/async/AsyncSocketException.h>
+
 #include "connection/client-dispatcher.h"
 #include "connection/connection-factory.h"
 #include "connection/pipeline.h"
 #include "connection/sasl-handler.h"
 #include "connection/service.h"
+#include "exceptions/exception.h"
 
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
@@ -56,15 +61,19 @@ std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> ConnectionFactory::M
 std::shared_ptr<HBaseService> ConnectionFactory::Connect(
     std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client, const std::string &hostname,
     uint16_t port) {
-  // Yes this will block however it makes dealing with connection pool soooooo
-  // much nicer.
-  // TODO see about using shared promise for this.
-  auto pipeline = client
-                      ->connect(folly::SocketAddress(hostname, port, true),
-                                std::chrono::duration_cast<milliseconds>(connect_timeout_))
-                      .get();
-  auto dispatcher = std::make_shared<ClientDispatcher>();
-  dispatcher->setPipeline(pipeline);
-  return dispatcher;
+  try {
+    // Yes this will block however it makes dealing with connection pool soooooo
+    // much nicer.
+    // TODO see about using shared promise for this.
+    auto pipeline = client
+                        ->connect(folly::SocketAddress(hostname, port, true),
+                                  std::chrono::duration_cast<milliseconds>(connect_timeout_))
+                        .get();
+    auto dispatcher = std::make_shared<ClientDispatcher>();
+    dispatcher->setPipeline(pipeline);
+    return dispatcher;
+  } catch (const folly::AsyncSocketException &e) {
+    throw ConnectionException(folly::exception_wrapper{e});
+  }
 }
 }  // namespace hbase

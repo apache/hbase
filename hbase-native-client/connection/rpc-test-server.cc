@@ -88,6 +88,9 @@ Future<std::unique_ptr<Response>> RpcTestService::operator()(std::unique_ptr<Req
     // TODO:
   } else if (method_name == "addr") {
     // TODO:
+  } else if (method_name == "socketNotOpen") {
+    auto pb_resp_msg = std::make_shared<EmptyResponseProto>();
+    response->set_resp_msg(pb_resp_msg);
   }
 
   return folly::makeFuture<std::unique_ptr<Response>>(std::move(response));

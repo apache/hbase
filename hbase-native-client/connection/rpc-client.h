@@ -20,6 +20,7 @@
 
 #include <google/protobuf/service.h>
 
+#include <folly/ExceptionWrapper.h>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -65,6 +66,13 @@ class RpcClient {
 
  private:
   std::shared_ptr<RpcConnection> GetConnection(std::shared_ptr<ConnectionId> remote_id);
+  folly::Future<std::unique_ptr<Response>> SendRequest(std::shared_ptr<ConnectionId> remote_id,
+                                                       std::unique_ptr<Request> req);
+  template <typename EXCEPTION>
+  folly::Future<std::unique_ptr<Response>> GetFutureWithException(const EXCEPTION &e);
+
+  folly::Future<std::unique_ptr<Response>> GetFutureWithException(
+      const folly::exception_wrapper &ew);
 
  private:
   std::shared_ptr<ConnectionPool> cp_;

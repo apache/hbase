@@ -59,7 +59,7 @@ class IOException : public std::logic_error {
   IOException(const std::string& what, bool do_not_retry)
       : logic_error(what), do_not_retry_(do_not_retry) {}
 
-  IOException(const std::string& what, folly::exception_wrapper cause)
+  IOException(const std::string& what, const folly::exception_wrapper& cause)
       : logic_error(what), cause_(cause), do_not_retry_(false) {}
 
   IOException(const std::string& what, folly::exception_wrapper cause, bool do_not_retry)
@@ -67,7 +67,7 @@ class IOException : public std::logic_error {
 
   virtual ~IOException() = default;
 
-  virtual folly::exception_wrapper cause() { return cause_; }
+  virtual folly::exception_wrapper cause() const { return cause_; }
 
   bool do_not_retry() const { return do_not_retry_; }
 
@@ -113,6 +113,18 @@ class RetriesExhaustedException : public IOException {
 
  private:
   int32_t num_retries_;
+};
+
+class ConnectionException : public IOException {
+ public:
+  ConnectionException() {}
+
+  ConnectionException(const std::string& what) : IOException(what) {}
+
+  ConnectionException(const folly::exception_wrapper& cause) : IOException("", cause) {}
+
+  ConnectionException(const std::string& what, const folly::exception_wrapper& cause)
+      : IOException(what, cause) {}
 };
 
 class RemoteException : public IOException {
