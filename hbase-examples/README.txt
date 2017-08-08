@@ -28,7 +28,8 @@ Example code.
       2. If HBase server is not secure, or authentication is not enabled for the Thrift server, execute:
       {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port>}
       3. If HBase server is secure, and authentication is enabled for the Thrift server, run kinit at first, then execute:
-      {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port> true}
+      {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port> true <server-principal>}
+      <server-principal> should only be specified when the client connects to a secure cluster. It's default value is "hbase".
 
     * Ruby: hbase-examples/src/main/ruby/DemoClient.rb
       1. Modify the import path in the file to point to {$THRIFT_HOME}/lib/rb/lib.
