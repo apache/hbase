@@ -169,5 +169,4 @@ else
   echo "Building a binary tarball from the source tarball failed. see srtarball_install.log for details."
   exit 1
 fi
-
 # TODO check the layout of the binary artifact we just made.
