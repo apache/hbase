@@ -304,7 +304,7 @@ module Hbase
           end
           arg[SPLITS] = []
           File.foreach(splits_file) do |line|
-            arg[SPLITS].push(line.strip())
+            arg[SPLITS].push(line.chomp)
           end
           htd.setValue(SPLITS_FILE, arg[SPLITS_FILE])
         end
