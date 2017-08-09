@@ -138,23 +138,23 @@ When you are satisfied with your changes, follow the procedure in
 [[website_publish]]
 === Publishing the HBase Website and Documentation
 
-HBase uses the ASF's `gitpubsub` mechanism.
-. After generating the website and documentation
-artifacts using `mvn clean site site:stage`, check out the `asf-site` repository.
+HBase uses the ASF's `gitpubsub` mechanism. A Jenkins job runs the
+`dev-support/jenkins-scripts/generate-hbase-website.sh` script, which runs the
+`mvn clean site site:stage` against the `master` branch of the `hbase`
+repository and commits the built artifacts to the `asf-site` branch of the
+`hbase-site` repository. When the commit is pushed, the website is redeployed
+automatically. If the script encounters an error, an email is sent to the
+developer mailing list. You can run the script manually or examine it to see the
+steps involved.
 
-. Remove previously-generated content using the following command:
-+
-----
-rm -rf rm -rf *apidocs* *book* *.html *.pdf* css js
-----
-+
-WARNING: Do not remove the `0.94/` directory. To regenerate them, you must check out
-the 0.94 branch and run `mvn clean site site:stage` from there, and then copy the
-artifacts to the 0.94/ directory of the `asf-site` branch.
+[[website_check_links]]
+=== Checking the HBase Website for Broken Links
 
-. Copy the contents of `target/staging` to the branch.
-
-. Add and commit your changes, and submit a patch for review.
+A Jenkins job runs periodically to check HBase website for broken links, using
+the `dev-support/jenkins-scripts/check-website-links.sh` script. This script
+uses a tool called `linklint` to check for bad links and create a report. If
+broken links are found, an email is sent to the developer mailing list. You can
+run the script manually or examine it to see the steps involved.
 
 === HBase Reference Guide Style Guide and Cheat Sheet
 
