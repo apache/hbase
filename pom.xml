@@ -1342,7 +1342,6 @@
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.8</compileSource>
-    <hbase-thirdparty.version>1.0.0</hbase-thirdparty.version>
     <!-- Build dependencies -->
     <maven.min.version>3.0.4</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
