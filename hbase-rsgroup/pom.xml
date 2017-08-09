@@ -60,6 +60,11 @@
             <goals>
               <goal>compile</goal>
             </goals>
+            <configuration>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>${basedir}/../hbase-protocol/src/main/protobuf</additionalProtoPathElement>
+              </additionalProtoPathElements>
+            </configuration>
           </execution>
         </executions>
       </plugin>
