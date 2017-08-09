@@ -53,6 +53,34 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * to remote server is sent and the Procedure is suspended waiting on external
  * event to be woken again. Once the external event is triggered, Procedure
  * moves to the REGION_TRANSITION_FINISH state.
+ *
+ * <p>NOTE: {@link AssignProcedure} and {@link UnassignProcedure} should not be thought of
+ * as being asymmetric, at least currently.
+ * <ul>
+ * <li>{@link AssignProcedure} moves through all the above described states and implements methods
+ * associated with each while {@link UnassignProcedure} starts at state
+ * REGION_TRANSITION_DISPATCH and state REGION_TRANSITION_QUEUE is not supported.</li>
+ *
+ * <li>When any step in {@link AssignProcedure} fails, failure handler
+ * AssignProcedure#handleFailure(MasterProcedureEnv, RegionStateNode) re-attempts the
+ * assignment by setting the procedure state to REGION_TRANSITION_QUEUE and forces
+ * assignment to a different target server by setting {@link AssignProcedure#forceNewPlan}. When
+ * the number of attempts reach hreshold configuration 'hbase.assignment.maximum.attempts',
+ * the procedure is aborted. For {@link UnassignProcedure}, similar re-attempts are
+ * intentionally not implemented. It is a 'one shot' procedure.
+ * </li>
+ * </ul>
+ *
+ * <p>TODO: Considering it is a priority doing all we can to get make a region available as soon as possible,
+ * re-attempting with any target makes sense if specified target fails in case of
+ * {@link AssignProcedure}. For {@link UnassignProcedure}, if communication with RS fails,
+ * similar re-attempt makes little sense (what should be different from previous attempt?). Also it
+ * could be complex with current implementation of
+ * {@link RegionTransitionProcedure#execute(MasterProcedureEnv)} and {@link UnassignProcedure}.
+ * We have made a choice of keeping {@link UnassignProcedure} simple, where the procedure either
+ * succeeds or fails depending on communication with RS. As parent will have broader context, parent
+ * can better handle the failed instance of {@link UnassignProcedure}. Similar simplicity for
+ * {@link AssignProcedure} is desired and should be explored/ discussed further.
  */
 @InterfaceAudience.Private
 public abstract class RegionTransitionProcedure
