@@ -62,7 +62,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({FlakeyTests.class, LargeTests.class})
-//@Ignore // Needs to be rewritten for AMv2. Uses tricks not ordained when up on AMv2.
+@Ignore // Needs to be rewritten for AMv2. Uses tricks not ordained when up on AMv2.
 public class TestMasterFailover {
   private static final Log LOG = LogFactory.getLog(TestMasterFailover.class);
 
