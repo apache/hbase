@@ -513,7 +513,7 @@ public class MergeTableRegionsProcedure
   throws IOException {
     GetRegionInfoResponse response =
       Util.getRegionInfoResponse(env, rs.getServerName(), rs.getRegion());
-    return response.hasSplittable() && response.getSplittable();
+    return response.hasMergeable() && response.getMergeable();
   }
 
   /**
