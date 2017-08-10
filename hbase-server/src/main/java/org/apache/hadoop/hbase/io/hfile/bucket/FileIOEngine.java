@@ -102,7 +102,10 @@ public class FileIOEngine implements IOEngine {
    */
   @Override
   public int read(ByteBuffer dstBuffer, long offset) throws IOException {
-    return accessFile(readAccessor, dstBuffer, offset);
+    if (dstBuffer.remaining() != 0) {
+      return accessFile(readAccessor, dstBuffer, offset);
+    }
+    return 0;
   }
 
   /**
@@ -113,6 +116,9 @@ public class FileIOEngine implements IOEngine {
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
+    if (!srcBuffer.hasRemaining()) {
+      return;
+    }
     accessFile(writeAccessor, srcBuffer, offset);
   }
 
