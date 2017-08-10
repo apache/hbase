@@ -34,7 +34,8 @@ class MonitoredTaskImpl implements MonitoredTask {
   private long startTime;
   private long statusTime;
   private long stateTime;
-  
+  private long warnTime;
+
   private volatile String status;
   private volatile String description;
   
@@ -49,6 +50,7 @@ class MonitoredTaskImpl implements MonitoredTask {
     startTime = System.currentTimeMillis();
     statusTime = startTime;
     stateTime = startTime;
+    warnTime = startTime;
   }
 
   private static class StatusJournalEntryImpl implements StatusJournalEntry {
@@ -118,7 +120,12 @@ class MonitoredTaskImpl implements MonitoredTask {
   public long getStateTime() {
     return stateTime;
   }
-  
+
+  @Override
+  public long getWarnTime() {
+    return warnTime;
+  }
+
   @Override
   public long getCompletionTimestamp() {
     if (state == State.COMPLETE || state == State.ABORTED) {
@@ -168,6 +175,11 @@ class MonitoredTaskImpl implements MonitoredTask {
   @Override
   public void setDescription(String description) {
     this.description = description;
+  }
+
+  @Override
+  public void setWarnTime(long t) {
+    this.warnTime = t;
   }
 
   @Override

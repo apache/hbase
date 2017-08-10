@@ -46,6 +46,7 @@ public interface MonitoredTask extends Cloneable {
   State getState();
   long getStateTime();
   long getCompletionTimestamp();
+  long getWarnTime();
 
   void markComplete(String msg);
   void pause(String msg);
@@ -55,6 +56,7 @@ public interface MonitoredTask extends Cloneable {
 
   void setStatus(String status);
   void setDescription(String description);
+  void setWarnTime(final long t);
 
   List<StatusJournalEntry> getStatusJournal();
 

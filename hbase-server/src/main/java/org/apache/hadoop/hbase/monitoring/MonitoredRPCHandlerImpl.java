@@ -251,6 +251,12 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
     if (getState() != State.RUNNING) {
       return super.toString();
     }
-    return super.toString() + ", rpcMethod=" + getRPC();
+    return super.toString()
+        + ", queuetimems=" + getRPCQueueTime()
+        + ", starttimems=" + getRPCStartTime()
+        + ", clientaddress=" + clientAddress
+        + ", remoteport=" + remotePort
+        + ", packetlength=" + getRPCPacketLength()
+        + ", rpcMethod=" + getRPC();
   }
 }

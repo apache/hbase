@@ -22,7 +22,9 @@ import static org.junit.Assert.*;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -54,6 +56,8 @@ public class TestTaskMonitor {
     // If we mark its completion time back a few minutes, it should get gced
     task.expireNow();
     assertEquals(0, tm.getTasks().size());
+
+    tm.shutdown();
   }
   
   @Test
@@ -85,19 +89,23 @@ public class TestTaskMonitor {
     // Now it should be aborted 
     MonitoredTask taskFromTm = tm.getTasks().get(0);
     assertEquals(MonitoredTask.State.ABORTED, taskFromTm.getState());
+
+    tm.shutdown();
   }
   
   @Test
   public void testTaskLimit() throws Exception {
     TaskMonitor tm = new TaskMonitor();
-    for (int i = 0; i < TaskMonitor.MAX_TASKS + 10; i++) {
+    for (int i = 0; i < TaskMonitor.DEFAULT_MAX_TASKS + 10; i++) {
       tm.createStatus("task " + i);
     }
     // Make sure it was limited correctly
-    assertEquals(TaskMonitor.MAX_TASKS, tm.getTasks().size());
+    assertEquals(TaskMonitor.DEFAULT_MAX_TASKS, tm.getTasks().size());
     // Make sure we culled the earlier tasks, not later
     // (i.e. tasks 0 through 9 should have been deleted)
     assertEquals("task 10", tm.getTasks().get(0).getDescription());
+
+    tm.shutdown();
   }
 
   @Test
@@ -122,6 +130,23 @@ public class TestTaskMonitor {
     assertEquals(1, task.getStatusJournal().size());
     task.setStatus("status3");
     assertEquals("status3", task.getStatusJournal().get(1).getStatus());
+
+    tm.shutdown();
+  }
+
+  @Test
+  public void testWarnStuckTasks() throws Exception {
+    final int INTERVAL = 1000;
+    Configuration conf = new Configuration();
+    conf.setLong(TaskMonitor.RPC_WARN_TIME_KEY, INTERVAL);
+    conf.setLong(TaskMonitor.MONITOR_INTERVAL_KEY, INTERVAL);
+    final TaskMonitor tm = new TaskMonitor(conf);
+    MonitoredRPCHandler t = tm.createRPCStatus("test task");
+    long then = EnvironmentEdgeManager.currentTime();
+    t.setRPC("testMethod", new Object[0], then);
+    Thread.sleep(INTERVAL * 2);
+    assertTrue("We did not warn", t.getWarnTime() > then);
+    tm.shutdown();
   }
 
 }

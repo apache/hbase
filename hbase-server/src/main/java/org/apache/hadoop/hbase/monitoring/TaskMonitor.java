@@ -30,9 +30,12 @@ import java.util.List;
 import org.apache.commons.collections.buffer.CircularFifoBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Threads;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 
 /**
@@ -44,15 +47,37 @@ import com.google.common.collect.Lists;
 public class TaskMonitor {
   private static final Log LOG = LogFactory.getLog(TaskMonitor.class);
 
-  // Don't keep around any tasks that have completed more than
-  // 60 seconds ago
-  private static final long EXPIRATION_TIME = 60*1000;
-
-  @VisibleForTesting
-  static final int MAX_TASKS = 1000;
+  public static final String MAX_TASKS_KEY = "hbase.taskmonitor.max.tasks";
+  public static final int DEFAULT_MAX_TASKS = 1000;
+  public static final String RPC_WARN_TIME_KEY = "hbase.taskmonitor.rpc.warn.time";
+  public static final long DEFAULT_RPC_WARN_TIME = 0;
+  public static final String EXPIRATION_TIME_KEY = "hbase.taskmonitor.expiration.time";
+  public static final long DEFAULT_EXPIRATION_TIME = 60*1000;
+  public static final String MONITOR_INTERVAL_KEY = "hbase.taskmonitor.monitor.interval";
+  public static final long DEFAULT_MONITOR_INTERVAL = 10*1000;
   
   private static TaskMonitor instance;
-  private CircularFifoBuffer tasks = new CircularFifoBuffer(MAX_TASKS);
+
+  private final int maxTasks;
+  private final long rpcWarnTime;
+  private final long expirationTime;
+  private final CircularFifoBuffer tasks;
+  private final long monitorInterval;
+  private Thread monitorThread;
+
+  TaskMonitor() {
+    this(HBaseConfiguration.create());
+  }
+
+  TaskMonitor(Configuration conf) {
+    maxTasks = conf.getInt(MAX_TASKS_KEY, DEFAULT_MAX_TASKS);
+    expirationTime = conf.getLong(EXPIRATION_TIME_KEY, DEFAULT_EXPIRATION_TIME);
+    rpcWarnTime = conf.getLong(RPC_WARN_TIME_KEY, DEFAULT_RPC_WARN_TIME);
+    tasks = new CircularFifoBuffer(maxTasks);
+    monitorInterval = conf.getLong(MONITOR_INTERVAL_KEY, DEFAULT_MONITOR_INTERVAL);
+    monitorThread = new Thread(new MonitorRunnable());
+    Threads.setDaemonThreadRunning(monitorThread, "Monitor thread for TaskMonitor");
+  }
 
   /**
    * Get singleton instance.
@@ -60,7 +85,7 @@ public class TaskMonitor {
    */
   public static synchronized TaskMonitor get() {
     if (instance == null) {
-      instance = new TaskMonitor();
+      instance = new TaskMonitor(HBaseConfiguration.create());
     }
     return instance;
   }
@@ -87,6 +112,23 @@ public class TaskMonitor {
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
     tasks.add(pair);
     return proxy;
+  }
+
+  private synchronized void warnStuckTasks() {
+    if (rpcWarnTime > 0) {
+      final long now = EnvironmentEdgeManager.currentTime();
+      for (Iterator<TaskAndWeakRefPair> it = tasks.iterator();
+          it.hasNext();) {
+        TaskAndWeakRefPair pair = it.next();
+        MonitoredTask stat = pair.get();
+        if ((stat instanceof MonitoredRPCHandler) &&
+            (stat.getState() == MonitoredTaskImpl.State.RUNNING) &&
+            (now >= stat.getWarnTime() + rpcWarnTime)) {
+          LOG.warn("Task may be stuck: " + stat);
+          stat.setWarnTime(now);
+        }
+      }
+    }
   }
 
   private synchronized void purgeExpiredTasks() {
@@ -129,12 +171,11 @@ public class TaskMonitor {
 
   private boolean canPurge(MonitoredTask stat) {
     long cts = stat.getCompletionTimestamp();
-    return (cts > 0 && System.currentTimeMillis() - cts > EXPIRATION_TIME);
+    return (cts > 0 && EnvironmentEdgeManager.currentTime() - cts > expirationTime);
   }
-  
 
   public void dumpAsText(PrintWriter out) {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     
     List<MonitoredTask> tasks = getTasks();
     for (MonitoredTask task : tasks) {
@@ -151,6 +192,12 @@ public class TaskMonitor {
         out.println("Running for " + running + "s");
       }
       out.println();
+    }
+  }
+
+  public synchronized void shutdown() {
+    if (this.monitorThread != null) {
+      monitorThread.interrupt();
     }
   }
 
@@ -207,5 +254,24 @@ public class TaskMonitor {
         throws Throwable {
       return method.invoke(delegatee, args);
     }    
+  }
+
+  private class MonitorRunnable implements Runnable {
+    private boolean running = true;
+
+    @Override
+    public void run() {
+      while (running) {
+        try {
+          Thread.sleep(monitorInterval);
+          if (tasks.isFull()) {
+            purgeExpiredTasks();
+          }
+          warnStuckTasks();
+        } catch (InterruptedException e) {
+          running = false;
+        }
+      }
+    }
   }
 }
