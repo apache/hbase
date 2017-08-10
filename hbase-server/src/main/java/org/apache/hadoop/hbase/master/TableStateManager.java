@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.TableState;
 /**
  * This is a helper class used to manage table states.
  * States persisted in tableinfo and cached internally.
+ * TODO: Cache state. Cut down on meta looksups.
  */
 @InterfaceAudience.Private
 public class TableStateManager {

@@ -27,10 +27,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionOpenOperation;
@@ -148,6 +151,13 @@ public class AssignProcedure extends RegionTransitionProcedure {
     // If the region is already open we can't do much...
     if (regionNode.isInState(State.OPEN) && isServerOnline(env, regionNode)) {
       LOG.info("Assigned, not reassigning; " + this + "; " + regionNode.toShortString());
+      return false;
+    }
+    // Don't assign if table is in disabling of disbled state.
+    TableStateManager tsm = env.getMasterServices().getTableStateManager();
+    TableName tn = regionNode.getRegionInfo().getTable();
+    if (tsm.isTableState(tn, TableState.State.DISABLING, TableState.State.DISABLED)) {
+      LOG.info("Table is state=" + tsm.getTableState(tn) + ", skipping " + this);
       return false;
     }
     // If the region is SPLIT, we can't assign it. But state might be CLOSED, rather than
@@ -321,9 +331,10 @@ public class AssignProcedure extends RegionTransitionProcedure {
   }
 
   @Override
-  protected void remoteCallFailed(final MasterProcedureEnv env, final RegionStateNode regionNode,
+  protected boolean remoteCallFailed(final MasterProcedureEnv env, final RegionStateNode regionNode,
       final IOException exception) {
     handleFailure(env, regionNode);
+    return true;
   }
 
   @Override

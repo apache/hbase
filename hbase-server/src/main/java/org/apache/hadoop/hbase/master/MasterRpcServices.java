@@ -1007,7 +1007,7 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public GetProcedureResultResponse getProcedureResult(RpcController controller,
       GetProcedureResultRequest request) throws ServiceException {
-    LOG.debug("Checking to see if procedure is done procId=" + request.getProcId());
+    LOG.debug("Checking to see if procedure is done pid=" + request.getProcId());
     try {
       master.checkInitialized();
       GetProcedureResultResponse.Builder builder = GetProcedureResultResponse.newBuilder();
