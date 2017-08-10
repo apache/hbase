@@ -102,7 +102,6 @@ public class Increment extends Mutation implements Comparable<Row> {
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
     list.add(cell);
-    familyMap.put(family, list);
     return this;
   }
 
@@ -123,7 +122,6 @@ public class Increment extends Mutation implements Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, Bytes.toBytes(amount));
     list.add(kv);
-    familyMap.put(CellUtil.cloneFamily(kv), list);
     return this;
   }
 
