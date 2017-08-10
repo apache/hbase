@@ -22,8 +22,10 @@ import static org.junit.Assert.*;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -32,7 +34,7 @@ public class TestTaskMonitor {
 
   @Test
   public void testTaskMonitorBasics() {
-    TaskMonitor tm = new TaskMonitor();
+    TaskMonitor tm = new TaskMonitor(new Configuration());
     assertTrue("Task monitor should start empty",
         tm.getTasks().isEmpty());
     
@@ -55,11 +57,13 @@ public class TestTaskMonitor {
     // If we mark its completion time back a few minutes, it should get gced
     task.expireNow();
     assertEquals(0, tm.getTasks().size());
+
+    tm.shutdown();
   }
   
   @Test
   public void testTasksGetAbortedOnLeak() throws InterruptedException {
-    final TaskMonitor tm = new TaskMonitor();
+    final TaskMonitor tm = new TaskMonitor(new Configuration());
     assertTrue("Task monitor should start empty",
         tm.getTasks().isEmpty());
     
@@ -86,42 +90,58 @@ public class TestTaskMonitor {
     // Now it should be aborted 
     MonitoredTask taskFromTm = tm.getTasks().get(0);
     assertEquals(MonitoredTask.State.ABORTED, taskFromTm.getState());
+
+    tm.shutdown();
   }
   
   @Test
   public void testTaskLimit() throws Exception {
-    TaskMonitor tm = new TaskMonitor();
-    for (int i = 0; i < TaskMonitor.MAX_TASKS + 10; i++) {
+    TaskMonitor tm = new TaskMonitor(new Configuration());
+    for (int i = 0; i < TaskMonitor.DEFAULT_MAX_TASKS + 10; i++) {
       tm.createStatus("task " + i);
     }
     // Make sure it was limited correctly
-    assertEquals(TaskMonitor.MAX_TASKS, tm.getTasks().size());
+    assertEquals(TaskMonitor.DEFAULT_MAX_TASKS, tm.getTasks().size());
     // Make sure we culled the earlier tasks, not later
     // (i.e. tasks 0 through 9 should have been deleted)
     assertEquals("task 10", tm.getTasks().get(0).getDescription());
+    tm.shutdown();
   }
 
   @Test
   public void testDoNotPurgeRPCTask() throws Exception {
     int RPCTaskNums = 10;
+    TaskMonitor tm = TaskMonitor.get();
     for(int i = 0; i < RPCTaskNums; i++) {
-      TaskMonitor.get().createRPCStatus("PRCTask" + i);
+      tm.createRPCStatus("PRCTask" + i);
     }
-    for(int i = 0; i < TaskMonitor.MAX_TASKS; i++) {
-      TaskMonitor.get().createStatus("otherTask" + i);
+    for(int i = 0; i < TaskMonitor.DEFAULT_MAX_TASKS; i++) {
+      tm.createStatus("otherTask" + i);
     }
     int remainRPCTask = 0;
-    for(MonitoredTask task :TaskMonitor.get().getTasks()) {
+    for(MonitoredTask task: tm.getTasks()) {
       if(task instanceof MonitoredRPCHandler) {
         remainRPCTask++;
       }
     }
     assertEquals("RPC Tasks have been purged!", RPCTaskNums, remainRPCTask);
-
+    tm.shutdown();
   }
 
-
-
+  @Test
+  public void testWarnStuckTasks() throws Exception {
+    final int INTERVAL = 1000;
+    Configuration conf = new Configuration();
+    conf.setLong(TaskMonitor.RPC_WARN_TIME_KEY, INTERVAL);
+    conf.setLong(TaskMonitor.MONITOR_INTERVAL_KEY, INTERVAL);
+    final TaskMonitor tm = new TaskMonitor(conf);
+    MonitoredRPCHandler t = tm.createRPCStatus("test task");
+    long then = EnvironmentEdgeManager.currentTime();
+    t.setRPC("testMethod", new Object[0], then);
+    Thread.sleep(INTERVAL * 2);
+    assertTrue("We did not warn", t.getWarnTime() > then);
+    tm.shutdown();
+  }
 
 }
 
