@@ -165,13 +165,7 @@ public abstract class RegionTransitionProcedure
       RegionStateNode regionNode, TransitionCode code, long seqId) throws UnexpectedStateException;
 
   public abstract RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName serverName);
-
-  /**
-   * @return True if processing of fail is complete; the procedure will be woken from its suspend
-   * and we'll go back to running through procedure steps:
-   * otherwise if false we leave the procedure in suspended state.
-   */
-  protected abstract boolean remoteCallFailed(MasterProcedureEnv env,
+  protected abstract void remoteCallFailed(MasterProcedureEnv env,
       RegionStateNode regionNode, IOException exception);
 
   @Override
@@ -187,15 +181,12 @@ public abstract class RegionTransitionProcedure
     assert serverName.equals(regionNode.getRegionLocation());
     String msg = exception.getMessage() == null? exception.getClass().getSimpleName():
       exception.getMessage();
-    LOG.warn("Remote call failed " + this + "; " + regionNode.toShortString() +
-      "; exception=" + msg);
-    if (remoteCallFailed(env, regionNode, exception)) {
-      // NOTE: This call to wakeEvent puts this Procedure back on the scheduler.
-      // Thereafter, another Worker can be in here so DO NOT MESS WITH STATE beyond
-      // this method. Just get out of this current processing quickly.
-      env.getProcedureScheduler().wakeEvent(regionNode.getProcedureEvent());
-    }
-    // else leave the procedure in suspended state; it is waiting on another call to this callback
+    LOG.warn("Failed " + this + "; " + regionNode.toShortString() + "; exception=" + msg);
+    remoteCallFailed(env, regionNode, exception);
+    // NOTE: This call to wakeEvent puts this Procedure back on the scheduler.
+    // Thereafter, another Worker can be in here so DO NOT MESS WITH STATE beyond
+    // this method. Just get out of this current processing quickly.
+    env.getProcedureScheduler().wakeEvent(regionNode.getProcedureEvent());
   }
 
   /**
@@ -219,10 +210,9 @@ public abstract class RegionTransitionProcedure
     // from remote regionserver. Means Procedure associated ProcedureEvent is marked not 'ready'.
     env.getProcedureScheduler().suspendEvent(getRegionState(env).getProcedureEvent());
 
-    // Tricky because this the below call to addOperationToNode can fail. If it fails, we need to
-    // backtrack on stuff like the 'suspend' done above -- tricky as the 'wake' requeues us -- and
-    // ditto up in the caller; it needs to undo state changes. Inside in remoteCallFailed, it does
-    // wake to undo the above suspend.
+    // Tricky because this can fail. If it fails need to backtrack on stuff like
+    // the 'suspend' done above -- tricky as the 'wake' requeues us -- and ditto
+    // up in the caller; it needs to undo state changes.
     if (!env.getRemoteDispatcher().addOperationToNode(targetServer, this)) {
       remoteCallFailed(env, targetServer,
           new FailedRemoteDispatchException(this + " to " + targetServer));

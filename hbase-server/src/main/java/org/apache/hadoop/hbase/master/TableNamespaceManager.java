@@ -240,7 +240,7 @@ public class TableNamespaceManager {
       // Sleep some
       Threads.sleep(10);
     }
-    throw new TimeoutIOException("Procedure pid=" + procId + " is still running");
+    throw new TimeoutIOException("Procedure " + procId + " is still running");
   }
 
   /**

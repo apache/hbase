@@ -23,8 +23,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Passed as Exception by {@link ServerCrashProcedure}
- * notifying on-going RIT that server has failed. This exception is less an error-condition than
- * it is a signal to waiting procedures that they can now proceed.
+ * notifying on-going RIT that server has failed.
  */
 @InterfaceAudience.Private
 @SuppressWarnings("serial")

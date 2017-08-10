@@ -118,7 +118,7 @@ public class DisableTableProcedure
         postDisable(env, state);
         return Flow.NO_MORE_STATE;
       default:
-        throw new UnsupportedOperationException("Unhandled state=" + state);
+        throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
@@ -147,7 +147,7 @@ public class DisableTableProcedure
     }
 
     // The delete doesn't have a rollback. The execution will succeed, at some point.
-    throw new UnsupportedOperationException("Unhandled state=" + state);
+    throw new UnsupportedOperationException("unhandled state=" + state);
   }
 
   @Override

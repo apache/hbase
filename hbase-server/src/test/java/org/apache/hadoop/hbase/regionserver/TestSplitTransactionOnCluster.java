@@ -403,16 +403,12 @@ public class TestSplitTransactionOnCluster {
       for (HRegion d: daughters) {
         LOG.info("Regions after crash: " + d);
       }
-      if (daughters.size() != regions.size()) {
-        LOG.info("Daughters=" + daughters.size() + ", regions=" + regions.size());
-      }
       assertEquals(daughters.size(), regions.size());
       for (HRegion r: regions) {
-        LOG.info("Regions post crash " + r + ", contains=" + daughters.contains(r));
+        LOG.info("Regions post crash " + r);
         assertTrue("Missing region post crash " + r, daughters.contains(r));
       }
     } finally {
-      LOG.info("EXITING");
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
@@ -803,7 +799,7 @@ public class TestSplitTransactionOnCluster {
       throws IOException, InterruptedException {
     this.admin.splitRegion(hri.getRegionName());
     for (int i = 0; this.cluster.getRegions(hri.getTable()).size() <= regionCount && i < 60; i++) {
-      LOG.debug("Waiting on region " + hri.getRegionNameAsString() + " to split");
+      LOG.debug("Waiting on region to split");
       Thread.sleep(2000);
     }
 
@@ -831,12 +827,10 @@ public class TestSplitTransactionOnCluster {
     // the table region serving server.
     int metaServerIndex = cluster.getServerWithMeta();
     assertTrue(metaServerIndex == -1); // meta is on master now
-    HRegionServer metaRegionServer = cluster.getRegionServer(metaServerIndex);
+    HRegionServer metaRegionServer = cluster.getMaster();
     int tableRegionIndex = cluster.getServerWith(hri.getRegionName());
     assertTrue(tableRegionIndex != -1);
     HRegionServer tableRegionServer = cluster.getRegionServer(tableRegionIndex);
-    LOG.info("MetaRegionServer=" + metaRegionServer.getServerName() +
-      ", other=" + tableRegionServer.getServerName());
     if (metaRegionServer.getServerName().equals(tableRegionServer.getServerName())) {
       HRegionServer hrs = getOtherRegionServer(cluster, metaRegionServer);
       assertNotNull(hrs);
@@ -854,8 +848,8 @@ public class TestSplitTransactionOnCluster {
         tableRegionIndex + " and metaServerIndex=" + metaServerIndex);
       Thread.sleep(100);
     }
-    assertTrue("Region not moved off hbase:meta server, tableRegionIndex=" + tableRegionIndex,
-      tableRegionIndex != -1 && tableRegionIndex != metaServerIndex);
+    assertTrue("Region not moved off hbase:meta server", tableRegionIndex != -1
+        && tableRegionIndex != metaServerIndex);
     // Verify for sure table region is not on same server as hbase:meta
     tableRegionIndex = cluster.getServerWith(hri.getRegionName());
     assertTrue(tableRegionIndex != -1);
@@ -905,7 +899,7 @@ public class TestSplitTransactionOnCluster {
 
   private void awaitDaughters(TableName tableName, int numDaughters) throws InterruptedException {
     // Wait till regions are back on line again.
-    for (int i = 0; cluster.getRegions(tableName).size() < numDaughters && i < 60; i++) {
+    for (int i=0; cluster.getRegions(tableName).size() < numDaughters && i<60; i++) {
       LOG.info("Waiting for repair to happen");
       Thread.sleep(1000);
     }

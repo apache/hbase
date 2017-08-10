@@ -315,7 +315,7 @@ public class ProcedureExecutor<TEnvironment> {
       @Override
       public void setMaxProcId(long maxProcId) {
         assert lastProcId.get() < 0 : "expected only one call to setMaxProcId()";
-        LOG.debug("Load max pid=" + maxProcId);
+        LOG.debug("Load maxProcId=" + maxProcId);
         lastProcId.set(maxProcId);
       }
 
@@ -727,7 +727,7 @@ public class ProcedureExecutor<TEnvironment> {
            !(procedures.containsKey(oldProcId) || completed.containsKey(oldProcId)) &&
            nonceKeysToProcIdsMap.containsKey(nonceKey)) {
       if (traceEnabled) {
-        LOG.trace("Waiting for pid=" + oldProcId.longValue() + " to be submitted");
+        LOG.trace("Waiting for procId=" + oldProcId.longValue() + " to be submitted");
       }
       Threads.sleep(100);
     }
@@ -999,9 +999,9 @@ public class ProcedureExecutor<TEnvironment> {
   public void removeResult(final long procId) {
     CompletedProcedureRetainer retainer = completed.get(procId);
     if (retainer == null) {
-      assert !procedures.containsKey(procId) : "pid=" + procId + " is still running";
+      assert !procedures.containsKey(procId) : "procId=" + procId + " is still running";
       if (LOG.isDebugEnabled()) {
-        LOG.debug("pid=" + procId + " already removed by the cleaner.");
+        LOG.debug("procId=" + procId + " already removed by the cleaner.");
       }
       return;
     }
@@ -1349,7 +1349,7 @@ public class ProcedureExecutor<TEnvironment> {
       return LockState.LOCK_YIELD_WAIT;
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
-      LOG.fatal("CODE-BUG: Uncaught runtime exception for " + proc, e);
+      LOG.fatal("CODE-BUG: Uncaught runtime exception fo " + proc, e);
     }
 
     // allows to kill the executor before something is stored to the wal.
