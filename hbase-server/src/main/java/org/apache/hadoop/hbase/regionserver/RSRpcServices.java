@@ -18,10 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -119,6 +115,9 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
+import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
@@ -220,8 +219,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implements the regionserver RPC services.
@@ -3108,9 +3105,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               // Heartbeat messages occur when the time limit has been reached.
               builder.setHeartbeatMessage(timeLimitReached);
               if (timeLimitReached && rsh.needCursor) {
-                Cell readingCell = scannerContext.getPeekedCellInHeartbeat();
-                if (readingCell != null ) {
-                  builder.setCursor(ProtobufUtil.toCursor(readingCell));
+                Cell cursorCell = scannerContext.getLastPeekedCell();
+                if (cursorCell != null ) {
+                  builder.setCursor(ProtobufUtil.toCursor(cursorCell));
                 }
               }
             }

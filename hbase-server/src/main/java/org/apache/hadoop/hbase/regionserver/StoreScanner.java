@@ -48,10 +48,9 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.CompactionScanQueryMatc
 import org.apache.hadoop.hbase.regionserver.querymatcher.LegacyScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.UserScanQueryMatcher;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Scanner scans both the memstore and the Store. Coalesce KeyValue stream into List&lt;KeyValue&gt;
@@ -105,7 +104,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * KVs skipped via seeking to next row/column. TODO: estimate them?
    */
   private long kvsScanned = 0;
-  private Cell prevCell = null;
+  protected Cell prevCell = null;
 
   private final long preadMaxBytes;
   private long bytesRead;
@@ -593,7 +592,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if ((kvsScanned % cellsPerHeartbeatCheck == 0)) {
         scannerContext.updateTimeProgress();
         if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
-          scannerContext.setPeekedCellInHeartbeat(prevCell);
           return scannerContext.setScannerState(NextState.TIME_LIMIT_REACHED).hasMoreValues();
         }
       }
@@ -605,6 +603,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       int cellSize = CellUtil.estimatedSerializedSizeOf(cell);
       bytesRead += cellSize;
       prevCell = cell;
+      scannerContext.setLastPeekedCell(cell);
       topChanged = false;
       ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
       switch (qcode) {
