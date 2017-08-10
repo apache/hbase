@@ -356,7 +356,8 @@ implements ServerProcedureInterface {
    * Handle any outstanding RIT that are up against this.serverName, the crashed server.
    * Notify them of crash. Remove assign entries from the passed in <code>regions</code>
    * otherwise we have two assigns going on and they will fight over who has lock.
-   * Notify Unassigns also.
+   * Notify Unassigns. If unable to unassign because server went away, unassigns block waiting
+   * on the below callback from a ServerCrashProcedure before proceeding.
    * @param env
    * @param regions Regions that were on crashed server
    */
