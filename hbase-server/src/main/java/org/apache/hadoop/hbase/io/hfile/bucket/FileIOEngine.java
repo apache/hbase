@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -122,15 +123,18 @@ public class FileIOEngine implements IOEngine {
   @Override
   public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
       throws IOException {
+    Preconditions.checkArgument(length >= 0, "Length of read can not be less than 0.");
     ByteBuffer dstBuffer = ByteBuffer.allocate(length);
-    accessFile(readAccessor, dstBuffer, offset);
-    // The buffer created out of the fileChannel is formed by copying the data from the file
-    // Hence in this case there is no shared memory that we point to. Even if the BucketCache evicts
-    // this buffer from the file the data is already copied and there is no need to ensure that
-    // the results are not corrupted before consuming them.
-    if (dstBuffer.limit() != length) {
-      throw new RuntimeException("Only " + dstBuffer.limit() + " bytes read, " + length
-          + " expected");
+    if (length != 0) {
+      accessFile(readAccessor, dstBuffer, offset);
+      // The buffer created out of the fileChannel is formed by copying the data from the file
+      // Hence in this case there is no shared memory that we point to. Even if the BucketCache evicts
+      // this buffer from the file the data is already copied and there is no need to ensure that
+      // the results are not corrupted before consuming them.
+      if (dstBuffer.limit() != length) {
+        throw new RuntimeException("Only " + dstBuffer.limit() + " bytes read, " + length
+            + " expected");
+      }
     }
     return deserializer.deserialize(new SingleByteBuff(dstBuffer), true, MemoryType.EXCLUSIVE);
   }
@@ -143,6 +147,9 @@ public class FileIOEngine implements IOEngine {
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
+    if (!srcBuffer.hasRemaining()) {
+      return;
+    }
     accessFile(writeAccessor, srcBuffer, offset);
   }
 
