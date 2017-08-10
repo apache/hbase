@@ -36,8 +36,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class ScanWildcardColumnTracker implements ColumnTracker {
   private Cell columnCell = null;
   private int currentCount = 0;
-  private int maxVersions;
-  private int minVersions;
+  private final int maxVersions;
+  private final int minVersions;
+
   /*
    * Keeps track of the latest timestamp and type included for current column. Used to eliminate
    * duplicates.
@@ -74,7 +75,6 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   @Override
   public ScanQueryMatcher.MatchCode checkVersions(Cell cell, long timestamp, byte type,
       boolean ignoreCount) throws IOException {
-
     if (columnCell == null) {
       // first iteration.
       resetCell(cell);
@@ -143,7 +143,6 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     } else {
       return MatchCode.SEEK_NEXT_COL;
     }
-
   }
 
   @Override

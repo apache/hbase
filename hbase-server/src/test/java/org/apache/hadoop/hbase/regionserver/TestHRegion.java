@@ -123,6 +123,8 @@ import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.filter.SubstringComparator;
+import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -2632,6 +2634,68 @@ public class TestHRegion {
       Result r = region.get(get);
 
       assertTrue(r.isEmpty());
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+    }
+  }
+
+  @Test
+  public void testGetWithFilter() throws IOException, InterruptedException {
+    byte[] row1 = Bytes.toBytes("row1");
+    byte[] fam1 = Bytes.toBytes("fam1");
+    byte[] col1 = Bytes.toBytes("col1");
+    byte[] value1 = Bytes.toBytes("value1");
+    byte[] value2 = Bytes.toBytes("value2");
+
+    final int maxVersions = 3;
+    HColumnDescriptor hcd = new HColumnDescriptor(fam1);
+    hcd.setMaxVersions(maxVersions);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testFilterAndColumnTracker"));
+    htd.addFamily(hcd);
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + ".log");
+    final WAL wal = HBaseTestingUtility.createWal(TEST_UTIL.getConfiguration(), logDir, info);
+    this.region = TEST_UTIL.createLocalHRegion(info, htd, wal);
+
+    try {
+      // Put 4 version to memstore
+      long ts = 0;
+      Put put = new Put(row1, ts);
+      put.addColumn(fam1, col1, value1);
+      region.put(put);
+      put = new Put(row1, ts + 1);
+      put.addColumn(fam1, col1, Bytes.toBytes("filter1"));
+      region.put(put);
+      put = new Put(row1, ts + 2);
+      put.addColumn(fam1, col1, Bytes.toBytes("filter2"));
+      region.put(put);
+      put = new Put(row1, ts + 3);
+      put.addColumn(fam1, col1, value2);
+      region.put(put);
+
+      Get get = new Get(row1);
+      get.setMaxVersions();
+      Result res = region.get(get);
+      // Get 3 versions, the oldest version has gone from user view
+      assertEquals(maxVersions, res.size());
+
+      get.setFilter(new ValueFilter(CompareOp.EQUAL, new SubstringComparator("value")));
+      res = region.get(get);
+      // When use value filter, the oldest version should still gone from user view and it
+      // should only return one key vaule
+      assertEquals(1, res.size());
+      assertTrue(CellUtil.matchingValue(new KeyValue(row1, fam1, col1, value2), res.rawCells()[0]));
+      assertEquals(ts + 3, res.rawCells()[0].getTimestamp());
+
+      region.flush(true);
+      region.compact(true);
+      Thread.sleep(1000);
+      res = region.get(get);
+      // After flush and compact, the result should be consistent with previous result
+      assertEquals(1, res.size());
+      assertTrue(CellUtil.matchingValue(new KeyValue(row1, fam1, col1, value2), res.rawCells()[0]));
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;

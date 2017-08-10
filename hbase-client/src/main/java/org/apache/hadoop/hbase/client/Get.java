@@ -267,10 +267,12 @@ public class Get extends Query
   /**
    * Get all available versions.
    * @return this for invocation chaining
+   * @deprecated It is easy to misunderstand with column family's max versions, so use
+   *             {@link #readAllVersions()} instead.
    */
+  @Deprecated
   public Get setMaxVersions() {
-    this.maxVersions = Integer.MAX_VALUE;
-    return this;
+    return readAllVersions();
   }
 
   /**
@@ -278,12 +280,34 @@ public class Get extends Query
    * @param maxVersions maximum versions for each column
    * @throws IOException if invalid number of versions
    * @return this for invocation chaining
+   * @deprecated It is easy to misunderstand with column family's max versions, so use
+   *             {@link #readVersions(int)} instead.
    */
+  @Deprecated
   public Get setMaxVersions(int maxVersions) throws IOException {
-    if(maxVersions <= 0) {
-      throw new IOException("maxVersions must be positive");
+    return readVersions(maxVersions);
+  }
+
+  /**
+   * Get all available versions.
+   * @return this for invocation chaining
+   */
+  public Get readAllVersions() {
+    this.maxVersions = Integer.MAX_VALUE;
+    return this;
+  }
+
+  /**
+   * Get up to the specified number of versions of each column.
+   * @param versions specified number of versions for each column
+   * @throws IOException if invalid number of versions
+   * @return this for invocation chaining
+   */
+  public Get readVersions(int versions) throws IOException {
+    if (versions <= 0) {
+      throw new IOException("versions must be positive");
     }
-    this.maxVersions = maxVersions;
+    this.maxVersions = versions;
     return this;
   }
 

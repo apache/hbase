@@ -593,19 +593,42 @@ public class Scan extends Query {
   /**
    * Get all available versions.
    * @return this
+   * @deprecated It is easy to misunderstand with column family's max versions, so use
+   *             {@link #readAllVersions()} instead.
    */
+  @Deprecated
   public Scan setMaxVersions() {
-    this.maxVersions = Integer.MAX_VALUE;
-    return this;
+    return readAllVersions();
   }
 
   /**
    * Get up to the specified number of versions of each column.
    * @param maxVersions maximum versions for each column
    * @return this
+   * @deprecated It is easy to misunderstand with column family's max versions, so use
+   *             {@link #readVersions(int)} instead.
    */
+  @Deprecated
   public Scan setMaxVersions(int maxVersions) {
-    this.maxVersions = maxVersions;
+    return readVersions(maxVersions);
+  }
+
+  /**
+   * Get all available versions.
+   * @return this
+   */
+  public Scan readAllVersions() {
+    this.maxVersions = Integer.MAX_VALUE;
+    return this;
+  }
+
+  /**
+   * Get up to the specified number of versions of each column.
+   * @param versions specified number of versions for each column
+   * @return this
+   */
+  public Scan readVersions(int versions) {
+    this.maxVersions = versions;
     return this;
   }
 
