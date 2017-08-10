@@ -416,6 +416,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       if (count > maxConcurrentCallsPerServer) {
         throw new ServerTooBusyException(addr, count);
       }
+      cs.setConcurrentCallsPerServer(count);
       T connection = getConnection(remoteId);
       connection.sendRequest(call, hrc);
     } catch (Exception e) {
