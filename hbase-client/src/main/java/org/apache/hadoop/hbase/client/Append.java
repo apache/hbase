@@ -125,10 +125,10 @@ public class Append extends Mutation {
     List<Cell> list = this.familyMap.get(family);
     if (list == null) {
       list  = new ArrayList<Cell>();
+      this.familyMap.put(family, list);
     }
     // find where the new entry should be placed in the List
     list.add(cell);
-    this.familyMap.put(family, list);
     return this;
   }
 
