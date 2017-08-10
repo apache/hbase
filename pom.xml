@@ -569,6 +569,11 @@
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>${maven.dependency.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
            <artifactId>maven-javadoc-plugin</artifactId>
         </plugin>
         <plugin>
@@ -1444,6 +1449,7 @@
     <maven.bundle.version>3.3.0</maven.bundle.version>
     <maven.checkstyle.version>2.17</maven.checkstyle.version>
     <maven.compiler.version>3.6.1</maven.compiler.version>
+    <maven.dependency.version>3.0.1</maven.dependency.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.install.version>2.5.2</maven.install.version>
     <maven.jar.version>3.0.2</maven.jar.version>
@@ -1476,6 +1482,7 @@
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
     <rsgroup.test.jar>hbase-rsgroup-${project.version}-tests.jar</rsgroup.test.jar>
+    <shell-executable>bash</shell-executable>
     <surefire.version>2.19.1</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
