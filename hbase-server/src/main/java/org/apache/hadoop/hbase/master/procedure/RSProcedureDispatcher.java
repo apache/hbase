@@ -197,7 +197,7 @@ public class RSProcedureDispatcher
       }
 
       // trying to send the request elsewhere instead
-      LOG.warn(String.format("the request should be tried elsewhere instead; server=%s try=%d",
+      LOG.warn(String.format("Failed dispatch to server=%s try=%d",
                   serverName, numberOfAttemptsSoFar), e);
       return false;
     }

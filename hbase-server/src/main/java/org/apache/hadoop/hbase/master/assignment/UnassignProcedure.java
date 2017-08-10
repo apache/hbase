@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -49,18 +50,28 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 
 
 /**
- * Procedure that describe the unassignment of a single region.
- * There can only be one RegionTransitionProcedure per region running at the time,
- * since each procedure takes a lock on the region.
+ * Procedure that describes the unassignment of a single region.
+ * There can only be one RegionTransitionProcedure -- i.e. an assign or an unassign -- per region
+ * running at a time, since each procedure takes a lock on the region.
  *
  * <p>The Unassign starts by placing a "close region" request in the Remote Dispatcher
- * queue, and the procedure will then go into a "waiting state".
+ * queue, and the procedure will then go into a "waiting state" (suspend).
  * The Remote Dispatcher will batch the various requests for that server and
  * they will be sent to the RS for execution.
  * The RS will complete the open operation by calling master.reportRegionStateTransition().
- * The AM will intercept the transition report, and notify the procedure.
- * The procedure will finish the unassign by publishing its new state on meta
- * or it will retry the unassign.
+ * The AM will intercept the transition report, and notify this procedure.
+ * The procedure will wakeup and finish the unassign by publishing its new state on meta.
+ * <p>If we are unable to contact the remote regionserver whether because of ConnectException
+ * or socket timeout, we will call expire on the server we were trying to contact. We will remain
+ * in suspended state waiting for a wake up from the ServerCrashProcedure that is processing the
+ * failed server. The basic idea is that if we notice a crashed server, then we have a
+ * responsibility; i.e. we should not let go of the region until we are sure the server that was
+ * hosting has had its crash processed. If we let go of the region before then, an assign might
+ * run before the logs have been split which would make for data loss.
+ *
+ * <p>TODO: Rather than this tricky coordination between SCP and this Procedure, instead, work on
+ * returning a SCP as our subprocedure; probably needs work on the framework to do this,
+ * especially if the SCP already created.
  */
 @InterfaceAudience.Private
 public class UnassignProcedure extends RegionTransitionProcedure {
@@ -74,8 +85,6 @@ public class UnassignProcedure extends RegionTransitionProcedure {
    * The Server we will subsequently assign the region too (can be null).
    */
   protected volatile ServerName destinationServer;
-
-  protected final AtomicBoolean serverCrashed = new AtomicBoolean(false);
 
   // TODO: should this be in a reassign procedure?
   //       ...and keep unassign for 'disable' case?
@@ -161,15 +170,6 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       return false;
     }
 
-    // if the server is down, mark the operation as failed. region cannot be unassigned
-    // if server is down
-    if (serverCrashed.get() || !isServerOnline(env, regionNode)) {
-      LOG.warn("Server already down: " + this + "; " + regionNode.toShortString());
-      setFailure("source region server not online",
-          new ServerCrashException(getProcId(), regionNode.getRegionLocation()));
-      return false;
-    }
-
     // if we haven't started the operation yet, we can abort
     if (aborted.get() && regionNode.isInState(State.OPEN)) {
       setAbortFailure(getClass().getSimpleName(), "abort requested");
@@ -181,13 +181,10 @@ public class UnassignProcedure extends RegionTransitionProcedure {
 
     // Add the close region operation the the server dispatch queue.
     if (!addToRemoteDispatcher(env, regionNode.getRegionLocation())) {
-      // If addToRemoteDispatcher fails, it calls #remoteCallFailed which
-      // does all cleanup.
+      // If addToRemoteDispatcher fails, it calls the callback #remoteCallFailed.
     }
 
-    // We always return true, even if we fail dispatch because addToRemoteDispatcher
-    // failure processing sets state back to REGION_TRANSITION_QUEUE so we try again;
-    // i.e. return true to keep the Procedure running; it has been reset to startover.
+    // Return true to keep the procedure running.
     return true;
   }
 
@@ -218,13 +215,15 @@ public class UnassignProcedure extends RegionTransitionProcedure {
   }
 
   @Override
-  protected void remoteCallFailed(final MasterProcedureEnv env, final RegionStateNode regionNode,
+  protected boolean remoteCallFailed(final MasterProcedureEnv env, final RegionStateNode regionNode,
       final IOException exception) {
     // TODO: Is there on-going rpc to cleanup?
     if (exception instanceof ServerCrashException) {
       // This exception comes from ServerCrashProcedure after log splitting.
-      // It is ok to let this procedure go on to complete close now.
-      // This will release lock on this region so the subsequent assign can succeed.
+      // SCP found this region as a RIT. Its call into here says it is ok to let this procedure go
+      // on to a complete close now. This will release lock on this region so subsequent action on
+      // region can succeed; e.g. the assign that follows this unassign when a move (w/o wait on SCP
+      // the assign could run w/o logs being split so data loss).
       try {
         reportTransition(env, regionNode, TransitionCode.CLOSED, HConstants.NO_SEQNUM);
       } catch (UnexpectedStateException e) {
@@ -237,19 +236,22 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       // TODO
       // RS is aborting, we cannot offline the region since the region may need to do WAL
       // recovery. Until we see the RS expiration, we should retry.
+      // TODO: This should be suspend like the below where we call expire on server?
       LOG.info("Ignoring; waiting on ServerCrashProcedure", exception);
-      // serverCrashed.set(true);
     } else if (exception instanceof NotServingRegionException) {
-      LOG.info("IS THIS OK? ANY LOGS TO REPLAY; ACTING AS THOUGH ALL GOOD " + regionNode, exception);
+      LOG.info("IS THIS OK? ANY LOGS TO REPLAY; ACTING AS THOUGH ALL GOOD " + regionNode,
+        exception);
       setTransitionState(RegionTransitionState.REGION_TRANSITION_FINISH);
     } else {
-      // TODO: kill the server in case we get an exception we are not able to handle
-      LOG.warn("Killing server; unexpected exception; " +
-          this + "; " + regionNode.toShortString() +
-        " exception=" + exception);
+      LOG.warn("Expiring server " + this + "; " + regionNode.toShortString() +
+        ", exception=" + exception);
       env.getMasterServices().getServerManager().expireServer(regionNode.getRegionLocation());
-      serverCrashed.set(true);
+      // Return false so this procedure stays in suspended state. It will be woken up by a
+      // ServerCrashProcedure when it notices this RIT.
+      // TODO: Add a SCP as a new subprocedure that we now come to depend on.
+      return false;
     }
+    return true;
   }
 
   @Override
