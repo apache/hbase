@@ -116,6 +116,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     List<Cell> list = this.familyMap.get(family);
     if (list == null) {
       list = new ArrayList<Cell>();
+      this.familyMap.put(family, list);
     }
     return list;
   }

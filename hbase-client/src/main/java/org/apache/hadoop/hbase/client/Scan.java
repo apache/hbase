@@ -341,12 +341,12 @@ public class Scan extends Query {
     NavigableSet<byte []> set = familyMap.get(family);
     if(set == null) {
       set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+      familyMap.put(family, set);
     }
     if (qualifier == null) {
       qualifier = HConstants.EMPTY_BYTE_ARRAY;
     }
     set.add(qualifier);
-    familyMap.put(family, set);
     return this;
   }
 

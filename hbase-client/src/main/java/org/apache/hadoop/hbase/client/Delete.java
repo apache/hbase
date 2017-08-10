@@ -173,9 +173,9 @@ public class Delete extends Mutation implements Comparable<Row> {
     List<Cell> list = familyMap.get(family);
     if (list == null) {
       list = new ArrayList<Cell>();
+      familyMap.put(family, list);
     }
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 
@@ -239,12 +239,12 @@ public class Delete extends Mutation implements Comparable<Row> {
     List<Cell> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<Cell>();
+      familyMap.put(family, list);
     } else if(!list.isEmpty()) {
       list.clear();
     }
     KeyValue kv = new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamily);
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 
@@ -272,10 +272,10 @@ public class Delete extends Mutation implements Comparable<Row> {
     List<Cell> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<Cell>();
+      familyMap.put(family, list);
     }
     list.add(new KeyValue(row, family, null, timestamp,
           KeyValue.Type.DeleteFamilyVersion));
-    familyMap.put(family, list);
     return this;
   }
 
@@ -331,10 +331,10 @@ public class Delete extends Mutation implements Comparable<Row> {
     List<Cell> list = familyMap.get(family);
     if (list == null) {
       list = new ArrayList<Cell>();
+      familyMap.put(family, list);
     }
     list.add(new KeyValue(this.row, family, qualifier, timestamp,
         KeyValue.Type.DeleteColumn));
-    familyMap.put(family, list);
     return this;
   }
 
@@ -394,10 +394,10 @@ public class Delete extends Mutation implements Comparable<Row> {
     List<Cell> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<Cell>();
+      familyMap.put(family, list);
     }
     KeyValue kv = new KeyValue(this.row, family, qualifier, timestamp, KeyValue.Type.Delete);
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 

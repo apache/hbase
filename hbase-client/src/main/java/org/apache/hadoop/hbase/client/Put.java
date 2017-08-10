@@ -206,7 +206,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
-    familyMap.put(CellUtil.cloneFamily(kv), list);
     return this;
   }
 
@@ -222,7 +221,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 
@@ -237,7 +235,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 
@@ -256,7 +253,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 
@@ -292,7 +288,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, null);
     list.add(kv);
-    familyMap.put(CellUtil.cloneFamily(kv), list);
     return this;
   }
 
@@ -308,7 +303,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, null);
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 
@@ -331,7 +325,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 
