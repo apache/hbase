@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Optional;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -47,14 +49,14 @@ public interface RawScanResultConsumer {
   }
 
   /**
-   * Used to suspend or stop a scan.
+   * Used to suspend or stop a scan, or get a scan cursor if available.
    * <p>
-   * Notice that, you should only call the methods below inside onNext or onHeartbeat method. A
-   * IllegalStateException will be thrown if you call them at other places.
+   * Notice that, you should only call the {@link #suspend()} or {@link #terminate()} inside onNext
+   * or onHeartbeat method. A IllegalStateException will be thrown if you call them at other places.
    * <p>
-   * You can only call one of the methods below, i.e., call suspend or terminate(of course you are
-   * free to not call them both), and the methods are not reentrant. A IllegalStateException will be
-   * thrown if you have already called one of the methods.
+   * You can only call one of the {@link #suspend()} and {@link #terminate()} methods(of course you
+   * are free to not call them both), and the methods are not reentrant. An IllegalStateException
+   * will be thrown if you have already called one of the methods.
    */
   @InterfaceAudience.Public
   interface ScanController {
@@ -75,6 +77,12 @@ public interface RawScanResultConsumer {
      * or you want to stop the scan in onHeartbeat method because it has spent too many time.
      */
     void terminate();
+
+    /**
+     * Get the scan cursor if available.
+     * @return The scan cursor.
+     */
+    Optional<Cursor> cursor();
   }
 
   /**

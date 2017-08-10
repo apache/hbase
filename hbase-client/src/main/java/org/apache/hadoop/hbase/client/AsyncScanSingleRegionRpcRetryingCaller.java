@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -144,7 +145,9 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   private final class ScanControllerImpl implements RawScanResultConsumer.ScanController {
 
     // Make sure the methods are only called in this thread.
-    private final Thread callerThread = Thread.currentThread();
+    private final Thread callerThread;
+
+    private final Optional<Cursor> cursor;
 
     // INITIALIZED -> SUSPENDED -> DESTROYED
     // INITIALIZED -> TERMINATED -> DESTROYED
@@ -153,6 +156,12 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     private ScanControllerState state = ScanControllerState.INITIALIZED;
 
     private ScanResumerImpl resumer;
+
+    public ScanControllerImpl(ScanResponse resp) {
+      callerThread = Thread.currentThread();
+      cursor = resp.hasCursor() ? Optional.of(ProtobufUtil.toCursor(resp.getCursor()))
+          : Optional.empty();
+    }
 
     private void preCheck() {
       Preconditions.checkState(Thread.currentThread() == callerThread,
@@ -183,6 +192,11 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       ScanControllerState state = this.state;
       this.state = ScanControllerState.DESTROYED;
       return state;
+    }
+
+    @Override
+    public Optional<Cursor> cursor() {
+        return cursor;
     }
   }
 
@@ -479,7 +493,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
 
-    ScanControllerImpl scanController = new ScanControllerImpl();
+    ScanControllerImpl scanController = new ScanControllerImpl(resp);
     if (results.length > 0) {
       updateNextStartRowWhenError(results[results.length - 1]);
       consumer.onNext(results, scanController);
