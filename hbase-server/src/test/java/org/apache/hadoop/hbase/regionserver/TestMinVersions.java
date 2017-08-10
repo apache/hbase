@@ -431,24 +431,27 @@ public class TestMinVersions {
       tss.add(ts-1);
       tss.add(ts-2);
 
+      // Sholud only get T2, versions is 2, so T1 is gone from user view.
       Get g = new Get(T1);
       g.addColumn(c1,c1);
       g.setFilter(new TimestampsFilter(tss));
       g.setMaxVersions();
       Result r = region.get(g);
-      checkResult(r, c1, T2,T1);
+      checkResult(r, c1, T2);
 
+      // Sholud only get T2, versions is 2, so T1 is gone from user view.
       g = new Get(T1);
       g.addColumn(c0,c0);
       g.setFilter(new TimestampsFilter(tss));
       g.setMaxVersions();
       r = region.get(g);
-      checkResult(r, c0, T2,T1);
+      checkResult(r, c0, T2);
 
       // now flush/compact
       region.flush(true);
       region.compact(true);
 
+      // After flush/compact, the result should be consistent with previous result
       g = new Get(T1);
       g.addColumn(c1,c1);
       g.setFilter(new TimestampsFilter(tss));
@@ -456,6 +459,7 @@ public class TestMinVersions {
       r = region.get(g);
       checkResult(r, c1, T2);
 
+      // After flush/compact, the result should be consistent with previous result
       g = new Get(T1);
       g.addColumn(c0,c0);
       g.setFilter(new TimestampsFilter(tss));

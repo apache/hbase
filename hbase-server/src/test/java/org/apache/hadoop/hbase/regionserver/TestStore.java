@@ -1067,10 +1067,11 @@ public class TestStore {
   @Test
   public void testFlushBeforeCompletingScanWoFilter() throws IOException, InterruptedException {
     final AtomicBoolean timeToGoNextRow = new AtomicBoolean(false);
+    final int expectedSize = 3;
     testFlushBeforeCompletingScan(new MyListHook() {
       @Override
       public void hook(int currentSize) {
-        if (currentSize == 2) {
+        if (currentSize == expectedSize - 1) {
           try {
             flushStore(store, id++);
             timeToGoNextRow.set(true);
@@ -1084,16 +1085,17 @@ public class TestStore {
       public Filter.ReturnCode filterKeyValue(Cell v) throws IOException {
         return ReturnCode.INCLUDE;
       }
-    });
+    }, expectedSize);
   }
 
   @Test
   public void testFlushBeforeCompletingScanWithFilter() throws IOException, InterruptedException {
     final AtomicBoolean timeToGoNextRow = new AtomicBoolean(false);
+    final int expectedSize = 2;
     testFlushBeforeCompletingScan(new MyListHook() {
       @Override
       public void hook(int currentSize) {
-        if (currentSize == 2) {
+        if (currentSize == expectedSize - 1) {
           try {
             flushStore(store, id++);
             timeToGoNextRow.set(true);
@@ -1112,16 +1114,17 @@ public class TestStore {
           return ReturnCode.INCLUDE;
         }
       }
-    });
+    }, expectedSize);
   }
 
   @Test
   public void testFlushBeforeCompletingScanWithFilterHint() throws IOException, InterruptedException {
     final AtomicBoolean timeToGetHint = new AtomicBoolean(false);
+    final int expectedSize = 2;
     testFlushBeforeCompletingScan(new MyListHook() {
       @Override
       public void hook(int currentSize) {
-        if (currentSize == 2) {
+        if (currentSize == expectedSize - 1) {
           try {
             flushStore(store, id++);
             timeToGetHint.set(true);
@@ -1144,10 +1147,10 @@ public class TestStore {
       public Cell getNextCellHint(Cell currentCell) throws IOException {
         return currentCell;
       }
-    });
+    }, expectedSize);
   }
 
-  private void testFlushBeforeCompletingScan(MyListHook hook, Filter filter)
+  private void testFlushBeforeCompletingScan(MyListHook hook, Filter filter, int expectedSize)
           throws IOException, InterruptedException {
     Configuration conf = HBaseConfiguration.create();
     HColumnDescriptor hcd = new HColumnDescriptor(family);
@@ -1188,7 +1191,7 @@ public class TestStore {
           scan, null, seqId + 3)){
       // r1
       scanner.next(myList);
-      assertEquals(3, myList.size());
+      assertEquals(expectedSize, myList.size());
       for (Cell c : myList) {
         byte[] actualValue = CellUtil.cloneValue(c);
         assertTrue("expected:" + Bytes.toStringBinary(value1)

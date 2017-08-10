@@ -355,13 +355,16 @@ public abstract class ScanQueryMatcher implements ShipperListener {
       NavigableSet<byte[]> columns, ScanInfo scanInfo, long oldestUnexpiredTS, Scan userScan)
       throws IOException {
     int resultMaxVersion = scanInfo.getMaxVersions();
+    int maxVersionToCheck = resultMaxVersion;
     if (userScan != null) {
       if (userScan.isRaw()) {
         resultMaxVersion = userScan.getMaxVersions();
       } else {
         resultMaxVersion = Math.min(userScan.getMaxVersions(), scanInfo.getMaxVersions());
       }
+      maxVersionToCheck = userScan.hasFilter() ? scanInfo.getMaxVersions() : resultMaxVersion;
     }
+
     DeleteTracker deleteTracker;
     if (scanInfo.isNewVersionBehavior() && (userScan == null || !userScan.isRaw())) {
       deleteTracker = new NewVersionBehaviorTracker(columns, scanInfo.getMinVersions(),
@@ -382,11 +385,11 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     if (deleteTracker instanceof NewVersionBehaviorTracker) {
       columnTracker = (NewVersionBehaviorTracker) deleteTracker;
     } else if (columns == null || columns.size() == 0) {
-      columnTracker = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), resultMaxVersion,
+      columnTracker = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), maxVersionToCheck,
           oldestUnexpiredTS);
     } else {
       columnTracker = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(),
-          resultMaxVersion, oldestUnexpiredTS);
+        maxVersionToCheck, oldestUnexpiredTS);
     }
     return new Pair<>(deleteTracker, columnTracker);
   }
