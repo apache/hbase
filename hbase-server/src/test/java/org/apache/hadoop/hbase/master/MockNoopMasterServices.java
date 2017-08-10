@@ -447,7 +447,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
 
   @Override
   public String getRegionServerVersion(ServerName sn) {
-    return null;
+    return "0.0.0";
   }
 
   @Override
