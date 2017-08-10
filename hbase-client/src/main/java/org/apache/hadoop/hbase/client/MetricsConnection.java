@@ -71,6 +71,7 @@ public class MetricsConnection implements StatisticTrackable {
     private long responseSizeBytes = 0;
     private long startTime = 0;
     private long callTimeMs = 0;
+    private int concurrentCallsPerServer = 0;
 
     public long getRequestSizeBytes() {
       return requestSizeBytes;
@@ -102,6 +103,14 @@ public class MetricsConnection implements StatisticTrackable {
 
     public void setCallTimeMs(long callTimeMs) {
       this.callTimeMs = callTimeMs;
+    }
+
+    public int getConcurrentCallsPerServer() {
+      return concurrentCallsPerServer;
+    }
+
+    public void setConcurrentCallsPerServer(int callsPerServer) {
+      this.concurrentCallsPerServer = callsPerServer;
     }
   }
 
@@ -280,6 +289,7 @@ public class MetricsConnection implements StatisticTrackable {
   @VisibleForTesting protected final Counter metaCacheNumClearRegion;
   @VisibleForTesting protected final Counter hedgedReadOps;
   @VisibleForTesting protected final Counter hedgedReadWin;
+  @VisibleForTesting protected final Histogram concurrentCallsPerServerHist;
 
   // dynamic metrics
 
@@ -348,6 +358,8 @@ public class MetricsConnection implements StatisticTrackable {
     this.putTracker = new CallTracker(this.registry, "Mutate", "Put", scope);
     this.multiTracker = new CallTracker(this.registry, "Multi", scope);
     this.runnerStats = new RunnerStats(this.registry);
+    this.concurrentCallsPerServerHist = registry.newHistogram(this.getClass(), 
+      "concurrentCallsPerServer", scope);
 
     this.reporter = new JmxReporter(this.registry);
     this.reporter.start();
@@ -450,6 +462,10 @@ public class MetricsConnection implements StatisticTrackable {
 
   /** Report RPC context to metrics system. */
   public void updateRpc(MethodDescriptor method, Message param, CallStats stats) {
+    int callsPerServer = stats.getConcurrentCallsPerServer();
+    if (callsPerServer > 0) {
+      concurrentCallsPerServerHist.update(callsPerServer);
+    }
     // this implementation is tied directly to protobuf implementation details. would be better
     // if we could dispatch based on something static, ie, request Message type.
     if (method.getService() == ClientService.getDescriptor()) {
