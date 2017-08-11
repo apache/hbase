@@ -170,10 +170,18 @@ public class AccessControlLists {
           Bytes.toString(key)+": "+Bytes.toStringBinary(value)
       );
     }
-    try {
-      t.put(p);
-    } finally {
-      t.close();
+    if (t == null) {
+      try (Connection connection = ConnectionFactory.createConnection(conf)) {
+        try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+          table.put(p);
+        }
+      }
+    } else {
+      try {
+        t.put(p);
+      } finally {
+        t.close();
+      }
     }
   }
 
@@ -193,13 +201,40 @@ public class AccessControlLists {
    */
   static void removeUserPermission(Configuration conf, UserPermission userPerm, Table t)
       throws IOException {
-    Delete d = new Delete(userPermissionRowKey(userPerm));
-    byte[] key = userPermissionKey(userPerm);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing permission "+ userPerm.toString());
+    if (null == userPerm.getActions()) {
+      removePermissionRecord(conf, userPerm, t);
+    } else {
+      // Get all the global user permissions from the acl table
+      List<UserPermission> permsList = getUserPermissions(conf, userPermissionRowKey(userPerm));
+      List<Permission.Action> remainingActions = new ArrayList<>();
+      List<Permission.Action> dropActions = Arrays.asList(userPerm.getActions());
+      for (UserPermission perm : permsList) {
+        // Find the user and remove only the requested permissions
+        if (Bytes.toString(perm.getUser()).equals(Bytes.toString(userPerm.getUser()))) {
+          for (Permission.Action oldAction : perm.getActions()) {
+            if (!dropActions.contains(oldAction)) {
+              remainingActions.add(oldAction);
+            }
+          }
+          if (!remainingActions.isEmpty()) {
+            perm.setActions(remainingActions.toArray(new Permission.Action[remainingActions.size()]));
+            addUserPermission(conf, perm, t);
+          } else {
+            removePermissionRecord(conf, userPerm, t);
+          }
+          break;
+        }
+      }
     }
-    d.addColumns(ACL_LIST_FAMILY, key);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removed permission "+ userPerm.toString());
+    }
+  }
+
+  private static void removePermissionRecord(Configuration conf, UserPermission userPerm, Table t)
+      throws IOException {
+    Delete d = new Delete(userPermissionRowKey(userPerm));
+    d.addColumns(ACL_LIST_FAMILY, userPermissionKey(userPerm));
     if (t == null) {
       try (Connection connection = ConnectionFactory.createConnection(conf)) {
         try (Table table = connection.getTable(ACL_TABLE_NAME)) {
