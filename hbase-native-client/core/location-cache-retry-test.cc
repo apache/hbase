@@ -45,7 +45,7 @@ using hbase::Put;
 using hbase::Table;
 using hbase::TestUtil;
 
-using std::chrono_literals::operator""s;
+using std::chrono_literals::operator"" s;
 
 class LocationCacheRetryTest : public ::testing::Test {
  public:

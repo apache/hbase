@@ -75,7 +75,6 @@ TEST_F(FilterTest, GetWithColumnPrefixFilter) {
   // Create a client
   hbase::Client client(*(FilterTest::test_util_->conf()));
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
 
   table->Put(Put{"row1"}.AddColumn("d", "column_1", "value1"));
   table->Put(Put{"row1"}.AddColumn("d", "column_2", "value2"));
@@ -122,7 +121,6 @@ TEST_F(FilterTest, GetWithQualifierFilter) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
 
   table->Put(Put{"row1"}.AddColumn("d", "a", "value1"));
   table->Put(Put{"row1"}.AddColumn("d", "b", "value2"));
