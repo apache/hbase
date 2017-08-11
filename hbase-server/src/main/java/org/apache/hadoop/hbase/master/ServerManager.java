@@ -1223,6 +1223,13 @@ public class ServerManager {
     flushedSequenceIdByRegion.remove(encodedName);
   }
 
+  @VisibleForTesting
+  public boolean isRegionInServerManagerStates(final HRegionInfo hri) {
+    final byte[] encodedName = hri.getEncodedNameAsBytes();
+    return (storeFlushedSequenceIdsByRegion.containsKey(encodedName)
+        || flushedSequenceIdByRegion.containsKey(encodedName));
+  }
+
   /**
    * Called by delete table and similar to notify the ServerManager that a region was removed.
    */

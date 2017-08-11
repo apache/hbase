@@ -858,6 +858,12 @@ public class RegionStates {
     }
   }
 
+  @VisibleForTesting
+  public boolean isRegionInRegionStates(final HRegionInfo hri) {
+    return (getRegionState(hri) != null || isRegionOnline(hri)) || isRegionInTransition(hri)
+        || isRegionInState(hri, State.OFFLINE, State.CLOSED);
+     }
+
   /**
    * Checking if a region was assigned to a server which is not online now.
    * If so, we should hold re-assign this region till SSH has split its wals.
