@@ -88,6 +88,36 @@ std::shared_ptr<RpcClient> CreateRpcClient(std::shared_ptr<Configuration> conf,
 }
 
 /**
+* test ping
+*/
+TEST_F(RpcTest, Ping) {
+  auto conf = CreateConf();
+  auto server = CreateRpcServer();
+  auto server_addr = GetRpcServerAddress(server);
+  auto client = CreateRpcClient(conf);
+
+  auto method = "ping";
+  auto request = std::make_unique<Request>(std::make_shared<EmptyRequestProto>(),
+                                           std::make_shared<EmptyResponseProto>(), method);
+
+  /* sending out request */
+  client
+      ->AsyncCall(server_addr->getAddressStr(), server_addr->getPort(), std::move(request),
+                  hbase::security::User::defaultUser())
+      .then([&](std::unique_ptr<Response> response) {
+        auto pb_resp = std::static_pointer_cast<EmptyResponseProto>(response->resp_msg());
+        EXPECT_TRUE(pb_resp != nullptr);
+        VLOG(1) << folly::sformat(FLAGS_result_format, method, "");
+      })
+      .onError([&](const folly::exception_wrapper& ew) {
+        FAIL() << folly::sformat(FLAGS_fail_format, method);
+      });
+
+  server->stop();
+  server->join();
+}
+
+/**
  * test echo
  */
 TEST_F(RpcTest, Echo) {
