@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -2380,28 +2381,30 @@ public class TestAccessController extends SecureTestUtil {
     // Grant table READ permissions to testGlobalGrantRevoke.
     String userName = testGlobalGrantRevoke.getShortName();
     try {
-      grantGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection,
-          userName, Permission.Action.READ);
+      grantGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+        Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.grant. ", e);
     }
     try {
       // Now testGlobalGrantRevoke should be able to read also
       verifyAllowed(getAction, testGlobalGrantRevoke);
-
-      // Revoke table READ permission to testGlobalGrantRevoke.
-      try {
-        revokeGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection,
-          userName, Permission.Action.READ);
-      } catch (Throwable e) {
-        LOG.error("error during call of AccessControlClient.revoke ", e);
-      }
-
-      // Now testGlobalGrantRevoke shouldn't be able read
-      verifyDenied(getAction, testGlobalGrantRevoke);
-    } finally {
+    } catch (Exception e) {
       revokeGlobal(TEST_UTIL, userName, Permission.Action.READ);
+      throw e;
     }
+
+    // Revoke table READ permission to testGlobalGrantRevoke.
+    try {
+      revokeGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+        Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke ", e);
+    }
+
+    // Now testGlobalGrantRevoke shouldn't be able read
+    verifyDenied(getAction, testGlobalGrantRevoke);
+
   }
 
   @Test(timeout = 180000)
@@ -2546,28 +2549,29 @@ public class TestAccessController extends SecureTestUtil {
     String namespace = TEST_TABLE.getNamespaceAsString();
     // Grant namespace READ to testNS, this should supersede any table permissions
     try {
-      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
-        namespace, Permission.Action.READ);
+      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName, namespace,
+        Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.grant. ", e);
     }
     try {
       // Now testNS should be able to read also
       verifyAllowed(getAction, testNS);
-
-      // Revoke namespace READ to testNS, this should supersede any table permissions
-      try {
-        revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
-          namespace, Permission.Action.READ);
-      } catch (Throwable e) {
-        LOG.error("error during call of AccessControlClient.revoke ", e);
-      }
-
-      // Now testNS shouldn't be able read
-      verifyDenied(getAction, testNS);
-    } finally {
+    } catch (Exception e) {
       revokeFromNamespace(TEST_UTIL, userName, namespace, Permission.Action.READ);
+      throw e;
     }
+
+    // Revoke namespace READ to testNS, this should supersede any table permissions
+    try {
+      revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+        namespace, Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke ", e);
+    }
+
+    // Now testNS shouldn't be able read
+    verifyDenied(getAction, testNS);
   }
 
 
@@ -2924,5 +2928,41 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(replicateLogEntriesAction, SUPERUSER, USER_ADMIN, USER_GROUP_WRITE);
     verifyDenied(replicateLogEntriesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER,
       USER_GROUP_READ, USER_GROUP_ADMIN, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testAccessControlRevokeOnlyFewPermission() throws Throwable {
+    TableName tname = TableName.valueOf("revoke");
+    try {
+      TEST_UTIL.createTable(tname, TEST_FAMILY);
+      User testUserPerms = User.createUserForTesting(conf, "revokePerms", new String[0]);
+      Permission.Action[] actions = { Action.READ, Action.WRITE };
+      AccessControlClient.grant(TEST_UTIL.getConnection(), tname, testUserPerms.getShortName(),
+        null, null, actions);
+
+      List<UserPermission> userPermissions = AccessControlClient
+          .getUserPermissions(TEST_UTIL.getConnection(), tname.getNameAsString());
+      assertEquals(2, userPermissions.size());
+
+      AccessControlClient.revoke(TEST_UTIL.getConnection(), tname, testUserPerms.getShortName(),
+        null, null, Action.WRITE);
+
+      userPermissions = AccessControlClient.getUserPermissions(TEST_UTIL.getConnection(),
+        tname.getNameAsString());
+      assertEquals(2, userPermissions.size());
+
+      Permission.Action[] expectedAction = { Action.READ };
+      boolean userFound = false;
+      for (UserPermission p : userPermissions) {
+        if (testUserPerms.getShortName().equals(Bytes.toString(p.getUser()))) {
+          assertArrayEquals(expectedAction, p.getActions());
+          userFound = true;
+          break;
+        }
+      }
+      assertTrue(userFound);
+    } finally {
+      TEST_UTIL.deleteTable(tname);
+    }
   }
 }

@@ -112,6 +112,12 @@ public class Permission extends VersionedWritable {
     return false;
   }
 
+  public void setActions(Action[] assigned) {
+    if (assigned != null && assigned.length > 0) {
+      actions = Arrays.copyOf(assigned, assigned.length);
+    }
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (!(obj instanceof Permission)) {
