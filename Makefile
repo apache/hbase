@@ -38,7 +38,7 @@ LINKFLAG := -shared
 
 #define list of source files and object files
 ALLSRC := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
-EXCLUDE_SRC := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*-test.cc)) core/simple-client.cc
+EXCLUDE_SRC := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*-test.cc)) core/simple-client.cc core/load-client.cc
 SRC := $(filter-out $(EXCLUDE_SRC), $(ALLSRC))
 PROTOSRC := $(patsubst %.proto, $(addprefix $(BUILD_PATH)/,%.pb.cc),$(wildcard if/*.proto))
 PROTOHDR := $(patsubst %.proto, $(addprefix $(BUILD_PATH)/,%.pb.h),$(wildcard if/*.proto))

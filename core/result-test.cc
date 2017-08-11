@@ -30,6 +30,7 @@
 using hbase::Cell;
 using hbase::CellType;
 using hbase::Result;
+using std::experimental::nullopt;
 
 void PopulateCells(std::vector<std::shared_ptr<Cell> > &cells) {
   // Populate some Results
@@ -111,7 +112,7 @@ TEST(Result, FilledResult) {
   // Value will be nullptr as no such family and qualifier is present
   ASSERT_FALSE(result.Value("family-4", "qualifier"));
   // Value will be present as family and qualifier is present
-  ASSERT_TRUE(result.Value("family-4", "column-4"));
+  ASSERT_TRUE(result.Value("family-4", "column-4") != nullopt);
   // Value should be present and match.
   EXPECT_EQ(latest_cell->Value(), (*result.ColumnLatestCell("family-4", "column-4")).Value());
   EXPECT_EQ("value-5", (*result.ColumnLatestCell("family-5", "column-5")).Value());

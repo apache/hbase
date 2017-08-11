@@ -304,7 +304,6 @@ void runTest(std::shared_ptr<AsyncRegionLocatorBase> region_locator, std::string
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
 
   table->Put(Put{"test2"}.AddColumn("d", "2", "value2"));
   table->Put(Put{"test2"}.AddColumn("d", "extra", "value for extra"));

@@ -42,6 +42,7 @@ using hbase::RetriesExhaustedException;
 using hbase::Put;
 using hbase::Table;
 using hbase::TestUtil;
+using std::experimental::nullopt;
 
 class ClientTest : public ::testing::Test {
  public:
@@ -134,7 +135,7 @@ TEST_F(ClientTest, Append) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
   std::string val1 = "a";
   auto result = table->Append(hbase::Append{row}.Add("d", "1", val1));
 
@@ -164,7 +165,7 @@ TEST_F(ClientTest, PutGetDelete) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
 
   // Perform Puts
   std::string valExtra = "value for extra";
@@ -201,7 +202,7 @@ TEST_F(ClientTest, PutGetDelete) {
   result = table->Get(get);
   ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
   ASSERT_FALSE(result->Value("d", "1")) << "Column 1 should be gone";
-  ASSERT_TRUE(result->Value("d", "extra")) << "Column extra should have value";
+  ASSERT_TRUE(result->Value("d", "extra") != nullopt) << "Column extra should have value";
   EXPECT_EQ(valExt, *(result->Value("d", "ext"))) << "Column ext should have value";
 
   // delete all cells from "extra" column
@@ -234,7 +235,7 @@ TEST_F(ClientTest, Increment) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
   int64_t incr1 = 1235;
   auto result = table->Increment(hbase::Increment{row}.AddColumn("d", "1", incr1));
   EXPECT_EQ(row, result->Row());
@@ -262,7 +263,7 @@ TEST_F(ClientTest, CheckAndPut) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
 
   // Perform Puts
   table->Put(Put{row}.AddColumn("d", "1", "value1"));
@@ -291,7 +292,7 @@ TEST_F(ClientTest, CheckAndDelete) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
 
   auto val1 = "value1";
 
@@ -321,7 +322,7 @@ TEST_F(ClientTest, PutGet) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
 
   // Perform Puts
   table->Put(Put{"test1"}.AddColumn("d", "1", "value1"));
@@ -355,7 +356,7 @@ TEST_F(ClientTest, GetForNonExistentTable) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
 
   // Perform the Get
   try {
@@ -387,7 +388,7 @@ TEST_F(ClientTest, GetForNonExistentRow) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
 
   // Perform the Get
   auto result = table->Get(get);
@@ -410,7 +411,7 @@ TEST_F(ClientTest, PutsWithTimestamp) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
 
   int64_t ts = 42;
   // Perform Puts
@@ -446,7 +447,7 @@ void PerformPuts(uint64_t num_rows, std::shared_ptr<hbase::Client> client,
                  const std::string &table_name) {
   auto tn = folly::to<hbase::pb::TableName>(table_name);
   auto table = client->Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
   // Perform Puts
   for (uint64_t i = 0; i < num_rows; i++) {
     table->Put(Put{"test" + std::to_string(i)}.AddColumn("d", std::to_string(i),
@@ -501,7 +502,7 @@ TEST_F(ClientTest, MultiGets) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
 
   std::vector<hbase::Get> gets;
   MakeGets(num_rows, "test", gets);
@@ -534,7 +535,7 @@ TEST_F(ClientTest, MultiGetsWithRegionSplits) {
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  ASSERT_TRUE(table != nullptr) << "Unable to get connection to Table.";
 
   std::vector<hbase::Get> gets;
   MakeGets(num_rows, "test", gets);

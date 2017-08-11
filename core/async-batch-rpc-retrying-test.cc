@@ -296,7 +296,6 @@ void runMultiTest(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
-  ASSERT_TRUE(table) << "Unable to get connection to Table.";
 
   for (uint64_t i = 0; i < num_rows; i++) {
     table->Put(Put{"test" + std::to_string(i)}.AddColumn("d", std::to_string(i),
