@@ -244,6 +244,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
   String TOTAL_REQUEST_COUNT_DESC =
       "Total number of requests this RegionServer has answered.";
+  String TOTAL_ROW_ACTION_REQUEST_COUNT = "totalRowActionRequestCount";
+  String TOTAL_ROW_ACTION_REQUEST_COUNT_DESC =
+      "Total number of region requests this RegionServer has answered, count by row-level action";
   String READ_REQUEST_COUNT = "readRequestCount";
   String READ_REQUEST_COUNT_DESC =
       "Number of read requests this region server has answered.";
