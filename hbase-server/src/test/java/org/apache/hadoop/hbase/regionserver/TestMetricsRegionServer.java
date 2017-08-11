@@ -72,6 +72,10 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("memstoreSize", 1025, serverSource);
     HELPER.assertGauge("storeFileSize", 1900, serverSource);
     HELPER.assertCounter("totalRequestCount", 899, serverSource);
+    HELPER.assertCounter("totalRowActionRequestCount",
+      HELPER.getCounter("readRequestCount", serverSource)
+          + HELPER.getCounter("writeRequestCount", serverSource),
+      serverSource);
     HELPER.assertCounter("readRequestCount", 997, serverSource);
     HELPER.assertCounter("filteredReadRequestCount", 1997, serverSource);
     HELPER.assertCounter("writeRequestCount", 707, serverSource);

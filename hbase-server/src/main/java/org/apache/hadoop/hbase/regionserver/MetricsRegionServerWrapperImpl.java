@@ -219,6 +219,11 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getTotalRowActionRequestCount() {
+    return regionServer.rpcServices.requestRowActionCount.sum();
+  }
+
+  @Override
   public int getSplitQueueSize() {
     if (this.regionServer.compactSplitThread == null) {
       return 0;
