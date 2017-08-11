@@ -1718,11 +1718,6 @@
         <version>${metrics-core.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.hbase.thirdparty</groupId>
-        <artifactId>hbase-shaded-miscellaneous</artifactId>
-        <version>${hbase-thirdparty.version}</version>
-      </dependency>
-      <dependency>
         <groupId>commons-collections</groupId>
         <artifactId>commons-collections</artifactId>
         <version>${collections.version}</version>
