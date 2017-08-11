@@ -148,9 +148,9 @@ void AsyncSingleRequestRpcRetryingCaller<RESP>::OnError(
    * establishment time (see ConnectionFactory::Connect()), otherwise, the IOThreadPool thread
    * just hangs because it deadlocks itself.
    */
-  conn_->retry_executor()->add([&]() {
+  conn_->retry_executor()->add([=]() {
     retry_timer_->scheduleTimeoutFn(
-        [this]() { conn_->cpu_executor()->add([&]() { LocateThenCall(); }); },
+        [=]() { conn_->cpu_executor()->add([&]() { LocateThenCall(); }); },
         std::chrono::milliseconds(TimeUtil::ToMillis(delay_ns)));
   });
 }

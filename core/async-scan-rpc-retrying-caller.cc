@@ -406,6 +406,7 @@ void AsyncScanRpcRetryingCaller::Call() {
       ->AsyncCall(region_location_->server_name().host_name(),
                   region_location_->server_name().port(), std::move(req),
                   security::User::defaultUser(), "ClientService")
+      .via(conn_->cpu_executor().get())
       .then([self, this](const std::unique_ptr<Response>& resp) {
         auto scan_resp = std::static_pointer_cast<pb::ScanResponse>(resp->resp_msg());
         return OnComplete(controller_, scan_resp, resp->cell_scanner());
