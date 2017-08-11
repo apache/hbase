@@ -68,6 +68,9 @@ Future<std::unique_ptr<Response>> RpcTestService::operator()(std::unique_ptr<Req
   if (method_name == "ping") {
     auto pb_resp_msg = std::make_shared<EmptyResponseProto>();
     response->set_resp_msg(pb_resp_msg);
+    VLOG(1) << "RPC server:"
+            << " ping called.";
+
   } else if (method_name == "echo") {
     auto pb_resp_msg = std::make_shared<EchoResponseProto>();
     /* get msg from client */
