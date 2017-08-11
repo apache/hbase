@@ -256,7 +256,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
   // Request counter. (Includes requests that are not serviced by regions.)
+  // Count only once for requests with multiple actions like multi/caching-scan/replayBatch
   final LongAdder requestCount = new LongAdder();
+
+  // Request counter. (Excludes requests that are not serviced by regions.)
+  // Count rows for requests with multiple actions like multi/caching-scan/replayBatch
+  final LongAdder requestRowActionCount = new LongAdder();
 
   // Request counter for rpc get
   final LongAdder rpcGetRequestCount = new LongAdder();
@@ -1091,7 +1096,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           it.remove();
         }
       }
-      requestCount.add(mutations.size());
+      requestCount.increment();
+      requestRowActionCount.add(mutations.size());
       if (!region.getRegionInfo().isMetaTable()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
@@ -2393,6 +2399,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
+      requestRowActionCount.increment();
       rpcGetRequestCount.increment();
       Region region = getRegion(request.getRegion());
 
@@ -2549,11 +2556,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     RegionScannersCloseCallBack closeCallBack = null;
     RpcCallContext context = RpcServer.getCurrentCall();
     this.rpcMultiRequestCount.increment();
+    this.requestCount.increment();
     Map<RegionSpecifier, ClientProtos.RegionLoadStats> regionStats = new HashMap<>(request
       .getRegionActionCount());
     ActivePolicyEnforcement spaceQuotaEnforcement = getSpaceQuotaManager().getActiveEnforcements();
     for (RegionAction regionAction : request.getRegionActionList()) {
-      this.requestCount.add(regionAction.getActionCount());
+      this.requestRowActionCount.add(regionAction.getActionCount());
       OperationQuota quota;
       Region region;
       regionActionResultBuilder.clear();
@@ -2687,6 +2695,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
+      requestRowActionCount.increment();
       rpcMutateRequestCount.increment();
       Region region = getRegion(request.getRegion());
       MutateResponse.Builder builder = MutateResponse.newBuilder();
@@ -3133,6 +3142,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
       region.updateReadRequestsCount(numOfResults);
+      requestRowActionCount.add(numOfResults);
       long end = EnvironmentEdgeManager.currentTime();
       long responseCellSize = context != null ? context.getResponseCellSize() : 0;
       region.getMetrics().updateScanTime(end - before);

@@ -224,6 +224,21 @@ public class TestRegionServerMetrics {
     }
   }
 
+  public void doScan(int n, boolean caching) throws IOException {
+    Scan scan = new Scan();
+    if (caching) {
+      scan.setCaching(n);
+    } else {
+      scan.setCaching(1);
+    }
+    ResultScanner scanner = table.getScanner(scan);
+    for (int i = 0; i < n; i++) {
+      Result res = scanner.next();
+      LOG.debug(
+        "Result row: " + Bytes.toString(res.getRow()) + ", value: " + res.getValue(cf, qualifier));
+    }
+  }
+
   @Test
   public void testRegionCount() throws Exception {
     metricsHelper.assertGauge("regionCount", 1, serverSource);
@@ -242,6 +257,7 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     long requests = metricsHelper.getCounter("totalRequestCount", serverSource);
+    long rowActionRequests = metricsHelper.getCounter("totalRowActionRequestCount", serverSource);
     long readRequests = metricsHelper.getCounter("readRequestCount", serverSource);
     long writeRequests = metricsHelper.getCounter("writeRequestCount", serverSource);
 
@@ -249,6 +265,7 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertCounter("totalRequestCount", requests + 30);
+    assertCounter("totalRowActionRequestCount", rowActionRequests + 30);
     assertCounter("readRequestCount", readRequests);
     assertCounter("writeRequestCount", writeRequests + 30);
 
@@ -256,6 +273,7 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertCounter("totalRequestCount", requests + 40);
+    assertCounter("totalRowActionRequestCount", rowActionRequests + 40);
     assertCounter("readRequestCount", readRequests + 10);
     assertCounter("writeRequestCount", writeRequests + 30);
 
@@ -265,16 +283,34 @@ public class TestRegionServerMetrics {
     doNGets(10, true);  // true = batch
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 50);
+    assertCounter("totalRequestCount", requests + 41);
+    assertCounter("totalRowActionRequestCount", rowActionRequests + 50);
     assertCounter("readRequestCount", readRequests + 20);
     assertCounter("writeRequestCount", writeRequests + 30);
 
     doNPuts(30, true);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertCounter("totalRequestCount", requests + 80);
+    assertCounter("totalRequestCount", requests + 42);
+    assertCounter("totalRowActionRequestCount", rowActionRequests + 80);
     assertCounter("readRequestCount", readRequests + 20);
     assertCounter("writeRequestCount", writeRequests + 60);
+
+    doScan(10, false); // test after batch put so we have enough lines
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    assertCounter("totalRequestCount", requests + 52);
+    assertCounter("totalRowActionRequestCount", rowActionRequests + 90);
+    assertCounter("readRequestCount", readRequests + 30);
+    assertCounter("writeRequestCount", writeRequests + 60);
+    numScanNext += 10;
+
+    doScan(10, true); // true = caching
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    assertCounter("totalRequestCount", requests + 53);
+    assertCounter("totalRowActionRequestCount", rowActionRequests + 100);
+    assertCounter("readRequestCount", readRequests + 40);
+    assertCounter("writeRequestCount", writeRequests + 60);
+    numScanNext += 1;
   }
 
   @Test
