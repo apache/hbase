@@ -354,6 +354,8 @@ public class MetricsRegionServerSourceImpl
           .addGauge(Interns.info(AVERAGE_REGION_SIZE, AVERAGE_REGION_SIZE_DESC), rsWrap.getAverageRegionSize())
           .addCounter(Interns.info(TOTAL_REQUEST_COUNT, TOTAL_REQUEST_COUNT_DESC),
               rsWrap.getTotalRequestCount())
+          .addCounter(Interns.info(TOTAL_ROW_ACTION_REQUEST_COUNT, TOTAL_ROW_ACTION_REQUEST_COUNT_DESC),
+              rsWrap.getTotalRowActionRequestCount())
           .addCounter(Interns.info(READ_REQUEST_COUNT, READ_REQUEST_COUNT_DESC),
               rsWrap.getReadRequestsCount())
           .addCounter(Interns.info(WRITE_REQUEST_COUNT, WRITE_REQUEST_COUNT_DESC),

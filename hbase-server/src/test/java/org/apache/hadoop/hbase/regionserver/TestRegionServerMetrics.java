@@ -124,6 +124,7 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     long requests = metricsHelper.getCounter("totalRequestCount", serverSource);
+    long rowActionRequests = metricsHelper.getCounter("totalRowActionRequestCount", serverSource);
     long readRequests = metricsHelper.getCounter("readRequestCount", serverSource);
     long writeRequests = metricsHelper.getCounter("writeRequestCount", serverSource);
 
@@ -133,6 +134,7 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("totalRequestCount", requests + 30, serverSource);
+    metricsHelper.assertCounter("totalRowActionRequestCount", rowActionRequests + 30, serverSource);
     metricsHelper.assertCounter("readRequestCount", readRequests, serverSource);
     metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
@@ -143,6 +145,7 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("totalRequestCount", requests + 40, serverSource);
+    metricsHelper.assertCounter("totalRowActionRequestCount", rowActionRequests + 40, serverSource);
     metricsHelper.assertCounter("readRequestCount", readRequests + 10, serverSource);
     metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
@@ -170,25 +173,57 @@ public class TestRegionServerMetrics {
     // By default, master doesn't host meta now.
     // Adding some meta related requests
     requests += 1;
+    rowActionRequests += 1;
     readRequests ++;
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    metricsHelper.assertCounter("totalRequestCount", requests + 50, serverSource);
+    metricsHelper.assertCounter("totalRequestCount", requests + 41, serverSource);
+    metricsHelper.assertCounter("totalRowActionRequestCount", rowActionRequests + 50, serverSource);
     metricsHelper.assertCounter("readRequestCount", readRequests + 20, serverSource);
     metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
     List<Put> puts = new ArrayList<>();
     for (int i=0; i< 30; i++) {
-      puts.add(p);
+      // put multiple lines for latter scan
+      Put put = new Put(Bytes.toBytes("" + i + "row")).addColumn(cfName, qualifier, initValue);
+      puts.add(put);
     }
     table.put(puts);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    metricsHelper.assertCounter("totalRequestCount", requests + 80, serverSource);
+    metricsHelper.assertCounter("totalRequestCount", requests + 42, serverSource);
+    metricsHelper.assertCounter("totalRowActionRequestCount", rowActionRequests + 80, serverSource);
     metricsHelper.assertCounter("readRequestCount", readRequests + 20, serverSource);
     metricsHelper.assertCounter("writeRequestCount", writeRequests + 60, serverSource);
 
+    doScan(table, 10, false);
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    metricsHelper.assertCounter("totalRequestCount", requests + 52, serverSource);
+    metricsHelper.assertCounter("totalRowActionRequestCount", rowActionRequests + 90, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests + 30, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 60, serverSource);
+
+    doScan(table, 10, true);
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    metricsHelper.assertCounter("totalRequestCount", requests + 53, serverSource);
+    metricsHelper.assertCounter("totalRowActionRequestCount", rowActionRequests + 100, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests + 40, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 60, serverSource);
+
     table.close();
+  }
+
+  public void doScan(Table table, int n, boolean caching) throws IOException {
+    Scan scan = new Scan();
+    if (caching) {
+      scan.setCaching(n);
+    } else {
+      scan.setCaching(1);
+    }
+    ResultScanner scanner = table.getScanner(scan);
+    for (int i = 0; i < n; i++) {
+      scanner.next();
+    }
   }
 
   @Test

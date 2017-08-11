@@ -367,4 +367,6 @@ public interface MetricsRegionServerWrapper {
   long getDeleteFamilyBloomHitCount();
 
   long getTrailerHitCount();
+
+  long getTotalRowActionRequestCount();
 }
