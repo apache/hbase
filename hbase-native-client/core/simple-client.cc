@@ -82,8 +82,8 @@ void ValidateResult(const Result &result, const std::string &row) {
 }
 
 int main(int argc, char *argv[]) {
-  google::SetUsageMessage("Simple client to get a single row from HBase on the comamnd line");
-  google::ParseCommandLineFlags(&argc, &argv, true);
+  gflags::SetUsageMessage("Simple client to get a single row from HBase on the comamnd line");
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
   FLAGS_logtostderr = 1;
