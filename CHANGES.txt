@@ -2,6 +2,70 @@ HBase Change Log
 
 
 
+
+Release Notes - HBase - Version 1.1.12 08/12/2017
+
+** Sub-task
+    * [HBASE-15691] - Port HBASE-10205 (ConcurrentModificationException in BucketAllocator) to branch-1
+    * [HBASE-18293] - Only add the spotbugs dependency when jdk8 is active
+
+
+
+
+
+
+
+** Bug
+    * [HBASE-9393] - Hbase does not closing a closed socket resulting in many CLOSE_WAIT 
+    * [HBASE-18212] - In Standalone mode with local filesystem HBase logs Warning message:Failed to invoke 'unbuffer' method in class class org.apache.hadoop.fs.FSDataInputStream
+    * [HBASE-18230] - Generated LICENSE file includes unsubstituted Velocity variables
+    * [HBASE-18255] - Time-Delayed HBase Performance Degradation with Java 7
+    * [HBASE-18330] - NPE in ReplicationZKLockCleanerChore
+    * [HBASE-18390] - Sleep too long when finding region location failed
+    * [HBASE-18481] - The autoFlush flag was not used in PE tool
+
+
+
+
+
+
+
+** Improvement
+    * [HBASE-14220] - nightly tests should verify src tgz generates and builds correctly
+    * [HBASE-16351] - do dependency license check via enforcer plugin
+    * [HBASE-18041] - Add pylintrc file to HBase
+    * [HBASE-18387] - [Thrift] Make principal configurable in DemoClient.java
+    * [HBASE-18426] - nightly job should use independent stages to check supported jdks
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** Task
+    * [HBASE-17954] - Switch findbugs implementation to spotbugs
+    * [HBASE-18527] - update nightly builds to compensate for jenkins plugin upgrades
+
+
+
+** Test
+    * [HBASE-18147] - nightly job to check health of active branches
+
+
+
 Release Notes - HBase - Version 1.1.11 06/10/2017
 
 
