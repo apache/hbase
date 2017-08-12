@@ -33,7 +33,7 @@ Being familiar with these guidelines will help the HBase committers to use your 
 [[getting.involved]]
 == Getting Involved
 
-Apache HBase gets better only when people contribute! If you are looking to contribute to Apache HBase, look for link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)[issues in JIRA tagged with the label 'beginner'].
+Apache HBase gets better only when people contribute! If you are looking to contribute to Apache HBase, look for link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)[issues in JIRA tagged with the label 'beginner'].
 These are issues HBase contributors have deemed worthy but not of immediate priority and a good way to ramp on HBase internals.
 See link:http://search-hadoop.com/m/DHED43re96[What label
                 is used for issues that are good on ramps for new contributors?] from the dev mailing list for background.
@@ -67,13 +67,90 @@ FreeNode offers a web-based client, but most people prefer a native client, and 
 Check for existing issues in link:https://issues.apache.org/jira/browse/HBASE[Jira].
 If it's either a new feature request, enhancement, or a bug, file a ticket.
 
-To check for existing issues which you can tackle as a beginner, search for link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)[issues in JIRA tagged with the label 'beginner'].
+We track multiple types of work in JIRA:
 
-* .JIRA PrioritiesBlocker: Should only be used if the issue WILL cause data loss or cluster instability reliably.
-* Critical: The issue described can cause data loss or cluster instability in some cases.
-* Major: Important but not tragic issues, like updates to the client API that will add a lot of much-needed functionality or significant bugs that need to be fixed but that don't cause data loss.
-* Minor: Useful enhancements and annoying but not damaging bugs.
-* Trivial: Useful enhancements but generally cosmetic.
+- Bug: Something is broken in HBase itself.
+- Test: A test is needed, or a test is broken.
+- New feature: You have an idea for new functionality. It's often best to bring
+  these up on the mailing lists first, and then write up a design specification
+  that you add to the feature request JIRA.
+- Improvement: A feature exists, but could be tweaked or augmented. It's often
+  best to bring these up on the mailing lists first and have a discussion, then
+  summarize or link to the discussion if others seem interested in the
+  improvement.
+- Wish: This is like a new feature, but for something you may not have the
+  background to flesh out yourself.
+
+Bugs and tests have the highest priority and should be actionable.
+
+==== Guidelines for reporting effective issues
+
+- *Search for duplicates*: Your issue may have already been reported. Have a
+  look, realizing that someone else might have worded the summary differently.
++
+Also search the mailing lists, which may have information about your problem
+and how to work around it. Don't file an issue for something that has already
+been discussed and resolved on a mailing list, unless you strongly disagree
+with the resolution *and* are willing to help take the issue forward.
+
+* *Discuss in public*: Use the mailing lists to discuss what you've discovered
+  and see if there is something you've missed. Avoid using back channels, so
+  that you benefit from the experience and expertise of the project as a whole.
+
+* *Don't file on behalf of others*: You might not have all the context, and you
+  don't have as much motivation to see it through as the person who is actually
+  experiencing the bug. It's more helpful in the long term to encourage others
+  to file their own issues. Point them to this material and offer to help out
+  the first time or two.
+
+* *Write a good summary*: A good summary includes information about the problem,
+  the impact on the user or developer, and the area of the code.
+** Good: `Address new license dependencies from hadoop3-alpha4`
+** Room for improvement: `Canary is broken`
++
+If you write a bad title, someone else will rewrite it for you. This is time
+they could have spent working on the issue instead.
+
+* *Give context in the description*: It can be good to think of this in multiple
+  parts:
+** What happens or doesn't happen?
+** How does it impact you?
+** How can someone else reproduce it?
+** What would "fixed" look like?
++
+You don't need to know the answers for all of these, but give as much
+information as you can. If you can provide technical information, such as a
+Git commit SHA that you think might have caused the issue or a build failure
+on builds.apache.org where you think the issue first showed up, share that
+info.
+
+* *Fill in all relevant fields*: These fields help us filter, categorize, and
+  find things.
+
+* *One bug, one issue, one patch*: To help with back-porting, don't split issues
+  or fixes among multiple bugs.
+
+* *Add value if you can*: Filing issues is great, even if you don't know how to
+  fix them. But providing as much information as possible, being willing to
+  triage and answer questions, and being willing to test potential fixes is even
+  better! We want to fix your issue as quickly as you want it to be fixed.
+
+* *Don't be upset if we don't fix it*: Time and resources are finite. In some
+  cases, we may not be able to (or might choose not to) fix an issue, especially
+  if it is an edge case or there is a workaround. Even if it doesn't get fixed,
+  the JIRA is a public record of it, and will help others out if they run into
+  a similar issue in the future.
+
+==== Working on an issue
+
+To check for existing issues which you can tackle as a beginner, search for link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)[issues in JIRA tagged with the label 'beginner'].
+
+.JIRA Priorites
+* *Blocker*: Should only be used if the issue WILL cause data loss or cluster instability reliably.
+* *Critical*: The issue described can cause data loss or cluster instability in some cases.
+* *Major*: Important but not tragic issues, like updates to the client API that will add a lot of much-needed functionality or significant bugs that need to be fixed but that don't cause data loss.
+* *Minor*: Useful enhancements and annoying but not damaging bugs.
+* *Trivial*: Useful enhancements but generally cosmetic.
 
 .Code Blocks in Jira Comments
 ====
