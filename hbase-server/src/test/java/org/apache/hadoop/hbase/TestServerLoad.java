@@ -41,8 +41,8 @@ public class TestServerLoad {
     assertEquals(114, sl.getStorefiles());
     assertEquals(129, sl.getStoreUncompressedSizeMB());
     assertEquals(504, sl.getRootIndexSizeKB());
-    assertEquals(820, sl.getStorefileSizeInMB());
-    assertEquals(82, sl.getStorefileIndexSizeInMB());
+    assertEquals(820, sl.getStorefileSizeMB());
+    assertEquals(82, sl.getStorefileIndexSizeMB());
     assertEquals(((long)Integer.MAX_VALUE)*2, sl.getReadRequestsCount());
     assertEquals(300, sl.getFilteredReadRequestsCount());
     
@@ -68,7 +68,7 @@ public class TestServerLoad {
 	  assertEquals(totalCount, sl.getReadRequestsCount());
 	  assertEquals(totalCount, sl.getWriteRequestsCount());
   }
-  
+
   private ClusterStatusProtos.ServerLoad createServerLoadProto() {
     HBaseProtos.RegionSpecifier rSpecOne =
         HBaseProtos.RegionSpecifier.newBuilder()

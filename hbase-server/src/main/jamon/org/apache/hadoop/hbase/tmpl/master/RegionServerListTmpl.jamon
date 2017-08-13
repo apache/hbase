@@ -153,7 +153,7 @@ for (ServerName serverName: serverNames) {
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
     <td><% TraditionalBinaryPrefix.long2String(sl.getMaxHeapMB()
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-    <td><% TraditionalBinaryPrefix.long2String(sl.getMemstoreSizeInMB()
+    <td><% TraditionalBinaryPrefix.long2String(sl.getMemstoreSizeMB()
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
 
 </tr>
@@ -232,7 +232,7 @@ if (sl != null) {
 <td><% sl.getStorefiles() %></td>
 <td><% TraditionalBinaryPrefix.long2String(
   sl.getStoreUncompressedSizeMB() * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(sl.getStorefileSizeInMB()
+<td><% TraditionalBinaryPrefix.long2String(sl.getStorefileSizeMB()
   * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
 <td><% TraditionalBinaryPrefix.long2String(sl.getTotalStaticIndexSizeKB()
   * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
