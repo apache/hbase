@@ -485,6 +485,7 @@ message GetTableStateResponse {
 }
 
 message GetClusterStatusRequest {
+  required Options cluster_options = 1;
 }
 
 message GetClusterStatusResponse {

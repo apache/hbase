@@ -225,3 +225,15 @@ message ClusterStatus {
   repeated ServerName backup_masters = 8;
   optional bool balancer_on = 9;
 }
+
+message Options {
+  optional bool include_hbase_version = 1 [default = true];
+  optional bool include_live_servers = 2 [default = true];
+  optional bool include_dead_servers = 3 [default = true];
+  optional bool include_regions_state = 4 [default = true];
+  optional bool include_cluster_id = 5 [default = true];
+  optional bool include_master_coprocessors = 6 [default = true];
+  optional bool include_master = 7 [default = true];
+  optional bool include_backup_masters = 8 [default = true];
+  optional bool include_balancer_on = 9 [default = true];
+}

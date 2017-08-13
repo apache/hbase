@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.shaded.protobuf;
 
+import java.awt.image.BandCombineOp;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -3069,6 +3070,7 @@ public final class ProtobufUtil {
    * @return the converted ClusterStatus
    */
   public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
+    ClusterStatus.Builder builder = ClusterStatus.newBuilder();
 
     Map<ServerName, ServerLoad> servers = null;
     servers = new HashMap<>(proto.getLiveServersList().size());
@@ -3103,10 +3105,74 @@ public final class ProtobufUtil {
       masterCoprocessors[i] = proto.getMasterCoprocessors(i).getName();
     }
 
-    return new ClusterStatus(proto.getHbaseVersion().getVersion(),
-      ClusterId.convert(proto.getClusterId()).toString(),servers,deadServers,
-      ProtobufUtil.toServerName(proto.getMaster()),backupMasters,rit,masterCoprocessors,
-      proto.getBalancerOn());
+    String clusterId = null;
+    if (proto.hasClusterId()) {
+      clusterId = ClusterId.convert(proto.getClusterId()).toString();
+    }
+
+    String hbaseVersion = null;
+    if (proto.hasHbaseVersion()) {
+      hbaseVersion = proto.getHbaseVersion().getVersion();
+    }
+
+    ServerName master = null;
+    if (proto.hasMaster()) {
+      master = ProtobufUtil.toServerName(proto.getMaster());
+    }
+
+    Boolean balancerOn = null;
+    if (proto.hasBalancerOn()) {
+      balancerOn = proto.getBalancerOn();
+    }
+    builder.setHBaseVersion(hbaseVersion)
+           .setClusterId(clusterId)
+           .setLiveServers(servers)
+           .setDeadServers(deadServers)
+           .setMaster(master)
+           .setBackupMasters(backupMasters)
+           .setRegionState(rit)
+           .setMasterCoprocessors(masterCoprocessors)
+           .setBalancerOn(balancerOn);
+    return builder.build();
+  }
+
+  /**
+   * Convert proto ClusterStatus.Options to ClusterStatusProtos.Options
+   * @param opt
+   * @return proto ClusterStatus.Options
+   */
+  public static ClusterStatus.Options toOptions (ClusterStatusProtos.Options opt) {
+    ClusterStatus.Options option = ClusterStatus.Options.getDefaultOptions();
+    if (!opt.getIncludeHbaseVersion()) option.excludeHBaseVersion();
+    if (!opt.getIncludeLiveServers()) option.excludeLiveServers();
+    if (!opt.getIncludeDeadServers()) option.excludeDeadServers();
+    if (!opt.getIncludeRegionsState()) option.excludeRegionState();
+    if (!opt.getIncludeClusterId()) option.excludeClusterId();
+    if (!opt.getIncludeMasterCoprocessors()) option.excludeMasterCoprocessors();
+    if (!opt.getIncludeMaster()) option.excludeMaster();
+    if (!opt.getIncludeBackupMasters()) option.excludeBackupMasters();
+    if (!opt.getIncludeBalancerOn()) option.excludeBalancerOn();
+    return option;
+  }
+
+  /**
+   * Convert ClusterStatus.Options to proto ClusterStatusProtos.Options
+   * @param opt
+   * @return ClusterStatus.Options
+   */
+  public static ClusterStatusProtos.Options toOptions(ClusterStatus.Options opt) {
+    ClusterStatusProtos.Options.Builder option =
+        ClusterStatusProtos.Options.newBuilder();
+    option.setIncludeHbaseVersion(opt.includeHBaseVersion())
+          .setIncludeLiveServers(opt.includeLiveServers())
+          .setIncludeDeadServers(opt.includeDeadServers())
+          .setIncludeRegionsState(opt.includeRegionState())
+          .setIncludeClusterId(opt.includeClusterId())
+          .setIncludeMasterCoprocessors(opt.includeMasterCoprocessors())
+          .setIncludeMaster(opt.includeMaster())
+          .setIncludeBackupMasters(opt.includeBackupMasters())
+          .setIncludeBalancerOn(opt.includeBalancerOn());
+    return option.build();
   }
 
   /**
@@ -3117,8 +3183,11 @@ public final class ProtobufUtil {
   public static ClusterStatusProtos.ClusterStatus convert(ClusterStatus status) {
     ClusterStatusProtos.ClusterStatus.Builder builder =
         ClusterStatusProtos.ClusterStatus.newBuilder();
-    builder
-        .setHbaseVersion(HBaseVersionFileContent.newBuilder().setVersion(status.getHBaseVersion()));
+    if (status.getHBaseVersion() != null) {
+       builder.setHbaseVersion(
+         HBaseVersionFileContent.newBuilder()
+                                .setVersion(status.getHBaseVersion()));
+    }
 
     if (status.getServers() != null) {
       for (ServerName serverName : status.getServers()) {

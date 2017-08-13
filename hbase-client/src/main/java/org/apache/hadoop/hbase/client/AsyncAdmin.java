@@ -27,6 +27,7 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Options;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionLoad;
@@ -831,6 +832,11 @@ public interface AsyncAdmin {
    * @return cluster status wrapped by {@link CompletableFuture}
    */
   CompletableFuture<ClusterStatus> getClusterStatus();
+
+  /**
+   * @return cluster status wrapped by {@link CompletableFuture}
+   */
+  CompletableFuture<ClusterStatus> getClusterStatus(Options options);
 
   /**
    * @return current master server name wrapped by {@link CompletableFuture}

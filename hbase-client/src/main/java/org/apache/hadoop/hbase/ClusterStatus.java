@@ -47,6 +47,28 @@ import org.apache.hadoop.io.VersionedWritable;
  * <li>Regions in transition at master</li>
  * <li>The unique cluster ID</li>
  * </ul>
+ * <tt>{@link Options}</tt> provides a way to filter out infos which unwanted.
+ * The following codes will retrieve all the cluster information.
+ * <pre>
+ * {@code
+ * // Original version still works
+ * Admin admin = connection.getAdmin();
+ * ClusterStatus status = admin.getClusterStatus();
+ * // or below, a new version which has the same effects
+ * ClusterStatus status = admin.getClusterStatus(Options.defaultOptions());
+ * }
+ * </pre>
+ * If information about dead servers and master coprocessors are unwanted,
+ * then codes in the following way:
+ * <pre>
+ * {@code
+ * Admin admin = connection.getAdmin();
+ * ClusterStatus status = admin.getClusterStatus(
+ *                                Options.defaultOptions()
+ *                                       .excludeDeadServers()
+ *                                       .excludeMasterCoprocessors());
+ * }
+ * </pre>
  */
 @InterfaceAudience.Public
 public class ClusterStatus extends VersionedWritable {
@@ -72,6 +94,12 @@ public class ClusterStatus extends VersionedWritable {
   private String[] masterCoprocessors;
   private Boolean balancerOn;
 
+  /**
+   * Use {@link ClusterStatus.Builder} to construct a ClusterStatus instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-15511">HBASE-15511</a>).
+   */
+  @Deprecated
   public ClusterStatus(final String hbaseVersion, final String clusterid,
       final Map<ServerName, ServerLoad> servers,
       final Collection<ServerName> deadServers,
@@ -80,8 +108,8 @@ public class ClusterStatus extends VersionedWritable {
       final List<RegionState> rit,
       final String[] masterCoprocessors,
       final Boolean balancerOn) {
+    // TODO: make this constructor private
     this.hbaseVersion = hbaseVersion;
-
     this.liveServers = servers;
     this.deadServers = deadServers;
     this.master = master;
@@ -133,7 +161,8 @@ public class ClusterStatus extends VersionedWritable {
    */
   public double getAverageLoad() {
     int load = getRegionsCount();
-    return (double)load / (double)getServersSize();
+    int serverSize = getServersSize();
+    return serverSize != 0 ? (double)load / (double)serverSize : 0.0;
   }
 
   /**
@@ -332,5 +361,269 @@ public class ClusterStatus extends VersionedWritable {
       }
     }
     return sb.toString();
+  }
+
+  public static Builder newBuilder() {
+    return new Builder();
+  }
+
+  /**
+   * Builder for construct a ClusterStatus.
+   */
+  public static class Builder {
+    private String hbaseVersion = null;
+    private Map<ServerName, ServerLoad> liveServers = null;
+    private Collection<ServerName> deadServers = null;
+    private ServerName master = null;
+    private Collection<ServerName> backupMasters = null;
+    private List<RegionState> intransition = null;
+    private String clusterId = null;
+    private String[] masterCoprocessors = null;
+    private Boolean balancerOn = null;
+
+    private Builder() {}
+
+    public Builder setHBaseVersion(String hbaseVersion) {
+      this.hbaseVersion = hbaseVersion;
+      return this;
+    }
+
+    public Builder setLiveServers(Map<ServerName, ServerLoad> liveServers) {
+      this.liveServers = liveServers;
+      return this;
+    }
+
+    public Builder setDeadServers(Collection<ServerName> deadServers) {
+      this.deadServers = deadServers;
+      return this;
+    }
+
+    public Builder setMaster(ServerName master) {
+      this.master = master;
+      return this;
+    }
+
+    public Builder setBackupMasters(Collection<ServerName> backupMasters) {
+      this.backupMasters = backupMasters;
+      return this;
+    }
+
+    public Builder setRegionState(List<RegionState> intransition) {
+      this.intransition = intransition;
+      return this;
+    }
+
+    public Builder setClusterId(String clusterId) {
+      this.clusterId = clusterId;
+      return this;
+    }
+
+    public Builder setMasterCoprocessors(String[] masterCoprocessors) {
+      this.masterCoprocessors = masterCoprocessors;
+      return this;
+    }
+
+    public Builder setBalancerOn(Boolean balancerOn) {
+      this.balancerOn = balancerOn;
+      return this;
+    }
+
+    public ClusterStatus build() {
+      return new ClusterStatus(hbaseVersion, clusterId, liveServers,
+          deadServers, master, backupMasters, intransition, masterCoprocessors,
+          balancerOn);
+    }
+  }
+
+  /**
+   * Options provides a way to filter out unwanted information.
+   * For compatibility, default options includes all the information about a ClusterStatus.
+   * To filter out unwanted information, use the specific excludeXXX() method.
+   */
+  public static class Options {
+    private boolean includeHBaseVersion = true;
+    private boolean includeLiveServers = true;
+    private boolean includeDeadServers = true;
+    private boolean includeMaster = true;
+    private boolean includeBackupMasters = true;
+    private boolean includeRegionState = true;
+    private boolean includeClusterId = true;
+    private boolean includeMasterCoprocessors = true;
+    private boolean includeBalancerOn = true;
+
+    private Options() {}
+
+    /**
+     * Include all information about a ClusterStatus.
+     */
+    public static Options getDefaultOptions() {
+      return new Options();
+    }
+
+    /**
+     * Filter out hbase verision.
+     */
+    public Options excludeHBaseVersion() {
+      includeHBaseVersion = false;
+      return this;
+    }
+
+    /**
+     * Filter out live servers.
+     */
+    public Options excludeLiveServers() {
+      includeLiveServers = false;
+      return this;
+    }
+
+    /**
+     * Filter out dead servers info.
+     */
+    public Options excludeDeadServers() {
+      includeDeadServers = false;
+      return this;
+    }
+
+    /**
+     * Filter out master info.
+     */
+    public Options excludeMaster() {
+      includeMaster = false;
+      return this;
+    }
+
+    /**
+     * Filter out backup masters info.
+     */
+    public Options excludeBackupMasters() {
+      includeBackupMasters = false;
+      return this;
+    }
+
+    /**
+     * Filter out region state.
+     */
+    public Options excludeRegionState() {
+      includeRegionState = false;
+      return this;
+    }
+
+    /**
+     * Filter out cluster id.
+     */
+    public Options excludeClusterId() {
+      includeClusterId = false;
+      return this;
+    }
+
+    /**
+     * Filter out master's coprocessors info.
+     */
+    public Options excludeMasterCoprocessors() {
+      includeMasterCoprocessors = false;
+      return this;
+    }
+
+    /**
+     * Filter out balancer on info.
+     */
+    public Options excludeBalancerOn() {
+      includeBalancerOn = false;
+      return this;
+    }
+
+    /**
+     * Include hbase version info.
+     */
+    public boolean includeHBaseVersion() {
+      return includeHBaseVersion;
+    }
+
+    /**
+     * Include live servers info.
+     */
+    public boolean includeLiveServers() {
+      return includeLiveServers;
+    }
+
+    /**
+     * Include dead servers info.
+     */
+    public boolean includeDeadServers() {
+      return includeDeadServers;
+    }
+
+    /**
+     * Include master info.
+     */
+    public boolean includeMaster() {
+      return includeMaster;
+    }
+
+    /**
+     * Include backup masters info.
+     */
+    public boolean includeBackupMasters() {
+      return includeBackupMasters;
+    }
+
+    /**
+     * Include region states info.
+     */
+    public boolean includeRegionState() {
+      return includeRegionState;
+    }
+
+    /**
+     * Include cluster id info.
+     */
+    public boolean includeClusterId() {
+      return includeClusterId;
+    }
+
+    /**
+     * Include master's coprocessors.
+     */
+    public boolean includeMasterCoprocessors() {
+      return includeMasterCoprocessors;
+    }
+
+    /**
+     * Include balancer on info.
+     */
+    public boolean includeBalancerOn() {
+      return includeBalancerOn;
+    }
+
+    /**
+     * For an options reusable convenience, reset options to default.
+     */
+    public Options reset() {
+      includeHBaseVersion = true;
+      includeLiveServers = true;
+      includeDeadServers = true;
+      includeMaster = true;
+      includeBackupMasters = true;
+      includeRegionState = true;
+      includeClusterId = true;
+      includeMasterCoprocessors = true;
+      includeBalancerOn = true;
+      return this;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder("ClusterStatus info: [");
+      builder.append("include hbase version: " + includeHBaseVersion + ", ");
+      builder.append("include cluster id: " + includeClusterId + ", ");
+      builder.append("include master info: " + includeMaster + ", ");
+      builder.append("include backup masters info: " + includeBackupMasters + ", ");
+      builder.append("include live servers info: " + includeLiveServers + ", ");
+      builder.append("include dead servers info: " + includeDeadServers + ", ");
+      builder.append("include masters coprocessors: " + includeMasterCoprocessors + ", ");
+      builder.append("include region state: " + includeRegionState + ", ");
+      builder.append("include balancer on: " + includeBalancerOn + "]");
+      return builder.toString();
+    }
   }
 }

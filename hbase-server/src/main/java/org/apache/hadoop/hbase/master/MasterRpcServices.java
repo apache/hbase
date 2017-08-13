@@ -762,7 +762,8 @@ public class MasterRpcServices extends RSRpcServices
     GetClusterStatusResponse.Builder response = GetClusterStatusResponse.newBuilder();
     try {
       master.checkInitialized();
-      response.setClusterStatus(ProtobufUtil.convert(master.getClusterStatus()));
+      response.setClusterStatus(ProtobufUtil.convert(
+        master.getClusterStatus(ProtobufUtil.toOptions(req.getClusterOptions()))));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
