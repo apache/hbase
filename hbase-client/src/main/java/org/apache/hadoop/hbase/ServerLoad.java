@@ -131,15 +131,42 @@ public class ServerLoad {
     return storeUncompressedSizeMB;
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   * Use {@link #getStorefileSizeMB()} instead.
+   */
+  @Deprecated
   public int getStorefileSizeInMB() {
     return storefileSizeMB;
   }
 
+  public int getStorefileSizeMB() {
+    return storefileSizeMB;
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   * Use {@link #getMemstoreSizeMB()} instead.
+   */
+  @Deprecated
   public int getMemstoreSizeInMB() {
     return memstoreSizeMB;
   }
 
+  public int getMemstoreSizeMB() {
+    return memstoreSizeMB;
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   * Use {@link #getStorefileIndexSizeMB()} instead.
+   */
+  @Deprecated
   public int getStorefileIndexSizeInMB() {
+    return storefileIndexSizeMB;
+  }
+
+  public int getStorefileIndexSizeMB() {
     return storefileIndexSizeMB;
   }
 
