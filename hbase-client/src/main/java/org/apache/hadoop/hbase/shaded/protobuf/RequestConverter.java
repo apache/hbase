@@ -26,10 +26,10 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.CellScannable;
+import org.apache.hadoop.hbase.ClusterStatus.Options;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -1508,18 +1508,14 @@ public final class RequestConverter {
   }
 
   /**
-   * @see {@link #buildGetClusterStatusRequest}
-   */
-  private static final GetClusterStatusRequest GET_CLUSTER_STATUS_REQUEST =
-      GetClusterStatusRequest.newBuilder().build();
-
-  /**
    * Creates a protocol buffer GetClusterStatusRequest
    *
    * @return A GetClusterStatusRequest
    */
-  public static GetClusterStatusRequest buildGetClusterStatusRequest() {
-    return GET_CLUSTER_STATUS_REQUEST;
+  public static GetClusterStatusRequest buildGetClusterStatusRequest(Options opt) {
+    return GetClusterStatusRequest.newBuilder()
+                                  .setClusterOptions(ProtobufUtil.toOptions(opt))
+                                  .build();
   }
 
   /**

@@ -54,6 +54,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Options;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -2431,6 +2432,48 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return cluster status
    */
   public ClusterStatus getClusterStatus() throws InterruptedIOException {
+    return getClusterStatus(Options.getDefaultOptions());
+  }
+
+  /**
+   * @return cluster status
+   */
+  public ClusterStatus getClusterStatus(Options options) throws InterruptedIOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Retrieving cluster status info. " + options);
+    }
+    ClusterStatus.Builder builder = ClusterStatus.newBuilder();
+    if (options.includeHBaseVersion()) {
+      builder.setHBaseVersion(VersionInfo.getVersion());
+    }
+    if (options.includeClusterId()) {
+      builder.setClusterId(getClusterId());
+    }
+    if (options.includeLiveServers() && serverManager != null) {
+      builder.setLiveServers(serverManager.getOnlineServers());
+    }
+    if (options.includeDeadServers() && serverManager != null) {
+      builder.setDeadServers(serverManager.getDeadServers().copyServerNames());
+    }
+    if (options.includeMaster()) {
+      builder.setMaster(getServerName());
+    }
+    if (options.includeBackupMasters()) {
+      builder.setBackupMasters(getBackupMasters());
+    }
+    if (options.includeRegionState() && assignmentManager != null) {
+      builder.setRegionState(assignmentManager.getRegionStates().getRegionsStateInTransition());
+    }
+    if (options.includeMasterCoprocessors() && cpHost != null) {
+      builder.setMasterCoprocessors(getMasterCoprocessors());
+    }
+    if (options.includeBalancerOn() && loadBalancerTracker != null) {
+      builder.setBalancerOn(loadBalancerTracker.isBalancerOn());
+    }
+    return builder.build();
+  }
+
+  private List<ServerName> getBackupMasters() throws InterruptedIOException {
     // Build Set of backup masters from ZK nodes
     List<String> backupMasterStrings;
     try {
@@ -2474,24 +2517,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           return s1.getServerName().compareTo(s2.getServerName());
         }});
     }
-
-    String clusterId = fileSystemManager != null ?
-      fileSystemManager.getClusterId().toString() : null;
-    List<RegionState> regionsInTransition = assignmentManager != null ?
-      assignmentManager.getRegionStates().getRegionsStateInTransition() : null;
-
-    String[] coprocessors = cpHost != null ? getMasterCoprocessors() : null;
-    boolean balancerOn = loadBalancerTracker != null ?
-      loadBalancerTracker.isBalancerOn() : false;
-    Map<ServerName, ServerLoad> onlineServers = null;
-    Set<ServerName> deadServers = null;
-    if (serverManager != null) {
-      deadServers = serverManager.getDeadServers().copyServerNames();
-      onlineServers = serverManager.getOnlineServers();
-    }
-    return new ClusterStatus(VersionInfo.getVersion(), clusterId,
-      onlineServers, deadServers, serverName, backupMasters,
-      regionsInTransition, coprocessors, balancerOn);
+    return backupMasters;
   }
 
   /**

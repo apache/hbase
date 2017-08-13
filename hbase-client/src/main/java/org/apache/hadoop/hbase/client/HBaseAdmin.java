@@ -45,6 +45,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Options;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -2074,13 +2075,18 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public ClusterStatus getClusterStatus() throws IOException {
+    return getClusterStatus(Options.getDefaultOptions());
+  }
+
+  @Override
+  public ClusterStatus getClusterStatus(Options options) throws IOException {
     return executeCallable(new MasterCallable<ClusterStatus>(getConnection(),
         this.rpcControllerFactory) {
       @Override
       protected ClusterStatus rpcCall() throws Exception {
-        GetClusterStatusRequest req = RequestConverter.buildGetClusterStatusRequest();
-        return ProtobufUtil.convert(master.getClusterStatus(getRpcController(), req).
-            getClusterStatus());
+        GetClusterStatusRequest req = RequestConverter.buildGetClusterStatusRequest(options);
+        return ProtobufUtil.convert(
+          master.getClusterStatus(getRpcController(), req).getClusterStatus());
       }
     });
   }

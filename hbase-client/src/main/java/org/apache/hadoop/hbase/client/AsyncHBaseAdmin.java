@@ -36,6 +36,7 @@ import io.netty.util.TimerTask;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Options;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionLoad;
@@ -493,7 +494,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<ClusterStatus> getClusterStatus() {
-    return wrap(rawAdmin.getClusterStatus());
+    return getClusterStatus(Options.getDefaultOptions());
+  }
+
+  @Override
+  public CompletableFuture<ClusterStatus> getClusterStatus(Options options) {
+    return wrap(rawAdmin.getClusterStatus(options));
   }
 
   @Override
