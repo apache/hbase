@@ -460,6 +460,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public String getClientIdAuditPrefix() {
+    return null;
+  }
+
+  @Override
   public ProcedureEvent getInitializedEvent() {
     // TODO Auto-generated method stub
     return null;
