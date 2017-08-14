@@ -59,16 +59,15 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * General backup commands, options and usage messages
  */
 
 @InterfaceAudience.Private
-public final class BackupCommands  {
+public final class BackupCommands {
 
   public final static String INCORRECT_USAGE = "Incorrect usage";
 
@@ -79,7 +78,8 @@ public final class BackupCommands  {
       + "  history    show history of all successful backups\n"
       + "  progress   show the progress of the latest backup request\n"
       + "  set        backup set management\n"
-      + "  repair     repair backup system table"
+      + "  repair     repair backup system table\n"
+      + "  merge      merge backup images\n"
       + "Run \'hbase backup COMMAND -h\' to see help message for each command\n";
 
   public static final String CREATE_CMD_USAGE =
@@ -109,17 +109,20 @@ public final class BackupCommands  {
 
   public static final String SET_CMD_USAGE = "Usage: hbase backup set COMMAND [name] [tables]\n"
       + "  name            Backup set name\n"
-      + "  tables          Comma separated list of tables.\n"
-      + "COMMAND is one of:\n" + "  add             add tables to a set, create a set if needed\n"
+      + "  tables          Comma separated list of tables.\n" + "COMMAND is one of:\n"
+      + "  add             add tables to a set, create a set if needed\n"
       + "  remove          remove tables from a set\n"
       + "  list            list all backup sets in the system\n"
       + "  describe        describe set\n" + "  delete          delete backup set\n";
+  public static final String MERGE_CMD_USAGE = "Usage: hbase backup merge [backup_ids]\n"
+      + "  backup_ids      Comma separated list of backup image ids.\n";
 
   public static final String USAGE_FOOTER = "";
 
   public static abstract class Command extends Configured {
     CommandLine cmdline;
     Connection conn;
+
     Command(Configuration conf) {
       if (conf == null) {
         conf = HBaseConfiguration.create();
@@ -140,7 +143,7 @@ public final class BackupCommands  {
         try (BackupSystemTable table = new BackupSystemTable(conn);) {
           List<BackupInfo> sessions = table.getBackupInfos(BackupState.RUNNING);
 
-          if(sessions.size() > 0) {
+          if (sessions.size() > 0) {
             System.err.println("Found backup session in a RUNNING state: ");
             System.err.println(sessions.get(0));
             System.err.println("This may indicate that a previous session has failed abnormally.");
@@ -154,11 +157,19 @@ public final class BackupCommands  {
         try (BackupSystemTable table = new BackupSystemTable(conn);) {
           String[] ids = table.getListOfBackupIdsFromDeleteOperation();
 
-          if(ids !=null && ids.length > 0) {
-            System.err.println("Found failed backup delete coommand. ");
+          if (ids != null && ids.length > 0) {
+            System.err.println("Found failed backup DELETE coommand. ");
             System.err.println("Backup system recovery is required.");
-            throw new IOException("Failed backup delete found, aborted command execution");
+            throw new IOException("Failed backup DELETE found, aborted command execution");
           }
+
+          ids = table.getListOfBackupIdsFromMergeOperation();
+          if (ids != null && ids.length > 0) {
+            System.err.println("Found failed backup MERGE coommand. ");
+            System.err.println("Backup system recovery is required.");
+            throw new IOException("Failed backup MERGE found, aborted command execution");
+          }
+
         }
       }
     }
@@ -178,10 +189,10 @@ public final class BackupCommands  {
     protected boolean requiresNoActiveSession() {
       return false;
     }
+
     /**
-     * Command requires consistent state of a backup system
-     * Backup system may become inconsistent because of an abnormal
-     * termination of a backup session or delete command
+     * Command requires consistent state of a backup system Backup system may become inconsistent
+     * because of an abnormal termination of a backup session or delete command
      * @return true, if yes
      */
     protected boolean requiresConsistentState() {
@@ -220,6 +231,9 @@ public final class BackupCommands  {
     case REPAIR:
       cmd = new RepairCommand(conf, cmdline);
       break;
+    case MERGE:
+      cmd = new MergeCommand(conf, cmdline);
+      break;
     case HELP:
     default:
       cmd = new HelpCommand(conf, cmdline);
@@ -257,7 +271,7 @@ public final class BackupCommands  {
         throw new IOException(INCORRECT_USAGE);
       }
       String[] args = cmdline.getArgs();
-      if (args.length !=3) {
+      if (args.length != 3) {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
@@ -273,7 +287,6 @@ public final class BackupCommands  {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
-
 
       String tables = null;
 
@@ -310,14 +323,14 @@ public final class BackupCommands  {
 
       try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
 
-       BackupRequest.Builder builder = new BackupRequest.Builder();
-       BackupRequest request = builder.withBackupType(BackupType.valueOf(args[1].toUpperCase()))
-            .withTableList(tables != null ?
-                          Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
-            .withTargetRootDir(args[2])
-            .withTotalTasks(workers)
-            .withBandwidthPerTasks(bandwidth)
-            .withBackupSetName(setName).build();
+        BackupRequest.Builder builder = new BackupRequest.Builder();
+        BackupRequest request =
+            builder
+                .withBackupType(BackupType.valueOf(args[1].toUpperCase()))
+                .withTableList(
+                  tables != null ? Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
+                .withTargetRootDir(args[2]).withTotalTasks(workers)
+                .withBandwidthPerTasks(bandwidth).withBackupSetName(setName).build();
         String backupId = admin.backupTables(request);
         System.out.println("Backup session " + backupId + " finished. Status: SUCCESS");
       } catch (IOException e) {
@@ -544,7 +557,8 @@ public final class BackupCommands  {
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total requested: " + args.length);
       } catch (IOException e) {
-        System.err.println("Delete command FAILED. Please run backup repair tool to restore backup system integrity");
+        System.err
+            .println("Delete command FAILED. Please run backup repair tool to restore backup system integrity");
         throw e;
       }
 
@@ -584,8 +598,9 @@ public final class BackupCommands  {
         if (list.size() == 0) {
           // No failed sessions found
           System.out.println("REPAIR status: no failed sessions found."
-          +" Checking failed delete backup operation ...");
+              + " Checking failed delete backup operation ...");
           repairFailedBackupDeletionIfAny(conn, sysTable);
+          repairFailedBackupMergeIfAny(conn, sysTable);
           return;
         }
         backupInfo = list.get(0);
@@ -606,38 +621,111 @@ public final class BackupCommands  {
         // If backup session is updated to FAILED state - means we
         // processed recovery already.
         sysTable.updateBackupInfo(backupInfo);
-        sysTable.finishBackupSession();
-        System.out.println("REPAIR status: finished repair failed session:\n "+ backupInfo);
+        sysTable.finishBackupExclusiveOperation();
+        System.out.println("REPAIR status: finished repair failed session:\n " + backupInfo);
 
       }
     }
 
     private void repairFailedBackupDeletionIfAny(Connection conn, BackupSystemTable sysTable)
-        throws IOException
-    {
+        throws IOException {
       String[] backupIds = sysTable.getListOfBackupIdsFromDeleteOperation();
-      if (backupIds == null ||backupIds.length == 0) {
-        System.out.println("No failed backup delete operation found");
+      if (backupIds == null || backupIds.length == 0) {
+        System.out.println("No failed backup DELETE operation found");
         // Delete backup table snapshot if exists
         BackupSystemTable.deleteSnapshot(conn);
         return;
       }
-      System.out.println("Found failed delete operation for: " + StringUtils.join(backupIds));
-      System.out.println("Running delete again ...");
+      System.out.println("Found failed DELETE operation for: " + StringUtils.join(backupIds));
+      System.out.println("Running DELETE again ...");
       // Restore table from snapshot
       BackupSystemTable.restoreFromSnapshot(conn);
       // Finish previous failed session
-      sysTable.finishBackupSession();
-      try(BackupAdmin admin = new BackupAdminImpl(conn);) {
+      sysTable.finishBackupExclusiveOperation();
+      try (BackupAdmin admin = new BackupAdminImpl(conn);) {
         admin.deleteBackups(backupIds);
       }
-      System.out.println("Delete operation finished OK: "+ StringUtils.join(backupIds));
+      System.out.println("DELETE operation finished OK: " + StringUtils.join(backupIds));
+
+    }
+
+    private void repairFailedBackupMergeIfAny(Connection conn, BackupSystemTable sysTable)
+        throws IOException {
+      String[] backupIds = sysTable.getListOfBackupIdsFromMergeOperation();
+      if (backupIds == null || backupIds.length == 0) {
+        System.out.println("No failed backup MERGE operation found");
+        // Delete backup table snapshot if exists
+        BackupSystemTable.deleteSnapshot(conn);
+        return;
+      }
+      System.out.println("Found failed MERGE operation for: " + StringUtils.join(backupIds));
+      System.out.println("Running MERGE again ...");
+      // Restore table from snapshot
+      BackupSystemTable.restoreFromSnapshot(conn);
+      // Unlock backupo system
+      sysTable.finishBackupExclusiveOperation();
+      // Finish previous failed session
+      sysTable.finishMergeOperation();
+      try (BackupAdmin admin = new BackupAdminImpl(conn);) {
+        admin.mergeBackups(backupIds);
+      }
+      System.out.println("MERGE operation finished OK: " + StringUtils.join(backupIds));
 
     }
 
     @Override
     protected void printUsage() {
       System.out.println(REPAIR_CMD_USAGE);
+    }
+  }
+
+  private static class MergeCommand extends Command {
+
+    MergeCommand(Configuration conf, CommandLine cmdline) {
+      super(conf);
+      this.cmdline = cmdline;
+    }
+
+    @Override
+    protected boolean requiresNoActiveSession() {
+      return true;
+    }
+
+    @Override
+    protected boolean requiresConsistentState() {
+      return true;
+    }
+
+    @Override
+    public void execute() throws IOException {
+      super.execute();
+
+      String[] args = cmdline == null ? null : cmdline.getArgs();
+      if (args == null || (args.length != 2)) {
+        System.err.println("ERROR: wrong number of arguments: "
+            + (args == null ? null : args.length));
+        printUsage();
+        throw new IOException(INCORRECT_USAGE);
+      }
+
+      String[] backupIds = args[1].split(",");
+      if (backupIds.length < 2) {
+        String msg = "ERROR: can not merge a single backup image. "+
+            "Number of images must be greater than 1.";
+        System.err.println(msg);
+        throw new IOException(msg);
+
+      }
+      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
+      try (final Connection conn = ConnectionFactory.createConnection(conf);
+          final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+        admin.mergeBackups(backupIds);
+      }
+    }
+
+    @Override
+    protected void printUsage() {
+      System.out.println(MERGE_CMD_USAGE);
     }
   }
 
@@ -671,7 +759,6 @@ public final class BackupCommands  {
 
     @Override
     public void execute() throws IOException {
-
 
       int n = parseHistoryLength();
       final TableName tableName = getTableName();
@@ -883,7 +970,7 @@ public final class BackupCommands  {
 
     private TableName[] toTableNames(String[] tables) {
       TableName[] arr = new TableName[tables.length];
-      for (int i=0; i < tables.length; i++) {
+      for (int i = 0; i < tables.length; i++) {
         arr[i] = TableName.valueOf(tables[i]);
       }
       return arr;

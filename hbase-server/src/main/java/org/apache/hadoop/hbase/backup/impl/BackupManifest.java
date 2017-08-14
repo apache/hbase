@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupType;
+import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -61,9 +62,8 @@ public class BackupManifest {
   public static final String MANIFEST_FILE_NAME = ".backup.manifest";
 
   /**
-   *  Backup image, the dependency graph is made up by series of backup images
-   *  BackupImage contains all the relevant information to restore the backup and
-   *  is used during restore operation
+   * Backup image, the dependency graph is made up by series of backup images BackupImage contains
+   * all the relevant information to restore the backup and is used during restore operation
    */
 
   public static class BackupImage implements Comparable<BackupImage> {
@@ -294,6 +294,16 @@ public class BackupManifest {
       return this.ancestors;
     }
 
+    public void removeAncestors(List<String> backupIds) {
+      List<BackupImage> toRemove = new ArrayList<BackupImage>();
+      for (BackupImage im : this.ancestors) {
+        if (backupIds.contains(im.getBackupId())) {
+          toRemove.add(im);
+        }
+      }
+      this.ancestors.removeAll(toRemove);
+    }
+
     private void addAncestor(BackupImage backupImage) {
       this.getAncestors().add(backupImage);
     }
@@ -464,18 +474,16 @@ public class BackupManifest {
   }
 
   /**
-   * Persist the manifest file.
+   * TODO: fix it. Persist the manifest file.
    * @throws IOException IOException when storing the manifest file.
    */
 
   public void store(Configuration conf) throws BackupException {
     byte[] data = backupImage.toProto().toByteArray();
     // write the file, overwrite if already exist
-    String logBackupDir =
-        BackupUtils.getLogBackupDir(backupImage.getRootDir(), backupImage.getBackupId());
     Path manifestFilePath =
-        new Path(new Path((tableBackupDir != null ? tableBackupDir : logBackupDir)),
-            MANIFEST_FILE_NAME);
+        new Path(HBackupFileSystem.getBackupPath(backupImage.getRootDir(),
+          backupImage.getBackupId()), MANIFEST_FILE_NAME);
     try (FSDataOutputStream out =
         manifestFilePath.getFileSystem(conf).create(manifestFilePath, true);) {
       out.write(data);

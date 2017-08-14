@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob;
+import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupMergeJob;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceRestoreJob;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -32,6 +33,7 @@ public final class BackupRestoreFactory {
 
   public final static String HBASE_INCR_RESTORE_IMPL_CLASS = "hbase.incremental.restore.class";
   public final static String HBASE_BACKUP_COPY_IMPL_CLASS = "hbase.backup.copy.class";
+  public final static String HBASE_BACKUP_MERGE_IMPL_CLASS = "hbase.backup.merge.class";
 
   private BackupRestoreFactory() {
     throw new AssertionError("Instantiating utility class...");
@@ -40,7 +42,7 @@ public final class BackupRestoreFactory {
   /**
    * Gets backup restore job
    * @param conf configuration
-   * @return backup restore task instance
+   * @return backup restore job instance
    */
   public static RestoreJob getRestoreJob(Configuration conf) {
     Class<? extends RestoreJob> cls =
@@ -53,13 +55,27 @@ public final class BackupRestoreFactory {
   /**
    * Gets backup copy job
    * @param conf configuration
-   * @return backup copy task
+   * @return backup copy job instance
    */
   public static BackupCopyJob getBackupCopyJob(Configuration conf) {
     Class<? extends BackupCopyJob> cls =
         conf.getClass(HBASE_BACKUP_COPY_IMPL_CLASS, MapReduceBackupCopyJob.class,
           BackupCopyJob.class);
     BackupCopyJob service = ReflectionUtils.newInstance(cls, conf);
+    service.setConf(conf);
+    return service;
+  }
+
+  /**
+   * Gets backup merge job
+   * @param conf configuration
+   * @return backup merge job instance
+   */
+  public static BackupMergeJob getBackupMergeJob(Configuration conf) {
+    Class<? extends BackupMergeJob> cls =
+        conf.getClass(HBASE_BACKUP_MERGE_IMPL_CLASS, MapReduceBackupMergeJob.class,
+          BackupMergeJob.class);
+    BackupMergeJob service = ReflectionUtils.newInstance(cls, conf);
     service.setConf(conf);
     return service;
   }

@@ -74,7 +74,7 @@ public class TestRepairAfterFailedDelete extends TestBackupBase {
     admin.restoreSnapshot(snapshotName);
     admin.enableTable(BackupSystemTable.getTableName(conf1));
     // Start backup session
-    table.startBackupSession();
+    table.startBackupExclusiveOperation();
     // Start delete operation
     table.startDeleteOperation(backupIds);
 
