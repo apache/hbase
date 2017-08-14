@@ -508,4 +508,6 @@ public interface MasterServices extends Server {
    * method to make sure meta is initialized.
    */
   boolean recoverMeta() throws IOException;
+
+  String getClientIdAuditPrefix();
 }
