@@ -38,8 +38,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public interface BackupAdmin extends Closeable {
 
   /**
-   * Backup given list of tables fully. This is a synchronous operation.
-   * It returns backup id on success or throw exception on failure.
+   * Backup given list of tables fully. This is a synchronous operation. It returns backup id on
+   * success or throw exception on failure.
    * @param userRequest BackupRequest instance
    * @return the backup Id
    */
@@ -61,14 +61,22 @@ public interface BackupAdmin extends Closeable {
    */
   BackupInfo getBackupInfo(String backupId) throws IOException;
 
-
   /**
    * Delete backup image command
-   * @param backupIds backup id list
+   * @param backupIds array of backup ids
    * @return total number of deleted sessions
    * @throws IOException exception
    */
   int deleteBackups(String[] backupIds) throws IOException;
+
+  /**
+   * Merge backup images command
+   * @param backupIds array of backup ids of images to be merged
+   *        The resulting backup image will have the same backup id as the most
+   *        recent image from a list of images to be merged
+   * @throws IOException exception
+   */
+  void mergeBackups(String[] backupIds) throws IOException;
 
   /**
    * Show backup history command
@@ -113,7 +121,7 @@ public interface BackupAdmin extends Closeable {
   /**
    * Add tables to backup set command
    * @param name name of backup set.
-   * @param tables list of tables to be added to this set.
+   * @param tables array of tables to be added to this set.
    * @throws IOException exception
    */
   void addToBackupSet(String name, TableName[] tables) throws IOException;
@@ -121,7 +129,7 @@ public interface BackupAdmin extends Closeable {
   /**
    * Remove tables from backup set
    * @param name name of backup set.
-   * @param tables list of tables to be removed from this set.
+   * @param tables array of tables to be removed from this set.
    * @throws IOException exception
    */
   void removeFromBackupSet(String name, TableName[] tables) throws IOException;

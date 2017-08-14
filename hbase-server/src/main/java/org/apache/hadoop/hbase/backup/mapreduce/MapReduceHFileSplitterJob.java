@@ -53,18 +53,18 @@ import org.apache.hadoop.util.ToolRunner;
  * for later bulk importing.
  */
 @InterfaceAudience.Private
-public class HFileSplitterJob extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(HFileSplitterJob.class);
+public class MapReduceHFileSplitterJob extends Configured implements Tool {
+  private static final Log LOG = LogFactory.getLog(MapReduceHFileSplitterJob.class);
   final static String NAME = "HFileSplitterJob";
   public final static String BULK_OUTPUT_CONF_KEY = "hfile.bulk.output";
   public final static String TABLES_KEY = "hfile.input.tables";
   public final static String TABLE_MAP_KEY = "hfile.input.tablesmap";
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
-  public HFileSplitterJob() {
+  public MapReduceHFileSplitterJob() {
   }
 
-  protected HFileSplitterJob(final Configuration c) {
+  protected MapReduceHFileSplitterJob(final Configuration c) {
     super(c);
   }
 
@@ -111,7 +111,7 @@ public class HFileSplitterJob extends Configured implements Tool {
     Job job =
         Job.getInstance(conf,
           conf.get(JOB_NAME_CONF_KEY, NAME + "_" + EnvironmentEdgeManager.currentTime()));
-    job.setJarByClass(HFileSplitterJob.class);
+    job.setJarByClass(MapReduceHFileSplitterJob.class);
     job.setInputFormatClass(HFileInputFormat.class);
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
@@ -164,7 +164,7 @@ public class HFileSplitterJob extends Configured implements Tool {
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    int ret = ToolRunner.run(new HFileSplitterJob(HBaseConfiguration.create()), args);
+    int ret = ToolRunner.run(new MapReduceHFileSplitterJob(HBaseConfiguration.create()), args);
     System.exit(ret);
   }
 

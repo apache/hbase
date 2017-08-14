@@ -115,8 +115,8 @@ public class BackupManager implements Closeable {
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Added log cleaner: " + cleanerClass +"\n" +
-                "Added master procedure manager: " + masterProcedureClass);
+      LOG.debug("Added log cleaner: " + cleanerClass + "\n" + "Added master procedure manager: "
+          + masterProcedureClass);
     }
 
   }
@@ -185,9 +185,8 @@ public class BackupManager implements Closeable {
    * @return BackupInfo
    * @throws BackupException exception
    */
-  public BackupInfo createBackupInfo(String backupId, BackupType type,
-      List<TableName> tableList, String targetRootDir, int workers, long bandwidth)
-      throws BackupException {
+  public BackupInfo createBackupInfo(String backupId, BackupType type, List<TableName> tableList,
+      String targetRootDir, int workers, long bandwidth) throws BackupException {
     if (targetRootDir == null) {
       throw new BackupException("Wrong backup request parameter: target backup root directory");
     }
@@ -313,7 +312,7 @@ public class BackupManager implements Closeable {
           }
         } else {
           Path logBackupPath =
-              HBackupFileSystem.getLogBackupPath(backup.getBackupRootDir(), backup.getBackupId());
+              HBackupFileSystem.getBackupPath(backup.getBackupRootDir(), backup.getBackupId());
           LOG.debug("Current backup has an incremental backup ancestor, "
               + "touching its image manifest in " + logBackupPath.toString()
               + " to construct the dependency.");
@@ -371,7 +370,7 @@ public class BackupManager implements Closeable {
    * @throws IOException if active session already exists
    */
   public void startBackupSession() throws IOException {
-    systemTable.startBackupSession();
+    systemTable.startBackupExclusiveOperation();
   }
 
   /**
@@ -379,9 +378,8 @@ public class BackupManager implements Closeable {
    * @throws IOException if no active session
    */
   public void finishBackupSession() throws IOException {
-    systemTable.finishBackupSession();
+    systemTable.finishBackupExclusiveOperation();
   }
-
 
   /**
    * Read the last backup start code (timestamp) of last successful backup. Will return null if
@@ -413,7 +411,7 @@ public class BackupManager implements Closeable {
   }
 
   public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
-  readBulkloadRows(List<TableName> tableList) throws IOException {
+      readBulkloadRows(List<TableName> tableList) throws IOException {
     return systemTable.readBulkloadRows(tableList);
   }
 
@@ -448,8 +446,7 @@ public class BackupManager implements Closeable {
    */
   public void writeRegionServerLogTimestamp(Set<TableName> tables,
       HashMap<String, Long> newTimestamps) throws IOException {
-    systemTable.writeRegionServerLogTimestamp(tables, newTimestamps,
-      backupInfo.getBackupRootDir());
+    systemTable.writeRegionServerLogTimestamp(tables, newTimestamps, backupInfo.getBackupRootDir());
   }
 
   /**

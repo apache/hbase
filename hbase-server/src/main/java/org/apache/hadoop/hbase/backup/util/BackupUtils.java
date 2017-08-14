@@ -56,7 +56,9 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -68,14 +70,15 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 public final class BackupUtils {
   protected static final Log LOG = LogFactory.getLog(BackupUtils.class);
   public static final String LOGNAME_SEPARATOR = ".";
+  public static final int MILLISEC_IN_HOUR = 3600000;
 
   private BackupUtils() {
     throw new AssertionError("Instantiating utility class...");
   }
 
   /**
-   * Loop through the RS log timestamp map for the tables, for each RS, find the min timestamp
-   * value for the RS among the tables.
+   * Loop through the RS log timestamp map for the tables, for each RS, find the min timestamp value
+   * for the RS among the tables.
    * @param rsLogTimestampMap timestamp map
    * @return the min timestamp of each RS
    */
@@ -114,16 +117,17 @@ public final class BackupUtils {
   }
 
   /**
-   * copy out Table RegionInfo into incremental backup image need to consider move this
-   * logic into HBackupFileSystem
+   * copy out Table RegionInfo into incremental backup image need to consider move this logic into
+   * HBackupFileSystem
    * @param conn connection
    * @param backupInfo backup info
    * @param conf configuration
    * @throws IOException exception
    * @throws InterruptedException exception
    */
-  public static void copyTableRegionInfo(Connection conn, BackupInfo backupInfo,
-      Configuration conf) throws IOException, InterruptedException {
+  public static void
+      copyTableRegionInfo(Connection conn, BackupInfo backupInfo, Configuration conf)
+          throws IOException, InterruptedException {
     Path rootDir = FSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
@@ -152,10 +156,8 @@ public final class BackupUtils {
       LOG.debug("Starting to write region info for table " + table);
       for (HRegionInfo regionInfo : regions) {
         Path regionDir =
-            HRegion.getRegionDir(new Path(backupInfo.getTableBackupDir(table)),
-              regionInfo);
-        regionDir =
-            new Path(backupInfo.getTableBackupDir(table), regionDir.getName());
+            HRegion.getRegionDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
+        regionDir = new Path(backupInfo.getTableBackupDir(table), regionDir.getName());
         writeRegioninfoOnFilesystem(conf, targetFs, regionDir, regionInfo);
       }
       LOG.debug("Finished writing region info for table " + table);
@@ -301,7 +303,6 @@ public final class BackupUtils {
     return ret;
   }
 
-
   /**
    * Check whether the backup path exist
    * @param backupStr backup
@@ -431,8 +432,7 @@ public final class BackupUtils {
    * @param conf configuration
    * @throws IOException exception
    */
-  private static void cleanupHLogDir(BackupInfo backupInfo, Configuration conf)
-      throws IOException {
+  private static void cleanupHLogDir(BackupInfo backupInfo, Configuration conf) throws IOException {
 
     String logDir = backupInfo.getHLogTargetDir();
     if (logDir == null) {
@@ -451,7 +451,6 @@ public final class BackupUtils {
       fs.delete(file.getPath(), true);
     }
   }
-
 
   private static void cleanupTargetDir(BackupInfo backupInfo, Configuration conf) {
     try {
@@ -498,8 +497,8 @@ public final class BackupUtils {
    * @param tableName table name
    * @return backupPath String for the particular table
    */
-  public static String getTableBackupDir(String backupRootDir, String backupId,
-      TableName tableName) {
+  public static String
+      getTableBackupDir(String backupRootDir, String backupId, TableName tableName) {
     return backupRootDir + Path.SEPARATOR + backupId + Path.SEPARATOR
         + tableName.getNamespaceAsString() + Path.SEPARATOR + tableName.getQualifierAsString()
         + Path.SEPARATOR;
@@ -522,7 +521,6 @@ public final class BackupUtils {
     }
     return list;
   }
-
 
   /**
    * Calls fs.listStatus() and treats FileNotFoundException as non-fatal This accommodates
@@ -655,19 +653,16 @@ public final class BackupUtils {
    * @param backupId backup id
    * @param check check only
    * @param fromTables table list from
-   * @param toTables   table list to
+   * @param toTables table list to
    * @param isOverwrite overwrite data
    * @return request obkect
    */
   public static RestoreRequest createRestoreRequest(String backupRootDir, String backupId,
       boolean check, TableName[] fromTables, TableName[] toTables, boolean isOverwrite) {
     RestoreRequest.Builder builder = new RestoreRequest.Builder();
-    RestoreRequest request = builder.withBackupRootDir(backupRootDir)
-                                    .withBackupId(backupId)
-                                    .withCheck(check)
-                                    .withFromTables(fromTables)
-                                    .withToTables(toTables)
-                                    .withOvewrite(isOverwrite).build();
+    RestoreRequest request =
+        builder.withBackupRootDir(backupRootDir).withBackupId(backupId).withCheck(check)
+            .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();
     return request;
   }
 
@@ -699,4 +694,54 @@ public final class BackupUtils {
     return isValid;
   }
 
+  public static Path getBulkOutputDir(String tableName, Configuration conf, boolean deleteOnExit)
+      throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    String tmp =
+        conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY, HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
+    Path path =
+        new Path(tmp + Path.SEPARATOR + "bulk_output-" + tableName + "-"
+            + EnvironmentEdgeManager.currentTime());
+    if (deleteOnExit) {
+      fs.deleteOnExit(path);
+    }
+    return path;
+  }
+
+  public static Path getBulkOutputDir(String tableName, Configuration conf) throws IOException {
+    return getBulkOutputDir(tableName, conf, true);
+  }
+
+  public static String getFileNameCompatibleString(TableName table) {
+    return table.getNamespaceAsString() + "-" + table.getQualifierAsString();
+  }
+
+  public static boolean failed(int result) {
+    return result != 0;
+  }
+
+  public static boolean succeeded(int result) {
+    return result == 0;
+  }
+
+  public static LoadIncrementalHFiles createLoader(Configuration config) throws IOException {
+    // set configuration for restore:
+    // LoadIncrementalHFile needs more time
+    // <name>hbase.rpc.timeout</name> <value>600000</value>
+    // calculates
+    Configuration conf = new Configuration(config);
+    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, MILLISEC_IN_HOUR);
+
+    // By default, it is 32 and loader will fail if # of files in any region exceed this
+    // limit. Bad for snapshot restore.
+    conf.setInt(LoadIncrementalHFiles.MAX_FILES_PER_REGION_PER_FAMILY, Integer.MAX_VALUE);
+    conf.set(LoadIncrementalHFiles.IGNORE_UNMATCHED_CF_CONF_KEY, "yes");
+    LoadIncrementalHFiles loader = null;
+    try {
+      loader = new LoadIncrementalHFiles(conf);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+    return loader;
+  }
 }

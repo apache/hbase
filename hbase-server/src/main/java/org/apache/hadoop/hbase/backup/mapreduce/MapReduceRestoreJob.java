@@ -17,31 +17,31 @@
  */
 package org.apache.hadoop.hbase.backup.mapreduce;
 
+import static org.apache.hadoop.hbase.backup.util.BackupUtils.failed;
+import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
+
 import java.io.IOException;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.RestoreJob;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
-import org.apache.hadoop.hbase.mapreduce.WALPlayer;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.Tool;
+
 
 /**
  * MapReduce implementation of {@link RestoreJob}
  *
- * For full backup restore, it runs {@link HFileSplitterJob} job and creates
+ * For backup restore, it runs {@link MapReduceHFileSplitterJob} job and creates
  * HFiles which are aligned with a region boundaries of a table being
- * restored, for incremental backup restore it runs {@link WALPlayer} in
- * bulk load mode (creates HFiles from WAL edits).
+ * restored.
  *
  * The resulting HFiles then are loaded using HBase bulk load tool
  * {@link LoadIncrementalHFiles}
@@ -62,8 +62,8 @@ public class MapReduceRestoreJob implements RestoreJob {
 
     String bulkOutputConfKey;
 
-    player = new HFileSplitterJob();
-    bulkOutputConfKey = HFileSplitterJob.BULK_OUTPUT_CONF_KEY;
+    player = new MapReduceHFileSplitterJob();
+    bulkOutputConfKey = MapReduceHFileSplitterJob.BULK_OUTPUT_CONF_KEY;
     // Player reads all files in arbitrary directory structure and creates
     // a Map task for each file
     String dirs = StringUtils.join(dirPaths, ",");
@@ -71,8 +71,8 @@ public class MapReduceRestoreJob implements RestoreJob {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Restore " + (fullBackupRestore ? "full" : "incremental")
           + " backup from directory " + dirs + " from hbase tables "
-          + StringUtils.join(tableNames, BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND) +
-          " to tables "
+          + StringUtils.join(tableNames, BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND)
+          + " to tables "
           + StringUtils.join(newTableNames, BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND));
     }
 
@@ -80,13 +80,16 @@ public class MapReduceRestoreJob implements RestoreJob {
 
       LOG.info("Restore " + tableNames[i] + " into " + newTableNames[i]);
 
-      Path bulkOutputPath = getBulkOutputDir(getFileNameCompatibleString(newTableNames[i]));
+      Path bulkOutputPath =
+          BackupUtils.getBulkOutputDir(BackupUtils.getFileNameCompatibleString(newTableNames[i]),
+            getConf());
       Configuration conf = getConf();
       conf.set(bulkOutputConfKey, bulkOutputPath.toString());
       String[] playerArgs =
-        { dirs,
-          fullBackupRestore? newTableNames[i].getNameAsString():tableNames[i].getNameAsString()
-        };
+          {
+              dirs,
+              fullBackupRestore ? newTableNames[i].getNameAsString() : tableNames[i]
+                  .getNameAsString() };
 
       int result = 0;
       int loaderResult = 0;
@@ -96,7 +99,7 @@ public class MapReduceRestoreJob implements RestoreJob {
         result = player.run(playerArgs);
         if (succeeded(result)) {
           // do bulk load
-          LoadIncrementalHFiles loader = createLoader(getConf());
+          LoadIncrementalHFiles loader = BackupUtils.createLoader(getConf());
           if (LOG.isDebugEnabled()) {
             LOG.debug("Restoring HFiles from directory " + bulkOutputPath);
           }
@@ -113,58 +116,11 @@ public class MapReduceRestoreJob implements RestoreJob {
         }
         LOG.debug("Restore Job finished:" + result);
       } catch (Exception e) {
+        LOG.error(e);
         throw new IOException("Can not restore from backup directory " + dirs
             + " (check Hadoop and HBase logs) ", e);
       }
-
     }
-  }
-
-  private String getFileNameCompatibleString(TableName table) {
-    return table.getNamespaceAsString() + "-" + table.getQualifierAsString();
-  }
-
-  private boolean failed(int result) {
-    return result != 0;
-  }
-
-  private boolean succeeded(int result) {
-    return result == 0;
-  }
-
-  public static LoadIncrementalHFiles createLoader(Configuration config) throws IOException {
-    // set configuration for restore:
-    // LoadIncrementalHFile needs more time
-    // <name>hbase.rpc.timeout</name> <value>600000</value>
-    // calculates
-    Integer milliSecInHour = 3600000;
-    Configuration conf = new Configuration(config);
-    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, milliSecInHour);
-
-    // By default, it is 32 and loader will fail if # of files in any region exceed this
-    // limit. Bad for snapshot restore.
-    conf.setInt(LoadIncrementalHFiles.MAX_FILES_PER_REGION_PER_FAMILY, Integer.MAX_VALUE);
-    conf.set(LoadIncrementalHFiles.IGNORE_UNMATCHED_CF_CONF_KEY, "yes");
-    LoadIncrementalHFiles loader = null;
-    try {
-      loader = new LoadIncrementalHFiles(conf);
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
-    return loader;
-  }
-
-  private Path getBulkOutputDir(String tableName) throws IOException {
-    Configuration conf = getConf();
-    FileSystem fs = FileSystem.get(conf);
-    String tmp =
-        conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY,
-          HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
-    Path path =
-        new Path(tmp + Path.SEPARATOR + "bulk_output-" + tableName + "-"
-            + EnvironmentEdgeManager.currentTime());
-    fs.deleteOnExit(path);
-    return path;
   }
 
   @Override

@@ -49,8 +49,8 @@ public class HBackupFileSystem {
   /**
    * Given the backup root dir, backup id and the table name, return the backup image location,
    * which is also where the backup manifest file is. return value look like:
-   * "hdfs://backup.hbase.org:9000/user/biadmin/backup/backup_1396650096738/default/t1_dn/",
-   * where "hdfs://backup.hbase.org:9000/user/biadmin/backup" is a backup root directory
+   * "hdfs://backup.hbase.org:9000/user/biadmin/backup/backup_1396650096738/default/t1_dn/", where
+   * "hdfs://backup.hbase.org:9000/user/biadmin/backup" is a backup root directory
    * @param backupRootDir backup root directory
    * @param backupId backup id
    * @param tableName table name
@@ -63,18 +63,26 @@ public class HBackupFileSystem {
         + Path.SEPARATOR;
   }
 
+  public static String getTableBackupDataDir(String backupRootDir, String backupId,
+      TableName tableName) {
+    return getTableBackupDir(backupRootDir, backupId, tableName) + Path.SEPARATOR + "data";
+  }
+
+  public static Path getBackupPath(String backupRootDir, String backupId) {
+    return new Path(backupRootDir + Path.SEPARATOR + backupId);
+  }
+
   /**
    * Given the backup root dir, backup id and the table name, return the backup image location,
    * which is also where the backup manifest file is. return value look like:
-   * "hdfs://backup.hbase.org:9000/user/biadmin/backup/backup_1396650096738/default/t1_dn/",
-   * where "hdfs://backup.hbase.org:9000/user/biadmin/backup" is a backup root directory
+   * "hdfs://backup.hbase.org:9000/user/biadmin/backup/backup_1396650096738/default/t1_dn/", where
+   * "hdfs://backup.hbase.org:9000/user/biadmin/backup" is a backup root directory
    * @param backupRootPath backup root path
    * @param tableName table name
    * @param backupId backup Id
    * @return backupPath for the particular table
    */
-  public static Path getTableBackupPath(TableName tableName,
-      Path backupRootPath, String backupId) {
+  public static Path getTableBackupPath(TableName tableName, Path backupRootPath, String backupId) {
     return new Path(getTableBackupDir(backupRootPath.toString(), backupId, tableName));
   }
 
@@ -94,33 +102,30 @@ public class HBackupFileSystem {
     return new Path(getLogBackupDir(backupRootDir, backupId));
   }
 
-  private static Path getManifestPath(TableName tableName, Configuration conf, Path backupRootPath,
-      String backupId) throws IOException {
-    Path manifestPath =
-        new Path(getTableBackupPath(tableName, backupRootPath, backupId),
-            BackupManifest.MANIFEST_FILE_NAME);
+  // TODO we do not keep WAL files anymore
+  // Move manifest file to other place
+  private static Path getManifestPath(Configuration conf, Path backupRootPath, String backupId)
+      throws IOException {
+    Path manifestPath = null;
 
     FileSystem fs = backupRootPath.getFileSystem(conf);
+    manifestPath =
+        new Path(getBackupPath(backupRootPath.toString(), backupId) + Path.SEPARATOR
+            + BackupManifest.MANIFEST_FILE_NAME);
     if (!fs.exists(manifestPath)) {
-      // check log dir for incremental backup case
-      manifestPath =
-          new Path(getLogBackupDir(backupRootPath.toString(), backupId) + Path.SEPARATOR
-              + BackupManifest.MANIFEST_FILE_NAME);
-      if (!fs.exists(manifestPath)) {
-        String errorMsg =
-            "Could not find backup manifest " + BackupManifest.MANIFEST_FILE_NAME + " for "
-                + backupId + ". File " + manifestPath + " does not exists. Did " + backupId
-                + " correspond to previously taken backup ?";
-        throw new IOException(errorMsg);
-      }
+      String errorMsg =
+          "Could not find backup manifest " + BackupManifest.MANIFEST_FILE_NAME + " for "
+              + backupId + ". File " + manifestPath + " does not exists. Did " + backupId
+              + " correspond to previously taken backup ?";
+      throw new IOException(errorMsg);
     }
     return manifestPath;
   }
 
-  public static BackupManifest getManifest(TableName tableName, Configuration conf,
-      Path backupRootPath, String backupId) throws IOException {
+  public static BackupManifest
+      getManifest(Configuration conf, Path backupRootPath, String backupId) throws IOException {
     BackupManifest manifest =
-        new BackupManifest(conf, getManifestPath(tableName, conf, backupRootPath, backupId));
+        new BackupManifest(conf, getManifestPath(conf, backupRootPath, backupId));
     return manifest;
   }
 
@@ -134,7 +139,7 @@ public class HBackupFileSystem {
       TableName[] tableArray, Configuration conf, Path backupRootPath, String backupId)
       throws IOException {
     for (TableName tableName : tableArray) {
-      BackupManifest manifest = getManifest(tableName, conf, backupRootPath, backupId);
+      BackupManifest manifest = getManifest(conf, backupRootPath, backupId);
       backupManifestMap.put(tableName, manifest);
     }
   }

@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
-import org.apache.hadoop.hbase.backup.mapreduce.MapReduceRestoreJob;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.backup.util.RestoreTool;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
@@ -58,7 +58,6 @@ public class RestoreTablesClient {
   private Configuration conf;
   private Connection conn;
   private String backupId;
-  private String fullBackupId;
   private TableName[] sTableArray;
   private TableName[] tTableArray;
   private String targetRootDir;
@@ -107,8 +106,7 @@ public class RestoreTablesClient {
 
     if (existTableList.size() > 0) {
       if (!isOverwrite) {
-        LOG.error("Existing table ("
-            + existTableList
+        LOG.error("Existing table (" + existTableList
             + ") found in the restore target, please add "
             + "\"-overwrite\" option in the command if you mean"
             + " to restore to these existing tables");
@@ -148,9 +146,8 @@ public class RestoreTablesClient {
     Path tableBackupPath = HBackupFileSystem.getTableBackupPath(sTable, backupRoot, backupId);
     String lastIncrBackupId = images.length == 1 ? null : images[images.length - 1].getBackupId();
     // We need hFS only for full restore (see the code)
-    BackupManifest manifest = HBackupFileSystem.getManifest(sTable, conf, backupRoot, backupId);
+    BackupManifest manifest = HBackupFileSystem.getManifest(conf, backupRoot, backupId);
     if (manifest.getType() == BackupType.FULL) {
-      fullBackupId = manifest.getBackupImage().getBackupId();
       LOG.info("Restoring '" + sTable + "' to '" + tTable + "' from full" + " backup image "
           + tableBackupPath.toString());
       restoreTool.fullRestoreTable(conn, tableBackupPath, sTable, tTable, truncateIfExists,
@@ -169,8 +166,8 @@ public class RestoreTablesClient {
     // full backup path comes first
     for (int i = 1; i < images.length; i++) {
       BackupImage im = images[i];
-      String fileBackupDir = HBackupFileSystem.getTableBackupDir(im.getRootDir(),
-                  im.getBackupId(), sTable)+ Path.SEPARATOR+"data";
+      String fileBackupDir =
+          HBackupFileSystem.getTableBackupDataDir(im.getRootDir(), im.getBackupId(), sTable);
       dirList.add(new Path(fileBackupDir));
     }
 
@@ -196,8 +193,10 @@ public class RestoreTablesClient {
     TreeSet<BackupImage> restoreImageSet = new TreeSet<BackupImage>();
     boolean truncateIfExists = isOverwrite;
     Set<String> backupIdSet = new HashSet<>();
+
     for (int i = 0; i < sTableArray.length; i++) {
       TableName table = sTableArray[i];
+
       BackupManifest manifest = backupManifestMap.get(table);
       // Get the image list of this backup for restore in time order from old
       // to new.
@@ -213,11 +212,8 @@ public class RestoreTablesClient {
       if (restoreImageSet != null && !restoreImageSet.isEmpty()) {
         LOG.info("Restore includes the following image(s):");
         for (BackupImage image : restoreImageSet) {
-          LOG.info("Backup: "
-              + image.getBackupId()
-              + " "
-              + HBackupFileSystem.getTableBackupDir(image.getRootDir(), image.getBackupId(),
-                  table));
+          LOG.info("Backup: " + image.getBackupId() + " "
+              + HBackupFileSystem.getTableBackupDir(image.getRootDir(), image.getBackupId(), table));
           if (image.getType() == BackupType.INCREMENTAL) {
             backupIdSet.add(image.getBackupId());
             LOG.debug("adding " + image.getBackupId() + " for bulk load");
@@ -232,13 +228,13 @@ public class RestoreTablesClient {
         Map<byte[], List<Path>>[] mapForSrc = table.readBulkLoadedFiles(id, sTableList);
         Map<LoadQueueItem, ByteBuffer> loaderResult;
         conf.setBoolean(LoadIncrementalHFiles.ALWAYS_COPY_FILES, true);
-        LoadIncrementalHFiles loader = MapReduceRestoreJob.createLoader(conf);
+        LoadIncrementalHFiles loader = BackupUtils.createLoader(conf);
         for (int i = 0; i < sTableList.size(); i++) {
           if (mapForSrc[i] != null && !mapForSrc[i].isEmpty()) {
             loaderResult = loader.run(null, mapForSrc[i], tTableArray[i]);
             LOG.debug("bulk loading " + sTableList.get(i) + " to " + tTableArray[i]);
             if (loaderResult.isEmpty()) {
-              String msg = "Couldn't bulk load for " + sTableList.get(i) + " to " +tTableArray[i];
+              String msg = "Couldn't bulk load for " + sTableList.get(i) + " to " + tTableArray[i];
               LOG.error(msg);
               throw new IOException(msg);
             }
@@ -253,7 +249,7 @@ public class RestoreTablesClient {
     if (backupId == null) {
       return 0;
     }
-    return Long.parseLong(backupId.substring(backupId.lastIndexOf("_")+1));
+    return Long.parseLong(backupId.substring(backupId.lastIndexOf("_") + 1));
   }
 
   static boolean withinRange(long a, long lower, long upper) {
@@ -268,15 +264,15 @@ public class RestoreTablesClient {
     // case VALIDATION:
     // check the target tables
     checkTargetTables(tTableArray, isOverwrite);
+
     // case RESTORE_IMAGES:
     HashMap<TableName, BackupManifest> backupManifestMap = new HashMap<>();
     // check and load backup image manifest for the tables
     Path rootPath = new Path(targetRootDir);
     HBackupFileSystem.checkImageManifestExist(backupManifestMap, sTableArray, conf, rootPath,
       backupId);
+
     restore(backupManifestMap, sTableArray, tTableArray, isOverwrite);
   }
-
-
 
 }

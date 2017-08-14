@@ -433,6 +433,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
     }
   }
 
+  @Override
+  public String toString() {
+    return backupId;
+  }
+
   public byte[] toByteArray() throws IOException {
     return toProtosBackupInfo().toByteArray();
   }
