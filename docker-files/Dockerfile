@@ -117,6 +117,8 @@ RUN cd /usr/src/ && \
   ctest && \
   make install
 
-ENTRYPOINT /usr/sbin/krb5kdc -P /var/run/krb5kdc.pid && /bin/bash
+RUN echo "enabled=1" >> /etc/default/apport
+
+ENTRYPOINT /usr/sbin/krb5kdc -P /var/run/krb5kdc.pid && echo "/tmp/core.%h.%e.%t" >> /proc/sys/kernel/core_pattern && sysctl -p && ulimit -c unlimited && /bin/bash
 
 WORKDIR /usr/src/hbase/hbase-native-client
