@@ -44,6 +44,7 @@ import java.util.concurrent.Future;
 import com.google.common.base.Objects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -325,7 +326,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // recreate the table when user has requested presplit or when existing
     // {RegionSplitPolicy,replica count} does not match requested.
     if ((exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions)
-      || (!isReadCmd && desc != null && desc.getRegionSplitPolicyClassName() != opts.splitPolicy)
+      || (!isReadCmd && desc != null && !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy))
       || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)) {
       needsDelete = true;
       // wait, why did it delete my table?!?
