@@ -388,7 +388,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
   /**
    * Sets the visibility expression associated with cells in this Mutation.
-   * It is illegal to set <code>CellVisibility</code> on <code>Delete</code> mutation.
    * @param expression
    */
   public Mutation setCellVisibility(CellVisibility expression) {
