@@ -310,6 +310,52 @@ public class TestFromClientSide3 {
   }
 
   @Test
+  public void testBatchWithRowMutation() throws Exception {
+    LOG.info("Starting testBatchWithRowMutation");
+    final TableName TABLENAME = TableName.valueOf("testBatchWithRowMutation");
+    try (Table t = TEST_UTIL.createTable(TABLENAME, FAMILY)) {
+      byte [][] QUALIFIERS = new byte [][] {
+        Bytes.toBytes("a"), Bytes.toBytes("b")
+      };
+      RowMutations arm = new RowMutations(ROW);
+      Put p = new Put(ROW);
+      p.addColumn(FAMILY, QUALIFIERS[0], VALUE);
+      arm.add(p);
+      Object[] batchResult = new Object[1];
+      t.batch(Arrays.asList(arm), batchResult);
+
+      Get g = new Get(ROW);
+      Result r = t.get(g);
+      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
+
+      arm = new RowMutations(ROW);
+      p = new Put(ROW);
+      p.addColumn(FAMILY, QUALIFIERS[1], VALUE);
+      arm.add(p);
+      Delete d = new Delete(ROW);
+      d.addColumns(FAMILY, QUALIFIERS[0]);
+      arm.add(d);
+      t.batch(Arrays.asList(arm), batchResult);
+      r = t.get(g);
+      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
+      assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
+
+      // Test that we get the correct remote exception for RowMutations from batch()
+      try {
+        arm = new RowMutations(ROW);
+        p = new Put(ROW);
+        p.addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE);
+        arm.add(p);
+        t.batch(Arrays.asList(arm), batchResult);
+        fail("Expected RetriesExhaustedWithDetailsException with NoSuchColumnFamilyException");
+      } catch(RetriesExhaustedWithDetailsException e) {
+        String msg = e.getMessage();
+        assertTrue(msg.contains("NoSuchColumnFamilyException"));
+      }
+    }
+  }
+
+  @Test
   public void testHTableExistsMethodSingleRegionSingleGet() throws Exception {
       // Test with a single region table.
       Table table = TEST_UTIL.createTable(

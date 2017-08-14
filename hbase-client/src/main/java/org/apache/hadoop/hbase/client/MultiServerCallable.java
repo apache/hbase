@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -93,30 +94,64 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
     RegionAction.Builder regionActionBuilder = RegionAction.newBuilder();
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
-    List<CellScannable> cells = null;
-    // The multi object is a list of Actions by region.  Iterate by region.
+
+    // Pre-size. Presume at least a KV per Action. There are likely more.
+    List<CellScannable> cells =
+        (this.cellBlock ? new ArrayList<CellScannable>(countOfActions) : null);
+
     long nonceGroup = multiAction.getNonceGroup();
     if (nonceGroup != HConstants.NO_NONCE) {
       multiRequestBuilder.setNonceGroup(nonceGroup);
     }
+    // Index to track RegionAction within the MultiRequest
+    int regionActionIndex = -1;
+    // Map from a created RegionAction to the original index for a RowMutations within
+    // its original list of actions
+    Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
+    // The multi object is a list of Actions by region. Iterate by region.
     for (Map.Entry<byte[], List<Action>> e: this.multiAction.actions.entrySet()) {
       final byte [] regionName = e.getKey();
       final List<Action> actions = e.getValue();
       regionActionBuilder.clear();
       regionActionBuilder.setRegion(RequestConverter.buildRegionSpecifier(
           HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName));
-      if (this.cellBlock) {
-        // Pre-size. Presume at least a KV per Action.  There are likely more.
-        if (cells == null) cells = new ArrayList<>(countOfActions);
-        // Send data in cellblocks. The call to buildNoDataMultiRequest will skip RowMutations.
-        // They have already been handled above. Guess at count of cells
-        regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells,
-          regionActionBuilder, actionBuilder, mutationBuilder);
-      } else {
-        regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions,
-          regionActionBuilder, actionBuilder, mutationBuilder);
+
+      int rowMutations = 0;
+      for (Action action : actions) {
+        Row row = action.getAction();
+        // Row Mutations are a set of Puts and/or Deletes all to be applied atomically
+        // on the one row. We do separate RegionAction for each RowMutations.
+        // We maintain a map to keep track of this RegionAction and the original Action index.
+        if (row instanceof RowMutations) {
+          RowMutations rms = (RowMutations)row;
+          if (this.cellBlock) {
+            // Build a multi request absent its Cell payload. Send data in cellblocks.
+            regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, rms, cells,
+              regionActionBuilder, actionBuilder, mutationBuilder);
+          } else {
+            regionActionBuilder = RequestConverter.buildRegionAction(regionName, rms);
+          }
+          regionActionBuilder.setAtomic(true);
+          multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+          regionActionIndex++;
+          rowMutationsIndexMap.put(regionActionIndex, action.getOriginalIndex());
+          rowMutations++;
+        }
       }
-      multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+
+      if (actions.size() > rowMutations) {
+        if (this.cellBlock) {
+          // Send data in cellblocks. The call to buildNoDataRegionAction will skip RowMutations.
+          // They have already been handled above. Guess at count of cells
+          regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells,
+            regionActionBuilder, actionBuilder, mutationBuilder);
+        } else {
+          regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions,
+            regionActionBuilder, actionBuilder, mutationBuilder);
+        }
+        multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+        regionActionIndex++;
+      }
     }
 
     if (cells != null) {
@@ -125,7 +160,8 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
     ClientProtos.MultiRequest requestProto = multiRequestBuilder.build();
     ClientProtos.MultiResponse responseProto = getStub().multi(getRpcController(), requestProto);
     if (responseProto == null) return null; // Occurs on cancel
-    return ResponseConverter.getResults(requestProto, responseProto, getRpcControllerCellScanner());
+    return ResponseConverter.getResults(requestProto, rowMutationsIndexMap, responseProto,
+      getRpcControllerCellScanner());
   }
 
   /**
