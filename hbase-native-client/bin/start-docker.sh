@@ -55,7 +55,7 @@ fi;
 docker build -t hbase_native -f docker-files/Dockerfile .
 
 # After the image is built run the thing
-docker run -h="securecluster" -p 16050:16050/tcp \
+docker run --privileged=true -h="securecluster" -p 16050:16050/tcp \
          -v ${BASE_DIR}/..:/usr/src/hbase \
            -v ~/.m2:/root/.m2 \
          -it hbase_native /bin/bash
