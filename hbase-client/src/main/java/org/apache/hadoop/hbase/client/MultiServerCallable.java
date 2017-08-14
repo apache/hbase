@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -97,12 +98,21 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
     RegionAction.Builder regionActionBuilder = RegionAction.newBuilder();
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
-    List<CellScannable> cells = null;
-    // The multi object is a list of Actions by region.  Iterate by region.
+
+    // Pre-size. Presume at least a KV per Action. There are likely more.
+    List<CellScannable> cells =
+        (this.cellBlock ? new ArrayList<CellScannable>(countOfActions) : null);
+
     long nonceGroup = multiAction.getNonceGroup();
     if (nonceGroup != HConstants.NO_NONCE) {
       multiRequestBuilder.setNonceGroup(nonceGroup);
     }
+    // Index to track RegionAction within the MultiRequest
+    int regionActionIndex = -1;
+    // Map from a created RegionAction for a RowMutations to the original index within
+    // its original list of actions
+    Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
+    // The multi object is a list of Actions by region.  Iterate by region.
     for (Map.Entry<byte[], List<Action<R>>> e: this.multiAction.actions.entrySet()) {
       final byte [] regionName = e.getKey();
       final List<Action<R>> actions = e.getValue();
@@ -110,19 +120,46 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
       regionActionBuilder.setRegion(RequestConverter.buildRegionSpecifier(
         HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName) );
 
+      int rowMutations = 0;
+      for (Action<R> action : actions) {
+        Row row = action.getAction();
+        // Row Mutations are a set of Puts and/or Deletes all to be applied atomically
+        // on the one row. We do separate RegionAction for each RowMutations.
+        // We maintain a map to keep track of this RegionAction and the original Action index.
+        if (row instanceof RowMutations) {
+          RowMutations rms = (RowMutations)row;
+          if (this.cellBlock) {
+            // Build a multi request absent its Cell payload. Send data in cellblocks.
+            regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, rms, cells,
+              regionActionBuilder, actionBuilder, mutationBuilder);
+          } else {
+            regionActionBuilder = RequestConverter.buildRegionAction(regionName, rms);
+          }
+          regionActionBuilder.setAtomic(true);
+          multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+          regionActionIndex++;
+          rowMutationsIndexMap.put(regionActionIndex, action.getOriginalIndex());
+          rowMutations++;
 
-      if (this.cellBlock) {
-        // Presize.  Presume at least a KV per Action.  There are likely more.
-        if (cells == null) cells = new ArrayList<CellScannable>(countOfActions);
-        // Send data in cellblocks. The call to buildNoDataMultiRequest will skip RowMutations.
-        // They have already been handled above. Guess at count of cells
-        regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells,
-          regionActionBuilder, actionBuilder, mutationBuilder);
-      } else {
-        regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions,
-          regionActionBuilder, actionBuilder, mutationBuilder);
+          regionActionBuilder.clear();
+          regionActionBuilder.setRegion(RequestConverter.buildRegionSpecifier(
+            HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName) );
+        }
       }
-      multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+
+      if (actions.size() > rowMutations) {
+        if (this.cellBlock) {
+          // Send data in cellblocks. The call to buildNoDataRegionAction will skip RowMutations.
+          // They have already been handled above. Guess at count of cells
+          regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells,
+            regionActionBuilder, actionBuilder, mutationBuilder);
+        } else {
+          regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions,
+            regionActionBuilder, actionBuilder, mutationBuilder);
+        }
+        multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+        regionActionIndex++;
+      }
     }
 
     // Controller optionally carries cell data over the proxy/service boundary and also
@@ -140,7 +177,8 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
       throw ProtobufUtil.getRemoteException(e);
     }
     if (responseProto == null) return null; // Occurs on cancel
-    return ResponseConverter.getResults(requestProto, responseProto, controller.cellScanner());
+    return ResponseConverter.getResults(requestProto, rowMutationsIndexMap,
+      responseProto, controller.cellScanner());
   }
 
   /**

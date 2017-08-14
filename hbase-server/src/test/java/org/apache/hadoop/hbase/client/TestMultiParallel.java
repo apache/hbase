@@ -576,10 +576,12 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testBatchWithMixedActions() throws Exception {
     LOG.info("test=testBatchWithMixedActions");
-    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
     // Load some data to start
-    Object[] results = table.batch(constructPutRequests());
+    List<Put> puts = constructPutRequests();
+    Object[] results = new Object[puts.size()];
+    table.batch(puts, results);
     validateSizeAndEmpty(results, KEYS.length);
 
     // Batch: get, get, put(new col), delete, get, get of put, get of deleted,
@@ -601,12 +603,12 @@ public class TestMultiParallel {
 
     // 2 put of new column
     Put put = new Put(KEYS[10]);
-    put.add(BYTES_FAMILY, qual2, val2);
+    put.addColumn(BYTES_FAMILY, qual2, val2);
     actions.add(put);
 
     // 3 delete
     Delete delete = new Delete(KEYS[20]);
-    delete.deleteFamily(BYTES_FAMILY);
+    delete.addFamily(BYTES_FAMILY);
     actions.add(delete);
 
     // 4 get
@@ -620,25 +622,55 @@ public class TestMultiParallel {
 
     // 5 put of new column
     put = new Put(KEYS[40]);
-    put.add(BYTES_FAMILY, qual2, val2);
+    put.addColumn(BYTES_FAMILY, qual2, val2);
     actions.add(put);
 
-    results = table.batch(actions);
+    // 6 RowMutations
+    RowMutations rm = new RowMutations(KEYS[50]);
+    put = new Put(KEYS[50]);
+    put.addColumn(BYTES_FAMILY, qual2, val2);
+    rm.add(put);
+    byte[] qual3 = Bytes.toBytes("qual3");
+    byte[] val3 = Bytes.toBytes("putvalue3");
+    put = new Put(KEYS[50]);
+    put.addColumn(BYTES_FAMILY, qual3, val3);
+    rm.add(put);
+    actions.add(rm);
+
+    // 7 Add another Get to the mixed sequence after RowMutations
+    get = new Get(KEYS[10]);
+    get.addColumn(BYTES_FAMILY, QUALIFIER);
+    actions.add(get);
+
+    results = new Object[actions.size()];
+    table.batch(actions, results);
 
     // Validation
 
     validateResult(results[0]);
     validateResult(results[1]);
-    validateEmpty(results[2]);
     validateEmpty(results[3]);
     validateResult(results[4]);
     validateEmpty(results[5]);
+    validateEmpty(results[6]);
+    validateResult(results[7]);
 
     // validate last put, externally from the batch
     get = new Get(KEYS[40]);
     get.addColumn(BYTES_FAMILY, qual2);
     Result r = table.get(get);
     validateResult(r, qual2, val2);
+
+    // validate last RowMutations, externally from the batch
+    get = new Get(KEYS[50]);
+    get.addColumn(BYTES_FAMILY, qual2);
+    r = table.get(get);
+    validateResult(r, qual2, val2);
+
+    get = new Get(KEYS[50]);
+    get.addColumn(BYTES_FAMILY, qual3);
+    r = table.get(get);
+    validateResult(r, qual3, val3);
 
     table.close();
   }
@@ -716,8 +748,7 @@ public class TestMultiParallel {
   private void validateEmpty(Object r1) {
     Result result = (Result)r1;
     Assert.assertTrue(result != null);
-    Assert.assertTrue(result.getRow() == null);
-    Assert.assertEquals(0, result.rawCells().length);
+    Assert.assertTrue(result.isEmpty());
   }
 
   private void validateSizeAndEmpty(Object[] results, int expectedSize) {

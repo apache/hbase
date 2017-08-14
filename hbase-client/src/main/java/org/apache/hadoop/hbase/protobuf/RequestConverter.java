@@ -621,7 +621,8 @@ public final class RequestConverter {
               .setMethodName(exec.getMethod().getName())
               .setRequest(exec.getRequest().toByteString())));
       } else if (row instanceof RowMutations) {
-        throw new UnsupportedOperationException("No RowMutations in multi calls; use mutateRow");
+        // Skip RowMutations, which has been separately converted to RegionAction
+        continue;
       } else {
         throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
@@ -699,7 +700,8 @@ public final class RequestConverter {
             .setMethodName(exec.getMethod().getName())
             .setRequest(exec.getRequest().toByteString())));
       } else if (row instanceof RowMutations) {
-        throw new UnsupportedOperationException("No RowMutations in multi calls; use mutateRow");
+        // Skip RowMutations, which has been separately converted to RegionAction
+        continue;
       } else {
         throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
