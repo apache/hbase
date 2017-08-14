@@ -79,13 +79,30 @@ public final class ResponseConverter {
   /**
    * Get the results from a protocol buffer MultiResponse
    *
-   * @param request the protocol buffer MultiResponse to convert
+   * @param request the original protocol buffer MultiRequest
+   * @param response the protocol buffer MultiResponse to convert
    * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
    * @return the results that were in the MultiResponse (a Result or an Exception).
    * @throws IOException
    */
   public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
       final MultiResponse response, final CellScanner cells)
+  throws IOException {
+    return getResults(request, null, response, cells);
+  }
+
+  /**
+   * Get the results from a protocol buffer MultiResponse
+   *
+   * @param request the original protocol buffer MultiRequest
+   * @param rowMutationsIndexMap
+   * @param response the protocol buffer MultiResponse to convert
+   * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
+   * @return the results that were in the MultiResponse (a Result or an Exception).
+   * @throws IOException
+   */
+  public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
+      Map<Integer, Integer> rowMutationsIndexMap, final MultiResponse response, final CellScanner cells)
   throws IOException {
     int requestRegionActionCount = request.getRegionActionCount();
     int responseRegionActionResultCount = response.getRegionActionResultCount();
@@ -120,8 +137,22 @@ public final class ResponseConverter {
             actionResult.getResultOrExceptionCount() + " for region " + actions.getRegion());
       }
 
+      Object responseValue;
+
+      Integer rowMutationsIndex =
+          (rowMutationsIndexMap == null ? null : rowMutationsIndexMap.get(i));
+      if (rowMutationsIndex != null) {
+        // This RegionAction is from a RowMutations in a batch.
+        // If there is an exception from the server, the exception is set at
+        // the RegionActionResult level, which has been handled above.
+        responseValue = response.getProcessed() ?
+            ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
+            ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+        results.add(regionName, rowMutationsIndex, responseValue);
+        continue;
+      }
+
       for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
-        Object responseValue;
         if (roe.hasException()) {
           responseValue = ProtobufUtil.toException(roe.getException());
         } else if (roe.hasResult()) {
