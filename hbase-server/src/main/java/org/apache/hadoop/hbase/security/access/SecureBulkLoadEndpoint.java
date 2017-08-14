@@ -148,15 +148,26 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       fs = baseStagingDir.getFileSystem(conf);
       if (!fs.exists(baseStagingDir)) {
         fs.mkdirs(baseStagingDir, PERM_HIDDEN);
-      } else {
-        fs.setPermission(baseStagingDir, PERM_HIDDEN);
       }
-      //no sticky bit in hadoop-1.0, making directory nonempty so it never gets erased
-      fs.mkdirs(new Path(baseStagingDir,"DONOTERASE"), PERM_HIDDEN);
       FileStatus status = fs.getFileStatus(baseStagingDir);
-      if(status == null) {
+      if (status == null) {
         throw new IllegalStateException("Failed to create staging directory");
       }
+
+      // If HDFS UMASK value has limited scope then staging directory permission may not be 711
+      // after creation, so we should set staging directory permission explicitly.
+      if (!status.getPermission().equals(PERM_HIDDEN)) {
+        fs.setPermission(baseStagingDir, PERM_HIDDEN);
+        status = fs.getFileStatus(baseStagingDir);
+      }
+
+      // no sticky bit in hadoop-1.0, making directory nonempty so it never gets erased
+      Path doNotEraseDir = new Path(baseStagingDir, "DONOTERASE");
+      if (!fs.exists(doNotEraseDir)) {
+        fs.mkdirs(doNotEraseDir, PERM_HIDDEN);
+        fs.setPermission(doNotEraseDir, PERM_HIDDEN);
+      }
+
       String scheme = fs.getScheme().toLowerCase();
       if (!fsSet.contains(scheme) && !status.getPermission().equals(PERM_HIDDEN)) {
         throw new IllegalStateException(
