@@ -35,8 +35,9 @@ public class ImmutableHColumnDescriptor extends HColumnDescriptor {
     super(desc, false);
   }
 
-  ImmutableHColumnDescriptor(final ModifyableColumnFamilyDescriptor desc) {
-    super(desc);
+  public ImmutableHColumnDescriptor(final ColumnFamilyDescriptor desc) {
+    super(desc instanceof ModifyableColumnFamilyDescriptor ?
+      (ModifyableColumnFamilyDescriptor) desc : new ModifyableColumnFamilyDescriptor(desc));
   }
 
   @Override
