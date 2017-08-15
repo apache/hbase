@@ -3325,7 +3325,7 @@ public final class ProtobufUtil {
     case SYSTEM_MONOTONIC:
       return ClockType.SYSTEM_MONOTONIC;
     case HLC:
-      return ClockType.HLC;
+      return ClockType.HYBRID_LOGICAL;
     default:
       throw new IllegalArgumentException("Unknown clock type: " + proto);
     }
@@ -3343,7 +3343,7 @@ public final class ProtobufUtil {
       return NodeTime.ClockType.SYSTEM;
     case SYSTEM_MONOTONIC:
       return NodeTime.ClockType.SYSTEM_MONOTONIC;
-    case HLC:
+    case HYBRID_LOGICAL:
       return NodeTime.ClockType.HLC;
     default:
       throw new IllegalArgumentException("Unknown clock type: " + clockType);

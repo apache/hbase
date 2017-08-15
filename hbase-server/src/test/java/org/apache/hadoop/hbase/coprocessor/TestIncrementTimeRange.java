@@ -94,8 +94,8 @@ public class TestIncrementTimeRange {
 
   @Parameters(name = "{0}")
   public static Iterable<Object> data() {
-    return Arrays.asList(new Object[] {ClockType.HLC, ClockType.SYSTEM_MONOTONIC, ClockType
-        .SYSTEM});
+    return Arrays.asList(new Object[] {ClockType.HYBRID_LOGICAL, ClockType.SYSTEM_MONOTONIC,
+        ClockType.SYSTEM});
   }
 
   public TestIncrementTimeRange(ClockType clockType) {

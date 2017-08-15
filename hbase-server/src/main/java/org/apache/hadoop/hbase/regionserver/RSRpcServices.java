@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -202,7 +201,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime;
@@ -1536,8 +1534,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
             .setTimestamp(regionServer.getClock(ClockType.SYSTEM_MONOTONIC).now()).build())
           .addNodeTimes(NodeTime.newBuilder()
-            .setClockType(ProtobufUtil.toClockType(ClockType.HLC))
-            .setTimestamp(regionServer.getClock(ClockType.HLC).now()).build());
+            .setClockType(ProtobufUtil.toClockType(ClockType.HYBRID_LOGICAL))
+            .setTimestamp(regionServer.getClock(ClockType.HYBRID_LOGICAL).now()).build());
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -2026,8 +2024,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
         .setTimestamp(regionServer.getClock(ClockType.SYSTEM_MONOTONIC).now()).build())
       .addNodeTimes(NodeTime.newBuilder()
-        .setClockType(ProtobufUtil.toClockType(ClockType.HLC))
-        .setTimestamp(regionServer.getClock(ClockType.HLC).now()).build());
+        .setClockType(ProtobufUtil.toClockType(ClockType.HYBRID_LOGICAL))
+        .setTimestamp(regionServer.getClock(ClockType.HYBRID_LOGICAL).now()).build());
 
     return builder.build();
   }

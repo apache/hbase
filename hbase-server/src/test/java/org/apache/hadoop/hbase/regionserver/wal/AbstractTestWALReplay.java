@@ -653,17 +653,17 @@ public abstract class AbstractTestWALReplay {
 
   @Test
   public void testReplayEditsAfterAbortingFlushWithHybridLogicalClock() throws Exception {
-    testReplayEditsAfterAbortingFlush(new Clock.HLC());
+    testReplayEditsAfterAbortingFlush(new HybridLogicalClock());
   }
 
   @Test
   public void testReplayEditsAfterAbortingFlushWithSystemMonotonicClock() throws Exception {
-    testReplayEditsAfterAbortingFlush(new Clock.SystemMonotonic());
+    testReplayEditsAfterAbortingFlush(new SystemMonotonicClock());
   }
 
   @Test
   public void testReplayEditsAfterAbortingFlushWithSystemClock() throws Exception {
-    testReplayEditsAfterAbortingFlush(new Clock.System());
+    testReplayEditsAfterAbortingFlush(new SystemClock());
   }
 
   /**

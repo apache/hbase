@@ -40,8 +40,8 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SystemClock;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Result;
@@ -583,7 +583,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public Clock getClock(ClockType clockType) {
-    return new Clock.System();
+    return new SystemClock();
   }
 
   @Override

@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -60,6 +59,7 @@ import org.junit.rules.TestName;
 @Category({MediumTests.class})
 public class TestClockWithCluster {
   private static final Log LOG = LogFactory.getLog(TestClockWithCluster.class);
+  private static final Clock SYSTEM_CLOCK = new SystemClock();
   @Rule
   public TestName name = new TestName();
   private static final HBaseTestingUtility HBTU = new HBaseTestingUtility();
@@ -132,7 +132,7 @@ public class TestClockWithCluster {
     // read , check if the it is same.
     HBTU.verifyNumericRows(table, TEST_FAMILY, 0, 1000, 0);
 
-    // This check will be useful if Clock type were to be system monotonic or HLC.
+    // This check will be useful if Clock type were to be system monotonic or hybrid logical.
     verifyTimestamps(table, TEST_FAMILY, 0, 1000, TimestampType.PHYSICAL);
   }
 
@@ -140,7 +140,7 @@ public class TestClockWithCluster {
   public void testMetaTableClockTypeIsHLC() throws IOException {
     ClockType clockType = admin
       .getTableDescriptor(TableName.META_TABLE_NAME).getClockType();
-    assertEquals(ClockType.HLC, clockType);
+    assertEquals(ClockType.HYBRID_LOGICAL, clockType);
   }
 
   @Test
@@ -161,7 +161,8 @@ public class TestClockWithCluster {
     return cell.getTimestamp();
   }
 
-  private void assertHLCTime(Clock.HLC clock, long expectedPhysicalTime, long expectedLogicalTime) {
+  private void assertHLCTime(HybridLogicalClock clock,
+      long expectedPhysicalTime, long expectedLogicalTime) {
     assertEquals(expectedPhysicalTime, clock.getPhysicalTime());
     assertEquals(expectedLogicalTime, clock.getLogicalTime());
   }
@@ -199,12 +200,13 @@ public class TestClockWithCluster {
     assertNotNull(regionMeta);
 
     // Inject physical clock that always returns same physical time into hybrid logical clock
-    long systemTime = Clock.SYSTEM_CLOCK.now();
+    long systemTime = SYSTEM_CLOCK.now();
     Clock mockSystemClock = mock(Clock.class);
     when(mockSystemClock.now()).thenReturn(systemTime);
     when(mockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
     when(mockSystemClock.isMonotonic()).thenReturn(true);
-    Clock.HLC masterHLC = new Clock.HLC(new Clock.SystemMonotonic(mockSystemClock));
+    HybridLogicalClock masterHLC =
+        new HybridLogicalClock(new SystemMonotonicClock(mockSystemClock));
 
     // The region clock is used for setting timestamps for table mutations and the region server
     // clock is used for updating the clock on region assign/unassign events.
@@ -307,11 +309,12 @@ public class TestClockWithCluster {
     assertNotNull(regionMeta);
 
     // Instantiate two hybrid logical clocks with mocked physical clocks
-    long expectedPhysicalTime = Clock.SYSTEM_CLOCK.now();
+    long expectedPhysicalTime = SYSTEM_CLOCK.now();
     Clock masterMockSystemClock = mock(Clock.class);
     when(masterMockSystemClock.now()).thenReturn(expectedPhysicalTime);
     when(masterMockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
-    Clock.HLC masterHLC= new Clock.HLC(new Clock.SystemMonotonic(masterMockSystemClock));
+    HybridLogicalClock masterHLC =
+        new HybridLogicalClock(new SystemMonotonicClock(masterMockSystemClock));
     master.setClock(masterHLC);
     regionMeta.setClock(masterHLC);
 
@@ -319,7 +322,8 @@ public class TestClockWithCluster {
     when(rsMockSystemClock.now()).thenReturn(expectedPhysicalTime);
     when(rsMockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
     when(rsMockSystemClock.isMonotonic()).thenReturn(true);
-    Clock.HLC rsHLC= new Clock.HLC(new Clock.SystemMonotonic(rsMockSystemClock));
+    HybridLogicalClock rsHLC =
+        new HybridLogicalClock(new SystemMonotonicClock(rsMockSystemClock));
     // We only mock the region server clock here because the region clock does not get used
     // during unassignment and assignment
     rs.setClock(rsHLC);

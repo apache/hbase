@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.TestTableName;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -82,7 +81,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   @Parameters()
   public static Iterable<Object> data() {
     return Arrays.asList(new Object[] {ClockType
-        .SYSTEM, ClockType.SYSTEM_MONOTONIC, ClockType.HLC});
+        .SYSTEM, ClockType.SYSTEM_MONOTONIC, ClockType.HYBRID_LOGICAL });
   }
 
   public TestCellACLWithMultipleVersions(ClockType clockType) {
@@ -418,9 +417,9 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   public void testDeleteWithFutureTimestamp() throws Exception {
     // Store two values, one in the future
 
-    // Setting of future timestamps is not allowed with System Monotonic and HLC.
+    // Setting of future timestamps is not allowed with System Monotonic and Hybrid Logical.
     // So need not run this test against these two clocks.
-    if (clockType == ClockType.HLC || clockType == ClockType.SYSTEM_MONOTONIC) {
+    if (clockType == ClockType.HYBRID_LOGICAL || clockType == ClockType.SYSTEM_MONOTONIC) {
       assertTrue(true);
       return;
     }
@@ -809,8 +808,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   public void testCellPermissionsForPutWithMultipleVersions() throws Exception {
 
     // This test relies is dependent on non monotonic timestamp updates which doesn't happen with
-    // HLC and System Monotonic Clocks.
-    if (clockType == ClockType.HLC || clockType == ClockType.SYSTEM_MONOTONIC) {
+    // Hybrid Logical and System Monotonic Clocks.
+    if (clockType == ClockType.HYBRID_LOGICAL || clockType == ClockType.SYSTEM_MONOTONIC) {
       assertTrue(true);
       return;
     }

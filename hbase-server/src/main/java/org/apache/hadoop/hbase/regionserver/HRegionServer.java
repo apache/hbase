@@ -78,15 +78,17 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HealthCheckChore;
+import org.apache.hadoop.hbase.HybridLogicalClock;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.SystemClock;
+import org.apache.hadoop.hbase.SystemMonotonicClock;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -600,9 +602,9 @@ public class HRegionServer extends HasThread implements
 
     final long maxClockSkew =
         conf.getLong("hbase.max.clock.skew.in.ms", Clock.DEFAULT_MAX_CLOCK_SKEW_IN_MS);
-    this.hybridLogicalClock = new Clock.HLC(maxClockSkew);
-    this.systemMonotonicClock = new Clock.SystemMonotonic(maxClockSkew);
-    this.systemClock = new Clock.System();
+    this.hybridLogicalClock = new HybridLogicalClock(maxClockSkew);
+    this.systemMonotonicClock = new SystemMonotonicClock(maxClockSkew);
+    this.systemClock = new SystemClock();
 
     rpcServices = createRpcServices();
     this.startcode = System.currentTimeMillis();
@@ -2092,7 +2094,7 @@ public class HRegionServer extends HasThread implements
   @Override
   public Clock getClock(ClockType clockType) {
     switch (clockType) {
-      case HLC:
+      case HYBRID_LOGICAL:
         return this.hybridLogicalClock;
       case SYSTEM_MONOTONIC:
         return this.systemMonotonicClock;
@@ -2110,7 +2112,7 @@ public class HRegionServer extends HasThread implements
   @VisibleForTesting
   public void setClock(Clock clock) {
     switch (clock.getClockType()) {
-      case HLC:
+      case HYBRID_LOGICAL:
         this.hybridLogicalClock = clock;
         break;
       case SYSTEM_MONOTONIC:

@@ -33,10 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -348,8 +346,8 @@ public class RSProcedureDispatcher
         .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
         .setTimestamp(env.getMasterServices().getClock(ClockType.SYSTEM_MONOTONIC).now());
     builder.addNodeTimesBuilder()
-        .setClockType(ProtobufUtil.toClockType(ClockType.HLC))
-        .setTimestamp(env.getMasterServices().getClock(ClockType.HLC).now());
+        .setClockType(ProtobufUtil.toClockType(ClockType.HYBRID_LOGICAL))
+        .setTimestamp(env.getMasterServices().getClock(ClockType.HYBRID_LOGICAL).now());
 
     for (RegionOpenOperation op: operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
@@ -578,8 +576,8 @@ public class RSProcedureDispatcher
       List<Pair<ClockType, Long>> nodeTimes = new ArrayList<>();
       nodeTimes.add(new Pair<>(ClockType.SYSTEM_MONOTONIC,
           env.getMasterServices().getClock(ClockType.SYSTEM_MONOTONIC).now()));
-      nodeTimes.add(new Pair<>(ClockType.HLC,
-          env.getMasterServices().getClock(ClockType.HLC).now()));
+      nodeTimes.add(new Pair<>(ClockType.HYBRID_LOGICAL,
+          env.getMasterServices().getClock(ClockType.HYBRID_LOGICAL).now()));
       return ProtobufUtil.buildCloseRegionRequest(serverName,
         getRegionInfo().getRegionName(), getDestinationServer(), nodeTimes);
     }

@@ -165,9 +165,9 @@ public class TableDescriptorBuilder {
   public static final ClockType DEFAULT_CLOCK_TYPE = ClockType.SYSTEM;
 
   /**
-   * Default clock type for HTD is HLC
+   * Default clock type for HTD is the hybrid logical clock
    */
-  public static final ClockType DEFAULT_META_CLOCK_TYPE = ClockType.HLC;
+  public static final ClockType DEFAULT_META_CLOCK_TYPE = ClockType.HYBRID_LOGICAL;
 
   @InterfaceAudience.Private
   public static final String PRIORITY = "PRIORITY";

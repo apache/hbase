@@ -44,9 +44,12 @@ import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HybridLogicalClock;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.SystemClock;
+import org.apache.hadoop.hbase.SystemMonotonicClock;
 import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
@@ -823,7 +826,7 @@ public class TestStoreScanner {
   public void testWildCardTtlScan() throws IOException {
     //testWildCardTtlScan(ClockType.SYSTEM);
     //testWildCardTtlScan(ClockType.SYSTEM_MONOTONIC);
-    testWildCardTtlScan(ClockType.HLC);
+    testWildCardTtlScan(ClockType.HYBRID_LOGICAL);
   }
 
   public void testWildCardTtlScan(ClockType clockType) throws IOException {
@@ -911,17 +914,17 @@ public class TestStoreScanner {
 
   @Test
   public void testExpiredDeleteFamilyWithHybridLogicalClock() throws Exception {
-    testExpiredDeleteFamily(new Clock.HLC());
+    testExpiredDeleteFamily(new HybridLogicalClock());
   }
 
   @Test
   public void testExpiredDeleteFamilyWithSystemMonotonicClock() throws Exception {
-    testExpiredDeleteFamily(new Clock.SystemMonotonic());
+    testExpiredDeleteFamily(new SystemMonotonicClock());
   }
 
   @Test
   public void testExpiredDeleteFamilyWithSystemClock() throws Exception {
-    testExpiredDeleteFamily(new Clock.System());
+    testExpiredDeleteFamily(new SystemClock());
   }
 
   /**
@@ -959,17 +962,17 @@ public class TestStoreScanner {
 
   @Test
   public void testDeleteMarkerLongevityWithHybridLogicalClock() throws Exception {
-    testDeleteMarkerLongevity(new Clock.HLC());
+    testDeleteMarkerLongevity(new HybridLogicalClock());
   }
 
   @Test
   public void testDeleteMarkerLongevityWithSystemMonotonicClock() throws Exception {
-    testDeleteMarkerLongevity(new Clock.SystemMonotonic());
+    testDeleteMarkerLongevity(new SystemMonotonicClock());
   }
 
   @Test
   public void testDeleteMarkerLongevityWithSystemClock() throws Exception {
-    testDeleteMarkerLongevity(new Clock.System());
+    testDeleteMarkerLongevity(new SystemClock());
   }
 
   public void testDeleteMarkerLongevity(Clock clock) throws Exception {

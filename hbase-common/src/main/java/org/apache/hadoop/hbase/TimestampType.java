@@ -43,7 +43,6 @@ import java.util.concurrent.TimeUnit;
  * </p>
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public enum TimestampType {
   /**
    * Hybrid is a Timestamp type used to encode both physical time and logical time components

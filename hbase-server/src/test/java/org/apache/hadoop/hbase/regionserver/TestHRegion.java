@@ -79,6 +79,9 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.ClockType;
+import org.apache.hadoop.hbase.HybridLogicalClock;
+import org.apache.hadoop.hbase.SystemClock;
+import org.apache.hadoop.hbase.SystemMonotonicClock;
 import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -768,12 +771,12 @@ public class TestHRegion {
 
   @Test
   public void testHybridLogicalClockUpdatesOnRecoveryEditReplay() throws Exception {
-    long systemTime = Clock.SYSTEM_CLOCK.now();
+    long systemTime = new SystemClock().now();
     Clock mockSystemClock = mock(Clock.class);
     when(mockSystemClock.now()).thenReturn(systemTime);
     when(mockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
     when(mockSystemClock.isMonotonic()).thenReturn(true);
-    Clock hlClock = new Clock.HLC(new Clock.SystemMonotonic(mockSystemClock));
+    Clock hlClock = new HybridLogicalClock(new SystemMonotonicClock(mockSystemClock));
 
     long maxSeqId = 1050;
     long minSeqId = 1000;
@@ -800,12 +803,12 @@ public class TestHRegion {
 
   @Test
   public void testSystemMonotonicClockUpdatesOnRecoveryEditReplay() throws Exception {
-    long systemTime = Clock.SYSTEM_CLOCK.now();
+    long systemTime = new SystemClock().now();
     Clock mockSystemClock = mock(Clock.class);
     when(mockSystemClock.now()).thenReturn(systemTime);
     when(mockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
     when(mockSystemClock.isMonotonic()).thenReturn(true);
-    Clock systemMonotonicClock = new Clock.SystemMonotonic(mockSystemClock);
+    Clock systemMonotonicClock = new SystemMonotonicClock(mockSystemClock);
 
     long maxSeqId = 1050;
     long minSeqId = 1000;
@@ -6120,7 +6123,7 @@ public class TestHRegion {
 
   @Test
   public void testCellTTLsWithHybridLogicalClock() throws IOException {
-    testCellTTLs(ClockType.HLC);
+    testCellTTLs(ClockType.HYBRID_LOGICAL);
   }
 
   @Test

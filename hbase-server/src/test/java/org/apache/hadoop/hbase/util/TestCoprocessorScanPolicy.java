@@ -151,7 +151,7 @@ public class TestCoprocessorScanPolicy {
 
   @Test
   public void testTTl() throws Exception {
-    testTTL(ClockType.HLC);
+    testTTL(ClockType.HYBRID_LOGICAL);
     testTTL(ClockType.SYSTEM_MONOTONIC);
     testTTL(ClockType.SYSTEM);
   }

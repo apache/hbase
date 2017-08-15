@@ -58,7 +58,6 @@ public class TestTimestampType {
     }
   }
 
-  /* Tests for HLC Clock */
   @Test
   public void testHybridMaxValues() {
     // assert 44-bit Physical Time with signed comparison (actual 43 bits)

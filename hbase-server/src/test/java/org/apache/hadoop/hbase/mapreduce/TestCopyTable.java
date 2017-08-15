@@ -195,7 +195,7 @@ public class TestCopyTable {
   public void testRenameFamily() throws Exception {
     testRenameFamily(ClockType.SYSTEM);
     testRenameFamily(ClockType.SYSTEM_MONOTONIC);
-    testRenameFamily(ClockType.HLC);
+    testRenameFamily(ClockType.HYBRID_LOGICAL);
   }
 
   public void testRenameFamily(ClockType clockType) throws Exception {

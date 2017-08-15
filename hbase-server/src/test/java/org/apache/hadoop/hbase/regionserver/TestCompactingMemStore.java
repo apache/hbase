@@ -175,7 +175,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
    */
   @Test
   public void testGetNextRowWithHybridLogicalClock() throws Exception {
-    testGetNextRow(new Clock.HLC());
+    testGetNextRow(new HybridLogicalClock());
   }
 
   /** Test getNextRow from memstore using timestamps from a system monotonic clock
@@ -183,7 +183,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
    */
   @Test
   public void testGetNextRowWithSystemMonotonicClock() throws Exception {
-    testGetNextRow(new Clock.SystemMonotonic());
+    testGetNextRow(new SystemMonotonicClock());
   }
 
   /** Test getNextRow from memstore using timestamps from a system clock
@@ -191,7 +191,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
    */
   @Test
   public void testGetNextRowWithSystemClock() throws Exception {
-    testGetNextRow(new Clock.System());
+    testGetNextRow(new SystemClock());
   }
 
   public void testGetNextRow(Clock clock) throws Exception {

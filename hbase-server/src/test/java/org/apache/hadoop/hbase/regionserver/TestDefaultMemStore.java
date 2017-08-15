@@ -37,10 +37,13 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HybridLogicalClock;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.SystemClock;
+import org.apache.hadoop.hbase.SystemMonotonicClock;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -583,7 +586,7 @@ public class TestDefaultMemStore {
    */
   @Test
   public void testGetNextRowWithHybridLogicalClock() throws Exception {
-    testGetNextRow(new Clock.HLC());
+    testGetNextRow(new HybridLogicalClock());
   }
 
   /** Test getNextRow from memstore with the system monotonic clock
@@ -591,7 +594,7 @@ public class TestDefaultMemStore {
    */
   @Test
   public void testGetNextRowWithSystemMonotonicClock() throws Exception {
-    testGetNextRow(new Clock.SystemMonotonic());
+    testGetNextRow(new SystemMonotonicClock());
   }
 
   /** Test getNextRow from memstore with the system clock
@@ -599,7 +602,7 @@ public class TestDefaultMemStore {
    */
   @Test
   public void testGetNextRowWithSystemClock() throws Exception {
-    testGetNextRow(new Clock.System());
+    testGetNextRow(new SystemClock());
   }
 
   public void testGetNextRow(Clock clock) throws Exception {

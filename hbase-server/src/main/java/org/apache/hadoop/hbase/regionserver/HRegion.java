@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.SystemClock;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
@@ -812,7 +813,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         recoveringRegions.put(encodedName, this);
       }
     } else {
-      this.clock = new Clock.System();
+      this.clock = new SystemClock();
       this.metricsRegionWrapper = null;
       this.metricsRegion = null;
     }
@@ -2846,7 +2847,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners,
       long nonceGroup, long nonce) throws IOException {
-    if (getClock().getClockType() == ClockType.HLC) {
+    if (getClock().getClockType() == ClockType.HYBRID_LOGICAL) {
       mapTimeRangesWithRespectToClock(scan);
     }
     startRegionOperation(Operation.SCAN);
