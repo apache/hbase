@@ -27,7 +27,11 @@ outputDirectory=$2
 pushd .
 cd ..
 
-user=`whoami`
+user=`whoami | sed -n -e 's/\\\/\\\\\\\\/p'`
+if [ "$user" == "" ]
+then
+  user=`whoami`
+fi
 date=`date`
 cwd=`pwd`
 if [ -d .svn ]; then
