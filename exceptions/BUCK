@@ -27,7 +27,7 @@ cxx_library(
         "//third-party:folly",
     ],
     compiler_flags=['-Weffc++'],
-    visibility=['//core/...', '//connection//...'],)
+    visibility=['//core/...', '//connection/...'],)
 cxx_test(
     name="exception-test",
     srcs=[
