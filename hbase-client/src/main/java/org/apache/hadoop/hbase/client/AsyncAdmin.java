@@ -296,8 +296,11 @@ public interface AsyncAdmin {
    * @param regionName region name to close
    * @param serverName Deprecated. Not used anymore after deprecation.
    * @return Deprecated. Always returns true now.
-   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18231">HBASE-18231</a>).
+   *             Use {@link #unassign(byte[], boolean)}.
    */
+  @Deprecated
   CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> serverName);
 
   /**

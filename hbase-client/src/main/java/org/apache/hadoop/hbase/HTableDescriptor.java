@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableCo
  * if the table is read only, the maximum size of the memstore,
  * when the region split should occur, coprocessors associated with it etc...
  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
- *             use {@link TableDescriptorBuilder} to build {@link HTableDescriptor}.
+ *             Use {@link TableDescriptorBuilder} to build {@link HTableDescriptor}.
  */
 @Deprecated
 @InterfaceAudience.Public
@@ -602,9 +602,13 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * HTableDescriptor contains mapping of family name to HColumnDescriptors.
    * This returns all the keys of the family map which represents the column
    * family names of the table.
+   *
    * @return Immutable sorted set of the keys of the families.
-   * @deprecated Use {@link #getColumnFamilyNames()}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18008">HBASE-18008</a>).
+   *             Use {@link #getColumnFamilyNames()}.
    */
+  @Deprecated
   public Set<byte[]> getFamiliesKeys() {
     return delegatee.getColumnFamilyNames();
   }

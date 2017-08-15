@@ -100,14 +100,18 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   public static final String NEW_VERSION_BEHAVIOR = ColumnFamilyDescriptorBuilder.NEW_VERSION_BEHAVIOR;
   public static final boolean DEFAULT_NEW_VERSION_BEHAVIOR = ColumnFamilyDescriptorBuilder.DEFAULT_NEW_VERSION_BEHAVIOR;
   protected final ModifyableColumnFamilyDescriptor delegatee;
+
   /**
    * Construct a column descriptor specifying only the family name
    * The other attributes are defaulted.
    *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and may not contain a <code>:</code>
-   * @deprecated use {@link ColumnFamilyDescriptorBuilder#of(String)}
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
+   *             Use {@link ColumnFamilyDescriptorBuilder#of(String)}.
    */
+  @Deprecated
   public HColumnDescriptor(final String familyName) {
     this(Bytes.toBytes(familyName));
   }
@@ -118,8 +122,11 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and may not contain a <code>:</code>
-   * @deprecated use {@link ColumnFamilyDescriptorBuilder#of(byte[])}
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
+   *             Use {@link ColumnFamilyDescriptorBuilder#of(byte[])}.
    */
+  @Deprecated
   public HColumnDescriptor(final byte [] familyName) {
     this(new ModifyableColumnFamilyDescriptor(familyName));
   }
@@ -128,9 +135,13 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    * Constructor.
    * Makes a deep copy of the supplied descriptor.
    * Can make a modifiable descriptor from an UnmodifyableHColumnDescriptor.
+   *
    * @param desc The descriptor.
-   * @deprecated use {@link ColumnFamilyDescriptorBuilder#copy(ColumnFamilyDescriptor)}
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
+   *             Use {@link ColumnFamilyDescriptorBuilder#copy(ColumnFamilyDescriptor)}.
    */
+  @Deprecated
   public HColumnDescriptor(HColumnDescriptor desc) {
     this(desc, true);
   }
