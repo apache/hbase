@@ -1437,8 +1437,11 @@ public interface RegionObserver extends Coprocessor {
    * @param stagingFamilyPaths pairs of { CF, HFile path } submitted for bulk load
    * @param hasLoaded whether the bulkLoad was successful
    * @return the new value of hasLoaded
-   * @deprecated Use {@link #postBulkLoadHFile(ObserverContext, List, Map, boolean)}
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17123">HBASE-17123</a>).
+   *             Use {@link #postBulkLoadHFile(ObserverContext, List, Map, boolean)}.
    */
+  @Deprecated
   default boolean postBulkLoadHFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> stagingFamilyPaths, boolean hasLoaded) throws IOException {
     return hasLoaded;

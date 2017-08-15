@@ -833,8 +833,11 @@ public interface Admin extends Abortable, Closeable {
    * @param regionname region name to close
    * @param serverName Deprecated. Not used.
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18231">HBASE-18231</a>).
+   *             Use {@link #unassign(byte[], boolean)}.
    */
+  @Deprecated
   void closeRegion(final String regionname, final String serverName) throws IOException;
 
   /**
@@ -843,8 +846,11 @@ public interface Admin extends Abortable, Closeable {
    * @param regionname region name to close
    * @param serverName Deprecated. Not used.
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18231">HBASE-18231</a>).
+   *             Use {@link #unassign(byte[], boolean)}.
    */
+  @Deprecated
   void closeRegion(final byte[] regionname, final String serverName) throws IOException;
 
   /**
@@ -857,8 +863,11 @@ public interface Admin extends Abortable, Closeable {
    * @param serverName Deprecated. Not used.
    * @return Deprecated. Returns true always.
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18231">HBASE-18231</a>).
+   *             Use {@link #unassign(byte[], boolean)}.
    */
+  @Deprecated
   boolean closeRegionWithEncodedRegionName(final String encodedRegionName, final String serverName)
       throws IOException;
 
@@ -866,8 +875,11 @@ public interface Admin extends Abortable, Closeable {
    * Used {@link #unassign(byte[], boolean)} to unassign the region. For expert-admins.
    *
    * @param sn Deprecated. Not used.
-   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #unassign(byte[], boolean)} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18231">HBASE-18231</a>).
+   *             Use {@link #unassign(byte[], boolean)}.
    */
+  @Deprecated
   void closeRegion(final ServerName sn, final HRegionInfo hri) throws IOException;
 
   /**
@@ -1175,9 +1187,11 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param regionName region to split
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 2.0. Will be removed in 3.0. Use
-   *     {@link #splitRegionAsync(byte[], byte[])} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18229">HBASE-18229</a>).
+   *             Use {@link #splitRegionAsync(byte[], byte[])}.
    */
+  @Deprecated
   void splitRegion(final byte[] regionName) throws IOException;
 
   /**
@@ -1196,9 +1210,11 @@ public interface Admin extends Abortable, Closeable {
    * @param regionName region to split
    * @param splitPoint the explicit position to split on
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 2.0. Will be removed in 3.0. Use
-   *     {@link #splitRegionAsync(byte[], byte[])} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18229">HBASE-18229</a>).
+   *             Use {@link #splitRegionAsync(byte[], byte[])}.
    */
+  @Deprecated
   void splitRegion(final byte[] regionName, final byte[] splitPoint)
     throws IOException;
 
