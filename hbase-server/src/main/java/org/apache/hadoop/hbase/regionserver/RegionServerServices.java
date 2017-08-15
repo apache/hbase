@@ -106,18 +106,13 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    */
   class PostOpenDeployContext {
     private final Region region;
-    private final long masterSystemTime;
 
     @InterfaceAudience.Private
-    public PostOpenDeployContext(Region region, long masterSystemTime) {
+    public PostOpenDeployContext(Region region) {
       this.region = region;
-      this.masterSystemTime = masterSystemTime;
     }
     public Region getRegion() {
       return region;
-    }
-    public long getMasterSystemTime() {
-      return masterSystemTime;
     }
   }
 
@@ -146,15 +141,13 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   class RegionStateTransitionContext {
     private final TransitionCode code;
     private final long openSeqNum;
-    private final long masterSystemTime;
     private final HRegionInfo[] hris;
 
     @InterfaceAudience.Private
-    public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long masterSystemTime,
+    public RegionStateTransitionContext(TransitionCode code, long openSeqNum,
         HRegionInfo... hris) {
       this.code = code;
       this.openSeqNum = openSeqNum;
-      this.masterSystemTime = masterSystemTime;
       this.hris = hris;
     }
     public TransitionCode getCode() {
@@ -163,9 +156,7 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
     public long getOpenSeqNum() {
       return openSeqNum;
     }
-    public long getMasterSystemTime() {
-      return masterSystemTime;
-    }
+
     public HRegionInfo[] getHris() {
       return hris;
     }

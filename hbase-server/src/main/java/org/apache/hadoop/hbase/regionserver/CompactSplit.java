@@ -209,9 +209,9 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
   }
 
   public synchronized void requestRegionsMerge(final Region a,
-      final Region b, final boolean forcible, long masterSystemTime, User user) {
+      final Region b, final boolean forcible, User user) {
     try {
-      mergePool.execute(new RegionMergeRequest(a, b, this.server, forcible, masterSystemTime,user));
+      mergePool.execute(new RegionMergeRequest(a, b, this.server, forcible, user));
       if (LOG.isDebugEnabled()) {
         LOG.debug("Region merge requested for " + a + "," + b + ", forcible="
             + forcible + ".  " + this);

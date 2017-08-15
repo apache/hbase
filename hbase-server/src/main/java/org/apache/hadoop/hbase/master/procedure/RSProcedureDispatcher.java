@@ -342,7 +342,6 @@ public class RSProcedureDispatcher
       final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
     builder.setServerStartCode(serverName.getStartcode());
-    builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
 
     // Set master clock time for send event
     builder.addNodeTimesBuilder()

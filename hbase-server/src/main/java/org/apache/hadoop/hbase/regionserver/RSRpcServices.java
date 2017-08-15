@@ -1910,8 +1910,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
     }
 
-    long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
-
     for (NodeTime nodeTime : request.getNodeTimesList()) {
       // Update region server clock on receive event
       regionServer.getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
@@ -1992,7 +1990,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // Need to pass the expected version in the constructor.
           if (region.isMetaRegion()) {
             regionServer.service.submit(new OpenMetaHandler(
-              regionServer, regionServer, region, htd, masterSystemTime));
+              regionServer, regionServer, region, htd));
           } else {
             if (regionOpenInfo.getFavoredNodesCount() > 0) {
               regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
@@ -2000,10 +1998,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             }
             if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
               regionServer.service.submit(new OpenPriorityRegionHandler(
-                  regionServer, regionServer, region, htd, masterSystemTime));
+                  regionServer, regionServer, region, htd));
             } else {
               regionServer.service.submit(new OpenRegionHandler(
-                  regionServer, regionServer, region, htd, masterSystemTime));
+                  regionServer, regionServer, region, htd));
             }
           }
         }
@@ -3540,7 +3538,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       Region regionA = getRegion(request.getRegionA());
       Region regionB = getRegion(request.getRegionB());
       boolean forcible = request.getForcible();
-      long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
       regionA.startRegionOperation(Operation.MERGE_REGION);
       regionB.startRegionOperation(Operation.MERGE_REGION);
       if (regionA.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
@@ -3552,7 +3549,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       regionA.flush(true);
       regionB.flush(true);
       regionServer.compactSplitThread.requestRegionsMerge(regionA, regionB, forcible,
-          masterSystemTime, RpcServer.getRequestUser());
+          RpcServer.getRequestUser());
       return MergeRegionsResponse.newBuilder().build();
     } catch (DroppedSnapshotException ex) {
       regionServer.abort("Replay of WAL required. Forcing server shutdown", ex);

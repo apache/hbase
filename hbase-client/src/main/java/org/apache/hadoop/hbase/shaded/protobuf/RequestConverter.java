@@ -903,9 +903,6 @@ public final class RequestConverter {
            .setTimestamp(nodeTime.getSecond());
      }
    }
-   // TODO: remove uses of master system time
-   // send the master's wall clock time as well, so that the RS can refer to it
-   builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
    return builder.build();
  }
 
@@ -928,7 +925,6 @@ public final class RequestConverter {
    if (server != null) {
      builder.setServerStartCode(server.getStartcode());
    }
-   builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
    if (nodeTimes != null) {
      for (Pair<ClockType, Long> nodeTime : nodeTimes) {
        builder.addNodeTimesBuilder()

@@ -2187,14 +2187,13 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public void postOpenDeployTasks(final Region r) throws KeeperException, IOException {
-    postOpenDeployTasks(new PostOpenDeployContext(r, -1));
+    postOpenDeployTasks(new PostOpenDeployContext(r));
   }
 
   @Override
   public void postOpenDeployTasks(final PostOpenDeployContext context)
       throws KeeperException, IOException {
     Region r = context.getRegion();
-    long masterSystemTime = context.getMasterSystemTime();
     Preconditions.checkArgument(r instanceof HRegion, "r must be an HRegion");
     rpcServices.checkOpen();
     LOG.info("Post open deploy tasks for " + r.getRegionInfo().getRegionNameAsString());
@@ -2217,7 +2216,7 @@ public class HRegionServer extends HasThread implements
 
     // Notify master
     if (!reportRegionStateTransition(new RegionStateTransitionContext(
-        TransitionCode.OPENED, openSeqNum, masterSystemTime, r.getRegionInfo()))) {
+        TransitionCode.OPENED, openSeqNum, r.getRegionInfo()))) {
       throw new IOException("Failed to report opened region to master: "
         + r.getRegionInfo().getRegionNameAsString());
     }
@@ -2236,7 +2235,7 @@ public class HRegionServer extends HasThread implements
   public boolean reportRegionStateTransition(
       TransitionCode code, long openSeqNum, HRegionInfo... hris) {
     return reportRegionStateTransition(
-      new RegionStateTransitionContext(code, HConstants.NO_SEQNUM, -1, hris));
+      new RegionStateTransitionContext(code, HConstants.NO_SEQNUM, hris));
   }
 
   @Override

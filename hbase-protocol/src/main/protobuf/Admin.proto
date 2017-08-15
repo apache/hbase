@@ -70,8 +70,8 @@ message OpenRegionRequest {
   repeated RegionOpenInfo open_info = 1;
   // the intended server for this RPC.
   optional uint64 serverStartCode = 2;
-  // wall clock time from master
-  optional uint64 master_system_time = 5;
+  // Deprecated when corresponding field in hbase-shaded-protocol was deprecated.
+  optional uint64 master_system_time = 5 [deprecated=true];
 
   message RegionOpenInfo {
     required RegionInfo region = 1;
@@ -185,8 +185,8 @@ message MergeRegionsRequest {
   required RegionSpecifier region_a = 1;
   required RegionSpecifier region_b = 2;
   optional bool forcible = 3 [default = false];
-  // wall clock time from master
-  optional uint64 master_system_time = 4;
+  // Deprecated when corresponding field in hbase-shaded-protocol was deprecated.
+  optional uint64 master_system_time = 4 [deprecated=true];
 }
 
 message MergeRegionsResponse {
