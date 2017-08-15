@@ -17,31 +17,31 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Assert;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
-@Category({ MediumTests.class, ClientTests.class })
-public class TestScanCursor extends AbstractTestScanCursor {
+public abstract class AbstractTestResultScannerCursor extends AbstractTestScanCursor {
+
+  protected abstract ResultScanner getScanner(Scan scan) throws Exception;
 
   @Test
   public void testHeartbeatWithSparseFilter() throws Exception {
-    try (ResultScanner scanner =
-        TEST_UTIL.getConnection().getTable(TABLE_NAME).getScanner(createScanWithSparseFilter())) {
+    try (ResultScanner scanner = getScanner(createScanWithSparseFilter())) {
       int num = 0;
       Result r;
       while ((r = scanner.next()) != null) {
         if (num < (NUM_ROWS - 1) * NUM_FAMILIES * NUM_QUALIFIERS) {
-          Assert.assertTrue(r.isCursor());
-          Assert.assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS],
+          assertTrue(r.isCursor());
+          assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS],
             r.getCursor().getRow());
         } else {
-          Assert.assertFalse(r.isCursor());
-          Assert.assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS], r.getRow());
+          assertFalse(r.isCursor());
+          assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS], r.getRow());
         }
         num++;
       }
@@ -50,18 +50,17 @@ public class TestScanCursor extends AbstractTestScanCursor {
 
   @Test
   public void testHeartbeatWithSparseFilterReversed() throws Exception {
-    try (ResultScanner scanner = TEST_UTIL.getConnection().getTable(TABLE_NAME)
-        .getScanner(createReversedScanWithSparseFilter())) {
+    try (ResultScanner scanner = getScanner(createReversedScanWithSparseFilter())) {
       int num = 0;
       Result r;
       while ((r = scanner.next()) != null) {
         if (num < (NUM_ROWS - 1) * NUM_FAMILIES * NUM_QUALIFIERS) {
-          Assert.assertTrue(r.isCursor());
-          Assert.assertArrayEquals(ROWS[NUM_ROWS - 1 - num / NUM_FAMILIES / NUM_QUALIFIERS],
+          assertTrue(r.isCursor());
+          assertArrayEquals(ROWS[NUM_ROWS - 1 - num / NUM_FAMILIES / NUM_QUALIFIERS],
             r.getCursor().getRow());
         } else {
-          Assert.assertFalse(r.isCursor());
-          Assert.assertArrayEquals(ROWS[0], r.getRow());
+          assertFalse(r.isCursor());
+          assertArrayEquals(ROWS[0], r.getRow());
         }
         num++;
       }
@@ -76,12 +75,12 @@ public class TestScanCursor extends AbstractTestScanCursor {
       Result r;
       while ((r = scanner.next()) != null) {
         if (num % (NUM_FAMILIES * NUM_QUALIFIERS) != (NUM_FAMILIES * NUM_QUALIFIERS) - 1) {
-          Assert.assertTrue(r.isCursor());
-          Assert.assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS],
+          assertTrue(r.isCursor());
+          assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS],
             r.getCursor().getRow());
         } else {
-          Assert.assertFalse(r.isCursor());
-          Assert.assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS], r.getRow());
+          assertFalse(r.isCursor());
+          assertArrayEquals(ROWS[num / NUM_FAMILIES / NUM_QUALIFIERS], r.getRow());
         }
         num++;
       }

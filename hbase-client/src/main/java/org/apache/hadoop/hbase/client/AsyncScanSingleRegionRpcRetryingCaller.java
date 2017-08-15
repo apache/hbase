@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -157,10 +158,9 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
     private ScanResumerImpl resumer;
 
-    public ScanControllerImpl(ScanResponse resp) {
-      callerThread = Thread.currentThread();
-      cursor = resp.hasCursor() ? Optional.of(ProtobufUtil.toCursor(resp.getCursor()))
-          : Optional.empty();
+    public ScanControllerImpl(Optional<Cursor> cursor) {
+      this.callerThread = Thread.currentThread();
+      this.cursor = cursor;
     }
 
     private void preCheck() {
@@ -476,10 +476,11 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
     updateServerSideMetrics(scanMetrics, resp);
     boolean isHeartbeatMessage = resp.hasHeartbeatMessage() && resp.getHeartbeatMessage();
+    Result[] rawResults;
     Result[] results;
     int numberOfCompleteRowsBefore = resultCache.numberOfCompleteRows();
     try {
-      Result[] rawResults = ResponseConverter.getResults(controller.cellScanner(), resp);
+      rawResults = ResponseConverter.getResults(controller.cellScanner(), resp);
       updateResultsMetrics(scanMetrics, rawResults, isHeartbeatMessage);
       results = resultCache.addAndGet(
         Optional.ofNullable(rawResults).orElse(ScanResultCache.EMPTY_RESULT_ARRAY),
@@ -493,12 +494,30 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
 
-    ScanControllerImpl scanController = new ScanControllerImpl(resp);
+    ScanControllerImpl scanController;
     if (results.length > 0) {
+      scanController = new ScanControllerImpl(
+          resp.hasCursor() ? Optional.of(ProtobufUtil.toCursor(resp.getCursor()))
+              : Optional.empty());
       updateNextStartRowWhenError(results[results.length - 1]);
       consumer.onNext(results, scanController);
-    } else if (resp.hasHeartbeatMessage() && resp.getHeartbeatMessage()) {
-      consumer.onHeartbeat(scanController);
+    } else {
+      Optional<Cursor> cursor = Optional.empty();
+      if (resp.hasCursor()) {
+        cursor = Optional.of(ProtobufUtil.toCursor(resp.getCursor()));
+      } else if (scan.isNeedCursorResult() && rawResults.length > 0) {
+        // It is size limit exceed and we need to return the last Result's row.
+        // When user setBatch and the scanner is reopened, the server may return Results that
+        // user has seen and the last Result can not be seen because the number is not enough.
+        // So the row keys of results may not be same, we must use the last one.
+        cursor = Optional.of(new Cursor(rawResults[rawResults.length - 1].getRow()));
+      }
+      scanController = new ScanControllerImpl(cursor);
+      if (isHeartbeatMessage || cursor.isPresent()) {
+        // only call onHeartbeat if server tells us explicitly this is a heartbeat message, or we
+        // want to pass a cursor to upper layer.
+        consumer.onHeartbeat(scanController);
+      }
     }
     ScanControllerState state = scanController.destroy();
     if (state == ScanControllerState.TERMINATED) {

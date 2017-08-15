@@ -19,9 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
@@ -31,6 +28,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 
 /**
  * The {@link ResultScanner} implementation for {@link AsyncTable}. It will fetch data automatically
@@ -45,6 +44,8 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   private final RawAsyncTable rawTable;
 
   private final long maxCacheSize;
+
+  private final Scan scan;
 
   private final Queue<Result> queue = new ArrayDeque<>();
 
@@ -61,6 +62,7 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   public AsyncTableResultScanner(RawAsyncTable table, Scan scan, long maxCacheSize) {
     this.rawTable = table;
     this.maxCacheSize = maxCacheSize;
+    this.scan = scan;
     table.scan(scan, this);
   }
 
@@ -98,6 +100,10 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   public synchronized void onHeartbeat(ScanController controller) {
     if (closed) {
       controller.terminate();
+      return;
+    }
+    if (scan.isNeedCursorResult()) {
+      controller.cursor().ifPresent(c -> queue.add(Result.createCursorResult(c)));
     }
   }
 
@@ -143,9 +149,11 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
       }
     }
     Result result = queue.poll();
-    cacheSize -= calcEstimatedSize(result);
-    if (resumer != null && cacheSize <= maxCacheSize / 2) {
-      resumePrefetch();
+    if (!result.isCursor()) {
+      cacheSize -= calcEstimatedSize(result);
+      if (resumer != null && cacheSize <= maxCacheSize / 2) {
+        resumePrefetch();
+      }
     }
     return result;
   }
