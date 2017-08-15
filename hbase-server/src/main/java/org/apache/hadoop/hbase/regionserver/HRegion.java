@@ -3928,7 +3928,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * We throw RegionTooBusyException if above memstore limit
    * and expect client to retry using some kind of backoff
   */
-  private void checkResources() throws RegionTooBusyException {
+  void checkResources() throws RegionTooBusyException {
     // If catalog region, do not impose resource constraints or block updates.
     if (this.getRegionInfo().isMetaRegion()) return;
 
@@ -3974,7 +3974,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param edits Cell updates by column
    * @throws IOException
    */
-  private void put(final byte [] row, byte [] family, List<Cell> edits)
+  void put(final byte [] row, byte [] family, List<Cell> edits)
   throws IOException {
     NavigableMap<byte[], List<Cell>> familyMap;
     familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -6875,33 +6875,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         + region_b.getWriteRequestsCount());
     this.fs.commitMergedRegion(mergedRegionInfo);
     return r;
-  }
-
-  /**
-   * Inserts a new region's meta information into the passed
-   * <code>meta</code> region. Used by the HMaster bootstrap code adding
-   * new table to hbase:meta table.
-   *
-   * @param meta hbase:meta HRegion to be updated
-   * @param r HRegion to add to <code>meta</code>
-   *
-   * @throws IOException
-   */
-  // TODO remove since only test and merge use this
-  public static void addRegionToMETA(final HRegion meta, final HRegion r) throws IOException {
-    meta.checkResources();
-    // The row key is the region name
-    byte[] row = r.getRegionInfo().getRegionName();
-    final long now = EnvironmentEdgeManager.currentTime();
-    final List<Cell> cells = new ArrayList<>(2);
-    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-      HConstants.REGIONINFO_QUALIFIER, now,
-      r.getRegionInfo().toByteArray()));
-    // Set into the root table the version of the meta table.
-    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-      HConstants.META_VERSION_QUALIFIER, now,
-      Bytes.toBytes(HConstants.META_VERSION)));
-    meta.put(row, HConstants.CATALOG_FAMILY, cells);
   }
 
   /**
