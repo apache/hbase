@@ -20,9 +20,15 @@ package org.apache.hadoop.hbase.monitoring;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Query;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -143,5 +149,47 @@ public class TestTaskMonitor {
     tm.shutdown();
   }
 
+  @Test
+  public void testGetTasksWithFilter() throws Exception {
+    TaskMonitor tm = new TaskMonitor(new Configuration());
+    assertTrue("Task monitor should start empty", tm.getTasks().isEmpty());
+    // Create 5 general tasks
+    tm.createStatus("General task1");
+    tm.createStatus("General task2");
+    tm.createStatus("General task3");
+    tm.createStatus("General task4");
+    tm.createStatus("General task5");
+    // Create 5 rpc tasks, and mark 1 completed
+    int length = 5;
+    ArrayList<MonitoredRPCHandler> rpcHandlers = new ArrayList<>(length);
+    for (int i = 0; i < length; i++) {
+      MonitoredRPCHandler rpcHandler = tm.createRPCStatus("Rpc task" + i);
+      rpcHandlers.add(rpcHandler);
+    }
+    // Create rpc opertions
+    byte[] row = new byte[] { 0x01 };
+    Mutation m = new Put(row);
+    Query q = new Scan();
+    String notOperation = "for test";
+    rpcHandlers.get(0).setRPC("operations", new Object[]{ m, q }, 3000);
+    rpcHandlers.get(1).setRPC("operations", new Object[]{ m, q }, 3000);
+    rpcHandlers.get(2).setRPC("operations", new Object[]{ m, q }, 3000);
+    rpcHandlers.get(3).setRPC("operations", new Object[]{ notOperation }, 3000);
+    rpcHandlers.get(4).setRPC("operations", new Object[]{ m, q }, 3000);
+    MonitoredRPCHandler completed = rpcHandlers.get(4);
+    completed.markComplete("Completed!");
+    // Test get tasks with filter
+    List<MonitoredTask> generalTasks = tm.getTasks("general");
+    assertEquals(5, generalTasks.size());
+    List<MonitoredTask> handlerTasks = tm.getTasks("handler");
+    assertEquals(5, handlerTasks.size());
+    List<MonitoredTask> rpcTasks = tm.getTasks("rpc");
+    // The last rpc handler is stopped
+    assertEquals(4, rpcTasks.size());
+    List<MonitoredTask> operationTasks = tm.getTasks("operation");
+    // Handler 3 doesn't handle Operation.
+    assertEquals(3, operationTasks.size());
+    tm.shutdown();
+  }
 }
 

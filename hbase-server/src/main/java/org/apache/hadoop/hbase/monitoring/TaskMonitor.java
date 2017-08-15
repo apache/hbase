@@ -157,22 +157,52 @@ public class TaskMonitor {
    * MonitoredTasks handled by this TaskMonitor.
    * @return A complete list of MonitoredTasks.
    */
-  public synchronized List<MonitoredTask> getTasks() {
+  public List<MonitoredTask> getTasks() {
+    return getTasks(null);
+  }
+
+  /**
+   * Produces a list containing copies of the current state of all non-expired 
+   * MonitoredTasks handled by this TaskMonitor.
+   * @param filter type of wanted tasks
+   * @return A filtered list of MonitoredTasks.
+   */
+  public synchronized List<MonitoredTask> getTasks(String filter) {
     purgeExpiredTasks();
-    ArrayList<MonitoredTask> ret = Lists.newArrayListWithCapacity(tasks.size() + rpcTasks.size());
-    for (Iterator<TaskAndWeakRefPair> it = tasks.iterator();
-         it.hasNext();) {
-      TaskAndWeakRefPair pair = it.next();
-      MonitoredTask t = pair.get();
-      ret.add(t.clone());
+    TaskFilter taskFilter = createTaskFilter(filter);
+    ArrayList<MonitoredTask> results =
+        Lists.newArrayListWithCapacity(tasks.size() + rpcTasks.size());
+    processTasks(tasks, taskFilter, results);
+    processTasks(rpcTasks, taskFilter, results);
+    return results;
+  }
+
+  /**
+   * Create a task filter according to a given filter type.
+   * @param filter type of monitored task
+   * @return a task filter
+   */
+  private static TaskFilter createTaskFilter(String filter) {
+    switch (TaskFilter.TaskType.getTaskType(filter)) {
+      case GENERAL: return task -> task instanceof MonitoredRPCHandler;
+      case HANDLER: return task -> !(task instanceof MonitoredRPCHandler);
+      case RPC: return task -> !(task instanceof MonitoredRPCHandler) ||
+                               !((MonitoredRPCHandler) task).isRPCRunning();
+      case OPERATION: return task -> !(task instanceof MonitoredRPCHandler) ||
+                                     !((MonitoredRPCHandler) task).isOperationRunning();
+      default: return task -> false;
     }
-    for (Iterator<TaskAndWeakRefPair> it = rpcTasks.iterator();
-         it.hasNext();) {
-      TaskAndWeakRefPair pair = it.next();
-      MonitoredTask t = pair.get();
-      ret.add(t.clone());
+  }
+
+  private static void processTasks(Iterable<TaskAndWeakRefPair> tasks,
+                                   TaskFilter filter,
+                                   List<MonitoredTask> results) {
+    for (TaskAndWeakRefPair task : tasks) {
+      MonitoredTask t = task.get();
+      if (!filter.filter(t)) {
+        results.add(t.clone());
+      }
     }
-    return ret;
   }
 
   private boolean canPurge(MonitoredTask stat) {
@@ -279,5 +309,46 @@ public class TaskMonitor {
         }
       }
     }
+  }
+
+  private interface TaskFilter {
+    enum TaskType {
+      GENERAL("general"),
+      HANDLER("handler"),
+      RPC("rpc"),
+      OPERATION("operation"),
+      ALL("all");
+
+      private String type;
+
+      private TaskType(String type) {
+        this.type = type.toLowerCase();
+      }
+
+      static TaskType getTaskType(String type) {
+        if (type == null || type.isEmpty()) {
+          return ALL;
+        }
+        type = type.toLowerCase();
+        for (TaskType taskType : values()) {
+          if (taskType.toString().equals(type)) {
+            return taskType;
+          }
+        }
+        return ALL;
+      }
+
+      @Override
+      public String toString() {
+        return type;
+      }
+    }
+
+    /**
+     * Filter out unwanted task.
+     * @param task monitored task
+     * @return false if a task is accepted, true if it is filtered
+     */
+    boolean filter(MonitoredTask t);
   }
 }

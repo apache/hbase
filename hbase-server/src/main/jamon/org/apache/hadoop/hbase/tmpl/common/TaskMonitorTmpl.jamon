@@ -27,27 +27,8 @@ String filter = "general";
 String format = "html";
 </%args>
 <%java>
-List<? extends MonitoredTask> tasks = taskMonitor.getTasks();
-Iterator<? extends MonitoredTask> iter = tasks.iterator();
 // apply requested filter
-while (iter.hasNext()) {
-  MonitoredTask t = iter.next();
-  if (filter.equals("general")) {
-    if (t instanceof MonitoredRPCHandler)
-      iter.remove();
-  } else if (filter.equals("handler")) {
-    if (!(t instanceof MonitoredRPCHandler))
-      iter.remove();
-  } else if (filter.equals("rpc")) {
-    if (!(t instanceof MonitoredRPCHandler) || 
-        !((MonitoredRPCHandler) t).isRPCRunning())
-      iter.remove();
-  } else if (filter.equals("operation")) {
-    if (!(t instanceof MonitoredRPCHandler) || 
-        !((MonitoredRPCHandler) t).isOperationRunning())
-      iter.remove();
-  }
-}
+List<? extends MonitoredTask> tasks = taskMonitor.getTasks(filter);
 long now = System.currentTimeMillis();
 Collections.reverse(tasks);
 boolean first = true;
