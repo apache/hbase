@@ -480,6 +480,15 @@ public class AssignmentManager implements ServerListener {
         synchronized (checkIfShouldMoveSystemRegionLock) {
           List<RegionPlan> plans = new ArrayList<>();
           for (ServerName server : getExcludedServersForSystemTable()) {
+            if (master.getServerManager().isServerDead(server)) {
+              // TODO: See HBASE-18494 and HBASE-18495. Though getExcludedServersForSystemTable()
+              // considers only online servers, the server could be queued for dead server
+              // processing. As region assignments for crashed server is handled by
+              // ServerCrashProcedure, do NOT handle them here. The goal is to handle this through
+              // regular flow of LoadBalancer as a favored node and not to have this special
+              // handling.
+              continue;
+            }
             List<HRegionInfo> regionsShouldMove = getCarryingSystemTables(server);
             if (!regionsShouldMove.isEmpty()) {
               for (HRegionInfo regionInfo : regionsShouldMove) {
