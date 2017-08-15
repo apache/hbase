@@ -2001,9 +2001,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
 
       // 3. blocking file count
-      String sbfc = htd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
-      if (sbfc != null) {
-        blockingFileCount = Integer.parseInt(sbfc);
+      sv = hcd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
+      if (sv != null) {
+        blockingFileCount = Integer.parseInt(sv);
       }
       if (blockingFileCount < 1000) {
         message =
