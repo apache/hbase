@@ -972,12 +972,38 @@ public class TestDefaultMemStore {
     HRegion r =
         HRegion.createHRegion(hri, testDir, conf, desc,
             wFactory.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()));
-    HRegion.addRegionToMETA(meta, r);
+    addRegionToMETA(meta, r);
     edge.setCurrentTimeMillis(1234 + 100);
     StringBuffer sb = new StringBuffer();
     assertTrue(meta.shouldFlush(sb) == false);
     edge.setCurrentTimeMillis(edge.currentTime() + HRegion.SYSTEM_CACHE_FLUSH_INTERVAL + 1);
     assertTrue(meta.shouldFlush(sb) == true);
+  }
+
+  /**
+   * Inserts a new region's meta information into the passed
+   * <code>meta</code> region. Used by the HMaster bootstrap code adding
+   * new table to hbase:meta table.
+   *
+   * @param meta hbase:meta HRegion to be updated
+   * @param r HRegion to add to <code>meta</code>
+   *
+   * @throws IOException
+   */
+  public static void addRegionToMETA(final HRegion meta, final HRegion r) throws IOException {
+    meta.checkResources();
+    // The row key is the region name
+    byte[] row = r.getRegionInfo().getRegionName();
+    final long now = EnvironmentEdgeManager.currentTime();
+    final List<Cell> cells = new ArrayList<>(2);
+    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
+      HConstants.REGIONINFO_QUALIFIER, now,
+      r.getRegionInfo().toByteArray()));
+    // Set into the root table the version of the meta table.
+    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
+      HConstants.META_VERSION_QUALIFIER, now,
+      Bytes.toBytes(HConstants.META_VERSION)));
+    meta.put(row, HConstants.CATALOG_FAMILY, cells);
   }
 
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
