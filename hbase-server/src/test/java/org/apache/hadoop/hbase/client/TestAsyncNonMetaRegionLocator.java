@@ -209,6 +209,7 @@ public class TestAsyncNonMetaRegionLocator {
         throw new RuntimeException(e);
       }
     }));
+
     LOCATOR.clearCache(TABLE_NAME);
     byte[][] endKeys = getEndKeys();
     IntStream.range(0, 2).forEach(
