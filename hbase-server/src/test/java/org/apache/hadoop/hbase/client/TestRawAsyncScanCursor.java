@@ -27,70 +27,83 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
 
+  private static AsyncConnection CONN;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    AbstractTestScanCursor.setUpBeforeClass();
+    CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+  }
+
+  public static void tearDownAfterClass() throws Exception {
+    if (CONN != null) {
+      CONN.close();
+    }
+    AbstractTestScanCursor.tearDownAfterClass();
+  }
+
   private void doTest(boolean reversed)
       throws InterruptedException, ExecutionException, IOException {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    try (AsyncConnection conn =
-        ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
-      RawAsyncTable table = conn.getRawTable(TABLE_NAME);
-      table.scan(reversed ? createReversedScanWithSparseFilter() : createScanWithSparseFilter(),
-        new RawScanResultConsumer() {
+    RawAsyncTable table = CONN.getRawTable(TABLE_NAME);
+    table.scan(reversed ? createReversedScanWithSparseFilter() : createScanWithSparseFilter(),
+      new RawScanResultConsumer() {
 
-          private int count;
+        private int count;
 
-          @Override
-          public void onHeartbeat(ScanController controller) {
-            int row = count / NUM_FAMILIES / NUM_QUALIFIERS;
-            if (reversed) {
-              row = NUM_ROWS - 1 - row;
+        @Override
+        public void onHeartbeat(ScanController controller) {
+          int row = count / NUM_FAMILIES / NUM_QUALIFIERS;
+          if (reversed) {
+            row = NUM_ROWS - 1 - row;
+          }
+          try {
+            assertArrayEquals(ROWS[row], controller.cursor().get().getRow());
+            count++;
+          } catch (Throwable e) {
+            future.completeExceptionally(e);
+            throw e;
+          }
+        }
+
+        @Override
+        public void onNext(Result[] results, ScanController controller) {
+          try {
+            assertEquals(1, results.length);
+            assertEquals(NUM_ROWS - 1, count / NUM_FAMILIES / NUM_QUALIFIERS);
+            // we will always provide a scan cursor if time limit is reached.
+            if (count == NUM_ROWS * NUM_FAMILIES * NUM_QUALIFIERS - 1) {
+              assertFalse(controller.cursor().isPresent());
+            } else {
+              assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1],
+                controller.cursor().get().getRow());
             }
-            try {
-              assertArrayEquals(ROWS[row], controller.cursor().get().getRow());
-              count++;
-            } catch (Throwable e) {
-              future.completeExceptionally(e);
-              throw e;
-            }
+            assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1], results[0].getRow());
+            count++;
+          } catch (Throwable e) {
+            future.completeExceptionally(e);
+            throw e;
           }
+        }
 
-          @Override
-          public void onNext(Result[] results, ScanController controller) {
-            try {
-              assertEquals(1, results.length);
-              assertEquals(NUM_ROWS - 1, count / NUM_FAMILIES / NUM_QUALIFIERS);
-              // we will always provide a scan cursor if time limit is reached.
-              if (count == NUM_ROWS * NUM_FAMILIES * NUM_QUALIFIERS - 1) {
-                assertFalse(controller.cursor().isPresent());
-              } else {
-                assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1],
-                  controller.cursor().get().getRow());
-              }
-              assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1], results[0].getRow());
-              count++;
-            } catch (Throwable e) {
-              future.completeExceptionally(e);
-              throw e;
-            }
-          }
+        @Override
+        public void onError(Throwable error) {
+          future.completeExceptionally(error);
+        }
 
-          @Override
-          public void onError(Throwable error) {
-            future.completeExceptionally(error);
-          }
-
-          @Override
-          public void onComplete() {
-            future.complete(null);
-          }
-        });
-      future.get();
-    }
+        @Override
+        public void onComplete() {
+          future.complete(null);
+        }
+      });
+    future.get();
   }
 
   @Test
@@ -103,5 +116,51 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
   public void testHeartbeatWithSparseFilterReversed()
       throws IOException, InterruptedException, ExecutionException {
     doTest(true);
+  }
+
+  @Test
+  public void testSizeLimit() throws InterruptedException, ExecutionException {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    RawAsyncTable table = CONN.getRawTable(TABLE_NAME);
+    table.scan(createScanWithSizeLimit(), new RawScanResultConsumer() {
+
+      private int count;
+
+      @Override
+      public void onHeartbeat(ScanController controller) {
+        try {
+          assertArrayEquals(ROWS[count / NUM_FAMILIES / NUM_QUALIFIERS],
+            controller.cursor().get().getRow());
+          count++;
+        } catch (Throwable e) {
+          future.completeExceptionally(e);
+          throw e;
+        }
+      }
+
+      @Override
+      public void onNext(Result[] results, ScanController controller) {
+        try {
+          assertFalse(controller.cursor().isPresent());
+          assertEquals(1, results.length);
+          assertArrayEquals(ROWS[count / NUM_FAMILIES / NUM_QUALIFIERS], results[0].getRow());
+          count++;
+        } catch (Throwable e) {
+          future.completeExceptionally(e);
+          throw e;
+        }
+      }
+
+      @Override
+      public void onError(Throwable error) {
+        future.completeExceptionally(error);
+      }
+
+      @Override
+      public void onComplete() {
+        future.complete(null);
+      }
+    });
+    future.get();
   }
 }

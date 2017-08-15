@@ -95,8 +95,15 @@ public interface RawScanResultConsumer {
   void onNext(Result[] results, ScanController controller);
 
   /**
-   * Indicate that there is an heartbeat message but we have not cumulated enough cells to call
-   * onNext.
+   * Indicate that there is a heartbeat message but we have not cumulated enough cells to call
+   * {@link #onNext(Result[], ScanController)}.
+   * <p>
+   * Note that this method will always be called when RS returns something to us but we do not have
+   * enough cells to call {@link #onNext(Result[], ScanController)}. Sometimes it may not be a
+   * 'heartbeat' message for RS, for example, we have a large row with many cells and size limit is
+   * exceeded before sending all the cells for this row. For RS it does send some data to us and the
+   * time limit has not been reached, but we can not return the data to client so here we call this
+   * method to tell client we have already received something.
    * <p>
    * This method give you a chance to terminate a slow scan operation.
    * @param controller used to suspend or terminate the scan. Notice that the {@code controller}
