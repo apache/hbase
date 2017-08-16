@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * Base class for all asynchronous admin builders.
  */
 @InterfaceAudience.Private
-abstract class AsyncAdminBuilderBase<T extends AsyncAdmin> implements AsyncAdminBuilder<T> {
+abstract class AsyncAdminBuilderBase implements AsyncAdminBuilder {
 
   protected long rpcTimeoutNs;
 
@@ -46,31 +46,31 @@ abstract class AsyncAdminBuilderBase<T extends AsyncAdmin> implements AsyncAdmin
   }
 
   @Override
-  public AsyncAdminBuilder<T> setOperationTimeout(long timeout, TimeUnit unit) {
+  public AsyncAdminBuilder setOperationTimeout(long timeout, TimeUnit unit) {
     this.operationTimeoutNs = unit.toNanos(timeout);
     return this;
   }
 
   @Override
-  public AsyncAdminBuilder<T> setRpcTimeout(long timeout, TimeUnit unit) {
+  public AsyncAdminBuilder setRpcTimeout(long timeout, TimeUnit unit) {
     this.rpcTimeoutNs = unit.toNanos(timeout);
     return this;
   }
 
   @Override
-  public AsyncAdminBuilder<T> setRetryPause(long timeout, TimeUnit unit) {
+  public AsyncAdminBuilder setRetryPause(long timeout, TimeUnit unit) {
     this.pauseNs = unit.toNanos(timeout);
     return this;
   }
 
   @Override
-  public AsyncAdminBuilder<T> setMaxAttempts(int maxAttempts) {
+  public AsyncAdminBuilder setMaxAttempts(int maxAttempts) {
     this.maxAttempts = maxAttempts;
     return this;
   }
 
   @Override
-  public AsyncAdminBuilder<T> setStartLogErrorsCnt(int startLogErrorsCnt) {
+  public AsyncAdminBuilder setStartLogErrorsCnt(int startLogErrorsCnt) {
     this.startLogErrorsCnt = startLogErrorsCnt;
     return this;
   }

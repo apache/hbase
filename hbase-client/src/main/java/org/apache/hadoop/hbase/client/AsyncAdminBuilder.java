@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * create a new AsyncAdmin instance.
  */
 @InterfaceAudience.Public
-public interface AsyncAdminBuilder<T extends AsyncAdmin> {
+public interface AsyncAdminBuilder {
 
   /**
    * Set timeout for a whole admin operation. Operation timeout and max attempt times(or max retry
@@ -39,7 +39,7 @@ public interface AsyncAdminBuilder<T extends AsyncAdmin> {
    * @param unit
    * @return this for invocation chaining
    */
-  AsyncAdminBuilder<T> setOperationTimeout(long timeout, TimeUnit unit);
+  AsyncAdminBuilder setOperationTimeout(long timeout, TimeUnit unit);
 
   /**
    * Set timeout for each rpc request.
@@ -47,7 +47,7 @@ public interface AsyncAdminBuilder<T extends AsyncAdmin> {
    * @param unit
    * @return this for invocation chaining
    */
-  AsyncAdminBuilder<T> setRpcTimeout(long timeout, TimeUnit unit);
+  AsyncAdminBuilder setRpcTimeout(long timeout, TimeUnit unit);
 
   /**
    * Set the base pause time for retrying. We use an exponential policy to generate sleep time when
@@ -56,7 +56,7 @@ public interface AsyncAdminBuilder<T extends AsyncAdmin> {
    * @param unit
    * @return this for invocation chaining
    */
-  AsyncAdminBuilder<T> setRetryPause(long timeout, TimeUnit unit);
+  AsyncAdminBuilder setRetryPause(long timeout, TimeUnit unit);
 
   /**
    * Set the max retry times for an admin operation. Usually it is the max attempt times minus 1.
@@ -65,7 +65,7 @@ public interface AsyncAdminBuilder<T extends AsyncAdmin> {
    * @param maxRetries
    * @return this for invocation chaining
    */
-  default AsyncAdminBuilder<T> setMaxRetries(int maxRetries) {
+  default AsyncAdminBuilder setMaxRetries(int maxRetries) {
     return setMaxAttempts(retries2Attempts(maxRetries));
   }
 
@@ -76,18 +76,18 @@ public interface AsyncAdminBuilder<T extends AsyncAdmin> {
    * @param maxAttempts
    * @return this for invocation chaining
    */
-  AsyncAdminBuilder<T> setMaxAttempts(int maxAttempts);
+  AsyncAdminBuilder setMaxAttempts(int maxAttempts);
 
   /**
    * Set the number of retries that are allowed before we start to log.
    * @param startLogErrorsCnt
    * @return this for invocation chaining
    */
-  AsyncAdminBuilder<T> setStartLogErrorsCnt(int startLogErrorsCnt);
+  AsyncAdminBuilder setStartLogErrorsCnt(int startLogErrorsCnt);
 
   /**
    * Create a {@link AsyncAdmin} instance.
    * @return a {@link AsyncAdmin} instance
    */
-  T build();
+  AsyncAdmin build();
 }

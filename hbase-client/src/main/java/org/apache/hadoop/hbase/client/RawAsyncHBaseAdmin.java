@@ -278,7 +278,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private final NonceGenerator ng;
 
-  RawAsyncHBaseAdmin(AsyncConnectionImpl connection, AsyncAdminBuilderBase<?> builder) {
+  RawAsyncHBaseAdmin(AsyncConnectionImpl connection, AsyncAdminBuilderBase builder) {
     this.connection = connection;
     this.metaTable = connection.getRawTable(META_TABLE_NAME);
     this.rpcTimeoutNs = builder.rpcTimeoutNs;

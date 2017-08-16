@@ -59,13 +59,13 @@ public class TestAsyncAdminBuilder {
   private static AsyncConnection ASYNC_CONN;
 
   @Parameter
-  public Supplier<AsyncAdminBuilder<?>> getAdminBuilder;
+  public Supplier<AsyncAdminBuilder> getAdminBuilder;
 
-  private static AsyncAdminBuilder<RawAsyncHBaseAdmin> getRawAsyncAdminBuilder() {
+  private static AsyncAdminBuilder getRawAsyncAdminBuilder() {
     return ASYNC_CONN.getAdminBuilder();
   }
 
-  private static AsyncAdminBuilder<AsyncHBaseAdmin> getAsyncAdminBuilder() {
+  private static AsyncAdminBuilder getAsyncAdminBuilder() {
     return ASYNC_CONN.getAdminBuilder(ForkJoinPool.commonPool());
   }
 
