@@ -122,11 +122,10 @@ public class Append extends Mutation {
   public Append add(final Cell cell) {
     // Presume it is KeyValue for now.
     byte [] family = CellUtil.cloneFamily(cell);
-    List<Cell> list = this.familyMap.get(family);
-    if (list == null) {
-      list  = new ArrayList<Cell>();
-      this.familyMap.put(family, list);
-    }
+
+    // Get cell list for the family
+    List<Cell> list = getCellList(family);
+
     // find where the new entry should be placed in the List
     list.add(cell);
     return this;

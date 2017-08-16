@@ -170,11 +170,7 @@ public class Delete extends Mutation implements Comparable<Row> {
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
     byte [] family = CellUtil.cloneFamily(kv);
-    List<Cell> list = familyMap.get(family);
-    if (list == null) {
-      list = new ArrayList<Cell>();
-      familyMap.put(family, list);
-    }
+    List<Cell> list = getCellList(family);
     list.add(kv);
     return this;
   }
@@ -236,11 +232,8 @@ public class Delete extends Mutation implements Comparable<Row> {
     if (timestamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
     }
-    List<Cell> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<Cell>();
-      familyMap.put(family, list);
-    } else if(!list.isEmpty()) {
+    List<Cell> list = getCellList(family);
+    if(!list.isEmpty()) {
       list.clear();
     }
     KeyValue kv = new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamily);
@@ -269,11 +262,7 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @return this for invocation chaining
    */
   public Delete addFamilyVersion(final byte [] family, final long timestamp) {
-    List<Cell> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<Cell>();
-      familyMap.put(family, list);
-    }
+    List<Cell> list = getCellList(family);
     list.add(new KeyValue(row, family, null, timestamp,
           KeyValue.Type.DeleteFamilyVersion));
     return this;
@@ -328,11 +317,7 @@ public class Delete extends Mutation implements Comparable<Row> {
     if (timestamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
     }
-    List<Cell> list = familyMap.get(family);
-    if (list == null) {
-      list = new ArrayList<Cell>();
-      familyMap.put(family, list);
-    }
+    List<Cell> list = getCellList(family);
     list.add(new KeyValue(this.row, family, qualifier, timestamp,
         KeyValue.Type.DeleteColumn));
     return this;
@@ -391,11 +376,7 @@ public class Delete extends Mutation implements Comparable<Row> {
     if (timestamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
     }
-    List<Cell> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<Cell>();
-      familyMap.put(family, list);
-    }
+    List<Cell> list = getCellList(family);
     KeyValue kv = new KeyValue(this.row, family, qualifier, timestamp, KeyValue.Type.Delete);
     list.add(kv);
     return this;
