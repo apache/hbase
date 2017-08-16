@@ -1980,6 +1980,24 @@ public final class ClientProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder getCfTimeRangeOrBuilder(
         int index);
+
+    // optional bool load_column_families_on_demand = 14;
+    /**
+     * <code>optional bool load_column_families_on_demand = 14;</code>
+     *
+     * <pre>
+     * DO NOT add defaults to load_column_families_on_demand.
+     * </pre>
+     */
+    boolean hasLoadColumnFamiliesOnDemand();
+    /**
+     * <code>optional bool load_column_families_on_demand = 14;</code>
+     *
+     * <pre>
+     * DO NOT add defaults to load_column_families_on_demand.
+     * </pre>
+     */
+    boolean getLoadColumnFamiliesOnDemand();
   }
   /**
    * Protobuf type {@code Get}
@@ -2134,6 +2152,11 @@ public final class ClientProtos {
                 mutable_bitField0_ |= 0x00001000;
               }
               cfTimeRange_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.PARSER, extensionRegistry));
+              break;
+            }
+            case 112: {
+              bitField0_ |= 0x00000400;
+              loadColumnFamiliesOnDemand_ = input.readBool();
               break;
             }
           }
@@ -2485,6 +2508,30 @@ public final class ClientProtos {
       return cfTimeRange_.get(index);
     }
 
+    // optional bool load_column_families_on_demand = 14;
+    public static final int LOAD_COLUMN_FAMILIES_ON_DEMAND_FIELD_NUMBER = 14;
+    private boolean loadColumnFamiliesOnDemand_;
+    /**
+     * <code>optional bool load_column_families_on_demand = 14;</code>
+     *
+     * <pre>
+     * DO NOT add defaults to load_column_families_on_demand.
+     * </pre>
+     */
+    public boolean hasLoadColumnFamiliesOnDemand() {
+      return ((bitField0_ & 0x00000400) == 0x00000400);
+    }
+    /**
+     * <code>optional bool load_column_families_on_demand = 14;</code>
+     *
+     * <pre>
+     * DO NOT add defaults to load_column_families_on_demand.
+     * </pre>
+     */
+    public boolean getLoadColumnFamiliesOnDemand() {
+      return loadColumnFamiliesOnDemand_;
+    }
+
     private void initFields() {
       row_ = com.google.protobuf.ByteString.EMPTY;
       column_ = java.util.Collections.emptyList();
@@ -2499,6 +2546,7 @@ public final class ClientProtos {
       closestRowBefore_ = false;
       consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
       cfTimeRange_ = java.util.Collections.emptyList();
+      loadColumnFamiliesOnDemand_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2579,6 +2627,9 @@ public final class ClientProtos {
       for (int i = 0; i < cfTimeRange_.size(); i++) {
         output.writeMessage(13, cfTimeRange_.get(i));
       }
+      if (((bitField0_ & 0x00000400) == 0x00000400)) {
+        output.writeBool(14, loadColumnFamiliesOnDemand_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -2639,6 +2690,10 @@ public final class ClientProtos {
       for (int i = 0; i < cfTimeRange_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(13, cfTimeRange_.get(i));
+      }
+      if (((bitField0_ & 0x00000400) == 0x00000400)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(14, loadColumnFamiliesOnDemand_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2719,6 +2774,11 @@ public final class ClientProtos {
       }
       result = result && getCfTimeRangeList()
           .equals(other.getCfTimeRangeList());
+      result = result && (hasLoadColumnFamiliesOnDemand() == other.hasLoadColumnFamiliesOnDemand());
+      if (hasLoadColumnFamiliesOnDemand()) {
+        result = result && (getLoadColumnFamiliesOnDemand()
+            == other.getLoadColumnFamiliesOnDemand());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -2783,6 +2843,10 @@ public final class ClientProtos {
       if (getCfTimeRangeCount() > 0) {
         hash = (37 * hash) + CF_TIME_RANGE_FIELD_NUMBER;
         hash = (53 * hash) + getCfTimeRangeList().hashCode();
+      }
+      if (hasLoadColumnFamiliesOnDemand()) {
+        hash = (37 * hash) + LOAD_COLUMN_FAMILIES_ON_DEMAND_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getLoadColumnFamiliesOnDemand());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -2952,6 +3016,8 @@ public final class ClientProtos {
         } else {
           cfTimeRangeBuilder_.clear();
         }
+        loadColumnFamiliesOnDemand_ = false;
+        bitField0_ = (bitField0_ & ~0x00002000);
         return this;
       }
 
@@ -3055,6 +3121,10 @@ public final class ClientProtos {
         } else {
           result.cfTimeRange_ = cfTimeRangeBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00002000) == 0x00002000)) {
+          to_bitField0_ |= 0x00000400;
+        }
+        result.loadColumnFamiliesOnDemand_ = loadColumnFamiliesOnDemand_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3178,6 +3248,9 @@ public final class ClientProtos {
               cfTimeRangeBuilder_.addAllMessages(other.cfTimeRange_);
             }
           }
+        }
+        if (other.hasLoadColumnFamiliesOnDemand()) {
+          setLoadColumnFamiliesOnDemand(other.getLoadColumnFamiliesOnDemand());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -4496,6 +4569,55 @@ public final class ClientProtos {
           cfTimeRange_ = null;
         }
         return cfTimeRangeBuilder_;
+      }
+
+      // optional bool load_column_families_on_demand = 14;
+      private boolean loadColumnFamiliesOnDemand_ ;
+      /**
+       * <code>optional bool load_column_families_on_demand = 14;</code>
+       *
+       * <pre>
+       * DO NOT add defaults to load_column_families_on_demand.
+       * </pre>
+       */
+      public boolean hasLoadColumnFamiliesOnDemand() {
+        return ((bitField0_ & 0x00002000) == 0x00002000);
+      }
+      /**
+       * <code>optional bool load_column_families_on_demand = 14;</code>
+       *
+       * <pre>
+       * DO NOT add defaults to load_column_families_on_demand.
+       * </pre>
+       */
+      public boolean getLoadColumnFamiliesOnDemand() {
+        return loadColumnFamiliesOnDemand_;
+      }
+      /**
+       * <code>optional bool load_column_families_on_demand = 14;</code>
+       *
+       * <pre>
+       * DO NOT add defaults to load_column_families_on_demand.
+       * </pre>
+       */
+      public Builder setLoadColumnFamiliesOnDemand(boolean value) {
+        bitField0_ |= 0x00002000;
+        loadColumnFamiliesOnDemand_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool load_column_families_on_demand = 14;</code>
+       *
+       * <pre>
+       * DO NOT add defaults to load_column_families_on_demand.
+       * </pre>
+       */
+      public Builder clearLoadColumnFamiliesOnDemand() {
+        bitField0_ = (bitField0_ & ~0x00002000);
+        loadColumnFamiliesOnDemand_ = false;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:Get)
@@ -34315,7 +34437,7 @@ public final class ClientProtos {
       "ce.proto\"\037\n\016Authorizations\022\r\n\005label\030\001 \003(" +
       "\t\"$\n\016CellVisibility\022\022\n\nexpression\030\001 \002(\t\"" +
       "+\n\006Column\022\016\n\006family\030\001 \002(\014\022\021\n\tqualifier\030\002" +
-      " \003(\014\"\203\003\n\003Get\022\013\n\003row\030\001 \002(\014\022\027\n\006column\030\002 \003(" +
+      " \003(\014\"\253\003\n\003Get\022\013\n\003row\030\001 \002(\014\022\027\n\006column\030\002 \003(" +
       "\0132\007.Column\022!\n\tattribute\030\003 \003(\0132\016.NameByte" +
       "sPair\022\027\n\006filter\030\004 \001(\0132\007.Filter\022\036\n\ntime_r" +
       "ange\030\005 \001(\0132\n.TimeRange\022\027\n\014max_versions\030\006" +
@@ -34324,12 +34446,13 @@ public final class ClientProtos {
       "\n\016existence_only\030\n \001(\010:\005false\022!\n\022closest" +
       "_row_before\030\013 \001(\010:\005false\022)\n\013consistency\030" +
       "\014 \001(\0162\014.Consistency:\006STRONG\022-\n\rcf_time_r" +
-      "ange\030\r \003(\0132\026.ColumnFamilyTimeRange\"z\n\006Re" +
+      "ange\030\r \003(\0132\026.ColumnFamilyTimeRange\022&\n\036lo" +
+      "ad_column_families_on_demand\030\016 \001(\010\"z\n\006Re" +
       "sult\022\023\n\004cell\030\001 \003(\0132\005.Cell\022\035\n\025associated_" +
       "cell_count\030\002 \001(\005\022\016\n\006exists\030\003 \001(\010\022\024\n\005stal" +
       "e\030\004 \001(\010:\005false\022\026\n\007partial\030\005 \001(\010:\005false\"A" +
-      "\n\nGetRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpe" +
-      "cifier\022\021\n\003get\030\002 \002(\0132\004.Get\"&\n\013GetResponse",
+      "\n\nGetRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpe",
+      "cifier\022\021\n\003get\030\002 \002(\0132\004.Get\"&\n\013GetResponse" +
       "\022\027\n\006result\030\001 \001(\0132\007.Result\"\200\001\n\tCondition\022" +
       "\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tqualifie" +
       "r\030\003 \002(\014\022\"\n\014compare_type\030\004 \002(\0162\014.CompareT" +
@@ -34338,8 +34461,8 @@ public final class ClientProtos {
       "pe\030\002 \001(\0162\033.MutationProto.MutationType\0220\n" +
       "\014column_value\030\003 \003(\0132\032.MutationProto.Colu" +
       "mnValue\022\021\n\ttimestamp\030\004 \001(\004\022!\n\tattribute\030" +
-      "\005 \003(\0132\016.NameBytesPair\022:\n\ndurability\030\006 \001(" +
-      "\0162\031.MutationProto.Durability:\013USE_DEFAUL",
+      "\005 \003(\0132\016.NameBytesPair\022:\n\ndurability\030\006 \001(",
+      "\0162\031.MutationProto.Durability:\013USE_DEFAUL" +
       "T\022\036\n\ntime_range\030\007 \001(\0132\n.TimeRange\022\035\n\025ass" +
       "ociated_cell_count\030\010 \001(\005\022\r\n\005nonce\030\t \001(\004\032" +
       "\347\001\n\013ColumnValue\022\016\n\006family\030\001 \002(\014\022B\n\017quali" +
@@ -34348,8 +34471,8 @@ public final class ClientProtos {
       "\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022\021\n\ttime" +
       "stamp\030\003 \001(\004\022.\n\013delete_type\030\004 \001(\0162\031.Mutat" +
       "ionProto.DeleteType\022\014\n\004tags\030\005 \001(\014\"W\n\nDur" +
-      "ability\022\017\n\013USE_DEFAULT\020\000\022\014\n\010SKIP_WAL\020\001\022\r" +
-      "\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL\020\003\022\r\n\tFSYNC_WAL",
+      "ability\022\017\n\013USE_DEFAULT\020\000\022\014\n\010SKIP_WAL\020\001\022\r",
+      "\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL\020\003\022\r\n\tFSYNC_WAL" +
       "\020\004\">\n\014MutationType\022\n\n\006APPEND\020\000\022\r\n\tINCREM" +
       "ENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003\"p\n\nDeleteType" +
       "\022\026\n\022DELETE_ONE_VERSION\020\000\022\034\n\030DELETE_MULTI" +
@@ -34358,8 +34481,8 @@ public final class ClientProtos {
       "\n\006region\030\001 \002(\0132\020.RegionSpecifier\022 \n\010muta" +
       "tion\030\002 \002(\0132\016.MutationProto\022\035\n\tcondition\030" +
       "\003 \001(\0132\n.Condition\022\023\n\013nonce_group\030\004 \001(\004\"<" +
-      "\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007.Resul" +
-      "t\022\021\n\tprocessed\030\002 \001(\010\"\207\004\n\004Scan\022\027\n\006column\030",
+      "\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007.Resul",
+      "t\022\021\n\tprocessed\030\002 \001(\010\"\207\004\n\004Scan\022\027\n\006column\030" +
       "\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\0132\016.Name" +
       "BytesPair\022\021\n\tstart_row\030\003 \001(\014\022\020\n\010stop_row" +
       "\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007.Filter\022\036\n\ntime_" +
@@ -34368,8 +34491,8 @@ public final class ClientProtos {
       "batch_size\030\t \001(\r\022\027\n\017max_result_size\030\n \001(" +
       "\004\022\023\n\013store_limit\030\013 \001(\r\022\024\n\014store_offset\030\014" +
       " \001(\r\022&\n\036load_column_families_on_demand\030\r" +
-      " \001(\010\022\r\n\005small\030\016 \001(\010\022\027\n\010reversed\030\017 \001(\010:\005f" +
-      "alse\022)\n\013consistency\030\020 \001(\0162\014.Consistency:",
+      " \001(\010\022\r\n\005small\030\016 \001(\010\022\027\n\010reversed\030\017 \001(\010:\005f",
+      "alse\022)\n\013consistency\030\020 \001(\0162\014.Consistency:" +
       "\006STRONG\022\017\n\007caching\030\021 \001(\r\022\035\n\025allow_partia" +
       "l_results\030\022 \001(\010\022-\n\rcf_time_range\030\023 \003(\0132\026" +
       ".ColumnFamilyTimeRange\"\224\002\n\013ScanRequest\022 " +
@@ -34378,8 +34501,8 @@ public final class ClientProtos {
       "ber_of_rows\030\004 \001(\r\022\025\n\rclose_scanner\030\005 \001(\010" +
       "\022\025\n\rnext_call_seq\030\006 \001(\004\022\037\n\027client_handle" +
       "s_partials\030\007 \001(\010\022!\n\031client_handles_heart" +
-      "beats\030\010 \001(\010\022\032\n\022track_scan_metrics\030\t \001(\010\022" +
-      "\024\n\005renew\030\n \001(\010:\005false\"\210\002\n\014ScanResponse\022\030",
+      "beats\030\010 \001(\010\022\032\n\022track_scan_metrics\030\t \001(\010\022",
+      "\024\n\005renew\030\n \001(\010:\005false\"\210\002\n\014ScanResponse\022\030" +
       "\n\020cells_per_result\030\001 \003(\r\022\022\n\nscanner_id\030\002" +
       " \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\022" +
       "\030\n\007results\030\005 \003(\0132\007.Result\022\r\n\005stale\030\006 \001(\010" +
@@ -34388,8 +34511,8 @@ public final class ClientProtos {
       "essage\030\t \001(\010\022\"\n\014scan_metrics\030\n \001(\0132\014.Sca" +
       "nMetrics\"\263\001\n\024BulkLoadHFileRequest\022 \n\006reg" +
       "ion\030\001 \002(\0132\020.RegionSpecifier\0225\n\013family_pa" +
-      "th\030\002 \003(\0132 .BulkLoadHFileRequest.FamilyPa" +
-      "th\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFamilyPath",
+      "th\030\002 \003(\0132 .BulkLoadHFileRequest.FamilyPa",
+      "th\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFamilyPath" +
       "\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLo" +
       "adHFileResponse\022\016\n\006loaded\030\001 \002(\010\"a\n\026Copro" +
       "cessorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014servic" +
@@ -34398,8 +34521,8 @@ public final class ClientProtos {
       "\n\005value\030\001 \001(\0132\016.NameBytesPair\"d\n\031Coproce" +
       "ssorServiceRequest\022 \n\006region\030\001 \002(\0132\020.Reg" +
       "ionSpecifier\022%\n\004call\030\002 \002(\0132\027.Coprocessor" +
-      "ServiceCall\"]\n\032CoprocessorServiceRespons" +
-      "e\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\035\n\005v",
+      "ServiceCall\"]\n\032CoprocessorServiceRespons",
+      "e\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\035\n\005v" +
       "alue\030\002 \002(\0132\016.NameBytesPair\"{\n\006Action\022\r\n\005" +
       "index\030\001 \001(\r\022 \n\010mutation\030\002 \001(\0132\016.Mutation" +
       "Proto\022\021\n\003get\030\003 \001(\0132\004.Get\022-\n\014service_call" +
@@ -34408,8 +34531,8 @@ public final class ClientProtos {
       "r\022\016\n\006atomic\030\002 \001(\010\022\027\n\006action\030\003 \003(\0132\007.Acti" +
       "on\"c\n\017RegionLoadStats\022\027\n\014memstoreLoad\030\001 " +
       "\001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(\005:\0010\022\035\n\022comp" +
-      "actionPressure\030\003 \001(\005:\0010\"\266\001\n\021ResultOrExce" +
-      "ption\022\r\n\005index\030\001 \001(\r\022\027\n\006result\030\002 \001(\0132\007.R",
+      "actionPressure\030\003 \001(\005:\0010\"\266\001\n\021ResultOrExce",
+      "ption\022\r\n\005index\030\001 \001(\r\022\027\n\006result\030\002 \001(\0132\007.R" +
       "esult\022!\n\texception\030\003 \001(\0132\016.NameBytesPair" +
       "\0221\n\016service_result\030\004 \001(\0132\031.CoprocessorSe" +
       "rviceResult\022#\n\tloadStats\030\005 \001(\0132\020.RegionL" +
@@ -34418,8 +34541,8 @@ public final class ClientProtos {
       "\texception\030\002 \001(\0132\016.NameBytesPair\"f\n\014Mult" +
       "iRequest\022#\n\014regionAction\030\001 \003(\0132\r.RegionA" +
       "ction\022\022\n\nnonceGroup\030\002 \001(\004\022\035\n\tcondition\030\003" +
-      " \001(\0132\n.Condition\"S\n\rMultiResponse\022/\n\022reg" +
-      "ionActionResult\030\001 \003(\0132\023.RegionActionResu",
+      " \001(\0132\n.Condition\"S\n\rMultiResponse\022/\n\022reg",
+      "ionActionResult\030\001 \003(\0132\023.RegionActionResu" +
       "lt\022\021\n\tprocessed\030\002 \001(\010*\'\n\013Consistency\022\n\n\006" +
       "STRONG\020\000\022\014\n\010TIMELINE\020\0012\205\003\n\rClientService" +
       "\022 \n\003Get\022\013.GetRequest\032\014.GetResponse\022)\n\006Mu" +
@@ -34428,8 +34551,8 @@ public final class ClientProtos {
       "lkLoadHFile\022\025.BulkLoadHFileRequest\032\026.Bul" +
       "kLoadHFileResponse\022F\n\013ExecService\022\032.Copr" +
       "ocessorServiceRequest\032\033.CoprocessorServi" +
-      "ceResponse\022R\n\027ExecRegionServerService\022\032." +
-      "CoprocessorServiceRequest\032\033.CoprocessorS",
+      "ceResponse\022R\n\027ExecRegionServerService\022\032.",
+      "CoprocessorServiceRequest\032\033.CoprocessorS" +
       "erviceResponse\022&\n\005Multi\022\r.MultiRequest\032\016" +
       ".MultiResponseBB\n*org.apache.hadoop.hbas" +
       "e.protobuf.generatedB\014ClientProtosH\001\210\001\001\240" +
@@ -34463,7 +34586,7 @@ public final class ClientProtos {
           internal_static_Get_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Get_descriptor,
-              new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "ClosestRowBefore", "Consistency", "CfTimeRange", });
+              new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "ClosestRowBefore", "Consistency", "CfTimeRange", "LoadColumnFamiliesOnDemand", });
           internal_static_Result_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_Result_fieldAccessorTable = new

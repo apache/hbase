@@ -6881,6 +6881,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       scan = new Scan(get);
     }
 
+    if (scan.getLoadColumnFamiliesOnDemandValue() == null) {
+      scan.setLoadColumnFamiliesOnDemand(isLoadingCfsOnDemandDefault());
+    }
     RegionScanner scanner = null;
     try {
       scanner = getScanner(scan);

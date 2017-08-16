@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -5611,6 +5612,50 @@ public class TestFromClientSide {
 
     table.close();
     TEST_UTIL.deleteTable(TABLE);
+  }
+
+  @Test
+  public void testEmptyFilterList() throws Exception {
+    // Test Initialization.
+    TableName TABLE = TableName.valueOf("testEmptyFilterList");
+    Table table = TEST_UTIL.createTable(TABLE, FAMILY);
+
+    // Insert one row each region
+    Put put = new Put(Bytes.toBytes("row"));
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
+
+    List<Result> scanResults = new LinkedList<>();
+    Scan scan = new Scan();
+    scan.setFilter(new FilterList());
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      for (Result r : scanner) {
+        scanResults.add(r);
+      }
+    }
+
+    Get g = new Get(Bytes.toBytes("row"));
+    g.setFilter(new FilterList());
+    Result getResult = table.get(g);
+    if (scanResults.isEmpty()) {
+      assertTrue(getResult.isEmpty());
+    } else if (scanResults.size() == 1) {
+      Result scanResult = scanResults.get(0);
+      assertEquals(scanResult.rawCells().length, getResult.rawCells().length);
+      for (int i = 0; i != scanResult.rawCells().length; ++i) {
+        Cell scanCell = scanResult.rawCells()[i];
+        Cell getCell = getResult.rawCells()[i];
+        assertEquals(0, Bytes.compareTo(CellUtil.cloneRow(scanCell), CellUtil.cloneRow(getCell)));
+        assertEquals(0,
+          Bytes.compareTo(CellUtil.cloneFamily(scanCell), CellUtil.cloneFamily(getCell)));
+        assertEquals(0,
+          Bytes.compareTo(CellUtil.cloneQualifier(scanCell), CellUtil.cloneQualifier(getCell)));
+        assertEquals(0,
+          Bytes.compareTo(CellUtil.cloneValue(scanCell), CellUtil.cloneValue(getCell)));
+      }
+    } else {
+      fail("The result retrieved from SCAN and Get should be same");
+    }
   }
 
   @Test
