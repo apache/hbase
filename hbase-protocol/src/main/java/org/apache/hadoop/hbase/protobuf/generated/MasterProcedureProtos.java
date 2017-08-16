@@ -3814,11 +3814,11 @@ public final class MasterProcedureProtos {
     /**
      * <code>optional .hbase.pb.TableName table_name = 3;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
     /**
      * <code>optional .hbase.pb.TableName table_name = 3;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
 
     // optional .hbase.pb.TableSchema table_schema = 4;
     /**
@@ -3929,11 +3929,11 @@ public final class MasterProcedureProtos {
               break;
             }
             case 26: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
               if (((bitField0_ & 0x00000004) == 0x00000004)) {
                 subBuilder = tableName_.toBuilder();
               }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(tableName_);
                 tableName_ = subBuilder.buildPartial();
@@ -4045,7 +4045,7 @@ public final class MasterProcedureProtos {
 
     // optional .hbase.pb.TableName table_name = 3;
     public static final int TABLE_NAME_FIELD_NUMBER = 3;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
     /**
      * <code>optional .hbase.pb.TableName table_name = 3;</code>
      */
@@ -4055,13 +4055,13 @@ public final class MasterProcedureProtos {
     /**
      * <code>optional .hbase.pb.TableName table_name = 3;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
       return tableName_;
     }
     /**
      * <code>optional .hbase.pb.TableName table_name = 3;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
@@ -4126,7 +4126,7 @@ public final class MasterProcedureProtos {
     private void initFields() {
       userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
       preserveSplits_ = false;
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       tableSchema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
       regionInfo_ = java.util.Collections.emptyList();
     }
@@ -4416,7 +4416,7 @@ public final class MasterProcedureProtos {
         preserveSplits_ = false;
         bitField0_ = (bitField0_ & ~0x00000002);
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
@@ -4760,9 +4760,9 @@ public final class MasterProcedureProtos {
       }
 
       // optional .hbase.pb.TableName table_name = 3;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
        * <code>optional .hbase.pb.TableName table_name = 3;</code>
        */
@@ -4772,7 +4772,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>optional .hbase.pb.TableName table_name = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
         } else {
@@ -4782,7 +4782,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>optional .hbase.pb.TableName table_name = 3;</code>
        */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -4799,7 +4799,7 @@ public final class MasterProcedureProtos {
        * <code>optional .hbase.pb.TableName table_name = 3;</code>
        */
       public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           tableName_ = builderForValue.build();
           onChanged();
@@ -4812,12 +4812,12 @@ public final class MasterProcedureProtos {
       /**
        * <code>optional .hbase.pb.TableName table_name = 3;</code>
        */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000004) == 0x00000004) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
             tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
           } else {
             tableName_ = value;
           }
@@ -4833,7 +4833,7 @@ public final class MasterProcedureProtos {
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
           onChanged();
         } else {
           tableNameBuilder_.clear();
@@ -4844,7 +4844,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>optional .hbase.pb.TableName table_name = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000004;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
@@ -4852,7 +4852,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>optional .hbase.pb.TableName table_name = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
         } else {
@@ -4863,11 +4863,11 @@ public final class MasterProcedureProtos {
        * <code>optional .hbase.pb.TableName table_name = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   getParentForChildren(),
                   isClean());
@@ -5269,11 +5269,11 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
 
     // repeated .hbase.pb.RegionInfo region_info = 3;
     /**
@@ -5365,11 +5365,11 @@ public final class MasterProcedureProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = tableName_.toBuilder();
               }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(tableName_);
                 tableName_ = subBuilder.buildPartial();
@@ -5452,7 +5452,7 @@ public final class MasterProcedureProtos {
 
     // required .hbase.pb.TableName table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
@@ -5462,13 +5462,13 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
       return tableName_;
     }
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
@@ -5510,7 +5510,7 @@ public final class MasterProcedureProtos {
 
     private void initFields() {
       userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       regionInfo_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
@@ -5756,7 +5756,7 @@ public final class MasterProcedureProtos {
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
@@ -6035,9 +6035,9 @@ public final class MasterProcedureProtos {
       }
 
       // required .hbase.pb.TableName table_name = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
@@ -6047,7 +6047,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
         } else {
@@ -6057,7 +6057,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -6074,7 +6074,7 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           tableName_ = builderForValue.build();
           onChanged();
@@ -6087,12 +6087,12 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
             tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
           } else {
             tableName_ = value;
           }
@@ -6108,7 +6108,7 @@ public final class MasterProcedureProtos {
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
           onChanged();
         } else {
           tableNameBuilder_.clear();
@@ -6119,7 +6119,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
@@ -6127,7 +6127,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
         } else {
@@ -6138,11 +6138,11 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   getParentForChildren(),
                   isClean());
@@ -8492,11 +8492,11 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
 
     // required .hbase.pb.ColumnFamilySchema columnfamily_schema = 3;
     /**
@@ -8591,11 +8591,11 @@ public final class MasterProcedureProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = tableName_.toBuilder();
               }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(tableName_);
                 tableName_ = subBuilder.buildPartial();
@@ -8693,7 +8693,7 @@ public final class MasterProcedureProtos {
 
     // required .hbase.pb.TableName table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
@@ -8703,13 +8703,13 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
       return tableName_;
     }
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
@@ -8759,7 +8759,7 @@ public final class MasterProcedureProtos {
 
     private void initFields() {
       userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       columnfamilySchema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.getDefaultInstance();
       unmodifiedTableSchema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
     }
@@ -9034,7 +9034,7 @@ public final class MasterProcedureProtos {
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
@@ -9314,9 +9314,9 @@ public final class MasterProcedureProtos {
       }
 
       // required .hbase.pb.TableName table_name = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
@@ -9326,7 +9326,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
         } else {
@@ -9336,7 +9336,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -9353,7 +9353,7 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           tableName_ = builderForValue.build();
           onChanged();
@@ -9366,12 +9366,12 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
             tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
           } else {
             tableName_ = value;
           }
@@ -9387,7 +9387,7 @@ public final class MasterProcedureProtos {
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
           onChanged();
         } else {
           tableNameBuilder_.clear();
@@ -9398,7 +9398,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
@@ -9406,7 +9406,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
         } else {
@@ -9417,11 +9417,11 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   getParentForChildren(),
                   isClean());
@@ -9700,11 +9700,11 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
 
     // required .hbase.pb.ColumnFamilySchema columnfamily_schema = 3;
     /**
@@ -9799,11 +9799,11 @@ public final class MasterProcedureProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = tableName_.toBuilder();
               }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(tableName_);
                 tableName_ = subBuilder.buildPartial();
@@ -9901,7 +9901,7 @@ public final class MasterProcedureProtos {
 
     // required .hbase.pb.TableName table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
@@ -9911,13 +9911,13 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
       return tableName_;
     }
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
@@ -9967,7 +9967,7 @@ public final class MasterProcedureProtos {
 
     private void initFields() {
       userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       columnfamilySchema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.getDefaultInstance();
       unmodifiedTableSchema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
     }
@@ -10242,7 +10242,7 @@ public final class MasterProcedureProtos {
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
@@ -10522,9 +10522,9 @@ public final class MasterProcedureProtos {
       }
 
       // required .hbase.pb.TableName table_name = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
@@ -10534,7 +10534,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
         } else {
@@ -10544,7 +10544,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -10561,7 +10561,7 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           tableName_ = builderForValue.build();
           onChanged();
@@ -10574,12 +10574,12 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
             tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
           } else {
             tableName_ = value;
           }
@@ -10595,7 +10595,7 @@ public final class MasterProcedureProtos {
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
           onChanged();
         } else {
           tableNameBuilder_.clear();
@@ -10606,7 +10606,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
@@ -10614,7 +10614,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
         } else {
@@ -10625,11 +10625,11 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   getParentForChildren(),
                   isClean());
@@ -10908,11 +10908,11 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
 
     // required bytes columnfamily_name = 3;
     /**
@@ -11003,11 +11003,11 @@ public final class MasterProcedureProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = tableName_.toBuilder();
               }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(tableName_);
                 tableName_ = subBuilder.buildPartial();
@@ -11097,7 +11097,7 @@ public final class MasterProcedureProtos {
 
     // required .hbase.pb.TableName table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
@@ -11107,13 +11107,13 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
       return tableName_;
     }
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
@@ -11157,7 +11157,7 @@ public final class MasterProcedureProtos {
 
     private void initFields() {
       userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       columnfamilyName_ = com.google.protobuf.ByteString.EMPTY;
       unmodifiedTableSchema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
     }
@@ -11427,7 +11427,7 @@ public final class MasterProcedureProtos {
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
@@ -11695,9 +11695,9 @@ public final class MasterProcedureProtos {
       }
 
       // required .hbase.pb.TableName table_name = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
@@ -11707,7 +11707,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
         } else {
@@ -11717,7 +11717,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -11734,7 +11734,7 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           tableName_ = builderForValue.build();
           onChanged();
@@ -11747,12 +11747,12 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
             tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
           } else {
             tableName_ = value;
           }
@@ -11768,7 +11768,7 @@ public final class MasterProcedureProtos {
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
           onChanged();
         } else {
           tableNameBuilder_.clear();
@@ -11779,7 +11779,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
@@ -11787,7 +11787,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
         } else {
@@ -11798,11 +11798,11 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   getParentForChildren(),
                   isClean());
@@ -12000,11 +12000,11 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
 
     // required bool skip_table_state_check = 3;
     /**
@@ -12081,11 +12081,11 @@ public final class MasterProcedureProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = tableName_.toBuilder();
               }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(tableName_);
                 tableName_ = subBuilder.buildPartial();
@@ -12162,7 +12162,7 @@ public final class MasterProcedureProtos {
 
     // required .hbase.pb.TableName table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
@@ -12172,13 +12172,13 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
       return tableName_;
     }
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
@@ -12200,7 +12200,7 @@ public final class MasterProcedureProtos {
 
     private void initFields() {
       userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       skipTableStateCheck_ = false;
     }
     private byte memoizedIsInitialized = -1;
@@ -12446,7 +12446,7 @@ public final class MasterProcedureProtos {
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
@@ -12691,9 +12691,9 @@ public final class MasterProcedureProtos {
       }
 
       // required .hbase.pb.TableName table_name = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
@@ -12703,7 +12703,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
         } else {
@@ -12713,7 +12713,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -12730,7 +12730,7 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           tableName_ = builderForValue.build();
           onChanged();
@@ -12743,12 +12743,12 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
             tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
           } else {
             tableName_ = value;
           }
@@ -12764,7 +12764,7 @@ public final class MasterProcedureProtos {
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
           onChanged();
         } else {
           tableNameBuilder_.clear();
@@ -12775,7 +12775,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
@@ -12783,7 +12783,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
         } else {
@@ -12794,11 +12794,11 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   getParentForChildren(),
                   isClean());
@@ -12876,11 +12876,11 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
 
     // required bool skip_table_state_check = 3;
     /**
@@ -12957,11 +12957,11 @@ public final class MasterProcedureProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = tableName_.toBuilder();
               }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(tableName_);
                 tableName_ = subBuilder.buildPartial();
@@ -13038,7 +13038,7 @@ public final class MasterProcedureProtos {
 
     // required .hbase.pb.TableName table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
@@ -13048,13 +13048,13 @@ public final class MasterProcedureProtos {
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
       return tableName_;
     }
     /**
      * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
@@ -13076,7 +13076,7 @@ public final class MasterProcedureProtos {
 
     private void initFields() {
       userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       skipTableStateCheck_ = false;
     }
     private byte memoizedIsInitialized = -1;
@@ -13322,7 +13322,7 @@ public final class MasterProcedureProtos {
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
@@ -13567,9 +13567,9 @@ public final class MasterProcedureProtos {
       }
 
       // required .hbase.pb.TableName table_name = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
@@ -13579,7 +13579,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
         } else {
@@ -13589,7 +13589,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -13606,7 +13606,7 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
           tableName_ = builderForValue.build();
           onChanged();
@@ -13619,12 +13619,12 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
             tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
           } else {
             tableName_ = value;
           }
@@ -13640,7 +13640,7 @@ public final class MasterProcedureProtos {
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
           onChanged();
         } else {
           tableNameBuilder_.clear();
@@ -13651,7 +13651,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
@@ -13659,7 +13659,7 @@ public final class MasterProcedureProtos {
       /**
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
         } else {
@@ -13670,11 +13670,11 @@ public final class MasterProcedureProtos {
        * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
                   tableName_,
                   getParentForChildren(),
                   isClean());
@@ -15392,144 +15392,145 @@ public final class MasterProcedureProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\025MasterProcedure.proto\022\010hbase.pb\032\013HBase" +
-      ".proto\032\tRPC.proto\"\234\001\n\024CreateTableStateDa" +
-      "ta\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInf" +
-      "ormation\022+\n\014table_schema\030\002 \002(\0132\025.hbase.p" +
-      "b.TableSchema\022)\n\013region_info\030\003 \003(\0132\024.hba" +
-      "se.pb.RegionInfo\"\332\001\n\024ModifyTableStateDat" +
-      "a\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInfo" +
-      "rmation\0226\n\027unmodified_table_schema\030\002 \001(\013" +
-      "2\025.hbase.pb.TableSchema\0224\n\025modified_tabl" +
-      "e_schema\030\003 \002(\0132\025.hbase.pb.TableSchema\022&\n",
-      "\036delete_column_family_in_modify\030\004 \002(\010\"\340\001" +
-      "\n\026TruncateTableStateData\022,\n\tuser_info\030\001 " +
-      "\002(\0132\031.hbase.pb.UserInformation\022\027\n\017preser" +
-      "ve_splits\030\002 \002(\010\022\'\n\ntable_name\030\003 \001(\0132\023.hb" +
-      "ase.pb.TableName\022+\n\014table_schema\030\004 \001(\0132\025" +
-      ".hbase.pb.TableSchema\022)\n\013region_info\030\005 \003" +
-      "(\0132\024.hbase.pb.RegionInfo\"\230\001\n\024DeleteTable" +
-      "StateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb." +
-      "UserInformation\022\'\n\ntable_name\030\002 \002(\0132\023.hb" +
-      "ase.pb.TableName\022)\n\013region_info\030\003 \003(\0132\024.",
-      "hbase.pb.RegionInfo\"W\n\030CreateNamespaceSt" +
-      "ateData\022;\n\024namespace_descriptor\030\001 \002(\0132\035." +
-      "hbase.pb.NamespaceDescriptor\"\237\001\n\030ModifyN" +
-      "amespaceStateData\022;\n\024namespace_descripto" +
-      "r\030\001 \002(\0132\035.hbase.pb.NamespaceDescriptor\022F" +
-      "\n\037unmodified_namespace_descriptor\030\002 \001(\0132" +
-      "\035.hbase.pb.NamespaceDescriptor\"o\n\030Delete" +
-      "NamespaceStateData\022\026\n\016namespace_name\030\001 \002" +
-      "(\t\022;\n\024namespace_descriptor\030\002 \001(\0132\035.hbase" +
-      ".pb.NamespaceDescriptor\"\344\001\n\030AddColumnFam",
-      "ilyStateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase." +
-      "pb.UserInformation\022\'\n\ntable_name\030\002 \002(\0132\023" +
-      ".hbase.pb.TableName\0229\n\023columnfamily_sche" +
-      "ma\030\003 \002(\0132\034.hbase.pb.ColumnFamilySchema\0226" +
-      "\n\027unmodified_table_schema\030\004 \001(\0132\025.hbase." +
-      "pb.TableSchema\"\347\001\n\033ModifyColumnFamilySta" +
-      "teData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.Use" +
-      "rInformation\022\'\n\ntable_name\030\002 \002(\0132\023.hbase" +
-      ".pb.TableName\0229\n\023columnfamily_schema\030\003 \002" +
-      "(\0132\034.hbase.pb.ColumnFamilySchema\0226\n\027unmo",
-      "dified_table_schema\030\004 \001(\0132\025.hbase.pb.Tab" +
-      "leSchema\"\307\001\n\033DeleteColumnFamilyStateData" +
-      "\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInfor" +
-      "mation\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.Ta" +
-      "bleName\022\031\n\021columnfamily_name\030\003 \002(\014\0226\n\027un" +
-      "modified_table_schema\030\004 \001(\0132\025.hbase.pb.T" +
-      "ableSchema\"\215\001\n\024EnableTableStateData\022,\n\tu" +
-      "ser_info\030\001 \002(\0132\031.hbase.pb.UserInformatio" +
-      "n\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.TableNa" +
-      "me\022\036\n\026skip_table_state_check\030\003 \002(\010\"\216\001\n\025D",
-      "isableTableStateData\022,\n\tuser_info\030\001 \002(\0132" +
-      "\031.hbase.pb.UserInformation\022\'\n\ntable_name" +
-      "\030\002 \002(\0132\023.hbase.pb.TableName\022\036\n\026skip_tabl" +
-      "e_state_check\030\003 \002(\010\"\201\002\n\024ServerCrashState" +
-      "Data\022)\n\013server_name\030\001 \002(\0132\024.hbase.pb.Ser" +
-      "verName\022\036\n\026distributed_log_replay\030\002 \001(\010\022" +
-      "7\n\031regions_on_crashed_server\030\003 \003(\0132\024.hba" +
-      "se.pb.RegionInfo\022.\n\020regions_assigned\030\004 \003" +
-      "(\0132\024.hbase.pb.RegionInfo\022\025\n\rcarrying_met" +
-      "a\030\005 \001(\010\022\036\n\020should_split_wal\030\006 \001(\010:\004true*",
-      "\330\001\n\020CreateTableState\022\036\n\032CREATE_TABLE_PRE" +
-      "_OPERATION\020\001\022 \n\034CREATE_TABLE_WRITE_FS_LA" +
-      "YOUT\020\002\022\034\n\030CREATE_TABLE_ADD_TO_META\020\003\022\037\n\033" +
-      "CREATE_TABLE_ASSIGN_REGIONS\020\004\022\"\n\036CREATE_" +
-      "TABLE_UPDATE_DESC_CACHE\020\005\022\037\n\033CREATE_TABL" +
-      "E_POST_OPERATION\020\006*\207\002\n\020ModifyTableState\022" +
-      "\030\n\024MODIFY_TABLE_PREPARE\020\001\022\036\n\032MODIFY_TABL" +
-      "E_PRE_OPERATION\020\002\022(\n$MODIFY_TABLE_UPDATE" +
-      "_TABLE_DESCRIPTOR\020\003\022&\n\"MODIFY_TABLE_REMO" +
-      "VE_REPLICA_COLUMN\020\004\022!\n\035MODIFY_TABLE_DELE",
-      "TE_FS_LAYOUT\020\005\022\037\n\033MODIFY_TABLE_POST_OPER" +
-      "ATION\020\006\022#\n\037MODIFY_TABLE_REOPEN_ALL_REGIO" +
-      "NS\020\007*\212\002\n\022TruncateTableState\022 \n\034TRUNCATE_" +
-      "TABLE_PRE_OPERATION\020\001\022#\n\037TRUNCATE_TABLE_" +
-      "REMOVE_FROM_META\020\002\022\"\n\036TRUNCATE_TABLE_CLE" +
-      "AR_FS_LAYOUT\020\003\022#\n\037TRUNCATE_TABLE_CREATE_" +
-      "FS_LAYOUT\020\004\022\036\n\032TRUNCATE_TABLE_ADD_TO_MET" +
-      "A\020\005\022!\n\035TRUNCATE_TABLE_ASSIGN_REGIONS\020\006\022!" +
-      "\n\035TRUNCATE_TABLE_POST_OPERATION\020\007*\337\001\n\020De" +
-      "leteTableState\022\036\n\032DELETE_TABLE_PRE_OPERA",
-      "TION\020\001\022!\n\035DELETE_TABLE_REMOVE_FROM_META\020" +
-      "\002\022 \n\034DELETE_TABLE_CLEAR_FS_LAYOUT\020\003\022\"\n\036D" +
-      "ELETE_TABLE_UPDATE_DESC_CACHE\020\004\022!\n\035DELET" +
-      "E_TABLE_UNASSIGN_REGIONS\020\005\022\037\n\033DELETE_TAB" +
-      "LE_POST_OPERATION\020\006*\320\001\n\024CreateNamespaceS" +
-      "tate\022\034\n\030CREATE_NAMESPACE_PREPARE\020\001\022%\n!CR" +
-      "EATE_NAMESPACE_CREATE_DIRECTORY\020\002\022)\n%CRE" +
-      "ATE_NAMESPACE_INSERT_INTO_NS_TABLE\020\003\022\036\n\032" +
-      "CREATE_NAMESPACE_UPDATE_ZK\020\004\022(\n$CREATE_N" +
-      "AMESPACE_SET_NAMESPACE_QUOTA\020\005*z\n\024Modify",
-      "NamespaceState\022\034\n\030MODIFY_NAMESPACE_PREPA" +
-      "RE\020\001\022$\n MODIFY_NAMESPACE_UPDATE_NS_TABLE" +
-      "\020\002\022\036\n\032MODIFY_NAMESPACE_UPDATE_ZK\020\003*\332\001\n\024D" +
-      "eleteNamespaceState\022\034\n\030DELETE_NAMESPACE_" +
-      "PREPARE\020\001\022)\n%DELETE_NAMESPACE_DELETE_FRO" +
-      "M_NS_TABLE\020\002\022#\n\037DELETE_NAMESPACE_REMOVE_" +
-      "FROM_ZK\020\003\022\'\n#DELETE_NAMESPACE_DELETE_DIR" +
-      "ECTORIES\020\004\022+\n\'DELETE_NAMESPACE_REMOVE_NA" +
-      "MESPACE_QUOTA\020\005*\331\001\n\024AddColumnFamilyState" +
-      "\022\035\n\031ADD_COLUMN_FAMILY_PREPARE\020\001\022#\n\037ADD_C",
-      "OLUMN_FAMILY_PRE_OPERATION\020\002\022-\n)ADD_COLU" +
-      "MN_FAMILY_UPDATE_TABLE_DESCRIPTOR\020\003\022$\n A" +
-      "DD_COLUMN_FAMILY_POST_OPERATION\020\004\022(\n$ADD" +
-      "_COLUMN_FAMILY_REOPEN_ALL_REGIONS\020\005*\353\001\n\027" +
-      "ModifyColumnFamilyState\022 \n\034MODIFY_COLUMN" +
-      "_FAMILY_PREPARE\020\001\022&\n\"MODIFY_COLUMN_FAMIL" +
-      "Y_PRE_OPERATION\020\002\0220\n,MODIFY_COLUMN_FAMIL" +
-      "Y_UPDATE_TABLE_DESCRIPTOR\020\003\022\'\n#MODIFY_CO" +
-      "LUMN_FAMILY_POST_OPERATION\020\004\022+\n\'MODIFY_C" +
-      "OLUMN_FAMILY_REOPEN_ALL_REGIONS\020\005*\226\002\n\027De",
-      "leteColumnFamilyState\022 \n\034DELETE_COLUMN_F" +
-      "AMILY_PREPARE\020\001\022&\n\"DELETE_COLUMN_FAMILY_" +
-      "PRE_OPERATION\020\002\0220\n,DELETE_COLUMN_FAMILY_" +
-      "UPDATE_TABLE_DESCRIPTOR\020\003\022)\n%DELETE_COLU" +
-      "MN_FAMILY_DELETE_FS_LAYOUT\020\004\022\'\n#DELETE_C" +
-      "OLUMN_FAMILY_POST_OPERATION\020\005\022+\n\'DELETE_" +
-      "COLUMN_FAMILY_REOPEN_ALL_REGIONS\020\006*\350\001\n\020E" +
-      "nableTableState\022\030\n\024ENABLE_TABLE_PREPARE\020" +
-      "\001\022\036\n\032ENABLE_TABLE_PRE_OPERATION\020\002\022)\n%ENA" +
-      "BLE_TABLE_SET_ENABLING_TABLE_STATE\020\003\022$\n ",
-      "ENABLE_TABLE_MARK_REGIONS_ONLINE\020\004\022(\n$EN" +
-      "ABLE_TABLE_SET_ENABLED_TABLE_STATE\020\005\022\037\n\033" +
-      "ENABLE_TABLE_POST_OPERATION\020\006*\362\001\n\021Disabl" +
-      "eTableState\022\031\n\025DISABLE_TABLE_PREPARE\020\001\022\037" +
-      "\n\033DISABLE_TABLE_PRE_OPERATION\020\002\022+\n\'DISAB" +
-      "LE_TABLE_SET_DISABLING_TABLE_STATE\020\003\022&\n\"" +
-      "DISABLE_TABLE_MARK_REGIONS_OFFLINE\020\004\022*\n&" +
-      "DISABLE_TABLE_SET_DISABLED_TABLE_STATE\020\005" +
-      "\022 \n\034DISABLE_TABLE_POST_OPERATION\020\006*\234\002\n\020S" +
-      "erverCrashState\022\026\n\022SERVER_CRASH_START\020\001\022",
-      "\035\n\031SERVER_CRASH_PROCESS_META\020\002\022\034\n\030SERVER" +
-      "_CRASH_GET_REGIONS\020\003\022\036\n\032SERVER_CRASH_NO_" +
-      "SPLIT_LOGS\020\004\022\033\n\027SERVER_CRASH_SPLIT_LOGS\020" +
-      "\005\022#\n\037SERVER_CRASH_PREPARE_LOG_REPLAY\020\006\022\027" +
-      "\n\023SERVER_CRASH_ASSIGN\020\010\022\037\n\033SERVER_CRASH_" +
-      "WAIT_ON_ASSIGN\020\t\022\027\n\023SERVER_CRASH_FINISH\020" +
-      "dBK\n*org.apache.hadoop.hbase.protobuf.ge" +
-      "neratedB\025MasterProcedureProtosH\001\210\001\001\240\001\001"
+      "\n\025MasterProcedure.proto\022\010hbase.pb\032\013Table" +
+      ".proto\032\013HBase.proto\032\tRPC.proto\"\234\001\n\024Creat" +
+      "eTableStateData\022,\n\tuser_info\030\001 \002(\0132\031.hba" +
+      "se.pb.UserInformation\022+\n\014table_schema\030\002 " +
+      "\002(\0132\025.hbase.pb.TableSchema\022)\n\013region_inf" +
+      "o\030\003 \003(\0132\024.hbase.pb.RegionInfo\"\332\001\n\024Modify" +
+      "TableStateData\022,\n\tuser_info\030\001 \002(\0132\031.hbas" +
+      "e.pb.UserInformation\0226\n\027unmodified_table" +
+      "_schema\030\002 \001(\0132\025.hbase.pb.TableSchema\0224\n\025" +
+      "modified_table_schema\030\003 \002(\0132\025.hbase.pb.T",
+      "ableSchema\022&\n\036delete_column_family_in_mo" +
+      "dify\030\004 \002(\010\"\340\001\n\026TruncateTableStateData\022,\n" +
+      "\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInformat" +
+      "ion\022\027\n\017preserve_splits\030\002 \002(\010\022\'\n\ntable_na" +
+      "me\030\003 \001(\0132\023.hbase.pb.TableName\022+\n\014table_s" +
+      "chema\030\004 \001(\0132\025.hbase.pb.TableSchema\022)\n\013re" +
+      "gion_info\030\005 \003(\0132\024.hbase.pb.RegionInfo\"\230\001" +
+      "\n\024DeleteTableStateData\022,\n\tuser_info\030\001 \002(" +
+      "\0132\031.hbase.pb.UserInformation\022\'\n\ntable_na" +
+      "me\030\002 \002(\0132\023.hbase.pb.TableName\022)\n\013region_",
+      "info\030\003 \003(\0132\024.hbase.pb.RegionInfo\"W\n\030Crea" +
+      "teNamespaceStateData\022;\n\024namespace_descri" +
+      "ptor\030\001 \002(\0132\035.hbase.pb.NamespaceDescripto" +
+      "r\"\237\001\n\030ModifyNamespaceStateData\022;\n\024namesp" +
+      "ace_descriptor\030\001 \002(\0132\035.hbase.pb.Namespac" +
+      "eDescriptor\022F\n\037unmodified_namespace_desc" +
+      "riptor\030\002 \001(\0132\035.hbase.pb.NamespaceDescrip" +
+      "tor\"o\n\030DeleteNamespaceStateData\022\026\n\016names" +
+      "pace_name\030\001 \002(\t\022;\n\024namespace_descriptor\030" +
+      "\002 \001(\0132\035.hbase.pb.NamespaceDescriptor\"\344\001\n",
+      "\030AddColumnFamilyStateData\022,\n\tuser_info\030\001" +
+      " \002(\0132\031.hbase.pb.UserInformation\022\'\n\ntable" +
+      "_name\030\002 \002(\0132\023.hbase.pb.TableName\0229\n\023colu" +
+      "mnfamily_schema\030\003 \002(\0132\034.hbase.pb.ColumnF" +
+      "amilySchema\0226\n\027unmodified_table_schema\030\004" +
+      " \001(\0132\025.hbase.pb.TableSchema\"\347\001\n\033ModifyCo" +
+      "lumnFamilyStateData\022,\n\tuser_info\030\001 \002(\0132\031" +
+      ".hbase.pb.UserInformation\022\'\n\ntable_name\030" +
+      "\002 \002(\0132\023.hbase.pb.TableName\0229\n\023columnfami" +
+      "ly_schema\030\003 \002(\0132\034.hbase.pb.ColumnFamilyS",
+      "chema\0226\n\027unmodified_table_schema\030\004 \001(\0132\025" +
+      ".hbase.pb.TableSchema\"\307\001\n\033DeleteColumnFa" +
+      "milyStateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase" +
+      ".pb.UserInformation\022\'\n\ntable_name\030\002 \002(\0132" +
+      "\023.hbase.pb.TableName\022\031\n\021columnfamily_nam" +
+      "e\030\003 \002(\014\0226\n\027unmodified_table_schema\030\004 \001(\013" +
+      "2\025.hbase.pb.TableSchema\"\215\001\n\024EnableTableS" +
+      "tateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.U" +
+      "serInformation\022\'\n\ntable_name\030\002 \002(\0132\023.hba" +
+      "se.pb.TableName\022\036\n\026skip_table_state_chec",
+      "k\030\003 \002(\010\"\216\001\n\025DisableTableStateData\022,\n\tuse" +
+      "r_info\030\001 \002(\0132\031.hbase.pb.UserInformation\022" +
+      "\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.TableName" +
+      "\022\036\n\026skip_table_state_check\030\003 \002(\010\"\201\002\n\024Ser" +
+      "verCrashStateData\022)\n\013server_name\030\001 \002(\0132\024" +
+      ".hbase.pb.ServerName\022\036\n\026distributed_log_" +
+      "replay\030\002 \001(\010\0227\n\031regions_on_crashed_serve" +
+      "r\030\003 \003(\0132\024.hbase.pb.RegionInfo\022.\n\020regions" +
+      "_assigned\030\004 \003(\0132\024.hbase.pb.RegionInfo\022\025\n" +
+      "\rcarrying_meta\030\005 \001(\010\022\036\n\020should_split_wal",
+      "\030\006 \001(\010:\004true*\330\001\n\020CreateTableState\022\036\n\032CRE" +
+      "ATE_TABLE_PRE_OPERATION\020\001\022 \n\034CREATE_TABL" +
+      "E_WRITE_FS_LAYOUT\020\002\022\034\n\030CREATE_TABLE_ADD_" +
+      "TO_META\020\003\022\037\n\033CREATE_TABLE_ASSIGN_REGIONS" +
+      "\020\004\022\"\n\036CREATE_TABLE_UPDATE_DESC_CACHE\020\005\022\037" +
+      "\n\033CREATE_TABLE_POST_OPERATION\020\006*\207\002\n\020Modi" +
+      "fyTableState\022\030\n\024MODIFY_TABLE_PREPARE\020\001\022\036" +
+      "\n\032MODIFY_TABLE_PRE_OPERATION\020\002\022(\n$MODIFY" +
+      "_TABLE_UPDATE_TABLE_DESCRIPTOR\020\003\022&\n\"MODI" +
+      "FY_TABLE_REMOVE_REPLICA_COLUMN\020\004\022!\n\035MODI",
+      "FY_TABLE_DELETE_FS_LAYOUT\020\005\022\037\n\033MODIFY_TA" +
+      "BLE_POST_OPERATION\020\006\022#\n\037MODIFY_TABLE_REO" +
+      "PEN_ALL_REGIONS\020\007*\212\002\n\022TruncateTableState" +
+      "\022 \n\034TRUNCATE_TABLE_PRE_OPERATION\020\001\022#\n\037TR" +
+      "UNCATE_TABLE_REMOVE_FROM_META\020\002\022\"\n\036TRUNC" +
+      "ATE_TABLE_CLEAR_FS_LAYOUT\020\003\022#\n\037TRUNCATE_" +
+      "TABLE_CREATE_FS_LAYOUT\020\004\022\036\n\032TRUNCATE_TAB" +
+      "LE_ADD_TO_META\020\005\022!\n\035TRUNCATE_TABLE_ASSIG" +
+      "N_REGIONS\020\006\022!\n\035TRUNCATE_TABLE_POST_OPERA" +
+      "TION\020\007*\337\001\n\020DeleteTableState\022\036\n\032DELETE_TA",
+      "BLE_PRE_OPERATION\020\001\022!\n\035DELETE_TABLE_REMO" +
+      "VE_FROM_META\020\002\022 \n\034DELETE_TABLE_CLEAR_FS_" +
+      "LAYOUT\020\003\022\"\n\036DELETE_TABLE_UPDATE_DESC_CAC" +
+      "HE\020\004\022!\n\035DELETE_TABLE_UNASSIGN_REGIONS\020\005\022" +
+      "\037\n\033DELETE_TABLE_POST_OPERATION\020\006*\320\001\n\024Cre" +
+      "ateNamespaceState\022\034\n\030CREATE_NAMESPACE_PR" +
+      "EPARE\020\001\022%\n!CREATE_NAMESPACE_CREATE_DIREC" +
+      "TORY\020\002\022)\n%CREATE_NAMESPACE_INSERT_INTO_N" +
+      "S_TABLE\020\003\022\036\n\032CREATE_NAMESPACE_UPDATE_ZK\020" +
+      "\004\022(\n$CREATE_NAMESPACE_SET_NAMESPACE_QUOT",
+      "A\020\005*z\n\024ModifyNamespaceState\022\034\n\030MODIFY_NA" +
+      "MESPACE_PREPARE\020\001\022$\n MODIFY_NAMESPACE_UP" +
+      "DATE_NS_TABLE\020\002\022\036\n\032MODIFY_NAMESPACE_UPDA" +
+      "TE_ZK\020\003*\332\001\n\024DeleteNamespaceState\022\034\n\030DELE" +
+      "TE_NAMESPACE_PREPARE\020\001\022)\n%DELETE_NAMESPA" +
+      "CE_DELETE_FROM_NS_TABLE\020\002\022#\n\037DELETE_NAME" +
+      "SPACE_REMOVE_FROM_ZK\020\003\022\'\n#DELETE_NAMESPA" +
+      "CE_DELETE_DIRECTORIES\020\004\022+\n\'DELETE_NAMESP" +
+      "ACE_REMOVE_NAMESPACE_QUOTA\020\005*\331\001\n\024AddColu" +
+      "mnFamilyState\022\035\n\031ADD_COLUMN_FAMILY_PREPA",
+      "RE\020\001\022#\n\037ADD_COLUMN_FAMILY_PRE_OPERATION\020" +
+      "\002\022-\n)ADD_COLUMN_FAMILY_UPDATE_TABLE_DESC" +
+      "RIPTOR\020\003\022$\n ADD_COLUMN_FAMILY_POST_OPERA" +
+      "TION\020\004\022(\n$ADD_COLUMN_FAMILY_REOPEN_ALL_R" +
+      "EGIONS\020\005*\353\001\n\027ModifyColumnFamilyState\022 \n\034" +
+      "MODIFY_COLUMN_FAMILY_PREPARE\020\001\022&\n\"MODIFY" +
+      "_COLUMN_FAMILY_PRE_OPERATION\020\002\0220\n,MODIFY" +
+      "_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR\020\003" +
+      "\022\'\n#MODIFY_COLUMN_FAMILY_POST_OPERATION\020" +
+      "\004\022+\n\'MODIFY_COLUMN_FAMILY_REOPEN_ALL_REG",
+      "IONS\020\005*\226\002\n\027DeleteColumnFamilyState\022 \n\034DE" +
+      "LETE_COLUMN_FAMILY_PREPARE\020\001\022&\n\"DELETE_C" +
+      "OLUMN_FAMILY_PRE_OPERATION\020\002\0220\n,DELETE_C" +
+      "OLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR\020\003\022)" +
+      "\n%DELETE_COLUMN_FAMILY_DELETE_FS_LAYOUT\020" +
+      "\004\022\'\n#DELETE_COLUMN_FAMILY_POST_OPERATION" +
+      "\020\005\022+\n\'DELETE_COLUMN_FAMILY_REOPEN_ALL_RE" +
+      "GIONS\020\006*\350\001\n\020EnableTableState\022\030\n\024ENABLE_T" +
+      "ABLE_PREPARE\020\001\022\036\n\032ENABLE_TABLE_PRE_OPERA" +
+      "TION\020\002\022)\n%ENABLE_TABLE_SET_ENABLING_TABL",
+      "E_STATE\020\003\022$\n ENABLE_TABLE_MARK_REGIONS_O" +
+      "NLINE\020\004\022(\n$ENABLE_TABLE_SET_ENABLED_TABL" +
+      "E_STATE\020\005\022\037\n\033ENABLE_TABLE_POST_OPERATION" +
+      "\020\006*\362\001\n\021DisableTableState\022\031\n\025DISABLE_TABL" +
+      "E_PREPARE\020\001\022\037\n\033DISABLE_TABLE_PRE_OPERATI" +
+      "ON\020\002\022+\n\'DISABLE_TABLE_SET_DISABLING_TABL" +
+      "E_STATE\020\003\022&\n\"DISABLE_TABLE_MARK_REGIONS_" +
+      "OFFLINE\020\004\022*\n&DISABLE_TABLE_SET_DISABLED_" +
+      "TABLE_STATE\020\005\022 \n\034DISABLE_TABLE_POST_OPER" +
+      "ATION\020\006*\234\002\n\020ServerCrashState\022\026\n\022SERVER_C",
+      "RASH_START\020\001\022\035\n\031SERVER_CRASH_PROCESS_MET" +
+      "A\020\002\022\034\n\030SERVER_CRASH_GET_REGIONS\020\003\022\036\n\032SER" +
+      "VER_CRASH_NO_SPLIT_LOGS\020\004\022\033\n\027SERVER_CRAS" +
+      "H_SPLIT_LOGS\020\005\022#\n\037SERVER_CRASH_PREPARE_L" +
+      "OG_REPLAY\020\006\022\027\n\023SERVER_CRASH_ASSIGN\020\010\022\037\n\033" +
+      "SERVER_CRASH_WAIT_ON_ASSIGN\020\t\022\027\n\023SERVER_" +
+      "CRASH_FINISH\020dBK\n*org.apache.hadoop.hbas" +
+      "e.protobuf.generatedB\025MasterProcedurePro" +
+      "tosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -15620,6 +15621,7 @@ public final class MasterProcedureProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
+          org.apache.hadoop.hbase.protobuf.generated.TableProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.getDescriptor(),
         }, assigner);

@@ -145,6 +145,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -2975,18 +2976,18 @@ public final class ProtobufUtil {
         ", type=" + proto.getMutateType().toString();
   }
 
-  public static TableName toTableName(HBaseProtos.TableName tableNamePB) {
+  public static TableName toTableName(TableProtos.TableName tableNamePB) {
     return TableName.valueOf(tableNamePB.getNamespace().asReadOnlyByteBuffer(),
         tableNamePB.getQualifier().asReadOnlyByteBuffer());
   }
 
-  public static HBaseProtos.TableName toProtoTableName(TableName tableName) {
-    return HBaseProtos.TableName.newBuilder()
+  public static TableProtos.TableName toProtoTableName(TableName tableName) {
+    return TableProtos.TableName.newBuilder()
         .setNamespace(ByteStringer.wrap(tableName.getNamespace()))
         .setQualifier(ByteStringer.wrap(tableName.getQualifier())).build();
   }
 
-  public static TableName[] getTableNameArray(List<HBaseProtos.TableName> tableNamesList) {
+  public static TableName[] getTableNameArray(List<TableProtos.TableName> tableNamesList) {
     if (tableNamesList == null) {
       return new TableName[0];
     }

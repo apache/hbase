@@ -27,7 +27,7 @@
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.client.Admin"
   import="org.apache.hadoop.hbase.master.HMaster"
-  import="org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescription"
+  import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.util.StringUtils" %>
