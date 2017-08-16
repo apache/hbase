@@ -282,37 +282,85 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
   }
 
   // -------------------------------- Entry's getters --------------------------------
-  // all interfaces returning Entries are unsupported because we are dealing only with the keys
+
+  private static class CellFlatMapEntry implements Entry<Cell, Cell> {
+    private final Cell cell;
+
+    public CellFlatMapEntry (Cell cell) {
+      this.cell = cell;
+    }
+
+    @Override
+    public Cell getKey() {
+      return cell;
+    }
+
+    @Override
+    public Cell getValue() {
+      return cell;
+    }
+
+    @Override
+    public Cell setValue(Cell value) {
+      throw new UnsupportedOperationException();
+    }
+  }
+
   @Override
   public Entry<Cell, Cell> lowerEntry(Cell k) {
-    throw new UnsupportedOperationException();
+    Cell cell = lowerKey(k);
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> higherEntry(Cell k) {
-    throw new UnsupportedOperationException();
+    Cell cell = higherKey(k);
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> ceilingEntry(Cell k) {
-    throw new UnsupportedOperationException();
+    Cell cell = ceilingKey(k);
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> floorEntry(Cell k) {
-    throw new UnsupportedOperationException();
+    Cell cell = floorKey(k);
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> firstEntry() {
-    throw new UnsupportedOperationException();
+    Cell cell = firstKey();
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> lastEntry() {
-    throw new UnsupportedOperationException();
+    Cell cell = lastKey();
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
+  // The following 2 methods (pollFirstEntry, pollLastEntry) are unsupported because these are updating methods.
   @Override
   public Entry<Cell, Cell> pollFirstEntry() {
     throw new UnsupportedOperationException();
@@ -322,7 +370,6 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
   public Entry<Cell, Cell> pollLastEntry() {
     throw new UnsupportedOperationException();
   }
-
 
   // -------------------------------- Updates --------------------------------
   // All updating methods below are unsupported.
