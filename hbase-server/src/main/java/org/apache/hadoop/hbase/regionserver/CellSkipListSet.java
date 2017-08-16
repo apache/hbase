@@ -123,11 +123,11 @@ public class CellSkipListSet implements NavigableSet<Cell> {
   }
 
   public Cell first() {
-    return this.delegatee.get(this.delegatee.firstKey());
+    return this.delegatee.firstEntry().getValue();
   }
 
   public Cell last() {
-    return this.delegatee.get(this.delegatee.lastKey());
+    return this.delegatee.lastEntry().getValue();
   }
 
   public boolean add(Cell e) {
