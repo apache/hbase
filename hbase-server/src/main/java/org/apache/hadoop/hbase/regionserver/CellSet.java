@@ -126,15 +126,12 @@ public class CellSet implements NavigableSet<Cell>  {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  // TODO: why do we have a double traversing through map? Recall we have Cell to Cell mapping...
-  // First for first/last key, which actually returns Cell and then get for the same Cell?
-  // TODO: Consider just return the first/lastKey(), should be twice more effective...
   public Cell first() {
-    return this.delegatee.get(this.delegatee.firstKey());
+    return this.delegatee.firstEntry().getValue();
   }
 
   public Cell last() {
-    return this.delegatee.get(this.delegatee.lastKey());
+    return this.delegatee.lastEntry().getValue();
   }
 
   public boolean add(Cell e) {
