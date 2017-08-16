@@ -117,7 +117,7 @@ public interface AsyncConnection extends Closeable {
    * framework's callback thread, so typically you should not do any time consuming work inside
    * these methods.
    */
-  AsyncAdminBuilder<RawAsyncHBaseAdmin> getAdminBuilder();
+  AsyncAdminBuilder getAdminBuilder();
 
   /**
    * Retrieve an {@link AsyncAdmin} implementation to administer an HBase cluster.
@@ -135,5 +135,5 @@ public interface AsyncConnection extends Closeable {
    * Returns an {@link AsyncAdminBuilder} for creating {@link AsyncAdmin}.
    * @param pool the thread pool to use for executing callback
    */
-  AsyncAdminBuilder<AsyncHBaseAdmin> getAdminBuilder(ExecutorService pool);
+  AsyncAdminBuilder getAdminBuilder(ExecutorService pool);
 }
