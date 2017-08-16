@@ -197,6 +197,7 @@
                           <include>RowProcessor.proto</include>
                           <include>SecureBulkLoad.proto</include>
                           <include>Snapshot.proto</include>
+                          <include>Table.proto</include>
                           <include>Tracing.proto</include>
                           <include>VisibilityLabels.proto</include>
                           <include>WAL.proto</include>

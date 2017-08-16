@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -240,7 +240,7 @@ public class TestHRegionInfo {
 
     // test convert RegionInfo without replicaId
     RegionInfo info = RegionInfo.newBuilder()
-      .setTableName(HBaseProtos.TableName.newBuilder()
+      .setTableName(TableProtos.TableName.newBuilder()
         .setQualifier(ByteString.copyFrom(tableName.getQualifier()))
         .setNamespace(ByteString.copyFrom(tableName.getNamespace()))
         .build())

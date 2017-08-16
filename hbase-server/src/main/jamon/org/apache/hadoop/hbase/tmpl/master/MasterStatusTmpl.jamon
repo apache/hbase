@@ -49,7 +49,7 @@ org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.TableName;
 org.apache.hadoop.hbase.tool.Canary;
-org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDescription;
+org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 org.apache.hadoop.hbase.master.DeadServer;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.security.visibility.VisibilityConstants;

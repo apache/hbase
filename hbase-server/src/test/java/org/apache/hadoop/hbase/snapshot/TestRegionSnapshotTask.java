@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -108,9 +109,9 @@ public class TestRegionSnapshotTask {
 
     List<HRegion> hRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
 
-    final SnapshotProtos.SnapshotDescription snapshot = SnapshotProtos.SnapshotDescription.newBuilder()
+    final HBaseProtos.SnapshotDescription snapshot = HBaseProtos.SnapshotDescription.newBuilder()
         .setTable(tableName.getNameAsString())
-        .setType(SnapshotProtos.SnapshotDescription.Type.FLUSH)
+        .setType(HBaseProtos.SnapshotDescription.Type.FLUSH)
         .setName("test_table_snapshot")
         .setVersion(SnapshotManifestV2.DESCRIPTOR_VERSION)
         .build();
@@ -160,7 +161,7 @@ public class TestRegionSnapshotTask {
     SnapshotReferenceUtil.verifySnapshot(conf, fs, manifest);
   }
 
-  private void addRegionToSnapshot(SnapshotProtos.SnapshotDescription snapshot,
+  private void addRegionToSnapshot(HBaseProtos.SnapshotDescription snapshot,
       HRegion region, SnapshotManifest manifest) throws Exception {
     LOG.info("Adding region to snapshot: " + region.getRegionInfo().getRegionNameAsString());
     Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
@@ -170,7 +171,7 @@ public class TestRegionSnapshotTask {
   }
 
   private SnapshotManifest.RegionVisitor createRegionVisitorWithDelay(
-      SnapshotProtos.SnapshotDescription desc, Path workingDir) {
+      HBaseProtos.SnapshotDescription desc, Path workingDir) {
     return new SnapshotManifestV2.ManifestBuilder(conf, fs, workingDir) {
       @Override
       public void storeFile(final SnapshotProtos.SnapshotRegionManifest.Builder region,

@@ -25,14 +25,8 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "Cell.proto";
-
-/**
- * Table Name
- */
-message TableName {
-  required bytes namespace = 1;
-  required bytes qualifier = 2;
-}
+import "Table.proto";
+import "AccessControl.proto";
 
 /**
  * Table Schema
@@ -220,4 +214,22 @@ message VersionInfo {
 message RegionServerInfo {
   optional int32 infoPort = 1;
   optional VersionInfo version_info = 2;
+}
+
+/**
+ * Description of the snapshot to take
+ */
+message SnapshotDescription {
+  required string name = 1;
+  optional string table = 2; // not needed for delete, but checked for in taking snapshot
+  optional int64 creation_time = 3 [default = 0];
+  enum Type {
+    DISABLED = 0;
+    FLUSH = 1;
+    SKIPFLUSH = 2;
+  }
+  optional Type type = 4 [default = FLUSH];
+  optional int32 version = 5;
+  optional string owner = 6;
+  optional UsersAndPermissions users_and_permissions = 7;
 }
