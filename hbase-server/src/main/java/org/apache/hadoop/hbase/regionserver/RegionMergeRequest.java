@@ -43,8 +43,7 @@ class RegionMergeRequest implements Runnable {
   private final boolean forcible;
   private final User user;
 
-  RegionMergeRequest(Region a, Region b, HRegionServer hrs, boolean forcible,
-      long masterSystemTime, User user) {
+  RegionMergeRequest(Region a, Region b, HRegionServer hrs, boolean forcible, User user) {
     Preconditions.checkNotNull(hrs);
     this.region_a = a.getRegionInfo();
     this.region_b = b.getRegionInfo();

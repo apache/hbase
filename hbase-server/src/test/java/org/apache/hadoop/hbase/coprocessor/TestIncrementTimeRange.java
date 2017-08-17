@@ -29,9 +29,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ClockType;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
@@ -45,12 +48,17 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.apache.hadoop.hbase.util.TestTableName;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
  * This test runs batch mutation with Increments which have custom TimeRange.
@@ -59,14 +67,16 @@ import org.junit.experimental.categories.Category;
  * See HBASE-15698
  */
 @Category({CoprocessorTests.class, MediumTests.class})
+@RunWith(Parameterized.class)
 public class TestIncrementTimeRange {
 
   private static final HBaseTestingUtility util = new HBaseTestingUtility();
   private static ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
 
-  private static final TableName TEST_TABLE = TableName.valueOf("test");
+  @Rule
+  public TestTableName TEST_TABLE = new TestTableName();
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
-
+  private static final byte[][] TEST_FAMILIES = new byte[][]{TEST_FAMILY};
   private static final byte[] ROW_A = Bytes.toBytes("aaa");
   private static final byte[] ROW_B = Bytes.toBytes("bbb");
   private static final byte[] ROW_C = Bytes.toBytes("ccc");
@@ -80,6 +90,18 @@ public class TestIncrementTimeRange {
   private Table hTableInterface;
   private Table table;
 
+  private ClockType clockType;
+
+  @Parameters(name = "{0}")
+  public static Iterable<Object> data() {
+    return Arrays.asList(new Object[] {ClockType.HYBRID_LOGICAL, ClockType.SYSTEM_MONOTONIC,
+        ClockType.SYSTEM});
+  }
+
+  public TestIncrementTimeRange(ClockType clockType) {
+    this.clockType = clockType;
+  }
+
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
@@ -88,6 +110,8 @@ public class TestIncrementTimeRange {
     // test that depends on an evironment edge that is manually moved forward.
     util.getConfiguration().setInt(RemoteProcedureDispatcher.DISPATCH_DELAY_CONF_KEY, 0);
     util.startMiniCluster();
+    // Ensure that current system time is set when clock updates during region open
+    mee.setValue(EnvironmentEdgeManager.currentTime());
     EnvironmentEdgeManager.injectEdge(mee);
   }
 
@@ -98,7 +122,8 @@ public class TestIncrementTimeRange {
 
   @Before
   public void before() throws Exception {
-    table = util.createTable(TEST_TABLE, TEST_FAMILY);
+    HTableDescriptor htd = util.createTableDescriptor(TEST_TABLE.getTableName(), clockType);
+    table = util.createTable(htd, TEST_FAMILIES, new Configuration(HBaseConfiguration.create()));
 
     Put puta = new Put(ROW_A);
     puta.addColumn(TEST_FAMILY, qualifierCol1, bytes1);
@@ -121,7 +146,7 @@ public class TestIncrementTimeRange {
       }
     } finally {
       try {
-        util.deleteTable(TEST_TABLE);
+        util.deleteTable(TEST_TABLE.getTableName());
       } catch (IOException ioe) {
       }
     }
@@ -150,7 +175,7 @@ public class TestIncrementTimeRange {
 
   @Test
   public void testHTableInterfaceMethods() throws Exception {
-    hTableInterface = util.getConnection().getTable(TEST_TABLE);
+    hTableInterface = util.getConnection().getTable(TEST_TABLE.getTableName());
     checkHTableInterfaceMethods();
   }
 
@@ -162,7 +187,7 @@ public class TestIncrementTimeRange {
 
     time = EnvironmentEdgeManager.currentTime();
     mee.setValue(time);
-    TimeRange range10 = new TimeRange(1, time+10);
+    TimeRange range10 = new TimeRange(1, time + 10);
     hTableInterface.increment(new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 10L)
         .setTimeRange(range10.getMin(), range10.getMax()));
     checkRowValue(ROW_A, Bytes.toBytes(11L));
@@ -171,7 +196,7 @@ public class TestIncrementTimeRange {
 
     time = EnvironmentEdgeManager.currentTime();
     mee.setValue(time);
-    TimeRange range2 = new TimeRange(1, time+20);
+    TimeRange range2 = new TimeRange(1, time + 20);
     List<Row> actions =
         Arrays.asList(new Row[] { new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 2L)
             .setTimeRange(range2.getMin(), range2.getMax()),

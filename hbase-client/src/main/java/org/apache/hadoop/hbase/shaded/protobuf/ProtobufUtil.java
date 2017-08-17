@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -152,6 +153,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -187,6 +189,7 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.NonceKey;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -1877,7 +1880,7 @@ public final class ProtobufUtil {
       final AdminService.BlockingInterface admin, ServerName server, final HRegionInfo region)
           throws IOException {
     OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(server, region, null, null);
+      RequestConverter.buildOpenRegionRequest(server, region, null, null, null);
     try {
       admin.openRegion(controller, request);
     } catch (ServiceException se) {
@@ -3290,6 +3293,45 @@ public final class ProtobufUtil {
      return builder.build();
    }
 
+
+  /**
+   * Convert a protobuf ClockType into a {@link ClockType}
+   *
+   * @param proto the protocol buffer ClockType to convert
+   * @return the converted client ClockType
+   */
+  public static ClockType toClockType(final NodeTime.ClockType proto) {
+    switch (proto) {
+    case SYSTEM:
+      return ClockType.SYSTEM;
+    case SYSTEM_MONOTONIC:
+      return ClockType.SYSTEM_MONOTONIC;
+    case HLC:
+      return ClockType.HYBRID_LOGICAL;
+    default:
+      throw new IllegalArgumentException("Unknown clock type: " + proto);
+    }
+  }
+
+  /**
+   * Convert a {@link ClockType} into a protobuf ClockType
+   *
+   * @param clockType the client ClockType to convert
+   * @return the converted ClockType proto
+   */
+  public static NodeTime.ClockType toClockType(final ClockType clockType) {
+    switch (clockType) {
+    case SYSTEM:
+      return NodeTime.ClockType.SYSTEM;
+    case SYSTEM_MONOTONIC:
+      return NodeTime.ClockType.SYSTEM_MONOTONIC;
+    case HYBRID_LOGICAL:
+      return NodeTime.ClockType.HLC;
+    default:
+      throw new IllegalArgumentException("Unknown clock type: " + clockType);
+    }
+  }
+
   /**
     * Create a CloseRegionRequest for a given region name
     *
@@ -3298,11 +3340,11 @@ public final class ProtobufUtil {
     */
    public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
        final byte[] regionName) {
-     return ProtobufUtil.buildCloseRegionRequest(server, regionName, null);
+     return ProtobufUtil.buildCloseRegionRequest(server, regionName, null, null);
    }
 
   public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
-    final byte[] regionName, ServerName destinationServer) {
+    final byte[] regionName, ServerName destinationServer, List<Pair<ClockType, Long>> nodeTimes) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
     RegionSpecifier region = RequestConverter.buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
@@ -3312,6 +3354,13 @@ public final class ProtobufUtil {
     }
     if (server != null) {
       builder.setServerStartCode(server.getStartcode());
+    }
+    if (nodeTimes != null) {
+      for (Pair<ClockType, Long> nodeTime : nodeTimes) {
+        builder.addNodeTimesBuilder()
+            .setClockType(ProtobufUtil.toClockType(nodeTime.getFirst()))
+            .setTimestamp(nodeTime.getSecond());
+      }
     }
     return builder.build();
   }

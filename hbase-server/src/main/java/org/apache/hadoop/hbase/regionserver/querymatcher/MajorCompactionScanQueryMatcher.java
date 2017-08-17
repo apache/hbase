@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 
@@ -37,7 +38,7 @@ public class MajorCompactionScanQueryMatcher extends DropDeletesCompactionScanQu
   }
 
   @Override
-  public MatchCode match(Cell cell) throws IOException {
+  public MatchCode match(Cell cell, TimestampType timestampType) throws IOException {
     MatchCode returnCode = preCheck(cell);
     if (returnCode != null) {
       return returnCode;
@@ -65,7 +66,7 @@ public class MajorCompactionScanQueryMatcher extends DropDeletesCompactionScanQu
         return MatchCode.INCLUDE;
       }
       trackDelete(cell);
-      returnCode = tryDropDelete(cell);
+      returnCode = tryDropDelete(cell, timestampType);
       if (returnCode != null) {
         return returnCode;
       }

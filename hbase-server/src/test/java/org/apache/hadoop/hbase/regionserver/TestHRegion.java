@@ -77,6 +77,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
+import org.apache.hadoop.hbase.HybridLogicalClock;
+import org.apache.hadoop.hbase.SystemClock;
+import org.apache.hadoop.hbase.SystemMonotonicClock;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -112,6 +118,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -716,6 +723,114 @@ public class TestHRegion {
       this.region = null;
       wals.close();
     }
+  }
+
+  public void verifyClockUpdatesOnRecoveryEditReplay(Clock clock, List<Long> seqIds,
+      List<Long> editTimestamps, long recoverSeqId, long expectedTimestamp) throws Exception {
+    byte[] family = Bytes.toBytes("family");
+    region = initHRegion(tableName, method, CONF, family);
+    final WALFactory wals = new WALFactory(CONF, null, method);
+    region.setClock(clock);
+
+    try {
+      Path regiondir = region.getRegionFileSystem().getRegionDir();
+      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+
+      for (int i = 0; i < seqIds.size(); i++) {
+        long editTimestamp = editTimestamps.get(i);
+        long seqId = seqIds.get(i);
+
+        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", seqId));
+        fs.create(recoveredEdits);
+        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+
+        WALEdit edit = new WALEdit();
+        edit.add(new KeyValue(row, family, Bytes.toBytes(seqId), editTimestamp, KeyValue.Type.Put,
+            Bytes.toBytes(seqId)));
+        writer.append(new WAL.Entry(new WALKey(regionName, tableName, seqId, editTimestamp,
+            HConstants.DEFAULT_CLUSTER_ID), edit));
+
+        writer.close();
+      }
+      MonitoredTask status = TaskMonitor.get().createStatus(method);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      for (Store store : region.getStores()) {
+        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
+      }
+
+      region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
+
+      assertEquals(expectedTimestamp, clock.now());
+
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+      wals.close();
+    }
+  }
+
+  @Test
+  public void testHybridLogicalClockUpdatesOnRecoveryEditReplay() throws Exception {
+    long systemTime = new SystemClock().now();
+    Clock mockSystemClock = mock(Clock.class);
+    when(mockSystemClock.now()).thenReturn(systemTime);
+    when(mockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
+    when(mockSystemClock.isMonotonic()).thenReturn(true);
+    Clock hlClock = new HybridLogicalClock(new SystemMonotonicClock(mockSystemClock));
+
+    long maxSeqId = 1050;
+    long minSeqId = 1000;
+    List<Long> seqIds = new ArrayList<>();
+    List<Long> editTimestamps = new ArrayList<>();
+
+    // Add edits with timestamps that are less than or equal to systemTime
+    for (long i = minSeqId; i <= maxSeqId; i += 10) {
+      seqIds.add(i);
+      editTimestamps.add(TimestampType.HYBRID
+          .fromEpochTimeMillisToTimestamp(systemTime - (maxSeqId - i)));
+    }
+
+    // Recover edits at sequence id 1030, 1040, and 1050
+    //
+    // Clock is updated three times with each update incrementing the logical time by one
+    // (from 0, 1, then 2). Then memstore gets flushed and clock.now() is called when
+    // constructing the StoreScanner for determining which rows to flush, incrementing
+    // the logical time from 2 to 3. Logical time advances by one again from 3 to 4 when
+    // calling clock.now() to assert that it equals the expected timestamp
+    verifyClockUpdatesOnRecoveryEditReplay(hlClock, seqIds, editTimestamps,
+        1030L, TimestampType.HYBRID.toTimestamp(TimeUnit.MILLISECONDS, systemTime, 4));
+  }
+
+  @Test
+  public void testSystemMonotonicClockUpdatesOnRecoveryEditReplay() throws Exception {
+    long systemTime = new SystemClock().now();
+    Clock mockSystemClock = mock(Clock.class);
+    when(mockSystemClock.now()).thenReturn(systemTime);
+    when(mockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
+    when(mockSystemClock.isMonotonic()).thenReturn(true);
+    Clock systemMonotonicClock = new SystemMonotonicClock(mockSystemClock);
+
+    long maxSeqId = 1050;
+    long minSeqId = 1000;
+    List<Long> seqIds = new ArrayList<>();
+    List<Long> editTimestamps = new ArrayList<>();
+    // All edits except the last have timestamps less than systemTime
+    // Last edit will have a timestamp 5 ms greater than systemTime
+    for (long i = minSeqId; i <= maxSeqId; i += 10) {
+      seqIds.add(i);
+      editTimestamps.add(TimestampType.PHYSICAL
+          .fromEpochTimeMillisToTimestamp(systemTime - (maxSeqId - i) + 5));
+    }
+
+    // Recover edits at sequence id 1030, 1040, and 1050
+    //
+    // The clock's physical time will remain the same for the first two edits since their
+    // timestamps are in the past. Last edit has a timestamp 5 ms ahead of systemTime so the
+    // clock will advance forward.
+    verifyClockUpdatesOnRecoveryEditReplay(systemMonotonicClock, seqIds, editTimestamps,
+        1030L, systemTime + 5);
   }
 
   @Test
@@ -6076,20 +6191,34 @@ public class TestHRegion {
   }
 
   @Test
-  public void testCellTTLs() throws IOException {
-    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
-    EnvironmentEdgeManager.injectEdge(edge);
+  public void testCellTTLsWithHybridLogicalClock() throws IOException {
+    testCellTTLs(ClockType.HYBRID_LOGICAL);
+  }
 
+  @Test
+  public void testCellTTLsWithSystemMonotonicClock() throws IOException {
+    testCellTTLs(ClockType.SYSTEM_MONOTONIC);
+  }
+
+  @Test
+  public void testCellTTLsWithSystemClock() throws IOException {
+    testCellTTLs(ClockType.SYSTEM);
+  }
+
+  public void testCellTTLs(ClockType clockType) throws IOException {
     final byte[] row = Bytes.toBytes("testRow");
     final byte[] q1 = Bytes.toBytes("q1");
     final byte[] q2 = Bytes.toBytes("q2");
     final byte[] q3 = Bytes.toBytes("q3");
     final byte[] q4 = Bytes.toBytes("q4");
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    hcd.setTimeToLive(10); // 10 seconds
-    htd.addFamily(hcd);
+    HTableDescriptor htd = new HTableDescriptor(TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName()))
+      .addColumnFamily(new HColumnDescriptor(fam1)
+        .setTimeToLive(10)) // 10 seconds
+      .setClockType(clockType)
+      .build());
+    TimestampType timestampType = clockType.timestampType();
 
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
@@ -6098,22 +6227,32 @@ public class TestHRegion {
             HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
         TEST_UTIL.getDataTestDir(), conf, htd);
     assertNotNull(region);
+
+    region.setClock(Clock.getDummyClockOfGivenClockType(clockType));
+    long now = timestampType.toEpochTimeMillisFromTimestamp(region.getClock().now());
+    ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(mee);
+    mee.setValue(now);
+
     try {
-      long now = EnvironmentEdgeManager.currentTime();
       // Add a cell that will expire in 5 seconds via cell TTL
-      region.put(new Put(row).add(new KeyValue(row, fam1, q1, now,
-        HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
+      region.put(new Put(row).add(new KeyValue(row, fam1, q1, timestampType
+          .fromEpochTimeMillisToTimestamp(now),
+          HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
           // TTL tags specify ts in milliseconds
           new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(5000L)) } )));
       // Add a cell that will expire after 10 seconds via family setting
-      region.put(new Put(row).addColumn(fam1, q2, now, HConstants.EMPTY_BYTE_ARRAY));
+      region.put(new Put(row).addColumn(fam1, q2, timestampType
+          .fromEpochTimeMillisToTimestamp(now), HConstants.EMPTY_BYTE_ARRAY));
       // Add a cell that will expire in 15 seconds via cell TTL
-      region.put(new Put(row).add(new KeyValue(row, fam1, q3, now + 10000 - 1,
-        HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
+      region.put(new Put(row).add(new KeyValue(row, fam1, q3, timestampType
+          .fromEpochTimeMillisToTimestamp(now + 10000 - 1),
+          HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
           // TTL tags specify ts in milliseconds
           new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(5000L)) } )));
       // Add a cell that will expire in 20 seconds via family setting
-      region.put(new Put(row).addColumn(fam1, q4, now + 10000 - 1, HConstants.EMPTY_BYTE_ARRAY));
+      region.put(new Put(row).addColumn(fam1, q4, timestampType.fromEpochTimeMillisToTimestamp
+          (now + 10000 - 1), HConstants.EMPTY_BYTE_ARRAY));
 
       // Flush so we are sure store scanning gets this right
       region.flush(true);
@@ -6126,7 +6265,7 @@ public class TestHRegion {
       assertNotNull(r.getValue(fam1, q4));
 
       // Increment time to T+5 seconds
-      edge.incrementTime(5000);
+      mee.setValue(now + 5001);
 
       r = region.get(new Get(row));
       assertNull(r.getValue(fam1, q1));
@@ -6135,7 +6274,7 @@ public class TestHRegion {
       assertNotNull(r.getValue(fam1, q4));
 
       // Increment time to T+10 seconds
-      edge.incrementTime(5000);
+      mee.setValue(now + 10001);
 
       r = region.get(new Get(row));
       assertNull(r.getValue(fam1, q1));
@@ -6144,7 +6283,7 @@ public class TestHRegion {
       assertNotNull(r.getValue(fam1, q4));
 
       // Increment time to T+15 seconds
-      edge.incrementTime(5000);
+      mee.setValue(now + 15000);
 
       r = region.get(new Get(row));
       assertNull(r.getValue(fam1, q1));
@@ -6153,7 +6292,7 @@ public class TestHRegion {
       assertNotNull(r.getValue(fam1, q4));
 
       // Increment time to T+20 seconds
-      edge.incrementTime(10000);
+      mee.setValue(now + 20000);
 
       r = region.get(new Get(row));
       assertNull(r.getValue(fam1, q1));
@@ -6182,7 +6321,13 @@ public class TestHRegion {
       assertEquals(Bytes.toLong(val), 2L);
 
       // Increment time to T+25 seconds
-      edge.incrementTime(5000);
+      // For the system and system monotonic clock, the increment operation adds 1 to the timestamp
+      // so we move must the clock forward an additional millisecond
+      if (clockType == ClockType.SYSTEM || clockType == ClockType.SYSTEM_MONOTONIC) {
+        mee.setValue(now + 25002);
+      } else {
+        mee.setValue(now + 25001);
+      }
 
       // Value should be back to 1
       r = region.get(new Get(row));
@@ -6191,7 +6336,7 @@ public class TestHRegion {
       assertEquals(Bytes.toLong(val), 1L);
 
       // Increment time to T+30 seconds
-      edge.incrementTime(5000);
+      mee.setValue(now + 30001);
 
       // Original value written at T+20 should be gone now via family TTL
       r = region.get(new Get(row));

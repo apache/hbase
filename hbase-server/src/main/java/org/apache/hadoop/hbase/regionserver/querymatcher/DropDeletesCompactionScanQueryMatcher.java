@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
@@ -60,12 +61,24 @@ public abstract class DropDeletesCompactionScanQueryMatcher extends CompactionSc
     this.earliestPutTs = earliestPutTs;
   }
 
-  protected final MatchCode tryDropDelete(Cell cell) {
+  protected final MatchCode tryDropDelete(Cell cell, TimestampType timestampType) {
     long timestamp = cell.getTimestamp();
     // If it is not the time to drop the delete marker, just return
-    if (timeToPurgeDeletes > 0 && now - timestamp <= timeToPurgeDeletes) {
-      return MatchCode.INCLUDE;
+    if (timeToPurgeDeletes > 0) {
+      // Assumes now and timestamp should be of same type. It should be the case.
+      // Else there is something wrong. if it happens in tests, tests should be rewritten.
+      if (timestampType == TimestampType.HYBRID) {
+        if (TimestampType.HYBRID.toEpochTimeMillisFromTimestamp(now) - TimestampType.HYBRID
+          .toEpochTimeMillisFromTimestamp(timestamp) <= timeToPurgeDeletes) {
+          return MatchCode.INCLUDE;
+        }
+      } else {
+        if (now - timestamp <= timeToPurgeDeletes) {
+          return MatchCode.INCLUDE;
+        }
+      }
     }
+
     if (keepDeletedCells == KeepDeletedCells.TRUE
         || (keepDeletedCells == KeepDeletedCells.TTL && timestamp >= oldestUnexpiredTS)) {
       // If keepDeletedCell is true, or the delete marker is not expired yet, we should include it

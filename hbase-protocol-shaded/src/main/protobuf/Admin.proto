@@ -81,6 +81,8 @@ message OpenRegionRequest {
   optional uint64 serverStartCode = 2;
   // wall clock time from master
   optional uint64 master_system_time = 5;
+  // timestamps from each clock on master
+  repeated NodeTime nodeTimes = 6;
 
   message RegionOpenInfo {
     required RegionInfo region = 1;
@@ -93,6 +95,8 @@ message OpenRegionRequest {
 
 message OpenRegionResponse {
   repeated RegionOpeningState opening_state = 1;
+  // timestamps from each clock on region server
+  repeated NodeTime nodeTimes = 2;
 
   enum RegionOpeningState {
     OPENED = 0;
@@ -120,10 +124,14 @@ message CloseRegionRequest {
   optional ServerName destination_server = 4;
   // the intended server for this RPC.
   optional uint64 serverStartCode = 5;
+  // timestamps from each clock on master
+  repeated NodeTime nodeTimes = 6;
 }
 
 message CloseRegionResponse {
   required bool closed = 1;
+  // timestamps from each clock on region server
+  repeated NodeTime nodeTimes = 2;
 }
 
 /**

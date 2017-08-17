@@ -426,7 +426,7 @@ public class TestMasterFailover {
     log("Master has aborted");
 
     rs.getRSRpcServices().closeRegion(null, ProtobufUtil.buildCloseRegionRequest(
-      rs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO.getRegionName()));
+      rs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), null));
 
     // Start up a new master
     log("Starting up a new master");

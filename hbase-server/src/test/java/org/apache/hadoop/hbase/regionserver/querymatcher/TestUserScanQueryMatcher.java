@@ -31,8 +31,10 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Timestamp;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -60,7 +62,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     Cell kv = new KeyValue(row1, fam2, col2, 1, data);
     Cell cell = CellUtil.createLastOnRowCol(kv);
     qm.setToNewRow(kv);
-    MatchCode code = qm.match(cell);
+    MatchCode code = qm.match(cell, TimestampType.PHYSICAL);
     assertFalse(code.compareTo(MatchCode.SEEK_NEXT_COL) != 0);
   }
 
@@ -99,7 +101,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     qm.setToNewRow(k);
 
     for (KeyValue kv : memstore) {
-      actual.add(qm.match(kv));
+      actual.add(qm.match(kv, TimestampType.PHYSICAL));
     }
 
     assertEquals(expected.size(), actual.size());
@@ -142,7 +144,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     qm.setToNewRow(k);
 
     for (KeyValue kv : memstore) {
-      actual.add(qm.match(kv));
+      actual.add(qm.match(kv, TimestampType.PHYSICAL));
     }
 
     assertEquals(expected.size(), actual.size());
@@ -186,7 +188,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
 
     List<MatchCode> actual = new ArrayList<>(kvs.length);
     for (KeyValue kv : kvs) {
-      actual.add(qm.match(kv));
+      actual.add(qm.match(kv, TimestampType.PHYSICAL));
     }
 
     assertEquals(expected.length, actual.size());
@@ -227,7 +229,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
 
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<>(kvs.length);
     for (KeyValue kv : kvs) {
-      actual.add(qm.match(kv));
+      actual.add(qm.match(kv, TimestampType.PHYSICAL));
     }
 
     assertEquals(expected.length, actual.size());

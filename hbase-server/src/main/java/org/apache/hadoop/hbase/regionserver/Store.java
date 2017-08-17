@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -344,6 +345,12 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * outstanding snapshots.
    */
   MemstoreSize getSizeToFlush();
+
+  /**
+   * @return clock of the Region Server corresponding the clock type used by the
+   *  table referred to by this store.
+   */
+  Clock getClock();
 
   /**
    * Returns the memstore snapshot size

@@ -114,6 +114,14 @@ public class StoreUtils {
     return max;
   }
 
+  public static long getMaxTimestampInList(Collection<StoreFile> sfs) {
+    long max = 0;
+    for (StoreFile sf : sfs) {
+      max = Math.max(max, sf.getMaximumTimestamp().orElse(Long.MIN_VALUE));
+    }
+    return max;
+  }
+
   /**
    * Gets the approximate mid-point of the given file that is optimal for use in splitting it.
    * @param file the store file

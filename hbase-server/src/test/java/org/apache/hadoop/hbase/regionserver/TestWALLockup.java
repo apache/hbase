@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SystemClock;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Durability;
@@ -203,6 +205,7 @@ public class TestWALLockup {
     Mockito.when(server.isStopped()).thenReturn(false);
     Mockito.when(server.isAborted()).thenReturn(false);
     RegionServerServices services = Mockito.mock(RegionServerServices.class);
+    Mockito.when(services.getClock(ClockType.SYSTEM)).thenReturn(new SystemClock());
 
     // OK. Now I have my mocked up Server & RegionServerServices and dodgy WAL, go ahead with test.
     FileSystem fs = FileSystem.get(CONF);

@@ -70,6 +70,9 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE;
   public static final int DEFAULT_REGION_REPLICATION = TableDescriptorBuilder.DEFAULT_REGION_REPLICATION;
   public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION = TableDescriptorBuilder.DEFAULT_REGION_MEMSTORE_REPLICATION;
+  public static final ClockType DEFAULT_CLOCK_TYPE = TableDescriptorBuilder.DEFAULT_CLOCK_TYPE;
+  public static final ClockType DEFAULT_META_CLOCK_TYPE =
+      TableDescriptorBuilder.DEFAULT_META_CLOCK_TYPE;
   protected final ModifyableTableDescriptor delegatee;
 
   /**
@@ -379,6 +382,15 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public HTableDescriptor setMaxFileSize(long maxFileSize) {
     getDelegateeForModification().setMaxFileSize(maxFileSize);
     return this;
+  }
+
+  /**
+   * Returns the clock type for the table.
+   * @return clock type for the table.
+   */
+  @Override
+  public ClockType getClockType() {
+    return delegatee.getClockType();
   }
 
   /**

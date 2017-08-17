@@ -46,6 +46,7 @@ public class AtomicUtils {
   /**
    * Updates a AtomicLong which is supposed to maintain the maximum values. This method is not
    * synchronized but is thread-safe.
+   * @return true if {@code max} was updated with {@code value}, else false.
    */
   public static void updateMax(AtomicLong max, long value) {
     while (true) {

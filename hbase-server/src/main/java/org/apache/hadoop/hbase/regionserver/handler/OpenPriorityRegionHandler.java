@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 @InterfaceAudience.Private
 public class OpenPriorityRegionHandler extends OpenRegionHandler {
   public OpenPriorityRegionHandler(Server server, RegionServerServices rsServices,
-      HRegionInfo regionInfo, HTableDescriptor htd, long masterSystemTime) {
-    super(server, rsServices, regionInfo, htd, masterSystemTime,
+      HRegionInfo regionInfo, HTableDescriptor htd) {
+    super(server, rsServices, regionInfo, htd,
        EventType.M_RS_OPEN_PRIORITY_REGION);
   }
 }

@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -196,6 +197,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -1513,6 +1515,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
 
+      for (NodeTime nodeTime : request.getNodeTimesList()) {
+        // Update master clock upon receiving open region response from region server
+        regionServer.getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
+            .update(nodeTime.getTimestamp());
+      }
+
       requestCount.increment();
       if (sn == null) {
         LOG.info("Close " + encodedRegionName + " without moving");
@@ -1520,7 +1528,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         LOG.info("Close " + encodedRegionName + ", moving to " + sn);
       }
       boolean closed = regionServer.closeRegion(encodedRegionName, false, sn);
-      CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder().setClosed(closed);
+
+      CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder()
+          .setClosed(closed)
+          .addNodeTimes(NodeTime.newBuilder()
+            .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
+            .setTimestamp(regionServer.getClock(ClockType.SYSTEM_MONOTONIC).now()).build())
+          .addNodeTimes(NodeTime.newBuilder()
+            .setClockType(ProtobufUtil.toClockType(ClockType.HYBRID_LOGICAL))
+            .setTimestamp(regionServer.getClock(ClockType.HYBRID_LOGICAL).now()).build());
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -1893,7 +1909,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
     }
 
-    long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
+    for (NodeTime nodeTime : request.getNodeTimesList()) {
+      // Update region server clock on receive event
+      regionServer.getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
+          .update(nodeTime.getTimestamp());
+    }
 
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
@@ -1946,7 +1966,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             // Check if current region open is for distributedLogReplay. This check is to support
             // rolling restart/upgrade where we want to Master/RS see same configuration
             if (!regionOpenInfo.hasOpenForDistributedLogReplay()
-                  || regionOpenInfo.getOpenForDistributedLogReplay()) {
+                || regionOpenInfo.getOpenForDistributedLogReplay()) {
               regionServer.recoveringRegions.put(region.getEncodedName(), null);
             } else {
               // Remove stale recovery region from ZK when we open region not for recovering which
@@ -1969,7 +1989,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // Need to pass the expected version in the constructor.
           if (region.isMetaRegion()) {
             regionServer.service.submit(new OpenMetaHandler(
-              regionServer, regionServer, region, htd, masterSystemTime));
+              regionServer, regionServer, region, htd));
           } else {
             if (regionOpenInfo.getFavoredNodesCount() > 0) {
               regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
@@ -1977,10 +1997,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             }
             if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
               regionServer.service.submit(new OpenPriorityRegionHandler(
-                regionServer, regionServer, region, htd, masterSystemTime));
+                  regionServer, regionServer, region, htd));
             } else {
               regionServer.service.submit(new OpenRegionHandler(
-                regionServer, regionServer, region, htd, masterSystemTime));
+                  regionServer, regionServer, region, htd));
             }
           }
         }
@@ -1999,6 +2019,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
     }
+
+    // Set clock for send event
+    builder.addNodeTimes(NodeTime.newBuilder()
+        .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
+        .setTimestamp(regionServer.getClock(ClockType.SYSTEM_MONOTONIC).now()).build())
+      .addNodeTimes(NodeTime.newBuilder()
+        .setClockType(ProtobufUtil.toClockType(ClockType.HYBRID_LOGICAL))
+        .setTimestamp(regionServer.getClock(ClockType.HYBRID_LOGICAL).now()).build());
+
     return builder.build();
   }
 

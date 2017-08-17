@@ -72,13 +72,18 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HealthCheckChore;
+import org.apache.hadoop.hbase.HybridLogicalClock;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.SystemClock;
+import org.apache.hadoop.hbase.SystemMonotonicClock;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -332,6 +337,13 @@ public class HRegionServer extends HasThread implements
   // Go down hard. Used if file system becomes unavailable and also in
   // debugging and unit tests.
   private volatile boolean abortRequested;
+
+  // Region server contains instances of all three clock clocks. Regions have a set
+  // clock type so depending on the clock type needed by a region, the appropriate
+  // one can be accessed.
+  protected Clock hybridLogicalClock;
+  protected Clock systemMonotonicClock;
+  protected Clock systemClock;
 
   ConcurrentMap<String, Integer> rowlocks = new ConcurrentHashMap<>();
 
@@ -590,6 +602,12 @@ public class HRegionServer extends HasThread implements
 
     this.abortRequested = false;
     this.stopped = false;
+
+    final long maxClockSkew =
+        conf.getLong("hbase.max.clock.skew.in.ms", Clock.DEFAULT_MAX_CLOCK_SKEW_IN_MS);
+    this.hybridLogicalClock = new HybridLogicalClock(maxClockSkew);
+    this.systemMonotonicClock = new SystemMonotonicClock(maxClockSkew);
+    this.systemClock = new SystemClock();
 
     rpcServices = createRpcServices();
     if (this instanceof HMaster) {
@@ -2076,6 +2094,41 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
+  public Clock getClock(ClockType clockType) {
+    switch (clockType) {
+      case HYBRID_LOGICAL:
+        return this.hybridLogicalClock;
+      case SYSTEM_MONOTONIC:
+        return this.systemMonotonicClock;
+      case SYSTEM:
+        return this.systemClock;
+      default:
+        throw new IllegalArgumentException("Wrong clock type: " + clockType.toString());
+    }
+  }
+
+  /**
+   * Only for the purpose of testing
+   * @param clock
+   */
+  @VisibleForTesting
+  public void setClock(Clock clock) {
+    switch (clock.getClockType()) {
+      case HYBRID_LOGICAL:
+        this.hybridLogicalClock = clock;
+        break;
+      case SYSTEM_MONOTONIC:
+        this.systemMonotonicClock = clock;
+        break;
+      case SYSTEM:
+        this.systemClock = clock;
+        break;
+      default:
+        throw new IllegalArgumentException("Wrong clock type: " + clock.getClockType().toString());
+    }
+  }
+
+  @Override
   public Connection getConnection() {
     return getClusterConnection();
   }
@@ -2138,14 +2191,13 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public void postOpenDeployTasks(final Region r) throws KeeperException, IOException {
-    postOpenDeployTasks(new PostOpenDeployContext(r, -1));
+    postOpenDeployTasks(new PostOpenDeployContext(r));
   }
 
   @Override
   public void postOpenDeployTasks(final PostOpenDeployContext context)
       throws KeeperException, IOException {
     Region r = context.getRegion();
-    long masterSystemTime = context.getMasterSystemTime();
     Preconditions.checkArgument(r instanceof HRegion, "r must be an HRegion");
     rpcServices.checkOpen();
     LOG.info("Post open deploy tasks for " + r.getRegionInfo().getRegionNameAsString());
@@ -2168,7 +2220,7 @@ public class HRegionServer extends HasThread implements
 
     // Notify master
     if (!reportRegionStateTransition(new RegionStateTransitionContext(
-        TransitionCode.OPENED, openSeqNum, masterSystemTime, r.getRegionInfo()))) {
+        TransitionCode.OPENED, openSeqNum, r.getRegionInfo()))) {
       throw new IOException("Failed to report opened region to master: "
         + r.getRegionInfo().getRegionNameAsString());
     }
@@ -2187,14 +2239,13 @@ public class HRegionServer extends HasThread implements
   public boolean reportRegionStateTransition(
       TransitionCode code, long openSeqNum, HRegionInfo... hris) {
     return reportRegionStateTransition(
-      new RegionStateTransitionContext(code, HConstants.NO_SEQNUM, -1, hris));
+      new RegionStateTransitionContext(code, HConstants.NO_SEQNUM, hris));
   }
 
   @Override
   public boolean reportRegionStateTransition(final RegionStateTransitionContext context) {
     TransitionCode code = context.getCode();
     long openSeqNum = context.getOpenSeqNum();
-    long masterSystemTime = context.getMasterSystemTime();
     HRegionInfo[] hris = context.getHris();
 
     if (TEST_SKIP_REPORTING_TRANSITION) {
@@ -2213,7 +2264,7 @@ public class HRegionServer extends HasThread implements
         } else {
           try {
             MetaTableAccessor.updateRegionLocation(clusterConnection,
-              hris[0], serverName, openSeqNum, masterSystemTime);
+              hris[0], serverName, openSeqNum);
           } catch (IOException e) {
             LOG.info("Failed to update meta", e);
             return false;

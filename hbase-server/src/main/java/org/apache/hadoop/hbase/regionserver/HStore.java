@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+import org.apache.hadoop.hbase.Clock;
 
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
@@ -341,10 +342,10 @@ public class HStore implements Store {
 
   /**
    * @param family
-   * @return TTL in seconds of the specified family
+   * @return TTL in milli seconds of the specified family
    */
   public static long determineTTLFromFamily(final ColumnFamilyDescriptor family) {
-    // HCD.getTimeToLive returns ttl in seconds.  Convert to milliseconds.
+    // HColumnDescriptor.getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     long ttl = family.getTimeToLive();
     if (ttl == HConstants.FOREVER) {
       // Default is unlimited ttl.
@@ -400,6 +401,11 @@ public class HStore implements Store {
   @Override
   public MemstoreSize getSizeToFlush() {
     return this.memstore.getFlushableSize();
+  }
+
+  @Override
+  public Clock getClock() {
+    return region.getClock();
   }
 
   @Override
@@ -472,6 +478,10 @@ public class HStore implements Store {
   @Override
   public long getMaxMemstoreTS() {
     return StoreUtils.getMaxMemstoreTSInList(this.getStorefiles());
+  }
+
+  public long getMaxTimestamp() {
+    return StoreUtils.getMaxTimestampInList(this.getStorefiles());
   }
 
   /**

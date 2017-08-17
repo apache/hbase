@@ -235,3 +235,16 @@ message RegionServerInfo {
   optional int32 infoPort = 1;
   optional VersionInfo version_info = 2;
 }
+
+/**
+ * Used to send timestamps from each clock of a master or region server
+ */
+message NodeTime {
+  enum ClockType {
+    SYSTEM = 0;
+    SYSTEM_MONOTONIC = 1;
+    HLC = 2;
+  }
+  optional ClockType clockType = 1;
+  optional uint64 timestamp = 2;
+}

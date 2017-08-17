@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.Clock;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -81,6 +82,11 @@ public interface Region extends ConfigurationObserver {
 
   /** @return table descriptor for this region */
   TableDescriptor getTableDescriptor();
+
+  /** @return clock of the Region Server corresponding the clock type used by the
+   *  table contained in this region.
+   */
+  Clock getClock();
 
   /** @return true if region is available (not closed and not closing) */
   boolean isAvailable();

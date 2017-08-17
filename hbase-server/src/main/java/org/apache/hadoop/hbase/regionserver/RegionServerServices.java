@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.Clock;
+import org.apache.hadoop.hbase.ClockType;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.protobuf.Service;
@@ -57,6 +59,12 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   /** @return the WAL for a particular region. Pass null for getting the
    * default (common) WAL */
   WAL getWAL(HRegionInfo regionInfo) throws IOException;
+
+  /**
+   * @param clockType The clock type
+   * @return Region server's instance of {@link Clock}
+   */
+  Clock getClock(ClockType clockType);
 
   /** @return the List of WALs that are used by this server
    *  Doesn't include the meta WAL
@@ -98,18 +106,13 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    */
   class PostOpenDeployContext {
     private final Region region;
-    private final long masterSystemTime;
 
     @InterfaceAudience.Private
-    public PostOpenDeployContext(Region region, long masterSystemTime) {
+    public PostOpenDeployContext(Region region) {
       this.region = region;
-      this.masterSystemTime = masterSystemTime;
     }
     public Region getRegion() {
       return region;
-    }
-    public long getMasterSystemTime() {
-      return masterSystemTime;
     }
   }
 
@@ -138,15 +141,13 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   class RegionStateTransitionContext {
     private final TransitionCode code;
     private final long openSeqNum;
-    private final long masterSystemTime;
     private final HRegionInfo[] hris;
 
     @InterfaceAudience.Private
-    public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long masterSystemTime,
+    public RegionStateTransitionContext(TransitionCode code, long openSeqNum,
         HRegionInfo... hris) {
       this.code = code;
       this.openSeqNum = openSeqNum;
-      this.masterSystemTime = masterSystemTime;
       this.hris = hris;
     }
     public TransitionCode getCode() {
@@ -155,9 +156,7 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
     public long getOpenSeqNum() {
       return openSeqNum;
     }
-    public long getMasterSystemTime() {
-      return masterSystemTime;
-    }
+
     public HRegionInfo[] getHris() {
       return hris;
     }
