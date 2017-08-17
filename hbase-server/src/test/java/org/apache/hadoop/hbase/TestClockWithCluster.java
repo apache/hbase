@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -190,8 +191,16 @@ public class TestClockWithCluster {
       hriOnline = locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
     }
 
+    boolean tablesOnMaster = true;
+    String confValue = HBTU.getConfiguration().get(LoadBalancer.TABLES_ON_MASTER);
+    if (confValue != null && confValue.equalsIgnoreCase("none")) {
+      tablesOnMaster = false;
+    }
+    List<Region> regionsContainingMeta = tablesOnMaster ?
+        rs.getOnlineRegions() : master.getOnlineRegions();
+
     HRegion regionMeta = null;
-    for (Region r : master.getOnlineRegions()) {
+    for (Region r : regionsContainingMeta) {
       if (r.getRegionInfo().isMetaRegion()) {
         regionMeta = ((HRegion) r);
       }
@@ -249,20 +258,18 @@ public class TestClockWithCluster {
 
       assertEquals(expectedLogicalTime, masterHLC.getLogicalTime());
       timestamps.add(masterHLC.getLogicalTime());
-
       admin.assign(hriOnline.getRegionName());
       // clock.now() is called 7 times and clock.update() is called 2 times, each call increments
       // the logical time by one.
-      // 0   [now]    Get region info from hbase:meta in HBaseAdmin#unassign
-      // 1,2 [now]    Update hbase:meta
-      // 3   [now]    Send unassign region request to region server
-      // 4   [update] Update region region server clock upon receiving unassign region request
-      // 5   [now]    Send region server response back to master
-      // 6   [update] Update master clock upon close region response form region server
-      // 7,8 [now]    Update hbase:meta
-      // Assignment has one less call to clock.now() because MasterRpcServices#assignRegion instead
-      // gets the region info from assignment manager rather than meta table accessor
-      expectedLogicalTime += 9;
+      // 0   [now]    Get region info from hbase:meta in HBaseAdmin#assign
+      // 1   [now]    Get table state in AssignProcedure#startTransition
+      // 2,3 [now]    Update hbase:meta
+      // 4   [now]    Send assign region request to region server
+      // 5   [update] Update region region server clock upon receiving assign region request
+      // 6   [now]    Send region server response back to master
+      // 7   [update] Update master clock upon close region response from region server
+      // 8,9 [now]    Update hbase:meta
+      expectedLogicalTime += 10;
       assertEquals(RegionState.State.OPEN, regionStates.getRegionState(hriOnline).getState());
       assertEquals(expectedLogicalTime, masterHLC.getLogicalTime());
       timestamps.add(masterHLC.getLogicalTime());
@@ -299,8 +306,16 @@ public class TestClockWithCluster {
       hriOnline = locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
     }
 
+    boolean tablesOnMaster = true;
+    String confValue = HBTU.getConfiguration().get(LoadBalancer.TABLES_ON_MASTER);
+    if (confValue != null && confValue.equalsIgnoreCase("none")) {
+      tablesOnMaster = false;
+    }
+    List<Region> regionsContainingMeta = tablesOnMaster ?
+        rs.getOnlineRegions() : master.getOnlineRegions();
+
     HRegion regionMeta = null;
-    for (Region r : master.getOnlineRegions()) {
+    for (Region r : regionsContainingMeta) {
       if (r.getRegionInfo().isMetaRegion()) {
         regionMeta = ((HRegion) r);
       }
@@ -367,7 +382,7 @@ public class TestClockWithCluster {
     admin.assign(hriOnline.getRegionName());
     assertEquals(RegionState.State.OPEN, regionStates.getRegionState(hriOnline).getState());
     // Verify that region server clock time increased
-    assertHLCTime(masterHLC, expectedPhysicalTime, 8);
-    assertHLCTime(rsHLC, expectedPhysicalTime, 5);
+    assertHLCTime(masterHLC, expectedPhysicalTime, 9);
+    assertHLCTime(rsHLC, expectedPhysicalTime, 6);
   }
 }

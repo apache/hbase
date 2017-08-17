@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.TimestampType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 
@@ -35,7 +36,7 @@ public class IncludeAllCompactionQueryMatcher extends MinorCompactionScanQueryMa
   }
 
   @Override
-  public MatchCode match(Cell cell) throws IOException {
+  public MatchCode match(Cell cell, TimestampType timestampType) throws IOException {
     return MatchCode.INCLUDE;
   }
 
