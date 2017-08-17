@@ -110,6 +110,7 @@ public class Get extends Query
     this.storeOffset = get.getRowOffsetPerColumnFamily();
     this.tr = get.getTimeRange();
     this.checkExistenceOnly = get.isCheckExistenceOnly();
+    this.loadColumnFamiliesOnDemand = get.getLoadColumnFamiliesOnDemandValue();
     this.closestRowBefore = get.isClosestRowBefore();
     Map<byte[], NavigableSet<byte[]>> fams = get.getFamilyMap();
     for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
@@ -240,6 +241,10 @@ public class Get extends Query
     }
     this.maxVersions = maxVersions;
     return this;
+  }
+
+  public Get setLoadColumnFamiliesOnDemand(boolean value) {
+    return (Get) super.setLoadColumnFamiliesOnDemand(value);
   }
 
   /**
