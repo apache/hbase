@@ -24,7 +24,7 @@ java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.TableName
-java_import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos::SnapshotDescription
+java_import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos::SnapshotDescription
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
