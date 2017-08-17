@@ -642,7 +642,7 @@ public class HRegionServer extends HasThread implements
     if (!conf.getBoolean("hbase.testing.nocluster", false)) {
       // Open connection to zookeeper and set primary watcher
       zooKeeper = new ZooKeeperWatcher(conf, getProcessName() + ":" +
-        rpcServices.isa.getPort(), this, canCreateBaseZNode());
+        rpcServices.isa.getPort(), this, canCreateBaseZNode(), true);
 
       this.csm = (BaseCoordinatedStateManager) csm;
       this.csm.initialize(this);
