@@ -43,10 +43,10 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * suffix of the pipeline.
  *
  * The synchronization model is copy-on-write. Methods which change the structure of the
- * pipeline (pushHead() and swap()) apply their changes in the context of a lock. They also make
- * a read-only copy of the pipeline's list. Read methods read from a read-only copy. If a read
- * method accesses the read-only copy more than once it makes a local copy of it
- * to ensure it accesses the same copy.
+ * pipeline (pushHead(), flattenOneSegment() and swap()) apply their changes in the context of a
+ * lock. They also make a read-only copy of the pipeline's list. Read methods read from a
+ * read-only copy. If a read method accesses the read-only copy more than once it makes a local
+ * copy of it to ensure it accesses the same copy.
  *
  * The methods getVersionedList(), getVersionedTail(), and flattenOneSegment() are also
  * protected by a lock since they need to have a consistent (atomic) view of the pipeline list
@@ -261,6 +261,8 @@ public class CompactionPipeline {
 
   private void swapSuffix(List<? extends Segment> suffix, ImmutableSegment segment,
       boolean closeSegmentsInSuffix) {
+    pipeline.removeAll(suffix);
+    if(segment != null) pipeline.addLast(segment);
     // During index merge we won't be closing the segments undergoing the merge. Segment#close()
     // will release the MSLAB chunks to pool. But in case of index merge there wont be any data copy
     // from old MSLABs. So the new cells in new segment also refers to same chunks. In case of data
@@ -272,15 +274,20 @@ public class CompactionPipeline {
         itemInSuffix.close();
       }
     }
-    pipeline.removeAll(suffix);
-    if(segment != null) pipeline.addLast(segment);
   }
 
   // replacing one segment in the pipeline with a new one exactly at the same index
   // need to be called only within synchronized block
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="VO_VOLATILE_INCREMENT",
+      justification="replaceAtIndex is invoked under a synchronize block so safe")
   private void replaceAtIndex(int idx, ImmutableSegment newSegment) {
     pipeline.set(idx, newSegment);
     readOnlyCopy = new LinkedList<>(pipeline);
+    // the version increment is indeed needed, because the swap uses removeAll() method of the
+    // linked-list that compares the objects to find what to remove.
+    // The flattening changes the segment object completely (creation pattern) and so
+    // swap will not proceed correctly after concurrent flattening.
+    version++;
   }
 
   public Segment getTail() {

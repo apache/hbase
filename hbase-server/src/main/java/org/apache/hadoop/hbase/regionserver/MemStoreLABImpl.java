@@ -78,6 +78,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
   private final int chunkSize;
   private final int maxAlloc;
   private final ChunkCreator chunkCreator;
+  private final CompactingMemStore.IndexType idxType; // what index is used for corresponding segment
 
   // This flag is for closing this instance, its set when clearing snapshot of
   // memstore
@@ -100,6 +101,9 @@ public class MemStoreLABImpl implements MemStoreLAB {
     // if we don't exclude allocations >CHUNK_SIZE, we'd infiniteloop on one!
     Preconditions.checkArgument(maxAlloc <= chunkSize,
         MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
+    idxType = CompactingMemStore.IndexType.valueOf(conf.get(
+        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_KEY,
+        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_DEFAULT));
   }
 
   @Override
@@ -239,7 +243,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
         if (c != null) {
           return c;
         }
-        c = this.chunkCreator.getChunk();
+        c = this.chunkCreator.getChunk(idxType);
         if (c != null) {
           // set the curChunk. No need of CAS as only one thread will be here
           curChunk.set(c);
@@ -253,12 +257,15 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return null;
   }
 
-  // Returning a new chunk, without replacing current chunk,
-  // meaning MSLABImpl does not make the returned chunk as CurChunk.
-  // The space on this chunk will be allocated externally
-  // The interface is only for external callers
+  /* Creating chunk to be used as index chunk in CellChunkMap, part of the chunks array.
+  ** Returning a new chunk, without replacing current chunk,
+  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
+  ** The space on this chunk will be allocated externally.
+  ** The interface is only for external callers
+  */
   @Override
   public Chunk getNewExternalChunk() {
+    // the new chunk is going to be part of the chunk array and will always be referenced
     Chunk c = this.chunkCreator.getChunk();
     chunks.add(c.getId());
     return c;
@@ -279,5 +286,15 @@ public class MemStoreLABImpl implements MemStoreLAB {
       }
     }
     return pooledChunks;
+  }
+
+  @VisibleForTesting Integer getNumOfChunksReturnedToPool() {
+    int i = 0;
+    for (Integer id : this.chunks) {
+      if (chunkCreator.isChunkInPool(id)) {
+        i++;
+      }
+    }
+    return i;
   }
 }

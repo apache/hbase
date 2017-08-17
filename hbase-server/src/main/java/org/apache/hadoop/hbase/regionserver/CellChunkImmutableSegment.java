@@ -176,10 +176,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
   private int createCellReference(ByteBufferKeyValue cell, ByteBuffer idxBuffer, int idxOffset) {
     int offset = idxOffset;
     int dataChunkID = cell.getChunkId();
-    // ensure strong pointer to data chunk, as index is no longer directly points to it
-    Chunk c = ChunkCreator.getInstance().saveChunkFromGC(dataChunkID);
-    // if c is null, it means that this cell chunks was already released shouldn't happen
-    assert (c!=null);
+
     offset = ByteBufferUtils.putInt(idxBuffer, offset, dataChunkID);    // write data chunk id
     offset = ByteBufferUtils.putInt(idxBuffer, offset, cell.getOffset());          // offset
     offset = ByteBufferUtils.putInt(idxBuffer, offset, KeyValueUtil.length(cell)); // length

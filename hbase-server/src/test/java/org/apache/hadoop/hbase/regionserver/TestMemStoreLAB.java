@@ -247,14 +247,16 @@ public class TestMemStoreLAB {
         }
       }
       // none of the chunkIds would have been returned back
-      assertTrue("All the chunks must have been cleared", ChunkCreator.INSTANCE.size() != 0);
+      assertTrue("All the chunks must have been cleared",
+          ChunkCreator.INSTANCE.numberOfMappedChunks() != 0);
+      int pooledChunksNum = mslab.getPooledChunks().size();
       // close the mslab
       mslab.close();
-      // make sure all chunks reclaimed or removed from chunk queue
-      int queueLength = mslab.getPooledChunks().size();
+      // make sure all chunks where reclaimed back to pool
+      int queueLength = mslab.getNumOfChunksReturnedToPool();
       assertTrue("All chunks in chunk queue should be reclaimed or removed"
-          + " after mslab closed but actually: " + queueLength,
-        queueLength == 0);
+          + " after mslab closed but actually: " + (pooledChunksNum-queueLength),
+          pooledChunksNum-queueLength == 0);
     } finally {
       ChunkCreator.INSTANCE = oldInstance;
     }
