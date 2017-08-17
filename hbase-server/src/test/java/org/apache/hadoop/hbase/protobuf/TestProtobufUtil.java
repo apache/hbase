@@ -82,6 +82,7 @@ public class TestProtobufUtil {
     columnBuilder.clear();
     columnBuilder.setFamily(ByteString.copyFromUtf8("f2"));
     getBuilder.addColumn(columnBuilder.build());
+    getBuilder.setLoadColumnFamiliesOnDemand(true);
 
     ClientProtos.Get proto = getBuilder.build();
     // default fields

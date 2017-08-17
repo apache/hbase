@@ -532,6 +532,9 @@ public final class ProtobufUtil {
     if (proto.hasConsistency()) {
       get.setConsistency(toConsistency(proto.getConsistency()));
     }
+    if (proto.hasLoadColumnFamiliesOnDemand()) {
+      get.setLoadColumnFamiliesOnDemand(proto.getLoadColumnFamiliesOnDemand());
+    }
     return get;
   }
 
@@ -980,7 +983,7 @@ public final class ProtobufUtil {
     }
     Boolean loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
     if (loadColumnFamiliesOnDemand != null) {
-      scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand.booleanValue());
+      scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand);
     }
     scanBuilder.setMaxVersions(scan.getMaxVersions());
     for (Entry<byte[], TimeRange> cftr : scan.getColumnFamilyTimeRange().entrySet()) {
@@ -1263,6 +1266,10 @@ public final class ProtobufUtil {
     }
     if (get.getConsistency() != null && get.getConsistency() != Consistency.STRONG) {
       builder.setConsistency(toConsistency(get.getConsistency()));
+    }
+    Boolean loadColumnFamiliesOnDemand = get.getLoadColumnFamiliesOnDemandValue();
+    if (loadColumnFamiliesOnDemand != null) {
+      builder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand);
     }
 
     return builder.build();
