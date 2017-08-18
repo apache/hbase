@@ -79,6 +79,15 @@ public class ZNodePaths {
   // znode of indicating master maintenance mode
   public final String masterMaintZNode;
 
+  // znode containing all replication state.
+  public final String replicationZNode;
+  // znode containing a list of all remote slave (i.e. peer) clusters.
+  public final String peersZNode;
+  // znode containing all replication queues
+  public final String queuesZNode;
+  // znode containing queues of hfile references to be replicated
+  public final String hfileRefsZNode;
+
   public ZNodePaths(Configuration conf) {
     baseZNode = conf.get(ZOOKEEPER_ZNODE_PARENT, DEFAULT_ZOOKEEPER_ZNODE_PARENT);
     ImmutableMap.Builder<Integer, String> builder = ImmutableMap.builder();
@@ -113,6 +122,15 @@ public class ZNodePaths {
       conf.get("zookeeper.znode.namespace", "namespace"));
     masterMaintZNode = ZKUtil.joinZNode(baseZNode,
       conf.get("zookeeper.znode.masterMaintenance", "master-maintenance"));
+    replicationZNode =
+        ZKUtil.joinZNode(baseZNode, conf.get("zookeeper.znode.replication", "replication"));
+    peersZNode =
+        ZKUtil.joinZNode(replicationZNode, conf.get("zookeeper.znode.replication.peers", "peers"));
+    queuesZNode =
+        ZKUtil.joinZNode(replicationZNode, conf.get("zookeeper.znode.replication.rs", "rs"));
+    hfileRefsZNode =
+        ZKUtil.joinZNode(replicationZNode,
+          conf.get("zookeeper.znode.replication.hfile.refs", "hfile-refs"));
   }
 
   @Override
@@ -125,7 +143,9 @@ public class ZNodePaths {
         + ", balancerZNode=" + balancerZNode + ", regionNormalizerZNode=" + regionNormalizerZNode
         + ", switchZNode=" + switchZNode + ", tableLockZNode=" + tableLockZNode
         + ", recoveringRegionsZNode=" + recoveringRegionsZNode + ", namespaceZNode="
-        + namespaceZNode + ", masterMaintZNode=" + masterMaintZNode + "]";
+        + namespaceZNode + ", masterMaintZNode=" + masterMaintZNode + ", replicationZNode="
+        + replicationZNode + ", peersZNode=" + peersZNode + ", queuesZNode=" + queuesZNode
+        + ", hfileRefsZNode=" + hfileRefsZNode + "]";
   }
 
   /**

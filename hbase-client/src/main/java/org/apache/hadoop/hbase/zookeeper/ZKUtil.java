@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -1772,23 +1771,18 @@ public class ZKUtil {
    */
   private static void getReplicationZnodesDump(ZooKeeperWatcher zkw, StringBuilder sb)
       throws KeeperException {
-    String replicationZNodeName = zkw.getConfiguration().get("zookeeper.znode.replication",
-      "replication");
-    String replicationZnode = joinZNode(zkw.znodePaths.baseZNode, replicationZNodeName);
+    String replicationZnode = zkw.znodePaths.replicationZNode;
     if (ZKUtil.checkExists(zkw, replicationZnode) == -1) return;
     // do a ls -r on this znode
     sb.append("\n").append(replicationZnode).append(": ");
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, replicationZnode);
     for (String child : children) {
       String znode = joinZNode(replicationZnode, child);
-      if (child.equals(zkw.getConfiguration().get("zookeeper.znode.replication.peers", "peers"))) {
+      if (znode.equals(zkw.znodePaths.peersZNode)) {
         appendPeersZnodes(zkw, znode, sb);
-      } else if (child.equals(zkw.getConfiguration().
-          get("zookeeper.znode.replication.rs", "rs"))) {
+      } else if (znode.equals(zkw.znodePaths.queuesZNode)) {
         appendRSZnodes(zkw, znode, sb);
-      } else if (child.equals(zkw.getConfiguration().get(
-        ReplicationStateZKBase.ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_KEY,
-        ReplicationStateZKBase.ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_DEFAULT))) {
+      } else if (znode.equals(zkw.znodePaths.hfileRefsZNode)) {
         appendHFileRefsZnodes(zkw, znode, sb);
       }
     }
