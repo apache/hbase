@@ -551,12 +551,16 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   @Override
   public boolean matchVisibility(List<Tag> putVisTags, Byte putTagsFormat, List<Tag> deleteVisTags,
       Byte deleteTagsFormat) throws IOException {
+    // Early out if there are no tags in both of cell and delete
+    if (putVisTags.isEmpty() && deleteVisTags.isEmpty()) {
+      return true;
+    }
+    // Early out if one of the tags is empty
+    if (putVisTags.isEmpty() ^ deleteVisTags.isEmpty()) {
+      return false;
+    }
     if ((deleteTagsFormat != null && deleteTagsFormat == SORTED_ORDINAL_SERIALIZATION_FORMAT)
         && (putTagsFormat == null || putTagsFormat == SORTED_ORDINAL_SERIALIZATION_FORMAT)) {
-      if (putVisTags.isEmpty()) {
-        // Early out if there are no tags in the cell
-        return false;
-      }
       if (putTagsFormat == null) {
         return matchUnSortedVisibilityTags(putVisTags, deleteVisTags);
       } else {
