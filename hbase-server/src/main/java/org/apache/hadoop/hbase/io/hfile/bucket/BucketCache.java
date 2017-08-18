@@ -1190,6 +1190,11 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   @Override
+  public long getCurrentDataSize() {
+    return size();
+  }
+
+  @Override
   public long getFreeSize() {
     return this.bucketAllocator.getFreeSize();
   }
@@ -1197,6 +1202,11 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public long getBlockCount() {
     return this.blockNumber.get();
+  }
+
+  @Override
+  public long getDataBlockCount() {
+    return getBlockCount();
   }
 
   @Override
