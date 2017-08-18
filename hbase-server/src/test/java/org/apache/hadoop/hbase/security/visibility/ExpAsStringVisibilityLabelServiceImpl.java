@@ -427,6 +427,10 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
 
   private static boolean checkForMatchingVisibilityTagsWithSortedOrder(List<Tag> putVisTags,
       List<Tag> deleteVisTags) {
+    // Early out if there are no tags in both of cell and delete
+    if (putVisTags.isEmpty() && deleteVisTags.isEmpty()) {
+      return true;
+    }
     boolean matchFound = false;
     // If the size does not match. Definitely we are not comparing the equal
     // tags.
