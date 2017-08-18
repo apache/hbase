@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
@@ -1161,7 +1162,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
+  @JsonIgnore
   public BlockCache[] getBlockCaches() {
+    if (victimHandler != null)
+      return new BlockCache[] {this, this.victimHandler};
     return null;
   }
 
