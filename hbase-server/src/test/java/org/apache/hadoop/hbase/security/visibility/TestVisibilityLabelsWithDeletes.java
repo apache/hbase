@@ -28,9 +28,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -65,6 +68,7 @@ import org.junit.rules.TestName;
  */
 @Category(MediumTests.class)
 public class TestVisibilityLabelsWithDeletes {
+  private static final Log LOG = LogFactory.getLog(TestVisibilityLabelsWithDeletes.class);
   private static final String TOPSECRET = "TOPSECRET";
   private static final String PUBLIC = "PUBLIC";
   private static final String PRIVATE = "PRIVATE";
@@ -3276,5 +3280,189 @@ public class TestVisibilityLabelsWithDeletes {
   @SafeVarargs
   public static <T> List<T> createList(T... ts) {
     return new ArrayList<>(Arrays.asList(ts));
+  }
+
+
+  private enum DeleteMark {
+    ROW,
+    FAMILY,
+    FAMILY_VERSION,
+    COLUMN,
+    CELL
+  }
+
+  private static Delete addDeleteMark(Delete d, DeleteMark mark, long now) {
+    switch (mark) {
+      case ROW:
+        break;
+      case FAMILY:
+        d.addFamily(fam);
+        break;
+      case FAMILY_VERSION:
+        d.addFamilyVersion(fam, now);
+        break;
+      case COLUMN:
+        d.addColumns(fam, qual);
+        break;
+      case CELL:
+        d.addColumn(fam, qual);
+        break;
+      default:
+        break;
+    }
+    return d;
+  }
+
+  @Test
+  public void testDeleteCellWithoutVisibility() throws IOException, InterruptedException {
+    for (DeleteMark mark : DeleteMark.values()) {
+      testDeleteCellWithoutVisibility(mark);
+    }
+  }
+
+  private void testDeleteCellWithoutVisibility(DeleteMark mark) throws IOException, InterruptedException {
+    setAuths();
+    final TableName tableName = TableName.valueOf("testDeleteCellWithoutVisibility-" + mark.name());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    colDesc.setMaxVersions(5);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    long now = System.currentTimeMillis();
+    List<Put> puts = new ArrayList<>(1);
+    Put put = new Put(row1);
+    if (mark == DeleteMark.FAMILY_VERSION) {
+      put.addColumn(fam, qual, now, value);
+    } else {
+      put.addColumn(fam, qual, value);
+    }
+
+    puts.add(put);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)){
+      table.put(puts);
+      Result r = table.get(new Get(row1));
+      assertEquals(1, r.size());
+      assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
+
+      Delete d = addDeleteMark(new Delete(row1), mark, now);
+      table.delete(d);
+      r = table.get(new Get(row1));
+      assertEquals(0, r.size());
+    }
+  }
+
+  @Test
+  public void testDeleteCellWithVisibility() throws IOException, InterruptedException {
+    for (DeleteMark mark : DeleteMark.values()) {
+      testDeleteCellWithVisibility(mark);
+      testDeleteCellWithVisibilityV2(mark);
+    }
+  }
+
+  private void testDeleteCellWithVisibility(DeleteMark mark) throws IOException, InterruptedException {
+    setAuths();
+    final TableName tableName = TableName.valueOf("testDeleteCellWithVisibility-" + mark.name());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    colDesc.setMaxVersions(5);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    long now = System.currentTimeMillis();
+    List<Put> puts = new ArrayList<>(2);
+    Put put = new Put(row1);
+    if (mark == DeleteMark.FAMILY_VERSION) {
+      put.addColumn(fam, qual, now, value);
+    } else {
+      put.addColumn(fam, qual, value);
+    }
+    puts.add(put);
+    put = new Put(row1);
+    if (mark == DeleteMark.FAMILY_VERSION) {
+      put.addColumn(fam, qual, now, value1);
+    } else {
+      put.addColumn(fam, qual, value1);
+    }
+    put.setCellVisibility(new CellVisibility(PRIVATE));
+    puts.add(put);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      table.put(puts);
+      Result r = table.get(new Get(row1));
+      assertEquals(0, r.size());
+      r = table.get(new Get(row1).setAuthorizations(new Authorizations(PRIVATE)));
+      assertEquals(1, r.size());
+      assertEquals(Bytes.toString(value1), Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
+
+      Delete d = addDeleteMark(new Delete(row1), mark, now);
+      table.delete(d);
+
+      r = table.get(new Get(row1));
+      assertEquals(0, r.size());
+      r = table.get(new Get(row1).setAuthorizations(new Authorizations(PRIVATE)));
+      assertEquals(1, r.size());
+      assertEquals(Bytes.toString(value1), Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
+
+      d = addDeleteMark(new Delete(row1).setCellVisibility(new CellVisibility(PRIVATE)), mark, now);
+      table.delete(d);
+
+      r = table.get(new Get(row1));
+      assertEquals(0, r.size());
+      r = table.get(new Get(row1).setAuthorizations(new Authorizations(PRIVATE)));
+      assertEquals(0, r.size());
+    }
+  }
+
+  private void testDeleteCellWithVisibilityV2(DeleteMark mark) throws IOException, InterruptedException {
+    setAuths();
+    final TableName tableName = TableName.valueOf("testDeleteCellWithVisibilityV2-" + mark.name());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    colDesc.setMaxVersions(5);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    long now = System.currentTimeMillis();
+    List<Put> puts = new ArrayList<>(2);
+    Put put = new Put(row1);
+    put.setCellVisibility(new CellVisibility(PRIVATE));
+    if (mark == DeleteMark.FAMILY_VERSION) {
+      put.addColumn(fam, qual, now, value);
+    } else {
+      put.addColumn(fam, qual, value);
+    }
+    puts.add(put);
+    put = new Put(row1);
+    if (mark == DeleteMark.FAMILY_VERSION) {
+      put.addColumn(fam, qual, now, value1);
+    } else {
+      put.addColumn(fam, qual, value1);
+    }
+    puts.add(put);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)){
+      table.put(puts);
+      Result r = table.get(new Get(row1));
+      assertEquals(1, r.size());
+      assertEquals(Bytes.toString(value1), Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
+      r = table.get(new Get(row1).setAuthorizations(new Authorizations(PRIVATE)));
+      assertEquals(1, r.size());
+      assertEquals(Bytes.toString(value1), Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
+
+      Delete d = addDeleteMark(new Delete(row1), mark, now);
+      table.delete(d);
+
+      r = table.get(new Get(row1));
+      assertEquals(0, r.size());
+      r = table.get(new Get(row1).setAuthorizations(new Authorizations(PRIVATE)));
+      assertEquals(0, r.size());
+
+      d = addDeleteMark(new Delete(row1).setCellVisibility(new CellVisibility(PRIVATE)), mark, now);
+      table.delete(d);
+
+      r = table.get(new Get(row1));
+      assertEquals(0, r.size());
+      r = table.get(new Get(row1).setAuthorizations(new Authorizations(PRIVATE)));
+      assertEquals(0, r.size());
+    }
   }
 }
