@@ -66,7 +66,6 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.jmx.MBeanContainer;
 import org.eclipse.jetty.servlet.FilterHolder;
 
-import org.glassfish.jersey.jackson1.Jackson1Feature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 
@@ -236,8 +235,7 @@ public class RESTServer implements Constants {
     parseCommandLine(args, servlet);
 
     // set up the Jersey servlet container for Jetty
-    ResourceConfig application = new ResourceConfig().
-        packages("org.apache.hadoop.hbase.rest").register(Jackson1Feature.class);
+    ResourceConfig application = new ResourceConfig();
     ServletHolder sh = new ServletHolder(new ServletContainer(application));
 
     // Set the default max thread number to 100 to limit
