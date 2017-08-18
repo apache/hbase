@@ -177,8 +177,14 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   /** Current size of cache */
   private final AtomicLong size;
 
+  /** Current size of data blocks */
+  private final AtomicLong dataBlockSize;
+
   /** Current number of cached elements */
   private final AtomicLong elements;
+
+  /** Current number of cached data block elements */
+  private final AtomicLong dataBlockElements;
 
   /** Cache access count (sequential ID) */
   private final AtomicLong count;
@@ -315,6 +321,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     this.stats = new CacheStats(this.getClass().getSimpleName());
     this.count = new AtomicLong(0);
     this.elements = new AtomicLong(0);
+    this.dataBlockElements = new AtomicLong(0);
+    this.dataBlockSize = new AtomicLong(0);
     this.overhead = calculateOverhead(maxSize, blockSize, mapConcurrencyLevel);
     this.size = new AtomicLong(this.overhead);
     this.hardCapacityLimitFactor = hardLimitFactor;
@@ -400,6 +408,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
     long val = elements.incrementAndGet();
+    if (buf.getBlockType().isData()) {
+       dataBlockElements.incrementAndGet();
+    }
     if (LOG.isTraceEnabled()) {
       long size = map.size();
       assertCounterSanity(size, val);
@@ -455,8 +466,12 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    */
   private long updateSizeMetrics(LruCachedBlock cb, boolean evict) {
     long heapsize = cb.heapSize();
+    BlockType bt = cb.getBuffer().getBlockType();
     if (evict) {
       heapsize *= -1;
+    }
+    if (bt != null && bt.isData()) {
+       dataBlockSize.addAndGet(heapsize);
     }
     return size.addAndGet(heapsize);
   }
@@ -561,6 +576,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     if (LOG.isTraceEnabled()) {
       long size = map.size();
       assertCounterSanity(size, val);
+    }
+    if (block.getBuffer().getBlockType().isData()) {
+       dataBlockElements.decrementAndGet();
     }
     if (evictedByEvictionProcess) {
       // When the eviction of the block happened because of invalidation of HFiles, no need to
@@ -832,6 +850,11 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
+  public long getCurrentDataSize() {
+    return this.dataBlockSize.get();
+  }
+
+  @Override
   public long getFreeSize() {
     return getMaxSize() - getCurrentSize();
   }
@@ -844,6 +867,11 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public long getBlockCount() {
     return this.elements.get();
+  }
+
+  @Override
+  public long getDataBlockCount() {
+    return this.dataBlockElements.get();
   }
 
   EvictionThread getEvictionThread() {
@@ -959,7 +987,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-      (4 * Bytes.SIZEOF_LONG) + (9 * ClassSize.REFERENCE) +
+      (4 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
       (6 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN)
       + ClassSize.OBJECT);
 
