@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -97,7 +95,7 @@ public class ScannerContext {
   boolean keepProgress;
   private static boolean DEFAULT_KEEP_PROGRESS = false;
 
-  private Cell peekedCellInHeartbeat = null;
+  private Cell lastPeekedCell = null;
 
   /**
    * Tracks the relevant server side metrics during scans. null when metrics should not be tracked
@@ -324,12 +322,12 @@ public class ScannerContext {
         || checkTimeLimit(checkerScope);
   }
 
-  public Cell getPeekedCellInHeartbeat() {
-    return peekedCellInHeartbeat;
+  public Cell getLastPeekedCell() {
+    return lastPeekedCell;
   }
 
-  public void setPeekedCellInHeartbeat(Cell peekedCellInHeartbeat) {
-    this.peekedCellInHeartbeat = peekedCellInHeartbeat;
+  public void setLastPeekedCell(Cell lastPeekedCell) {
+    this.lastPeekedCell = lastPeekedCell;
   }
 
   @Override

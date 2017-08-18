@@ -46,11 +46,11 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.regionserver.querymatcher.CompactionScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.LegacyScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.UserScanQueryMatcher;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -540,7 +540,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if ((kvsScanned % cellsPerHeartbeatCheck == 0)) {
         scannerContext.updateTimeProgress();
         if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
-          scannerContext.setPeekedCellInHeartbeat(prevCell);
           return scannerContext.setScannerState(NextState.TIME_LIMIT_REACHED).hasMoreValues();
         }
       }
@@ -548,6 +547,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if (prevCell != cell) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
       checkScanOrder(prevCell, cell, comparator);
       prevCell = cell;
+      scannerContext.setLastPeekedCell(cell);
       topChanged = false;
       ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
       switch (qcode) {
