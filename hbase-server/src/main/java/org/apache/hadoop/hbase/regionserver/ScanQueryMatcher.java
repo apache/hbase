@@ -566,6 +566,17 @@ public class ScanQueryMatcher {
   }
 
   public Cell getKeyForNextColumn(Cell kv) {
+    // We aren't sure whether any DeleteFamily cells exist, so we can't skip to next column.
+    // see HBASE-18471
+    // see TestFromClientSide3#testScanAfterDeletingSpecifiedRow
+    if (kv.getQualifierLength() == 0) {
+      Cell nextKey = createNextOnRowCol(kv);
+      if (nextKey != kv) {
+        return nextKey;
+      }
+      // The cell is at the end of row/family/qualifier, so it is impossible to find any DeleteFamily cells.
+      // Let us seek to next column.
+    }
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
       return KeyValueUtil.createLastOnRow(
@@ -692,5 +703,96 @@ public class ScanQueryMatcher {
      * Include KeyValue and done with row, seek to next.
      */
     INCLUDE_AND_SEEK_NEXT_ROW,
+  }
+
+  /**
+   * @return An new cell is located following input cell. If both of type and timestamp are
+   *         minimum, the input cell will be returned directly.
+   */
+  private static Cell createNextOnRowCol(Cell cell) {
+    long ts = cell.getTimestamp();
+    byte type = cell.getTypeByte();
+    if (type != Type.Minimum.getCode()) {
+      type = KeyValue.Type.values()[KeyValue.Type.codeToType(type).ordinal() - 1].getCode();
+    } else if (ts != HConstants.OLDEST_TIMESTAMP) {
+      ts = ts - 1;
+      type = Type.Maximum.getCode();
+    } else {
+      return cell;
+    }
+    return createNextOnRowCol(cell, ts, type);
+  }
+
+  private static Cell createNextOnRowCol(final Cell cell, final long ts, final byte type) {
+    return new Cell() {
+      @Override
+      public byte[] getRowArray() { return cell.getRowArray(); }
+
+      @Override
+      public int getRowOffset() { return cell.getRowOffset(); }
+
+      @Override
+      public short getRowLength() { return cell.getRowLength(); }
+
+      @Override
+      public byte[] getFamilyArray() { return cell.getFamilyArray(); }
+
+      @Override
+      public int getFamilyOffset() { return cell.getFamilyOffset(); }
+
+      @Override
+      public byte getFamilyLength() { return cell.getFamilyLength(); }
+
+      @Override
+      public byte[] getQualifierArray() { return cell.getQualifierArray(); }
+
+      @Override
+      public int getQualifierOffset() { return cell.getQualifierOffset(); }
+
+      @Override
+      public int getQualifierLength() { return cell.getQualifierLength(); }
+
+      @Override
+      public long getTimestamp() { return ts; }
+
+      @Override
+      public byte getTypeByte() {return type; }
+
+      @Override
+      public long getMvccVersion() { return cell.getMvccVersion(); }
+
+      @Override
+      public long getSequenceId() { return cell.getSequenceId(); }
+
+      @Override
+      public byte[] getValueArray() { return cell.getValueArray(); }
+
+      @Override
+      public int getValueOffset() { return cell.getValueOffset(); }
+
+      @Override
+      public int getValueLength() { return cell.getValueLength(); }
+
+      @Override
+      public byte[] getTagsArray() { return cell.getTagsArray(); }
+
+      @Override
+      public int getTagsOffset() { return cell.getTagsOffset(); }
+
+      @Override
+      public int getTagsLength() { return cell.getTagsLength(); }
+
+      @Override
+      public byte[] getValue() { return cell.getValue(); }
+
+      @Override
+      public byte[] getFamily() { return cell.getFamily(); }
+
+      @Override
+      public byte[] getQualifier() { return cell.getQualifier(); }
+
+      @Override
+      public byte[] getRow() {return cell.getRow(); }
+    };
   }
 }
