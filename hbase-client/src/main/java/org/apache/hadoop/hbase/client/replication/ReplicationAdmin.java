@@ -26,37 +26,22 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationFactory;
-import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.replication.ReplicationPeerZKImpl;
-import org.apache.hadoop.hbase.replication.ReplicationPeers;
-import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
-import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
@@ -101,16 +86,6 @@ public class ReplicationAdmin implements Closeable {
       Integer.toString(HConstants.REPLICATION_SCOPE_SERIAL);
 
   private final Connection connection;
-  // TODO: replication should be managed by master. All the classes except ReplicationAdmin should
-  // be moved to hbase-server. Resolve it in HBASE-11392.
-  private final ReplicationQueuesClient replicationQueuesClient;
-  private final ReplicationPeers replicationPeers;
-  /**
-   * A watcher used by replicationPeers and replicationQueuesClient. Keep reference so can dispose
-   * on {@link #close()}.
-   */
-  private final ZooKeeperWatcher zkw;
-
   private Admin admin;
 
   /**
@@ -122,49 +97,6 @@ public class ReplicationAdmin implements Closeable {
   public ReplicationAdmin(Configuration conf) throws IOException {
     this.connection = ConnectionFactory.createConnection(conf);
     admin = connection.getAdmin();
-    try {
-      zkw = createZooKeeperWatcher();
-      try {
-        this.replicationQueuesClient =
-            ReplicationFactory.getReplicationQueuesClient(new ReplicationQueuesClientArguments(conf,
-            this.connection, zkw));
-        this.replicationQueuesClient.init();
-        this.replicationPeers = ReplicationFactory.getReplicationPeers(zkw, conf,
-          this.replicationQueuesClient, this.connection);
-        this.replicationPeers.init();
-      } catch (Exception exception) {
-        if (zkw != null) {
-          zkw.close();
-        }
-        throw exception;
-      }
-    } catch (Exception exception) {
-      connection.close();
-      if (exception instanceof IOException) {
-        throw (IOException) exception;
-      } else if (exception instanceof RuntimeException) {
-        throw (RuntimeException) exception;
-      } else {
-        throw new IOException("Error initializing the replication admin client.", exception);
-      }
-    }
-  }
-
-  private ZooKeeperWatcher createZooKeeperWatcher() throws IOException {
-    // This Abortable doesn't 'abort'... it just logs.
-    return new ZooKeeperWatcher(connection.getConfiguration(), "ReplicationAdmin", new Abortable() {
-      @Override
-      public void abort(String why, Throwable e) {
-        LOG.error(why, e);
-        // We used to call system.exit here but this script can be embedded by other programs that
-        // want to do replication stuff... so inappropriate calling System.exit. Just log for now.
-      }
-
-      @Override
-      public boolean isAborted() {
-        return false;
-      }
-    });
   }
 
   /**
@@ -452,9 +384,6 @@ public class ReplicationAdmin implements Closeable {
 
   @Override
   public void close() throws IOException {
-    if (this.zkw != null) {
-      this.zkw.close();
-    }
     if (this.connection != null) {
       this.connection.close();
     }
@@ -518,40 +447,13 @@ public class ReplicationAdmin implements Closeable {
     admin.disableTableReplication(tableName);
   }
 
-  @VisibleForTesting
-  @Deprecated
-  public void peerAdded(String id) throws ReplicationException {
-    this.replicationPeers.peerConnected(id);
-  }
-
   /**
    * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#listReplicationPeers()} instead
    */
   @VisibleForTesting
   @Deprecated
-  List<ReplicationPeer> listReplicationPeers() throws IOException {
-    Map<String, ReplicationPeerConfig> peers = listPeerConfigs();
-    if (peers == null || peers.size() <= 0) {
-      return null;
-    }
-    List<ReplicationPeer> listOfPeers = new ArrayList<>(peers.size());
-    for (Entry<String, ReplicationPeerConfig> peerEntry : peers.entrySet()) {
-      String peerId = peerEntry.getKey();
-      try {
-        Pair<ReplicationPeerConfig, Configuration> pair = this.replicationPeers.getPeerConf(peerId);
-        Configuration peerConf = pair.getSecond();
-        ReplicationPeer peer = new ReplicationPeerZKImpl(zkw, pair.getSecond(),
-          peerId, pair.getFirst(), this.connection);
-        listOfPeers.add(peer);
-      } catch (ReplicationException e) {
-        LOG.warn("Failed to get valid replication peers. "
-            + "Error connecting to peer cluster with peerId=" + peerId + ". Error message="
-            + e.getMessage());
-        LOG.debug("Failure details to get valid replication peers.", e);
-        continue;
-      }
-    }
-    return listOfPeers;
+  List<ReplicationPeerDescription> listReplicationPeers() throws IOException {
+    return admin.listReplicationPeers();
   }
 
   /**

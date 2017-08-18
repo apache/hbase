@@ -61,6 +61,7 @@
   </licenses>
 
   <modules>
+    <module>hbase-replication</module>
     <module>hbase-resource-bundle</module>
     <module>hbase-server</module>
     <module>hbase-thrift</module>
@@ -1562,6 +1563,11 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-replication</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <artifactId>hbase-server</artifactId>
