@@ -34,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -156,6 +157,106 @@ public class TestFromClientSide3 {
 
         admin.flush(table.getName());
       }
+    }
+  }
+
+  private static List<Cell> toList(ResultScanner scanner) {
+    try {
+      List<Cell> cells = new ArrayList<>();
+      for (Result r : scanner) {
+        cells.addAll(r.listCells());
+      }
+      return cells;
+    } finally {
+      scanner.close();
+    }
+  }
+
+  @Test
+  public void testScanAfterDeletingSpecifiedRow() throws IOException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .build();
+    TEST_UTIL.getAdmin().createTable(desc);
+    byte[] row = Bytes.toBytes("SpecifiedRow");
+    byte[] value0 = Bytes.toBytes("value_0");
+    byte[] value1 = Bytes.toBytes("value_1");
+    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+      Put put = new Put(row);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      t.put(put);
+      Delete d = new Delete(row);
+      t.delete(d);
+      put = new Put(row);
+      put.addColumn(FAMILY, null, value0);
+      t.put(put);
+      put = new Put(row);
+      put.addColumn(FAMILY, null, value1);
+      t.put(put);
+      List<Cell> cells = toList(t.getScanner(new Scan()));
+      assertEquals(1, cells.size());
+      assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
+
+      cells = toList(t.getScanner(new Scan().addFamily(FAMILY)));
+      assertEquals(1, cells.size());
+      assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
+
+      cells = toList(t.getScanner(new Scan().addColumn(FAMILY, QUALIFIER)));
+      assertEquals(0, cells.size());
+
+      TEST_UTIL.getAdmin().flush(tableName);
+      cells = toList(t.getScanner(new Scan()));
+      assertEquals(1, cells.size());
+      assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
+
+      cells = toList(t.getScanner(new Scan().addFamily(FAMILY)));
+      assertEquals(1, cells.size());
+      assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
+
+      cells = toList(t.getScanner(new Scan().addColumn(FAMILY, QUALIFIER)));
+      assertEquals(0, cells.size());
+    }
+  }
+
+  @Test
+  public void testScanAfterDeletingSpecifiedRowV2() throws IOException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .build();
+    TEST_UTIL.getAdmin().createTable(desc);
+    byte[] row = Bytes.toBytes("SpecifiedRow");
+    byte[] qual0 = Bytes.toBytes("qual0");
+    byte[] qual1 = Bytes.toBytes("qual1");
+    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+      Delete d = new Delete(row);
+      t.delete(d);
+
+      Put put = new Put(row);
+      put.addColumn(FAMILY, null, VALUE);
+      t.put(put);
+
+      put = new Put(row);
+      put.addColumn(FAMILY, qual1, qual1);
+      t.put(put);
+
+      put = new Put(row);
+      put.addColumn(FAMILY, qual0, qual0);
+      t.put(put);
+
+      Result r = t.get(new Get(row));
+      assertEquals(3, r.size());
+      assertEquals("testValue", Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
+      assertEquals("qual0", Bytes.toString(CellUtil.cloneValue(r.rawCells()[1])));
+      assertEquals("qual1", Bytes.toString(CellUtil.cloneValue(r.rawCells()[2])));
+
+      TEST_UTIL.getAdmin().flush(tableName);
+      r = t.get(new Get(row));
+      assertEquals(3, r.size());
+      assertEquals("testValue", Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
+      assertEquals("qual0", Bytes.toString(CellUtil.cloneValue(r.rawCells()[1])));
+      assertEquals("qual1", Bytes.toString(CellUtil.cloneValue(r.rawCells()[2])));
     }
   }
 

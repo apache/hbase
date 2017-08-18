@@ -3135,4 +3135,57 @@ public final class CellUtil {
       return Type.DeleteFamily.getCode();
     }
   }
+
+  /**
+   * @return An new cell is located following input cell. If both of type and timestamp are
+   *         minimum, the input cell will be returned directly.
+   */
+  @InterfaceAudience.Private
+  public static Cell createNextOnRowCol(Cell cell) {
+    long ts = cell.getTimestamp();
+    byte type = cell.getTypeByte();
+    if (type != Type.Minimum.getCode()) {
+      type = KeyValue.Type.values()[KeyValue.Type.codeToType(type).ordinal() - 1].getCode();
+    } else if (ts != HConstants.OLDEST_TIMESTAMP) {
+      ts = ts - 1;
+      type = Type.Maximum.getCode();
+    } else {
+      return cell;
+    }
+    return createNextOnRowCol(cell, ts, type);
+  }
+
+  private static Cell createNextOnRowCol(Cell cell, long ts, byte type) {
+    if (cell instanceof ByteBufferCell) {
+      return new LastOnRowColByteBufferCell(((ByteBufferCell) cell).getRowByteBuffer(),
+              ((ByteBufferCell) cell).getRowPosition(), cell.getRowLength(),
+              ((ByteBufferCell) cell).getFamilyByteBuffer(),
+              ((ByteBufferCell) cell).getFamilyPosition(), cell.getFamilyLength(),
+              ((ByteBufferCell) cell).getQualifierByteBuffer(),
+              ((ByteBufferCell) cell).getQualifierPosition(), cell.getQualifierLength()) {
+        @Override
+        public long getTimestamp() {
+          return ts;
+        }
+
+        @Override
+        public byte getTypeByte() {
+          return type;
+        }
+      };
+    }
+    return new LastOnRowColCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+            cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+            cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()) {
+      @Override
+      public long getTimestamp() {
+        return ts;
+      }
+
+      @Override
+      public byte getTypeByte() {
+        return type;
+      }
+    };
+  }
 }
