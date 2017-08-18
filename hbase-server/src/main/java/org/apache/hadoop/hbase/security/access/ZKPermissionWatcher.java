@@ -38,6 +38,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -55,11 +56,11 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
   private static final Log LOG = LogFactory.getLog(ZKPermissionWatcher.class);
   // parent node for permissions lists
   static final String ACL_NODE = "acl";
-  TableAuthManager authManager;
-  String aclZNode;
-  CountDownLatch initialized = new CountDownLatch(1);
-  AtomicReference<List<ZKUtil.NodeAndData>> nodes = new AtomicReference<>(null);
-  ExecutorService executor;
+  private final TableAuthManager authManager;
+  private final String aclZNode;
+  private final CountDownLatch initialized = new CountDownLatch(1);
+  private final ExecutorService executor;
+  private Future<?> childrenChangedFuture;
 
   public ZKPermissionWatcher(ZooKeeperWatcher watcher,
       TableAuthManager authManager, Configuration conf) {
@@ -82,7 +83,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
               List<ZKUtil.NodeAndData> existing =
                   ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
               if (existing != null) {
-                refreshNodes(existing, null);
+                refreshNodes(existing);
               }
               return null;
             }
@@ -126,7 +127,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
           try {
             List<ZKUtil.NodeAndData> nodes =
                 ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-            refreshNodes(nodes, null);
+            refreshNodes(nodes);
           } catch (KeeperException ke) {
             LOG.error("Error reading data from zookeeper", ke);
             // only option is to abort
@@ -179,42 +180,37 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
     }
   }
 
+
   @Override
   public void nodeChildrenChanged(final String path) {
     waitUntilStarted();
     if (path.equals(aclZNode)) {
       try {
-        List<ZKUtil.NodeAndData> nodeList =
+        final List<ZKUtil.NodeAndData> nodeList =
             ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-        while (!nodes.compareAndSet(null, nodeList)) {
-          try {
-            Thread.sleep(20);
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted while setting node list", e);
-            Thread.currentThread().interrupt();
+        // preempt any existing nodeChildrenChanged event processing
+        if (childrenChangedFuture != null && !childrenChangedFuture.isDone()) {
+          boolean cancelled = childrenChangedFuture.cancel(true);
+          if (!cancelled) {
+            // task may have finished between our check and attempted cancel, this is fine.
+            if (! childrenChangedFuture.isDone()) {
+              LOG.warn("Could not cancel processing node children changed event, " +
+                  "please file a JIRA and attach logs if possible.");
+            }
           }
         }
+        childrenChangedFuture = asyncProcessNodeUpdate(() -> refreshNodes(nodeList));
       } catch (KeeperException ke) {
         LOG.error("Error reading data from zookeeper for path "+path, ke);
         watcher.abort("ZooKeeper error get node children for path "+path, ke);
       }
-      asyncProcessNodeUpdate(new Runnable() {
-        // allows subsequent nodeChildrenChanged event to preempt current processing of
-        // nodeChildrenChanged event
-        @Override
-        public void run() {
-          List<ZKUtil.NodeAndData> nodeList = nodes.get();
-          nodes.set(null);
-          refreshNodes(nodeList, nodes);
-        }
-      });
     }
   }
 
-  private void asyncProcessNodeUpdate(Runnable runnable) {
+  private Future<?> asyncProcessNodeUpdate(Runnable runnable) {
     if (!executor.isShutdown()) {
       try {
-        executor.submit(runnable);
+        return executor.submit(runnable);
       } catch (RejectedExecutionException e) {
         if (executor.isShutdown()) {
           LOG.warn("aclZNode changed after ZKPermissionWatcher was shutdown");
@@ -223,12 +219,13 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
         }
       }
     }
+    return null; // No task launched so there will be nothing to cancel later
   }
 
-  private void refreshNodes(List<ZKUtil.NodeAndData> nodes, AtomicReference ref) {
+  private void refreshNodes(List<ZKUtil.NodeAndData> nodes) {
     for (ZKUtil.NodeAndData n : nodes) {
-      if (ref != null && ref.get() != null) {
-        // there is a newer list
+      if (Thread.interrupted()) {
+        // Use Thread.interrupted so that we clear interrupt status
         break;
       }
       if (n.isEmpty()) continue;

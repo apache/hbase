@@ -44,8 +44,8 @@ import org.junit.experimental.categories.Category;
  * Test the reading and writing of access permissions to and from zookeeper.
  */
 @Category({SecurityTests.class, LargeTests.class})
-public class TestZKPermissionsWatcher {
-  private static final Log LOG = LogFactory.getLog(TestZKPermissionsWatcher.class);
+public class TestZKPermissionWatcher {
+  private static final Log LOG = LogFactory.getLog(TestZKPermissionWatcher.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static TableAuthManager AUTH_A;
   private static TableAuthManager AUTH_B;
@@ -91,7 +91,7 @@ public class TestZKPermissionsWatcher {
     Configuration conf = UTIL.getConfiguration();
     User george = User.createUserForTesting(conf, "george", new String[] { });
     User hubert = User.createUserForTesting(conf, "hubert", new String[] { });
-    
+
     assertFalse(AUTH_A.authorizeUser(george, TEST_TABLE, null,
       TablePermission.Action.READ));
     assertFalse(AUTH_A.authorizeUser(george, TEST_TABLE, null,
