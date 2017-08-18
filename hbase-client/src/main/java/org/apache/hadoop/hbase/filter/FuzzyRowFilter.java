@@ -77,20 +77,27 @@ public class FuzzyRowFilter extends FilterBase {
   private RowTracker tracker;
 
   public FuzzyRowFilter(List<Pair<byte[], byte[]>> fuzzyKeysData) {
-    Pair<byte[], byte[]> p;
-    for (int i = 0; i < fuzzyKeysData.size(); i++) {
-      p = fuzzyKeysData.get(i);
-      if (p.getFirst().length != p.getSecond().length) {
+    List<Pair<byte[], byte[]>> fuzzyKeyDataCopy = new ArrayList<>(fuzzyKeysData.size());
+
+    for (Pair<byte[], byte[]> aFuzzyKeysData : fuzzyKeysData) {
+      if (aFuzzyKeysData.getFirst().length != aFuzzyKeysData.getSecond().length) {
         Pair<String, String> readable =
-            new Pair<String, String>(Bytes.toStringBinary(p.getFirst()), Bytes.toStringBinary(p
-                .getSecond()));
+          new Pair<>(Bytes.toStringBinary(aFuzzyKeysData.getFirst()), Bytes.toStringBinary(aFuzzyKeysData.getSecond()));
         throw new IllegalArgumentException("Fuzzy pair lengths do not match: " + readable);
       }
+
+      Pair<byte[], byte[]> p = new Pair<>();
+      // create a copy of pair bytes so that they are not modified by the filter.
+      p.setFirst(Arrays.copyOf(aFuzzyKeysData.getFirst(), aFuzzyKeysData.getFirst().length));
+      p.setSecond(Arrays.copyOf(aFuzzyKeysData.getSecond(), aFuzzyKeysData.getSecond().length));
+
       // update mask ( 0 -> -1 (0xff), 1 -> 2)
       p.setSecond(preprocessMask(p.getSecond()));
       preprocessSearchKey(p);
+
+      fuzzyKeyDataCopy.add(p);
     }
-    this.fuzzyKeysData = fuzzyKeysData;
+    this.fuzzyKeysData = fuzzyKeyDataCopy;
     this.tracker = new RowTracker();
   }
 
