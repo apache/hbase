@@ -2855,9 +2855,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               // Heartbeat messages occur when the time limit has been reached.
               builder.setHeartbeatMessage(timeLimitReached);
               if (timeLimitReached && rsh.needCursor) {
-                Cell readingCell = scannerContext.getPeekedCellInHeartbeat();
-                if (readingCell != null) {
-                  builder.setCursor(ProtobufUtil.toCursor(readingCell));
+                Cell cursorCell = scannerContext.getLastPeekedCell();
+                if (cursorCell != null) {
+                  builder.setCursor(ProtobufUtil.toCursor(cursorCell));
                 }
               }
             }
