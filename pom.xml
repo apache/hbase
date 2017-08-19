@@ -1376,6 +1376,7 @@
     <hadoop.version>${hadoop-two.version}</hadoop.version>
     <compat.module>hbase-hadoop2-compat</compat.module>
     <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
+    <audience-annotations.version>0.5.0</audience-annotations.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <avro.version>1.7.7</avro.version>
     <commons-cli.version>1.4</commons-cli.version>
@@ -1525,11 +1526,6 @@
           javax.servlet:jsp-api in favour of org.mortbay.jetty:jsp-api-2.1
         -->
       <!-- Intra-module dependencies -->
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-annotations</artifactId>
-        <version>${project.version}</version>
-      </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-annotations</artifactId>
@@ -2065,6 +2061,11 @@
         </exclusions>
       </dependency>
       <dependency>
+        <groupId>org.apache.yetus</groupId>
+        <artifactId>audience-annotations</artifactId>
+        <version>${audience-annotations.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-miscellaneous</artifactId>
         <version>${hbase-thirdparty.version}</version>
@@ -2087,6 +2088,10 @@
       <groupId>com.github.stephenc.findbugs</groupId>
       <artifactId>findbugs-annotations</artifactId>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.yetus</groupId>
+      <artifactId>audience-annotations</artifactId>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
@@ -3301,12 +3306,12 @@
             </reports>
             <configuration>
               <doclet>
-                org.apache.hadoop.hbase.classification.tools.IncludePublicAnnotationsStandardDoclet
+                org.apache.yetus.audience.tools.IncludePublicAnnotationsStandardDoclet
               </doclet>
               <docletArtifact>
-                <groupId>org.apache.hbase</groupId>
-                <artifactId>hbase-annotations</artifactId>
-                <version>${project.version}</version>
+                <groupId>org.apache.yetus</groupId>
+                <artifactId>audience-annotations</artifactId>
+                <version>${audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
               <destDir>apidocs</destDir>
@@ -3317,10 +3322,6 @@
               </excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
-              <dependencySourceIncludes>
-                <!-- include ONLY dependencies I control -->
-                <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
-              </dependencySourceIncludes>
               <sourceFilesExclude>**/generated/*</sourceFilesExclude>
               <show>protected</show> <!-- (shows only public and protected classes and members) -->
               <quiet>true</quiet>
@@ -3358,12 +3359,12 @@
             </reports>
             <configuration>
               <doclet>
-                org.apache.hadoop.hbase.classification.tools.IncludePublicAnnotationsStandardDoclet
+                org.apache.yetus.audience.tools.IncludePublicAnnotationsStandardDoclet
               </doclet>
               <docletArtifact>
-                <groupId>org.apache.hbase</groupId>
-                <artifactId>hbase-annotations</artifactId>
-                <version>${project.version}</version>
+                <groupId>org.apache.yetus</groupId>
+                <artifactId>audience-annotations</artifactId>
+                <version>${audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
               <destDir>testapidocs</destDir>
@@ -3374,10 +3375,6 @@
               </excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
-              <dependencySourceIncludes>
-                <!-- include ONLY dependencies I control -->
-                <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
-              </dependencySourceIncludes>
               <sourceFilesExclude>**/generated/*</sourceFilesExclude>
               <show>protected</show> <!-- (shows only public and protected classes and members) -->
               <quiet>true</quiet>

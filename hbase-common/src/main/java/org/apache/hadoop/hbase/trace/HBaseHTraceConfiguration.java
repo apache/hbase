@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.trace;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.htrace.HTraceConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

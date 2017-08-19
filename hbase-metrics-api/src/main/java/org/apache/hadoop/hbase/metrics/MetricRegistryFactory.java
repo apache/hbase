@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.hbase.metrics;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A Factory for creating MetricRegistries. This is the main plugin point for metrics implementation

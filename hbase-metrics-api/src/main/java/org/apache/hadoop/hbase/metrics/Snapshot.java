@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.hbase.metrics;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A statictical sample of histogram values.

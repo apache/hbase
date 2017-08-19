@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.util;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An hash key for ROWCOL bloom. This assumes the cells to be serialized in the Keyvalue

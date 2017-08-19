@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class is a server side extension to the {@link Cell} interface. It is used when the

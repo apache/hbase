@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.Map;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public interface Attributes {

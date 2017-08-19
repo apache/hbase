@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.backup;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Backup merge operation job interface. Concrete implementation is provided by backup provider, see

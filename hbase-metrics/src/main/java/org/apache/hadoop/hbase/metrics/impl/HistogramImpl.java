@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.hbase.metrics.impl;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Histogram;
 import org.apache.hadoop.hbase.metrics.Snapshot;
 

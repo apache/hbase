@@ -30,7 +30,7 @@ import java.io.IOException;
 
 import javax.security.sasl.SaslClient;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * wrap sasl messages.

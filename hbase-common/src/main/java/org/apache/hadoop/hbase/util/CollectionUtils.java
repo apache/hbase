@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility methods for dealing with Collections, including treating null collections as empty.
