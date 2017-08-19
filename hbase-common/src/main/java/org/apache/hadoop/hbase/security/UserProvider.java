@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.BaseConfigurable;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;

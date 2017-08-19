@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.favored;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.net.HostAndPort;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Addressing;
 

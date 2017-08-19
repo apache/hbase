@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Base class for all asynchronous admin builders.

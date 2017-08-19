@@ -22,7 +22,7 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 

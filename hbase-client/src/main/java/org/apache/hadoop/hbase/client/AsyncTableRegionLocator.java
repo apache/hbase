@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The asynchronous version of RegionLocator.

@@ -23,7 +23,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.Cell;

@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.Optional;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 

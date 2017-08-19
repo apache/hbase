@@ -34,8 +34,8 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience.Private;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience.Private;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.Dictionary;

@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown if a coprocessor rules we should bypass an operation

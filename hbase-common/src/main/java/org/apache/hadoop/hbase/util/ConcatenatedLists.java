@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A collection class that contains multiple sub-lists, which allows us to not copy lists.

@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
  /**
    * This implementation is not smart and just treats nonce group and nonce as random bits.

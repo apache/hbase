@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.DefaultThreadFactory;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**

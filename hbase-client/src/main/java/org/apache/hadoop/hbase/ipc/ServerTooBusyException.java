@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Throw this in RPC call if there are too many pending requests for one region server

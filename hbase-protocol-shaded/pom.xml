@@ -160,7 +160,7 @@
                   <exclude>junit:junit</exclude>
                   <exclude>log4j:log4j</exclude>
                   <exclude>commons-logging:commons-logging</exclude>
-                  <exclude>org.apache.hbase:hbase-annotations</exclude>
+                  <exclude>org.apache.yetus:audience-annotations</exclude>
                   <exclude>com.github.stephenc.fingbugs:*</exclude>
                   <exclude></exclude>
                 </excludes>

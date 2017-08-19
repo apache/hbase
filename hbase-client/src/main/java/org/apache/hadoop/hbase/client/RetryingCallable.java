@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A Callable&lt;T&gt; that will be retried. If {@link #call(int)} invocation throws exceptions,

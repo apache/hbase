@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client.metrics;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 
 /**

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;

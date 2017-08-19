@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.SortedSet;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**

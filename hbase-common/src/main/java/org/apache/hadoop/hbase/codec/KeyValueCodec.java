@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.NoTagsKeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 

@@ -114,7 +114,6 @@
     </pluginManagement>
   </build>
   <dependencies>
-    <!-- Intra-project dependencies -->
     <!-- General dependencies -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
