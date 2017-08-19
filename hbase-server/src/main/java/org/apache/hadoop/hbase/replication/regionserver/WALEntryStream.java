@@ -233,9 +233,11 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
       if (trailerSize < 0) {
         if (currentPosition < stat.getLen()) {
           final long skippedBytes = stat.getLen() - currentPosition;
-          LOG.info("Reached the end of WAL file '" + currentPath
-              + "'. It was not closed cleanly, so we did not parse " + skippedBytes
-              + " bytes of data.");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Reached the end of WAL file '" + currentPath
+                + "'. It was not closed cleanly, so we did not parse " + skippedBytes
+                + " bytes of data. This is normally ok.");
+          }
           metrics.incrUncleanlyClosedWALs();
           metrics.incrBytesSkippedInUncleanlyClosedWALs(skippedBytes);
         }
