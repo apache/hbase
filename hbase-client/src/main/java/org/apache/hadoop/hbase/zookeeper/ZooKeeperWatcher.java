@@ -26,9 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,8 +38,8 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.Superusers;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -81,7 +78,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private final RecoverableZooKeeper recoverableZooKeeper;
 
   // abortable in case of zk failure
-  protected final Abortable abortable;
+  protected Abortable abortable;
   // Used if abortable is null
   private boolean aborted = false;
 
@@ -92,14 +89,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   // Used by ZKUtil:waitForZKConnectionIfAuthenticating to wait for SASL
   // negotiation to complete
   public CountDownLatch saslLatch = new CountDownLatch(1);
-
-  // Connection timeout on disconnect event
-  private long connWaitTimeOut;
-  private AtomicBoolean connected = new AtomicBoolean(false);
-  private boolean forceAbortOnZKDisconnect;
-
-  // Execute service for zookeeper disconnect event watcher
-  private ExecutorService zkEventWatcherExecService = null;
 
   // node names
 
@@ -175,26 +164,9 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
    * @throws IOException
    * @throws ZooKeeperConnectionException
    */
-  public ZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable,
-      boolean canCreateBaseZNode) throws IOException, ZooKeeperConnectionException {
-    this(conf, identifier, abortable, canCreateBaseZNode, false);
-  }
-
-  /**
-   * Instantiate a ZooKeeper connection and watcher.
-   * @param conf Configuration
-   * @param identifier string that is passed to RecoverableZookeeper to be used as identifier for
-   *          this instance. Use null for default.
-   * @param abortable Can be null if there is on error there is no host to abort: e.g. client
-   *          context.
-   * @param canCreateBaseZNode whether create base node.
-   * @param forceAbortOnZKDisconnect abort the watcher if true.
-   * @throws IOException when any IO exception
-   * @throws ZooKeeperConnectionException when any zookeeper connection exception
-   */
-  public ZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable,
-      boolean canCreateBaseZNode, boolean forceAbortOnZKDisconnect)
-          throws IOException, ZooKeeperConnectionException {
+  public ZooKeeperWatcher(Configuration conf, String identifier,
+      Abortable abortable, boolean canCreateBaseZNode)
+  throws IOException, ZooKeeperConnectionException {
     this.conf = conf;
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
     this.prefix = identifier;
@@ -203,9 +175,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     this.identifier = identifier + "0x0";
     this.abortable = abortable;
     setNodeNames(conf);
-    // On Disconnected event a thread will wait for sometime (2/3 of zookeeper.session.timeout),
-    // it will abort the process if no SyncConnected event reported by the time.
-    connWaitTimeOut = this.conf.getLong("zookeeper.session.timeout", 90000) * 2 / 3;
     PendingWatcher pendingWatcher = new PendingWatcher();
     this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, pendingWatcher, identifier);
     pendingWatcher.prepare(this);
@@ -671,10 +640,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         break;
       }
     }
-    this.forceAbortOnZKDisconnect = forceAbortOnZKDisconnect;
-    if (this.forceAbortOnZKDisconnect) {
-      this.zkEventWatcherExecService = Executors.newSingleThreadExecutor();
-    }
   }
 
   // Connection management
@@ -696,19 +661,11 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
           Long.toHexString(this.recoverableZooKeeper.getSessionId());
         // Update our identifier.  Otherwise ignore.
         LOG.debug(this.identifier + " connected");
-        connected.set(true);
         break;
 
       // Abort the server if Disconnected or Expired
       case Disconnected:
-        LOG.debug(prefix("Received Disconnected from ZooKeeper."));
-        if (forceAbortOnZKDisconnect) {
-          connected.set(false);
-          ZKDisconnectEventWatcher task = new ZKDisconnectEventWatcher();
-          zkEventWatcherExecService.execute(task);
-        } else {
-          LOG.debug(prefix("Received Disconnected from ZooKeeper, ignoring."));
-        }
+        LOG.debug(prefix("Received Disconnected from ZooKeeper, ignoring"));
         break;
 
       case Expired:
@@ -728,38 +685,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
       default:
         throw new IllegalStateException("Received event is not valid: " + event.getState());
-    }
-  }
-
-  /*
-   * Task to watch zookeper disconnect event.
-   */
-  class ZKDisconnectEventWatcher implements Runnable {
-    @Override
-    public void run() {
-      if (connected.get()) {
-        return;
-      }
-
-      long startTime = EnvironmentEdgeManager.currentTime();
-      while (EnvironmentEdgeManager.currentTime() - startTime < connWaitTimeOut) {
-        if (connected.get()) {
-          LOG.debug(prefix("Client got reconnected to zookeeper."));
-          return;
-        }
-        try {
-          Thread.sleep(100);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          break;
-        }
-      }
-
-      if (!connected.get() && abortable != null) {
-        String msg = prefix(
-          "Couldn't connect to ZooKeeper after waiting " + connWaitTimeOut + " ms, aborting");
-        abortable.abort(msg, new KeeperException.ConnectionLossException());
-      }
     }
   }
 
@@ -821,10 +746,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public void close() {
     try {
       recoverableZooKeeper.close();
-      if (zkEventWatcherExecService != null) {
-        zkEventWatcherExecService.shutdown();
-        zkEventWatcherExecService = null;
-      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
