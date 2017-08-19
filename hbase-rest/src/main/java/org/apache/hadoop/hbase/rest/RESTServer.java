@@ -235,7 +235,9 @@ public class RESTServer implements Constants {
 
     parseCommandLine(args, servlet);
 
-    // set up the Jersey servlet container for Jetty
+    // Set up the Jersey servlet container for Jetty
+    // The Jackson1Feature is a signal to Jersey that it should use jackson doing json.
+    // See here: https://stackoverflow.com/questions/39458230/how-register-jacksonfeature-on-clientconfig
     ResourceConfig application = new ResourceConfig().
         packages("org.apache.hadoop.hbase.rest").register(Jackson1Feature.class);
     ServletHolder sh = new ServletHolder(new ServletContainer(application));

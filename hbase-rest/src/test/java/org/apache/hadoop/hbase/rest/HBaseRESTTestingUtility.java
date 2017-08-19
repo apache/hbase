@@ -34,6 +34,7 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
+import org.glassfish.jersey.jackson1.Jackson1Feature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 
@@ -61,7 +62,8 @@ public class HBaseRESTTestingUtility {
     RESTServlet.getInstance(conf, UserProvider.instantiate(conf));
 
     // set up the Jersey servlet container for Jetty
-    ResourceConfig app = new ResourceConfig();
+    ResourceConfig app = new ResourceConfig().
+        packages("org.apache.hadoop.hbase.rest").register(Jackson1Feature.class);
     ServletHolder sh = new ServletHolder(new ServletContainer(app));
 
     // set up Jetty and run the embedded server
