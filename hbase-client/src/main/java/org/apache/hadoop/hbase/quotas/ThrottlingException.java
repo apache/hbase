@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Describe the throttling result.

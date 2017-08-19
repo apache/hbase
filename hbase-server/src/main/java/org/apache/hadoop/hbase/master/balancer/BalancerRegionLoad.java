@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Wrapper class for the few fields required by the {@link StochasticLoadBalancer}

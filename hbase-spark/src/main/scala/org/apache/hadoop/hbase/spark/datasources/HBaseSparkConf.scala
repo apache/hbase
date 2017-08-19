@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hbase.spark.datasources
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is the hbase configuration. User can either set them in SparkConf, which

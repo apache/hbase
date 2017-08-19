@@ -23,7 +23,7 @@ import java.util.Iterator;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A generic, immutable class for pairs of objects both of type <code>T</code>.

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The replication listener interface can be implemented if a class needs to subscribe to events

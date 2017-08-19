@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Simple delegating controller for use with the {@link RpcControllerFactory} to help override

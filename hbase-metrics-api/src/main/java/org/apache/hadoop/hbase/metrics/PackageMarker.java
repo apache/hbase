@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.metrics;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is a dummy annotation that forces javac to produce output for

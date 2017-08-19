@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown when server finds fatal issue w/ connection setup: e.g. bad rpc version

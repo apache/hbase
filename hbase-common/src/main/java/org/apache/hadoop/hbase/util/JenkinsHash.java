@@ -24,8 +24,8 @@ import static java.lang.Integer.rotateLeft;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Produces 32-bit hash for hash table lookup.

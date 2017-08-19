@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOutboundHandlerAdapter;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPromise;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Encoder for {@link RpcResponse}.

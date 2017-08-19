@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.exceptions;
 
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown when a read request issued against a region which is in recovering state.

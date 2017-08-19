@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.io.crypto.aes;
 
 import org.apache.commons.crypto.cipher.CryptoCipher;
 import org.apache.commons.crypto.utils.Utils;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;

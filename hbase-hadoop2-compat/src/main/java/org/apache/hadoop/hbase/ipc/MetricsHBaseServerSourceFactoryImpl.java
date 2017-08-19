@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.util.HashMap;
 import java.util.Locale;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourceFactory {

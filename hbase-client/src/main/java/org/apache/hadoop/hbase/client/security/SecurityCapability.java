@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.client.security;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Available security capabilities

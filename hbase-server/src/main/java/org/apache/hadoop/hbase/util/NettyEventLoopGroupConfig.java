@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.DefaultThreadFact
 import java.util.concurrent.ThreadFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Event loop group related config.

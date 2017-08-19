@@ -26,7 +26,7 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.nio.charset.Charset;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 

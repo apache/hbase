@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Strings;
 
 /**

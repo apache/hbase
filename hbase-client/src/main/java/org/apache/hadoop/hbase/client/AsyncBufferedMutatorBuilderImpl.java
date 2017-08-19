@@ -21,7 +21,7 @@ import com.google.common.base.Preconditions;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The implementation of {@link AsyncBufferedMutatorBuilder}.

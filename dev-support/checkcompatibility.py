@@ -28,8 +28,8 @@
 #   $ ./checkcompatibility.py ${SOURCE_GIT_REVISION} ${GIT_BRANCH_OR_TAG}
 # or with some options:
 #   $ ./dev-support/checkcompatibility.py \
-#      --annotation org.apache.hadoop.hbase.classification.InterfaceAudience.Public \
-#      --annotation org.apache.hadoop.hbase.classification.InterfaceAudience.LimitedPrivate \
+#      --annotation org.apache.yetus.audience.InterfaceAudience.Public \
+#      --annotation org.apache.yetus.audience.InterfaceAudience.LimitedPrivate \
 #      --include-file "hbase-*" \
 #      --known_problems_path ~/known_problems.json \
 #      rel/1.0.0 branch-1.2

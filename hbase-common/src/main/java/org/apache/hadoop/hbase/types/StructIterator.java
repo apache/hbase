@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.types;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 
 /**

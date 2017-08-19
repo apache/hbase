@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A flush policy determines the stores that need to be flushed when flushing a region.

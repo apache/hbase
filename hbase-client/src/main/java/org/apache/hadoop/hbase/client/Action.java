@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A Get, Put, Increment, Append, or Delete associated with it's region.  Used internally by

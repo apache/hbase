@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.replication;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**

@@ -31,7 +31,7 @@ import java.nio.charset.Charset;
 
 import org.apache.commons.logging.Log;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 

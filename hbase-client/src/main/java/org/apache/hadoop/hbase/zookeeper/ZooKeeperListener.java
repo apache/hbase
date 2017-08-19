@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Base class for internal listeners of ZooKeeper events.

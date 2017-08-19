@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Like Hadoops' ByteBufferPool only you do not specify desired size when getting a ByteBuffer. This

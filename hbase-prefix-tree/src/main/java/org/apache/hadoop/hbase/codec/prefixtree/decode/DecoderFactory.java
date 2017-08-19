@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.codec.prefixtree.decode;
 
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.apache.hadoop.hbase.nio.ByteBuff;

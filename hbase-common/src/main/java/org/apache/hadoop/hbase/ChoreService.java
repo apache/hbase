@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore.ChoreServicer;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ChoreService is a service that can be used to schedule instances of {@link ScheduledChore} to run

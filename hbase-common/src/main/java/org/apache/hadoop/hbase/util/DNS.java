@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.util;
 import java.lang.reflect.Method;
 import java.net.UnknownHostException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Wrapper around Hadoop's DNS class to hide reflection.
