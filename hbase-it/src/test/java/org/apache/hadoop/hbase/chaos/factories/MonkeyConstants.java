@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.chaos.factories;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 public interface MonkeyConstants {
 
   String PERIODIC_ACTION1_PERIOD = "sdm.action1.period";
@@ -41,6 +45,13 @@ public interface MonkeyConstants {
   String UNBALANCE_WAIT_AFTER_BALANCE_MS = "unbalance.action.wait.after.period";
   String UNBALANCE_KILL_META_RS = "unbalance.action.kill.meta.rs";
   String DECREASE_HFILE_SIZE_SLEEP_TIME = "decrease.hfile.size.sleep.time";
+
+  /**
+   * A Set of prefixes which encompasses all of the configuration properties for the ChaosMonky.
+   */
+  Set<String> MONKEY_CONFIGURATION_KEY_PREFIXES = new HashSet<>(
+      Arrays.asList("sdm.", "move.", "restart.", "batch.", "rolling.", "compact.",
+          "unbalance.", "decrease."));
 
   long DEFAULT_PERIODIC_ACTION1_PERIOD = 60 * 1000;
   long DEFAULT_PERIODIC_ACTION2_PERIOD = 90 * 1000;
