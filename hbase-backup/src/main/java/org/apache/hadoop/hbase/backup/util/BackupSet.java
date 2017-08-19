@@ -21,7 +21,7 @@ import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Backup set is a named group of HBase tables, which are managed together by Backup/Restore

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The POJO equivalent of ReplicationProtos.ReplicationPeerDescription

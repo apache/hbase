@@ -125,10 +125,23 @@ for warning about incompatible changes). All effort will be made to provide a de
 [[hbase.client.api.surface]]
 ==== HBase API Surface
 
-HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses a version of link:https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html[Hadoop's Interface classification]. HBase's Interface classification classes can be found link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/classification/package-summary.html[here].
+HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses link:http://yetus.apache.org/documentation/0.5.0/interface-classification/[Apache Yetus Audience Annotations] to guide downstream expectations for stability.
 
-* InterfaceAudience: captures the intended audience, possible values are Public (for end users and external projects), LimitedPrivate (for other Projects, Coprocessors or other plugin points), and Private (for internal use).
-* InterfaceStability: describes what types of interface changes are permitted. Possible values are Stable, Evolving, Unstable, and Deprecated. Notice that this annotation is only valid for classes which are marked as IA.LimitedPrivate. The stability of IA.Public classes is only related to the upgrade type(major, minor or patch). And for IA.Private classes, there is no guarantee on the stability between releases. Refer to the Compatibility Matrix above for more details.
+* InterfaceAudience (link:http://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceAudience.html[javadocs]): captures the intended audience, possible values include:
+  - Public: safe for end users and external projects
+  - LimitedPrivate: used for internals we expect to be pluggable, such as coprocessors
+  - Private: strictly for use within HBase itself
+Classes which are defined as `IA.Private` may be used as parameters or return values for interfaces which are declared `IA.LimitedPrivate`. Treat the `IA.Private` object as opaque; do not try to access its methods or fields directly.
+* InterfaceStability (link:http://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceStability.html[javadocs]): describes what types of interface changes are permitted. Possible values include:
+  - Stable: the interface is fixed and is not expected to change
+  - Evolving: the interface may change in future minor verisons
+  - Unstable: the interface may change at any time
+
+Please keep in mind the following interactions between the `InterfaceAudience` and `InterfaceStability` annotations within the HBase project:
+
+* `IA.Public` classes are inherently stable and adhere to our stability guarantees relating to the type of upgrade (major, minor, or patch).
+* `IA.LimitedPrivate` classes should always be annotated with one of the given `InterfaceStability` values. If they are not, you should presume they are `IS.Unstable`.
+* `IA.Private` classes should be considered implicitly unstable, with no guarantee of stability between releases.
 
 [[hbase.client.api]]
 HBase Client API::

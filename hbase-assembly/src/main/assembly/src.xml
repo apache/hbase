@@ -34,6 +34,7 @@
         <include>org.apache.hbase:hbase-annotations</include>
         <include>org.apache.hbase:hbase-archetypes</include>
         <include>org.apache.hbase:hbase-assembly</include>
+        <include>org.apache.hbase:hbase-build-configuration</include>
         <include>org.apache.hbase:hbase-checkstyle</include>
         <include>org.apache.hbase:hbase-client</include>
         <include>org.apache.hbase:hbase-common</include>

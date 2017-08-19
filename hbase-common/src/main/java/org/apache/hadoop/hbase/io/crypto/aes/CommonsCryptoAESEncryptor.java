@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.crypto.aes;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.commons.crypto.stream.CryptoOutputStream;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 
 import javax.crypto.spec.IvParameterSpec;

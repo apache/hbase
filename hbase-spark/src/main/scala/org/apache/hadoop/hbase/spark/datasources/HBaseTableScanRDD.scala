@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.spark.datasources
 
 import java.util.ArrayList
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.spark._
 import org.apache.hadoop.hbase.spark.hbase._

@@ -50,7 +50,7 @@
 
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A basic mutable {@link ByteRange} implementation.

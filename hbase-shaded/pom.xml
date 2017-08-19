@@ -21,10 +21,10 @@
       -->
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>hbase</artifactId>
+        <artifactId>hbase-build-configuration</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>2.0.0-alpha3-SNAPSHOT</version>
-        <relativePath>..</relativePath>
+        <relativePath>../hbase-build-configuration</relativePath>
     </parent>
     <artifactId>hbase-shaded</artifactId>
     <name>Apache HBase - Shaded</name>
@@ -141,6 +141,7 @@
                                         <exclude>com.google.code.findbugs:*</exclude>
                                         <exclude>com.github.stephenc.findbugs:*</exclude>
                                         <exclude>org.apache.htrace:*</exclude>
+                                        <exclude>org.apache.yetus:*</exclude>
                                         <exclude>log4j:*</exclude>
                                         <exclude>commons-logging:*</exclude>
                                     </excludes>

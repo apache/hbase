@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPromise;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.CoalescingBufferQueue;
 import org.apache.hadoop.hbase.shaded.io.netty.util.ReferenceCountUtil;
 import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.PromiseCombiner;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 
 import java.io.IOException;

@@ -65,7 +65,7 @@ cat >"$outputDirectory/org/apache/hadoop/hbase/Version.java" <<EOF
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class Version {

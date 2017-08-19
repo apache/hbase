@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Exception thrown by HTable methods when an attempt to do something (like

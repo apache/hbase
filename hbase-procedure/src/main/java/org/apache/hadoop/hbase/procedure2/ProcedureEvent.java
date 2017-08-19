@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Basic ProcedureEvent that contains an "object", which can be a description or a reference to the

@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Implementations can be asked for an estimate of their size in bytes.

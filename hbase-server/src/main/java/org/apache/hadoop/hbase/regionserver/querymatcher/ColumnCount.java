@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Simple wrapper for a byte buffer and a counter. Does not copy.

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.HBaseZeroCopyByteString;
@@ -26,11 +27,7 @@ import com.google.protobuf.HBaseZeroCopyByteString;
 /**
  * Hack to workaround HBASE-10304 issue that keeps bubbling up when a mapreduce context.
  */
-// @InterfaceAudience.Private
-// This class has NO InterfaceAudience. It is commented out. We do not want to import
-// InterfaceAudience. This would be only class in this module with the IA import and we do not want
-// to have this module depend annotations module just for one class.
-// NO InterfaceAudience defaults to mean InterfaceAudience.Private!
+@InterfaceAudience.Private
 public class ByteStringer {
   private static final Log LOG = LogFactory.getLog(ByteStringer.class);
 

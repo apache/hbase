@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link java.util.Set} of {@link Cell}s, where an add will overwrite the entry if already
