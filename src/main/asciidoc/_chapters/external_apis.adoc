@@ -288,18 +288,17 @@ your filter to the file. For example, to return only rows for
 which keys start with <codeph>u123</codeph> and use a batch size
 of 100, the filter file would look like this:
 
-+++
-<pre>
-&lt;Scanner batch="100"&gt;
-  &lt;filter&gt;
+[source,xml]
+----
+<Scanner batch="100">
+  <filter>
     {
       "type": "PrefixFilter",
       "value": "u123"
     }
-  &lt;/filter&gt;
-&lt;/Scanner&gt;
-</pre>
-+++
+  </filter>
+</Scanner>
+----
 
 Pass the file to the `-d` argument of the `curl` request.
 |curl -vi -X PUT \

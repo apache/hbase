@@ -1112,7 +1112,7 @@ If you don't have time to build it both ways and compare, my advice would be to 
 [[schema.ops]]
 == Operational and Performance Configuration Options
 
-====  Tune HBase Server RPC Handling
+===  Tune HBase Server RPC Handling
 
 * Set `hbase.regionserver.handler.count` (in `hbase-site.xml`) to cores x spindles for concurrency.
 * Optionally, split the call queues into separate read and write queues for differentiated service. The parameter `hbase.ipc.server.callqueue.handler.factor` specifies the number of call queues:
@@ -1128,7 +1128,7 @@ If you don't have time to build it both ways and compare, my advice would be to 
 - `< 0.5` for more short-read
 - `> 0.5` for more long-read
 
-====  Disable Nagle for RPC
+===  Disable Nagle for RPC
 
 Disable Nagle’s algorithm. Delayed ACKs can add up to ~200ms to RPC round trip time. Set the following parameters:
 
@@ -1139,7 +1139,7 @@ Disable Nagle’s algorithm. Delayed ACKs can add up to ~200ms to RPC round trip
 - `hbase.ipc.client.tcpnodelay = true`
 - `hbase.ipc.server.tcpnodelay = true`
 
-====  Limit Server Failure Impact
+===  Limit Server Failure Impact
 
 Detect regionserver failure as fast as reasonable. Set the following parameters:
 
@@ -1148,7 +1148,7 @@ Detect regionserver failure as fast as reasonable. Set the following parameters:
 - `dfs.namenode.avoid.read.stale.datanode = true`
 - `dfs.namenode.avoid.write.stale.datanode = true`
 
-====  Optimize on the Server Side for Low Latency
+===  Optimize on the Server Side for Low Latency
 
 * Skip the network for local blocks. In `hbase-site.xml`, set the following parameters:
 - `dfs.client.read.shortcircuit = true`
@@ -1186,7 +1186,7 @@ Detect regionserver failure as fast as reasonable. Set the following parameters:
 
 ==  Special Cases
 
-====  For applications where failing quickly is better than waiting
+===  For applications where failing quickly is better than waiting
 
 *  In `hbase-site.xml` on the client side, set the following parameters:
 - Set `hbase.client.pause = 1000`
@@ -1195,7 +1195,7 @@ Detect regionserver failure as fast as reasonable. Set the following parameters:
 - Set the RecoverableZookeeper retry count: `zookeeper.recovery.retry = 1` (no retry)
 * In `hbase-site.xml` on the server side, set the Zookeeper session timeout for detecting server failures: `zookeeper.session.timeout` <= 30 seconds (20-30 is good).
 
-====  For applications that can tolerate slightly out of date information
+===  For applications that can tolerate slightly out of date information
 
 **HBase timeline consistency (HBASE-10070) **
 With read replicas enabled, read-only copies of regions (replicas) are distributed over the cluster. One RegionServer services the default or primary replica, which is the only replica that can service writes. Other RegionServers serve the secondary replicas, follow the primary RegionServer, and only see committed updates. The secondary replicas are read-only, but can serve reads immediately while the primary is failing over, cutting read availability blips from seconds to milliseconds. Phoenix supports timeline consistency as of 4.4.0
