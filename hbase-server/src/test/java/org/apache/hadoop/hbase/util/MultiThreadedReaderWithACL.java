@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -121,7 +122,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
         UserGroupInformation realUserUgi;
         if(!users.containsKey(userNames[mod])) {
           if(User.isHBaseSecurityEnabled(conf)) {
-            realUserUgi = LoadTestTool.loginAndReturnUGI(conf, userNames[mod]);
+            realUserUgi = HBaseKerberosUtils.loginAndReturnUGI(conf, userNames[mod]);
           } else {
             realUserUgi = UserGroupInformation.createRemoteUser(userNames[mod]);
           }

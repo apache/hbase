@@ -2478,7 +2478,7 @@ void rename(Admin admin, String oldTableName, TableName newTableName) {
 RegionServer Grouping (A.K.A `rsgroup`) is an advanced feature for
 partitioning regionservers into distinctive groups for strict isolation. It
 should only be used by users who are sophisticated enough to understand the
-full implications and have a sufficient background in managing HBase clusters. 
+full implications and have a sufficient background in managing HBase clusters.
 It was developed by Yahoo! and they run it at scale on their large grid cluster.
 See link:http://www.slideshare.net/HBaseCon/keynote-apache-hbase-at-yahoo-scale[HBase at Yahoo! Scale].
 
@@ -2491,20 +2491,20 @@ rsgroup at a time. By default, all tables and regionservers belong to the
 APIs. A custom balancer implementation tracks assignments per rsgroup and makes
 sure to move regions to the relevant regionservers in that rsgroup. The rsgroup
 information is stored in a regular HBase table, and a zookeeper-based read-only
-cache is used at cluster bootstrap time. 
+cache is used at cluster bootstrap time.
 
-To enable, add the following to your hbase-site.xml and restart your Master: 
+To enable, add the following to your hbase-site.xml and restart your Master:
 
 [source,xml]
 ----
- <property> 
-   <name>hbase.coprocessor.master.classes</name> 
-   <value>org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint</value> 
- </property> 
- <property> 
-   <name>hbase.master.loadbalancer.class</name> 
-   <value>org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer</value> 
- </property> 
+ <property>
+   <name>hbase.coprocessor.master.classes</name>
+   <value>org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint</value>
+ </property>
+ <property>
+   <name>hbase.master.loadbalancer.class</name>
+   <value>org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer</value>
+ </property>
 ----
 
 Then use the shell _rsgroup_ commands to create and manipulate RegionServer
@@ -2514,7 +2514,7 @@ rsgroup commands available in the hbase shell type:
 [source, bash]
 ----
  hbase(main):008:0> help ‘rsgroup’
- Took 0.5610 seconds 
+ Took 0.5610 seconds
 ----
 
 High level, you create a rsgroup that is other than the `default` group using
@@ -2531,8 +2531,8 @@ Here is example using a few of the rsgroup  commands. To add a group, do as foll
 
 [source, bash]
 ----
- hbase(main):008:0> add_rsgroup 'my_group' 
- Took 0.5610 seconds 
+ hbase(main):008:0> add_rsgroup 'my_group'
+ Took 0.5610 seconds
 ----
 
 
@@ -2556,11 +2556,11 @@ ERROR: org.apache.hadoop.hbase.exceptions.UnknownProtocolException: No registere
 ====
 
 Add a server (specified by hostname + port) to the just-made group using the
-_move_servers_rsgroup_ command as follows: 
+_move_servers_rsgroup_ command as follows:
 
 [source, bash]
 ----
- hbase(main):010:0> move_servers_rsgroup 'my_group',['k.att.net:51129'] 
+ hbase(main):010:0> move_servers_rsgroup 'my_group',['k.att.net:51129']
 ----
 
 .Hostname and Port vs ServerName

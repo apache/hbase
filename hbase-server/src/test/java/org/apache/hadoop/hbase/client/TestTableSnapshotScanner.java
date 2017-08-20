@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,8 +30,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.mapreduce.TestTableSnapshotInputFormat;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -45,7 +46,7 @@ import org.junit.experimental.categories.Category;
 @Category({LargeTests.class, ClientTests.class})
 public class TestTableSnapshotScanner {
 
-  private static final Log LOG = LogFactory.getLog(TestTableSnapshotInputFormat.class);
+  private static final Log LOG = LogFactory.getLog(TestTableSnapshotScanner.class);
   private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final int NUM_REGION_SERVERS = 2;
   private static final byte[][] FAMILIES = {Bytes.toBytes("f1"), Bytes.toBytes("f2")};
@@ -54,6 +55,17 @@ public class TestTableSnapshotScanner {
 
   private FileSystem fs;
   private Path rootDir;
+
+  public static void blockUntilSplitFinished(HBaseTestingUtility util, TableName tableName,
+      int expectedRegionSize) throws Exception {
+    for (int i = 0; i < 100; i++) {
+      List<HRegionInfo> hRegionInfoList = util.getAdmin().getTableRegions(tableName);
+      if (hRegionInfoList.size() >= expectedRegionSize) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+  }
 
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
@@ -129,7 +141,7 @@ public class TestTableSnapshotScanner {
 
       // split to 2 regions
       admin.split(tableName, Bytes.toBytes("eee"));
-      TestTableSnapshotInputFormat.blockUntilSplitFinished(UTIL, tableName, 2);
+      blockUntilSplitFinished(UTIL, tableName, 2);
 
       Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
       FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());

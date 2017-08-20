@@ -220,8 +220,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   /**
    *  This class works as the InputSplit of Performance Evaluation
-   *  MapReduce InputFormat, and the Record Value of RecordReader. 
-   *  Each map task will only read one record from a PeInputSplit, 
+   *  MapReduce InputFormat, and the Record Value of RecordReader.
+   *  Each map task will only read one record from a PeInputSplit,
    *  the record value is the PeInputSplit itself.
    */
   public static class PeInputSplit extends InputSplit implements Writable {
@@ -950,7 +950,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   static abstract class TableTest extends Test {
     protected Table table;
-    
+
     public TableTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
     }

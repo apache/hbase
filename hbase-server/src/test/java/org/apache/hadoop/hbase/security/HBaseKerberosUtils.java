@@ -17,15 +17,22 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Strings;
+import org.apache.hadoop.security.UserGroupInformation;
+
+import java.io.IOException;
+import java.net.InetAddress;
 
 @InterfaceAudience.Private
 public class HBaseKerberosUtils {
+  private static final Log LOG = LogFactory.getLog(HBaseKerberosUtils.class);
+
   public static final String KRB_PRINCIPAL = "hbase.regionserver.kerberos.principal";
   public static final String MASTER_KRB_PRINCIPAL = "hbase.master.kerberos.principal";
   public static final String KRB_KEYTAB_FILE = "hbase.regionserver.keytab.file";
@@ -80,5 +87,22 @@ public class HBaseKerberosUtils {
     conf.set(KRB_KEYTAB_FILE, System.getProperty(KRB_KEYTAB_FILE));
     conf.set(KRB_PRINCIPAL, System.getProperty(KRB_PRINCIPAL));
     conf.set(MASTER_KRB_PRINCIPAL, System.getProperty(KRB_PRINCIPAL));
+  }
+
+  public static UserGroupInformation loginAndReturnUGI(Configuration conf, String username)
+      throws IOException {
+    String hostname = InetAddress.getLocalHost().getHostName();
+    String keyTabFileConfKey = "hbase." + username + ".keytab.file";
+    String keyTabFileLocation = conf.get(keyTabFileConfKey);
+    String principalConfKey = "hbase." + username + ".kerberos.principal";
+    String principal = org.apache.hadoop.security.SecurityUtil
+        .getServerPrincipal(conf.get(principalConfKey), hostname);
+    if (keyTabFileLocation == null || principal == null) {
+      LOG.warn("Principal or key tab file null for : " + principalConfKey + ", "
+          + keyTabFileConfKey);
+    }
+    UserGroupInformation ugi =
+        UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
+    return ugi;
   }
 }
