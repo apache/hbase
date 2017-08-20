@@ -42,7 +42,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -62,9 +61,11 @@ import org.junit.rules.TestName;
 public class TestHRegionFileSystem {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestHRegionFileSystem.class);
+
+  public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
   private static final byte[][] FAMILIES = {
-    Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-A")),
-    Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B")) };
+    Bytes.add(FAMILY_NAME, Bytes.toBytes("-A")),
+    Bytes.add(FAMILY_NAME, Bytes.toBytes("-B")) };
   private static final TableName TABLE_NAME = TableName.valueOf("TestTable");
 
   @Rule

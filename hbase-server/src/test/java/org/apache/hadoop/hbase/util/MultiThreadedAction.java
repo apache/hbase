@@ -49,7 +49,7 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * Common base class for reader and writer parts of multi-thread HBase load
- * test ({@link LoadTestTool}).
+ * test (See LoadTestTool).
  */
 public abstract class MultiThreadedAction {
   private static final Log LOG = LogFactory.getLog(MultiThreadedAction.class);

@@ -81,7 +81,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
     // start the writers
     LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(
       minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey,
-      LoadTestTool.DEFAULT_COLUMN_FAMILY);
+      HFileTestUtil.DEFAULT_COLUMN_FAMILY);
     MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
     writer.setMultiPut(true);
     writer.start(startKey, endKey, numThreads);
@@ -101,7 +101,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     // create tables if needed
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, TABLE_NAME,
-        LoadTestTool.DEFAULT_COLUMN_FAMILY, Compression.Algorithm.NONE,
+        HFileTestUtil.DEFAULT_COLUMN_FAMILY, Compression.Algorithm.NONE,
         DataBlockEncoding.NONE);
 
     LOG.debug("Loading data....\n\n");
@@ -143,8 +143,8 @@ public class RestartMetaTest extends AbstractHBaseTool {
   @Override
   protected void addOptions() {
     addOptWithArg(OPT_NUM_RS, "Number of Region Servers");
-    addOptWithArg(LoadTestTool.OPT_DATA_BLOCK_ENCODING,
-        LoadTestTool.OPT_DATA_BLOCK_ENCODING_USAGE);
+    addOptWithArg(HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
+        HFileTestUtil.OPT_DATA_BLOCK_ENCODING_USAGE);
   }
 
   @Override

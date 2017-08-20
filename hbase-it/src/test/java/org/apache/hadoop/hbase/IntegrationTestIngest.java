@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
@@ -70,7 +71,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected String[] LOAD_TEST_TOOL_INIT_ARGS = {
       LoadTestTool.OPT_COLUMN_FAMILIES,
       LoadTestTool.OPT_COMPRESSION,
-      LoadTestTool.OPT_DATA_BLOCK_ENCODING,
+      HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
       LoadTestTool.OPT_INMEMORY,
       LoadTestTool.OPT_ENCRYPTION,
       LoadTestTool.OPT_NUM_REGIONS_PER_SERVER,
@@ -138,7 +139,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
     String familiesString = getConf().get(
       String.format("%s.%s", clazz, LoadTestTool.OPT_COLUMN_FAMILIES));
     if (familiesString == null) {
-      for (byte[] family : LoadTestTool.DEFAULT_COLUMN_FAMILIES) {
+      for (byte[] family : HFileTestUtil.DEFAULT_COLUMN_FAMILIES) {
         families.add(Bytes.toString(family));
       }
     } else {

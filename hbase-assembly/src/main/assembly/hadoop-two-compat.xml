@@ -50,6 +50,7 @@
         <include>org.apache.hbase:hbase-thrift</include>
         <include>org.apache.hbase:hbase-external-blockcache</include>
         <include>org.apache.hbase:hbase-backup</include>
+        <include>org.apache.hbase:hbase-mapreduce</include>
       </includes>
       <!-- Binaries for the dependencies also go in the hbase-jars directory -->
       <binaries>

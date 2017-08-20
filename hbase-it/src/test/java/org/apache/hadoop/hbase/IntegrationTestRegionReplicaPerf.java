@@ -72,6 +72,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
   private static final String PRIMARY_TIMEOUT_DEFAULT = "" + 10 * 1000; // 10 ms
   private static final String NUM_RS_KEY = "numRs";
   private static final String NUM_RS_DEFAULT = "" + 3;
+  public static final String FAMILY_NAME = "info";
 
   /** Extract a descriptive statistic from a {@link com.codahale.metrics.Histogram}. */
   private enum Stat {
@@ -236,7 +237,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
   @Override
   protected Set<String> getColumnFamilies() {
-    return Sets.newHashSet(Bytes.toString(PerformanceEvaluation.FAMILY_NAME));
+    return Sets.newHashSet(FAMILY_NAME);
   }
 
   /** Compute the mean of the given {@code stat} from a timing results. */

@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
-import org.apache.hadoop.hbase.mapreduce.TableInputFormatBase;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
@@ -336,7 +335,7 @@ public class TestNamespaceAuditor {
     byte[] columnFamily = Bytes.toBytes("info");
     HTableDescriptor tableDescOne = new HTableDescriptor(tableTwo);
     tableDescOne.addFamily(new HColumnDescriptor(columnFamily));
-    ADMIN.createTable(tableDescOne, Bytes.toBytes("1"), Bytes.toBytes("2000"), initialRegions);
+    ADMIN.createTable(tableDescOne, Bytes.toBytes("0"), Bytes.toBytes("9"), initialRegions);
     Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
     try (Table table = connection.getTable(tableTwo)) {
       UTIL.loadNumericRows(table, Bytes.toBytes("info"), 1000, 1999);
@@ -354,7 +353,7 @@ public class TestNamespaceAuditor {
     hris = ADMIN.getTableRegions(tableTwo);
     assertEquals(initialRegions - 1, hris.size());
     Collections.sort(hris);
-    ADMIN.split(tableTwo, Bytes.toBytes("500"));
+    ADMIN.split(tableTwo, Bytes.toBytes("3"));
     // Not much we can do here until we have split return a Future.
     Threads.sleep(5000);
     hris = ADMIN.getTableRegions(tableTwo);
@@ -383,8 +382,7 @@ public class TestNamespaceAuditor {
     Collections.sort(hris);
     // verify that we cannot split
     HRegionInfo hriToSplit2 = hris.get(1);
-    ADMIN.split(tableTwo,
-      TableInputFormatBase.getSplitKey(hriToSplit2.getStartKey(), hriToSplit2.getEndKey(), true));
+    ADMIN.split(tableTwo, Bytes.toBytes("6"));
     Thread.sleep(2000);
     assertEquals(initialRegions, ADMIN.getTableRegions(tableTwo).size());
   }

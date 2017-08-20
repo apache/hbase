@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.LoadTestDataGeneratorWithMOB;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.util.ToolRunner;
@@ -44,7 +45,7 @@ import org.junit.experimental.categories.Category;
 public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   private static final char COLON = ':';
 
-  private byte[] mobColumnFamily = LoadTestTool.DEFAULT_COLUMN_FAMILY;
+  private byte[] mobColumnFamily = HFileTestUtil.DEFAULT_COLUMN_FAMILY;
   public static final String THRESHOLD = "threshold";
   public static final String MIN_MOB_DATA_SIZE = "minMobDataSize";
   public static final String MAX_MOB_DATA_SIZE = "maxMobDataSize";
@@ -56,7 +57,7 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   //similar to LOAD_TEST_TOOL_INIT_ARGS except OPT_IN_MEMORY is removed
   protected String[] LOAD_TEST_TOOL_MOB_INIT_ARGS = {
       LoadTestTool.OPT_COMPRESSION,
-      LoadTestTool.OPT_DATA_BLOCK_ENCODING,
+      HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
       LoadTestTool.OPT_ENCRYPTION,
       LoadTestTool.OPT_NUM_REGIONS_PER_SERVER,
       LoadTestTool.OPT_REGION_REPLICATION,
