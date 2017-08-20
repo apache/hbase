@@ -341,7 +341,7 @@ In particular:
 * It is OK to write cells in a non-increasing version order.
 
 Below we describe how the version dimension in HBase currently works.
-See link:https://issues.apache.org/jira/browse/HBASE-2406[HBASE-2406] for discussion of HBase versions. link:http://outerthought.org/blog/417-ot.html[Bending time in HBase] makes for a good read on the version, or time, dimension in HBase.
+See link:https://issues.apache.org/jira/browse/HBASE-2406[HBASE-2406] for discussion of HBase versions. link:https://www.ngdata.com/bending-time-in-hbase/[Bending time in HBase] makes for a good read on the version, or time, dimension in HBase.
 It has more detail on versioning than is provided here.
 As of this writing, the limitation _Overwriting values at existing timestamps_ mentioned in the article no longer holds in HBase.
 This section is basically a synopsis of this article by Bruno Dumon.
@@ -525,7 +525,7 @@ _...create three cell versions at t1, t2 and t3, with a maximum-versions
     setting of 2. So when getting all versions, only the values at t2 and t3 will be
     returned. But if you delete the version at t2 or t3, the one at t1 will appear again.
     Obviously, once a major compaction has run, such behavior will not be the case
-    anymore..._ (See _Garbage Collection_ in link:http://outerthought.org/blog/417-ot.html[Bending time in HBase].)
+    anymore..._ (See _Garbage Collection_ in link:https://www.ngdata.com/bending-time-in-hbase/[Bending time in HBase].)
 
 [[dm.sort]]
 == Sort Order
