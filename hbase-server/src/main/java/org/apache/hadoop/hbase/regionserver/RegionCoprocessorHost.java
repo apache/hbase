@@ -1259,13 +1259,12 @@ public class RegionCoprocessorHost
    * @param result the result returned by the append
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result postAppend(final Append append, final Result result) throws IOException {
-    return execOperationWithResult(result,
-        coprocessors.isEmpty() ? null : new RegionOperationWithResult<Result>() {
+  public void postAppend(final Append append, final Result result) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        setResult(oserver.postAppend(ctx, append, result));
+        oserver.postAppend(ctx, append, result);
       }
     });
   }
