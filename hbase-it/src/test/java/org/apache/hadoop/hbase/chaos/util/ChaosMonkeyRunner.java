@@ -45,6 +45,8 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
   public static final String TABLE_NAME_OPT = "tableName";
   public static final String FAMILY_NAME_OPT = "familyName";
 
+  private static ChaosMonkeyRunner runner;
+
   protected IntegrationTestingUtility util;
   protected ChaosMonkey monkey;
   protected String monkeyToUse;
@@ -99,8 +101,8 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
     return 0;
   }
 
-  public void stopRunner() {
-    stop = true;
+  public static void stopRunner() {
+    runner.stop = true;
   }
 
   public void setUpCluster() throws Exception {
@@ -176,7 +178,8 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
       System.arraycopy(args, 2, actualArgs, 0, argCount);
     }
     IntegrationTestingUtility.setUseDistributedCluster(conf);
-    int ret = ToolRunner.run(conf, new ChaosMonkeyRunner(), actualArgs);
+    runner = new ChaosMonkeyRunner();
+    int ret = ToolRunner.run(conf, runner, actualArgs);
     System.exit(ret);
   }
 
