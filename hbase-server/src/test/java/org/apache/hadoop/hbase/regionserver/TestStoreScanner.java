@@ -1044,9 +1044,10 @@ public class TestStoreScanner {
         HConstants.DEFAULT_BLOCKSIZE /* block size */,
         200, /* timeToPurgeDeletes */
         CellComparator.COMPARATOR, false);
+      Store store = mock(HStore.class);
+      when(store.getClock()).thenReturn(clock);
       try (StoreScanner scanner =
-        new StoreScanner(scan, scanInfo,
-          ScanType.COMPACT_DROP_DELETES, null, scanners,
+        new StoreScanner(store, scan, scanInfo, ScanType.COMPACT_DROP_DELETES, null, scanners,
           HConstants.OLDEST_TIMESTAMP)) {
         List<Cell> results = new ArrayList<>();
         results = new ArrayList<>();
