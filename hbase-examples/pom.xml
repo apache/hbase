@@ -305,6 +305,7 @@ if we can combine these profiles somehow -->
                     <includes>
                       <include>BulkDelete.proto</include>
                       <include>Examples.proto</include>
+                      <include>RefreshHFiles.proto</include>
                     </includes>
                   </source>
                   <output>${basedir}/src/main/java/</output>
