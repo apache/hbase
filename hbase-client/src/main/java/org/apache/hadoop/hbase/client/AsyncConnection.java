@@ -136,4 +136,43 @@ public interface AsyncConnection extends Closeable {
    * @param pool the thread pool to use for executing callback
    */
   AsyncAdminBuilder getAdminBuilder(ExecutorService pool);
+
+  /**
+   * Retrieve an {@link AsyncBufferedMutator} for performing client-side buffering of writes.
+   * <p>
+   * The returned instance will use default configs. Use
+   * {@link #getBufferedMutatorBuilder(TableName)} if you want to customize some configs.
+   * @param tableName the name of the table
+   * @return an {@link AsyncBufferedMutator} for the supplied tableName.
+   */
+  default AsyncBufferedMutator getBufferedMutator(TableName tableName) {
+    return getBufferedMutatorBuilder(tableName).build();
+  }
+
+  /**
+   * Returns an {@link AsyncBufferedMutatorBuilder} for creating {@link AsyncBufferedMutator}.
+   * @param tableName the name of the table
+   */
+  AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName);
+
+  /**
+   * Retrieve an {@link AsyncBufferedMutator} for performing client-side buffering of writes.
+   * <p>
+   * The returned instance will use default configs. Use
+   * {@link #getBufferedMutatorBuilder(TableName, ExecutorService)} if you want to customize some
+   * configs.
+   * @param tableName the name of the table
+   * @param pool the thread pool to use for executing callback
+   * @return an {@link AsyncBufferedMutator} for the supplied tableName.
+   */
+  default AsyncBufferedMutator getBufferedMutator(TableName tableName, ExecutorService pool) {
+    return getBufferedMutatorBuilder(tableName, pool).build();
+  }
+
+  /**
+   * Returns an {@link AsyncBufferedMutatorBuilder} for creating {@link AsyncBufferedMutator}.
+   * @param tableName the name of the table
+   * @param pool the thread pool to use for executing callback
+   */
+  AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName, ExecutorService pool);
 }
