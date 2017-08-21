@@ -915,23 +915,20 @@ public class PartitionedMobCompactor extends MobCompactor {
 
   private FileStatus getLinkedFileStatus(HFileLink link) throws IOException {
     Path[] locations = link.getLocations();
+    FileStatus file;
     for (Path location : locations) {
-      FileStatus file = getFileStatus(location);
-      if (file != null) {
-        return file;
-      }
-    }
-    return null;
-  }
 
-  private FileStatus getFileStatus(Path path) throws IOException {
-    try {
-      if (path != null) {
-        return fs.getFileStatus(path);
+      if (location != null) {
+        try {
+          file = fs.getFileStatus(location);
+          if (file != null) {
+            return file;
+          }
+        }  catch (FileNotFoundException e) {
+        }
       }
-    } catch (FileNotFoundException e) {
-      LOG.warn("The file " + path + " can not be found", e);
     }
+    LOG.warn("The file " + link + " links to can not be found");
     return null;
   }
 }
