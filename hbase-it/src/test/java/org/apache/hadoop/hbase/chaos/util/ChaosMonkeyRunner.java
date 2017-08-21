@@ -52,6 +52,7 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
   protected boolean noClusterCleanUp = false;
   private String tableName = "ChaosMonkeyRunner.tableName";
   private String familyName = "ChaosMonkeyRunner.familyName";
+  private volatile boolean stop = false;
 
   @Override
   public void addOptions() {
@@ -92,9 +93,14 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
   protected int doWork() throws Exception {
     setUpCluster();
     getAndStartMonkey();
-    while (true) {// loop here until got killed
+    while (!stop) {// loop here until got killed
       Thread.sleep(10000);
     }
+    return 0;
+  }
+
+  public void stopRunner() {
+    stop = true;
   }
 
   public void setUpCluster() throws Exception {
@@ -151,10 +157,26 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
     return Sets.newHashSet(familyName);
   }
 
+  /*
+   * If caller wants to add config parameters contained in a file, the path of conf file
+   * can be passed as the first two arguments like this:
+   *   -c <path-to-conf>
+   */
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    String[] actualArgs = args;
+    if (args.length > 0 && "-c".equals(args[0])) {
+      int argCount = args.length - 2;
+      if (argCount < 0) {
+        throw new IllegalArgumentException("Missing path for -c parameter");
+      }
+      // load the resource specified by the second parameter
+      conf.addResource(args[1]);
+      actualArgs = new String[argCount];
+      System.arraycopy(args, 2, actualArgs, 0, argCount);
+    }
     IntegrationTestingUtility.setUseDistributedCluster(conf);
-    int ret = ToolRunner.run(conf, new ChaosMonkeyRunner(), args);
+    int ret = ToolRunner.run(conf, new ChaosMonkeyRunner(), actualArgs);
     System.exit(ret);
   }
 
