@@ -65,7 +65,7 @@ public class TestClientClusterStatus {
     RegionServerThread rst = rsts.get(rsts.size() - 1);
     DEAD = rst.getRegionServer();
     DEAD.stop("Test dead servers status");
-    while (rst.isAlive()) {
+    while (!DEAD.isStopped()) {
       Thread.sleep(500);
     }
   }
@@ -155,11 +155,9 @@ public class TestClientClusterStatus {
     Assert.assertNotNull(status);
     Assert.assertNotNull(status.getServers());
     // exclude a dead region server
-    Assert.assertEquals(SLAVES -1, numRs);
-    // live servers = nums of regionservers
-    // By default, HMaster don't carry any regions so it won't report its load.
-    // Hence, it won't be in the server list.
-    Assert.assertEquals(status.getServers().size(), numRs);
+    Assert.assertEquals(SLAVES, numRs);
+    // live servers = primary master + nums of regionservers
+    Assert.assertEquals(status.getServers().size() + 1 /*Master*/, numRs);
     Assert.assertTrue(status.getRegionsCount() > 0);
     Assert.assertNotNull(status.getDeadServerNames());
     Assert.assertEquals(1, status.getDeadServersSize());
