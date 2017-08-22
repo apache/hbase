@@ -53,8 +53,13 @@ function personality_globals
 
   # TODO use PATCH_BRANCH to select hadoop versions to use.
   # All supported Hadoop versions that we want to test the compilation with
+  # NOTE: The master defines below are reused by BRANCH_2 too; if you change
+  # master instances, be sure to adjust BRANCH_2 appropriately.
   HBASE_MASTER_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
   HBASE_MASTER_HADOOP3_VERSIONS="3.0.0-alpha2"
+
+  HBASE_BRANCH_2_HADOOP2_VERSIONS="${HBASE_MASTER_HADOOP2_VERSIONS}"
+  HBASE_BRANCH_2_HADOOP3_VERSIONS="${HBASE_MASTER_HADOOP3_VERSIONS}"
 
   HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
   HBASE_HADOOP3_VERSIONS=""
@@ -196,6 +201,9 @@ function hadoopcheck_rebuild
   if [[ "${PATCH_BRANCH}" = "master" ]]; then
     hbase_hadoop2_versions=${HBASE_MASTER_HADOOP2_VERSIONS}
     hbase_hadoop3_versions=${HBASE_MASTER_HADOOP3_VERSIONS}
+  elif [[ "${PATCH_BRANCH}" = "branch-2" ]]; then
+    hbase_hadoop2_versions=${HBASE_BRANCH_2_HADOOP2_VERSIONS}
+    hbase_hadoop3_versions=${HBASE_BRANCH_2_HADOOP3_VERSIONS}
   else
     hbase_hadoop2_versions=${HBASE_HADOOP2_VERSIONS}
     hbase_hadoop3_versions=${HBASE_HADOOP3_VERSIONS}
