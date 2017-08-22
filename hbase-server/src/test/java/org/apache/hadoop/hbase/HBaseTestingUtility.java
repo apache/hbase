@@ -4425,4 +4425,22 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     HBaseKerberosUtils.setKeytabFileForTesting(keytabFile.getAbsolutePath());
     return kdc;
   }
+
+  public int getNumHFiles(final TableName tableName, final byte[] family) {
+    int numHFiles = 0;
+    for (RegionServerThread regionServerThread : getMiniHBaseCluster().getRegionServerThreads()) {
+      numHFiles+= getNumHFilesForRS(regionServerThread.getRegionServer(), tableName,
+                                    family);
+    }
+    return numHFiles;
+  }
+
+  public int getNumHFilesForRS(final HRegionServer rs, final TableName tableName,
+                               final byte[] family) {
+    int numHFiles = 0;
+    for (Region region : rs.getOnlineRegions(tableName)) {
+      numHFiles += region.getStore(family).getStorefilesCount();
+    }
+    return numHFiles;
+  }
 }
