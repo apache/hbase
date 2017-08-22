@@ -33,11 +33,11 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ModifyNamespaceProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.AbstractService;
 import org.apache.hadoop.hbase.util.NonceKey;
 
 @InterfaceAudience.Private
-class ClusterSchemaServiceImpl implements ClusterSchemaService {
-  private boolean running = false;
+class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaService {
   private final TableNamespaceManager tableNamespaceManager;
   private final MasterServices masterServices;
   private final static List<NamespaceDescriptor> EMPTY_NAMESPACE_LIST =
@@ -50,28 +50,25 @@ class ClusterSchemaServiceImpl implements ClusterSchemaService {
 
   // All below are synchronized so consistent view on whether running or not.
 
-  @Override
-  public synchronized boolean isRunning() {
-    return this.running;
-  }
 
   private synchronized void checkIsRunning() throws ServiceNotRunningException {
     if (!isRunning()) throw new ServiceNotRunningException();
   }
 
   @Override
-  public synchronized void startAndWait() throws IOException {
-    if (isRunning()) throw new IllegalStateException("Already running; cannot double-start.");
-    // Set to running FIRST because tableNamespaceManager start uses this class to do namespace ops
-    this.running = true;
-    this.tableNamespaceManager.start();
+  public synchronized void doStart() {
+    try {
+      notifyStarted();
+      this.tableNamespaceManager.start();
+    } catch (IOException ioe) {
+      notifyFailed(ioe);
+    }
   }
 
   @Override
-  public synchronized void stopAndWait() throws IOException {
-    checkIsRunning();
-    // You can't stop tableNamespaceManager.
-    this.running = false;
+  protected void doStop() {
+    // This is no stop for the table manager.
+    notifyStopped();
   }
 
   @Override

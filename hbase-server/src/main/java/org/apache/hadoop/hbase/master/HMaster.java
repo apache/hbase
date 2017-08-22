@@ -39,6 +39,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -305,6 +306,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private ClusterSchemaService clusterSchemaService;
 
+  public static final String HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS =
+    "hbase.master.wait.on.service.seconds";
+  public static final int DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS = 5 * 60;
+
   // Metrics for the HMaster
   final MetricsMaster metricsMaster;
   // file system manager for the master FS operations
@@ -539,6 +544,13 @@ public class HMaster extends HRegionServer implements MasterServices {
       super.run();
     } finally {
       // If on way out, then we are no longer active master.
+      this.clusterSchemaService.stopAsync();
+      try {
+        this.clusterSchemaService.awaitTerminated(getConfiguration().getInt(HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,
+          DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS), TimeUnit.SECONDS);
+      } catch (TimeoutException te) {
+        LOG.warn("Failed shutdown of clusterSchemaService", te);
+      }
       this.activeMaster = false;
     }
   }
@@ -1014,8 +1026,14 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   void initClusterSchemaService() throws IOException, InterruptedException {
     this.clusterSchemaService = new ClusterSchemaServiceImpl(this);
-    this.clusterSchemaService.startAndWait();
-    if (!this.clusterSchemaService.isRunning()) throw new HBaseIOException("Failed start");
+    this.clusterSchemaService.startAsync();
+    try {
+      this.clusterSchemaService.awaitRunning(getConfiguration().getInt(
+        HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,
+        DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS), TimeUnit.SECONDS);
+    } catch (TimeoutException toe) {
+      throw new IOException("Timedout starting ClusterSchemaService", toe);
+    }
   }
 
   void initQuotaManager() throws IOException {

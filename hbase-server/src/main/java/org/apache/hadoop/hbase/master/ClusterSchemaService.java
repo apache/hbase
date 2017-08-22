@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.Service;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.Service;
 
 /**
  * Mixes in ClusterSchema and Service
