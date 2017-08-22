@@ -88,7 +88,14 @@ Future<std::unique_ptr<Response>> RpcTestService::operator()(std::unique_ptr<Req
     response->set_exception(folly::make_exception_wrapper<RpcTestException>("server error!"));
 
   } else if (method_name == "pause") {
-    // TODO:
+    auto pb_resp_msg = std::make_shared<EmptyResponseProto>();
+    /* sleeping */
+    auto pb_req_msg = std::static_pointer_cast<PauseRequestProto>(request->req_msg());
+    std::this_thread::sleep_for(std::chrono::milliseconds(pb_req_msg->ms()));
+    response->set_resp_msg(pb_resp_msg);
+    VLOG(1) << "RPC server:"
+            << " pause called, " << pb_req_msg->ms() << " ms";
+
   } else if (method_name == "addr") {
     // TODO:
   } else if (method_name == "socketNotOpen") {
