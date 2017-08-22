@@ -1392,7 +1392,7 @@
     <metrics-core.version>3.2.1</metrics-core.version>
     <jackson.version>2.23.2</jackson.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
-    <jetty.version>9.3.8.v20160314</jetty.version>
+    <jetty.version>9.4.6.v20170531</jetty.version>
     <jetty-jsp.version>9.2.19.v20160908</jetty-jsp.version>
     <jackson1.version>1.9.13</jackson1.version>
     <servlet.api.version>3.1.0</servlet.api.version>

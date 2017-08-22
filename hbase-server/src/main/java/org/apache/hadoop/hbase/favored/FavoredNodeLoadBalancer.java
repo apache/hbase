@@ -97,12 +97,12 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
       LOG.warn("Not running balancer since exception was thrown " + ie);
       return plans;
     }
-    Map<ServerName, ServerName> serverNameToServerNameWithoutCode = new HashMap<>();
+    // This is not used? Findbugs says so: Map<ServerName, ServerName> serverNameToServerNameWithoutCode = new HashMap<>();
     Map<ServerName, ServerName> serverNameWithoutCodeToServerName = new HashMap<>();
     ServerManager serverMgr = super.services.getServerManager();
     for (ServerName sn: serverMgr.getOnlineServersList()) {
       ServerName s = ServerName.valueOf(sn.getHostname(), sn.getPort(), ServerName.NON_STARTCODE);
-      serverNameToServerNameWithoutCode.put(sn, s);
+      // FindBugs complains about useless store! serverNameToServerNameWithoutCode.put(sn, s);
       serverNameWithoutCodeToServerName.put(s, sn);
     }
     for (Map.Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {

@@ -112,12 +112,12 @@ public class TestThriftHttpServer {
     try {
       runThriftServer(1024 * 63);
     } catch (TTransportException tex) {
-      assertFalse(tex.getMessage().equals("HTTP Response code: 413"));
+      assertFalse(tex.getMessage().equals("HTTP Response code: 431"));
     }
 
     // Test thrift server with HTTP header length more than 64k, expect an exception
     exception.expect(TTransportException.class);
-    exception.expectMessage("HTTP Response code: 413");
+    exception.expectMessage("HTTP Response code: 431");
     runThriftServer(1024 * 64);
   }
 
