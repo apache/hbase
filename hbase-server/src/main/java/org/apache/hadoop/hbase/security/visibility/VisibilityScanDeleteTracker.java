@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -45,6 +46,10 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
 
   private static final Log LOG = LogFactory.getLog(VisibilityScanDeleteTracker.class);
 
+  /**
+   * This tag is used for the DELETE cell which has no visibility label.
+   */
+  private static final List<Tag> EMPTY_TAG = Collections.EMPTY_LIST;
   // Its better to track the visibility tags in delete based on each type.  Create individual
   // data structures for tracking each of them.  This would ensure that there is no tracking based
   // on time and also would handle all cases where deletefamily or deletecolumns is specified with
@@ -110,9 +115,8 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   private boolean extractDeleteCellVisTags(Cell delCell, Type type) {
     // If tag is present in the delete
     boolean hasVisTag = false;
-    if (delCell.getTagsLength() > 0) {
-      Byte deleteCellVisTagsFormat = null;
-      switch (type) {
+    Byte deleteCellVisTagsFormat = null;
+    switch (type) {
       case DeleteFamily:
         List<Tag> delTags = new ArrayList<>();
         if (visibilityTagsDeleteFamily == null) {
@@ -122,6 +126,8 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         if (!delTags.isEmpty()) {
           visibilityTagsDeleteFamily.add(new Triple<>(delTags, deleteCellVisTagsFormat, delCell.getTimestamp()));
           hasVisTag = true;
+        } else {
+          visibilityTagsDeleteFamily.add(new Triple<>(EMPTY_TAG, deleteCellVisTagsFormat, delCell.getTimestamp()));
         }
         break;
       case DeleteFamilyVersion:
@@ -133,6 +139,8 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         if (!delTags.isEmpty()) {
           visibilityTagsDeleteFamilyVersion.add(new Triple<>(delTags, deleteCellVisTagsFormat, delCell.getTimestamp()));
           hasVisTag = true;
+        } else {
+          visibilityTagsDeleteFamilyVersion.add(new Triple<>(EMPTY_TAG, deleteCellVisTagsFormat, delCell.getTimestamp()));
         }
         break;
       case DeleteColumn:
@@ -144,6 +152,8 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         if (!delTags.isEmpty()) {
           visibilityTagsDeleteColumns.add(new Pair<>(delTags, deleteCellVisTagsFormat));
           hasVisTag = true;
+        } else {
+          visibilityTagsDeleteColumns.add(new Pair<>(EMPTY_TAG, deleteCellVisTagsFormat));
         }
         break;
       case Delete:
@@ -155,11 +165,12 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         if (!delTags.isEmpty()) {
           visiblityTagsDeleteColumnVersion.add(new Pair<>(delTags, deleteCellVisTagsFormat));
           hasVisTag = true;
+        } else {
+          visiblityTagsDeleteColumnVersion.add(new Pair<>(EMPTY_TAG, deleteCellVisTagsFormat));
         }
         break;
       default:
         throw new IllegalArgumentException("Invalid delete type");
-      }
     }
     return hasVisTag;
   }

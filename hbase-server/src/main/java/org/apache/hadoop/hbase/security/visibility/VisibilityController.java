@@ -1074,6 +1074,10 @@ public class VisibilityController implements MasterObserver, RegionObserver,
     public ReturnCode filterKeyValue(Cell cell) throws IOException {
       List<Tag> putVisTags = new ArrayList<>();
       Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
+      if (putVisTags.isEmpty() && deleteCellVisTags.isEmpty()) {
+        // Early out if there are no tags in the cell
+        return ReturnCode.INCLUDE;
+      }
       boolean matchFound = VisibilityLabelServiceManager
           .getInstance().getVisibilityLabelService()
           .matchVisibility(putVisTags, putCellVisTagsFormat, deleteCellVisTags,

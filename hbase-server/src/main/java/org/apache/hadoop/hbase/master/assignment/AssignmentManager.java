@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
@@ -895,7 +896,7 @@ public class AssignmentManager implements ServerListener {
    * that something went wrong on the RS side.
    */
   public void reportOnlineRegions(final ServerName serverName,
-      final int versionNumber, final Set<byte[]> regionNames) {
+      final int versionNumber, final Set<byte[]> regionNames) throws YouAreDeadException {
     if (!isRunning()) return;
     if (LOG.isTraceEnabled()) {
       LOG.trace("ReportOnlineRegions " + serverName + " regionCount=" + regionNames.size() +
@@ -959,7 +960,8 @@ public class AssignmentManager implements ServerListener {
     }
   }
 
-  void checkOnlineRegionsReport(final ServerStateNode serverNode, final Set<byte[]> regionNames) {
+  void checkOnlineRegionsReport(final ServerStateNode serverNode, final Set<byte[]> regionNames)
+      throws YouAreDeadException {
     final ServerName serverName = serverNode.getServerName();
     try {
       for (byte[] regionName: regionNames) {
@@ -999,6 +1001,7 @@ public class AssignmentManager implements ServerListener {
     } catch (UnexpectedStateException e) {
       LOG.warn("Killing " + serverName + ": " + e.getMessage());
       killRegionServer(serverNode);
+      throw (YouAreDeadException)new YouAreDeadException(e.getMessage()).initCause(e);
     }
   }
 

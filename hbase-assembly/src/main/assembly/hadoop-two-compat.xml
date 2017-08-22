@@ -59,6 +59,8 @@
           <dependencySet>
             <excludes>
               <exclude>org.jruby:jruby-complete</exclude>
+              <exclude>com.sun.jersey:*</exclude>
+              <exclude>com.sun.jersey.contribs:*</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>

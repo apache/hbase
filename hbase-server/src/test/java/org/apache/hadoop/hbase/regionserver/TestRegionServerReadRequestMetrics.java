@@ -89,6 +89,8 @@ public class TestRegionServerReadRequestMetrics {
   @BeforeClass
   public static void setUpOnce() throws Exception {
     // Default starts one regionserver only.
+    TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
+    TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
     serverNames = admin.getClusterStatus().getServers();

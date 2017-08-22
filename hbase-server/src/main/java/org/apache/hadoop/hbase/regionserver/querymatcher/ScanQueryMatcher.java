@@ -308,6 +308,19 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   public abstract boolean moreRowsMayExistAfter(Cell cell);
 
   public Cell getKeyForNextColumn(Cell cell) {
+    // We aren't sure whether any DeleteFamily cells exist, so we can't skip to next column.
+    // TODO: Current way disable us to seek to next column quickly. Is there any better solution?
+    // see HBASE-18471 for more details
+    // see TestFromClientSide3#testScanAfterDeletingSpecifiedRow
+    // see TestFromClientSide3#testScanAfterDeletingSpecifiedRowV2
+    if (cell.getQualifierLength() == 0) {
+      Cell nextKey = CellUtil.createNextOnRowCol(cell);
+      if (nextKey != cell) {
+        return nextKey;
+      }
+      // The cell is at the end of row/family/qualifier, so it is impossible to find any DeleteFamily cells.
+      // Let us seek to next column.
+    }
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
       return CellUtil.createLastOnRowCol(cell);

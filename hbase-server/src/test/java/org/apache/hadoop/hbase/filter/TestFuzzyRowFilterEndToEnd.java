@@ -17,13 +17,6 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +35,7 @@ import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -53,9 +47,15 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.junit.rules.TestName;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  */
@@ -140,6 +140,11 @@ public class TestFuzzyRowFilterEndToEnd {
     List<Pair<byte[], byte[]>> data = new ArrayList<>();
     byte[] fuzzyKey = Bytes.toBytesBinary("\\x9B\\x00\\x044e");
     byte[] mask = new byte[] { 0, 0, 0, 0, 0 };
+
+    // copy the fuzzy key and mask to test HBASE-18617
+    byte[] copyFuzzyKey = Arrays.copyOf(fuzzyKey, fuzzyKey.length);
+    byte[] copyMask = Arrays.copyOf(mask, mask.length);
+
     data.add(new Pair<>(fuzzyKey, mask));
     FuzzyRowFilter filter = new FuzzyRowFilter(data);
 
@@ -152,6 +157,10 @@ public class TestFuzzyRowFilterEndToEnd {
       total++;
     }
     assertEquals(2, total);
+
+    assertEquals(true, Arrays.equals(copyFuzzyKey, fuzzyKey));
+    assertEquals(true, Arrays.equals(copyMask, mask));
+
     TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
   }
 

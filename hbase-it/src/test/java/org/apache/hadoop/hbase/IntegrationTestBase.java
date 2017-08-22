@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 
@@ -27,6 +28,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
@@ -86,6 +88,10 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
       noClusterCleanUp = true;
     }
     monkeyProps = new Properties();
+    // Add entries for the CM from hbase-site.xml as a convenience.
+    // Do this prior to loading from the properties file to make sure those in the properties
+    // file are given precedence to those in hbase-site.xml (backwards compatibility).
+    loadMonkeyProperties(monkeyProps, HBaseConfiguration.create());
     if (cmd.hasOption(CHAOS_MONKEY_PROPS)) {
       String chaosMonkeyPropsFile = cmd.getOptionValue(CHAOS_MONKEY_PROPS);
       if (StringUtils.isNotEmpty(chaosMonkeyPropsFile)) {
@@ -95,6 +101,21 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
         } catch (IOException e) {
           LOG.warn(e);
           System.exit(EXIT_FAILURE);
+        }
+      }
+    }
+  }
+
+  /**
+   * Loads entries from the provided {@code conf} into {@code props} when the configuration key
+   * is one that may be configuring ChaosMonkey actions.
+   */
+  void loadMonkeyProperties(Properties props, Configuration conf) {
+    for (Entry<String,String> entry : conf) {
+      for (String prefix : MonkeyConstants.MONKEY_CONFIGURATION_KEY_PREFIXES) {
+        if (entry.getKey().startsWith(prefix)) {
+          props.put(entry.getKey(), entry.getValue());
+          break;
         }
       }
     }

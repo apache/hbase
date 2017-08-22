@@ -42,8 +42,9 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.CompactionScanQueryMatc
 import org.apache.hadoop.hbase.regionserver.querymatcher.LegacyScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.UserScanQueryMatcher;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.CollectionUtils;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Scanner scans both the memstore and the Store. Coalesce KeyValue stream into List&lt;KeyValue&gt;
@@ -98,7 +99,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * KVs skipped via seeking to next row/column. TODO: estimate them?
    */
   private long kvsScanned = 0;
-  protected Cell prevCell = null;
+  private Cell prevCell = null;
 
   private final long preadMaxBytes;
   private long bytesRead;
