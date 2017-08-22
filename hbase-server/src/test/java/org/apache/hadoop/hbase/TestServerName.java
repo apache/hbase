@@ -108,7 +108,7 @@ public class TestServerName {
     assertEquals(lower.hashCode(), upper.hashCode());
     assertTrue(lower.equals(upper));
     assertTrue(upper.equals(lower));
-    assertTrue(ServerName.isSameHostnameAndPort(lower, upper));
+    assertTrue(ServerName.isSameAddress(lower, upper));
   }
 }
 

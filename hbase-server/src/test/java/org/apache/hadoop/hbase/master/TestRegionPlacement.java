@@ -201,14 +201,14 @@ public class TestRegionPlacement {
           break;
         }
       }
-    } while (ServerName.isSameHostnameAndPort(metaServer, serverToKill) || isNamespaceServer ||
+    } while (ServerName.isSameAddress(metaServer, serverToKill) || isNamespaceServer ||
         TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getNumberOfOnlineRegions() == 0);
     LOG.debug("Stopping RS " + serverToKill);
     Map<HRegionInfo, Pair<ServerName, ServerName>> regionsToVerify = new HashMap<>();
     // mark the regions to track
     for (Map.Entry<HRegionInfo, ServerName[]> entry : favoredNodesAssignmentPlan.entrySet()) {
       ServerName s = entry.getValue()[0];
-      if (ServerName.isSameHostnameAndPort(s, serverToKill)) {
+      if (ServerName.isSameAddress(s, serverToKill)) {
         regionsToVerify.put(entry.getKey(), new Pair<>(entry.getValue()[1], entry.getValue()[2]));
         LOG.debug("Adding " + entry.getKey() + " with sedcondary/tertiary " +
             entry.getValue()[1] + " " + entry.getValue()[2]);
@@ -232,8 +232,8 @@ public class TestRegionPlacement {
       LOG.debug("New destination for region " + entry.getKey().getEncodedName() +
           " " + newDestination +". Secondary/Tertiary are " + secondaryTertiaryServers.getFirst()
           + "/" + secondaryTertiaryServers.getSecond());
-      if (!(ServerName.isSameHostnameAndPort(newDestination, secondaryTertiaryServers.getFirst())||
-          ServerName.isSameHostnameAndPort(newDestination, secondaryTertiaryServers.getSecond()))){
+      if (!(ServerName.isSameAddress(newDestination, secondaryTertiaryServers.getFirst())||
+          ServerName.isSameAddress(newDestination, secondaryTertiaryServers.getSecond()))){
         fail("Region " + entry.getKey() + " not present on any of the expected servers");
       }
     }

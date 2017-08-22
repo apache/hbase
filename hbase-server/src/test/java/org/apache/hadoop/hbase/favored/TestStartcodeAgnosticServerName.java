@@ -35,14 +35,14 @@ public class TestStartcodeAgnosticServerName {
     StartcodeAgnosticServerName snStartCode =
         new StartcodeAgnosticServerName("www.example.org", 1234, 5678);
 
-    assertTrue(ServerName.isSameHostnameAndPort(sn, snStartCode));
+    assertTrue(ServerName.isSameAddress(sn, snStartCode));
     assertTrue(snStartCode.equals(sn));
     assertTrue(sn.equals(snStartCode));
     assertEquals(0, snStartCode.compareTo(sn));
 
     StartcodeAgnosticServerName snStartCodeFNPort =
         new StartcodeAgnosticServerName("www.example.org", 1234, ServerName.NON_STARTCODE);
-    assertTrue(ServerName.isSameHostnameAndPort(snStartCodeFNPort, snStartCode));
+    assertTrue(ServerName.isSameAddress(snStartCodeFNPort, snStartCode));
     assertTrue(snStartCode.equals(snStartCodeFNPort));
     assertTrue(snStartCodeFNPort.equals(snStartCode));
     assertEquals(0, snStartCode.compareTo(snStartCodeFNPort));

@@ -420,7 +420,7 @@ public class TestRSGroupBasedLoadBalancer {
       ServerAndLoad newSAL = null;
       ServerAndLoad oldSAL = null;
       for (ServerAndLoad sal : previousLoad.get(groupName)) {
-        if (ServerName.isSameHostnameAndPort(sn, sal.getServerName())) {
+        if (ServerName.isSameAddress(sn, sal.getServerName())) {
           oldSAL = sal;
           newSAL = new ServerAndLoad(sn, sal.getLoad() + diff);
           break;

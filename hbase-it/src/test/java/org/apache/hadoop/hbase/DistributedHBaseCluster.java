@@ -320,7 +320,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
     List<IOException> deferred = new ArrayList<>();
     //check whether current master has changed
     final ServerName initMaster = initial.getMaster();
-    if (!ServerName.isSameHostnameAndPort(initMaster, current.getMaster())) {
+    if (!ServerName.isSameAddress(initMaster, current.getMaster())) {
       LOG.info("Restoring cluster - Initial active master : "
               + initMaster.getHostAndPort()
               + " has changed to : "
@@ -340,7 +340,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
         // 2. Stop current master
         // 3. Start backup masters
         for (ServerName currentBackup : current.getBackupMasters()) {
-          if (!ServerName.isSameHostnameAndPort(currentBackup, initMaster)) {
+          if (!ServerName.isSameAddress(currentBackup, initMaster)) {
             LOG.info("Restoring cluster - stopping backup master: " + currentBackup);
             stopMaster(currentBackup);
           }

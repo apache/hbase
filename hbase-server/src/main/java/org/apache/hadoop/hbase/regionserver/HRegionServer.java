@@ -118,7 +118,6 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.quotas.FileSystemUtilizationChore;
@@ -3406,7 +3405,7 @@ public class HRegionServer extends HasThread implements
   private static final int TIMEOUT_REGION_MOVED = (2 * 60 * 1000);
 
   protected void addToMovedRegions(String encodedName, ServerName destination, long closeSeqNum) {
-    if (ServerName.isSameHostnameAndPort(destination, this.getServerName())) {
+    if (ServerName.isSameAddress(destination, this.getServerName())) {
       LOG.warn("Not adding moved region record: " + encodedName + " to self.");
       return;
     }
