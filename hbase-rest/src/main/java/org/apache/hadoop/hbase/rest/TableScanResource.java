@@ -67,6 +67,9 @@ public class TableScanResource  extends ResourceBase {
   @GET
   @Produces({ Constants.MIMETYPE_XML, Constants.MIMETYPE_JSON })
   public CellSetModelStream get(final @Context UriInfo uriInfo) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath());
+    }
     servlet.getMetrics().incrementRequests(1);
     final int rowsToSend = userRequestedLimit;
     servlet.getMetrics().incrementSucessfulScanRequests(1);
@@ -116,17 +119,11 @@ public class TableScanResource  extends ResourceBase {
   @Produces({ Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF })
   public Response getProtobuf(
       final @Context UriInfo uriInfo,
-      final @PathParam("scanspec") String scanSpec,
-      final @HeaderParam("Accept") String contentType,
-      @DefaultValue(Integer.MAX_VALUE + "") @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
-      @DefaultValue("") @QueryParam(Constants.SCAN_START_ROW) String startRow,
-      @DefaultValue("") @QueryParam(Constants.SCAN_END_ROW) String endRow,
-      @DefaultValue("column") @QueryParam(Constants.SCAN_COLUMN) List<String> column,
-      @DefaultValue("1") @QueryParam(Constants.SCAN_MAX_VERSIONS) int maxVersions,
-      @DefaultValue("-1") @QueryParam(Constants.SCAN_BATCH_SIZE) int batchSize,
-      @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
-      @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
-      @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks) {
+      final @HeaderParam("Accept") String contentType) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath() + " as " +
+              MIMETYPE_BINARY);
+    }
     servlet.getMetrics().incrementRequests(1);
     try {
       int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);
