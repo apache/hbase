@@ -62,7 +62,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   @BeforeClass
   public static void setup() throws Exception {
     conf = new Configuration();
-    conf.setInt(HttpServer.HTTP_MAX_THREADS, 10);
+    conf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
 
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);

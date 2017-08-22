@@ -168,7 +168,7 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     Configuration conf = new Configuration();
     KerberosName.setRules("DEFAULT");
 
-    conf.setInt(HttpServer.HTTP_MAX_THREADS, 10);
+    conf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
 
     // Enable Kerberos (pre-req)
     conf.set("hbase.security.authentication", "kerberos");
@@ -245,7 +245,7 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
   @Test(expected = IllegalArgumentException.class)
   public void testMissingConfigurationThrowsException() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(HttpServer.HTTP_MAX_THREADS, 10);
+    conf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
     // Enable Kerberos (pre-req)
     conf.set("hbase.security.authentication", "kerberos");
     // Intentionally skip keytab and principal

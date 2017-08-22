@@ -74,7 +74,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   private static final Log LOG = LogFactory.getLog(TestHttpServer.class);
   private static HttpServer server;
   private static URL baseUrl;
-  private static final int MAX_THREADS = 10;
+  // jetty 9.4.x needs this many threads to start, even in the small.
+  static final int MAX_THREADS = 16;
   
   @SuppressWarnings("serial")
   public static class EchoMapServlet extends HttpServlet {
@@ -150,7 +151,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @BeforeClass public static void setup() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(HttpServer.HTTP_MAX_THREADS, 10);
+    conf.setInt(HttpServer.HTTP_MAX_THREADS, MAX_THREADS);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);

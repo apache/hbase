@@ -1602,7 +1602,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.http.max.threads</name>
-    <value>10</value>
+    <value>16</value>
     <description>
       The maximum number of threads that the HTTP Server will create in its
       ThreadPool.
