@@ -606,8 +606,8 @@ public class HRegionServer extends HasThread implements
     // Some unit tests don't need a cluster, so no zookeeper at all
     if (!conf.getBoolean("hbase.testing.nocluster", false)) {
       // Open connection to zookeeper and set primary watcher
-      zooKeeper = new ZooKeeperWatcher(conf, getProcessName() + ":" + rpcServices.isa.getPort(),
-          this, canCreateBaseZNode(), true);
+      zooKeeper = new ZooKeeperWatcher(conf, getProcessName() + ":" +
+        rpcServices.isa.getPort(), this, canCreateBaseZNode());
 
       this.csm = (BaseCoordinatedStateManager) csm;
       this.csm.initialize(this);
