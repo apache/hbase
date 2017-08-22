@@ -94,7 +94,7 @@ public class TestRegionPlacement2 {
         ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
     assertTrue(favoredNodesBefore.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
     // the primary RS should be the one that the balancer's assignment returns
-    assertTrue(ServerName.isSameHostnameAndPort(serverBefore.iterator().next(),
+    assertTrue(ServerName.isSameAddress(serverBefore.iterator().next(),
         favoredNodesBefore.get(PRIMARY)));
     // now remove the primary from the list of available servers
     List<ServerName> removedServers = removeMatchingServers(serverBefore, servers);
@@ -110,9 +110,9 @@ public class TestRegionPlacement2 {
     Set<ServerName> serverAfter = assignmentMap.keySet();
     // We expect the new RegionServer assignee to be one of the favored nodes
     // chosen earlier.
-    assertTrue(ServerName.isSameHostnameAndPort(serverAfter.iterator().next(),
+    assertTrue(ServerName.isSameAddress(serverAfter.iterator().next(),
                  favoredNodesBefore.get(SECONDARY)) ||
-               ServerName.isSameHostnameAndPort(serverAfter.iterator().next(),
+               ServerName.isSameAddress(serverAfter.iterator().next(),
                  favoredNodesBefore.get(TERTIARY)));
 
     // put back the primary in the list of available servers
@@ -153,7 +153,7 @@ public class TestRegionPlacement2 {
         ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
     assertTrue(favoredNodesBefore.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
     // the primary RS should be the one that the balancer's assignment returns
-    assertTrue(ServerName.isSameHostnameAndPort(serverBefore,favoredNodesBefore.get(PRIMARY)));
+    assertTrue(ServerName.isSameAddress(serverBefore,favoredNodesBefore.get(PRIMARY)));
     // now remove the primary from the list of servers
     removeMatchingServers(serverBefore, servers);
     // call randomAssignment with the modified servers list
@@ -167,8 +167,8 @@ public class TestRegionPlacement2 {
     assertTrue(favoredNodesAfter.containsAll(favoredNodesBefore));
     // We expect the new RegionServer assignee to be one of the favored nodes
     // chosen earlier.
-    assertTrue(ServerName.isSameHostnameAndPort(serverAfter, favoredNodesBefore.get(SECONDARY)) ||
-               ServerName.isSameHostnameAndPort(serverAfter, favoredNodesBefore.get(TERTIARY)));
+    assertTrue(ServerName.isSameAddress(serverAfter, favoredNodesBefore.get(SECONDARY)) ||
+               ServerName.isSameAddress(serverAfter, favoredNodesBefore.get(TERTIARY)));
     // Make all the favored nodes unavailable for assignment
     removeMatchingServers(favoredNodesAfter, servers);
     // call randomAssignment with the modified servers list
@@ -194,7 +194,7 @@ public class TestRegionPlacement2 {
       List<ServerName> servers) {
     List<ServerName> serversToRemove = new ArrayList<>();
     for (ServerName s : servers) {
-      if (ServerName.isSameHostnameAndPort(s, serverWithoutStartCode)) {
+      if (ServerName.isSameAddress(s, serverWithoutStartCode)) {
         serversToRemove.add(s);
       }
     }

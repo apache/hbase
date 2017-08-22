@@ -92,7 +92,7 @@ public class FavoredNodesPlan {
       return null;
     }
     for (Position p : Position.values()) {
-      if (ServerName.isSameHostnameAndPort(favoredNodes.get(p.ordinal()),server)) {
+      if (ServerName.isSameAddress(favoredNodes.get(p.ordinal()),server)) {
         return p;
       }
     }

@@ -278,7 +278,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   // server with the legit startcode
   private ServerName availableServersContains(List<ServerName> servers, ServerName favoredNode) {
     for (ServerName server : servers) {
-      if (ServerName.isSameHostnameAndPort(favoredNode, server)) {
+      if (ServerName.isSameAddress(favoredNode, server)) {
         return server;
       }
     }

@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.shaded.com.google.common.net.HostAndPort;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -109,7 +111,6 @@ public class TestRestartCluster {
    * This tests retaining assignments on a cluster restart
    */
   @Test (timeout=300000)
-  @Ignore // Does not work in new AMv2 currently.
   public void testRetainAssignmentOnRestart() throws Exception {
     UTIL.startMiniCluster(2);
     while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
@@ -163,7 +164,7 @@ public class TestRestartCluster {
     LOG.info("\n\nStarting cluster the second time with the same ports");
     try {
       cluster.getConf().setInt(
-        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 4);
+          ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 3);
       master = cluster.startMaster().getMaster();
       for (int i = 0; i < 3; i++) {
         cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, rsPorts[i]);
@@ -178,7 +179,7 @@ public class TestRestartCluster {
 
     // Make sure live regionservers are on the same host/port
     List<ServerName> localServers = master.getServerManager().getOnlineServersList();
-    assertEquals(4, localServers.size());
+    assertEquals(3, localServers.size());
     for (int i = 0; i < 3; i++) {
       boolean found = false;
       for (ServerName serverName: localServers) {

@@ -75,7 +75,7 @@ public class DeadServer {
     Iterator<ServerName> it = deadServers.keySet().iterator();
     while (it.hasNext()) {
       ServerName sn = it.next();
-      if (ServerName.isSameHostnameAndPort(sn, newServerName)) {
+      if (ServerName.isSameAddress(sn, newServerName)) {
         it.remove();
         return true;
       }
@@ -149,7 +149,7 @@ public class DeadServer {
     Iterator<ServerName> it = deadServers.keySet().iterator();
     while (it.hasNext()) {
       ServerName sn = it.next();
-      if (ServerName.isSameHostnameAndPort(sn, newServerName)) {
+      if (ServerName.isSameAddress(sn, newServerName)) {
         it.remove();
       }
     }

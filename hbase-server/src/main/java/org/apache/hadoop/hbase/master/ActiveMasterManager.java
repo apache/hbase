@@ -200,7 +200,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
             // Hopefully next time around we won't fail the parse.  Dangerous.
             continue;
           }
-          if (ServerName.isSameHostnameAndPort(currentMaster, this.sn)) {
+          if (ServerName.isSameAddress(currentMaster, this.sn)) {
             msg = ("Current master has this master's address, " +
               currentMaster + "; master was restarted? Deleting node.");
             // Hurry along the expiration of the znode.

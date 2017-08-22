@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -414,7 +413,7 @@ public class ServerManager {
 
     ServerName r = onlineServers.lowerKey(end);
     if (r != null) {
-      if (ServerName.isSameHostnameAndPort(r, serverName)) {
+      if (ServerName.isSameAddress(r, serverName)) {
         return r;
       }
     }

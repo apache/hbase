@@ -164,8 +164,10 @@ implements ServerProcedureInterface {
           }
           handleRIT(env, regionsOnCrashedServer);
           AssignmentManager am = env.getAssignmentManager();
+          // forceNewPlan is set to false. Balancer is expected to find most suitable target
+          // server if retention is not possible.
           addChildProcedure(am.
-              createAssignProcedures(am.getOrderedRegions(regionsOnCrashedServer), true));
+              createAssignProcedures(am.getOrderedRegions(regionsOnCrashedServer), false));
         }
         setNextState(ServerCrashState.SERVER_CRASH_FINISH);
         break;

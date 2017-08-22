@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -220,7 +219,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     assertNotNull(favoredNodes);
     boolean containsFN = false;
     for (ServerName sn : favoredNodes) {
-      if (ServerName.isSameHostnameAndPort(destination, sn)) {
+      if (ServerName.isSameAddress(destination, sn)) {
         containsFN = true;
       }
     }
@@ -305,7 +304,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
       @Override
       public boolean evaluate() throws Exception {
         ServerName host = regionStates.getRegionServerOfRegion(misplacedRegion);
-        return !ServerName.isSameHostnameAndPort(host, current);
+        return !ServerName.isSameAddress(host, current);
       }
     });
     checkFavoredNodeAssignments(tableName, fnm, regionStates);
@@ -516,7 +515,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
   private void stopServersAndWaitUntilProcessed(List<ServerName> currentFN) throws Exception {
     for (ServerName sn : currentFN) {
       for (JVMClusterUtil.RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-        if (ServerName.isSameHostnameAndPort(sn, rst.getRegionServer().getServerName())) {
+        if (ServerName.isSameAddress(sn, rst.getRegionServer().getServerName())) {
           LOG.info("Shutting down server: " + sn);
           cluster.stopRegionServer(rst.getRegionServer().getServerName());
           cluster.waitForRegionServerToStop(rst.getRegionServer().getServerName(), 60000);

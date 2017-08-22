@@ -252,7 +252,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    */
   private ServerName getServerFromFavoredNode(List<ServerName> servers, ServerName fn) {
     for (ServerName server : servers) {
-      if (ServerName.isSameHostnameAndPort(fn, server)) {
+      if (ServerName.isSameAddress(fn, server)) {
         return server;
       }
     }
@@ -463,7 +463,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
       List<ServerName> result = Lists.newArrayList();
       for (ServerName sn : serversWithoutStartCodes) {
         for (ServerName online : onlineServers) {
-          if (ServerName.isSameHostnameAndPort(sn, online)) {
+          if (ServerName.isSameAddress(sn, online)) {
             result.add(online);
           }
         }

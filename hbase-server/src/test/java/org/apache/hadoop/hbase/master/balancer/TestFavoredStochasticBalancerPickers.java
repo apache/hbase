@@ -133,7 +133,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     Map<ServerName, List<HRegionInfo>> serverAssignments = Maps.newHashMap();
     ClusterStatus status = admin.getClusterStatus();
     for (ServerName sn : status.getServers()) {
-      if (!ServerName.isSameHostnameAndPort(sn, masterServerName)) {
+      if (!ServerName.isSameAddress(sn, masterServerName)) {
         serverAssignments.put(sn, admin.getOnlineRegions(sn));
       }
     }
@@ -195,7 +195,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
 
   private boolean doesMatchExcludeNodes(ArrayList<ServerName> excludeNodes, ServerName sn) {
     for (ServerName excludeSN : excludeNodes) {
-      if (ServerName.isSameHostnameAndPort(sn, excludeSN)) {
+      if (ServerName.isSameAddress(sn, excludeSN)) {
         return true;
       }
     }

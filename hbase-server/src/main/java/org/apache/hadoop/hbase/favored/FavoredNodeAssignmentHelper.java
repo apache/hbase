@@ -31,7 +31,6 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -105,7 +104,7 @@ public class FavoredNodeAssignmentHelper {
         this.rackToRegionServerMap.put(rackName, serverList);
       }
       for (ServerName serverName : serverList) {
-        if (ServerName.isSameHostnameAndPort(sn, serverName)) {
+        if (ServerName.isSameAddress(sn, serverName)) {
           // The server is already present, ignore.
           break;
         }

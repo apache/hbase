@@ -347,8 +347,8 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * @param right
    * @return True if <code>other</code> has same hostname and port.
    */
-  public static boolean isSameHostnameAndPort(final ServerName left,
-      final ServerName right) {
+  public static boolean isSameAddress(final ServerName left,
+                                      final ServerName right) {
     // TODO: Make this left.getAddress().equals(right.getAddress())
     if (left == null) return false;
     if (right == null) return false;
