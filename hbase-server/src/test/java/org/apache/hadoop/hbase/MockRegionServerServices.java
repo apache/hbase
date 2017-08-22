@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.regionserver.Clocks;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
@@ -253,8 +254,8 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Clock getClock(ClockType clockType) {
-    return Clock.getDummyClockOfGivenClockType(clockType);
+  public Clocks getClocks() {
+    return null;
   }
 
   @Override

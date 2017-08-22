@@ -22,8 +22,6 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.Clock;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -48,6 +46,7 @@ import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.regionserver.Clocks;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -91,7 +90,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public Clock getClock(ClockType clockType) { return null; };
+  public Clocks getClocks() { return null; };
 
   @Override
   public AssignmentManager getAssignmentManager() {

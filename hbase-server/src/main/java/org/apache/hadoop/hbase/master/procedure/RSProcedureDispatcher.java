@@ -22,7 +22,6 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultima
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
@@ -30,13 +29,10 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.ClockType;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
@@ -271,16 +267,10 @@ public class RSProcedureDispatcher
         final ExecuteProceduresResponse response = sendRequest(getServerName(), request.build());
         // TODO: consider updating clock with just top timestamp from both loops
         for (OpenRegionResponse orr : response.getOpenRegionList()) {
-          for (NodeTime nodeTime : orr.getNodeTimesList()) {
-            env.getMasterServices().getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
-                .update(nodeTime.getTimestamp());
-          }
+          env.getMasterServices().getClocks().updateAll(orr.getNodeTimesList());
         }
         for (CloseRegionResponse crr : response.getCloseRegionList()) {
-          for (NodeTime nodeTime : crr.getNodeTimesList()) {
-            env.getMasterServices().getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
-                .update(nodeTime.getTimestamp());
-          }
+          env.getMasterServices().getClocks().updateAll(crr.getNodeTimesList());
         }
         remoteCallCompleted(env, response);
       } catch (IOException e) {
@@ -340,15 +330,8 @@ public class RSProcedureDispatcher
       final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
     builder.setServerStartCode(serverName.getStartcode());
-
-    // Set master clock time for send event
-    builder.addNodeTimesBuilder()
-        .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
-        .setTimestamp(env.getMasterServices().getClock(ClockType.SYSTEM_MONOTONIC).now());
-    builder.addNodeTimesBuilder()
-        .setClockType(ProtobufUtil.toClockType(ClockType.HYBRID_LOGICAL))
-        .setTimestamp(env.getMasterServices().getClock(ClockType.HYBRID_LOGICAL).now());
-
+    // Set master clock times for send event
+    builder.addAllNodeTimes(env.getMasterServices().getClocks().nowAll());
     for (RegionOpenOperation op: operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
     }
@@ -371,11 +354,8 @@ public class RSProcedureDispatcher
       try {
         final OpenRegionRequest request = buildOpenRegionRequest(env, getServerName(), operations);
         OpenRegionResponse response = sendRequest(getServerName(), request);
-        for (NodeTime nodeTime : response.getNodeTimesList()) {
-          // Update master clock upon receiving open region response from region server
-          env.getMasterServices().getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
-              .update(nodeTime.getTimestamp());
-        }
+        // Update master clocks upon receiving open region response from region server
+        env.getMasterServices().getClocks().updateAll(response.getNodeTimesList());
         remoteCallCompleted(env, response);
       } catch (IOException e) {
         e = unwrapException(e);
@@ -429,11 +409,8 @@ public class RSProcedureDispatcher
       final CloseRegionRequest request = operation.buildCloseRegionRequest(env, getServerName());
       try {
         CloseRegionResponse response = sendRequest(getServerName(), request);
-        for (NodeTime nodeTime : response.getNodeTimesList()) {
-          // Update master clock upon receiving close region response from region server
-          env.getMasterServices().getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
-              .update(nodeTime.getTimestamp());
-        }
+        // Update master clock upon receiving close region response from region server
+        env.getMasterServices().getClocks().updateAll(response.getNodeTimesList());
         remoteCallCompleted(env, response);
       } catch (IOException e) {
         e = unwrapException(e);
@@ -572,14 +549,9 @@ public class RSProcedureDispatcher
 
     public CloseRegionRequest buildCloseRegionRequest(final MasterProcedureEnv env,
         final ServerName serverName) {
-      // Set master clock time for send event
-      List<Pair<ClockType, Long>> nodeTimes = new ArrayList<>();
-      nodeTimes.add(new Pair<>(ClockType.SYSTEM_MONOTONIC,
-          env.getMasterServices().getClock(ClockType.SYSTEM_MONOTONIC).now()));
-      nodeTimes.add(new Pair<>(ClockType.HYBRID_LOGICAL,
-          env.getMasterServices().getClock(ClockType.HYBRID_LOGICAL).now()));
       return ProtobufUtil.buildCloseRegionRequest(serverName,
-        getRegionInfo().getRegionName(), getDestinationServer(), nodeTimes);
+        getRegionInfo().getRegionName(), getDestinationServer(),
+          env.getMasterServices().getClocks().nowAll());
     }
   }
 }

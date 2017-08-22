@@ -108,7 +108,7 @@ public class TestRegionSplitPolicy {
     final List<Region> regions = new ArrayList<>();
     Mockito.when(rss.getOnlineRegions(TABLENAME)).thenReturn(regions);
     Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
-    Mockito.when(rss.getClock(ClockType.SYSTEM)).thenReturn(new SystemClock());
+    Mockito.when(rss.getClocks().getClock(ClockType.SYSTEM)).thenReturn(new SystemClock());
     // Set max size for this 'table'.
     long maxSplitSize = 1024L;
     htd.setMaxFileSize(maxSplitSize);
@@ -170,8 +170,7 @@ public class TestRegionSplitPolicy {
     Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
     Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(0L);
     Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(0L);
-    Mockito.when(rss.getClock(ClockType.SYSTEM)).thenReturn(new SystemClock());
-
+    Mockito.when(rss.getClocks().getClock(ClockType.SYSTEM)).thenReturn(new SystemClock());
 
     BusyRegionSplitPolicy policy =
         (BusyRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);

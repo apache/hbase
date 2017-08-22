@@ -205,7 +205,7 @@ public class TestWALLockup {
     Mockito.when(server.isStopped()).thenReturn(false);
     Mockito.when(server.isAborted()).thenReturn(false);
     RegionServerServices services = Mockito.mock(RegionServerServices.class);
-    Mockito.when(services.getClock(ClockType.SYSTEM)).thenReturn(new SystemClock());
+    Mockito.when(services.getClocks().getClock(ClockType.SYSTEM)).thenReturn(new SystemClock());
 
     // OK. Now I have my mocked up Server & RegionServerServices and dodgy WAL, go ahead with test.
     FileSystem fs = FileSystem.get(CONF);

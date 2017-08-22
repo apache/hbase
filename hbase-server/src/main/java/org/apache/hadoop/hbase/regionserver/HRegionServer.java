@@ -73,17 +73,13 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Clock;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HealthCheckChore;
-import org.apache.hadoop.hbase.HybridLogicalClock;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.SystemClock;
-import org.apache.hadoop.hbase.SystemMonotonicClock;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -341,9 +337,7 @@ public class HRegionServer extends HasThread implements
   // Region server contains instances of all three clock clocks. Regions have a set
   // clock type so depending on the clock type needed by a region, the appropriate
   // one can be accessed.
-  protected Clock hybridLogicalClock;
-  protected Clock systemMonotonicClock;
-  protected Clock systemClock;
+  protected Clocks clocks;
 
   ConcurrentMap<String, Integer> rowlocks = new ConcurrentHashMap<>();
 
@@ -605,9 +599,7 @@ public class HRegionServer extends HasThread implements
 
     final long maxClockSkew =
         conf.getLong("hbase.max.clock.skew.in.ms", Clock.DEFAULT_MAX_CLOCK_SKEW_IN_MS);
-    this.hybridLogicalClock = new HybridLogicalClock(maxClockSkew);
-    this.systemMonotonicClock = new SystemMonotonicClock(maxClockSkew);
-    this.systemClock = new SystemClock();
+    this.clocks = new Clocks(maxClockSkew);
 
     rpcServices = createRpcServices();
     if (this instanceof HMaster) {
@@ -2094,38 +2086,8 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public Clock getClock(ClockType clockType) {
-    switch (clockType) {
-      case HYBRID_LOGICAL:
-        return this.hybridLogicalClock;
-      case SYSTEM_MONOTONIC:
-        return this.systemMonotonicClock;
-      case SYSTEM:
-        return this.systemClock;
-      default:
-        throw new IllegalArgumentException("Wrong clock type: " + clockType.toString());
-    }
-  }
-
-  /**
-   * Only for the purpose of testing
-   * @param clock
-   */
-  @VisibleForTesting
-  public void setClock(Clock clock) {
-    switch (clock.getClockType()) {
-      case HYBRID_LOGICAL:
-        this.hybridLogicalClock = clock;
-        break;
-      case SYSTEM_MONOTONIC:
-        this.systemMonotonicClock = clock;
-        break;
-      case SYSTEM:
-        this.systemClock = clock;
-        break;
-      default:
-        throw new IllegalArgumentException("Wrong clock type: " + clock.getClockType().toString());
-    }
+  public Clocks getClocks() {
+    return clocks;
   }
 
   @Override

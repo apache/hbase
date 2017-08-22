@@ -184,7 +184,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
@@ -3344,7 +3343,7 @@ public final class ProtobufUtil {
    }
 
   public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
-    final byte[] regionName, ServerName destinationServer, List<Pair<ClockType, Long>> nodeTimes) {
+    final byte[] regionName, ServerName destinationServer, List<NodeTime> nodeTimes) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
     RegionSpecifier region = RequestConverter.buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
@@ -3356,11 +3355,7 @@ public final class ProtobufUtil {
       builder.setServerStartCode(server.getStartcode());
     }
     if (nodeTimes != null) {
-      for (Pair<ClockType, Long> nodeTime : nodeTimes) {
-        builder.addNodeTimesBuilder()
-            .setClockType(ProtobufUtil.toClockType(nodeTime.getFirst()))
-            .setTimestamp(nodeTime.getSecond());
-      }
+      builder.addAllNodeTimes(nodeTimes);
     }
     return builder.build();
   }

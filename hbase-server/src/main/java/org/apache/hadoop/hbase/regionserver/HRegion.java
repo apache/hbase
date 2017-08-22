@@ -389,8 +389,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public Clock getClock() {
     if (this.clock == null) {
-      return this.getRegionServerServices().getClock(
-          getTableDescriptor().getClockType());
+      return this.getRegionServerServices().getClocks().getClock(htableDescriptor.getClockType());
     }
     return this.clock;
   }
@@ -800,7 +799,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         ? DEFAULT_DURABILITY
         : htd.getDurability();
     if (rsServices != null) {
-      this.clock = rsServices.getClock(htd.getClockType());
+      this.clock = rsServices.getClocks().getClock(htd.getClockType());
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
       // TODO: revisit if coprocessors should load in other cases

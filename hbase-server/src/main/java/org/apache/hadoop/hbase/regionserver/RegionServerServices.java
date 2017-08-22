@@ -39,8 +39,6 @@ import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.Clock;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.protobuf.Service;
@@ -61,10 +59,9 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   WAL getWAL(HRegionInfo regionInfo) throws IOException;
 
   /**
-   * @param clockType The clock type
-   * @return Region server's instance of {@link Clock}
+   * @return the underlying clocks instance
    */
-  Clock getClock(ClockType clockType);
+  Clocks getClocks();
 
   /** @return the List of WALs that are used by this server
    *  Doesn't include the meta WAL

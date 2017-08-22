@@ -222,7 +222,7 @@ public class TestClockWithCluster {
 
     // Set meta region clock so that region state transitions are timestamped with mocked clock
     regionMeta.setClock(masterHLC);
-    master.setClock(masterHLC);
+    master.getClocks().setClock(masterHLC);
 
     HRegion userRegion = null;
     for (Region region : regions) {
@@ -234,7 +234,7 @@ public class TestClockWithCluster {
 
     // Only mock the region server clock because the region clock does not get used during
     // unassignment and assignment
-    rs.setClock(masterHLC);
+    rs.getClocks().setClock(masterHLC);
 
     // Repeatedly unassign and assign region while tracking the timestamps of the region state
     // transitions from the meta table
@@ -330,7 +330,7 @@ public class TestClockWithCluster {
     when(masterMockSystemClock.getTimeUnit()).thenReturn(TimeUnit.MILLISECONDS);
     HybridLogicalClock masterHLC =
         new HybridLogicalClock(new SystemMonotonicClock(masterMockSystemClock));
-    master.setClock(masterHLC);
+    master.getClocks().setClock(masterHLC);
     regionMeta.setClock(masterHLC);
 
     Clock rsMockSystemClock = mock(Clock.class);
@@ -341,7 +341,7 @@ public class TestClockWithCluster {
         new HybridLogicalClock(new SystemMonotonicClock(rsMockSystemClock));
     // We only mock the region server clock here because the region clock does not get used
     // during unassignment and assignment
-    rs.setClock(rsHLC);
+    rs.getClocks().setClock(rsHLC);
 
     // Increment master physical clock time
     expectedPhysicalTime += 1000;

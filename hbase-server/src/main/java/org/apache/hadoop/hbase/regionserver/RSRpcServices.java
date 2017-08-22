@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -209,7 +208,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NodeTime;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -1516,11 +1514,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
 
-      for (NodeTime nodeTime : request.getNodeTimesList()) {
-        // Update master clock upon receiving open region response from region server
-        regionServer.getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
-            .update(nodeTime.getTimestamp());
-      }
+      // Update master clocks upon receiving open region response from region server
+      regionServer.getClocks().updateAll(request.getNodeTimesList());
 
       requestCount.increment();
       if (sn == null) {
@@ -1532,12 +1527,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
       CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder()
           .setClosed(closed)
-          .addNodeTimes(NodeTime.newBuilder()
-            .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
-            .setTimestamp(regionServer.getClock(ClockType.SYSTEM_MONOTONIC).now()).build())
-          .addNodeTimes(NodeTime.newBuilder()
-            .setClockType(ProtobufUtil.toClockType(ClockType.HYBRID_LOGICAL))
-            .setTimestamp(regionServer.getClock(ClockType.HYBRID_LOGICAL).now()).build());
+          .addAllNodeTimes(regionServer.getClocks().nowAll());
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -1910,11 +1900,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
     }
 
-    for (NodeTime nodeTime : request.getNodeTimesList()) {
-      // Update region server clock on receive event
-      regionServer.getClock(ProtobufUtil.toClockType(nodeTime.getClockType()))
-          .update(nodeTime.getTimestamp());
-    }
+    // Update region server clocks on receive event
+    regionServer.getClocks().updateAll(request.getNodeTimesList());
 
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
@@ -2021,13 +2008,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
     }
 
-    // Set clock for send event
-    builder.addNodeTimes(NodeTime.newBuilder()
-        .setClockType(ProtobufUtil.toClockType(ClockType.SYSTEM_MONOTONIC))
-        .setTimestamp(regionServer.getClock(ClockType.SYSTEM_MONOTONIC).now()).build())
-      .addNodeTimes(NodeTime.newBuilder()
-        .setClockType(ProtobufUtil.toClockType(ClockType.HYBRID_LOGICAL))
-        .setTimestamp(regionServer.getClock(ClockType.HYBRID_LOGICAL).now()).build());
+    // Set node times for send event
+    builder.addAllNodeTimes(regionServer.getClocks().nowAll());
 
     return builder.build();
   }

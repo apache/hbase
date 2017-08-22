@@ -687,7 +687,7 @@ public abstract class AbstractTestWALReplay {
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
     Mockito.doReturn(false).when(rsServices).isAborted();
-    when(rsServices.getClock(clock.getClockType())).thenReturn(clock);
+    when(rsServices.getClocks().getClock(clock.getClockType())).thenReturn(clock);
     when(rsServices.getServerName()).thenReturn(ServerName.valueOf("foo", 10, 10));
     Configuration customConf = new Configuration(this.conf);
     customConf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,

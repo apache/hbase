@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.Clock;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -48,6 +46,7 @@ import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.regionserver.Clocks;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -61,10 +60,9 @@ import com.google.protobuf.Service;
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
   /**
-   * @param clockType The clock type
-   * @return Master's instance of {@link Clock}
+   * @return the underlying clocks instance
    */
-  Clock getClock(ClockType clockType);
+  Clocks getClocks();
 
   /**
    * @return the underlying snapshot manager
