@@ -225,6 +225,9 @@ public class MiniZooKeeperCluster {
       }
 
       ZooKeeperServer server = new ZooKeeperServer(dir, dir, tickTimeToUse);
+      // Setting {min,max}SessionTimeout defaults to be the same as in Zookeeper
+      server.setMinSessionTimeout(configuration.getInt("hbase.zookeeper.property.minSessionTimeout", -1));
+      server.setMaxSessionTimeout(configuration.getInt("hbase.zookeeper.property.maxSessionTimeout", -1));
       NIOServerCnxnFactory standaloneServerFactory;
       while (true) {
         try {
