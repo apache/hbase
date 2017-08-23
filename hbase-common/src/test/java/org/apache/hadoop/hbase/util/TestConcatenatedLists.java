@@ -67,7 +67,7 @@ public class TestConcatenatedLists {
     } catch (UnsupportedOperationException ex) {
     }
     try {
-      c.retainAll(Arrays.asList(0L, 1L));
+      c.retainAll(Arrays.asList(0L, 2L));
       fail("Should throw");
     } catch (UnsupportedOperationException ex) {
     }
@@ -118,9 +118,11 @@ public class TestConcatenatedLists {
     verify(c, 7);
   }
 
+  @SuppressWarnings("ModifyingCollectionWithItself")
   private void verify(ConcatenatedLists<Long> c, int last) {
     assertEquals((last == -1), c.isEmpty());
     assertEquals(last + 1, c.size());
+    // This check is O(n^2), test with care
     assertTrue(c.containsAll(c));
     Long[] array = c.toArray(new Long[c.size()]);
     List<Long> all = new ArrayList<>();
