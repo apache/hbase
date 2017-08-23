@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.CountingChore;
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.DoNothingChore;
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.FailInitialChore;
@@ -36,6 +38,8 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestChoreService {
+  public static final Log log = LogFactory.getLog(TestChoreService.class);
+
   /**
    * A few ScheduledChore samples that are useful for testing with ChoreService
    */
@@ -75,7 +79,7 @@ public class TestChoreService {
         try {
           Thread.sleep(getPeriod() * 2);
         } catch (InterruptedException e) {
-          e.printStackTrace();
+          log.warn("", e);
         }
         return true;
       }
@@ -85,7 +89,7 @@ public class TestChoreService {
         try {
           Thread.sleep(getPeriod() * 2);
         } catch (InterruptedException e) {
-          //e.printStackTrace();
+          log.warn("", e);
         }
       }
     }
@@ -126,7 +130,7 @@ public class TestChoreService {
         try {
           Thread.sleep(sleepTime);
         } catch (InterruptedException e) {
-          e.printStackTrace();
+          log.warn("", e);
         }
         return true;
       }
@@ -136,7 +140,7 @@ public class TestChoreService {
         try {
           Thread.sleep(sleepTime);
         } catch (Exception e) {
-          System.err.println(e.getStackTrace());
+          log.warn("", e);
         }
       }
     }
@@ -174,7 +178,7 @@ public class TestChoreService {
       }
 
       private void outputTickCount() {
-        System.out.println("Chore: " + getName() + ". Count of chore calls: " + countOfChoreCalls);
+        log.info("Chore: " + getName() + ". Count of chore calls: " + countOfChoreCalls);
       }
 
       public int getCountOfChoreCalls() {
