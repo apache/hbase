@@ -26,6 +26,7 @@ namespace hbase {
 
 class MiniCluster {
  public:
+  virtual ~MiniCluster();
   jobject StartCluster(int32_t num_region_servers);
   void StopCluster();
   jobject CreateTable(const std::string &table, const std::string &family);

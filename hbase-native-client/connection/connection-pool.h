@@ -43,6 +43,7 @@ class ConnectionPool {
  public:
   /** Create connection pool wit default connection factory */
   ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
+                 std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
                  std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
                  std::chrono::nanoseconds connect_timeout = std::chrono::nanoseconds(0));
 
@@ -81,10 +82,6 @@ class ConnectionPool {
   std::unordered_map<std::shared_ptr<ConnectionId>, std::shared_ptr<RpcConnection>,
                      ConnectionIdHash, ConnectionIdEquals>
       connections_;
-  std::unordered_map<std::shared_ptr<ConnectionId>,
-                     std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>, ConnectionIdHash,
-                     ConnectionIdEquals>
-      clients_;
   folly::SharedMutexWritePriority map_mutex_;
   std::shared_ptr<ConnectionFactory> cf_;
   std::shared_ptr<Configuration> conf_;

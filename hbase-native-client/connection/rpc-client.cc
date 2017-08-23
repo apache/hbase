@@ -32,10 +32,11 @@ using std::chrono::nanoseconds;
 namespace hbase {
 
 RpcClient::RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
+                     std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
                      std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
                      nanoseconds connect_timeout)
     : io_executor_(io_executor), conf_(conf) {
-  cp_ = std::make_shared<ConnectionPool>(io_executor_, codec, conf, connect_timeout);
+  cp_ = std::make_shared<ConnectionPool>(io_executor_, cpu_executor, codec, conf, connect_timeout);
 }
 
 void RpcClient::Close() { io_executor_->stop(); }

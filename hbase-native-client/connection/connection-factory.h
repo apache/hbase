@@ -18,6 +18,8 @@
  */
 #pragma once
 
+#include <wangle/concurrent/CPUThreadPoolExecutor.h>
+#include <wangle/concurrent/IOThreadPoolExecutor.h>
 #include <wangle/service/Service.h>
 
 #include <chrono>
@@ -32,6 +34,8 @@
 
 namespace hbase {
 
+class RpcConnection;
+
 /**
  * Class to create a ClientBootstrap and turn it into a connected
  * pipeline.
@@ -42,7 +46,8 @@ class ConnectionFactory {
    * Constructor.
    * There should only be one ConnectionFactory per client.
    */
-  ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
+  ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
+                    std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
                     std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
                     std::chrono::nanoseconds connect_timeout = std::chrono::nanoseconds(0));
 
@@ -60,13 +65,19 @@ class ConnectionFactory {
    * This is mostly visible so that mocks can override socket connections.
    */
   virtual std::shared_ptr<HBaseService> Connect(
-      std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client,
+      std::shared_ptr<RpcConnection> rpc_connection,
+      std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client_bootstrap,
       const std::string &hostname, uint16_t port);
+
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor() { return io_executor_; }
+
+  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor() { return cpu_executor_; }
 
  private:
   std::chrono::nanoseconds connect_timeout_;
   std::shared_ptr<Configuration> conf_;
-  std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool_;
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
+  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::shared_ptr<RpcPipelineFactory> pipeline_factory_;
 };
 }  // namespace hbase

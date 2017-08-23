@@ -17,47 +17,46 @@
  *
  */
 
-#include "connection/connection-pool.h"
-#include "connection/connection-factory.h"
-#include "connection/connection-id.h"
-
-#include "if/HBase.pb.h"
-#include "serde/server-name.h"
-
 #include <folly/Logging.h>
 #include <gmock/gmock.h>
 
-using namespace hbase;
+#include "connection/connection-factory.h"
+#include "connection/connection-id.h"
+#include "connection/connection-pool.h"
+#include "if/HBase.pb.h"
+#include "serde/server-name.h"
 
 using hbase::pb::ServerName;
 using ::testing::Return;
 using ::testing::_;
+using hbase::ConnectionFactory;
+using hbase::ConnectionPool;
 using hbase::ConnectionId;
+using hbase::HBaseService;
+using hbase::Request;
+using hbase::Response;
+using hbase::RpcConnection;
+using hbase::SerializePipeline;
 
 class MockConnectionFactory : public ConnectionFactory {
  public:
-  MockConnectionFactory() : ConnectionFactory(nullptr, nullptr, nullptr) {}
+  MockConnectionFactory() : ConnectionFactory(nullptr, nullptr, nullptr, nullptr) {}
   MOCK_METHOD0(MakeBootstrap, std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>());
-  MOCK_METHOD3(Connect, std::shared_ptr<HBaseService>(
+  MOCK_METHOD4(Connect, std::shared_ptr<HBaseService>(
+                            std::shared_ptr<RpcConnection> rpc_connection,
                             std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>,
                             const std::string &hostname, uint16_t port));
 };
 
 class MockBootstrap : public wangle::ClientBootstrap<SerializePipeline> {};
 
-class MockServiceBase : public HBaseService {
+class MockService : public HBaseService {
  public:
   folly::Future<std::unique_ptr<Response>> operator()(std::unique_ptr<Request> req) override {
-    return do_operation(req.get());
+    return folly::makeFuture<std::unique_ptr<Response>>(
+        std::make_unique<Response>(do_operation(req.get())));
   }
-  virtual folly::Future<std::unique_ptr<Response>> do_operation(Request *req) {
-    return folly::makeFuture<std::unique_ptr<Response>>(std::make_unique<Response>());
-  }
-};
-
-class MockService : public MockServiceBase {
- public:
-  MOCK_METHOD1(do_operation, folly::Future<std::unique_ptr<Response>>(Request *));
+  MOCK_METHOD1(do_operation, Response(Request *));
 };
 
 TEST(TestConnectionPool, TestOnlyCreateOnce) {
@@ -67,14 +66,16 @@ TEST(TestConnectionPool, TestOnlyCreateOnce) {
   auto mock_cf = std::make_shared<MockConnectionFactory>();
   uint32_t port{999};
 
-  EXPECT_CALL((*mock_cf), Connect(_, _, _)).Times(1).WillRepeatedly(Return(mock_service));
+  EXPECT_CALL((*mock_cf), Connect(_, _, _, _)).Times(1).WillRepeatedly(Return(mock_service));
   EXPECT_CALL((*mock_cf), MakeBootstrap()).Times(1).WillRepeatedly(Return(mock_boot));
+  EXPECT_CALL((*mock_service), do_operation(_)).Times(1).WillRepeatedly(Return(Response{}));
   ConnectionPool cp{mock_cf};
 
   auto remote_id = std::make_shared<ConnectionId>(hostname, port);
   auto result = cp.GetConnection(remote_id);
   ASSERT_TRUE(result != nullptr);
   result = cp.GetConnection(remote_id);
+  result->SendRequest(nullptr);
 }
 
 TEST(TestConnectionPool, TestOnlyCreateMultipleDispose) {
@@ -86,20 +87,25 @@ TEST(TestConnectionPool, TestOnlyCreateMultipleDispose) {
   auto mock_service = std::make_shared<MockService>();
   auto mock_cf = std::make_shared<MockConnectionFactory>();
 
-  EXPECT_CALL((*mock_cf), Connect(_, _, _)).Times(2).WillRepeatedly(Return(mock_service));
+  EXPECT_CALL((*mock_cf), Connect(_, _, _, _)).Times(2).WillRepeatedly(Return(mock_service));
   EXPECT_CALL((*mock_cf), MakeBootstrap()).Times(2).WillRepeatedly(Return(mock_boot));
+  EXPECT_CALL((*mock_service), do_operation(_)).Times(4).WillRepeatedly(Return(Response{}));
   ConnectionPool cp{mock_cf};
 
   {
     auto remote_id = std::make_shared<ConnectionId>(hostname_one, port);
     auto result_one = cp.GetConnection(remote_id);
+    result_one->SendRequest(nullptr);
     auto remote_id2 = std::make_shared<ConnectionId>(hostname_two, port);
     auto result_two = cp.GetConnection(remote_id2);
+    result_two->SendRequest(nullptr);
   }
   auto remote_id = std::make_shared<ConnectionId>(hostname_one, port);
   auto result_one = cp.GetConnection(remote_id);
+  result_one->SendRequest(nullptr);
   auto remote_id2 = std::make_shared<ConnectionId>(hostname_two, port);
   auto result_two = cp.GetConnection(remote_id2);
+  result_two->SendRequest(nullptr);
 }
 
 TEST(TestConnectionPool, TestCreateOneConnectionForOneService) {
@@ -112,18 +118,23 @@ TEST(TestConnectionPool, TestCreateOneConnectionForOneService) {
   auto mock_service = std::make_shared<MockService>();
   auto mock_cf = std::make_shared<MockConnectionFactory>();
 
-  EXPECT_CALL((*mock_cf), Connect(_, _, _)).Times(2).WillRepeatedly(Return(mock_service));
+  EXPECT_CALL((*mock_cf), Connect(_, _, _, _)).Times(2).WillRepeatedly(Return(mock_service));
   EXPECT_CALL((*mock_cf), MakeBootstrap()).Times(2).WillRepeatedly(Return(mock_boot));
+  EXPECT_CALL((*mock_service), do_operation(_)).Times(4).WillRepeatedly(Return(Response{}));
   ConnectionPool cp{mock_cf};
 
   {
     auto remote_id = std::make_shared<ConnectionId>(hostname, port, service1);
     auto result_one = cp.GetConnection(remote_id);
+    result_one->SendRequest(nullptr);
     auto remote_id2 = std::make_shared<ConnectionId>(hostname, port, service2);
     auto result_two = cp.GetConnection(remote_id2);
+    result_two->SendRequest(nullptr);
   }
   auto remote_id = std::make_shared<ConnectionId>(hostname, port, service1);
   auto result_one = cp.GetConnection(remote_id);
+  result_one->SendRequest(nullptr);
   auto remote_id2 = std::make_shared<ConnectionId>(hostname, port, service2);
   auto result_two = cp.GetConnection(remote_id2);
+  result_two->SendRequest(nullptr);
 }

@@ -17,19 +17,24 @@
  *
  */
 #include "connection/client-dispatcher.h"
+
 #include <folly/ExceptionWrapper.h>
 #include <folly/Format.h>
 #include <folly/io/async/AsyncSocketException.h>
 #include <utility>
+
+#include "connection/rpc-connection.h"
 #include "exceptions/exception.h"
 
 using std::unique_ptr;
 
 namespace hbase {
 
-ClientDispatcher::ClientDispatcher() : current_call_id_(9), requests_(5000) {}
+ClientDispatcher::ClientDispatcher(const std::string &server)
+    : current_call_id_(9), requests_(5000), server_(server), is_closed_(false) {}
 
 void ClientDispatcher::read(Context *ctx, unique_ptr<Response> in) {
+  VLOG(5) << "ClientDispatcher::read()";
   auto call_id = in->call_id();
   auto p = requests_.find_and_erase(call_id);
 
@@ -43,7 +48,23 @@ void ClientDispatcher::read(Context *ctx, unique_ptr<Response> in) {
   }
 }
 
+void ClientDispatcher::readException(Context *ctx, folly::exception_wrapper e) {
+  VLOG(5) << "ClientDispatcher::readException()";
+  CloseAndCleanUpCalls();
+}
+
+void ClientDispatcher::readEOF(Context *ctx) {
+  VLOG(5) << "ClientDispatcher::readEOF()";
+  CloseAndCleanUpCalls();
+}
+
 folly::Future<unique_ptr<Response>> ClientDispatcher::operator()(unique_ptr<Request> arg) {
+  VLOG(5) << "ClientDispatcher::operator()";
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  if (is_closed_) {
+    throw ConnectionException("Connection closed already");
+  }
+
   auto call_id = current_call_id_++;
   arg->set_call_id(call_id);
 
@@ -55,6 +76,7 @@ folly::Future<unique_ptr<Response>> ClientDispatcher::operator()(unique_ptr<Requ
   p.setInterruptHandler([call_id, this](const folly::exception_wrapper &e) {
     LOG(ERROR) << "e = " << call_id;
     this->requests_.erase(call_id);
+    // TODO: call Promise::SetException()?
   });
 
   try {
@@ -68,9 +90,26 @@ folly::Future<unique_ptr<Response>> ClientDispatcher::operator()(unique_ptr<Requ
   return f;
 }
 
-folly::Future<folly::Unit> ClientDispatcher::close() { return ClientDispatcherBase::close(); }
+void ClientDispatcher::CloseAndCleanUpCalls() {
+  VLOG(5) << "ClientDispatcher::CloseAndCleanUpCalls()";
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  if (is_closed_) {
+    return;
+  }
+  for (auto &pair : requests_) {
+    pair.second.setException(IOException{"Connection closed to server:" + server_});
+  }
+  requests_.clear();
+  is_closed_ = true;
+}
+
+folly::Future<folly::Unit> ClientDispatcher::close() {
+  CloseAndCleanUpCalls();
+  return ClientDispatcherBase::close();
+}
 
 folly::Future<folly::Unit> ClientDispatcher::close(Context *ctx) {
+  CloseAndCleanUpCalls();
   return ClientDispatcherBase::close(ctx);
 }
 }  // namespace hbase

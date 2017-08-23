@@ -86,6 +86,7 @@ void SaslHandler::transportActive(Context *ctx) {
   VLOG(3) << "Writing RPC connection Preamble to server: " << host_name_;
   auto preamble = RpcSerde::Preamble(secure_);
   ctx->fireWrite(std::move(preamble));
+  ctx->fireTransportActive();
 }
 
 void SaslHandler::read(Context *ctx, folly::IOBufQueue &buf) {

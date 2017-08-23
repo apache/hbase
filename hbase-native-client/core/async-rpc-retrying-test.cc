@@ -316,8 +316,8 @@ void runTest(std::shared_ptr<AsyncRegionLocatorBase> region_locator, std::string
   auto io_executor_ = client.async_connection()->io_executor();
   auto retry_executor_ = std::make_shared<wangle::IOThreadPoolExecutor>(1);
   auto codec = std::make_shared<hbase::KeyValueCodec>();
-  auto rpc_client =
-      std::make_shared<RpcClient>(io_executor_, codec, AsyncRpcRetryTest::test_util->conf());
+  auto rpc_client = std::make_shared<RpcClient>(io_executor_, cpu_executor_, codec,
+                                                AsyncRpcRetryTest::test_util->conf());
   // auto retry_event_base_ = std::make_shared<folly::ScopedEventBaseThread>(true);
   std::shared_ptr<folly::HHWheelTimer> retry_timer =
       folly::HHWheelTimer::newTimer(retry_executor_->getEventBase());

@@ -25,6 +25,7 @@
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
 
 #include <map>
+#include <shared_mutex>
 #include <utility>
 
 #include "connection/response.h"
@@ -44,13 +45,15 @@ using hbase::pb::TableName;
 namespace hbase {
 
 LocationCache::LocationCache(std::shared_ptr<hbase::Configuration> conf,
+                             std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
                              std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
                              std::shared_ptr<ConnectionPool> cp)
     : conf_(conf),
+      io_executor_(io_executor),
       cpu_executor_(cpu_executor),
+      cp_(cp),
       meta_promise_(nullptr),
       meta_lock_(),
-      cp_(cp),
       meta_util_(),
       zk_(nullptr),
       cached_locations_(),
@@ -147,11 +150,12 @@ folly::Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
   return this->LocateMeta()
       .via(cpu_executor_.get())
       .then([this](ServerName sn) {
+        // TODO: use RpcClient?
         auto remote_id = std::make_shared<ConnectionId>(sn.host_name(), sn.port());
         return this->cp_->GetConnection(remote_id);
       })
       .then([tn, row, this](std::shared_ptr<RpcConnection> rpc_connection) {
-        return (*rpc_connection->get_service())(std::move(meta_util_.MetaRequest(tn, row)));
+        return rpc_connection->SendRequest(std::move(meta_util_.MetaRequest(tn, row)));
       })
       .onError([&](const folly::exception_wrapper &ew) {
         auto promise = InvalidateMeta();

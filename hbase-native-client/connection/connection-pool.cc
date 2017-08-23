@@ -24,6 +24,7 @@
 #include <wangle/service/Service.h>
 
 #include <memory>
+#include <string>
 #include <utility>
 
 using std::chrono::nanoseconds;
@@ -31,17 +32,18 @@ using std::chrono::nanoseconds;
 namespace hbase {
 
 ConnectionPool::ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
+                               std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
                                std::shared_ptr<Codec> codec, std::shared_ptr<Configuration> conf,
                                nanoseconds connect_timeout)
-    : cf_(std::make_shared<ConnectionFactory>(io_executor, codec, conf, connect_timeout)),
-      clients_(),
+    : cf_(std::make_shared<ConnectionFactory>(io_executor, cpu_executor, codec, conf,
+                                              connect_timeout)),
       connections_(),
       map_mutex_(),
       conf_(conf) {}
 ConnectionPool::ConnectionPool(std::shared_ptr<ConnectionFactory> cf)
-    : cf_(cf), clients_(), connections_(), map_mutex_() {}
+    : cf_(cf), connections_(), map_mutex_() {}
 
-ConnectionPool::~ConnectionPool() { Close(); }
+ConnectionPool::~ConnectionPool() {}
 
 std::shared_ptr<RpcConnection> ConnectionPool::GetConnection(
     std::shared_ptr<ConnectionId> remote_id) {
@@ -85,12 +87,9 @@ std::shared_ptr<RpcConnection> ConnectionPool::GetNewConnection(
     connections_.erase(remote_id);
 
     /* create new connection */
-    auto clientBootstrap = cf_->MakeBootstrap();
-    auto dispatcher = cf_->Connect(clientBootstrap, remote_id->host(), remote_id->port());
-    auto connection = std::make_shared<RpcConnection>(remote_id, dispatcher);
+    auto connection = std::make_shared<RpcConnection>(remote_id, cf_);
 
     connections_.insert(std::make_pair(remote_id, connection));
-    clients_.insert(std::make_pair(remote_id, clientBootstrap));
 
     return connection;
   }
@@ -107,7 +106,6 @@ void ConnectionPool::Close(std::shared_ptr<ConnectionId> remote_id) {
   }
   found->second->Close();
   connections_.erase(found);
-  // TODO: erase the client as well?
 }
 
 void ConnectionPool::Close() {
@@ -117,6 +115,5 @@ void ConnectionPool::Close() {
     con->Close();
   }
   connections_.clear();
-  clients_.clear();
 }
 }  // namespace hbase

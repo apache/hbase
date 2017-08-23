@@ -118,6 +118,11 @@ class concurrent_map {
     return map_.empty();
   }
 
+  void clear() {
+    std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+    map_.clear();
+  }
+
  private:
   std::shared_timed_mutex mutex_;
   std::unordered_map<K, V> map_;

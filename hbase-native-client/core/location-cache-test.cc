@@ -27,8 +27,15 @@
 #include "if/HBase.pb.h"
 #include "serde/table-name.h"
 #include "test-util/test-util.h"
-using namespace hbase;
-using namespace std::chrono;
+
+using hbase::Cell;
+using hbase::Configuration;
+using hbase::ConnectionPool;
+using hbase::MetaUtil;
+using hbase::LocationCache;
+using hbase::TestUtil;
+using hbase::KeyValueCodec;
+using std::chrono::milliseconds;
 
 class LocationCacheTest : public ::testing::Test {
  protected:
@@ -52,8 +59,8 @@ TEST_F(LocationCacheTest, TestGetMetaNodeContents) {
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   auto codec = std::make_shared<KeyValueCodec>();
-  auto cp = std::make_shared<ConnectionPool>(io, codec, LocationCacheTest::test_util_->conf());
-  LocationCache cache{LocationCacheTest::test_util_->conf(), cpu, cp};
+  auto cp = std::make_shared<ConnectionPool>(io, cpu, codec, LocationCacheTest::test_util_->conf());
+  LocationCache cache{LocationCacheTest::test_util_->conf(), io, cpu, cp};
   auto f = cache.LocateMeta();
   auto result = f.get();
   ASSERT_FALSE(f.hasException());
@@ -61,15 +68,14 @@ TEST_F(LocationCacheTest, TestGetMetaNodeContents) {
   ASSERT_TRUE(result.has_host_name());
   cpu->stop();
   io->stop();
-  cp->Close();
 }
 
 TEST_F(LocationCacheTest, TestGetRegionLocation) {
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   auto codec = std::make_shared<KeyValueCodec>();
-  auto cp = std::make_shared<ConnectionPool>(io, codec, LocationCacheTest::test_util_->conf());
-  LocationCache cache{LocationCacheTest::test_util_->conf(), cpu, cp};
+  auto cp = std::make_shared<ConnectionPool>(io, cpu, codec, LocationCacheTest::test_util_->conf());
+  LocationCache cache{LocationCacheTest::test_util_->conf(), io, cpu, cp};
 
   // If there is no table this should throw an exception
   auto tn = folly::to<hbase::pb::TableName>("t");
@@ -80,15 +86,14 @@ TEST_F(LocationCacheTest, TestGetRegionLocation) {
   ASSERT_TRUE(loc != nullptr);
   cpu->stop();
   io->stop();
-  cp->Close();
 }
 
 TEST_F(LocationCacheTest, TestCaching) {
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   auto codec = std::make_shared<KeyValueCodec>();
-  auto cp = std::make_shared<ConnectionPool>(io, codec, LocationCacheTest::test_util_->conf());
-  LocationCache cache{LocationCacheTest::test_util_->conf(), cpu, cp};
+  auto cp = std::make_shared<ConnectionPool>(io, cpu, codec, LocationCacheTest::test_util_->conf());
+  LocationCache cache{LocationCacheTest::test_util_->conf(), io, cpu, cp};
 
   auto tn_1 = folly::to<hbase::pb::TableName>("t1");
   auto tn_2 = folly::to<hbase::pb::TableName>("t2");
@@ -156,5 +161,4 @@ TEST_F(LocationCacheTest, TestCaching) {
 
   cpu->stop();
   io->stop();
-  cp->Close();
 }

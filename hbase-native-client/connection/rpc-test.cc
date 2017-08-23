@@ -80,14 +80,17 @@ std::shared_ptr<folly::SocketAddress> GetRpcServerAddress(ServerPtr server) {
 
 std::shared_ptr<RpcClient> CreateRpcClient(std::shared_ptr<Configuration> conf) {
   auto io_executor = std::make_shared<wangle::IOThreadPoolExecutor>(1);
-  auto client = std::make_shared<RpcClient>(io_executor, nullptr, conf);
+  auto cpu_executor = std::make_shared<wangle::CPUThreadPoolExecutor>(1);
+  auto client = std::make_shared<RpcClient>(io_executor, cpu_executor, nullptr, conf);
   return client;
 }
 
 std::shared_ptr<RpcClient> CreateRpcClient(std::shared_ptr<Configuration> conf,
                                            std::chrono::nanoseconds connect_timeout) {
   auto io_executor = std::make_shared<wangle::IOThreadPoolExecutor>(1);
-  auto client = std::make_shared<RpcClient>(io_executor, nullptr, conf, connect_timeout);
+  auto cpu_executor = std::make_shared<wangle::CPUThreadPoolExecutor>(1);
+  auto client =
+      std::make_shared<RpcClient>(io_executor, cpu_executor, nullptr, conf, connect_timeout);
   return client;
 }
 
@@ -115,7 +118,8 @@ TEST_F(RpcTest, Ping) {
       })
       .onError([&](const folly::exception_wrapper& ew) {
         FAIL() << folly::sformat(FLAGS_fail_no_ex_format, method);
-      }).get();
+      })
+      .get();
 
   server->stop();
   server->join();
@@ -149,7 +153,8 @@ TEST_F(RpcTest, Echo) {
       })
       .onError([&](const folly::exception_wrapper& ew) {
         FAIL() << folly::sformat(FLAGS_fail_no_ex_format, method);
-      }).get();
+      })
+      .get();
 
   server->stop();
   server->join();
@@ -188,7 +193,8 @@ TEST_F(RpcTest, Error) {
           EXPECT_EQ(kRpcTestException, e.exception_class_name());
           EXPECT_EQ(kRpcTestException + ": server error!", e.stack_trace());
         }));
-      }).get();
+      })
+      .get();
 
   server->stop();
   server->join();
@@ -235,7 +241,8 @@ TEST_F(RpcTest, SocketNotOpen) {
             EXPECT_EQ(111 /*ECONNREFUSED*/, ase.getErrno());
           });
         }));
-      }).get();
+      })
+      .get();
 }
 
 /**
@@ -269,7 +276,8 @@ TEST_F(RpcTest, Pause) {
       .onError([&](const folly::exception_wrapper& ew) {
         VLOG(1) << folly::sformat(FLAGS_result_format, method, ew.what());
         FAIL() << folly::sformat(FLAGS_fail_no_ex_format, method);
-      }).get();
+      })
+      .get();
 
   server->stop();
   server->join();
