@@ -327,25 +327,25 @@ are combined counts. Request count is sum of hits and misses.</p>
 </%if>
     <tr>
         <td>Count</td>
-        <td><% String.format("%,d", cbsbf.getCount()) %></td>
+        <td><% String.format("%,d", bc.getBlockCount()) %></td>
         <td>Count of Blocks</td>
     </tr>
 <%if !bucketCache %>
     <tr>
         <td>Count</td>
-        <td><% String.format("%,d", cbsbf.getDataCount()) %></td>
+        <td><% String.format("%,d", bc.getDataBlockCount()) %></td>
         <td>Count of DATA Blocks</td>
     </tr>
 </%if>
     <tr>
         <td>Size</td>
-        <td><% TraditionalBinaryPrefix.long2String(cbsbf.getSize(), "B", 1) %></td>
+        <td><% TraditionalBinaryPrefix.long2String(bc.getCurrentSize(), "B", 1) %></td>
         <td>Size of Blocks</td>
     </tr>
 <%if !bucketCache %>
     <tr>
         <td>Size</td>
-        <td><% TraditionalBinaryPrefix.long2String(cbsbf.getDataSize(), "B", 1) %></td>
+        <td><% TraditionalBinaryPrefix.long2String(bc.getCurrentDataSize(), "B", 1) %></td>
         <td>Size of DATA Blocks</td>
     </tr>
 </%if> 
@@ -371,4 +371,3 @@ are combined counts. Request count is sum of hits and misses.</p>
 cbsbf = null;
 </%java>
 </%def>
-
