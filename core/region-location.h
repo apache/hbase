@@ -21,7 +21,6 @@
 #include <memory>
 #include <string>
 
-#include "connection/service.h"
 #include "if/HBase.pb.h"
 
 namespace hbase {
@@ -32,7 +31,7 @@ enum class RegionLocateType { kBefore, kCurrent, kAfter };
  * @brief class to hold where a region is located.
  *
  * This class holds where a region is located, the information about it, the
- * region name, and a connection to the service used for connecting to it.
+ * region name.
  */
 class RegionLocation {
  public:
@@ -42,7 +41,6 @@ class RegionLocation {
    * @param ri The decoded RegionInfo of this region.
    * @param sn The server name of the HBase regionserver thought to be hosting
    * this region.
-   * @param service the connected service to the regionserver.
    */
   RegionLocation(std::string region_name, hbase::pb::RegionInfo ri, hbase::pb::ServerName sn)
       : region_name_(region_name), ri_(ri), sn_(sn) {}

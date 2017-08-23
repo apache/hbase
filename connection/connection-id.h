@@ -18,12 +18,14 @@
  */
 #pragma once
 
+#include <boost/functional/hash.hpp>
+
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "if/HBase.pb.h"
 #include "security/user.h"
-
-#include <boost/functional/hash.hpp>
-#include <memory>
-#include <utility>
 
 namespace hbase {
 

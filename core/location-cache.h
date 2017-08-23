@@ -27,18 +27,19 @@
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
 #include <zookeeper/zookeeper.h>
 
+#include <map>
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <string>
+#include <unordered_map>
 
 #include "connection/connection-pool.h"
 #include "core/async-region-locator.h"
 #include "core/configuration.h"
 #include "core/meta-utils.h"
 #include "core/region-location.h"
+#include "core/zk-util.h"
 #include "serde/table-name.h"
-#include "zk-util.h"
 
 namespace hbase {
 // Forward
@@ -87,6 +88,7 @@ class LocationCache : public AsyncRegionLocator {
    * @param io_executor executor used to talk to the network
    */
   LocationCache(std::shared_ptr<hbase::Configuration> conf,
+                std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
                 std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
                 std::shared_ptr<ConnectionPool> cp);
   /**
@@ -129,7 +131,7 @@ class LocationCache : public AsyncRegionLocator {
    * @param row of the table to look up. This object must live until after the
    * future is returned
    */
-  virtual folly::Future<std::shared_ptr<RegionLocation>> LocateRegion(
+  folly::Future<std::shared_ptr<RegionLocation>> LocateRegion(
       const hbase::pb::TableName &tn, const std::string &row,
       const RegionLocateType locate_type = RegionLocateType::kCurrent,
       const int64_t locate_ns = 0) override;
@@ -180,8 +182,8 @@ class LocationCache : public AsyncRegionLocator {
   /**
    * Update cached region location, possibly using the information from exception.
    */
-  virtual void UpdateCachedLocation(const RegionLocation &loc,
-                                    const folly::exception_wrapper &error) override;
+  void UpdateCachedLocation(const RegionLocation &loc,
+                            const folly::exception_wrapper &error) override;
 
   const std::string &zk_quorum() { return zk_quorum_; }
 
@@ -200,6 +202,7 @@ class LocationCache : public AsyncRegionLocator {
   /* data */
   std::shared_ptr<hbase::Configuration> conf_;
   std::string zk_quorum_;
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::shared_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;
   std::recursive_mutex meta_lock_;

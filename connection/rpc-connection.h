@@ -18,36 +18,62 @@
  */
 #pragma once
 
+#include <memory>
+#include <mutex>
+#include <utility>
+
+#include "connection/connection-factory.h"
 #include "connection/connection-id.h"
 #include "connection/request.h"
 #include "connection/response.h"
 #include "connection/service.h"
 
-#include <memory>
-#include <utility>
-
 namespace hbase {
 
-class RpcConnection {
+class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
  public:
-  RpcConnection(std::shared_ptr<ConnectionId> connection_id,
-                std::shared_ptr<HBaseService> hbase_service)
-      : connection_id_(connection_id), hbase_service_(hbase_service) {}
+  RpcConnection(std::shared_ptr<ConnectionId> connection_id, std::shared_ptr<ConnectionFactory> cf)
+      : connection_id_(connection_id), cf_(cf), hbase_service_(nullptr) {}
 
   virtual ~RpcConnection() { Close(); }
 
   virtual std::shared_ptr<ConnectionId> remote_id() const { return connection_id_; }
 
-  virtual std::shared_ptr<HBaseService> get_service() const { return hbase_service_; }
-
   virtual folly::Future<std::unique_ptr<Response>> SendRequest(std::unique_ptr<Request> req) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    if (hbase_service_ == nullptr) {
+      Connect();
+    }
+    VLOG(5) << "Calling RpcConnection::SendRequest()";  // TODO
     return (*hbase_service_)(std::move(req));
   }
 
-  virtual void Close() { hbase_service_->close(); }
+  virtual void Close() {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    if (hbase_service_) {
+      hbase_service_->close();
+      hbase_service_ = nullptr;
+    }
+    if (client_bootstrap_) {
+      client_bootstrap_ = nullptr;
+    }
+  }
 
  private:
+  void Connect() {
+    client_bootstrap_ = cf_->MakeBootstrap();
+    auto dispatcher = cf_->Connect(shared_from_this(), client_bootstrap_, remote_id()->host(),
+                                   remote_id()->port());
+    hbase_service_ = std::move(dispatcher);
+  }
+
+ private:
+  std::recursive_mutex mutex_;
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
+  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::shared_ptr<ConnectionId> connection_id_;
   std::shared_ptr<HBaseService> hbase_service_;
+  std::shared_ptr<ConnectionFactory> cf_;
+  std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client_bootstrap_;
 };
 }  // namespace hbase

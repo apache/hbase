@@ -66,12 +66,16 @@ JNIEnv *MiniCluster::CreateVM(JavaVM **jvm) {
   args.ignoreUnrecognized = 0;
   int rv;
   rv = JNI_CreateJavaVM(jvm, reinterpret_cast<void **>(&env_), &args);
-  if (rv < 0 || !env_) {
-    LOG(INFO) << "Unable to Launch JVM " << rv;
-  } else {
-    LOG(INFO) << "Launched JVM! " << options;
-  }
+  CHECK(rv >= 0 && env_);
   return env_;
+}
+
+MiniCluster::~MiniCluster() {
+  if (jvm_ != NULL) {
+    jvm_->DestroyJavaVM();
+    jvm_ = NULL;
+  }
+  env_ = nullptr;
 }
 
 void MiniCluster::Setup() {
@@ -186,10 +190,9 @@ JNIEnv *MiniCluster::env() {
 }
 // converts C char* to Java byte[]
 jbyteArray MiniCluster::StrToByteChar(const std::string &str) {
-  if (str.size() == 0) {
+  if (str.length() == 0) {
     return nullptr;
   }
-  char *p = const_cast<char *>(str.c_str());
   int n = str.length();
   jbyteArray arr = env_->NewByteArray(n);
   env_->SetByteArrayRegion(arr, 0, n, reinterpret_cast<const jbyte *>(str.c_str()));

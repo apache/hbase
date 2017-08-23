@@ -47,7 +47,10 @@ std::string TestUtil::RandString(int len) {
 TestUtil::TestUtil() : temp_dir_(TestUtil::RandString()) {}
 
 TestUtil::~TestUtil() {
-  if (mini_) StopMiniCluster();
+  if (mini_) {
+    StopMiniCluster();
+    mini_ = nullptr;
+  }
 }
 
 void TestUtil::StartMiniCluster(int32_t num_region_servers) {
