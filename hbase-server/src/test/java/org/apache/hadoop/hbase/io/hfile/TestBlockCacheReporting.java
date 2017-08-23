@@ -118,7 +118,7 @@ public class TestBlockCacheReporting {
     BlockCache [] bcs = bc.getBlockCaches();
     if (bcs != null) {
       for (BlockCache sbc: bc.getBlockCaches()) {
-        bucketCacheReport(sbc);
+        LOG.info(bc.getClass().getSimpleName() + ": " + sbc.getStats());
       }
     }
   }
