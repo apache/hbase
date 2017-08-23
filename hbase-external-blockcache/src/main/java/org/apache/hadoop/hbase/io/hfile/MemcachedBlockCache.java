@@ -205,7 +205,17 @@ public class MemcachedBlockCache implements BlockCache {
   }
 
   @Override
+  public long getCurrentDataSize() {
+    return 0;
+  }
+
+  @Override
   public long getBlockCount() {
+    return 0;
+  }
+
+  @Override
+  public long getDataBlockCount() {
     return 0;
   }
 
