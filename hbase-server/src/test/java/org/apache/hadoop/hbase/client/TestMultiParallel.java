@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -77,6 +78,8 @@ public class TestMultiParallel {
     //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     UTIL.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
         KeyValueCodec.class.getCanonicalName());
+    UTIL.getConfiguration().setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
+    UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     UTIL.startMiniCluster(slaves);
     Table t = UTIL.createMultiRegionTable(TEST_TABLE, Bytes.toBytes(FAMILY));
     UTIL.waitTableEnabled(TEST_TABLE);
