@@ -51,6 +51,11 @@ public class Clocks {
     clockTypes.add(hybridLogicalClock.getClockType());
   }
 
+  @VisibleForTesting
+  public Clocks() {
+    this(Clock.DEFAULT_MAX_CLOCK_SKEW_IN_MS);
+  }
+
   public long update(ClockType clockType, long timestamp) {
     return getClock(clockType).update(timestamp);
   }

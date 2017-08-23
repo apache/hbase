@@ -27,11 +27,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.SystemClock;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ClockType;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -108,7 +106,7 @@ public class TestRegionSplitPolicy {
     final List<Region> regions = new ArrayList<>();
     Mockito.when(rss.getOnlineRegions(TABLENAME)).thenReturn(regions);
     Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
-    Mockito.when(rss.getClocks().getClock(ClockType.SYSTEM)).thenReturn(new SystemClock());
+    Mockito.when(rss.getClocks()).thenReturn(new Clocks());
     // Set max size for this 'table'.
     long maxSplitSize = 1024L;
     htd.setMaxFileSize(maxSplitSize);
@@ -170,7 +168,7 @@ public class TestRegionSplitPolicy {
     Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
     Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(0L);
     Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(0L);
-    Mockito.when(rss.getClocks().getClock(ClockType.SYSTEM)).thenReturn(new SystemClock());
+    Mockito.when(rss.getClocks()).thenReturn(new Clocks());
 
     BusyRegionSplitPolicy policy =
         (BusyRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
