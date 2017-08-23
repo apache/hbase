@@ -281,8 +281,12 @@
       <version>${project.version}</version>
       <type>test-jar</type>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-backup</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
-
   <profiles>
     <profile>
       <id>rsgroup</id>
