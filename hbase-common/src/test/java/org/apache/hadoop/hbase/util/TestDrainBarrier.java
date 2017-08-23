@@ -43,7 +43,7 @@ public class TestDrainBarrier {
     DrainBarrier barrier = new DrainBarrier();
     try {
       barrier.endOp();
-      fail("Should have asserted");
+      throw new Error("Should have asserted");
     } catch (AssertionError e) {
     }
 
@@ -53,7 +53,7 @@ public class TestDrainBarrier {
     barrier.endOp();
     try {
       barrier.endOp();
-      fail("Should have asserted");
+      throw new Error("Should have asserted");
     } catch (AssertionError e) {
     }
   }
@@ -105,7 +105,7 @@ public class TestDrainBarrier {
     barrier.stopAndDrainOpsOnce();
     try {
       barrier.stopAndDrainOpsOnce();
-      fail("Should have asserted");
+      throw new Error("Should have asserted");
     } catch (AssertionError e) {
     }
   }
