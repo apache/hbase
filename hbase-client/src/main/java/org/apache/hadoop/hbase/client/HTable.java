@@ -747,19 +747,7 @@ public class HTable implements Table {
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put)
   throws IOException {
-    ClientServiceCallable<Boolean> callable = new ClientServiceCallable<Boolean>(this.connection, getName(), row,
-        this.rpcControllerFactory.newController(), put.getPriority()) {
-      @Override
-      protected Boolean rpcCall() throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-          new BinaryComparator(value), CompareType.EQUAL, put);
-        MutateResponse response = doMutate(request);
-        return Boolean.valueOf(response.getProcessed());
-      }
-    };
-    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).
-        callWithRetries(callable, this.operationTimeout);
+    return checkAndPut(row, family, qualifier, CompareOp.EQUAL, value, put);
   }
 
   /**
