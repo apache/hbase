@@ -73,6 +73,7 @@ public class Get extends Query
   private boolean cacheBlocks = true;
   private int storeLimit = -1;
   private int storeOffset = 0;
+  private TimeRange tr = new TimeRange();
   private boolean checkExistenceOnly = false;
   private boolean closestRowBefore = false;
   private Map<byte [], NavigableSet<byte []>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -222,19 +223,9 @@ public class Get extends Query
    * @throws IOException
    * @return this for invocation chaining
    */
-  @Override
   public Get setTimeRange(long minStamp, long maxStamp) throws IOException {
-    return (Get) super.setTimeRange(minStamp, maxStamp);
-  }
-
-  /**
-   * Get versions of columns only within the specified timestamp range,
-   * @param tr Input TimeRange
-   * @return this for invocation chaining
-   */
-  @Override
-  public Get setTimeRange(TimeRange tr) {
-    return (Get) super.setTimeRange(tr);
+    tr = new TimeRange(minStamp, maxStamp);
+    return this;
   }
 
   /**
@@ -245,7 +236,7 @@ public class Get extends Query
   public Get setTimeStamp(long timestamp)
   throws IOException {
     try {
-      super.setTimeRange(timestamp, timestamp + 1);
+      tr = new TimeRange(timestamp, timestamp+1);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
@@ -254,14 +245,8 @@ public class Get extends Query
     return this;
   }
 
-  @Override
-  public Get setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
+  @Override public Get setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
     return (Get) super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
-  }
-
-  @Override
-  public Get setColumnFamilyTimeRange(byte[] cf, TimeRange tr) {
-    return (Get) super.setColumnFamilyTimeRange(cf, tr);
   }
 
   /**
@@ -401,6 +386,14 @@ public class Get extends Query
    */
   public int getRowOffsetPerColumnFamily() {
     return this.storeOffset;
+  }
+
+  /**
+   * Method for retrieving the get's TimeRange
+   * @return timeRange
+   */
+  public TimeRange getTimeRange() {
+    return this.tr;
   }
 
   /**
