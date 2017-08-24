@@ -22,11 +22,21 @@ import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ProcedureState;
+import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import java.io.IOException;
 
 @Category(SmallTests.class)
 public class TestProtobufUtil {
@@ -147,5 +157,81 @@ public class TestProtobufUtil {
     LockInfo.WaitingProcedure waitingProcedure2 = ProtobufUtil.toWaitingProcedure(proto);
 
     assertWaitingProcedureEquals(waitingProcedure, waitingProcedure2);
+  }
+
+  /**
+   * Test Increment Mutate conversions.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testIncrement() throws IOException {
+    long timeStamp = 111111;
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
+    mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
+    mutateBuilder.setMutateType(MutationProto.MutationType.INCREMENT);
+    ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
+    valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
+    QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
+    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
+    qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(11L)));
+    qualifierBuilder.setTimestamp(timeStamp);
+    valueBuilder.addQualifierValue(qualifierBuilder.build());
+    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
+    qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(22L)));
+    valueBuilder.addQualifierValue(qualifierBuilder.build());
+    mutateBuilder.addColumnValue(valueBuilder.build());
+
+    MutationProto proto = mutateBuilder.build();
+    // default fields
+    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
+
+    // set the default value for equal comparison
+    mutateBuilder = MutationProto.newBuilder(proto);
+    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
+
+    Increment increment = ProtobufUtil.toIncrement(proto, null);
+    mutateBuilder.setTimestamp(increment.getTimeStamp());
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.INCREMENT, increment));
+  }
+
+  /**
+   * Test Append Mutate conversions.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testAppend() throws IOException {
+    long timeStamp = 111111;
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
+    mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
+    mutateBuilder.setMutateType(MutationType.APPEND);
+    mutateBuilder.setTimestamp(timeStamp);
+    ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
+    valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
+    QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
+    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
+    qualifierBuilder.setValue(ByteString.copyFromUtf8("v1"));
+    qualifierBuilder.setTimestamp(timeStamp);
+    valueBuilder.addQualifierValue(qualifierBuilder.build());
+    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
+    qualifierBuilder.setValue(ByteString.copyFromUtf8("v2"));
+    valueBuilder.addQualifierValue(qualifierBuilder.build());
+    mutateBuilder.addColumnValue(valueBuilder.build());
+
+    MutationProto proto = mutateBuilder.build();
+    // default fields
+    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
+
+    // set the default value for equal comparison
+    mutateBuilder = MutationProto.newBuilder(proto);
+    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
+
+    Append append = ProtobufUtil.toAppend(proto, null);
+
+    // append always use the latest timestamp,
+    // reset the timestamp to the original mutate
+    mutateBuilder.setTimestamp(append.getTimeStamp());
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.APPEND, append));
   }
 }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -33,10 +34,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
@@ -462,6 +465,26 @@ public class TestIncrementsFromClientSide {
     }
   }
 
+  @Test
+  public void testIncrementWithCustomTimestamp() throws IOException {
+    TableName TABLENAME = TableName.valueOf(name.getMethodName());
+    Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    long timestamp = 999;
+    Increment increment = new Increment(ROW);
+    increment.add(CellUtil.createCell(ROW, FAMILY, QUALIFIER, timestamp, KeyValue.Type.Put.getCode(), Bytes.toBytes(100L)));
+    Result r = table.increment(increment);
+    assertEquals(1, r.size());
+    assertEquals(timestamp, r.rawCells()[0].getTimestamp());
+    r = table.get(new Get(ROW));
+    assertEquals(1, r.size());
+    assertEquals(timestamp, r.rawCells()[0].getTimestamp());
+    r = table.increment(increment);
+    assertEquals(1, r.size());
+    assertNotEquals(timestamp, r.rawCells()[0].getTimestamp());
+    r = table.get(new Get(ROW));
+    assertEquals(1, r.size());
+    assertNotEquals(timestamp, r.rawCells()[0].getTimestamp());
+  }
 
   /**
    * Call over to the adjacent class's method of same name.
