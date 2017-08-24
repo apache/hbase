@@ -122,9 +122,7 @@ public class TableResource extends ResourceBase {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION")
   @Path("{scanspec: .*[*]$}")
   public TableScanResource  getScanResource(
-      final @Context UriInfo uriInfo,
       final @PathParam("scanspec") String scanSpec,
-      final @HeaderParam("Accept") String contentType,
       @DefaultValue(Integer.MAX_VALUE + "")
       @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
       @DefaultValue("") @QueryParam(Constants.SCAN_START_ROW) String startRow,
@@ -134,7 +132,7 @@ public class TableResource extends ResourceBase {
       @DefaultValue("-1") @QueryParam(Constants.SCAN_BATCH_SIZE) int batchSize,
       @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
       @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
-      @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks,
+      @DefaultValue("true") @QueryParam(Constants.SCAN_CACHE_BLOCKS) boolean cacheBlocks,
       @DefaultValue("false") @QueryParam(Constants.SCAN_REVERSED) boolean reversed,
       @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String paramFilter) {
     try {
@@ -204,6 +202,7 @@ public class TableResource extends ResourceBase {
       int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);
       tableScan.setCaching(fetchSize);
       tableScan.setReversed(reversed);
+      tableScan.setCacheBlocks(cacheBlocks);
      return new TableScanResource(hTable.getScanner(tableScan), userRequestedLimit);
     } catch (Exception exp) {
       servlet.getMetrics().incrementFailedScanRequests(1);
