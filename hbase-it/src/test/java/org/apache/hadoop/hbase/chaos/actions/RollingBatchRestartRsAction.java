@@ -24,7 +24,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
@@ -104,7 +104,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
         break;
       }
 
-      sleep(RandomUtils.nextInt((int)sleepTime));
+      sleep(RandomUtils.nextInt(0, (int)sleepTime));
     }
   }
 

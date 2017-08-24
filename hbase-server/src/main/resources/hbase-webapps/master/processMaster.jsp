@@ -21,7 +21,7 @@
   import="java.util.Date"
   import="java.util.List"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
+  import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
   import="javax.management.ObjectName"
   import="java.lang.management.ManagementFactory"
   import="java.lang.management.MemoryPoolMXBean"

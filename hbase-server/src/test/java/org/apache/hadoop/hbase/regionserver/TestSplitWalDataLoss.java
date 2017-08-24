@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 
-import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;

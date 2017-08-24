@@ -552,7 +552,7 @@ Minimally, a client of HBase needs several libraries in its `CLASSPATH` when con
 ----
 
 commons-configuration (commons-configuration-1.6.jar)
-commons-lang (commons-lang-2.5.jar)
+commons-lang3 (commons-lang3-3.6.jar)
 commons-logging (commons-logging-1.1.1.jar)
 hadoop-core (hadoop-core-1.0.0.jar)
 hbase (hbase-0.92.0.jar)

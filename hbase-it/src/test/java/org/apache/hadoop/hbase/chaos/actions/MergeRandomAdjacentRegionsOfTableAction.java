@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
@@ -54,7 +54,7 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
       return;
     }
 
-    int i = RandomUtils.nextInt(regions.size() - 1);
+    int i = RandomUtils.nextInt(0, regions.size() - 1);
     HRegionInfo a = regions.get(i++);
     HRegionInfo b = regions.get(i);
     LOG.debug("Merging " + a.getRegionNameAsString() + " and " + b.getRegionNameAsString());

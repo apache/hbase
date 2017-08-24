@@ -24,7 +24,7 @@ import java.util.Random;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;

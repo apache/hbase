@@ -318,8 +318,8 @@
                                         <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.net</shadedPattern>
                                     </relocation>
                                     <relocation>
-                                        <pattern>org.apache.commons.lang</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.lang</shadedPattern>
+                                        <pattern>org.apache.commons.lang3</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.lang3</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.el</pattern>

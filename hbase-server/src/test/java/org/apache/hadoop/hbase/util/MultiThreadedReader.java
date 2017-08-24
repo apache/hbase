@@ -22,7 +22,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -277,7 +277,7 @@ public class MultiThreadedReader extends MultiThreadedAction
         try {
           gets[i] = createGet(keyToRead);
           if (keysToRead.length == 1) {
-            queryKey(gets[i], RandomUtils.nextInt(100) < verifyPercent, keyToRead);
+            queryKey(gets[i], RandomUtils.nextInt(0, 100) < verifyPercent, keyToRead);
           }
           i++;
         } catch (IOException e) {
@@ -293,7 +293,7 @@ public class MultiThreadedReader extends MultiThreadedAction
       }
       if (keysToRead.length > 1) {
         try {
-          queryKey(gets, RandomUtils.nextInt(100) < verifyPercent, keysToRead);
+          queryKey(gets, RandomUtils.nextInt(0, 100) < verifyPercent, keysToRead);
         } catch (IOException e) {
           numReadFailures.addAndGet(gets.length);
           for (long keyToRead : keysToRead) {

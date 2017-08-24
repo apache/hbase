@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.spark;
 
 import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;

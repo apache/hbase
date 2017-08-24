@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -1362,6 +1362,8 @@ public final class HConstants {
       "hbase.snapshot.restore.failsafe.name";
   public static final String DEFAULT_SNAPSHOT_RESTORE_FAILSAFE_NAME =
       "hbase-failsafe-{snapshot.name}-{restore.timestamp}";
+
+  public static final String NOT_IMPLEMENTED = "Not implemented";
 
   private HConstants() {
     // Can't be instantiated with this ctor.
