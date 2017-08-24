@@ -1106,7 +1106,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       if (success) {
         Counters counters = job.getCounters();
         if (null == counters) {
-          LOG.warn("Counters were null, cannot verify Job completion");
+          LOG.warn("Counters were null, cannot verify Job completion."
+              + " This is commonly a result of insufficient YARN configuration.");
           // We don't have access to the counters to know if we have "bad" counts
           return 0;
         }
@@ -1128,6 +1129,11 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       Counters counters = job.getCounters();
+      if (counters == null) {
+        LOG.info("Counters object was null, write verification cannot be performed."
+              + " This is commonly a result of insufficient YARN configuration.");
+        return false;
+      }
 
       // Run through each check, even if we fail one early
       boolean success = verifyExpectedValues(expectedReferenced, counters);
