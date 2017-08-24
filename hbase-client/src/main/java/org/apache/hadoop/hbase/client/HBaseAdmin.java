@@ -378,7 +378,7 @@ public class HBaseAdmin implements Admin {
                   .setNamespaceName(Bytes.toString(name)).build())
                 .getTableSchemaList()
                 .stream()
-                .map(ProtobufUtil::toTableDescriptor)
+                .map(ProtobufUtil::convertToTableDesc)
                 .collect(Collectors.toList());
       }
     });
@@ -459,8 +459,8 @@ public class HBaseAdmin implements Admin {
       protected HTableDescriptor[] rpcCall() throws Exception {
         GetTableDescriptorsRequest req =
             RequestConverter.buildGetTableDescriptorsRequest(pattern, includeSysTables);
-        return ProtobufUtil.toTableDescriptorList(master.getTableDescriptors(getRpcController(),
-                req)).stream().map(ImmutableHTableDescriptor::new).toArray(HTableDescriptor[]::new);
+        return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(getRpcController(),
+            req));
       }
     });
   }
@@ -525,7 +525,7 @@ public class HBaseAdmin implements Admin {
             RequestConverter.buildGetTableDescriptorsRequest(tableName);
         GetTableDescriptorsResponse htds = master.getTableDescriptors(getRpcController(), req);
         if (!htds.getTableSchemaList().isEmpty()) {
-          return ProtobufUtil.toTableDescriptor(htds.getTableSchemaList().get(0));
+          return ProtobufUtil.convertToTableDesc(htds.getTableSchemaList().get(0));
         }
         return null;
       }
@@ -554,7 +554,7 @@ public class HBaseAdmin implements Admin {
             RequestConverter.buildGetTableDescriptorsRequest(tableName);
         GetTableDescriptorsResponse htds = master.getTableDescriptors(getRpcController(), req);
         if (!htds.getTableSchemaList().isEmpty()) {
-          return new ImmutableHTableDescriptor(ProtobufUtil.toTableDescriptor(htds.getTableSchemaList().get(0)));
+          return ProtobufUtil.convertToHTableDesc(htds.getTableSchemaList().get(0));
         }
         return null;
       }
@@ -2300,7 +2300,7 @@ public class HBaseAdmin implements Admin {
                 .build()).getTableSchemaList();
         HTableDescriptor[] res = new HTableDescriptor[list.size()];
         for(int i=0; i < list.size(); i++) {
-          res[i] = new ImmutableHTableDescriptor(ProtobufUtil.toTableDescriptor(list.get(i)));
+          res[i] = new ImmutableHTableDescriptor(ProtobufUtil.convertToHTableDesc(list.get(i)));
         }
         return res;
       }
@@ -2419,12 +2419,31 @@ public class HBaseAdmin implements Admin {
       protected HTableDescriptor[] rpcCall() throws Exception {
         GetTableDescriptorsRequest req =
             RequestConverter.buildGetTableDescriptorsRequest(tableNames);
-          return ProtobufUtil.toTableDescriptorList(master.getTableDescriptors(getRpcController(), req))
-                  .stream()
-                  .map(ImmutableHTableDescriptor::new)
-                  .toArray(HTableDescriptor[]::new);
+          return ProtobufUtil.
+              getHTableDescriptorArray(master.getTableDescriptors(getRpcController(), req));
       }
     });
+  }
+
+  /**
+   * Get tableDescriptor
+   * @param tableName one table name
+   * @return HTD the HTableDescriptor or null if the table not exists
+   * @throws IOException if a remote or network exception occurs
+   */
+  private HTableDescriptor getTableDescriptorByTableName(TableName tableName)
+      throws IOException {
+    List<TableName> tableNames = new ArrayList<>(1);
+    tableNames.add(tableName);
+
+    HTableDescriptor[] htdl = getTableDescriptorsByTableName(tableNames);
+
+    if (htdl == null || htdl.length == 0) {
+      return null;
+    }
+    else {
+      return htdl[0];
+    }
   }
 
   @Override
@@ -3690,7 +3709,7 @@ public class HBaseAdmin implements Admin {
      * @return the table descriptor
      */
     protected TableDescriptor getTableDescriptor() throws IOException {
-      return getAdmin().listTableDescriptor(getTableName());
+      return getAdmin().getTableDescriptorByTableName(getTableName());
     }
 
     /**

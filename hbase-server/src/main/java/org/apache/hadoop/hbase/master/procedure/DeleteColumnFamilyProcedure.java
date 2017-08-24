@@ -26,11 +26,10 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -46,7 +45,7 @@ public class DeleteColumnFamilyProcedure
     extends AbstractStateMachineTableProcedure<DeleteColumnFamilyState> {
   private static final Log LOG = LogFactory.getLog(DeleteColumnFamilyProcedure.class);
 
-  private TableDescriptor unmodifiedTableDescriptor;
+  private HTableDescriptor unmodifiedHTableDescriptor;
   private TableName tableName;
   private byte [] familyName;
   private boolean hasMob;
@@ -56,7 +55,7 @@ public class DeleteColumnFamilyProcedure
 
   public DeleteColumnFamilyProcedure() {
     super();
-    this.unmodifiedTableDescriptor = null;
+    this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
   }
@@ -71,7 +70,7 @@ public class DeleteColumnFamilyProcedure
     super(env, latch);
     this.tableName = tableName;
     this.familyName = familyName;
-    this.unmodifiedTableDescriptor = null;
+    this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
   }
@@ -180,9 +179,9 @@ public class DeleteColumnFamilyProcedure
             .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
             .setColumnfamilyName(UnsafeByteOperations.unsafeWrap(familyName));
-    if (unmodifiedTableDescriptor != null) {
+    if (unmodifiedHTableDescriptor != null) {
       deleteCFMsg
-          .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
+          .setUnmodifiedTableSchema(ProtobufUtil.convertToTableSchema(unmodifiedHTableDescriptor));
     }
 
     deleteCFMsg.build().writeDelimitedTo(stream);
@@ -198,7 +197,7 @@ public class DeleteColumnFamilyProcedure
     familyName = deleteCFMsg.getColumnfamilyName().toByteArray();
 
     if (deleteCFMsg.hasUnmodifiedTableSchema()) {
-      unmodifiedTableDescriptor = ProtobufUtil.toTableDescriptor(deleteCFMsg.getUnmodifiedTableSchema());
+      unmodifiedHTableDescriptor = ProtobufUtil.convertToHTableDesc(deleteCFMsg.getUnmodifiedTableSchema());
     }
   }
 
@@ -236,22 +235,22 @@ public class DeleteColumnFamilyProcedure
     checkTableModifiable(env);
 
     // In order to update the descriptor, we need to retrieve the old descriptor for comparison.
-    unmodifiedTableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
-    if (unmodifiedTableDescriptor == null) {
-      throw new IOException("TableDescriptor missing for " + tableName);
+    unmodifiedHTableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
+    if (unmodifiedHTableDescriptor == null) {
+      throw new IOException("HTableDescriptor missing for " + tableName);
     }
-    if (!unmodifiedTableDescriptor.hasColumnFamily(familyName)) {
+    if (!unmodifiedHTableDescriptor.hasFamily(familyName)) {
       throw new InvalidFamilyOperationException("Family '" + getColumnFamilyName()
           + "' does not exist, so it cannot be deleted");
     }
 
-    if (unmodifiedTableDescriptor.getColumnFamilyCount() == 1) {
+    if (unmodifiedHTableDescriptor.getColumnFamilyCount() == 1) {
       throw new InvalidFamilyOperationException("Family '" + getColumnFamilyName()
         + "' is the only column family in the table, so it cannot be deleted");
     }
 
     // whether mob family
-    hasMob = unmodifiedTableDescriptor.getColumnFamily(familyName).isMobEnabled();
+    hasMob = unmodifiedHTableDescriptor.getFamily(familyName).isMobEnabled();
   }
 
   /**
@@ -273,17 +272,17 @@ public class DeleteColumnFamilyProcedure
     // Update table descriptor
     LOG.info("DeleteColumn. Table = " + tableName + " family = " + getColumnFamilyName());
 
-    TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(tableName);
+    HTableDescriptor htd = env.getMasterServices().getTableDescriptors().get(tableName);
 
-    if (!htd.hasColumnFamily(familyName)) {
+    if (!htd.hasFamily(familyName)) {
       // It is possible to reach this situation, as we could already delete the column family
       // from table descriptor, but the master failover happens before we complete this state.
       // We should be able to handle running this function multiple times without causing problem.
       return;
     }
 
-    env.getMasterServices().getTableDescriptors().add(
-            TableDescriptorBuilder.newBuilder(htd).removeColumnFamily(familyName).build());
+    htd.removeFamily(familyName);
+    env.getMasterServices().getTableDescriptors().add(htd);
   }
 
   /**
@@ -292,7 +291,7 @@ public class DeleteColumnFamilyProcedure
    * @throws IOException
    **/
   private void restoreTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getTableDescriptors().add(unmodifiedTableDescriptor);
+    env.getMasterServices().getTableDescriptors().add(unmodifiedHTableDescriptor);
 
     // Make sure regions are opened after table descriptor is updated.
     //reOpenAllRegionsIfTableIsOnline(env);

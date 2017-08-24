@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -515,7 +514,7 @@ public class TestPartitionedMobCompactor {
     CacheConfig cacheConfig = null;
 
     MyPartitionedMobCompactor(Configuration conf, FileSystem fs, TableName tableName,
-        ColumnFamilyDescriptor column, ExecutorService pool, final int delPartitionSize,
+        HColumnDescriptor column, ExecutorService pool, final int delPartitionSize,
         final CacheConfig cacheConf, final int PartitionsIncludeDelFiles)
         throws IOException {
       super(conf, fs, tableName, column, pool);

@@ -28,11 +28,11 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -48,7 +48,7 @@ public class TruncateTableProcedure
 
   private boolean preserveSplits;
   private List<HRegionInfo> regions;
-  private TableDescriptor tableDescriptor;
+  private HTableDescriptor hTableDescriptor;
   private TableName tableName;
 
   public TruncateTableProcedure() {
@@ -95,7 +95,7 @@ public class TruncateTableProcedure
           setNextState(TruncateTableState.TRUNCATE_TABLE_REMOVE_FROM_META);
           break;
         case TRUNCATE_TABLE_REMOVE_FROM_META:
-          tableDescriptor = env.getMasterServices().getTableDescriptors()
+          hTableDescriptor = env.getMasterServices().getTableDescriptors()
               .get(tableName);
           DeleteTableProcedure.deleteFromMeta(env, getTableName(), regions);
           DeleteTableProcedure.deleteAssignmentState(env, getTableName());
@@ -105,26 +105,26 @@ public class TruncateTableProcedure
           DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
           if (!preserveSplits) {
             // if we are not preserving splits, generate a new single region
-            regions = Arrays.asList(ModifyRegionUtils.createHRegionInfos(tableDescriptor, null));
+            regions = Arrays.asList(ModifyRegionUtils.createHRegionInfos(hTableDescriptor, null));
           } else {
             regions = recreateRegionInfo(regions);
           }
           setNextState(TruncateTableState.TRUNCATE_TABLE_CREATE_FS_LAYOUT);
           break;
         case TRUNCATE_TABLE_CREATE_FS_LAYOUT:
-          regions = CreateTableProcedure.createFsLayout(env, tableDescriptor, regions);
+          regions = CreateTableProcedure.createFsLayout(env, hTableDescriptor, regions);
           CreateTableProcedure.updateTableDescCache(env, getTableName());
           setNextState(TruncateTableState.TRUNCATE_TABLE_ADD_TO_META);
           break;
         case TRUNCATE_TABLE_ADD_TO_META:
-          regions = CreateTableProcedure.addTableToMeta(env, tableDescriptor, regions);
+          regions = CreateTableProcedure.addTableToMeta(env, hTableDescriptor, regions);
           setNextState(TruncateTableState.TRUNCATE_TABLE_ASSIGN_REGIONS);
           break;
         case TRUNCATE_TABLE_ASSIGN_REGIONS:
           CreateTableProcedure.setEnablingState(env, getTableName());
           addChildProcedure(env.getAssignmentManager().createAssignProcedures(regions));
           setNextState(TruncateTableState.TRUNCATE_TABLE_POST_OPERATION);
-          tableDescriptor = null;
+          hTableDescriptor = null;
           regions = null;
           break;
         case TRUNCATE_TABLE_POST_OPERATION:
@@ -216,8 +216,8 @@ public class TruncateTableProcedure
       MasterProcedureProtos.TruncateTableStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setPreserveSplits(preserveSplits);
-    if (tableDescriptor != null) {
-      state.setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
+    if (hTableDescriptor != null) {
+      state.setTableSchema(ProtobufUtil.convertToTableSchema(hTableDescriptor));
     } else {
       state.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
@@ -237,8 +237,8 @@ public class TruncateTableProcedure
       MasterProcedureProtos.TruncateTableStateData.parseDelimitedFrom(stream);
     setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
     if (state.hasTableSchema()) {
-      tableDescriptor = ProtobufUtil.toTableDescriptor(state.getTableSchema());
-      tableName = tableDescriptor.getTableName();
+      hTableDescriptor = ProtobufUtil.convertToHTableDesc(state.getTableSchema());
+      tableName = hTableDescriptor.getTableName();
     } else {
       tableName = ProtobufUtil.toTableName(state.getTableName());
     }

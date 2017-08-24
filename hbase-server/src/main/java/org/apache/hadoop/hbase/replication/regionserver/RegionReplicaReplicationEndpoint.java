@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hbase.client.RegionAdminServiceCallable;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetryingCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
@@ -399,7 +399,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       if (requiresReplication == null) {
         // check if the table requires memstore replication
         // some unit-test drop the table, so we should do a bypass check and always replicate.
-        TableDescriptor htd = tableDescriptors.get(tableName);
+        HTableDescriptor htd = tableDescriptors.get(tableName);
         requiresReplication = htd == null || htd.hasRegionMemstoreReplication();
         memstoreReplicationEnabled.put(tableName, requiresReplication);
       }

@@ -25,8 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
@@ -48,18 +48,18 @@ public class OpenRegionHandler extends EventHandler {
   protected final RegionServerServices rsServices;
 
   private final HRegionInfo regionInfo;
-  private final TableDescriptor htd;
+  private final HTableDescriptor htd;
   private final long masterSystemTime;
 
   public OpenRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      TableDescriptor htd, long masterSystemTime) {
+      HTableDescriptor htd, long masterSystemTime) {
     this(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_REGION);
   }
 
   protected OpenRegionHandler(final Server server,
-                              final RegionServerServices rsServices, final HRegionInfo regionInfo,
-                              final TableDescriptor htd, long masterSystemTime, EventType eventType) {
+      final RegionServerServices rsServices, final HRegionInfo regionInfo,
+      final HTableDescriptor htd, long masterSystemTime, EventType eventType) {
     super(server, eventType);
     this.rsServices = rsServices;
     this.regionInfo = regionInfo;

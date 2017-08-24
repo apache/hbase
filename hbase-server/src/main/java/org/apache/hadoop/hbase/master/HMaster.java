@@ -41,7 +41,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
@@ -61,8 +60,10 @@ import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -76,12 +77,9 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.BypassCoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -592,9 +590,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     return connector.getLocalPort();
   }
 
-  protected Function<TableDescriptorBuilder, TableDescriptorBuilder> getMetaTableObserver() {
-    return builder -> builder.setRegionReplication(conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM));
+  @Override
+  protected TableDescriptors getFsTableDescriptors() throws IOException {
+    return super.getFsTableDescriptors();
   }
+
   /**
    * For compatibility, if failed with regionserver credentials, try the master one
    */
@@ -761,7 +761,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // enable table descriptors cache
     this.tableDescriptors.setCacheOn();
-
+    // set the META's descriptor to the correct replication
+    this.tableDescriptors.get(TableName.META_TABLE_NAME).setRegionReplication(
+        conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM));
     // warm-up HTDs cache on master initialization
     if (preLoadTableDescriptors) {
       status.setStatus("Pre-loading table descriptors");
@@ -1499,7 +1501,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           return false;
         }
 
-        TableDescriptor tblDesc = getTableDescriptors().get(table);
+        HTableDescriptor tblDesc = getTableDescriptors().get(table);
         if (table.isSystemTable() || (tblDesc != null &&
             !tblDesc.isNormalizationEnabled())) {
           LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
@@ -1710,34 +1712,34 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public long createTable(
-      final TableDescriptor tableDescriptor,
+      final HTableDescriptor hTableDescriptor,
       final byte [][] splitKeys,
       final long nonceGroup,
       final long nonce) throws IOException {
     checkInitialized();
 
-    String namespace = tableDescriptor.getTableName().getNamespaceAsString();
+    String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
     this.clusterSchemaService.getNamespace(namespace);
 
-    HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(tableDescriptor, splitKeys);
-    sanityCheckTableDescriptor(tableDescriptor);
+    HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(hTableDescriptor, splitKeys);
+    sanityCheckTableDescriptor(hTableDescriptor);
 
     return MasterProcedureUtil.submitProcedure(
         new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
       @Override
       protected void run() throws IOException {
-        getMaster().getMasterCoprocessorHost().preCreateTable(tableDescriptor, newRegions);
+        getMaster().getMasterCoprocessorHost().preCreateTable(hTableDescriptor, newRegions);
 
-        LOG.info(getClientIdAuditPrefix() + " create " + tableDescriptor);
+        LOG.info(getClientIdAuditPrefix() + " create " + hTableDescriptor);
 
         // TODO: We can handle/merge duplicate requests, and differentiate the case of
         //       TableExistsException by saying if the schema is the same or not.
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
         submitProcedure(new CreateTableProcedure(
-            procedureExecutor.getEnvironment(), tableDescriptor, newRegions, latch));
+            procedureExecutor.getEnvironment(), hTableDescriptor, newRegions, latch));
         latch.await();
 
-        getMaster().getMasterCoprocessorHost().postCreateTable(tableDescriptor, newRegions);
+        getMaster().getMasterCoprocessorHost().postCreateTable(hTableDescriptor, newRegions);
       }
 
       @Override
@@ -1748,25 +1750,25 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public long createSystemTable(final TableDescriptor tableDescriptor) throws IOException {
+  public long createSystemTable(final HTableDescriptor hTableDescriptor) throws IOException {
     if (isStopped()) {
       throw new MasterNotRunningException();
     }
 
-    TableName tableName = tableDescriptor.getTableName();
+    TableName tableName = hTableDescriptor.getTableName();
     if (!(tableName.isSystemTable())) {
       throw new IllegalArgumentException(
         "Only system table creation can use this createSystemTable API");
     }
 
-    HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(tableDescriptor, null);
+    HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(hTableDescriptor, null);
 
-    LOG.info(getClientIdAuditPrefix() + " create " + tableDescriptor);
+    LOG.info(getClientIdAuditPrefix() + " create " + hTableDescriptor);
 
     // This special create table is called locally to master.  Therefore, no RPC means no need
     // to use nonce to detect duplicated RPC call.
     long procId = this.procedureExecutor.submitProcedure(
-      new CreateTableProcedure(procedureExecutor.getEnvironment(), tableDescriptor, newRegions));
+      new CreateTableProcedure(procedureExecutor.getEnvironment(), hTableDescriptor, newRegions));
 
     return procId;
   }
@@ -1776,7 +1778,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * values (compression, etc) work. Throws an exception if something is wrong.
    * @throws IOException
    */
-  private void sanityCheckTableDescriptor(final TableDescriptor htd) throws IOException {
+  private void sanityCheckTableDescriptor(final HTableDescriptor htd) throws IOException {
     final String CONF_KEY = "hbase.table.sanity.checks";
     boolean logWarn = false;
     if (!conf.getBoolean(CONF_KEY, true)) {
@@ -1846,7 +1848,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
     }
 
-    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
       if (hcd.getTimeToLive() <= 0) {
         String message = "TTL for column family " + hcd.getNameAsString() + " must be positive.";
         warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
@@ -1867,7 +1869,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
       // max versions already being checked
 
-      // HBASE-13776 Setting illegal versions for ColumnFamilyDescriptor
+      // HBASE-13776 Setting illegal versions for HColumnDescriptor
       //  does not throw IllegalArgumentException
       // check minVersions <= maxVerions
       if (hcd.getMinVersions() > hcd.getMaxVersions()) {
@@ -1891,7 +1893,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  private void checkReplicationScope(ColumnFamilyDescriptor hcd) throws IOException{
+  private void checkReplicationScope(HColumnDescriptor hcd) throws IOException{
     // check replication scope
     WALProtos.ScopeType scop = WALProtos.ScopeType.valueOf(hcd.getScope());
     if (scop == null) {
@@ -1903,7 +1905,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  private void checkCompactionPolicy(Configuration conf, TableDescriptor htd)
+  private void checkCompactionPolicy(Configuration conf, HTableDescriptor htd)
       throws IOException {
     // FIFO compaction has some requirements
     // Actually FCP ignores periodic major compactions
@@ -1923,7 +1925,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       blockingFileCount = conf.getInt(HStore.BLOCKING_STOREFILES_KEY, blockingFileCount);
     }
 
-    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
       String compactionPolicy =
           hcd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
       if (compactionPolicy == null) {
@@ -1936,7 +1938,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       String message = null;
 
       // 1. Check TTL
-      if (hcd.getTimeToLive() == ColumnFamilyDescriptorBuilder.DEFAULT_TTL) {
+      if (hcd.getTimeToLive() == HColumnDescriptor.DEFAULT_TTL) {
         message = "Default TTL is not supported for FIFO compaction";
         throw new IOException(message);
       }
@@ -2038,36 +2040,36 @@ public class HMaster extends HRegionServer implements MasterServices {
     }, getServerName().toShortString() + ".masterManager"));
   }
 
-  private void checkCompression(final TableDescriptor htd)
+  private void checkCompression(final HTableDescriptor htd)
   throws IOException {
     if (!this.masterCheckCompression) return;
-    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
       checkCompression(hcd);
     }
   }
 
-  private void checkCompression(final ColumnFamilyDescriptor hcd)
+  private void checkCompression(final HColumnDescriptor hcd)
   throws IOException {
     if (!this.masterCheckCompression) return;
     CompressionTest.testCompression(hcd.getCompressionType());
     CompressionTest.testCompression(hcd.getCompactionCompressionType());
   }
 
-  private void checkEncryption(final Configuration conf, final TableDescriptor htd)
+  private void checkEncryption(final Configuration conf, final HTableDescriptor htd)
   throws IOException {
     if (!this.masterCheckEncryption) return;
-    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
       checkEncryption(conf, hcd);
     }
   }
 
-  private void checkEncryption(final Configuration conf, final ColumnFamilyDescriptor hcd)
+  private void checkEncryption(final Configuration conf, final HColumnDescriptor hcd)
   throws IOException {
     if (!this.masterCheckEncryption) return;
     EncryptionTest.testEncryption(conf, hcd.getEncryptionType(), hcd.getEncryptionKey());
   }
 
-  private void checkClassLoading(final Configuration conf, final TableDescriptor htd)
+  private void checkClassLoading(final Configuration conf, final HTableDescriptor htd)
   throws IOException {
     RegionSplitPolicy.getSplitPolicyClass(htd, conf);
     RegionCoprocessorHost.testTableCoprocessorAttrs(conf, htd);
@@ -2141,7 +2143,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public long addColumn(
       final TableName tableName,
-      final ColumnFamilyDescriptor columnDescriptor,
+      final HColumnDescriptor columnDescriptor,
       final long nonceGroup,
       final long nonce)
       throws IOException {
@@ -2177,7 +2179,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public long modifyColumn(
       final TableName tableName,
-      final ColumnFamilyDescriptor descriptor,
+      final HColumnDescriptor descriptor,
       final long nonceGroup,
       final long nonce)
       throws IOException {
@@ -2371,7 +2373,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public long modifyTable(final TableName tableName, final TableDescriptor descriptor,
+  public long modifyTable(final TableName tableName, final HTableDescriptor descriptor,
       final long nonceGroup, final long nonce) throws IOException {
     checkInitialized();
     sanityCheckTableDescriptor(descriptor);
@@ -3125,7 +3127,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   throws IOException {
     if (tableNameList == null || tableNameList.isEmpty()) {
       // request for all TableDescriptors
-      Collection<TableDescriptor> allHtds;
+      Collection<HTableDescriptor> allHtds;
       if (namespace != null && namespace.length() > 0) {
         // Do a check on the namespace existence. Will fail if does not exist.
         this.clusterSchemaService.getNamespace(namespace);
@@ -3133,7 +3135,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       } else {
         allHtds = tableDescriptors.getAll().values();
       }
-      for (TableDescriptor desc: allHtds) {
+      for (HTableDescriptor desc: allHtds) {
         if (tableStateManager.isTablePresent(desc.getTableName())
             && (includeSysTables || !desc.getTableName().isSystemTable())) {
           htds.add(desc);
@@ -3142,7 +3144,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     } else {
       for (TableName s: tableNameList) {
         if (tableStateManager.isTablePresent(s)) {
-          TableDescriptor desc = tableDescriptors.get(s);
+          HTableDescriptor desc = tableDescriptors.get(s);
           if (desc != null) {
             htds.add(desc);
           }
@@ -3247,7 +3249,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @param allFiles Whether add all mob files into the compaction.
    */
   public void requestMobCompaction(TableName tableName,
-                                   List<ColumnFamilyDescriptor> columns, boolean allFiles) throws IOException {
+    List<HColumnDescriptor> columns, boolean allFiles) throws IOException {
     mobCompactThread.requestMobCompaction(conf, fs, tableName, columns, allFiles);
   }
 

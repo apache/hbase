@@ -36,20 +36,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -652,30 +652,31 @@ public class SecureTestUtil {
 
   public static Table createTable(HBaseTestingUtility testUtil, TableName tableName,
       byte[][] families) throws Exception {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      htd.addFamily(hcd);
     }
-    createTable(testUtil, testUtil.getAdmin(), builder.build());
-    return testUtil.getConnection().getTable(tableName);
+    createTable(testUtil, testUtil.getAdmin(), htd);
+    return testUtil.getConnection().getTable(htd.getTableName());
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, TableDescriptor htd)
+  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd)
       throws Exception {
     createTable(testUtil, testUtil.getAdmin(), htd);
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, TableDescriptor htd,
+  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd,
       byte[][] splitKeys) throws Exception {
     createTable(testUtil, testUtil.getAdmin(), htd, splitKeys);
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, Admin admin, TableDescriptor htd)
+  public static void createTable(HBaseTestingUtility testUtil, Admin admin, HTableDescriptor htd)
       throws Exception {
     createTable(testUtil, admin, htd, null);
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, Admin admin, TableDescriptor htd,
+  public static void createTable(HBaseTestingUtility testUtil, Admin admin, HTableDescriptor htd,
       byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.

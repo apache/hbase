@@ -24,12 +24,12 @@ import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -198,7 +198,7 @@ public class TableStateManager {
 
   public static void fixTableStates(TableDescriptors tableDescriptors, Connection connection)
       throws IOException {
-    final Map<String, TableDescriptor> allDescriptors =
+    final Map<String, HTableDescriptor> allDescriptors =
         tableDescriptors.getAllDescriptors();
     final Map<String, TableState> states = new HashMap<>();
     MetaTableAccessor.fullScanTables(connection, new MetaTableAccessor.Visitor() {
@@ -210,7 +210,7 @@ public class TableStateManager {
         return true;
       }
     });
-    for (Map.Entry<String, TableDescriptor> entry : allDescriptors.entrySet()) {
+    for (Map.Entry<String, HTableDescriptor> entry : allDescriptors.entrySet()) {
       String table = entry.getKey();
       if (table.equals(TableName.META_TABLE_NAME.getNameAsString()))
         continue;

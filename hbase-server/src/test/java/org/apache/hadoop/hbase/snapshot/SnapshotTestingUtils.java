@@ -40,35 +40,36 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.BufferedMutator;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.client.SnapshotDescription;
-import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSVisitor;
@@ -491,7 +492,7 @@ public final class SnapshotTestingUtils {
     public static class SnapshotBuilder {
       private final RegionData[] tableRegions;
       private final SnapshotProtos.SnapshotDescription desc;
-      private final TableDescriptor htd;
+      private final HTableDescriptor htd;
       private final Configuration conf;
       private final FileSystem fs;
       private final Path rootDir;
@@ -499,7 +500,7 @@ public final class SnapshotTestingUtils {
       private int snapshotted = 0;
 
       public SnapshotBuilder(final Configuration conf, final FileSystem fs,
-          final Path rootDir, final TableDescriptor htd,
+          final Path rootDir, final HTableDescriptor htd,
           final SnapshotProtos.SnapshotDescription desc, final RegionData[] tableRegions)
           throws IOException {
         this.fs = fs;
@@ -513,7 +514,7 @@ public final class SnapshotTestingUtils {
           .createTableDescriptorForTableDirectory(snapshotDir, htd, false);
       }
 
-      public TableDescriptor getTableDescriptor() {
+      public HTableDescriptor getTableDescriptor() {
         return this.htd;
       }
 
@@ -679,11 +680,11 @@ public final class SnapshotTestingUtils {
 
     private SnapshotBuilder createSnapshot(final String snapshotName, final String tableName,
         final int numRegions, final int version) throws IOException {
-      TableDescriptor htd = createHtd(tableName);
+      HTableDescriptor htd = createHtd(tableName);
       RegionData[] regions = createTable(htd, numRegions);
 
       SnapshotProtos.SnapshotDescription desc = SnapshotProtos.SnapshotDescription.newBuilder()
-        .setTable(htd.getTableName().getNameAsString())
+        .setTable(htd.getNameAsString())
         .setName(snapshotName)
         .setVersion(version)
         .build();
@@ -693,13 +694,13 @@ public final class SnapshotTestingUtils {
       return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
     }
 
-    public TableDescriptor createHtd(final String tableName) {
-      return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
-              .build();
+    public HTableDescriptor createHtd(final String tableName) {
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+      htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+      return htd;
     }
 
-    private RegionData[] createTable(final TableDescriptor htd, final int nregions)
+    private RegionData[] createTable(final HTableDescriptor htd, final int nregions)
         throws IOException {
       Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
       new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(tableDir, htd, false);
@@ -765,15 +766,14 @@ public final class SnapshotTestingUtils {
   public static void createTable(final HBaseTestingUtility util, final TableName tableName,
       int regionReplication, int nRegions, final byte[]... families)
       throws IOException, InterruptedException {
-    TableDescriptorBuilder builder
-      = TableDescriptorBuilder
-          .newBuilder(tableName)
-          .setRegionReplication(regionReplication);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.setRegionReplication(regionReplication);
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      htd.addFamily(hcd);
     }
     byte[][] splitKeys = getSplitKeys(nRegions);
-    util.createTable(builder.build(), splitKeys);
+    util.createTable(htd, splitKeys);
     assertEquals((splitKeys.length + 1) * regionReplication,
         util.getAdmin().getTableRegions(tableName).size());
   }

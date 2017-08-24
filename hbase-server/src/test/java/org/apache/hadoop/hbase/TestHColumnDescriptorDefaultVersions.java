@@ -24,8 +24,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -154,22 +152,22 @@ public class TestHColumnDescriptorDefaultVersions {
     Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
-    TableDescriptor htd = admin.listTableDescriptor(tableName);
-    ColumnFamilyDescriptor[] hcds = htd.getColumnFamilies();
+    HTableDescriptor htd = admin.getTableDescriptor(tableName);
+    HColumnDescriptor[] hcds = htd.getColumnFamilies();
     verifyHColumnDescriptor(expected, hcds, tableName, families);
 
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    TableDescriptor td = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
+    HTableDescriptor td = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
     hcds = td.getColumnFamilies();
     verifyHColumnDescriptor(expected, hcds, tableName, families);
   }
 
-  private void verifyHColumnDescriptor(int expected, final ColumnFamilyDescriptor[] hcds,
+  private void verifyHColumnDescriptor(int expected, final HColumnDescriptor[] hcds,
       final TableName tableName,
       final byte[]... families) {
-    for (ColumnFamilyDescriptor hcd : hcds) {
+    for (HColumnDescriptor hcd : hcds) {
       assertEquals(expected, hcd.getMaxVersions());
     }
   }

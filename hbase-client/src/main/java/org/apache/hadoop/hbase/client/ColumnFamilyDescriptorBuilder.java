@@ -1160,10 +1160,13 @@ public class ColumnFamilyDescriptorBuilder {
       if (this == obj) {
         return true;
       }
-      if (obj instanceof ModifyableColumnFamilyDescriptor) {
-        return ColumnFamilyDescriptor.COMPARATOR.compare(this, (ModifyableColumnFamilyDescriptor) obj) == 0;
+      if (obj == null) {
+        return false;
       }
-      return false;
+      if (!(obj instanceof ModifyableColumnFamilyDescriptor)) {
+        return false;
+      }
+      return compareTo((ModifyableColumnFamilyDescriptor) obj) == 0;
     }
 
     @Override
@@ -1185,7 +1188,7 @@ public class ColumnFamilyDescriptorBuilder {
      * @see #parseFrom(byte[])
      */
     private byte[] toByteArray() {
-      return ProtobufUtil.prependPBMagic(ProtobufUtil.toColumnFamilySchema(this)
+      return ProtobufUtil.prependPBMagic(ProtobufUtil.convertToColumnFamilySchema(this)
                       .toByteArray());
     }
 
@@ -1210,7 +1213,7 @@ public class ColumnFamilyDescriptorBuilder {
       } catch (IOException e) {
         throw new DeserializationException(e);
       }
-      return ProtobufUtil.toColumnFamilyDescriptor(cfs);
+      return ProtobufUtil.convertToColumnDesc(cfs);
     }
 
     @Override

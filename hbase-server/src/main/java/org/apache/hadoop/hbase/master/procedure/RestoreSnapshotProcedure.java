@@ -33,12 +33,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -61,7 +61,7 @@ public class RestoreSnapshotProcedure
     extends AbstractStateMachineTableProcedure<RestoreSnapshotState> {
   private static final Log LOG = LogFactory.getLog(RestoreSnapshotProcedure.class);
 
-  private TableDescriptor modifiedTableDescriptor;
+  private HTableDescriptor modifiedHTableDescriptor;
   private List<HRegionInfo> regionsToRestore = null;
   private List<HRegionInfo> regionsToRemove = null;
   private List<HRegionInfo> regionsToAdd = null;
@@ -82,24 +82,24 @@ public class RestoreSnapshotProcedure
   }
 
   public RestoreSnapshotProcedure(final MasterProcedureEnv env,
-                                  final TableDescriptor tableDescriptor, final SnapshotDescription snapshot) {
-    this(env, tableDescriptor, snapshot, false);
+      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot) {
+    this(env, hTableDescriptor, snapshot, false);
   }
   /**
    * Constructor
    * @param env MasterProcedureEnv
-   * @param tableDescriptor the table to operate on
+   * @param hTableDescriptor the table to operate on
    * @param snapshot snapshot to restore from
    * @throws IOException
    */
   public RestoreSnapshotProcedure(
       final MasterProcedureEnv env,
-      final TableDescriptor tableDescriptor,
+      final HTableDescriptor hTableDescriptor,
       final SnapshotDescription snapshot,
       final boolean restoreAcl) {
     super(env);
     // This is the new schema we are going to write out as this modification.
-    this.modifiedTableDescriptor = tableDescriptor;
+    this.modifiedHTableDescriptor = hTableDescriptor;
     // Snapshot information
     this.snapshot = snapshot;
     this.restoreAcl = restoreAcl;
@@ -204,7 +204,7 @@ public class RestoreSnapshotProcedure
 
   @Override
   public TableName getTableName() {
-    return modifiedTableDescriptor.getTableName();
+    return modifiedHTableDescriptor.getTableName();
   }
 
   @Override
@@ -236,7 +236,7 @@ public class RestoreSnapshotProcedure
       MasterProcedureProtos.RestoreSnapshotStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setSnapshot(this.snapshot)
-        .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor));
+        .setModifiedTableSchema(ProtobufUtil.convertToTableSchema(modifiedHTableDescriptor));
 
     if (regionsToRestore != null) {
       for (HRegionInfo hri: regionsToRestore) {
@@ -278,8 +278,8 @@ public class RestoreSnapshotProcedure
       MasterProcedureProtos.RestoreSnapshotStateData.parseDelimitedFrom(stream);
     setUser(MasterProcedureUtil.toUserInfo(restoreSnapshotMsg.getUserInfo()));
     snapshot = restoreSnapshotMsg.getSnapshot();
-    modifiedTableDescriptor =
-      ProtobufUtil.toTableDescriptor(restoreSnapshotMsg.getModifiedTableSchema());
+    modifiedHTableDescriptor =
+      ProtobufUtil.convertToHTableDesc(restoreSnapshotMsg.getModifiedTableSchema());
 
     if (restoreSnapshotMsg.getRegionInfoForRestoreCount() == 0) {
       regionsToRestore = null;
@@ -333,7 +333,7 @@ public class RestoreSnapshotProcedure
     env.getMasterServices().checkTableModifiable(tableName);
 
     // Check that we have at least 1 CF
-    if (modifiedTableDescriptor.getColumnFamilyCount() == 0) {
+    if (modifiedHTableDescriptor.getColumnFamilyCount() == 0) {
       throw new DoNotRetryIOException("Table " + getTableName().toString() +
         " should have at least one column family.");
     }
@@ -363,7 +363,7 @@ public class RestoreSnapshotProcedure
    * @throws IOException
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getTableDescriptors().add(modifiedTableDescriptor);
+    env.getMasterServices().getTableDescriptors().add(modifiedHTableDescriptor);
   }
 
   /**
@@ -386,7 +386,7 @@ public class RestoreSnapshotProcedure
         env.getMasterServices().getConfiguration(),
         fs,
         manifest,
-              modifiedTableDescriptor,
+        modifiedHTableDescriptor,
         rootDir,
         monitorException,
         getMonitorStatus());
@@ -440,19 +440,19 @@ public class RestoreSnapshotProcedure
         MetaTableAccessor.addRegionsToMeta(
           conn,
           regionsToAdd,
-          modifiedTableDescriptor.getRegionReplication());
+          modifiedHTableDescriptor.getRegionReplication());
       }
 
       if (regionsToRestore != null) {
         MetaTableAccessor.overwriteRegions(
           conn,
           regionsToRestore,
-          modifiedTableDescriptor.getRegionReplication());
+          modifiedHTableDescriptor.getRegionReplication());
       }
 
       RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
         new RestoreSnapshotHelper.RestoreMetaChanges(
-                modifiedTableDescriptor, parentsToChildrenPairMap);
+          modifiedHTableDescriptor, parentsToChildrenPairMap);
       metaChanges.updateMetaParentRegions(conn, regionsToAdd);
 
       // At this point the restore is complete.

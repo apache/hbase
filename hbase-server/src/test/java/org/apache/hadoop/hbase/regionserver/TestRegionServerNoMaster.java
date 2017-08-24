@@ -26,13 +26,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -261,7 +261,7 @@ public class TestRegionServerNoMaster {
         hri.getEncodedNameAsBytes()));
 
     // Let's start the open handler
-    TableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
+    HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
 
     getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, -1));
 

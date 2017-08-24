@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.ImmutableHTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -467,20 +466,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * @return META table descriptor
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #getMetaDescriptor()}
    */
-  @Deprecated
   public HTableDescriptor getMetaTableDescriptor() {
-    return new ImmutableHTableDescriptor(getMetaTableDescriptorBuilder().build());
-  }
-
-  /**
-   * @return META table descriptor
-   */
-  public TableDescriptorBuilder getMetaTableDescriptorBuilder() {
     try {
-      return FSTableDescriptors.createMetaTableDescriptorBuilder(conf);
+      return new FSTableDescriptors(conf).get(TableName.META_TABLE_NAME);
     } catch (IOException e) {
       throw new RuntimeException("Unable to create META table descriptor", e);
     }

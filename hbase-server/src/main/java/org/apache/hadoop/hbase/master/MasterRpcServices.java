@@ -31,8 +31,10 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
@@ -41,7 +43,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -362,7 +363,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       long procId = master.addColumn(
           ProtobufUtil.toTableName(req.getTableName()),
-          ProtobufUtil.toColumnFamilyDescriptor(req.getColumnFamilies()),
+          ProtobufUtil.convertToHColumnDesc(req.getColumnFamilies()),
           req.getNonceGroup(),
           req.getNonce());
       if (procId == -1) {
@@ -438,11 +439,11 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public CreateTableResponse createTable(RpcController controller, CreateTableRequest req)
   throws ServiceException {
-    TableDescriptor tableDescriptor = ProtobufUtil.toTableDescriptor(req.getTableSchema());
+    HTableDescriptor hTableDescriptor = ProtobufUtil.convertToHTableDesc(req.getTableSchema());
     byte [][] splitKeys = ProtobufUtil.getSplitKeysArray(req);
     try {
       long procId =
-          master.createTable(tableDescriptor, splitKeys, req.getNonceGroup(), req.getNonce());
+          master.createTable(hTableDescriptor, splitKeys, req.getNonceGroup(), req.getNonce());
       return CreateTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -864,7 +865,7 @@ public class MasterRpcServices extends RSRpcServices
       if (descriptors != null && descriptors.size() > 0) {
         // Add the table descriptors to the response
         for (TableDescriptor htd: descriptors) {
-          builder.addTableSchema(ProtobufUtil.toTableSchema(htd));
+          builder.addTableSchema(ProtobufUtil.convertToTableSchema(htd));
         }
       }
       return builder.build();
@@ -1117,7 +1118,7 @@ public class MasterRpcServices extends RSRpcServices
           ListTableDescriptorsByNamespaceResponse.newBuilder();
       for (TableDescriptor htd : master
           .listTableDescriptorsByNamespace(request.getNamespaceName())) {
-        b.addTableSchema(ProtobufUtil.toTableSchema(htd));
+        b.addTableSchema(ProtobufUtil.convertToTableSchema(htd));
       }
       return b.build();
     } catch (IOException e) {
@@ -1146,7 +1147,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       long procId = master.modifyColumn(
         ProtobufUtil.toTableName(req.getTableName()),
-        ProtobufUtil.toColumnFamilyDescriptor(req.getColumnFamilies()),
+        ProtobufUtil.convertToHColumnDesc(req.getColumnFamilies()),
         req.getNonceGroup(),
         req.getNonce());
       if (procId == -1) {
@@ -1180,7 +1181,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       long procId = master.modifyTable(
         ProtobufUtil.toTableName(req.getTableName()),
-        ProtobufUtil.toTableDescriptor(req.getTableSchema()),
+        ProtobufUtil.convertToHTableDesc(req.getTableSchema()),
         req.getNonceGroup(),
         req.getNonce());
       return ModifyTableResponse.newBuilder().setProcId(procId).build();
@@ -1531,12 +1532,12 @@ public class MasterRpcServices extends RSRpcServices
       throw new DoNotRetryIOException("Table " + tableName + " is not enabled");
     }
     boolean allFiles = false;
-    List<ColumnFamilyDescriptor> compactedColumns = new ArrayList<>();
-    ColumnFamilyDescriptor[] hcds = master.getTableDescriptors().get(tableName).getColumnFamilies();
+    List<HColumnDescriptor> compactedColumns = new ArrayList<>();
+    HColumnDescriptor[] hcds = master.getTableDescriptors().get(tableName).getColumnFamilies();
     byte[] family = null;
     if (request.hasFamily()) {
       family = request.getFamily().toByteArray();
-      for (ColumnFamilyDescriptor hcd : hcds) {
+      for (HColumnDescriptor hcd : hcds) {
         if (Bytes.equals(family, hcd.getName())) {
           if (!hcd.isMobEnabled()) {
             LOG.error("Column family " + hcd.getNameAsString() + " is not a mob column family");
@@ -1547,7 +1548,7 @@ public class MasterRpcServices extends RSRpcServices
         }
       }
     } else {
-      for (ColumnFamilyDescriptor hcd : hcds) {
+      for (HColumnDescriptor hcd : hcds) {
         if (hcd.isMobEnabled()) {
           compactedColumns.add(hcd);
         }

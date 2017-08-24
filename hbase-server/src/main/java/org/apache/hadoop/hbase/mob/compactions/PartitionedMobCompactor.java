@@ -45,13 +45,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
@@ -109,7 +109,7 @@ public class PartitionedMobCompactor extends MobCompactor {
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
   public PartitionedMobCompactor(Configuration conf, FileSystem fs, TableName tableName,
-                                 ColumnFamilyDescriptor column, ExecutorService pool) throws IOException {
+    HColumnDescriptor column, ExecutorService pool) throws IOException {
     super(conf, fs, tableName, column, pool);
     mergeableSize = conf.getLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD,
       MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD);

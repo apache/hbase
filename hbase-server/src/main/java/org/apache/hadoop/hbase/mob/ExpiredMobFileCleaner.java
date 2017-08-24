@@ -26,15 +26,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -59,7 +59,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
    * @param tableName The current table name.
    * @param family The current family.
    */
-  public void cleanExpiredMobFiles(String tableName, ColumnFamilyDescriptor family) throws IOException {
+  public void cleanExpiredMobFiles(String tableName, HColumnDescriptor family) throws IOException {
     Configuration conf = getConf();
     TableName tn = TableName.valueOf(tableName);
     FileSystem fs = FileSystem.get(conf);
@@ -98,8 +98,8 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     Connection connection = ConnectionFactory.createConnection(getConf());
     Admin admin = connection.getAdmin();
     try {
-      TableDescriptor htd = admin.listTableDescriptor(tn);
-      ColumnFamilyDescriptor family = htd.getColumnFamily(Bytes.toBytes(familyName));
+      HTableDescriptor htd = admin.getTableDescriptor(tn);
+      HColumnDescriptor family = htd.getFamily(Bytes.toBytes(familyName));
       if (family == null || !family.isMobEnabled()) {
         throw new IOException("Column family " + familyName + " is not a MOB column family");
       }

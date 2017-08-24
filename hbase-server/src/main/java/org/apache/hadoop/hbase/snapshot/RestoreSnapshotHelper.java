@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,6 +43,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -125,7 +125,7 @@ public class RestoreSnapshotHelper {
   private final SnapshotDescription snapshotDesc;
   private final TableName snapshotTable;
 
-  private final TableDescriptor tableDesc;
+  private final HTableDescriptor tableDesc;
   private final Path rootDir;
   private final Path tableDir;
 
@@ -136,7 +136,7 @@ public class RestoreSnapshotHelper {
   public RestoreSnapshotHelper(final Configuration conf,
       final FileSystem fs,
       final SnapshotManifest manifest,
-      final TableDescriptor tableDescriptor,
+      final HTableDescriptor tableDescriptor,
       final Path rootDir,
       final ForeignExceptionDispatcher monitor,
       final MonitoredTask status) {
@@ -146,7 +146,7 @@ public class RestoreSnapshotHelper {
   public RestoreSnapshotHelper(final Configuration conf,
       final FileSystem fs,
       final SnapshotManifest manifest,
-      final TableDescriptor tableDescriptor,
+      final HTableDescriptor tableDescriptor,
       final Path rootDir,
       final ForeignExceptionDispatcher monitor,
       final MonitoredTask status,
@@ -265,18 +265,18 @@ public class RestoreSnapshotHelper {
    */
   public static class RestoreMetaChanges {
     private final Map<String, Pair<String, String> > parentsMap;
-    private final TableDescriptor htd;
+    private final HTableDescriptor htd;
 
     private List<HRegionInfo> regionsToRestore = null;
     private List<HRegionInfo> regionsToRemove = null;
     private List<HRegionInfo> regionsToAdd = null;
 
-    public RestoreMetaChanges(TableDescriptor htd, Map<String, Pair<String, String> > parentsMap) {
+    public RestoreMetaChanges(HTableDescriptor htd, Map<String, Pair<String, String> > parentsMap) {
       this.parentsMap = parentsMap;
       this.htd = htd;
     }
 
-    public TableDescriptor getTableDescriptor() {
+    public HTableDescriptor getTableDescriptor() {
       return htd;
     }
 

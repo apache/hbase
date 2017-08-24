@@ -23,14 +23,15 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -74,7 +75,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
 
   @Override
   public long createTable(
-      final TableDescriptor desc,
+      final HTableDescriptor desc,
       final byte[][] splitKeys,
       final long nonceGroup,
       final long nonce) throws IOException {
@@ -83,7 +84,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public long createSystemTable(final TableDescriptor tableDescriptor) throws IOException {
+  public long createSystemTable(final HTableDescriptor hTableDescriptor) throws IOException {
     return -1;
   }
 
@@ -266,7 +267,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
   @Override
   public long modifyTable(
       final TableName tableName,
-      final TableDescriptor descriptor,
+      final HTableDescriptor descriptor,
       final long nonceGroup,
       final long nonce) throws IOException {
     return -1;
@@ -289,13 +290,13 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public long addColumn(final TableName tableName, final ColumnFamilyDescriptor columnDescriptor,
+  public long addColumn(final TableName tableName, final HColumnDescriptor columnDescriptor,
       final long nonceGroup, final long nonce) throws IOException {
     return -1;
   }
 
   @Override
-  public long modifyColumn(final TableName tableName, final ColumnFamilyDescriptor descriptor,
+  public long modifyColumn(final TableName tableName, final HColumnDescriptor descriptor,
       final long nonceGroup, final long nonce) throws IOException {
     return -1;
   }

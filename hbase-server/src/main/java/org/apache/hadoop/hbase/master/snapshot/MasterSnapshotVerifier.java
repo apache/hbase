@@ -30,9 +30,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -137,16 +137,16 @@ public final class MasterSnapshotVerifier {
    * @param manifest snapshot manifest to inspect
    */
   private void verifyTableInfo(final SnapshotManifest manifest) throws IOException {
-    TableDescriptor htd = manifest.getTableDescriptor();
+    HTableDescriptor htd = manifest.getTableDescriptor();
     if (htd == null) {
       throw new CorruptedSnapshotException("Missing Table Descriptor",
         ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
-    if (!htd.getTableName().getNameAsString().equals(snapshot.getTable())) {
+    if (!htd.getNameAsString().equals(snapshot.getTable())) {
       throw new CorruptedSnapshotException(
           "Invalid Table Descriptor. Expected " + snapshot.getTable() + " name, got "
-              + htd.getTableName().getNameAsString(), ProtobufUtil.createSnapshotDesc(snapshot));
+              + htd.getNameAsString(), ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 

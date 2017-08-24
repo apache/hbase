@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -80,11 +79,10 @@ public class TestGetClosestAtOrBefore  {
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = UTIL.getDataTestDirOnTestFS();
     // Up flush size else we bind up when we use default catalog flush of 16k.
-    TableDescriptorBuilder metaBuilder = UTIL.getMetaTableDescriptorBuilder()
-            .setMemStoreFlushSize(64 * 1024 * 1024);
+    UTIL.getMetaTableDescriptor().setMemStoreFlushSize(64 * 1024 * 1024);
 
     Region mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
-        rootdir, this.conf, metaBuilder.build());
+        rootdir, this.conf, UTIL.getMetaTableDescriptor());
     try {
     // Write rows for three tables 'A', 'B', and 'C'.
     for (char c = 'A'; c < 'D'; c++) {

@@ -28,15 +28,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
@@ -389,8 +387,10 @@ public class MasterFileSystem {
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
-      TableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
-      HRegion meta = HRegion.createHRegion(metaHRI, rd, c, setInfoFamilyCachingForMeta(metaDescriptor, false), null);
+      HTableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
+      setInfoFamilyCachingForMeta(metaDescriptor, false);
+      HRegion meta = HRegion.createHRegion(metaHRI, rd, c, metaDescriptor, null);
+      setInfoFamilyCachingForMeta(metaDescriptor, true);
       meta.close();
     } catch (IOException e) {
         e = e instanceof RemoteException ?
@@ -403,17 +403,13 @@ public class MasterFileSystem {
   /**
    * Enable in memory caching for hbase:meta
    */
-  public static TableDescriptor setInfoFamilyCachingForMeta(TableDescriptor metaDescriptor, final boolean b) {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(metaDescriptor);
-    for (ColumnFamilyDescriptor hcd: metaDescriptor.getColumnFamilies()) {
+  public static void setInfoFamilyCachingForMeta(HTableDescriptor metaDescriptor, final boolean b) {
+    for (HColumnDescriptor hcd: metaDescriptor.getColumnFamilies()) {
       if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
-        builder.modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(hcd)
-                .setBlockCacheEnabled(b)
-                .setInMemory(b)
-                .build());
+        hcd.setBlockCacheEnabled(b);
+        hcd.setInMemory(b);
       }
     }
-    return builder.build();
   }
 
   public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName)

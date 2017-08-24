@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -74,7 +75,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   private Path restoreDir;
   private Scan scan;
   private ArrayList<HRegionInfo> regions;
-  private TableDescriptor htd;
+  private HTableDescriptor htd;
 
   private ClientSideRegionScanner currentRegionScanner  = null;
   private int currentRegion = -1;

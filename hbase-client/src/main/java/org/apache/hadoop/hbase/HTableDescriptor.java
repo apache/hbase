@@ -495,10 +495,13 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     if (this == obj) {
       return true;
     }
-    if (obj instanceof HTableDescriptor) {
-      return delegatee.equals(((HTableDescriptor) obj).delegatee);
+    if (obj == null) {
+      return false;
     }
-    return false;
+    if (!(obj instanceof HTableDescriptor)) {
+      return false;
+    }
+    return compareTo((HTableDescriptor)obj) == 0;
   }
 
   /**
@@ -520,7 +523,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    */
   @Override
   public int compareTo(final HTableDescriptor other) {
-    return TableDescriptor.COMPARATOR.compare(this, other);
+    return delegatee.compareTo(other.delegatee);
   }
 
   /**

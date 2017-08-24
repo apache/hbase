@@ -27,9 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -42,14 +42,14 @@ public abstract class MobCompactor {
   protected FileSystem fs;
   protected Configuration conf;
   protected TableName tableName;
-  protected ColumnFamilyDescriptor column;
+  protected HColumnDescriptor column;
 
   protected Path mobTableDir;
   protected Path mobFamilyDir;
   protected ExecutorService pool;
 
   public MobCompactor(Configuration conf, FileSystem fs, TableName tableName,
-                      ColumnFamilyDescriptor column, ExecutorService pool) {
+    HColumnDescriptor column, ExecutorService pool) {
     this.conf = conf;
     this.fs = fs;
     this.tableName = tableName;

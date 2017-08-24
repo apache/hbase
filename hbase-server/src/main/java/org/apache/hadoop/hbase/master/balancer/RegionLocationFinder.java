@@ -34,10 +34,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -194,7 +194,7 @@ class RegionLocationFinder {
    */
   protected HDFSBlocksDistribution internalGetTopBlockLocation(HRegionInfo region) {
     try {
-      TableDescriptor tableDescriptor = getTableDescriptor(region.getTable());
+      HTableDescriptor tableDescriptor = getTableDescriptor(region.getTable());
       if (tableDescriptor != null) {
         HDFSBlocksDistribution blocksDistribution =
             HRegion.computeHDFSBlocksDistribution(getConf(), tableDescriptor, region);
@@ -209,14 +209,14 @@ class RegionLocationFinder {
   }
 
   /**
-   * return TableDescriptor for a given tableName
+   * return HTableDescriptor for a given tableName
    *
    * @param tableName the table name
-   * @return TableDescriptor
+   * @return HTableDescriptor
    * @throws IOException
    */
-  protected TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
-    TableDescriptor tableDescriptor = null;
+  protected HTableDescriptor getTableDescriptor(TableName tableName) throws IOException {
+    HTableDescriptor tableDescriptor = null;
     try {
       if (this.services != null && this.services.getTableDescriptors() != null) {
         tableDescriptor = this.services.getTableDescriptors().get(tableName);

@@ -31,9 +31,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -79,7 +79,7 @@ public class MasterMobCompactionThread {
    * @param allFiles Whether add all mob files into the compaction.
    */
   public void requestMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
-                                   List<ColumnFamilyDescriptor> columns, boolean allFiles) throws IOException {
+      List<HColumnDescriptor> columns, boolean allFiles) throws IOException {
     master.reportMobCompactionStart(tableName);
     try {
       masterMobPool.execute(new CompactionRunner(fs, tableName, columns,
@@ -102,11 +102,11 @@ public class MasterMobCompactionThread {
   private class CompactionRunner implements Runnable {
     private FileSystem fs;
     private TableName tableName;
-    private List<ColumnFamilyDescriptor> hcds;
+    private List<HColumnDescriptor> hcds;
     private boolean allFiles;
     private ExecutorService pool;
 
-    public CompactionRunner(FileSystem fs, TableName tableName, List<ColumnFamilyDescriptor> hcds,
+    public CompactionRunner(FileSystem fs, TableName tableName, List<HColumnDescriptor> hcds,
       boolean allFiles, ExecutorService pool) {
       super();
       this.fs = fs;
@@ -123,7 +123,7 @@ public class MasterMobCompactionThread {
           MobUtils.getTableLockName(tableName), LockProcedure.LockType.EXCLUSIVE,
           this.getClass().getName() + ": mob compaction");
       try {
-        for (ColumnFamilyDescriptor hcd : hcds) {
+        for (HColumnDescriptor hcd : hcds) {
           MobUtils.doMobCompaction(conf, fs, tableName, hcd, pool, allFiles, lock);
         }
       } catch (IOException e) {

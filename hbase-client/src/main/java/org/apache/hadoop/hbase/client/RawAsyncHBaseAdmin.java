@@ -453,7 +453,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
             return;
           }
           if (!tableSchemas.isEmpty()) {
-            future.complete(ProtobufUtil.toTableDescriptor(tableSchemas.get(0)));
+            future.complete(ProtobufUtil.convertToTableDesc(tableSchemas.get(0)));
           } else {
             future.completeExceptionally(new TableNotFoundException(tableName.getNameAsString()));
           }

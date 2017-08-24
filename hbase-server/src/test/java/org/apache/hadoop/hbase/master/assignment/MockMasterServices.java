@@ -24,19 +24,19 @@ import java.util.NavigableMap;
 import java.util.SortedSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -300,36 +300,36 @@ public class MockMasterServices extends MockNoopMasterServices {
   public TableDescriptors getTableDescriptors() {
     return new TableDescriptors() {
       @Override
-      public TableDescriptor remove(TableName tablename) throws IOException {
+      public HTableDescriptor remove(TableName tablename) throws IOException {
         // noop
         return null;
       }
 
       @Override
-      public Map<String, TableDescriptor> getAll() throws IOException {
+      public Map<String, HTableDescriptor> getAll() throws IOException {
         // noop
         return null;
       }
 
-      @Override public Map<String, TableDescriptor> getAllDescriptors() throws IOException {
+      @Override public Map<String, HTableDescriptor> getAllDescriptors() throws IOException {
         // noop
         return null;
       }
 
       @Override
-      public TableDescriptor get(TableName tablename) throws IOException {
-        TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tablename);
-        builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(DEFAULT_COLUMN_FAMILY_NAME));
-        return builder.build();
+      public HTableDescriptor get(TableName tablename) throws IOException {
+        HTableDescriptor htd = new HTableDescriptor(tablename);
+        htd.addFamily(new HColumnDescriptor(DEFAULT_COLUMN_FAMILY_NAME));
+        return htd;
       }
 
       @Override
-      public Map<String, TableDescriptor> getByNamespace(String name) throws IOException {
+      public Map<String, HTableDescriptor> getByNamespace(String name) throws IOException {
         return null;
       }
 
       @Override
-      public void add(TableDescriptor htd) throws IOException {
+      public void add(HTableDescriptor htd) throws IOException {
         // noop
       }
 

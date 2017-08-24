@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 
 /**
  * Get, remove and modify table descriptors.
@@ -34,7 +33,7 @@ public interface TableDescriptors {
    * @return TableDescriptor for tablename
    * @throws IOException
    */
-  TableDescriptor get(final TableName tableName)
+  HTableDescriptor get(final TableName tableName)
       throws IOException;
 
   /**
@@ -42,7 +41,16 @@ public interface TableDescriptors {
    * @return Map of all descriptors.
    * @throws IOException
    */
-  Map<String, TableDescriptor> getByNamespace(String name)
+  Map<String, HTableDescriptor> getByNamespace(String name)
+  throws IOException;
+
+  /**
+   * Get Map of all HTableDescriptors. Populates the descriptor cache as a
+   * side effect.
+   * @return Map of all descriptors.
+   * @throws IOException
+   */
+  Map<String, HTableDescriptor> getAll()
   throws IOException;
 
   /**
@@ -51,16 +59,7 @@ public interface TableDescriptors {
    * @return Map of all descriptors.
    * @throws IOException
    */
-  Map<String, TableDescriptor> getAll()
-  throws IOException;
-
-  /**
-   * Get Map of all TableDescriptors. Populates the descriptor cache as a
-   * side effect.
-   * @return Map of all descriptors.
-   * @throws IOException
-   */
-  Map<String, TableDescriptor> getAllDescriptors()
+  Map<String, HTableDescriptor> getAllDescriptors()
       throws IOException;
 
   /**
@@ -68,7 +67,7 @@ public interface TableDescriptors {
    * @param htd Descriptor to set into TableDescriptors
    * @throws IOException
    */
-  void add(final TableDescriptor htd)
+  void add(final HTableDescriptor htd)
   throws IOException;
 
   /**
@@ -76,7 +75,7 @@ public interface TableDescriptors {
    * @return Instance of table descriptor or null if none found.
    * @throws IOException
    */
-  TableDescriptor remove(final TableName tablename)
+  HTableDescriptor remove(final TableName tablename)
   throws IOException;
 
   /**

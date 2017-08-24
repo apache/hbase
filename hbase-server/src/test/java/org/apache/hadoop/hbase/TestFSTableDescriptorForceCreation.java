@@ -25,13 +25,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
@@ -49,9 +46,9 @@ public class TestFSTableDescriptorForceCreation {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
 
-    assertTrue("Should create new table descriptor",
-      fstd.createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build(), false));
+    assertTrue("Should create new table descriptor", fstd.createTableDescriptor(htd, false));
   }
 
   @Test
@@ -62,7 +59,7 @@ public class TestFSTableDescriptorForceCreation {
     // Cleanup old tests if any detritus laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build();
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     fstd.add(htd);
     assertFalse("Should not create new table descriptor", fstd.createTableDescriptor(htd, false));
   }
@@ -74,7 +71,7 @@ public class TestFSTableDescriptorForceCreation {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build();
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     fstd.createTableDescriptor(htd, false);
     assertTrue("Should create new table descriptor",
         fstd.createTableDescriptor(htd, true));

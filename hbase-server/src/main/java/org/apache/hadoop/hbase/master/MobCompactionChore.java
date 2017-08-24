@@ -24,11 +24,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
@@ -55,8 +55,8 @@ public class MobCompactionChore extends ScheduledChore {
   protected void chore() {
     try {
       TableDescriptors htds = master.getTableDescriptors();
-      Map<String, TableDescriptor> map = htds.getAll();
-      for (TableDescriptor htd : map.values()) {
+      Map<String, HTableDescriptor> map = htds.getAll();
+      for (HTableDescriptor htd : map.values()) {
         if (!master.getTableStateManager().isTableState(htd.getTableName(),
           TableState.State.ENABLED)) {
           continue;
@@ -66,7 +66,7 @@ public class MobCompactionChore extends ScheduledChore {
           final LockManager.MasterLock lock = master.getLockManager().createMasterLock(
               MobUtils.getTableLockName(htd.getTableName()), LockProcedure.LockType.EXCLUSIVE,
               this.getClass().getName() + ": mob compaction");
-          for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+          for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
             if (!hcd.isMobEnabled()) {
               continue;
             }
