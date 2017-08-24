@@ -141,7 +141,9 @@ public class Scan extends Query {
   private long maxResultSize = -1;
   private boolean cacheBlocks = true;
   private boolean reversed = false;
-  private Map<byte[], NavigableSet<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  private TimeRange tr = new TimeRange();
+  private Map<byte [], NavigableSet<byte []>> familyMap =
+    new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
   private Boolean asyncPrefetch = null;
 
   /**
@@ -350,7 +352,7 @@ public class Scan extends Query {
   }
 
   /**
-   * Set versions of columns only within the specified timestamp range,
+   * Get versions of columns only within the specified timestamp range,
    * [minStamp, maxStamp).  Note, default maximum versions to return is 1.  If
    * your time range spans more than one version and you want all versions
    * returned, up the number of versions beyond the default.
@@ -360,18 +362,9 @@ public class Scan extends Query {
    * @see #setMaxVersions(int)
    * @return this
    */
-  @Override
   public Scan setTimeRange(long minStamp, long maxStamp) throws IOException {
-    return (Scan) super.setTimeRange(minStamp, maxStamp);
-  }
-
-  /**
-   * Set versions of columns only within the specified timestamp range,
-   * @param tr Input TimeRange
-   * @return this for invocation chaining
-   */
-  public Scan setTimeRange(TimeRange tr) {
-    return (Scan) super.setTimeRange(tr);
+    tr = new TimeRange(minStamp, maxStamp);
+    return this;
   }
 
   /**
@@ -387,7 +380,7 @@ public class Scan extends Query {
   public Scan setTimeStamp(long timestamp)
   throws IOException {
     try {
-      super.setTimeRange(timestamp, timestamp + 1);
+      tr = new TimeRange(timestamp, timestamp+1);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
@@ -396,14 +389,8 @@ public class Scan extends Query {
     return this;
   }
 
-  @Override
-  public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
+  @Override public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
     return (Scan) super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
-  }
-
-  @Override
-  public Scan setColumnFamilyTimeRange(byte[] cf, TimeRange tr) {
-    return (Scan) super.setColumnFamilyTimeRange(cf, tr);
   }
 
   /**
@@ -814,6 +801,13 @@ public class Scan extends Query {
    */
   public int getCaching() {
     return this.caching;
+  }
+
+  /**
+   * @return TimeRange
+   */
+  public TimeRange getTimeRange() {
+    return this.tr;
   }
 
   /**
