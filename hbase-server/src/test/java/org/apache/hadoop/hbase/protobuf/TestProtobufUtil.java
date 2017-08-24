@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ProcedureState;
@@ -130,7 +129,6 @@ public class TestProtobufUtil {
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
     qualifierBuilder.setValue(ByteString.copyFromUtf8("v2"));
     valueBuilder.addQualifierValue(qualifierBuilder.build());
-    qualifierBuilder.setTimestamp(timeStamp);
     mutateBuilder.addColumnValue(valueBuilder.build());
 
     MutationProto proto = mutateBuilder.build();
@@ -203,6 +201,7 @@ public class TestProtobufUtil {
    */
   @Test
   public void testIncrement() throws IOException {
+    long timeStamp = 111111;
     MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
     mutateBuilder.setMutateType(MutationType.INCREMENT);
@@ -211,6 +210,7 @@ public class TestProtobufUtil {
     QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
     qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(11L)));
+    qualifierBuilder.setTimestamp(timeStamp);
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
     qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(22L)));
@@ -226,8 +226,8 @@ public class TestProtobufUtil {
     mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
 
     Increment increment = ProtobufUtil.toIncrement(proto, null);
-    assertEquals(mutateBuilder.build(),
-      ProtobufUtil.toMutation(increment, MutationProto.newBuilder(), HConstants.NO_NONCE));
+    mutateBuilder.setTimestamp(increment.getTimeStamp());
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.INCREMENT, increment));
   }
 
   /**
