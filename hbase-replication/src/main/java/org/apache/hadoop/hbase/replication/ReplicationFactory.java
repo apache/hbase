@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.commons.lang.reflect.ConstructorUtils;
+import org.apache.commons.lang3.reflect.ConstructorUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
