@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -104,11 +104,11 @@ public class TestRestoreSnapshotHelper {
     builder.addRegionV2();
     builder.addRegionV1();
     Path snapshotDir = builder.commit();
-    HTableDescriptor htd = builder.getTableDescriptor();
+    TableDescriptor htd = builder.getTableDescriptor();
     SnapshotDescription desc = builder.getSnapshotDescription();
 
     // Test clone a snapshot
-    HTableDescriptor htdClone = snapshotMock.createHtd("testtb-clone");
+    TableDescriptor htdClone = snapshotMock.createHtd("testtb-clone");
     testRestore(snapshotDir, desc, htdClone);
     verifyRestore(rootDir, htd, htdClone);
 
@@ -118,13 +118,13 @@ public class TestRestoreSnapshotHelper {
         .setTable("testtb-clone")
         .build();
     Path cloneDir = FSUtils.getTableDir(rootDir, htdClone.getTableName());
-    HTableDescriptor htdClone2 = snapshotMock.createHtd("testtb-clone2");
+    TableDescriptor htdClone2 = snapshotMock.createHtd("testtb-clone2");
     testRestore(cloneDir, cloneDesc, htdClone2);
     verifyRestore(rootDir, htd, htdClone2);
   }
 
-  private void verifyRestore(final Path rootDir, final HTableDescriptor sourceHtd,
-      final HTableDescriptor htdClone) throws IOException {
+  private void verifyRestore(final Path rootDir, final TableDescriptor sourceHtd,
+      final TableDescriptor htdClone) throws IOException {
     List<String> files = SnapshotTestingUtils.listHFileNames(fs,
       FSUtils.getTableDir(rootDir, htdClone.getTableName()));
     assertEquals(12, files.size());
@@ -148,7 +148,7 @@ public class TestRestoreSnapshotHelper {
    * @param htdClone The HTableDescriptor of the table to restore/clone.
    */
   private void testRestore(final Path snapshotDir, final SnapshotDescription sd,
-      final HTableDescriptor htdClone) throws IOException {
+      final TableDescriptor htdClone) throws IOException {
     LOG.debug("pre-restore table=" + htdClone.getTableName() + " snapshot=" + snapshotDir);
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
@@ -164,7 +164,7 @@ public class TestRestoreSnapshotHelper {
    * Initialize the restore helper, based on the snapshot and table information provided.
    */
   private RestoreSnapshotHelper getRestoreHelper(final Path rootDir, final Path snapshotDir,
-      final SnapshotDescription sd, final HTableDescriptor htdClone) throws IOException {
+      final SnapshotDescription sd, final TableDescriptor htdClone) throws IOException {
     ForeignExceptionDispatcher monitor = Mockito.mock(ForeignExceptionDispatcher.class);
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
 

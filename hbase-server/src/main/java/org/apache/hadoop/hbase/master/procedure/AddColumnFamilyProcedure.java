@@ -25,12 +25,13 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -45,30 +46,30 @@ public class AddColumnFamilyProcedure
   private static final Log LOG = LogFactory.getLog(AddColumnFamilyProcedure.class);
 
   private TableName tableName;
-  private HTableDescriptor unmodifiedHTableDescriptor;
-  private HColumnDescriptor cfDescriptor;
+  private TableDescriptor unmodifiedTableDescriptor;
+  private ColumnFamilyDescriptor cfDescriptor;
 
   private List<HRegionInfo> regionInfoList;
   private Boolean traceEnabled;
 
   public AddColumnFamilyProcedure() {
     super();
-    this.unmodifiedHTableDescriptor = null;
+    this.unmodifiedTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
   }
 
   public AddColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final HColumnDescriptor cfDescriptor) throws IOException {
+      final ColumnFamilyDescriptor cfDescriptor) throws IOException {
     this(env, tableName, cfDescriptor, null);
   }
 
   public AddColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final HColumnDescriptor cfDescriptor, final ProcedurePrepareLatch latch) {
+      final ColumnFamilyDescriptor cfDescriptor, final ProcedurePrepareLatch latch) {
     super(env, latch);
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
-    this.unmodifiedHTableDescriptor = null;
+    this.unmodifiedTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
   }
@@ -172,10 +173,10 @@ public class AddColumnFamilyProcedure
         MasterProcedureProtos.AddColumnFamilyStateData.newBuilder()
             .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
-            .setColumnfamilySchema(ProtobufUtil.convertToColumnFamilySchema(cfDescriptor));
-    if (unmodifiedHTableDescriptor != null) {
+            .setColumnfamilySchema(ProtobufUtil.toColumnFamilySchema(cfDescriptor));
+    if (unmodifiedTableDescriptor != null) {
       addCFMsg
-          .setUnmodifiedTableSchema(ProtobufUtil.convertToTableSchema(unmodifiedHTableDescriptor));
+          .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
     }
 
     addCFMsg.build().writeDelimitedTo(stream);
@@ -189,9 +190,9 @@ public class AddColumnFamilyProcedure
         MasterProcedureProtos.AddColumnFamilyStateData.parseDelimitedFrom(stream);
     setUser(MasterProcedureUtil.toUserInfo(addCFMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(addCFMsg.getTableName());
-    cfDescriptor = ProtobufUtil.convertToHColumnDesc(addCFMsg.getColumnfamilySchema());
+    cfDescriptor = ProtobufUtil.toColumnFamilyDescriptor(addCFMsg.getColumnfamilySchema());
     if (addCFMsg.hasUnmodifiedTableSchema()) {
-      unmodifiedHTableDescriptor = ProtobufUtil.convertToHTableDesc(addCFMsg.getUnmodifiedTableSchema());
+      unmodifiedTableDescriptor = ProtobufUtil.toTableDescriptor(addCFMsg.getUnmodifiedTableSchema());
     }
   }
 
@@ -229,11 +230,11 @@ public class AddColumnFamilyProcedure
     checkTableModifiable(env);
 
     // In order to update the descriptor, we need to retrieve the old descriptor for comparison.
-    unmodifiedHTableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
-    if (unmodifiedHTableDescriptor == null) {
-      throw new IOException("HTableDescriptor missing for " + tableName);
+    unmodifiedTableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
+    if (unmodifiedTableDescriptor == null) {
+      throw new IOException("TableDescriptor missing for " + tableName);
     }
-    if (unmodifiedHTableDescriptor.hasFamily(cfDescriptor.getName())) {
+    if (unmodifiedTableDescriptor.hasColumnFamily(cfDescriptor.getName())) {
       throw new InvalidFamilyOperationException("Column family '" + getColumnFamilyName()
           + "' in table '" + tableName + "' already exists so cannot be added");
     }
@@ -258,17 +259,18 @@ public class AddColumnFamilyProcedure
     // Update table descriptor
     LOG.info("AddColumn. Table = " + tableName + " HCD = " + cfDescriptor.toString());
 
-    HTableDescriptor htd = env.getMasterServices().getTableDescriptors().get(tableName);
+    TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(tableName);
 
-    if (htd.hasFamily(cfDescriptor.getName())) {
+    if (htd.hasColumnFamily(cfDescriptor.getName())) {
       // It is possible to reach this situation, as we could already add the column family
       // to table descriptor, but the master failover happens before we complete this state.
       // We should be able to handle running this function multiple times without causing problem.
       return;
     }
 
-    htd.addFamily(cfDescriptor);
-    env.getMasterServices().getTableDescriptors().add(htd);
+    env.getMasterServices().getTableDescriptors().add(
+            TableDescriptorBuilder.newBuilder(htd)
+            .addColumnFamily(cfDescriptor).build());
   }
 
   /**
@@ -277,14 +279,14 @@ public class AddColumnFamilyProcedure
    * @throws IOException
    **/
   private void restoreTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    HTableDescriptor htd = env.getMasterServices().getTableDescriptors().get(tableName);
-    if (htd.hasFamily(cfDescriptor.getName())) {
+    TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(tableName);
+    if (htd.hasColumnFamily(cfDescriptor.getName())) {
       // Remove the column family from file system and update the table descriptor to
       // the before-add-column-family-state
       MasterDDLOperationHelper.deleteColumnFamilyFromFileSystem(env, tableName,
         getRegionInfoList(env), cfDescriptor.getName(), cfDescriptor.isMobEnabled());
 
-      env.getMasterServices().getTableDescriptors().add(unmodifiedHTableDescriptor);
+      env.getMasterServices().getTableDescriptors().add(unmodifiedTableDescriptor);
 
       // Make sure regions are opened after table descriptor is updated.
       //reOpenAllRegionsIfTableIsOnline(env);

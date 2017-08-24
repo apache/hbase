@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
@@ -84,11 +88,9 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -939,7 +941,7 @@ public class HBaseFsck extends Configured implements Closeable {
     TableName tableName = hi.getTableName();
     TableInfo tableInfo = tablesInfo.get(tableName);
     Preconditions.checkNotNull(tableInfo, "Table '" + tableName + "' not present!");
-    HTableDescriptor template = tableInfo.getHTD();
+    TableDescriptor template = tableInfo.getHTD();
 
     // find min and max key values
     Pair<byte[],byte[]> orphanRegionRange = null;
@@ -1200,17 +1202,17 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void reportTablesInFlux() {
     AtomicInteger numSkipped = new AtomicInteger(0);
-    HTableDescriptor[] allTables = getTables(numSkipped);
+    TableDescriptor[] allTables = getTables(numSkipped);
     errors.print("Number of Tables: " + allTables.length);
     if (details) {
       if (numSkipped.get() > 0) {
         errors.detail("Number of Tables in flux: " + numSkipped.get());
       }
-      for (HTableDescriptor td : allTables) {
+      for (TableDescriptor td : allTables) {
         errors.detail("  Table: " + td.getTableName() + "\t" +
                            (td.isReadOnly() ? "ro" : "rw") + "\t" +
                             (td.isMetaRegion() ? "META" : "    ") + "\t" +
-                           " families: " + td.getFamilies().size());
+                           " families: " + td.getColumnFamilyCount());
       }
     }
   }
@@ -1314,7 +1316,7 @@ public class HBaseFsck extends Configured implements Closeable {
         modTInfo = new TableInfo(tableName);
         tablesInfo.put(tableName, modTInfo);
         try {
-          HTableDescriptor htd =
+          TableDescriptor htd =
               FSTableDescriptors.getTableDescriptorFromFs(fs, hbaseRoot, tableName);
           modTInfo.htds.add(htd);
         } catch (IOException ioe) {
@@ -1361,17 +1363,17 @@ public class HBaseFsck extends Configured implements Closeable {
    * To fabricate a .tableinfo file with following contents<br>
    * 1. the correct tablename <br>
    * 2. the correct colfamily list<br>
-   * 3. the default properties for both {@link HTableDescriptor} and {@link HColumnDescriptor}<br>
+   * 3. the default properties for both {@link TableDescriptor} and {@link ColumnFamilyDescriptor}<br>
    * @throws IOException
    */
   private boolean fabricateTableInfo(FSTableDescriptors fstd, TableName tableName,
       Set<String> columns) throws IOException {
     if (columns ==null || columns.isEmpty()) return false;
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (String columnfamimly : columns) {
-      htd.addFamily(new HColumnDescriptor(columnfamimly));
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(columnfamimly));
     }
-    fstd.createTableDescriptor(htd, true);
+    fstd.createTableDescriptor(builder.build(), true);
     return true;
   }
 
@@ -1396,7 +1398,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * 2. else create a default .tableinfo file with following items<br>
    * &nbsp;2.1 the correct tablename <br>
    * &nbsp;2.2 the correct colfamily list<br>
-   * &nbsp;2.3 the default properties for both {@link HTableDescriptor} and {@link HColumnDescriptor}<br>
+   * &nbsp;2.3 the default properties for both {@link TableDescriptor} and {@link ColumnFamilyDescriptor}<br>
    * @throws IOException
    */
   public void fixOrphanTables() throws IOException {
@@ -1404,7 +1406,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
       List<TableName> tmpList = new ArrayList<>(orphanTableDirs.keySet().size());
       tmpList.addAll(orphanTableDirs.keySet());
-      HTableDescriptor[] htds = getHTableDescriptors(tmpList);
+      TableDescriptor[] htds = getTableDescriptors(tmpList);
       Iterator<Entry<TableName, Set<String>>> iter =
           orphanTableDirs.entrySet().iterator();
       int j = 0;
@@ -1417,7 +1419,7 @@ public class HBaseFsck extends Configured implements Closeable {
         LOG.info("Trying to fix orphan table error: " + tableName);
         if (j < htds.length) {
           if (tableName.equals(htds[j].getTableName())) {
-            HTableDescriptor htd = htds[j];
+            TableDescriptor htd = htds[j];
             LOG.info("fixing orphan table: " + tableName + " from cache");
             fstd.createTableDescriptor(htd, true);
             j++;
@@ -1426,7 +1428,7 @@ public class HBaseFsck extends Configured implements Closeable {
         } else {
           if (fabricateTableInfo(fstd, tableName, entry.getValue())) {
             LOG.warn("fixing orphan table: " + tableName + " with a default .tableinfo file");
-            LOG.warn("Strongly recommend to modify the HTableDescriptor if necessary for: " + tableName);
+            LOG.warn("Strongly recommend to modify the TableDescriptor if necessary for: " + tableName);
             iter.remove();
           } else {
             LOG.error("Unable to create default .tableinfo for " + tableName + " while missing column family information");
@@ -1463,7 +1465,7 @@ public class HBaseFsck extends Configured implements Closeable {
     Path rootdir = FSUtils.getRootDir(getConf());
     Configuration c = getConf();
     HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
-    HTableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
+    TableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
     MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, false);
     // The WAL subsystem will use the default rootDir rather than the passed in rootDir
     // unless I pass along via the conf.
@@ -2646,8 +2648,8 @@ public class HBaseFsck extends Configured implements Closeable {
    * regions reported for the table, but table dir is there in hdfs
    */
   private void loadTableInfosForTablesWithNoRegion() throws IOException {
-    Map<String, HTableDescriptor> allTables = new FSTableDescriptors(getConf()).getAll();
-    for (HTableDescriptor htd : allTables.values()) {
+    Map<String, TableDescriptor> allTables = new FSTableDescriptors(getConf()).getAll();
+    for (TableDescriptor htd : allTables.values()) {
       if (checkMetaOnly && !htd.isMetaTable()) {
         continue;
       }
@@ -2770,8 +2772,8 @@ public class HBaseFsck extends Configured implements Closeable {
     // region split calculator
     final RegionSplitCalculator<HbckInfo> sc = new RegionSplitCalculator<>(cmp);
 
-    // Histogram of different HTableDescriptors found.  Ideally there is only one!
-    final Set<HTableDescriptor> htds = new HashSet<>();
+    // Histogram of different TableDescriptors found.  Ideally there is only one!
+    final Set<TableDescriptor> htds = new HashSet<>();
 
     // key = start split, values = set of splits in problem group
     final Multimap<byte[], HbckInfo> overlapGroups =
@@ -2788,9 +2790,9 @@ public class HBaseFsck extends Configured implements Closeable {
     /**
      * @return descriptor common to all regions.  null if are none or multiple!
      */
-    private HTableDescriptor getHTD() {
+    private TableDescriptor getHTD() {
       if (htds.size() == 1) {
-        return (HTableDescriptor)htds.toArray()[0];
+        return (TableDescriptor)htds.toArray()[0];
       } else {
         LOG.error("None/Multiple table descriptors found for table '"
           + tableName + "' regions: " + htds);
@@ -2960,7 +2962,7 @@ public class HBaseFsck extends Configured implements Closeable {
             "First region should start with an empty key.  Creating a new " +
             "region and regioninfo in HDFS to plug the hole.",
             getTableInfo(), next);
-        HTableDescriptor htd = getTableInfo().getHTD();
+        TableDescriptor htd = getTableInfo().getHTD();
         // from special EMPTY_START_ROW to next region's startKey
         HRegionInfo newRegion = new HRegionInfo(htd.getTableName(),
             HConstants.EMPTY_START_ROW, next.getStartKey());
@@ -2977,7 +2979,7 @@ public class HBaseFsck extends Configured implements Closeable {
         errors.reportError(ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY,
             "Last region should end with an empty key.  Creating a new "
                 + "region and regioninfo in HDFS to plug the hole.", getTableInfo());
-        HTableDescriptor htd = getTableInfo().getHTD();
+        TableDescriptor htd = getTableInfo().getHTD();
         // from curEndKey to EMPTY_START_ROW
         HRegionInfo newRegion = new HRegionInfo(htd.getTableName(), curEndKey,
             HConstants.EMPTY_START_ROW);
@@ -3001,7 +3003,7 @@ public class HBaseFsck extends Configured implements Closeable {
                 + Bytes.toStringBinary(holeStopKey)
                 + ".  Creating a new regioninfo and region "
                 + "dir in hdfs to plug the hole.");
-        HTableDescriptor htd = getTableInfo().getHTD();
+        TableDescriptor htd = getTableInfo().getHTD();
         HRegionInfo newRegion = new HRegionInfo(htd.getTableName(), holeStartKey, holeStopKey);
         HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
         LOG.info("Plugged hole by creating new empty region: "+ newRegion + " " +region);
@@ -3202,7 +3204,7 @@ public class HBaseFsck extends Configured implements Closeable {
         }
 
         // create new empty container region.
-        HTableDescriptor htd = getTableInfo().getHTD();
+        TableDescriptor htd = getTableInfo().getHTD();
         // from start key to end Key
         HRegionInfo newRegion = new HRegionInfo(htd.getTableName(), range.getFirst(),
             range.getSecond());
@@ -3503,7 +3505,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * @return tables that have not been modified recently
    * @throws IOException if an error is encountered
    */
-  HTableDescriptor[] getTables(AtomicInteger numSkipped) {
+  TableDescriptor[] getTables(AtomicInteger numSkipped) {
     List<TableName> tableNames = new ArrayList<>();
     long now = EnvironmentEdgeManager.currentTime();
 
@@ -3520,19 +3522,19 @@ public class HBaseFsck extends Configured implements Closeable {
         }
       }
     }
-    return getHTableDescriptors(tableNames);
+    return getTableDescriptors(tableNames);
   }
 
-  HTableDescriptor[] getHTableDescriptors(List<TableName> tableNames) {
-    HTableDescriptor[] htd = new HTableDescriptor[0];
-      LOG.info("getHTableDescriptors == tableNames => " + tableNames);
+  TableDescriptor[] getTableDescriptors(List<TableName> tableNames) {
+      LOG.info("getTableDescriptors == tableNames => " + tableNames);
     try (Connection conn = ConnectionFactory.createConnection(getConf());
         Admin admin = conn.getAdmin()) {
-      htd = admin.getTableDescriptorsByTableName(tableNames);
+      List<TableDescriptor> tds = admin.listTableDescriptors(tableNames);
+      return tds.toArray(new TableDescriptor[tds.size()]);
     } catch (IOException e) {
       LOG.debug("Exception getting table descriptors", e);
     }
-    return htd;
+    return new TableDescriptor[0];
   }
 
   /**

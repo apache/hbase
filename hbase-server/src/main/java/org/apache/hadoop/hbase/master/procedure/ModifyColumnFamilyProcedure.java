@@ -24,11 +24,12 @@ import java.io.OutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -43,28 +44,28 @@ public class ModifyColumnFamilyProcedure
   private static final Log LOG = LogFactory.getLog(ModifyColumnFamilyProcedure.class);
 
   private TableName tableName;
-  private HTableDescriptor unmodifiedHTableDescriptor;
-  private HColumnDescriptor cfDescriptor;
+  private TableDescriptor unmodifiedtableDescriptor;
+  private ColumnFamilyDescriptor cfDescriptor;
 
   private Boolean traceEnabled;
 
   public ModifyColumnFamilyProcedure() {
     super();
-    this.unmodifiedHTableDescriptor = null;
+    this.unmodifiedtableDescriptor = null;
     this.traceEnabled = null;
   }
 
   public ModifyColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final HColumnDescriptor cfDescriptor) {
+      final ColumnFamilyDescriptor cfDescriptor) {
     this(env, tableName, cfDescriptor, null);
   }
 
   public ModifyColumnFamilyProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final HColumnDescriptor cfDescriptor, final ProcedurePrepareLatch latch) {
+      final ColumnFamilyDescriptor cfDescriptor, final ProcedurePrepareLatch latch) {
     super(env, latch);
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
-    this.unmodifiedHTableDescriptor = null;
+    this.unmodifiedtableDescriptor = null;
     this.traceEnabled = null;
   }
 
@@ -165,10 +166,10 @@ public class ModifyColumnFamilyProcedure
         MasterProcedureProtos.ModifyColumnFamilyStateData.newBuilder()
             .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
-            .setColumnfamilySchema(ProtobufUtil.convertToColumnFamilySchema(cfDescriptor));
-    if (unmodifiedHTableDescriptor != null) {
+            .setColumnfamilySchema(ProtobufUtil.toColumnFamilySchema(cfDescriptor));
+    if (unmodifiedtableDescriptor != null) {
       modifyCFMsg
-          .setUnmodifiedTableSchema(ProtobufUtil.convertToTableSchema(unmodifiedHTableDescriptor));
+          .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedtableDescriptor));
     }
 
     modifyCFMsg.build().writeDelimitedTo(stream);
@@ -182,9 +183,9 @@ public class ModifyColumnFamilyProcedure
         MasterProcedureProtos.ModifyColumnFamilyStateData.parseDelimitedFrom(stream);
     setUser(MasterProcedureUtil.toUserInfo(modifyCFMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(modifyCFMsg.getTableName());
-    cfDescriptor = ProtobufUtil.convertToHColumnDesc(modifyCFMsg.getColumnfamilySchema());
+    cfDescriptor = ProtobufUtil.toColumnFamilyDescriptor(modifyCFMsg.getColumnfamilySchema());
     if (modifyCFMsg.hasUnmodifiedTableSchema()) {
-      unmodifiedHTableDescriptor = ProtobufUtil.convertToHTableDesc(modifyCFMsg.getUnmodifiedTableSchema());
+      unmodifiedtableDescriptor = ProtobufUtil.toTableDescriptor(modifyCFMsg.getUnmodifiedTableSchema());
     }
   }
 
@@ -221,11 +222,11 @@ public class ModifyColumnFamilyProcedure
     // Checks whether the table is allowed to be modified.
     checkTableModifiable(env);
 
-    unmodifiedHTableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
-    if (unmodifiedHTableDescriptor == null) {
-      throw new IOException("HTableDescriptor missing for " + tableName);
+    unmodifiedtableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
+    if (unmodifiedtableDescriptor == null) {
+      throw new IOException("TableDescriptor missing for " + tableName);
     }
-    if (!unmodifiedHTableDescriptor.hasFamily(cfDescriptor.getName())) {
+    if (!unmodifiedtableDescriptor.hasColumnFamily(cfDescriptor.getName())) {
       throw new InvalidFamilyOperationException("Family '" + getColumnFamilyName()
           + "' does not exist, so it cannot be modified");
     }
@@ -250,9 +251,9 @@ public class ModifyColumnFamilyProcedure
     // Update table descriptor
     LOG.info("ModifyColumnFamily. Table = " + tableName + " HCD = " + cfDescriptor.toString());
 
-    HTableDescriptor htd = env.getMasterServices().getTableDescriptors().get(tableName);
-    htd.modifyFamily(cfDescriptor);
-    env.getMasterServices().getTableDescriptors().add(htd);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(env.getMasterServices().getTableDescriptors().get(tableName));
+    builder.modifyColumnFamily(cfDescriptor);
+    env.getMasterServices().getTableDescriptors().add(builder.build());
   }
 
   /**
@@ -261,7 +262,7 @@ public class ModifyColumnFamilyProcedure
    * @throws IOException
    **/
   private void restoreTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getTableDescriptors().add(unmodifiedHTableDescriptor);
+    env.getMasterServices().getTableDescriptors().add(unmodifiedtableDescriptor);
 
     // Make sure regions are opened after table descriptor is updated.
     //reOpenAllRegionsIfTableIsOnline(env);

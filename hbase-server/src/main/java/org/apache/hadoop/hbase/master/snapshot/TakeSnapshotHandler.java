@@ -33,9 +33,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
@@ -89,7 +89,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   protected final SnapshotManifest snapshotManifest;
   protected final SnapshotManager snapshotManager;
 
-  protected HTableDescriptor htd;
+  protected TableDescriptor htd;
 
   /**
    * @param snapshot descriptor of the snapshot to take
@@ -124,12 +124,12 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable);
   }
 
-  private HTableDescriptor loadTableDescriptor()
+  private TableDescriptor loadTableDescriptor()
       throws FileNotFoundException, IOException {
-    HTableDescriptor htd =
+    TableDescriptor htd =
       this.master.getTableDescriptors().get(snapshotTable);
     if (htd == null) {
-      throw new IOException("HTableDescriptor missing for " + snapshotTable);
+      throw new IOException("TableDescriptor missing for " + snapshotTable);
     }
     return htd;
   }

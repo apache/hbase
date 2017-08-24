@@ -23,11 +23,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.mob.ExpiredMobFileCleaner;
@@ -61,9 +61,9 @@ public class ExpiredMobFileCleanerChore extends ScheduledChore {
   protected void chore() {
     try {
       TableDescriptors htds = master.getTableDescriptors();
-      Map<String, HTableDescriptor> map = htds.getAll();
-      for (HTableDescriptor htd : map.values()) {
-        for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+      Map<String, TableDescriptor> map = htds.getAll();
+      for (TableDescriptor htd : map.values()) {
+        for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
           if (hcd.isMobEnabled() && hcd.getMinVersions() == 0) {
             // clean only for mob-enabled column.
             // obtain a read table lock before cleaning, synchronize with MobFileCompactionChore.

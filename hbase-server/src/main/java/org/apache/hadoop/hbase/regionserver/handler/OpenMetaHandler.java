@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
@@ -33,8 +33,8 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 @InterfaceAudience.Private
 public class OpenMetaHandler extends OpenRegionHandler {
   public OpenMetaHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo,
-      final HTableDescriptor htd, long masterSystemTime) {
+                         final RegionServerServices rsServices, HRegionInfo regionInfo,
+                         final TableDescriptor htd, long masterSystemTime) {
     super(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_META);
   }
 }
