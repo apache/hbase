@@ -1080,7 +1080,7 @@ public final class RequestConverter {
       final long nonce) {
     AddColumnRequest.Builder builder = AddColumnRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
-    builder.setColumnFamilies(ProtobufUtil.convertToColumnFamilySchema(column));
+    builder.setColumnFamilies(ProtobufUtil.toColumnFamilySchema(column));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();
@@ -1120,7 +1120,7 @@ public final class RequestConverter {
       final long nonce) {
     ModifyColumnRequest.Builder builder = ModifyColumnRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
-    builder.setColumnFamilies(ProtobufUtil.convertToColumnFamilySchema(column));
+    builder.setColumnFamilies(ProtobufUtil.toColumnFamilySchema(column));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();
@@ -1306,28 +1306,28 @@ public final class RequestConverter {
   /**
    * Creates a protocol buffer CreateTableRequest
    *
-   * @param hTableDesc
+   * @param tableDescriptor
    * @param splitKeys
    * @return a CreateTableRequest
    */
   public static CreateTableRequest buildCreateTableRequest(
-      final TableDescriptor hTableDesc,
+      final TableDescriptor tableDescriptor,
       final byte [][] splitKeys,
       final long nonceGroup,
       final long nonce) {
-    return buildCreateTableRequest(hTableDesc, Optional.ofNullable(splitKeys), nonceGroup, nonce);
+    return buildCreateTableRequest(tableDescriptor, Optional.ofNullable(splitKeys), nonceGroup, nonce);
   }
 
   /**
    * Creates a protocol buffer CreateTableRequest
-   * @param hTableDesc
+   * @param tableDescriptor
    * @param splitKeys
    * @return a CreateTableRequest
    */
-  public static CreateTableRequest buildCreateTableRequest(TableDescriptor hTableDesc,
+  public static CreateTableRequest buildCreateTableRequest(TableDescriptor tableDescriptor,
       Optional<byte[][]> splitKeys, long nonceGroup, long nonce) {
     CreateTableRequest.Builder builder = CreateTableRequest.newBuilder();
-    builder.setTableSchema(ProtobufUtil.convertToTableSchema(hTableDesc));
+    builder.setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
     splitKeys.ifPresent(keys -> Arrays.stream(keys).forEach(
       key -> builder.addSplitKeys(UnsafeByteOperations.unsafeWrap(key))));
     builder.setNonceGroup(nonceGroup);
@@ -1349,7 +1349,7 @@ public final class RequestConverter {
       final long nonce) {
     ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
-    builder.setTableSchema(ProtobufUtil.convertToTableSchema(tableDesc));
+    builder.setTableSchema(ProtobufUtil.toTableSchema(tableDesc));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();

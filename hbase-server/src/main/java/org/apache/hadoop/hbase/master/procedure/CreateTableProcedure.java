@@ -30,12 +30,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -55,7 +55,7 @@ public class CreateTableProcedure
     extends AbstractStateMachineTableProcedure<CreateTableState> {
   private static final Log LOG = LogFactory.getLog(CreateTableProcedure.class);
 
-  private HTableDescriptor hTableDescriptor;
+  private TableDescriptor tableDescriptor;
   private List<HRegionInfo> newRegions;
 
   public CreateTableProcedure() {
@@ -64,15 +64,15 @@ public class CreateTableProcedure
   }
 
   public CreateTableProcedure(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions) {
-    this(env, hTableDescriptor, newRegions, null);
+      final TableDescriptor tableDescriptor, final HRegionInfo[] newRegions) {
+    this(env, tableDescriptor, newRegions, null);
   }
 
   public CreateTableProcedure(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions,
+      final TableDescriptor tableDescriptor, final HRegionInfo[] newRegions,
       final ProcedurePrepareLatch syncLatch) {
     super(env, syncLatch);
-    this.hTableDescriptor = hTableDescriptor;
+    this.tableDescriptor = tableDescriptor;
     this.newRegions = newRegions != null ? Lists.newArrayList(newRegions) : null;
   }
 
@@ -98,11 +98,11 @@ public class CreateTableProcedure
           setNextState(CreateTableState.CREATE_TABLE_WRITE_FS_LAYOUT);
           break;
         case CREATE_TABLE_WRITE_FS_LAYOUT:
-          newRegions = createFsLayout(env, hTableDescriptor, newRegions);
+          newRegions = createFsLayout(env, tableDescriptor, newRegions);
           setNextState(CreateTableState.CREATE_TABLE_ADD_TO_META);
           break;
         case CREATE_TABLE_ADD_TO_META:
-          newRegions = addTableToMeta(env, hTableDescriptor, newRegions);
+          newRegions = addTableToMeta(env, tableDescriptor, newRegions);
           setNextState(CreateTableState.CREATE_TABLE_ASSIGN_REGIONS);
           break;
         case CREATE_TABLE_ASSIGN_REGIONS:
@@ -174,7 +174,7 @@ public class CreateTableProcedure
 
   @Override
   public TableName getTableName() {
-    return hTableDescriptor.getTableName();
+    return tableDescriptor.getTableName();
   }
 
   @Override
@@ -189,7 +189,7 @@ public class CreateTableProcedure
     MasterProcedureProtos.CreateTableStateData.Builder state =
       MasterProcedureProtos.CreateTableStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
-            .setTableSchema(ProtobufUtil.convertToTableSchema(hTableDescriptor));
+            .setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
     if (newRegions != null) {
       for (HRegionInfo hri: newRegions) {
         state.addRegionInfo(HRegionInfo.convert(hri));
@@ -205,7 +205,7 @@ public class CreateTableProcedure
     MasterProcedureProtos.CreateTableStateData state =
       MasterProcedureProtos.CreateTableStateData.parseDelimitedFrom(stream);
     setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
-    hTableDescriptor = ProtobufUtil.convertToHTableDesc(state.getTableSchema());
+    tableDescriptor = ProtobufUtil.toTableDescriptor(state.getTableSchema());
     if (state.getRegionInfoCount() == 0) {
       newRegions = null;
     } else {
@@ -235,7 +235,7 @@ public class CreateTableProcedure
     }
 
     // check that we have at least 1 CF
-    if (hTableDescriptor.getColumnFamilyCount() == 0) {
+    if (tableDescriptor.getColumnFamilyCount() == 0) {
       setFailure("master-create-table", new DoNotRetryIOException("Table " +
           getTableName().toString() + " should have at least one column family."));
       return false;
@@ -256,7 +256,7 @@ public class CreateTableProcedure
     if (cpHost != null) {
       final HRegionInfo[] regions = newRegions == null ? null :
         newRegions.toArray(new HRegionInfo[newRegions.size()]);
-      cpHost.preCreateTableAction(hTableDescriptor, regions, getUser());
+      cpHost.preCreateTableAction(tableDescriptor, regions, getUser());
     }
   }
 
@@ -266,7 +266,7 @@ public class CreateTableProcedure
     if (cpHost != null) {
       final HRegionInfo[] regions = (newRegions == null) ? null :
         newRegions.toArray(new HRegionInfo[newRegions.size()]);
-      cpHost.postCompletedCreateTableAction(hTableDescriptor, regions, getUser());
+      cpHost.postCompletedCreateTableAction(tableDescriptor, regions, getUser());
     }
   }
 
@@ -277,9 +277,9 @@ public class CreateTableProcedure
   }
 
   protected static List<HRegionInfo> createFsLayout(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor, final List<HRegionInfo> newRegions)
+      final TableDescriptor tableDescriptor, final List<HRegionInfo> newRegions)
       throws IOException {
-    return createFsLayout(env, hTableDescriptor, newRegions, new CreateHdfsRegions() {
+    return createFsLayout(env, tableDescriptor, newRegions, new CreateHdfsRegions() {
       @Override
       public List<HRegionInfo> createHdfsRegions(final MasterProcedureEnv env,
           final Path tableRootDir, final TableName tableName,
@@ -287,40 +287,40 @@ public class CreateTableProcedure
         HRegionInfo[] regions = newRegions != null ?
           newRegions.toArray(new HRegionInfo[newRegions.size()]) : null;
         return ModifyRegionUtils.createRegions(env.getMasterConfiguration(),
-            tableRootDir, hTableDescriptor, regions, null);
+            tableRootDir, tableDescriptor, regions, null);
       }
     });
   }
 
   protected static List<HRegionInfo> createFsLayout(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor, List<HRegionInfo> newRegions,
+      final TableDescriptor tableDescriptor, List<HRegionInfo> newRegions,
       final CreateHdfsRegions hdfsRegionHandler) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Path tempdir = mfs.getTempDir();
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    final Path tempTableDir = FSUtils.getTableDir(tempdir, hTableDescriptor.getTableName());
+    final Path tempTableDir = FSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
     ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
         .createTableDescriptorForTableDirectory(
-          tempTableDir, hTableDescriptor, false);
+          tempTableDir, tableDescriptor, false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(env, tempdir,
-      hTableDescriptor.getTableName(), newRegions);
+            tableDescriptor.getTableName(), newRegions);
 
     // 3. Move Table temp directory to the hbase root location
-    moveTempDirectoryToHBaseRoot(env, hTableDescriptor, tempTableDir);
+    moveTempDirectoryToHBaseRoot(env, tableDescriptor, tempTableDir);
 
     return newRegions;
   }
 
   protected static void moveTempDirectoryToHBaseRoot(
     final MasterProcedureEnv env,
-    final HTableDescriptor hTableDescriptor,
+    final TableDescriptor tableDescriptor,
     final Path tempTableDir) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), hTableDescriptor.getTableName());
+    final Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableDescriptor.getTableName());
     FileSystem fs = mfs.getFileSystem();
     if (!fs.delete(tableDir, true) && fs.exists(tableDir)) {
       throw new IOException("Couldn't delete " + tableDir);
@@ -332,20 +332,20 @@ public class CreateTableProcedure
   }
 
   protected static List<HRegionInfo> addTableToMeta(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor,
+      final TableDescriptor tableDescriptor,
       final List<HRegionInfo> regions) throws IOException {
     assert (regions != null && regions.size() > 0) : "expected at least 1 region, got " + regions;
 
     ProcedureSyncWait.waitMetaRegions(env);
 
     // Add replicas if needed
-    List<HRegionInfo> newRegions = addReplicas(env, hTableDescriptor, regions);
+    List<HRegionInfo> newRegions = addReplicas(env, tableDescriptor, regions);
 
     // Add regions to META
-    addRegionsToMeta(env, hTableDescriptor, newRegions);
+    addRegionsToMeta(env, tableDescriptor, newRegions);
 
     // Setup replication for region replicas if needed
-    if (hTableDescriptor.getRegionReplication() > 1) {
+    if (tableDescriptor.getRegionReplication() > 1) {
       ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
     }
     return newRegions;
@@ -354,14 +354,14 @@ public class CreateTableProcedure
   /**
    * Create any replicas for the regions (the default replicas that was
    * already created is passed to the method)
-   * @param hTableDescriptor descriptor to use
+   * @param tableDescriptor descriptor to use
    * @param regions default replicas
    * @return the combined list of default and non-default replicas
    */
   private static List<HRegionInfo> addReplicas(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor,
+      final TableDescriptor tableDescriptor,
       final List<HRegionInfo> regions) {
-    int numRegionReplicas = hTableDescriptor.getRegionReplication() - 1;
+    int numRegionReplicas = tableDescriptor.getRegionReplication() - 1;
     if (numRegionReplicas <= 0) {
       return regions;
     }
@@ -394,10 +394,10 @@ public class CreateTableProcedure
    * Add the specified set of regions to the hbase:meta table.
    */
   private static void addRegionsToMeta(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor,
+      final TableDescriptor tableDescriptor,
       final List<HRegionInfo> regionInfos) throws IOException {
     MetaTableAccessor.addRegionsToMeta(env.getMasterServices().getConnection(),
-      regionInfos, hTableDescriptor.getRegionReplication());
+      regionInfos, tableDescriptor.getRegionReplication());
   }
 
   protected static void updateTableDescCache(final MasterProcedureEnv env,

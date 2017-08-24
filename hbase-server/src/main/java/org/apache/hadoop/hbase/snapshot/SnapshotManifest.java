@@ -36,10 +36,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -76,7 +76,7 @@ public final class SnapshotManifest {
 
   private List<SnapshotRegionManifest> regionManifests;
   private SnapshotDescription desc;
-  private HTableDescriptor htd;
+  private TableDescriptor htd;
 
   private final ForeignExceptionSnare monitor;
   private final Configuration conf;
@@ -119,7 +119,7 @@ public final class SnapshotManifest {
   /**
    * Return a SnapshotManifest instance with the information already loaded in-memory.
    *    SnapshotManifest manifest = SnapshotManifest.open(...)
-   *    HTableDescriptor htd = manifest.getTableDescriptor()
+   *    TableDescriptor htd = manifest.getTableDescriptor()
    *    for (SnapshotRegionManifest regionManifest: manifest.getRegionManifests())
    *      hri = regionManifest.getRegionInfo()
    *      for (regionManifest.getFamilyFiles())
@@ -136,7 +136,7 @@ public final class SnapshotManifest {
   /**
    * Add the table descriptor to the snapshot manifest
    */
-  public void addTableDescriptor(final HTableDescriptor htd) throws IOException {
+  public void addTableDescriptor(final TableDescriptor htd) throws IOException {
     this.htd = htd;
   }
 
@@ -182,7 +182,7 @@ public final class SnapshotManifest {
     LOG.debug("Creating references for mob files");
 
     Path mobRegionPath = MobUtils.getMobRegionPath(conf, regionInfo.getTable());
-    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       // 2.1. build the snapshot reference for the store if it's a mob store
       if (!hcd.isMobEnabled()) {
         continue;
@@ -377,7 +377,7 @@ public final class SnapshotManifest {
       case SnapshotManifestV2.DESCRIPTOR_VERSION: {
         SnapshotDataManifest dataManifest = readDataManifest();
         if (dataManifest != null) {
-          htd = ProtobufUtil.convertToHTableDesc(dataManifest.getTableSchema());
+          htd = ProtobufUtil.toTableDescriptor(dataManifest.getTableSchema());
           regionManifests = dataManifest.getRegionManifestsList();
         } else {
           // Compatibility, load the v1 regions
@@ -429,7 +429,7 @@ public final class SnapshotManifest {
   /**
    * Get the table descriptor from the Snapshot
    */
-  public HTableDescriptor getTableDescriptor() {
+  public TableDescriptor getTableDescriptor() {
     return this.htd;
   }
 
@@ -485,7 +485,7 @@ public final class SnapshotManifest {
     }
 
     SnapshotDataManifest.Builder dataManifestBuilder = SnapshotDataManifest.newBuilder();
-    dataManifestBuilder.setTableSchema(ProtobufUtil.convertToTableSchema(htd));
+    dataManifestBuilder.setTableSchema(ProtobufUtil.toTableSchema(htd));
 
     if (v1Regions != null && v1Regions.size() > 0) {
       dataManifestBuilder.addAllRegionManifests(v1Regions);

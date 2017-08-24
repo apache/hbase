@@ -31,18 +31,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.master.CatalogJanitor;
@@ -603,10 +603,10 @@ public class MergeTableRegionsProcedure
       throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Configuration conf = env.getMasterConfiguration();
-    final HTableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
+    final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
 
     for (String family: regionFs.getFamilies()) {
-      final HColumnDescriptor hcd = htd.getFamily(family.getBytes());
+      final ColumnFamilyDescriptor hcd = htd.getColumnFamily(family.getBytes());
       final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
 
       if (storeFiles != null && storeFiles.size() > 0) {
@@ -682,7 +682,7 @@ public class MergeTableRegionsProcedure
   }
 
   private int getRegionReplication(final MasterProcedureEnv env) throws IOException {
-    final HTableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
+    final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     return htd.getRegionReplication();
   }
 

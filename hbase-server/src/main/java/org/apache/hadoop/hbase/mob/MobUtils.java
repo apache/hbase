@@ -44,10 +44,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -57,6 +55,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -286,7 +285,7 @@ public final class MobUtils {
    * @throws IOException
    */
   public static void cleanExpiredMobFiles(FileSystem fs, Configuration conf, TableName tableName,
-      HColumnDescriptor columnDescriptor, CacheConfig cacheConfig, long current)
+      ColumnFamilyDescriptor columnDescriptor, CacheConfig cacheConfig, long current)
       throws IOException {
     long timeToLive = columnDescriptor.getTimeToLive();
     if (Integer.MAX_VALUE == timeToLive) {
@@ -519,7 +518,7 @@ public final class MobUtils {
    * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
-      HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
+      ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, String startKey, CacheConfig cacheConfig,
       Encryption.Context cryptoContext, boolean isCompaction)
       throws IOException {
@@ -543,7 +542,7 @@ public final class MobUtils {
    * @throws IOException
    */
   public static StoreFileWriter createRefFileWriter(Configuration conf, FileSystem fs,
-    HColumnDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig,
+    ColumnFamilyDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig,
     Encryption.Context cryptoContext, boolean isCompaction)
     throws IOException {
     return createWriter(conf, fs, family,
@@ -570,7 +569,7 @@ public final class MobUtils {
    * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
-      HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
+      ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
       Encryption.Context cryptoContext, boolean isCompaction)
       throws IOException {
@@ -596,7 +595,7 @@ public final class MobUtils {
    * @throws IOException
    */
   public static StoreFileWriter createDelFileWriter(Configuration conf, FileSystem fs,
-      HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
+      ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
       Encryption.Context cryptoContext)
       throws IOException {
@@ -623,7 +622,7 @@ public final class MobUtils {
    * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
-      HColumnDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
+                                             ColumnFamilyDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext,
       boolean isCompaction)
       throws IOException {
@@ -797,7 +796,7 @@ public final class MobUtils {
    * @param allFiles Whether add all mob files into the compaction.
    */
   public static void doMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
-    HColumnDescriptor hcd, ExecutorService pool, boolean allFiles, LockManager.MasterLock lock)
+                                     ColumnFamilyDescriptor hcd, ExecutorService pool, boolean allFiles, LockManager.MasterLock lock)
       throws IOException {
     String className = conf.get(MobConstants.MOB_COMPACTOR_CLASS_KEY,
         PartitionedMobCompactor.class.getName());
@@ -805,7 +804,7 @@ public final class MobUtils {
     MobCompactor compactor = null;
     try {
       compactor = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
-        Configuration.class, FileSystem.class, TableName.class, HColumnDescriptor.class,
+        Configuration.class, FileSystem.class, TableName.class, ColumnFamilyDescriptor.class,
         ExecutorService.class }, new Object[] { conf, fs, tableName, hcd, pool });
     } catch (Exception e) {
       throw new IOException("Unable to load configured mob file compactor '" + className + "'", e);
@@ -857,9 +856,9 @@ public final class MobUtils {
    * @param htd The current table descriptor.
    * @return Whether this table has mob-enabled columns.
    */
-  public static boolean hasMobColumns(HTableDescriptor htd) {
-    HColumnDescriptor[] hcds = htd.getColumnFamilies();
-    for (HColumnDescriptor hcd : hcds) {
+  public static boolean hasMobColumns(TableDescriptor htd) {
+    ColumnFamilyDescriptor[] hcds = htd.getColumnFamilies();
+    for (ColumnFamilyDescriptor hcd : hcds) {
       if (hcd.isMobEnabled()) {
         return true;
       }
@@ -899,7 +898,7 @@ public final class MobUtils {
    * @param fileDate The date string parsed from the mob file name.
    * @return True if the mob file is expired.
    */
-  public static boolean isMobFileExpired(HColumnDescriptor column, long current, String fileDate) {
+  public static boolean isMobFileExpired(ColumnFamilyDescriptor column, long current, String fileDate) {
     if (column.getMinVersions() > 0) {
       return false;
     }

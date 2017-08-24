@@ -38,6 +38,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -252,8 +253,12 @@ public class TableDescriptorBuilder {
     return new TableDescriptorBuilder(name);
   }
 
-  public static TableDescriptor copy(TableDescriptor desc) throws DeserializationException {
+  public static TableDescriptor copy(TableDescriptor desc) {
     return new ModifyableTableDescriptor(desc);
+  }
+
+  public static TableDescriptor copy(TableName name, TableDescriptor desc) {
+    return new ModifyableTableDescriptor(name, desc);
   }
 
   /**
@@ -1012,13 +1017,10 @@ public class TableDescriptorBuilder {
       if (this == obj) {
         return true;
       }
-      if (obj == null) {
-        return false;
+      if (obj instanceof ModifyableTableDescriptor) {
+        return TableDescriptor.COMPARATOR.compare(this, (ModifyableTableDescriptor) obj) == 0;
       }
-      if (!(obj instanceof ModifyableTableDescriptor)) {
-        return false;
-      }
-      return compareTo((ModifyableTableDescriptor) obj) == 0;
+      return false;
     }
 
     /**
@@ -1395,7 +1397,7 @@ public class TableDescriptorBuilder {
      * @return the bytes in pb format
      */
     private byte[] toByteArray() {
-      return ProtobufUtil.prependPBMagic(ProtobufUtil.convertToTableSchema(this).toByteArray());
+      return ProtobufUtil.prependPBMagic(ProtobufUtil.toTableSchema(this).toByteArray());
     }
 
     /**
@@ -1415,7 +1417,7 @@ public class TableDescriptorBuilder {
       HBaseProtos.TableSchema.Builder builder = HBaseProtos.TableSchema.newBuilder();
       try {
         ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
-        return ProtobufUtil.convertToTableDesc(builder.build());
+        return ProtobufUtil.toTableDescriptor(builder.build());
       } catch (IOException e) {
         throw new DeserializationException(e);
       }

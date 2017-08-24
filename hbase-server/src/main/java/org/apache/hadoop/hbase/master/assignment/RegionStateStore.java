@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -221,7 +221,7 @@ public class RegionStateStore {
   // ============================================================================================
   public void splitRegion(final HRegionInfo parent, final HRegionInfo hriA,
       final HRegionInfo hriB, final ServerName serverName)  throws IOException {
-    final HTableDescriptor htd = getTableDescriptor(parent.getTable());
+    final TableDescriptor htd = getTableDescriptor(parent.getTable());
     MetaTableAccessor.splitRegion(master.getConnection(), parent, hriA, hriB, serverName,
         getRegionReplication(htd), hasSerialReplicationScope(htd));
   }
@@ -231,7 +231,7 @@ public class RegionStateStore {
   // ============================================================================================
   public void mergeRegions(final HRegionInfo parent, final HRegionInfo hriA,
       final HRegionInfo hriB, final ServerName serverName)  throws IOException {
-    final HTableDescriptor htd = getTableDescriptor(parent.getTable());
+    final TableDescriptor htd = getTableDescriptor(parent.getTable());
     MetaTableAccessor.mergeRegions(master.getConnection(), parent, hriA, hriB, serverName,
         getRegionReplication(htd), EnvironmentEdgeManager.currentTime(),
         hasSerialReplicationScope(htd));
@@ -255,15 +255,15 @@ public class RegionStateStore {
     return hasSerialReplicationScope(getTableDescriptor(tableName));
   }
 
-  private boolean hasSerialReplicationScope(final HTableDescriptor htd) {
+  private boolean hasSerialReplicationScope(final TableDescriptor htd) {
     return (htd != null)? htd.hasSerialReplicationScope(): false;
   }
 
-  private int getRegionReplication(final HTableDescriptor htd) {
+  private int getRegionReplication(final TableDescriptor htd) {
     return (htd != null) ? htd.getRegionReplication() : 1;
   }
 
-  private HTableDescriptor getTableDescriptor(final TableName tableName) throws IOException {
+  private TableDescriptor getTableDescriptor(final TableName tableName) throws IOException {
     return master.getTableDescriptors().get(tableName);
   }
 
