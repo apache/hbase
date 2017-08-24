@@ -22,7 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -77,7 +77,7 @@ public class MoveRegionsOfTableAction extends Action {
 
       try {
         String destServerName =
-          servers[RandomUtils.nextInt(servers.length)].getServerName();
+          servers[RandomUtils.nextInt(0, servers.length)].getServerName();
         LOG.debug("Moving " + regionInfo.getRegionNameAsString() + " to " + destServerName);
         admin.move(regionInfo.getEncodedNameAsBytes(), Bytes.toBytes(destServerName));
       } catch (Exception ex) {

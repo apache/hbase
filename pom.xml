@@ -1388,7 +1388,7 @@
     <commons-codec.version>1.10</commons-codec.version>
     <!-- pretty outdated -->
     <commons-io.version>2.5</commons-io.version>
-    <commons-lang.version>2.6</commons-lang.version>
+    <commons-lang3.version>3.6</commons-lang3.version>
     <commons-logging.version>1.2</commons-logging.version>
     <commons-math.version>2.2</commons-math.version>
     <disruptor.version>3.3.6</disruptor.version>
@@ -1804,9 +1804,9 @@
         <version>${commons-io.version}</version>
       </dependency>
       <dependency>
-        <groupId>commons-lang</groupId>
-        <artifactId>commons-lang</artifactId>
-        <version>${commons-lang.version}</version>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${commons-lang3.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-logging</groupId>

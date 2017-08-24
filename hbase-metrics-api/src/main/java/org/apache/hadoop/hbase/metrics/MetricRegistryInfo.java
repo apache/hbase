@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.metrics;
 
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**

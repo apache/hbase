@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -208,7 +208,7 @@ public class Action {
       int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
       LOG.debug("Removing " + victimRegionCount + " regions from " + server.getServerName());
       for (int i = 0; i < victimRegionCount; ++i) {
-        int victimIx = RandomUtils.nextInt(regions.size());
+        int victimIx = RandomUtils.nextInt(0, regions.size());
         String regionId = HRegionInfo.encodeRegionName(regions.remove(victimIx));
         victimRegions.add(Bytes.toBytes(regionId));
       }
@@ -223,7 +223,7 @@ public class Action {
       if (context.isStopping()) {
         break;
       }
-      int targetIx = RandomUtils.nextInt(toServers.size());
+      int targetIx = RandomUtils.nextInt(0, toServers.size());
       admin.move(victimRegion, Bytes.toBytes(toServers.get(targetIx).getServerName()));
     }
   }

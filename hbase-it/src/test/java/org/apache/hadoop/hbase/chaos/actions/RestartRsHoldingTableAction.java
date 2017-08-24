@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.client.RegionLocator;
 
@@ -41,6 +41,6 @@ public class RestartRsHoldingTableAction extends RestartActionBaseAction {
     LOG.info("Performing action: Restart random RS holding table " + this.locator.getName());
 
     List<HRegionLocation> locations = locator.getAllRegionLocations();
-    restartRs(locations.get(RandomUtils.nextInt(locations.size())).getServerName(), sleepTime);
+    restartRs(locations.get(RandomUtils.nextInt(0, locations.size())).getServerName(), sleepTime);
   }
 }

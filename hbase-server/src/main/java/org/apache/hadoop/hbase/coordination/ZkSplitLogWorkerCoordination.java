@@ -26,8 +26,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.lang.math.RandomUtils;
-import org.apache.commons.lang.mutable.MutableInt;
+import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -269,7 +269,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
 
       // after a successful submit, sleep a little bit to allow other RSs to grab the rest tasks
       try {
-        int sleepTime = RandomUtils.nextInt(500) + 500;
+        int sleepTime = RandomUtils.nextInt(0, 500) + 500;
         Thread.sleep(sleepTime);
       } catch (InterruptedException e) {
         LOG.warn("Interrupted while yielding for other region servers", e);

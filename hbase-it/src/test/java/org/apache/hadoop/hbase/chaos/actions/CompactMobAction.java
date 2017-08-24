@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -47,7 +47,7 @@ public class CompactMobAction extends Action {
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
-    boolean major = RandomUtils.nextInt(100) < majorRatio;
+    boolean major = RandomUtils.nextInt(0, 100) < majorRatio;
 
     // Don't try the modify if we're stopping
     if (context.isStopping()) {

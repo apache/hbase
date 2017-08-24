@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -461,7 +461,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     @Override
     public MutateResponse mutate(RpcController controller,
         MutateRequest request) throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
@@ -476,14 +476,14 @@ public class TestClientNoCluster extends Configured implements Tool {
     public BulkLoadHFileResponse bulkLoadHFile(
         RpcController controller, BulkLoadHFileRequest request)
         throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
     public CoprocessorServiceResponse execService(
         RpcController controller, CoprocessorServiceRequest request)
         throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
@@ -505,19 +505,19 @@ public class TestClientNoCluster extends Configured implements Tool {
     @Override
     public CoprocessorServiceResponse execRegionServerService(RpcController controller,
         CoprocessorServiceRequest request) throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
     public PrepareBulkLoadResponse prepareBulkLoad(RpcController controller,
         PrepareBulkLoadRequest request) throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
     public CleanupBulkLoadResponse cleanupBulkLoad(RpcController controller,
         CleanupBulkLoadRequest request) throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
   }
 
