@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Ordering;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.TreeMultimap;
-import com.google.protobuf.ServiceException;
 
 import java.io.Closeable;
 import java.io.FileNotFoundException;
@@ -745,7 +744,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * @return 0 on success, non-zero on failure
    */
   public int onlineHbck()
-      throws IOException, KeeperException, InterruptedException, ServiceException {
+      throws IOException, KeeperException, InterruptedException {
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
 
@@ -4841,7 +4840,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
 
   public HBaseFsck exec(ExecutorService exec, String[] args) throws KeeperException, IOException,
-    ServiceException, InterruptedException {
+      InterruptedException {
     long sleepBeforeRerun = DEFAULT_SLEEP_BEFORE_RERUN;
 
     boolean checkCorruptHFiles = false;
