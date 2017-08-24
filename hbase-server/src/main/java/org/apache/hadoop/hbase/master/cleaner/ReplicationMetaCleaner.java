@@ -27,17 +27,17 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,11 +63,11 @@ public class ReplicationMetaCleaner extends ScheduledChore {
   @Override
   protected void chore() {
     try {
-      Map<String, HTableDescriptor> tables = master.getTableDescriptors().getAllDescriptors();
+      Map<String, TableDescriptor> tables = master.getTableDescriptors().getAllDescriptors();
       Map<String, Set<String>> serialTables = new HashMap<>();
-      for (Map.Entry<String, HTableDescriptor> entry : tables.entrySet()) {
+      for (Map.Entry<String, TableDescriptor> entry : tables.entrySet()) {
         boolean hasSerialScope = false;
-        for (HColumnDescriptor column : entry.getValue().getFamilies()) {
+        for (ColumnFamilyDescriptor column : entry.getValue().getColumnFamilies()) {
           if (column.getScope() == HConstants.REPLICATION_SCOPE_SERIAL) {
             hasSerialScope = true;
             break;

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,7 +29,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution.HostAndWeight;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.ClientSideRegionScanner;
@@ -81,7 +81,7 @@ public class TableSnapshotInputFormatImpl {
    */
   public static class InputSplit implements Writable {
 
-    private HTableDescriptor htd;
+    private TableDescriptor htd;
     private HRegionInfo regionInfo;
     private String[] locations;
     private String scan;
@@ -90,7 +90,7 @@ public class TableSnapshotInputFormatImpl {
     // constructor for mapreduce framework / Writable
     public InputSplit() {}
 
-    public InputSplit(HTableDescriptor htd, HRegionInfo regionInfo, List<String> locations,
+    public InputSplit(TableDescriptor htd, HRegionInfo regionInfo, List<String> locations,
         Scan scan, Path restoreDir) {
       this.htd = htd;
       this.regionInfo = regionInfo;
@@ -108,7 +108,7 @@ public class TableSnapshotInputFormatImpl {
       this.restoreDir = restoreDir.toString();
     }
 
-    public HTableDescriptor getHtd() {
+    public TableDescriptor getHtd() {
       return htd;
     }
 
@@ -129,7 +129,7 @@ public class TableSnapshotInputFormatImpl {
       return locations;
     }
 
-    public HTableDescriptor getTableDescriptor() {
+    public TableDescriptor getTableDescriptor() {
       return htd;
     }
 
@@ -142,7 +142,7 @@ public class TableSnapshotInputFormatImpl {
     @Override
     public void write(DataOutput out) throws IOException {
       TableSnapshotRegionSplit.Builder builder = TableSnapshotRegionSplit.newBuilder()
-          .setTable(ProtobufUtil.convertToTableSchema(htd))
+          .setTable(ProtobufUtil.toTableSchema(htd))
           .setRegion(HRegionInfo.convert(regionInfo));
 
       for (String location : locations) {
@@ -169,7 +169,7 @@ public class TableSnapshotInputFormatImpl {
       byte[] buf = new byte[len];
       in.readFully(buf);
       TableSnapshotRegionSplit split = TableSnapshotRegionSplit.PARSER.parseFrom(buf);
-      this.htd = ProtobufUtil.convertToHTableDesc(split.getTable());
+      this.htd = ProtobufUtil.toTableDescriptor(split.getTable());
       this.regionInfo = HRegionInfo.convert(split.getRegion());
       List<String> locationsList = split.getLocationsList();
       this.locations = locationsList.toArray(new String[locationsList.size()]);
@@ -196,7 +196,7 @@ public class TableSnapshotInputFormatImpl {
     public void initialize(InputSplit split, Configuration conf) throws IOException {
       this.scan = TableMapReduceUtil.convertStringToScan(split.getScan());
       this.split = split;
-      HTableDescriptor htd = split.htd;
+      TableDescriptor htd = split.htd;
       HRegionInfo hri = this.split.getRegionInfo();
       FileSystem fs = FSUtils.getCurrentFileSystem(conf);
 
@@ -311,7 +311,7 @@ public class TableSnapshotInputFormatImpl {
   public static List<InputSplit> getSplits(Scan scan, SnapshotManifest manifest,
       List<HRegionInfo> regionManifests, Path restoreDir, Configuration conf) throws IOException {
     // load table descriptor
-    HTableDescriptor htd = manifest.getTableDescriptor();
+    TableDescriptor htd = manifest.getTableDescriptor();
 
     Path tableDir = FSUtils.getTableDir(restoreDir, htd.getTableName());
 

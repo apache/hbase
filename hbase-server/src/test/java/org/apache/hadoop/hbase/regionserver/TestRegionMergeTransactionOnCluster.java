@@ -39,22 +39,22 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
@@ -207,7 +207,7 @@ public class TestRegionMergeTransactionOnCluster {
       List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor
           .getTableRegionsAndLocations(MASTER.getConnection(), tableName);
       HRegionInfo mergedRegionInfo = tableRegions.get(0).getFirst();
-      HTableDescriptor tableDescriptor = MASTER.getTableDescriptors().get(
+      TableDescriptor tableDescriptor = MASTER.getTableDescriptors().get(
           tableName);
       Result mergedRegionResult = MetaTableAccessor.getRegionResult(
         MASTER.getConnection(), mergedRegionInfo.getRegionName());
@@ -231,11 +231,11 @@ public class TestRegionMergeTransactionOnCluster {
       assertTrue(fs.exists(regionAdir));
       assertTrue(fs.exists(regionBdir));
 
-      HColumnDescriptor[] columnFamilies = tableDescriptor.getColumnFamilies();
+      ColumnFamilyDescriptor[] columnFamilies = tableDescriptor.getColumnFamilies();
       HRegionFileSystem hrfs = new HRegionFileSystem(
         TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo);
       int count = 0;
-      for(HColumnDescriptor colFamily : columnFamilies) {
+      for(ColumnFamilyDescriptor colFamily : columnFamilies) {
         count += hrfs.getStoreFiles(colFamily.getName()).size();
       }
       ADMIN.compactRegion(mergedRegionInfo.getRegionName());
@@ -244,7 +244,7 @@ public class TestRegionMergeTransactionOnCluster {
       long timeout = System.currentTimeMillis() + waitTime;
       int newcount = 0;
       while (System.currentTimeMillis() < timeout) {
-        for(HColumnDescriptor colFamily : columnFamilies) {
+        for(ColumnFamilyDescriptor colFamily : columnFamilies) {
           newcount += hrfs.getStoreFiles(colFamily.getName()).size();
         }
         if(newcount > count) {
@@ -263,7 +263,7 @@ public class TestRegionMergeTransactionOnCluster {
       }
       while (System.currentTimeMillis() < timeout) {
         int newcount1 = 0;
-        for(HColumnDescriptor colFamily : columnFamilies) {
+        for(ColumnFamilyDescriptor colFamily : columnFamilies) {
           newcount1 += hrfs.getStoreFiles(colFamily.getName()).size();
         }
         if(newcount1 <= 1) {

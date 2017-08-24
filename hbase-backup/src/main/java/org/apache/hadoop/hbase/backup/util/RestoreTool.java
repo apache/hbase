@@ -33,16 +33,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreJob;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
@@ -122,10 +123,10 @@ public class RestoreTool {
   }
 
 
-  void modifyTableSync(Connection conn, HTableDescriptor desc) throws IOException {
+  void modifyTableSync(Connection conn, TableDescriptor desc) throws IOException {
 
     try (Admin admin = conn.getAdmin();) {
-      admin.modifyTable(desc.getTableName(), desc);
+      admin.modifyTable(desc);
       int attempt = 0;
       int maxAttempts = 600;
       while (!admin.isTableAvailable(desc.getTableName())) {
@@ -172,29 +173,30 @@ public class RestoreTool {
       // adjust table schema
       for (int i = 0; i < tableNames.length; i++) {
         TableName tableName = tableNames[i];
-        HTableDescriptor tableDescriptor = getTableDescriptor(fileSys, tableName, incrBackupId);
+        TableDescriptor tableDescriptor = getTableDescriptor(fileSys, tableName, incrBackupId);
         LOG.debug("Found descriptor " + tableDescriptor + " through " + incrBackupId);
 
         TableName newTableName = newTableNames[i];
-        HTableDescriptor newTableDescriptor = new HTableDescriptor(admin.getTableDescriptor(newTableName));
-        List<HColumnDescriptor> families = Arrays.asList(tableDescriptor.getColumnFamilies());
-        List<HColumnDescriptor> existingFamilies =
+        TableDescriptor newTableDescriptor = admin.listTableDescriptor(newTableName);
+        List<ColumnFamilyDescriptor> families = Arrays.asList(tableDescriptor.getColumnFamilies());
+        List<ColumnFamilyDescriptor> existingFamilies =
             Arrays.asList(newTableDescriptor.getColumnFamilies());
+        TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(newTableDescriptor);
         boolean schemaChangeNeeded = false;
-        for (HColumnDescriptor family : families) {
+        for (ColumnFamilyDescriptor family : families) {
           if (!existingFamilies.contains(family)) {
-            newTableDescriptor.addFamily(family);
+            builder.addColumnFamily(family);
             schemaChangeNeeded = true;
           }
         }
-        for (HColumnDescriptor family : existingFamilies) {
+        for (ColumnFamilyDescriptor family : existingFamilies) {
           if (!families.contains(family)) {
-            newTableDescriptor.removeFamily(family.getName());
+            builder.removeColumnFamily(family.getName());
             schemaChangeNeeded = true;
           }
         }
         if (schemaChangeNeeded) {
-          modifyTableSync(conn, newTableDescriptor);
+          modifyTableSync(conn, builder.build());
           LOG.info("Changed " + newTableDescriptor.getTableName() + " to: " + newTableDescriptor);
         }
       }
@@ -253,24 +255,24 @@ public class RestoreTool {
   /**
    * Get table descriptor
    * @param tableName is the table backed up
-   * @return {@link HTableDescriptor} saved in backup image of the table
+   * @return {@link TableDescriptor} saved in backup image of the table
    */
-  HTableDescriptor getTableDesc(TableName tableName) throws FileNotFoundException, IOException {
+  TableDescriptor getTableDesc(TableName tableName) throws FileNotFoundException, IOException {
     Path tableInfoPath = this.getTableInfoPath(tableName);
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, tableInfoPath);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, tableInfoPath, desc);
-    HTableDescriptor tableDescriptor = manifest.getTableDescriptor();
+    TableDescriptor tableDescriptor = manifest.getTableDescriptor();
     if (!tableDescriptor.getTableName().equals(tableName)) {
       LOG.error("couldn't find Table Desc for table: " + tableName + " under tableInfoPath: "
           + tableInfoPath.toString());
-      LOG.error("tableDescriptor.getNameAsString() = " + tableDescriptor.getNameAsString());
+      LOG.error("tableDescriptor.getNameAsString() = " + tableDescriptor.getTableName().getNameAsString());
       throw new FileNotFoundException("couldn't find Table Desc for table: " + tableName
           + " under tableInfoPath: " + tableInfoPath.toString());
     }
     return tableDescriptor;
   }
 
-  private HTableDescriptor getTableDescriptor(FileSystem fileSys, TableName tableName,
+  private TableDescriptor getTableDescriptor(FileSystem fileSys, TableName tableName,
       String lastIncrBackupId) throws IOException {
     if (lastIncrBackupId != null) {
       String target =
@@ -289,7 +291,7 @@ public class RestoreTool {
     FileSystem fileSys = tableBackupPath.getFileSystem(this.conf);
 
     // get table descriptor first
-    HTableDescriptor tableDescriptor = getTableDescriptor(fileSys, tableName, lastIncrBackupId);
+    TableDescriptor tableDescriptor = getTableDescriptor(fileSys, tableName, lastIncrBackupId);
     if (tableDescriptor != null) {
       LOG.debug("Retrieved descriptor: " + tableDescriptor + " thru " + lastIncrBackupId);
     }
@@ -325,7 +327,7 @@ public class RestoreTool {
           LOG.debug("find table descriptor but no archive dir for table " + tableName
               + ", will only create table");
         }
-        tableDescriptor = new HTableDescriptor(newTableName, tableDescriptor);
+        tableDescriptor = TableDescriptorBuilder.copy(newTableName, tableDescriptor);
         checkAndCreateTable(conn, tableBackupPath, tableName, newTableName, null, tableDescriptor,
           truncateIfExists);
         return;
@@ -336,9 +338,9 @@ public class RestoreTool {
     }
 
     if (tableDescriptor == null) {
-      tableDescriptor = new HTableDescriptor(newTableName);
+      tableDescriptor = TableDescriptorBuilder.newBuilder(newTableName).build();
     } else {
-      tableDescriptor = new HTableDescriptor(newTableName, tableDescriptor);
+      tableDescriptor = TableDescriptorBuilder.copy(newTableName, tableDescriptor);
     }
 
     // record all region dirs:
@@ -470,7 +472,7 @@ public class RestoreTool {
    * @throws IOException exception
    */
   private void checkAndCreateTable(Connection conn, Path tableBackupPath, TableName tableName,
-      TableName targetTableName, ArrayList<Path> regionDirList, HTableDescriptor htd,
+      TableName targetTableName, ArrayList<Path> regionDirList, TableDescriptor htd,
       boolean truncateIfExists) throws IOException {
     try (Admin admin = conn.getAdmin();) {
       boolean createNew = false;

@@ -21,9 +21,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -32,6 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -159,17 +158,17 @@ public interface MasterServices extends Server {
    *     a single region is created.
    */
   long createTable(
-      final HTableDescriptor desc,
+      final TableDescriptor desc,
       final byte[][] splitKeys,
       final long nonceGroup,
       final long nonce) throws IOException;
 
   /**
    * Create a system table using the given table definition.
-   * @param hTableDescriptor The system table definition
+   * @param tableDescriptor The system table definition
    *     a single region is created.
    */
-  long createSystemTable(final HTableDescriptor hTableDescriptor) throws IOException;
+  long createSystemTable(final TableDescriptor tableDescriptor) throws IOException;
 
   /**
    * Delete a table
@@ -207,7 +206,7 @@ public interface MasterServices extends Server {
    */
   long modifyTable(
       final TableName tableName,
-      final HTableDescriptor descriptor,
+      final TableDescriptor descriptor,
       final long nonceGroup,
       final long nonce)
       throws IOException;
@@ -247,7 +246,7 @@ public interface MasterServices extends Server {
    */
   long addColumn(
       final TableName tableName,
-      final HColumnDescriptor column,
+      final ColumnFamilyDescriptor column,
       final long nonceGroup,
       final long nonce)
       throws IOException;
@@ -262,7 +261,7 @@ public interface MasterServices extends Server {
    */
   long modifyColumn(
       final TableName tableName,
-      final HColumnDescriptor descriptor,
+      final ColumnFamilyDescriptor descriptor,
       final long nonceGroup,
       final long nonce)
       throws IOException;

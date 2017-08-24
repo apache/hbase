@@ -639,13 +639,10 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
-      return false;
+    if (obj instanceof HColumnDescriptor) {
+      return delegatee.equals(((HColumnDescriptor) obj).delegatee);
     }
-    if (!(obj instanceof HColumnDescriptor)) {
-      return false;
-    }
-    return compareTo((HColumnDescriptor)obj) == 0;
+    return false;
   }
 
   /**
@@ -658,7 +655,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   @Override
   public int compareTo(HColumnDescriptor other) {
-    return delegatee.compareTo(other.delegatee);
+    return COMPARATOR.compare(this, other);
   }
 
   /**

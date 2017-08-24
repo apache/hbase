@@ -22,9 +22,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -76,10 +78,11 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     // create table with 0 families will fail
-    final HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName);
+    final TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(MasterProcedureTestingUtility.createHTD(tableName));
 
     // disable sanity check
-    htd.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
+    builder.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
+    TableDescriptor htd = builder.build();
     final HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
 
     long procId =
@@ -96,7 +99,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
   public void testCreateExisting() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    final HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f");
+    final TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f");
     final HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
 
     // create the table
@@ -125,7 +128,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Create procedure && kill the executor
     byte[][] splitKeys = null;
-    HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
+    TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
@@ -138,18 +141,21 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
   @Test(timeout=90000)
   public void testRollbackAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    testRollbackAndDoubleExecution(MasterProcedureTestingUtility.createHTD(tableName, F1, F2));
+    testRollbackAndDoubleExecution(TableDescriptorBuilder.newBuilder(MasterProcedureTestingUtility.createHTD(tableName, F1, F2)));
   }
 
   @Test(timeout=90000)
   public void testRollbackAndDoubleExecutionOnMobTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1, F2);
-    htd.getFamily(Bytes.toBytes(F1)).setMobEnabled(true);
-    testRollbackAndDoubleExecution(htd);
+    TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1, F2);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd)
+            .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(htd.getColumnFamily(Bytes.toBytes(F1)))
+                    .setMobEnabled(true)
+                    .build());
+    testRollbackAndDoubleExecution(builder);
   }
 
-  private void testRollbackAndDoubleExecution(HTableDescriptor htd) throws Exception {
+  private void testRollbackAndDoubleExecution(TableDescriptorBuilder builder) throws Exception {
     // create the table
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
@@ -158,7 +164,8 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     final byte[][] splitKeys = new byte[][] {
       Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
-    htd.setRegionReplication(3);
+    builder.setRegionReplication(3);
+    TableDescriptor htd = builder.build();
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
@@ -181,9 +188,9 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
       splitKeys[i] = Bytes.toBytes(String.format("%08d", i));
     }
 
-    final HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(
+    final TableDescriptor htd = MasterProcedureTestingUtility.createHTD(
       TableName.valueOf("TestMRegions"), F1, F2);
-    UTIL.getHBaseAdmin().createTableAsync(htd, splitKeys)
+    UTIL.getAdmin().createTableAsync(htd, splitKeys)
       .get(10, java.util.concurrent.TimeUnit.HOURS);
     LOG.info("TABLE CREATED");
   }

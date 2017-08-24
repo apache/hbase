@@ -24,18 +24,20 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 
 public class MobSnapshotTestingUtils {
@@ -60,15 +62,17 @@ public class MobSnapshotTestingUtils {
   private static void createMobTable(final HBaseTestingUtility util,
       final TableName tableName, final byte[][] splitKeys, int regionReplication,
       final byte[]... families) throws IOException, InterruptedException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.setRegionReplication(regionReplication);
+    TableDescriptorBuilder builder
+      = TableDescriptorBuilder.newBuilder(tableName)
+            .setRegionReplication(regionReplication);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      hcd.setMobEnabled(true);
-      hcd.setMobThreshold(0L);
-      htd.addFamily(hcd);
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder
+          .newBuilder(family)
+          .setMobEnabled(true)
+          .setMobThreshold(0L)
+          .build());
     }
-    util.getAdmin().createTable(htd, splitKeys);
+    util.getAdmin().createTable(builder.build(), splitKeys);
     SnapshotTestingUtils.waitForTableToBeOnline(util, tableName);
     assertEquals((splitKeys.length + 1) * regionReplication, util
         .getAdmin().getTableRegions(tableName).size());
@@ -80,29 +84,29 @@ public class MobSnapshotTestingUtils {
    * @param util
    * @param tableName
    * @param families
-   * @return An HTable instance for the created table.
+   * @return An Table instance for the created table.
    * @throws IOException
    */
   public static Table createMobTable(final HBaseTestingUtility util,
       final TableName tableName, final byte[]... families) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
       // Disable blooms (they are on by default as of 0.95) but we disable them
       // here because
       // tests have hard coded counts of what to expect in block cache, etc.,
       // and blooms being
       // on is interfering.
-      hcd.setBloomFilterType(BloomType.NONE);
-      hcd.setMobEnabled(true);
-      hcd.setMobThreshold(0L);
-      htd.addFamily(hcd);
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
+              .setBloomFilterType(BloomType.NONE)
+              .setMobEnabled(true)
+              .setMobThreshold(0L)
+              .build());
     }
-    util.getAdmin().createTable(htd);
+    util.getAdmin().createTable(builder.build());
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait
     // until they are assigned
-    util.waitUntilAllRegionsAssigned(htd.getTableName());
-    return ConnectionFactory.createConnection(util.getConfiguration()).getTable(htd.getTableName());
+    util.waitUntilAllRegionsAssigned(tableName);
+    return ConnectionFactory.createConnection(util.getConfiguration()).getTable(tableName);
   }
 
   /**
@@ -146,13 +150,14 @@ public class MobSnapshotTestingUtils {
     }
 
     @Override
-    public HTableDescriptor createHtd(final String tableName) {
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-      HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
-      hcd.setMobEnabled(true);
-      hcd.setMobThreshold(0L);
-      htd.addFamily(hcd);
-      return htd;
+    public TableDescriptor createHtd(final String tableName) {
+      return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+              .addColumnFamily(ColumnFamilyDescriptorBuilder
+                  .newBuilder(Bytes.toBytes(TEST_FAMILY))
+                  .setMobEnabled(true)
+                  .setMobThreshold(0L)
+                  .build())
+              .build();
     }
   }
 }
