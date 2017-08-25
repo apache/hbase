@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.OptionalInt;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -86,11 +85,8 @@ abstract class StoreFlusher {
           smallestReadPoint);
     }
     if (scanner == null) {
-      Scan scan = new Scan();
-      scan.setMaxVersions(store.getScanInfo().getMaxVersions());
-      scanner = new StoreScanner(store, store.getScanInfo(), scan,
-          snapshotScanners, ScanType.COMPACT_RETAIN_DELETES,
-          smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
+      scanner = new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), snapshotScanners,
+          ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
     }
     assert scanner != null;
     if (store.getCoprocessorHost() != null) {

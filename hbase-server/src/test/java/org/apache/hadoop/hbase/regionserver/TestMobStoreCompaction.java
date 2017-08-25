@@ -442,14 +442,11 @@ public class TestMobStoreCompaction {
 
       List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true, false, false,
           HConstants.LATEST_TIMESTAMP);
-      Scan scan = new Scan();
-      scan.setMaxVersions(hcd.getMaxVersions());
       long timeToPurgeDeletes = Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
       long ttl = HStore.determineTTLFromFamily(hcd);
       ScanInfo scanInfo = new ScanInfo(copyOfConf, hcd, ttl, timeToPurgeDeletes,
         CellComparator.COMPARATOR);
-      StoreScanner scanner = new StoreScanner(scan, scanInfo, ScanType.COMPACT_DROP_DELETES, null,
-          scanners, 0L, HConstants.LATEST_TIMESTAMP);
+      StoreScanner scanner = new StoreScanner(scanInfo, ScanType.COMPACT_DROP_DELETES, scanners);
       try {
         size += UTIL.countRows(scanner);
       } finally {

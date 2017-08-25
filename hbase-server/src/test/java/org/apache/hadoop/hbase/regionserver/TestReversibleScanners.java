@@ -22,8 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -67,6 +65,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * Test cases against ReversibleKeyValueScanner
@@ -263,7 +263,6 @@ public class TestReversibleScanners {
     StoreFile sf2 = new HStoreFile(fs, writer2.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
         BloomType.NONE, true);
 
-    ScanType scanType = ScanType.USER_SCAN;
     ScanInfo scanInfo =
         new ScanInfo(TEST_UTIL.getConfiguration(), FAMILYNAME, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
             KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR, false);
@@ -271,16 +270,15 @@ public class TestReversibleScanners {
     // Case 1.Test a full reversed scan
     Scan scan = new Scan();
     scan.setReversed(true);
-    StoreScanner storeScanner = getReversibleStoreScanner(memstore, sf1, sf2,
-        scan, scanType, scanInfo, MAXMVCC);
+    StoreScanner storeScanner =
+        getReversibleStoreScanner(memstore, sf1, sf2, scan, scanInfo, MAXMVCC);
     verifyCountAndOrder(storeScanner, QUALSIZE * ROWSIZE, ROWSIZE, false);
 
     // Case 2.Test reversed scan with a specified start row
     int startRowNum = ROWSIZE / 2;
     byte[] startRow = ROWS[startRowNum];
     scan.withStartRow(startRow);
-    storeScanner = getReversibleStoreScanner(memstore, sf1, sf2, scan,
-        scanType, scanInfo, MAXMVCC);
+    storeScanner = getReversibleStoreScanner(memstore, sf1, sf2, scan, scanInfo, MAXMVCC);
     verifyCountAndOrder(storeScanner, QUALSIZE * (startRowNum + 1),
         startRowNum + 1, false);
 
@@ -289,16 +287,14 @@ public class TestReversibleScanners {
     assertTrue(QUALSIZE > 2);
     scan.addColumn(FAMILYNAME, QUALS[0]);
     scan.addColumn(FAMILYNAME, QUALS[2]);
-    storeScanner = getReversibleStoreScanner(memstore, sf1, sf2, scan,
-        scanType, scanInfo, MAXMVCC);
+    storeScanner = getReversibleStoreScanner(memstore, sf1, sf2, scan, scanInfo, MAXMVCC);
     verifyCountAndOrder(storeScanner, 2 * (startRowNum + 1), startRowNum + 1,
         false);
 
     // Case 4.Test reversed scan with mvcc based on case 3
     for (int readPoint = 0; readPoint < MAXMVCC; readPoint++) {
       LOG.info("Setting read point to " + readPoint);
-      storeScanner = getReversibleStoreScanner(memstore, sf1, sf2, scan,
-          scanType, scanInfo, readPoint);
+      storeScanner = getReversibleStoreScanner(memstore, sf1, sf2, scan, scanInfo, readPoint);
       int expectedRowCount = 0;
       int expectedKVCount = 0;
       for (int i = startRowNum; i >= 0; i--) {
@@ -423,7 +419,7 @@ public class TestReversibleScanners {
   }
 
   private StoreScanner getReversibleStoreScanner(MemStore memstore,
-      StoreFile sf1, StoreFile sf2, Scan scan, ScanType scanType,
+      StoreFile sf1, StoreFile sf2, Scan scan,
       ScanInfo scanInfo, int readPoint) throws IOException {
     List<KeyValueScanner> scanners = getScanners(memstore, sf1, sf2, null,
         false, readPoint);
@@ -434,7 +430,7 @@ public class TestReversibleScanners {
       columns = entry.getValue();
     }
     StoreScanner storeScanner = new ReversedStoreScanner(scan, scanInfo,
-        scanType, columns, scanners);
+         columns, scanners);
     return storeScanner;
   }
 

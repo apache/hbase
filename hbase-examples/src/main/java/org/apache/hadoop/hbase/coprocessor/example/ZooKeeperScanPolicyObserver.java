@@ -19,9 +19,9 @@
 package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.OptionalInt;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -194,9 +194,7 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
       // take default action
       return null;
     }
-    Scan scan = new Scan();
-    scan.setMaxVersions(scanInfo.getMaxVersions());
-    return new StoreScanner(store, scanInfo, scan, scanners,
+    return new StoreScanner(store, scanInfo, OptionalInt.empty(), scanners,
         ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 
@@ -210,9 +208,7 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
       // take default action
       return null;
     }
-    Scan scan = new Scan();
-    scan.setMaxVersions(scanInfo.getMaxVersions());
-    return new StoreScanner(store, scanInfo, scan, scanners, scanType,
+    return new StoreScanner(store, scanInfo, OptionalInt.empty(), scanners, scanType,
         store.getSmallestReadPoint(), earliestPutTs);
   }
 

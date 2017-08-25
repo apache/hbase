@@ -18,9 +18,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,22 +63,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /** memstore test case */
 @Category({RegionServerTests.class, MediumTests.class})
@@ -164,10 +163,8 @@ public class TestDefaultMemStore {
     Configuration conf = HBaseConfiguration.create();
     ScanInfo scanInfo = new ScanInfo(conf, null, 0, 1, HConstants.LATEST_TIMESTAMP,
         KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator(), false);
-    ScanType scanType = ScanType.USER_SCAN;
-    StoreScanner s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     int count = 0;
-    try {
+    try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
       while (s.next(result)) {
         LOG.info(result);
         count++;
@@ -175,8 +172,6 @@ public class TestDefaultMemStore {
         assertEquals(rowCount, result.size());
         result.clear();
       }
-    } finally {
-      s.close();
     }
     assertEquals(rowCount, count);
     for (KeyValueScanner scanner : memstorescanners) {
@@ -185,9 +180,8 @@ public class TestDefaultMemStore {
 
     memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
     // Now assert can count same number even if a snapshot mid-scan.
-    s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
-    try {
+    try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
       while (s.next(result)) {
         LOG.info(result);
         // Assert the stuff is coming out in right order.
@@ -201,8 +195,6 @@ public class TestDefaultMemStore {
         }
         result.clear();
       }
-    } finally {
-      s.close();
     }
     assertEquals(rowCount, count);
     for (KeyValueScanner scanner : memstorescanners) {
@@ -211,10 +203,9 @@ public class TestDefaultMemStore {
     memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
     // Assert that new values are seen in kvset as we scan.
     long ts = System.currentTimeMillis();
-    s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
     int snapshotIndex = 5;
-    try {
+    try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
       while (s.next(result)) {
         LOG.info(result);
         // Assert the stuff is coming out in right order.
@@ -225,14 +216,12 @@ public class TestDefaultMemStore {
         if (count == snapshotIndex) {
           MemStoreSnapshot snapshot = this.memstore.snapshot();
           this.memstore.clearSnapshot(snapshot.getId());
-          // Added more rows into kvset.  But the scanner wont see these rows.
+          // Added more rows into kvset. But the scanner wont see these rows.
           addRows(this.memstore, ts);
           LOG.info("Snapshotted, cleared it and then added values (which wont be seen)");
         }
         result.clear();
       }
-    } finally {
-      s.close();
     }
     assertEquals(rowCount, count);
   }
@@ -600,27 +589,26 @@ public class TestDefaultMemStore {
     //starting from each row, validate results should contain the starting row
     Configuration conf = HBaseConfiguration.create();
     for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
-      ScanInfo scanInfo = new ScanInfo(conf, FAMILY, 0, 1, Integer.MAX_VALUE,
-          KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator(), false);
-      ScanType scanType = ScanType.USER_SCAN;
-      try (InternalScanner scanner = new StoreScanner(new Scan(
-          Bytes.toBytes(startRowId)), scanInfo, scanType, null,
-          memstore.getScanners(0))) {
+      ScanInfo scanInfo =
+          new ScanInfo(conf, FAMILY, 0, 1, Integer.MAX_VALUE, KeepDeletedCells.FALSE,
+              HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator(), false);
+      try (InternalScanner scanner =
+          new StoreScanner(new Scan().withStartRow(Bytes.toBytes(startRowId)), scanInfo, null,
+              memstore.getScanners(0))) {
         List<Cell> results = new ArrayList<>();
         for (int i = 0; scanner.next(results); i++) {
           int rowId = startRowId + i;
           Cell left = results.get(0);
           byte[] row1 = Bytes.toBytes(rowId);
-          assertTrue(
-              "Row name",
-              CellComparator.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
+          assertTrue("Row name",
+            CellComparator.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
           assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
           List<Cell> row = new ArrayList<>();
           for (Cell kv : results) {
             row.add(kv);
           }
           isExpectedRowWithoutTimestamps(rowId, row);
-          // Clear out set.  Otherwise row results accumulate.
+          // Clear out set. Otherwise row results accumulate.
           results.clear();
         }
       }
