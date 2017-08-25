@@ -37,6 +37,9 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
+/**
+ * @since 2.0.0
+ */
 @InterfaceAudience.Private
 public class AccessControlUtil {
   private AccessControlUtil() {}
