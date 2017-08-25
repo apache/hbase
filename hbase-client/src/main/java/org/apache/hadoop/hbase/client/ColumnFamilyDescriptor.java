@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * It is used as input when creating a table or adding a column.
  *
  * To construct a new instance, use the {@link ColumnFamilyDescriptorBuilder} methods
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public interface ColumnFamilyDescriptor {

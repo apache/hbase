@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * method. The {@link RawScanResultConsumer} exposes the implementation details of a scan(heartbeat)
  * so it is not suitable for a normal user. If it is still the only difference after we implement
  * most features of AsyncTable, we can think about merge these two interfaces.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public interface RawAsyncTable extends AsyncTableBase {

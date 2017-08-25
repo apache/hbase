@@ -48,6 +48,7 @@ import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * The netty rpc handler.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyRpcDuplexHandler extends ChannelDuplexHandler {

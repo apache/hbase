@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 /**
  * Implement logic to deal with the rpc connection header.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class NettyHBaseRpcConnectionHeaderHandler extends SimpleChannelInboundHandler<ByteBuf> {

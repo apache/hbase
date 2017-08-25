@@ -33,6 +33,7 @@ import org.apache.htrace.TraceInfo;
 /**
  * Datastructure that holds all necessary to a method invocation and then afterward, carries the
  * result.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyServerCall extends ServerCall<NettyServerRpcConnection> {

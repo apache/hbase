@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.util.Pair;
  * As hadoop Configuration can not pass an Object directly, we need to find a way to pass the
  * EventLoopGroup to {@code AsyncRpcClient} if we want to use a single {@code EventLoopGroup} for
  * the whole process.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public class NettyRpcClientConfigHelper {

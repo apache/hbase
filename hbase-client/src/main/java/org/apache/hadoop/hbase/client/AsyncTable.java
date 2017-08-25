@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * The implementation should make sure that user can do everything they want to the returned
  * {@code CompletableFuture} without breaking anything. Usually the implementation will require user
  * to provide a {@code ExecutorService}.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public interface AsyncTable extends AsyncTableBase {

@@ -58,6 +58,7 @@ import com.google.protobuf.RpcChannel;
 
 /**
  * The implementation of AsyncAdmin.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class AsyncHBaseAdmin implements AsyncAdmin {

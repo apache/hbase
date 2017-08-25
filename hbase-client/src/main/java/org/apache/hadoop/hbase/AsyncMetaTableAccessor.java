@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.util.Pair;
 /**
  * The asynchronous meta table accessor. Used to read/write region and assignment information store
  * in <code>hbase:meta</code>.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class AsyncMetaTableAccessor {

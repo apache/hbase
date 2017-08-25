@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  * If user setBatch(5) and rpc returns 3+5+5+5+3 cells, we should return 5+5+5+5+1 to user. setBatch
  * doesn't mean setAllowPartialResult(true).
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class BatchScanResultCache implements ScanResultCache {

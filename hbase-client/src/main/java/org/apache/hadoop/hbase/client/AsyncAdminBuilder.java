@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * For creating {@link AsyncAdmin}. The implementation should have default configurations set before
  * returning the builder to user. So users are free to only set the configs they care about to
  * create a new AsyncAdmin instance.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public interface AsyncAdminBuilder {

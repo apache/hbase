@@ -41,6 +41,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
 
+/**
+ * @since 2.0.0
+ */
 @InterfaceAudience.Public
 public class ColumnFamilyDescriptorBuilder {
   // For future backward compatibility
