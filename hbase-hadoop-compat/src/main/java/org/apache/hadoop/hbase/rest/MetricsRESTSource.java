@@ -52,6 +52,14 @@ public interface MetricsRESTSource extends BaseSource, JvmPauseMonitorSource {
   
   String FAILED_SCAN_KEY = "failedScanCount";
 
+  String SUCCESSFUL_APPEND_KEY = "successfulAppendCount";
+
+  String FAILED_APPEND_KEY = "failedAppendCount";
+
+  String SUCCESSFUL_INCREMENT_KEY = "successfulIncrementCount";
+
+  String FAILED_INCREMENT_KEY = "failedIncrementCount";
+
   /**
    * Increment the number of requests
    *
@@ -111,7 +119,35 @@ public interface MetricsRESTSource extends BaseSource, JvmPauseMonitorSource {
   /**
    * Increment the number failed scan requests.
    *
-   * @param inc the inc
+   * @param inc Number of failed scan requests.
    */
   void incrementFailedScanRequests(final int inc);
+
+  /**
+   * Increment the number of successful append requests.
+   *
+   * @param inc Number of successful append requests.
+   */
+  void incrementSucessfulAppendRequests(final int inc);
+
+  /**
+   * Increment the number failed append requests.
+   *
+   * @param inc Number of failed append requests.
+   */
+  void incrementFailedAppendRequests(final int inc);
+
+  /**
+   * Increment the number of successful increment requests.
+   *
+   * @param inc Number of successful increment requests.
+   */
+  void incrementSucessfulIncrementRequests(final int inc);
+
+  /**
+   * Increment the number failed increment requests.
+   *
+   * @param inc Number of failed increment requests.
+   */
+  void incrementFailedIncrementRequests(final int inc);
 }
