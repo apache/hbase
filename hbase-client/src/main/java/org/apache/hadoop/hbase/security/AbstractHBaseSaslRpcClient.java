@@ -42,6 +42,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 /**
  * A utility class that encapsulates SASL logic for RPC client. Copied from
  * <code>org.apache.hadoop.security</code>
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public abstract class AbstractHBaseSaslRpcClient {

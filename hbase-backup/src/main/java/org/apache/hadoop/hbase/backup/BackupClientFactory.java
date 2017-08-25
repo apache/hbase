@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.backup.impl.IncrementalTableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.TableBackupClient;
 import org.apache.hadoop.hbase.client.Connection;
 
+@InterfaceAudience.Private
 public class BackupClientFactory {
 
   public static TableBackupClient create (Connection conn, String backupId, BackupRequest request)
