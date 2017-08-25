@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
 /**
  * A binary comparator which lexicographically compares against the specified
  * byte array using {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
- * @since 2.0.0
  */
 @InterfaceAudience.Public
 public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayComparable {
