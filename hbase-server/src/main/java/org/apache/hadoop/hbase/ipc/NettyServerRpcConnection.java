@@ -38,6 +38,7 @@ import org.apache.htrace.TraceInfo;
 
 /**
  * RpcConnection implementation for netty rpc server.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyServerRpcConnection extends ServerRpcConnection {

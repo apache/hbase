@@ -36,6 +36,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
  * Implement SASL logic for netty rpc client.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {

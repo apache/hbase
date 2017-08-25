@@ -57,6 +57,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 
 /**
  * An RPC server with Netty4 implementation.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class NettyRpcServer extends RpcServer {

@@ -65,6 +65,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * <p>
  * Most operations are executed in handlers. Netty handler is always executed in the same
  * thread(EventLoop) so no lock is needed.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyRpcConnection extends RpcConnection {

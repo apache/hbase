@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterServ
 
 /**
  * Retry caller for a request call to master.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {

@@ -47,6 +47,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
+/**
+ * @since 2.0.0
+ */
 @InterfaceAudience.Public
 public class TableDescriptorBuilder {
   public static final Log LOG = LogFactory.getLog(TableDescriptorBuilder.class);

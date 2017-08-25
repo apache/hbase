@@ -255,6 +255,7 @@ import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * The implementation of AsyncAdmin.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class RawAsyncHBaseAdmin implements AsyncAdmin {

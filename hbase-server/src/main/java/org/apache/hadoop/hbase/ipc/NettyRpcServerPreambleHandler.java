@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Handle connection preamble.
+ * @since 2.0.0`
  */
 @InterfaceAudience.Private
 class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf> {

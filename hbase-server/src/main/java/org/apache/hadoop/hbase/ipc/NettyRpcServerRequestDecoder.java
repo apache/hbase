@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Decoder for rpc request.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyRpcServerRequestDecoder extends ChannelInboundHandlerAdapter {

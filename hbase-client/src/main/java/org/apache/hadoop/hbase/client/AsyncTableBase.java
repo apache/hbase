@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  * Usually the implementation will not throw any exception directly. You need to get the exception
  * from the returned {@link CompletableFuture}.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public interface AsyncTableBase {

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Encoder for {@link RpcResponse}.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {

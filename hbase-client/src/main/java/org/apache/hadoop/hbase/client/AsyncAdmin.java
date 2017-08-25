@@ -52,6 +52,7 @@ import com.google.protobuf.RpcChannel;
  * <p>
  * This feature is still under development, so marked as IA.Private. Will change to public when
  * done. Use it with caution.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public interface AsyncAdmin {

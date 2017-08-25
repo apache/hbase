@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
  * HBase in background while you process the returned data, you need to move the processing work to
  * another thread to make the {@code onNext} call return immediately. And please do NOT do any time
  * consuming tasks in all methods below unless you know what you are doing.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public interface RawScanResultConsumer {

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * The asynchronous version of Connection.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public interface AsyncConnection extends Closeable {

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Helper class for passing netty event loop config to {@link AsyncFSWALProvider}.
+ * @since 2.0.0
  */
 public class NettyAsyncFSWALConfigHelper {
 

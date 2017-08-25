@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Netty client for the requests and responses.
+ * @since 2.0.0
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
