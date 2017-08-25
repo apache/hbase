@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -269,19 +270,17 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     private InternalScanner createCompactorScanner(Store store,
         List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs)
         throws IOException {
-      Scan scan = new Scan();
-      scan.setMaxVersions(store.getColumnFamilyDescriptor().getMaxVersions());
-      return new CompactorStoreScanner(store, store.getScanInfo(), scan, scanners, scanType,
-          store.getSmallestReadPoint(), earliestPutTs);
+      return new CompactorStoreScanner(store, store.getScanInfo(), OptionalInt.empty(), scanners,
+          scanType, store.getSmallestReadPoint(), earliestPutTs);
     }
   }
 
   private static class CompactorStoreScanner extends StoreScanner {
 
-    public CompactorStoreScanner(Store store, ScanInfo scanInfo, Scan scan,
+    public CompactorStoreScanner(Store store, ScanInfo scanInfo, OptionalInt maxVersions,
         List<? extends KeyValueScanner> scanners, ScanType scanType, long smallestReadPoint,
         long earliestPutTs) throws IOException {
-      super(store, scanInfo, scan, scanners, scanType, smallestReadPoint, earliestPutTs);
+      super(store, scanInfo, maxVersions, scanners, scanType, smallestReadPoint, earliestPutTs);
     }
 
     @Override

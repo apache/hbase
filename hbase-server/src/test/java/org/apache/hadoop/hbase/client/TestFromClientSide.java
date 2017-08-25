@@ -576,9 +576,9 @@ public class TestFromClientSide {
       }
 
       @Override
-      protected List<KeyValueScanner> selectScannersFrom(
+      protected List<KeyValueScanner> selectScannersFrom(Store store,
           List<? extends KeyValueScanner> allScanners) {
-        List<KeyValueScanner> scanners = super.selectScannersFrom(allScanners);
+        List<KeyValueScanner> scanners = super.selectScannersFrom(store, allScanners);
         List<KeyValueScanner> newScanners = new ArrayList<>(scanners.size());
         for (KeyValueScanner scanner : scanners) {
           newScanners.add(new DelegatingKeyValueScanner(scanner) {

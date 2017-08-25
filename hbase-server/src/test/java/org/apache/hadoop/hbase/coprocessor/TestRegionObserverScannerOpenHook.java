@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -116,18 +117,31 @@ public class TestRegionObserverScannerOpenHook {
     }
   }
 
+  private static final InternalScanner NO_DATA = new InternalScanner() {
+
+    @Override
+    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+      return false;
+    }
+
+    @Override
+    public boolean next(List<Cell> results) throws IOException {
+      return false;
+    }
+
+    @Override
+    public void close() throws IOException {}
+  };
   /**
    * Don't allow any data in a flush by creating a custom {@link StoreScanner}.
    */
   public static class NoDataFromFlush implements RegionObserver {
+
     @Override
     public InternalScanner preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
-      Scan scan = new Scan();
-      scan.setFilter(new NoDataFilter());
-      return new StoreScanner(store, store.getScanInfo(), scan,
-          scanners, ScanType.COMPACT_RETAIN_DELETES,
-          store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
+      scanners.forEach(KeyValueScanner::close);
+      return NO_DATA;
     }
   }
 
@@ -140,11 +154,8 @@ public class TestRegionObserverScannerOpenHook {
     public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
         long earliestPutTs, InternalScanner s) throws IOException {
-      Scan scan = new Scan();
-      scan.setFilter(new NoDataFilter());
-      return new StoreScanner(store, store.getScanInfo(), scan, scanners,
-          ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
-          HConstants.OLDEST_TIMESTAMP);
+      scanners.forEach(KeyValueScanner::close);
+      return NO_DATA;
     }
   }
 

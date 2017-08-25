@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.OptionalInt;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -251,18 +252,17 @@ public class TestCoprocessorScanPolicy {
           family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(), family.isNewVersionBehavior());
-      Scan scan = new Scan();
-      scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
-      return new StoreScanner(store, scanInfo, scan, scanners,
-          ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
+      return new StoreScanner(store, scanInfo,
+          newVersions == null ? OptionalInt.empty() : OptionalInt.of(newVersions.intValue()),
+          scanners, ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
           HConstants.OLDEST_TIMESTAMP);
     }
 
     @Override
     public InternalScanner preCompactScannerOpen(
-        final ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
-        long earliestPutTs, InternalScanner s) throws IOException {
+        final ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+        List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
+        InternalScanner s) throws IOException {
       Long newTtl = ttls.get(store.getTableName());
       Integer newVersions = versions.get(store.getTableName());
       ScanInfo oldSI = store.getScanInfo();
@@ -270,11 +270,11 @@ public class TestCoprocessorScanPolicy {
       ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
           family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(), family.isNewVersionBehavior());
-      Scan scan = new Scan();
-      scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
-      return new StoreScanner(store, scanInfo, scan, scanners, scanType,
-          store.getSmallestReadPoint(), earliestPutTs);
+          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(),
+          family.isNewVersionBehavior());
+      return new StoreScanner(store, scanInfo,
+          newVersions == null ? OptionalInt.empty() : OptionalInt.of(newVersions.intValue()),
+          scanners, scanType, store.getSmallestReadPoint(), earliestPutTs);
     }
 
     @Override

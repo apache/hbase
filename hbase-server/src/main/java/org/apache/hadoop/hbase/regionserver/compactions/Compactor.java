@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,7 +34,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -499,10 +499,8 @@ public abstract class Compactor<T extends CellSink> {
    */
   protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
       ScanType scanType, long smallestReadPoint, long earliestPutTs) throws IOException {
-    Scan scan = new Scan();
-    scan.setMaxVersions(store.getColumnFamilyDescriptor().getMaxVersions());
-    return new StoreScanner(store, store.getScanInfo(), scan, scanners,
-        scanType, smallestReadPoint, earliestPutTs);
+    return new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), scanners, scanType,
+        smallestReadPoint, earliestPutTs);
   }
 
   /**
@@ -515,11 +513,9 @@ public abstract class Compactor<T extends CellSink> {
    * @return A compaction scanner.
    */
   protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
-     long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
-     byte[] dropDeletesToRow) throws IOException {
-    Scan scan = new Scan();
-    scan.setMaxVersions(store.getColumnFamilyDescriptor().getMaxVersions());
-    return new StoreScanner(store, store.getScanInfo(), scan, scanners, smallestReadPoint,
-        earliestPutTs, dropDeletesFromRow, dropDeletesToRow);
+      long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
+      byte[] dropDeletesToRow) throws IOException {
+    return new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), scanners,
+        smallestReadPoint, earliestPutTs, dropDeletesFromRow, dropDeletesToRow);
   }
 }

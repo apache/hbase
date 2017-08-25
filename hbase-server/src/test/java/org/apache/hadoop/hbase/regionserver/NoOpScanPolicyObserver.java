@@ -19,9 +19,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.OptionalInt;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
  * of functionality still behaves as expected.
  */
 public class NoOpScanPolicyObserver implements RegionObserver {
+
   /**
    * Reimplement the default behavior
    */
@@ -45,11 +46,9 @@ public class NoOpScanPolicyObserver implements RegionObserver {
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
     ScanInfo oldSI = store.getScanInfo();
-    ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(), oldSI.getTtl(),
-        oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-    Scan scan = new Scan();
-    scan.setMaxVersions(oldSI.getMaxVersions());
-    return new StoreScanner(store, scanInfo, scan, scanners,
+    ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(),
+        oldSI.getTtl(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
+    return new StoreScanner(store, scanInfo, OptionalInt.empty(), scanners,
         ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 
@@ -57,16 +56,15 @@ public class NoOpScanPolicyObserver implements RegionObserver {
    * Reimplement the default behavior
    */
   @Override
-  public InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
+  public InternalScanner preCompactScannerOpen(
+      final ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+      List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
       InternalScanner s) throws IOException {
     // this demonstrates how to override the scanners default behavior
     ScanInfo oldSI = store.getScanInfo();
-    ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(), oldSI.getTtl(),
-        oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-    Scan scan = new Scan();
-    scan.setMaxVersions(oldSI.getMaxVersions());
-    return new StoreScanner(store, scanInfo, scan, scanners, scanType, 
+    ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(),
+        oldSI.getTtl(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
+    return new StoreScanner(store, scanInfo, OptionalInt.empty(), scanners, scanType,
         store.getSmallestReadPoint(), earliestPutTs);
   }
 

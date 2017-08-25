@@ -19,16 +19,16 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Scan;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.OptionalInt;
+
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * The MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator
@@ -106,22 +106,14 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
 
   /**
    * Creates the scanner for compacting the pipeline.
-   *
    * @return the scanner
    */
   private StoreScanner createScanner(Store store, List<KeyValueScanner> scanners)
       throws IOException {
-
-    Scan scan = new Scan();
-    scan.setMaxVersions();  //Get all available versions
-    StoreScanner internalScanner =
-        new StoreScanner(store, store.getScanInfo(), scan, scanners,
-            ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
-            HConstants.OLDEST_TIMESTAMP);
-
-    return internalScanner;
+    // Get all available versions
+    return new StoreScanner(store, store.getScanInfo(), OptionalInt.of(Integer.MAX_VALUE), scanners,
+        ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
-
 
   /* Refill kev-value set (should be invoked only when KVS is empty)
    * Returns true if KVS is non-empty */

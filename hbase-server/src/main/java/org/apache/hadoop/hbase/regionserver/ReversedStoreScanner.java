@@ -53,11 +53,9 @@ class ReversedStoreScanner extends StoreScanner implements KeyValueScanner {
   }
 
   /** Constructor for testing. */
-  ReversedStoreScanner(final Scan scan, ScanInfo scanInfo, ScanType scanType,
-      final NavigableSet<byte[]> columns, final List<? extends KeyValueScanner> scanners)
-      throws IOException {
-    super(scan, scanInfo, scanType, columns, scanners,
-        HConstants.LATEST_TIMESTAMP);
+  ReversedStoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
+      List<? extends KeyValueScanner> scanners) throws IOException {
+    super(scan, scanInfo, columns, scanners);
   }
 
   @Override
