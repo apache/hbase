@@ -22,8 +22,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.math.random.GaussianRandomGenerator;
-import org.apache.commons.math.random.MersenneTwister;
+import org.apache.commons.math3.random.GaussianRandomGenerator;
+import org.apache.commons.math3.random.MersenneTwister;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 
 class GaussianFileListGenerator extends StoreFileListGenerator {

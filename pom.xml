@@ -1354,7 +1354,7 @@
     <commons-io.version>2.5</commons-io.version>
     <commons-lang3.version>3.6</commons-lang3.version>
     <commons-logging.version>1.2</commons-logging.version>
-    <commons-math.version>2.2</commons-math.version>
+    <commons-math.version>3.6.1</commons-math.version>
     <disruptor.version>3.3.6</disruptor.version>
     <!-- Do not use versions earlier than 3.2.2 due to a security vulnerability -->
     <collections.version>4.1</collections.version>
@@ -1768,7 +1768,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
-        <artifactId>commons-math</artifactId>
+        <artifactId>commons-math3</artifactId>
         <version>${commons-math.version}</version>
       </dependency>
       <dependency>
