@@ -312,10 +312,10 @@ public class RpcRetryingCallerWithReadReplicas {
 
     RegionLocations rl;
     try {
-      if (!useCache) {
-        rl = cConnection.relocateRegion(tableName, row, replicaId);
+      if (useCache) {
+        rl = cConnection.locateRegion(tableName, row, true, true, replicaId);
       } else {
-        rl = cConnection.locateRegion(tableName, row, useCache, true, replicaId);
+        rl = cConnection.relocateRegion(tableName, row, replicaId);
       }
     } catch (DoNotRetryIOException | InterruptedIOException | RetriesExhaustedException e) {
       throw e;
