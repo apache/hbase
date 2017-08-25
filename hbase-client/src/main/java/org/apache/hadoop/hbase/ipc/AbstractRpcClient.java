@@ -89,6 +89,7 @@ import org.apache.hadoop.security.token.TokenSelector;
  * outside the lock in {@link Call} and {@link HBaseRpcController} which means the implementations
  * of the callbacks are free to hold any lock.</li>
  * </ul>
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcClient {
