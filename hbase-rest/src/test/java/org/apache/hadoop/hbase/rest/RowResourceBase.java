@@ -30,7 +30,6 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
-import org.apache.commons.collections.keyvalue.AbstractMapEntry;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -70,6 +69,8 @@ public class RowResourceBase {
   protected static final String VALUE_3 = "testvalue3";
   protected static final String ROW_4 = "testrow4";
   protected static final String VALUE_4 = "testvalue4";
+  protected static final String VALUE_5 = "5";
+  protected static final String VALUE_6 = "6";
 
   protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static final HBaseRESTTestingUtility REST_TEST_UTIL =
@@ -176,6 +177,19 @@ public class RowResourceBase {
     assertEquals(Bytes.toString(cell.getValue()), value);
   }
 
+  protected static void checkIncrementValueXML(String table, String row, String column,
+                                      long value) throws IOException, JAXBException {
+    Response response1 = getValueXML(table, row, column);
+    assertEquals(response1.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response1.getHeader("content-type"));
+    CellSetModel cellSet = (CellSetModel)
+            xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response1.getBody()));
+    RowModel rowModel = cellSet.getRows().get(0);
+    CellModel cell = rowModel.getCells().get(0);
+    assertEquals(Bytes.toString(cell.getColumn()), column);
+    assertEquals(Bytes.toLong(cell.getValue()), value);
+  }
+
   protected static Response getValuePB(String url) throws IOException {
     Response response = client.get(url, Constants.MIMETYPE_PROTOBUF); 
     return response;
@@ -231,6 +245,19 @@ public class RowResourceBase {
     CellModel cell = rowModel.getCells().get(0);
     assertEquals(Bytes.toString(cell.getColumn()), column);
     assertEquals(Bytes.toString(cell.getValue()), value);
+  }
+
+  protected static void checkIncrementValuePB(String table, String row, String column,
+      long value) throws IOException {
+    Response response = getValuePB(table, row, column);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
+    CellSetModel cellSet = new CellSetModel();
+    cellSet.getObjectFromMessage(response.getBody());
+    RowModel rowModel = cellSet.getRows().get(0);
+    CellModel cell = rowModel.getCells().get(0);
+    assertEquals(Bytes.toString(cell.getColumn()), column);
+    assertEquals(Bytes.toLong(cell.getValue()), value);
   }
 
   protected static Response checkAndPutValuePB(String url, String table,
@@ -520,6 +547,20 @@ public class RowResourceBase {
     assertEquals(Bytes.toString(cell.getValue()), value);
   }
 
+  protected static void checkIncrementValueJSON(String table, String row, String column,
+      long value) throws IOException, JAXBException {
+    Response response = getValueJson(table, row, column);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
+    ObjectMapper mapper = new JacksonJaxbJsonProvider()
+            .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+    CellSetModel cellSet = mapper.readValue(response.getBody(), CellSetModel.class);
+    RowModel rowModel = cellSet.getRows().get(0);
+    CellModel cell = rowModel.getCells().get(0);
+    assertEquals(Bytes.toString(cell.getColumn()), column);
+    assertEquals(Bytes.toLong(cell.getValue()), value);
+  }
+
   protected static Response putValueJson(String table, String row, String column,
       String value) throws IOException, JAXBException {
     StringBuilder path = new StringBuilder();
@@ -546,4 +587,69 @@ public class RowResourceBase {
     return response;
   }
 
+  protected static Response appendValueXML(String table, String row, String column,
+      String value) throws IOException, JAXBException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=append");
+    return putValueXML(path.toString(), table, row, column, value);
+  }
+
+  protected static Response appendValuePB(String table, String row, String column,
+      String value) throws IOException, JAXBException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=append");
+    return putValuePB(path.toString(), table, row, column, value);
+  }
+
+  protected static Response appendValueJson(String table, String row, String column,
+      String value) throws IOException, JAXBException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=append");
+    return putValueJson(path.toString(), table, row, column, value);
+  }
+
+  protected static Response incrementValueXML(String table, String row, String column,
+      String value) throws IOException, JAXBException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=increment");
+    return putValueXML(path.toString(), table, row, column, value);
+  }
+
+  protected static Response incrementValuePB(String table, String row, String column,
+      String value) throws IOException, JAXBException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=increment");
+    return putValuePB(path.toString(), table, row, column, value);
+  }
+
+  protected static Response incrementValueJson(String table, String row, String column,
+      String value) throws IOException, JAXBException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=increment");
+    return putValueJson(path.toString(), table, row, column, value);
+  }
 }

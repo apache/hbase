@@ -699,5 +699,110 @@ public class TestGetAndPutResource extends RowResourceBase {
     response = deleteRow(TABLE, ROW_2);
     assertEquals(response.getCode(), 200);
   }
+
+  @Test
+  public void testAppendXML() throws IOException, JAXBException {
+    Response response = getValueXML(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+
+    //append cell
+    response = appendValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    response = appendValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
+    assertEquals(response.getCode(), 200);
+    checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1 + VALUE_2);
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testAppendPB() throws IOException, JAXBException {
+    Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+
+    //append cell
+    response = appendValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    response = appendValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2);
+    assertEquals(response.getCode(), 200);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1 + VALUE_2);
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testAppendJSON() throws IOException, JAXBException {
+    Response response = getValueJson(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+
+    //append cell
+    response = appendValueJson(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    putValueJson(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    response = appendValueJson(TABLE, ROW_1, COLUMN_1, VALUE_2);
+    assertEquals(response.getCode(), 200);
+    putValueJson(TABLE, ROW_1, COLUMN_1, VALUE_1 + VALUE_2);
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testIncrementXML() throws IOException, JAXBException {
+    Response response = getValueXML(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+
+    //append single cell
+    response = incrementValueXML(TABLE, ROW_1, COLUMN_1, VALUE_5);
+    assertEquals(response.getCode(), 200);
+    checkIncrementValueXML(TABLE, ROW_1, COLUMN_1, Long.parseLong(VALUE_5));
+    response = incrementValueXML(TABLE, ROW_1, COLUMN_1, VALUE_6);
+    assertEquals(response.getCode(), 200);
+    checkIncrementValueXML(TABLE, ROW_1, COLUMN_1,
+        Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testIncrementPB() throws IOException, JAXBException {
+    Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+
+    //append cell
+    response = incrementValuePB(TABLE, ROW_1, COLUMN_1, VALUE_5);
+    assertEquals(response.getCode(), 200);
+    checkIncrementValuePB(TABLE, ROW_1, COLUMN_1, Long.parseLong(VALUE_5));
+    response = incrementValuePB(TABLE, ROW_1, COLUMN_1, VALUE_6);
+    assertEquals(response.getCode(), 200);
+    checkIncrementValuePB(TABLE, ROW_1, COLUMN_1,
+        Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testIncrementJSON() throws IOException, JAXBException {
+    Response response = getValueJson(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+
+    //append cell
+    response = incrementValueJson(TABLE, ROW_1, COLUMN_1, VALUE_5);
+    assertEquals(response.getCode(), 200);
+    checkIncrementValueJSON(TABLE, ROW_1, COLUMN_1, Long.parseLong(VALUE_5));
+    response = incrementValueJson(TABLE, ROW_1, COLUMN_1, VALUE_6);
+    assertEquals(response.getCode(), 200);
+    checkIncrementValueJSON(TABLE, ROW_1, COLUMN_1,
+        Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
 }
 

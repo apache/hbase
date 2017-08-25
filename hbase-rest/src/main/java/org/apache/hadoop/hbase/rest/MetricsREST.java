@@ -100,4 +100,32 @@ public class MetricsREST {
     source.incrementFailedScanRequests(inc);
   }
 
+  /**
+   * @param inc How much to add to sucessfulAppendCount.
+   */
+  public synchronized void incrementSucessfulAppendRequests(final int inc) {
+    source.incrementSucessfulAppendRequests(inc);
+  }
+
+  /**
+   * @param inc How much to add to failedAppendCount.
+   */
+  public void incrementFailedAppendRequests(final int inc) {
+    source.incrementFailedAppendRequests(inc);
+  }
+
+  /**
+   * @param inc How much to add to sucessfulIncrementCount.
+   */
+  public synchronized void incrementSucessfulIncrementRequests(final int inc) {
+    source.incrementSucessfulIncrementRequests(inc);
+  }
+
+  /**
+   * @param inc How much to add to failedIncrementCount.
+   */
+  public void incrementFailedIncrementRequests(final int inc) {
+    source.incrementFailedIncrementRequests(inc);
+  }
+
 }
