@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
+import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
