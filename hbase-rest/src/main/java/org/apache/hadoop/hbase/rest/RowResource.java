@@ -44,8 +44,11 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
@@ -56,22 +59,27 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class RowResource extends ResourceBase {
   private static final Log LOG = LogFactory.getLog(RowResource.class);
 
-  static final String CHECK_PUT = "put";
-  static final String CHECK_DELETE = "delete";
+  private static final String CHECK_PUT = "put";
+  private static final String CHECK_DELETE = "delete";
+  private static final String CHECK_APPEND = "append";
+  private static final String CHECK_INCREMENT = "increment";
 
-  TableResource tableResource;
-  RowSpec rowspec;
+  private TableResource tableResource;
+  private RowSpec rowspec;
   private String check = null;
+  private boolean returnResult = false;
 
   /**
    * Constructor
    * @param tableResource
    * @param rowspec
    * @param versions
+   * @param check
+   * @param returnResult
    * @throws IOException
    */
   public RowResource(TableResource tableResource, String rowspec,
-      String versions, String check) throws IOException {
+      String versions, String check, String returnResult) throws IOException {
     super();
     this.tableResource = tableResource;
     this.rowspec = new RowSpec(rowspec);
@@ -79,6 +87,9 @@ public class RowResource extends ResourceBase {
       this.rowspec.setMaxVersions(Integer.parseInt(versions));
     }
     this.check = check;
+    if (returnResult != null) {
+      this.returnResult = Boolean.valueOf(returnResult);
+    }
   }
 
   @GET
@@ -182,6 +193,10 @@ public class RowResource extends ResourceBase {
       return checkAndPut(model);
     } else if (CHECK_DELETE.equalsIgnoreCase(check)) {
       return checkAndDelete(model);
+    } else if (CHECK_APPEND.equalsIgnoreCase(check)) {
+      return append(model);
+    } else if (CHECK_INCREMENT.equalsIgnoreCase(check)) {
+      return increment(model);
     } else if (check != null && check.length() > 0) {
       return Response.status(Response.Status.BAD_REQUEST)
         .type(MIMETYPE_TEXT).entity("Invalid check value '" + check + "'" + CRLF)
@@ -544,7 +559,7 @@ public class RowResource extends ResourceBase {
       if (model.getRows().size() != 1) {
         servlet.getMetrics().incrementFailedDeleteRequests(1);
         return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+          .type(MIMETYPE_TEXT).entity("Bad request: Number of rows specified is not 1." + CRLF)
           .build();
       }
       RowModel rowModel = model.getRows().get(0);
@@ -655,6 +670,197 @@ public class RowResource extends ResourceBase {
         table.close();
       } catch (IOException ioe) {
         LOG.debug("Exception received while closing the table", ioe);
+      }
+    }
+  }
+
+  /**
+   * Validates the input request parameters, parses columns from CellSetModel,
+   * and invokes Append on HTable.
+   *
+   * @param model instance of CellSetModel
+   * @return Response 200 OK, 304 Not modified, 400 Bad request
+   */
+  Response append(final CellSetModel model) {
+    Table table = null;
+    Append append = null;
+    try {
+      table = servlet.getTable(tableResource.getName());
+      if (model.getRows().size() != 1) {
+        servlet.getMetrics().incrementFailedAppendRequests(1);
+        return Response.status(Response.Status.BAD_REQUEST)
+                .type(MIMETYPE_TEXT).entity("Bad request: Number of rows specified is not 1." + CRLF)
+                .build();
+      }
+      RowModel rowModel = model.getRows().get(0);
+      byte[] key = rowModel.getKey();
+      if (key == null) {
+        key = rowspec.getRow();
+      }
+      if (key == null) {
+        servlet.getMetrics().incrementFailedAppendRequests(1);
+        return Response.status(Response.Status.BAD_REQUEST)
+                .type(MIMETYPE_TEXT).entity("Bad request: Row key found to be null." + CRLF)
+                .build();
+      }
+
+      append = new Append(key);
+      append.setReturnResults(returnResult);
+      int i = 0;
+      for (CellModel cell: rowModel.getCells()) {
+        byte[] col = cell.getColumn();
+        if (col == null) {
+          try {
+            col = rowspec.getColumns()[i++];
+          } catch (ArrayIndexOutOfBoundsException e) {
+            col = null;
+          }
+        }
+        if (col == null) {
+          servlet.getMetrics().incrementFailedAppendRequests(1);
+          return Response.status(Response.Status.BAD_REQUEST)
+                  .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
+                  .build();
+        }
+        byte [][] parts = KeyValue.parseColumn(col);
+        if (parts.length != 2) {
+          servlet.getMetrics().incrementFailedAppendRequests(1);
+          return Response.status(Response.Status.BAD_REQUEST)
+                  .type(MIMETYPE_TEXT).entity("Bad request: Column incorrectly specified." + CRLF)
+                  .build();
+        }
+        append.add(parts[0], parts[1], cell.getValue());
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("APPEND " + append.toString());
+      }
+      Result result = table.append(append);
+      if (returnResult) {
+        if (result.isEmpty()) {
+          servlet.getMetrics().incrementFailedAppendRequests(1);
+          return Response.status(Response.Status.NOT_MODIFIED)
+                  .type(MIMETYPE_TEXT).entity("Append return empty." + CRLF)
+                  .build();
+        }
+
+        CellSetModel rModel = new CellSetModel();
+        RowModel rRowModel = new RowModel(result.getRow());
+        for (Cell cell : result.listCells()) {
+          rRowModel.addCell(new CellModel(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
+                  cell.getTimestamp(), CellUtil.cloneValue(cell)));
+        }
+        rModel.addRow(rRowModel);
+        servlet.getMetrics().incrementSucessfulAppendRequests(1);
+        return Response.ok(rModel).build();
+      }
+      servlet.getMetrics().incrementSucessfulAppendRequests(1);
+      return Response.ok().build();
+    } catch (Exception e) {
+      servlet.getMetrics().incrementFailedAppendRequests(1);
+      return processException(e);
+    } finally {
+      if (table != null) try {
+        table.close();
+      } catch (IOException ioe) {
+        LOG.debug("Exception received while closing the table" + table.getName(), ioe);
+      }
+    }
+  }
+
+  /**
+   * Validates the input request parameters, parses columns from CellSetModel,
+   * and invokes Increment on HTable.
+   *
+   * @param model instance of CellSetModel
+   * @return Response 200 OK, 304 Not modified, 400 Bad request
+   */
+  Response increment(final CellSetModel model) {
+    Table table = null;
+    Increment increment = null;
+    try {
+      table = servlet.getTable(tableResource.getName());
+      if (model.getRows().size() != 1) {
+        servlet.getMetrics().incrementFailedIncrementRequests(1);
+        return Response.status(Response.Status.BAD_REQUEST)
+                .type(MIMETYPE_TEXT).entity("Bad request: Number of rows specified is not 1." + CRLF)
+                .build();
+      }
+      RowModel rowModel = model.getRows().get(0);
+      byte[] key = rowModel.getKey();
+      if (key == null) {
+        key = rowspec.getRow();
+      }
+      if (key == null) {
+        servlet.getMetrics().incrementFailedIncrementRequests(1);
+        return Response.status(Response.Status.BAD_REQUEST)
+                .type(MIMETYPE_TEXT).entity("Bad request: Row key found to be null." + CRLF)
+                .build();
+      }
+
+      increment = new Increment(key);
+      increment.setReturnResults(returnResult);
+      int i = 0;
+      for (CellModel cell: rowModel.getCells()) {
+        byte[] col = cell.getColumn();
+        if (col == null) {
+          try {
+            col = rowspec.getColumns()[i++];
+          } catch (ArrayIndexOutOfBoundsException e) {
+            col = null;
+          }
+        }
+        if (col == null) {
+          servlet.getMetrics().incrementFailedIncrementRequests(1);
+          return Response.status(Response.Status.BAD_REQUEST)
+                  .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
+                  .build();
+        }
+        byte [][] parts = KeyValue.parseColumn(col);
+        if (parts.length != 2) {
+          servlet.getMetrics().incrementFailedIncrementRequests(1);
+          return Response.status(Response.Status.BAD_REQUEST)
+                  .type(MIMETYPE_TEXT).entity("Bad request: Column incorrectly specified." + CRLF)
+                  .build();
+        }
+        increment.addColumn(parts[0], parts[1], Long.parseLong(Bytes.toStringBinary(cell.getValue())));
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("INCREMENT " + increment.toString());
+      }
+      Result result = table.increment(increment);
+
+      if (returnResult) {
+        if (result.isEmpty()) {
+          servlet.getMetrics().incrementFailedIncrementRequests(1);
+          return Response.status(Response.Status.NOT_MODIFIED)
+                  .type(MIMETYPE_TEXT).entity("Increment return empty." + CRLF)
+                  .build();
+        }
+
+        CellSetModel rModel = new CellSetModel();
+        RowModel rRowModel = new RowModel(result.getRow());
+        for (Cell cell : result.listCells()) {
+          rRowModel.addCell(new CellModel(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
+                  cell.getTimestamp(), CellUtil.cloneValue(cell)));
+        }
+        rModel.addRow(rowModel);
+        servlet.getMetrics().incrementSucessfulIncrementRequests(1);
+        return Response.ok(rModel).build();
+      }
+
+      ResponseBuilder response = Response.ok();
+      servlet.getMetrics().incrementSucessfulIncrementRequests(1);
+      return response.build();
+    } catch (Exception e) {
+      servlet.getMetrics().incrementFailedIncrementRequests(1);
+      return processException(e);
+    } finally {
+      if (table != null) try {
+        table.close();
+      } catch (IOException ioe) {
+        LOG.debug("Exception received while closing the table " + table.getName(), ioe);
       }
     }
   }

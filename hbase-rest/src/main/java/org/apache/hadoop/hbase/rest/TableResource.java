@@ -105,8 +105,9 @@ public class TableResource extends ResourceBase {
       // the RowSpec constructor has a chance to parse
       final @PathParam("rowspec") @Encoded String rowspec,
       final @QueryParam("v") String versions,
-      final @QueryParam("check") String check) throws IOException {
-    return new RowResource(this, rowspec, versions, check);
+      final @QueryParam("check") String check,
+      final @QueryParam("rr") String returnResult) throws IOException {
+    return new RowResource(this, rowspec, versions, check, returnResult);
   }
 
   @Path("{suffixglobbingspec: .*\\*/.+}")
@@ -115,8 +116,9 @@ public class TableResource extends ResourceBase {
       // the RowSpec constructor has a chance to parse
       final @PathParam("suffixglobbingspec") @Encoded String suffixglobbingspec,
       final @QueryParam("v") String versions,
-      final @QueryParam("check") String check) throws IOException {
-    return new RowResource(this, suffixglobbingspec, versions, check);
+      final @QueryParam("check") String check,
+      final @QueryParam("rr") String returnResult) throws IOException {
+    return new RowResource(this, suffixglobbingspec, versions, check, returnResult);
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION")
