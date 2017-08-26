@@ -21,7 +21,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.prefixtree.row.BaseTestRowData;
-import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
+import org.apache.hadoop.hbase.util.RedundantKVGenerator;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 /**

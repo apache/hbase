@@ -25,7 +25,6 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
