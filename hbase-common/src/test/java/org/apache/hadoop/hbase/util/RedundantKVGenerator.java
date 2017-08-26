@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hadoop.hbase.util.test;
+package org.apache.hadoop.hbase.util;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.io.WritableUtils;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.primitives.Bytes;
@@ -469,10 +468,8 @@ public class RedundantKVGenerator {
     }
     return result;
   }
-  
-  
+
   /************************ get/set ***********************************/
-  
   public RedundantKVGenerator setCommonPrefix(byte[] prefix){
     this.commonPrefix = prefix;
     return this;
@@ -563,5 +560,4 @@ public class RedundantKVGenerator {
     this.timestampDiffSize = timestampDiffSize;
     return this;
   }
-  
 }

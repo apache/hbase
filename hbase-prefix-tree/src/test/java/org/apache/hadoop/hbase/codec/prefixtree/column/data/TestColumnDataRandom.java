@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.util.byterange.ByteRangeSet;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
-import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
+import org.apache.hadoop.hbase.util.RedundantKVGenerator;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 

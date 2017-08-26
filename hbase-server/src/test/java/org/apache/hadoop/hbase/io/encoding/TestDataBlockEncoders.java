@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
+import org.apache.hadoop.hbase.util.RedundantKVGenerator;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
