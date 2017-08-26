@@ -22,6 +22,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 
 /**
  * A generator of random data (keys/cfs/columns/values) for load testing.
