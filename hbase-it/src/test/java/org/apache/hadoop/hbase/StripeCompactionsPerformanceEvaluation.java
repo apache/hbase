@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.util.MultiThreadedReader;
 import org.apache.hadoop.hbase.util.MultiThreadedWriter;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
-import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
+import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.Assert;
 
 
