@@ -221,9 +221,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * @param key Key whose key and value we're to remove from HCD parameters.
    */
-  public HColumnDescriptor remove(final byte [] key) {
+  public void remove(final byte [] key) {
     getDelegateeForModification().removeValue(new Bytes(key));
-    return this;
   }
 
   /**
@@ -704,9 +703,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * Remove a configuration setting represented by the key.
    */
-  public HColumnDescriptor removeConfiguration(final String key) {
+  public void removeConfiguration(final String key) {
     getDelegateeForModification().removeConfiguration(key);
-    return this;
   }
 
   @Override
