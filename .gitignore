@@ -1,6 +1,7 @@
 /.externalToolBuilders
 .project
 *.settings/
+.DS_Store
 .classpath
 /build
 /.idea/
