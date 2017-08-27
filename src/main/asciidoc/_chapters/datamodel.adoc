@@ -173,7 +173,7 @@ This abstraction lays the groundwork for upcoming multi-tenancy related features
 
 * Quota Management (link:https://issues.apache.org/jira/browse/HBASE-8410[HBASE-8410]) - Restrict the amount of resources (i.e. regions, tables) a namespace can consume.
 * Namespace Security Administration (link:https://issues.apache.org/jira/browse/HBASE-9206[HBASE-9206]) - Provide another level of security administration for tenants.
-* Region server groups (link:https://issues.apache.org/jira/browse/HBASE-6721[HBASE-6721]) - A namespace/table can be pinned onto a subset of RegionServers thus guaranteeing a course level of isolation.
+* Region server groups (link:https://issues.apache.org/jira/browse/HBASE-6721[HBASE-6721]) - A namespace/table can be pinned onto a subset of RegionServers thus guaranteeing a coarse level of isolation.
 
 [[namespace_creation]]
 === Namespace management
