@@ -25,6 +25,9 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
@@ -35,6 +38,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
 public class BulkLoadCellFilter {
   private static final Log LOG = LogFactory.getLog(BulkLoadCellFilter.class);
 
+  private final CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
   /**
    * Filters the bulk load cell using the supplied predicate.
    * @param cell The WAL cell to filter.
@@ -75,7 +79,13 @@ public class BulkLoadCellFilter {
             .setBulkloadSeqNum(bld.getBulkloadSeqNum());
     newDesc.addAllStores(copiedStoresList);
     BulkLoadDescriptor newBulkLoadDescriptor = newDesc.build();
-    return CellUtil.createCell(CellUtil.cloneRow(cell), WALEdit.METAFAMILY, WALEdit.BULK_LOAD,
-        cell.getTimestamp(), cell.getTypeByte(), newBulkLoadDescriptor.toByteArray());
+    return cellBuilder.clear()
+            .setRow(CellUtil.cloneRow(cell))
+            .setFamily(WALEdit.METAFAMILY)
+            .setQualifier(WALEdit.BULK_LOAD)
+            .setTimestamp(cell.getTimestamp())
+            .setType(cell.getTypeByte())
+            .setValue(newBulkLoadDescriptor.toByteArray())
+            .build();
   }
 }

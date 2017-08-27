@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.ArrayUtils;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 @InterfaceAudience.Private
 public class IndividualBytesFieldCell implements ExtendedCell {
@@ -38,16 +38,26 @@ public class IndividualBytesFieldCell implements ExtendedCell {
       + 5 * ClassSize.REFERENCE);     // references to all byte arrays: row, family, qualifier, value, tags
 
   // The following fields are backed by individual byte arrays
-  private byte[] row;
-  private byte[] family;
-  private byte[] qualifier;
-  private byte[] value;
-  private byte[] tags;  // A byte array, rather than an array of org.apache.hadoop.hbase.Tag
+  private final byte[] row;
+  private final int rOffset;
+  private final int rLength;
+  private final byte[] family;
+  private final int fOffset;
+  private final int fLength;
+  private final byte[] qualifier;
+  private final int qOffset;
+  private final int qLength;
+  private final byte[] value;
+  private final int vOffset;
+  private final int vLength;
+  private final byte[] tags;  // A byte array, rather than an array of org.apache.hadoop.hbase.Tag
+  private final int tagsOffset;
+  private final int tagsLength;
 
   // Other fields
-  private long   timestamp;
-  private byte   type;  // A byte, rather than org.apache.hadoop.hbase.KeyValue.Type
-  private long   seqId;
+  private long timestamp;
+  private final byte type;  // A byte, rather than org.apache.hadoop.hbase.KeyValue.Type
+  private long seqId;
 
   public IndividualBytesFieldCell(byte[] row, byte[] family, byte[] qualifier,
                                   long timestamp, KeyValue.Type type,  byte[] value) {
@@ -56,12 +66,26 @@ public class IndividualBytesFieldCell implements ExtendedCell {
 
   public IndividualBytesFieldCell(byte[] row, byte[] family, byte[] qualifier,
                                   long timestamp, KeyValue.Type type, long seqId, byte[] value, byte[] tags) {
+    this(row, 0, ArrayUtils.length(row),
+            family, 0, ArrayUtils.length(family),
+            qualifier, 0, ArrayUtils.length(qualifier),
+            timestamp, type, seqId,
+            value, 0, ArrayUtils.length(value),
+            tags, 0, ArrayUtils.length(tags));
+  }
+
+  public IndividualBytesFieldCell(byte[] row, int rOffset, int rLength,
+                                  byte[] family, int fOffset, int fLength,
+                                  byte[] qualifier, int qOffset, int qLength,
+                                  long timestamp, KeyValue.Type type, long seqId,
+                                  byte[] value, int vOffset, int vLength,
+                                  byte[] tags, int tagsOffset, int tagsLength) {
 
     // Check row, family, qualifier and value
-    KeyValue.checkParameters(row, (row == null) ? 0 : row.length,           // row and row length
-                             family, (family == null) ? 0 : family.length,  // family and family length
-                             (qualifier == null) ? 0 : qualifier.length,    // qualifier length
-                             (value == null) ? 0 : value.length);           // value length
+    KeyValue.checkParameters(row, rLength,     // row and row length
+                             family, fLength,  // family and family length
+                             qLength,          // qualifier length
+                             vLength);         // value length
 
     // Check timestamp
     if (timestamp < 0) {
@@ -69,19 +93,46 @@ public class IndividualBytesFieldCell implements ExtendedCell {
     }
 
     // Check tags
-    TagUtil.checkForTagsLength((tags == null) ? 0 : tags.length);
-
+    TagUtil.checkForTagsLength(tagsLength);
+    checkArrayBounds(row, rOffset, rLength);
+    checkArrayBounds(family, fOffset, fLength);
+    checkArrayBounds(qualifier, qOffset, qLength);
+    checkArrayBounds(value, vOffset, vLength);
+    checkArrayBounds(tags, tagsOffset, tagsLength);
     // No local copy is made, but reference to the input directly
-    this.row       = row;
-    this.family    = family;
-    this.qualifier = qualifier;
-    this.value     = value;
-    this.tags      = tags;
+    this.row        = row;
+    this.rOffset    = rOffset;
+    this.rLength    = rLength;
+    this.family     = family;
+    this.fOffset    = fOffset;
+    this.fLength    = fLength;
+    this.qualifier  = qualifier;
+    this.qOffset    = qOffset;
+    this.qLength    = qLength;
+    this.value      = value;
+    this.vOffset    = vOffset;
+    this.vLength    = vLength;
+    this.tags       = tags;
+    this.tagsOffset = tagsOffset;
+    this.tagsLength = tagsLength;
 
     // Set others
-    this.timestamp = timestamp;
-    this.type      = type.getCode();
-    this.seqId     = seqId;
+    this.timestamp  = timestamp;
+    this.type       = type.getCode();
+    this.seqId      = seqId;
+  }
+
+  private void checkArrayBounds(byte[] bytes, int offset, int length) {
+    if (offset < 0 || length < 0) {
+      throw new IllegalArgumentException("Negative number! offset=" + offset + "and length=" + length);
+    }
+    if (bytes == null && (offset != 0 || length != 0)) {
+      throw new IllegalArgumentException("Null bytes array but offset=" + offset + "and length=" + length);
+    }
+    if (bytes != null && bytes.length < offset + length) {
+      throw new IllegalArgumentException("Out of bounds! bytes.length=" + bytes.length
+        + ", offset=" + offset + ", length=" + length);
+    }
   }
 
   @Override
@@ -99,8 +150,8 @@ public class IndividualBytesFieldCell implements ExtendedCell {
     // Tags length and tags byte array
     if (withTags && getTagsLength() > 0) {
       // Tags length
-      out.write((byte)(0xff & (tags.length >> 8)));
-      out.write((byte)(0xff & tags.length));
+      out.write((byte)(0xff & (getTagsLength() >> 8)));
+      out.write((byte)(0xff & getTagsLength()));
 
       // Tags byte array
       out.write(tags);
@@ -148,14 +199,14 @@ public class IndividualBytesFieldCell implements ExtendedCell {
 
   @Override
   public int getRowOffset() {
-        return 0;
+        return rOffset;
     }
 
   @Override
   public short getRowLength() {
-    // If row is null or row.length is invalid, the constructor will reject it, by {@link KeyValue#checkParameters()},
-    // so it is safe to call row.length and make the type conversion.
-    return (short)(row.length);
+    // If row is null or rLength is invalid, the constructor will reject it, by {@link KeyValue#checkParameters()},
+    // so it is safe to call rLength and make the type conversion.
+    return (short)(rLength);
   }
 
   // 2) Family
@@ -167,15 +218,14 @@ public class IndividualBytesFieldCell implements ExtendedCell {
 
   @Override
   public int getFamilyOffset() {
-    return 0;
+    return fOffset;
   }
 
   @Override
   public byte getFamilyLength() {
-    // If family.length is invalid, the constructor will reject it, by {@link KeyValue#checkParameters()},
+    // If fLength is invalid, the constructor will reject it, by {@link KeyValue#checkParameters()},
     // so it is safe to make the type conversion.
-    // But need to consider the condition when family is null.
-    return (family == null) ? 0 : (byte)(family.length);
+    return (byte)(fLength);
   }
 
   // 3) Qualifier
@@ -187,13 +237,12 @@ public class IndividualBytesFieldCell implements ExtendedCell {
 
   @Override
   public int getQualifierOffset() {
-    return 0;
+    return qOffset;
   }
 
   @Override
   public int getQualifierLength() {
-    // Qualifier could be null
-    return (qualifier == null) ? 0 : qualifier.length;
+    return qLength;
   }
 
   // 4) Timestamp
@@ -223,13 +272,12 @@ public class IndividualBytesFieldCell implements ExtendedCell {
 
   @Override
   public int getValueOffset() {
-    return 0;
+    return vOffset;
   }
 
   @Override
   public int getValueLength() {
-    // Value could be null
-    return (value == null) ? 0 : value.length;
+    return vLength;
   }
 
   // 8) Tags
@@ -241,13 +289,12 @@ public class IndividualBytesFieldCell implements ExtendedCell {
 
   @Override
   public int getTagsOffset() {
-    return 0;
+    return tagsOffset;
   }
 
   @Override
   public int getTagsLength() {
-    // Tags could be null
-    return (tags == null) ? 0 : tags.length;
+    return tagsLength;
   }
 
   /**
@@ -297,5 +344,10 @@ public class IndividualBytesFieldCell implements ExtendedCell {
   @Override
   public void setTimestamp(byte[] ts, int tsOffset) {
     setTimestamp(Bytes.toLong(ts, tsOffset));
+  }
+
+  @Override
+  public String toString() {
+    return CellUtil.toString(this, true);
   }
 }

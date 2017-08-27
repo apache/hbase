@@ -316,73 +316,104 @@ public final class CellUtil {
     return buffer;
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link CellBuilder} instead
+   */
+  @Deprecated
   public static Cell createCell(final byte [] row, final byte [] family, final byte [] qualifier,
       final long timestamp, final byte type, final byte [] value) {
-    // I need a Cell Factory here.  Using KeyValue for now. TODO.
-    // TODO: Make a new Cell implementation that just carries these
-    // byte arrays.
-    // TODO: Call factory to create Cell
-    return new KeyValue(row, family, qualifier, timestamp, KeyValue.Type.codeToType(type), value);
+    return CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+            .setRow(row)
+            .setFamily(family)
+            .setQualifier(qualifier)
+            .setTimestamp(timestamp)
+            .setType(type)
+            .setValue(value)
+            .build();
   }
 
+  /**
+   * Creates a cell with deep copy of all passed bytes.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link CellBuilder} instead
+   */
+  @Deprecated
   public static Cell createCell(final byte [] rowArray, final int rowOffset, final int rowLength,
       final byte [] familyArray, final int familyOffset, final int familyLength,
       final byte [] qualifierArray, final int qualifierOffset, final int qualifierLength) {
     // See createCell(final byte [] row, final byte [] value) for why we default Maximum type.
-    return new KeyValue(rowArray, rowOffset, rowLength,
-        familyArray, familyOffset, familyLength,
-        qualifierArray, qualifierOffset, qualifierLength,
-        HConstants.LATEST_TIMESTAMP,
-        KeyValue.Type.Maximum,
-        HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length);
+    return CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+            .setRow(rowArray, rowOffset, rowLength)
+            .setFamily(familyArray, familyOffset, familyLength)
+            .setQualifier(qualifierArray, qualifierOffset, qualifierLength)
+            .setTimestamp(HConstants.LATEST_TIMESTAMP)
+            .setType(KeyValue.Type.Maximum.getCode())
+            .setValue(HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
+            .build();
   }
 
   /**
    * Marked as audience Private as of 1.2.0.
    * Creating a Cell with a memstoreTS/mvcc is an internal implementation detail not for
    * public use.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link ExtendedCellBuilder} instead
    */
   @InterfaceAudience.Private
+  @Deprecated
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
       final long timestamp, final byte type, final byte[] value, final long memstoreTS) {
-    KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
-        KeyValue.Type.codeToType(type), value);
-    keyValue.setSequenceId(memstoreTS);
-    return keyValue;
+    return createCell(row, family, qualifier, timestamp, type, value, null, memstoreTS);
   }
 
   /**
    * Marked as audience Private as of 1.2.0.
    * Creating a Cell with tags and a memstoreTS/mvcc is an internal implementation detail not for
    * public use.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link ExtendedCellBuilder} instead
    */
   @InterfaceAudience.Private
+  @Deprecated
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
       final long timestamp, final byte type, final byte[] value, byte[] tags,
       final long memstoreTS) {
-    KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
-        KeyValue.Type.codeToType(type), value, tags);
-    keyValue.setSequenceId(memstoreTS);
-    return keyValue;
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+            .setRow(row)
+            .setFamily(family)
+            .setQualifier(qualifier)
+            .setTimestamp(timestamp)
+            .setType(type)
+            .setValue(value)
+            .setTags(tags)
+            .setSequenceId(memstoreTS)
+            .build();
   }
 
   /**
    * Marked as audience Private as of 1.2.0.
    * Creating a Cell with tags is an internal implementation detail not for
    * public use.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link ExtendedCellBuilder} instead
    */
   @InterfaceAudience.Private
+  @Deprecated
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
       final long timestamp, Type type, final byte[] value, byte[] tags) {
-    KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp, type, value, tags);
-    return keyValue;
+    return createCell(row, family, qualifier, timestamp, type.getCode(), value,
+            tags, 0);
   }
 
   /**
    * Create a Cell with specific row.  Other fields defaulted.
    * @param row
    * @return Cell with passed row but all other fields are arbitrary
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link CellBuilder} instead
    */
+  @Deprecated
   public static Cell createCell(final byte [] row) {
     return createCell(row, HConstants.EMPTY_BYTE_ARRAY);
   }
@@ -392,7 +423,10 @@ public final class CellUtil {
    * @param row
    * @param value
    * @return Cell with passed row and value but all other fields are arbitrary
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link CellBuilder} instead
    */
+  @Deprecated
   public static Cell createCell(final byte [] row, final byte [] value) {
     // An empty family + empty qualifier + Type.Minimum is used as flag to indicate last on row.
     // See the CellComparator and KeyValue comparator.  Search for compareWithoutRow.
@@ -408,7 +442,10 @@ public final class CellUtil {
    * @param family
    * @param qualifier
    * @return Cell with passed row but all other fields are arbitrary
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link CellBuilder} instead
    */
+  @Deprecated
   public static Cell createCell(final byte [] row, final byte [] family, final byte [] qualifier) {
     // See above in createCell(final byte [] row, final byte [] value) why we set type to Maximum.
     return createCell(row, family, qualifier,

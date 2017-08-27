@@ -34,11 +34,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -358,15 +358,17 @@ public class HMobStore extends HStore {
       }
     }
     if (result == null) {
-      LOG.warn("The KeyValue result is null, assemble a new KeyValue with the same row,family,"
+      LOG.warn("The Cell result is null, assemble a new Cell with the same row,family,"
           + "qualifier,timestamp,type and tags but with an empty value to return.");
-      result = new KeyValue(reference.getRowArray(), reference.getRowOffset(),
-          reference.getRowLength(), reference.getFamilyArray(), reference.getFamilyOffset(),
-          reference.getFamilyLength(), reference.getQualifierArray(),
-          reference.getQualifierOffset(), reference.getQualifierLength(), reference.getTimestamp(),
-          Type.codeToType(reference.getTypeByte()), HConstants.EMPTY_BYTE_ARRAY,
-          0, 0, reference.getTagsArray(), reference.getTagsOffset(),
-          reference.getTagsLength());
+      result = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+              .setRow(reference.getRowArray(), reference.getRowOffset(), reference.getRowLength())
+              .setFamily(reference.getFamilyArray(), reference.getFamilyOffset(), reference.getFamilyLength())
+              .setQualifier(reference.getQualifierArray(), reference.getQualifierOffset(), reference.getQualifierLength())
+              .setTimestamp(reference.getTimestamp())
+              .setType(reference.getTypeByte())
+              .setValue(HConstants.EMPTY_BYTE_ARRAY)
+              .setTags(reference.getTagsArray(), reference.getTagsOffset(), reference.getTagsLength())
+              .build();
     }
     return result;
   }

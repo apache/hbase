@@ -31,9 +31,14 @@ import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -491,6 +496,7 @@ public final class ProtobufUtil {
         throw new IllegalArgumentException("row cannot be null");
       }
       // The proto has the metadata and the data itself
+      ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
       for (ColumnValue column: proto.getColumnValueList()) {
         byte[] family = column.getFamily().toByteArray();
         for (QualifierValue qv: column.getQualifierValueList()) {
@@ -510,9 +516,14 @@ public final class ProtobufUtil {
           if (qv.hasTags()) {
             allTagsBytes = qv.getTags().toByteArray();
             if(qv.hasDeleteType()) {
-              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
-              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
-                  fromDeleteType(qv.getDeleteType()), null, allTagsBytes));
+              put.add(cellBuilder.clear()
+                      .setRow(proto.getRow().toByteArray())
+                      .setFamily(family)
+                      .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                      .setTimestamp(ts)
+                      .setType(fromDeleteType(qv.getDeleteType()).getCode())
+                      .setTags(allTagsBytes)
+                      .build());
             } else {
               List<Tag> tags = TagUtil.asList(allTagsBytes, 0, (short)allTagsBytes.length);
               Tag[] tagsArray = new Tag[tags.size()];
@@ -520,9 +531,13 @@ public final class ProtobufUtil {
             }
           } else {
             if(qv.hasDeleteType()) {
-              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
-              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
-                  fromDeleteType(qv.getDeleteType())));
+              put.add(cellBuilder.clear()
+                      .setRow(proto.getRow().toByteArray())
+                      .setFamily(family)
+                      .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                      .setTimestamp(ts)
+                      .setType(fromDeleteType(qv.getDeleteType()).getCode())
+                      .build());
             } else{
               put.addImmutable(family, qualifier, ts, value);
             }
@@ -1314,8 +1329,9 @@ public final class ProtobufUtil {
     }
 
     List<Cell> cells = new ArrayList<>(values.size());
+    CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     for (CellProtos.Cell c : values) {
-      cells.add(toCell(c));
+      cells.add(toCell(builder, c));
     }
     return Result.create(cells, null, proto.getStale(), proto.getPartial());
   }
@@ -1356,8 +1372,9 @@ public final class ProtobufUtil {
 
     if (!values.isEmpty()){
       if (cells == null) cells = new ArrayList<>(values.size());
+      CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
       for (CellProtos.Cell c: values) {
-        cells.add(toCell(c));
+        cells.add(toCell(builder, c));
       }
     }
 
@@ -1616,15 +1633,15 @@ public final class ProtobufUtil {
     return kvbuilder.build();
   }
 
-  public static Cell toCell(final CellProtos.Cell cell) {
-    // Doing this is going to kill us if we do it for all data passed.
-    // St.Ack 20121205
-    return CellUtil.createCell(cell.getRow().toByteArray(),
-      cell.getFamily().toByteArray(),
-      cell.getQualifier().toByteArray(),
-      cell.getTimestamp(),
-      (byte)cell.getCellType().getNumber(),
-      cell.getValue().toByteArray());
+  public static Cell toCell(CellBuilder cellBuilder, final CellProtos.Cell cell) {
+    return cellBuilder.clear()
+            .setRow(cell.getRow().toByteArray())
+            .setFamily(cell.getFamily().toByteArray())
+            .setQualifier(cell.getQualifier().toByteArray())
+            .setTimestamp(cell.getTimestamp())
+            .setType((byte) cell.getCellType().getNumber())
+            .setValue(cell.getValue().toByteArray())
+            .build();
   }
 
   /**
