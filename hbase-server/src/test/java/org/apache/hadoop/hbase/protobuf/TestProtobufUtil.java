@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Col
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
+import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -335,8 +335,8 @@ public class TestProtobufUtil {
     ByteBuffer dbb = ByteBuffer.allocateDirect(arr.length);
     dbb.put(arr);
     ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(dbb, kv1.getLength(), kv2.getLength());
-    CellProtos.Cell cell = org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toCell(offheapKV);
-    Cell newOffheapKV = org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toCell(cell);
+    CellProtos.Cell cell = ProtobufUtil.toCell(offheapKV);
+    Cell newOffheapKV = ProtobufUtil.toCell(cell);
     assertTrue(CellComparator.COMPARATOR.compare(offheapKV, newOffheapKV) == 0);
   }
 
