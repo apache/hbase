@@ -123,11 +123,13 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver.MutationType;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
@@ -7546,13 +7548,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (currentCell != null) {
       tags = TagUtil.carryForwardTags(tags, currentCell);
       byte[] newValue = supplier.apply(currentCell);
-      // TODO: FIX. This is carnel knowledge of how KeyValues are made...
-      // This will be fixed by HBASE-18519
-      return new KeyValue(mutation.getRow(), 0, mutation.getRow().length,
-              columnFamily, 0, columnFamily.length,
-              delta.getQualifierArray(), delta.getQualifierOffset(), delta.getQualifierLength(),
-              Math.max(currentCell.getTimestamp() + 1, now),
-              KeyValue.Type.Put, newValue, 0, newValue.length, tags);
+      return ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(mutation.getRow(), 0, mutation.getRow().length)
+              .setFamily(columnFamily, 0, columnFamily.length)
+              // copy the qualifier if the cell is located in shared memory.
+              .setQualifier(CellUtil.cloneQualifier(delta))
+              .setTimestamp(Math.max(currentCell.getTimestamp() + 1, now))
+              .setType(KeyValue.Type.Put.getCode())
+              .setValue(newValue, 0, newValue.length)
+              .setTags(TagUtil.fromList(tags))
+              .build();
     } else {
       CellUtil.updateLatestStamp(delta, now);
       return CollectionUtils.isEmpty(tags) ? delta : CellUtil.createCell(delta, tags);
