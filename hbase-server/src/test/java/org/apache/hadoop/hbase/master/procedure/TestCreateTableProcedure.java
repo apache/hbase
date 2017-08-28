@@ -81,7 +81,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     final TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(MasterProcedureTestingUtility.createHTD(tableName));
 
     // disable sanity check
-    builder.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
+    builder.setValue("hbase.table.sanity.checks", Boolean.FALSE.toString());
     TableDescriptor htd = builder.build();
     final HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
 

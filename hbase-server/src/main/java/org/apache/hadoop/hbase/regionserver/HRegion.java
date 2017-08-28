@@ -721,7 +721,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.baseConf = confParam;
     this.conf = new CompoundConfiguration()
       .add(confParam)
-      .addStringMap(htd.getConfiguration())
       .addBytesMap(htd.getValues());
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
         DEFAULT_CACHE_FLUSH_INTERVAL);

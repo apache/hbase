@@ -60,11 +60,7 @@ public interface TableDescriptor {
         }
       }
       // punt on comparison for ordering, just calculate difference
-      result = Integer.compare(lhs.getValues().hashCode(), rhs.getValues().hashCode());
-      if (result != 0) {
-        return result;
-      }
-      return Integer.compare(lhs.getConfiguration().hashCode(), rhs.getConfiguration().hashCode());
+      return Integer.compare(lhs.getValues().hashCode(), rhs.getValues().hashCode());
   };
 
   /**
@@ -73,22 +69,6 @@ public interface TableDescriptor {
    * @return Count of column families of the table
    */
   int getColumnFamilyCount();
-
-  /**
-   * Getter for fetching an unmodifiable map.
-   *
-   * @return an unmodifiable map
-   */
-  Map<String, String> getConfiguration();
-
-  /**
-   * Getter for accessing the configuration value by key
-   *
-   * @param key the key whose associated value is to be returned
-   * @return the value to which the specified key is mapped, or {@code null} if
-   * this map contains no mapping for the key
-   */
-  String getConfigurationValue(String key);
 
   /**
    * Return the list of attached co-processor represented by their name

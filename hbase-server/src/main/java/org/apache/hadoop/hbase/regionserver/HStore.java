@@ -229,7 +229,7 @@ public class HStore implements Store {
     // add global config first, then table and cf overrides, then cf metadata.
     this.conf = new CompoundConfiguration()
       .add(confParam)
-      .addStringMap(region.getTableDescriptor().getConfiguration())
+      .addBytesMap(region.getTableDescriptor().getValues())
       .addStringMap(family.getConfiguration())
       .addBytesMap(family.getValues());
     this.blocksize = family.getBlocksize();
