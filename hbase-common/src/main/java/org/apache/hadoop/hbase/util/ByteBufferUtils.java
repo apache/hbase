@@ -395,7 +395,7 @@ public final class ByteBufferUtils {
    * @param destinationOffset
    * @param length
    */
-  public static int copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out, int sourceOffset,
+  public static void copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out, int sourceOffset,
       int destinationOffset, int length) {
     if (in.hasArray() && out.hasArray()) {
       System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out.array(), out.arrayOffset()
@@ -409,7 +409,7 @@ public final class ByteBufferUtils {
       inDup.position(sourceOffset).limit(sourceOffset + length);
       outDup.put(inDup);
     }
-    return destinationOffset + length;
+    // We used to return a result but disabled; return destinationOffset + length;
   }
 
   /**
