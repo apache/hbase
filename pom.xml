@@ -1355,7 +1355,7 @@
     <commons-math.version>2.2</commons-math.version>
     <disruptor.version>3.3.6</disruptor.version>
     <!-- Do not use versions earlier than 3.2.2 due to a security vulnerability -->
-    <collections.version>3.2.2</collections.version>
+    <collections.version>4.1</collections.version>
     <httpclient.version>4.5.3</httpclient.version>
     <httpcore.version>4.4.6</httpcore.version>
     <metrics-core.version>3.2.1</metrics-core.version>
@@ -1729,8 +1729,8 @@
         <version>${metrics-core.version}</version>
       </dependency>
       <dependency>
-        <groupId>commons-collections</groupId>
-        <artifactId>commons-collections</artifactId>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-collections4</artifactId>
         <version>${collections.version}</version>
       </dependency>
       <dependency>
