@@ -84,10 +84,18 @@ public class RegionLoad {
   }
 
   /**
-   * @return the approximate size of storefile indexes on the heap, in MB
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             ((<a href="https://issues.apache.org/jira/browse/HBASE-3935">HBASE-3935</a>)).
+   *             Use {@link #getStorefileIndexSizeKB()} instead.
    */
+  @Deprecated
   public int getStorefileIndexSizeMB() {
-    return regionLoadPB.getStorefileIndexSizeMB();
+    // Return value divided by 1024
+    return (int) (regionLoadPB.getStorefileIndexSizeKB() >> 10);
+  }
+
+  public long getStorefileIndexSizeKB() {
+    return regionLoadPB.getStorefileIndexSizeKB();
   }
 
   /**
@@ -215,8 +223,8 @@ public class RegionLoad {
     }
     sb = Strings.appendKeyValue(sb, "memstoreSizeMB",
         this.getMemStoreSizeMB());
-    sb = Strings.appendKeyValue(sb, "storefileIndexSizeMB",
-        this.getStorefileIndexSizeMB());
+    sb = Strings.appendKeyValue(sb, "storefileIndexSizeKB",
+        this.getStorefileIndexSizeKB());
     sb = Strings.appendKeyValue(sb, "readRequestsCount",
         this.getReadRequestsCount());
     sb = Strings.appendKeyValue(sb, "writeRequestsCount",

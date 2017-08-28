@@ -98,9 +98,9 @@ message RegionLoad {
 
   /**
    * The current total size of root-level store file indexes for the region,
-   * in MB. The same as {@link #rootIndexSizeKB} but in MB.
+   * in KB. The same as {@link #rootIndexSizeKB}.
    */
-  optional uint32 storefile_index_size_MB = 7;
+  optional uint64 storefile_index_size_KB = 7;
 
   /** the current total read requests made to region */
   optional uint64 read_requests_count = 8;

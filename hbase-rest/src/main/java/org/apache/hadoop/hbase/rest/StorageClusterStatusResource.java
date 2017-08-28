@@ -85,7 +85,7 @@ public class StorageClusterStatusResource extends ResourceBase {
         for (RegionLoad region: load.getRegionsLoad().values()) {
           node.addRegion(region.getName(), region.getStores(),
             region.getStorefiles(), region.getStorefileSizeMB(),
-            region.getMemStoreSizeMB(), region.getStorefileIndexSizeMB(),
+            region.getMemStoreSizeMB(), region.getStorefileIndexSizeKB(),
             region.getReadRequestsCount(), region.getWriteRequestsCount(),
             region.getRootIndexSizeKB(), region.getTotalStaticIndexSizeKB(),
             region.getTotalStaticBloomSizeKB(), region.getTotalCompactingKVs(),

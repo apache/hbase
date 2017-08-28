@@ -45,7 +45,7 @@ public class ServerLoad {
   private int storeUncompressedSizeMB = 0;
   private int storefileSizeMB = 0;
   private int memstoreSizeMB = 0;
-  private int storefileIndexSizeMB = 0;
+  private long storefileIndexSizeKB = 0;
   private long readRequestsCount = 0;
   private long filteredReadRequestsCount = 0;
   private long writeRequestsCount = 0;
@@ -64,7 +64,7 @@ public class ServerLoad {
       storeUncompressedSizeMB += rl.getStoreUncompressedSizeMB();
       storefileSizeMB += rl.getStorefileSizeMB();
       memstoreSizeMB += rl.getMemstoreSizeMB();
-      storefileIndexSizeMB += rl.getStorefileIndexSizeMB();
+      storefileIndexSizeKB += rl.getStorefileIndexSizeKB();
       readRequestsCount += rl.getReadRequestsCount();
       filteredReadRequestsCount += rl.getFilteredReadRequestsCount();
       writeRequestsCount += rl.getWriteRequestsCount();
@@ -159,15 +159,16 @@ public class ServerLoad {
 
   /**
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   * Use {@link #getStorefileIndexSizeMB()} instead.
+   * Use {@link #getStorefileIndexSizeKB()} instead.
    */
   @Deprecated
   public int getStorefileIndexSizeInMB() {
-    return storefileIndexSizeMB;
+    // Return value divided by 1024
+    return (int) (getStorefileIndexSizeKB() >> 10);
   }
 
-  public int getStorefileIndexSizeMB() {
-    return storefileIndexSizeMB;
+  public long getStorefileIndexSizeKB() {
+    return storefileIndexSizeKB;
   }
 
   public long getReadRequestsCount() {
@@ -327,8 +328,8 @@ public class ServerLoad {
     }
     sb = Strings.appendKeyValue(sb, "memstoreSizeMB", Integer.valueOf(this.memstoreSizeMB));
     sb =
-        Strings.appendKeyValue(sb, "storefileIndexSizeMB",
-          Integer.valueOf(this.storefileIndexSizeMB));
+        Strings.appendKeyValue(sb, "storefileIndexSizeKB",
+          Long.valueOf(this.storefileIndexSizeKB));
     sb = Strings.appendKeyValue(sb, "readRequestsCount", Long.valueOf(this.readRequestsCount));
     sb = Strings.appendKeyValue(sb, "filteredReadRequestsCount",
       Long.valueOf(this.filteredReadRequestsCount));
