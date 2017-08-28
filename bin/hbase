@@ -160,7 +160,15 @@ if [ -d "$HBASE_HOME/hbase-webapps" ]; then
 fi
 #add if we are in a dev environment
 if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
-  add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target"
+  if [ "$COMMAND" = "thrift" ] ; then
+    add_to_cp_if_exists "${HBASE_HOME}/hbase-thrift/target"
+  elif [ "$COMMAND" = "thrift2" ] ; then
+    add_to_cp_if_exists "${HBASE_HOME}/hbase-thrift/target"
+  elif [ "$COMMAND" = "rest" ] ; then
+    add_to_cp_if_exists "${HBASE_HOME}/hbase-rest/target"
+  else
+    add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target"
+  fi
 fi
 
 add_maven_deps_to_classpath() {
