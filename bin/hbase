@@ -172,7 +172,7 @@ if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
 fi
 
 add_maven_deps_to_classpath() {
-  f="${HBASE_HOME}/target/cached_classpath.txt"
+  f="${HBASE_HOME}/hbase-build-configuration/target/cached_classpath.txt"
   if [ ! -f "${f}" ]
   then
       echo "As this is a development environment, we need ${f} to be generated from maven (command: mvn install -DskipTests)"
@@ -329,7 +329,7 @@ if [[ $jruby_needed ]]; then
 
   else  # JRUBY_HOME is not specified explicitly
     if $in_dev_env; then  # in dev environment
-      F_JRUBY="${HBASE_HOME}/target/cached_classpath_jruby.txt"
+      F_JRUBY="${HBASE_HOME}/hbase-build-configuration/target/cached_classpath_jruby.txt"
       if [ ! -f "${F_JRUBY}" ]; then
         echo "As this is a development environment, we need ${F_JRUBY} to be generated from maven (command: mvn install -DskipTests)"
         exit 1
