@@ -28,7 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.collections.iterators.UnmodifiableIterator;
+import org.apache.commons.collections4.iterators.UnmodifiableIterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -388,7 +388,7 @@ public class CompoundConfiguration extends Configuration {
       }
     }
 
-    return UnmodifiableIterator.decorate(ret.entrySet().iterator());
+    return UnmodifiableIterator.unmodifiableIterator(ret.entrySet().iterator());
   }
 
   @Override
@@ -419,4 +419,4 @@ public class CompoundConfiguration extends Configuration {
   public void writeXml(OutputStream out) throws IOException {
     throw new UnsupportedOperationException("Immutable Configuration");
   }
-};
+}

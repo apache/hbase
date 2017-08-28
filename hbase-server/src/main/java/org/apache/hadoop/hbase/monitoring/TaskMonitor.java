@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.collections.buffer.CircularFifoBuffer;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -61,7 +61,7 @@ public class TaskMonitor {
   private final int maxTasks;
   private final long rpcWarnTime;
   private final long expirationTime;
-  private final CircularFifoBuffer tasks;
+  private final CircularFifoQueue tasks;
   private final List<TaskAndWeakRefPair> rpcTasks;
   private final long monitorInterval;
   private Thread monitorThread;
@@ -70,7 +70,7 @@ public class TaskMonitor {
     maxTasks = conf.getInt(MAX_TASKS_KEY, DEFAULT_MAX_TASKS);
     expirationTime = conf.getLong(EXPIRATION_TIME_KEY, DEFAULT_EXPIRATION_TIME);
     rpcWarnTime = conf.getLong(RPC_WARN_TIME_KEY, DEFAULT_RPC_WARN_TIME);
-    tasks = new CircularFifoBuffer(maxTasks);
+    tasks = new CircularFifoQueue(maxTasks);
     rpcTasks = Lists.newArrayList();
     monitorInterval = conf.getLong(MONITOR_INTERVAL_KEY, DEFAULT_MONITOR_INTERVAL);
     monitorThread = new Thread(new MonitorRunnable());
@@ -349,6 +349,6 @@ public class TaskMonitor {
      * @param task monitored task
      * @return false if a task is accepted, true if it is filtered
      */
-    boolean filter(MonitoredTask t);
+    boolean filter(MonitoredTask task);
   }
 }
