@@ -103,7 +103,7 @@ if defined HBASE_OFFHEAPSIZE (
 set CLASSPATH=%HBASE_CONF_DIR%;%JAVA_HOME%\lib\tools.jar
 
 rem Add maven target directory
-set cached_classpath_filename=%HBASE_HOME%\target\cached_classpath.txt
+set cached_classpath_filename=%HBASE_HOME%\hbase-build-configuration\target\cached_classpath.txt
 if "%in_dev_env%"=="true" (
 
   rem adding maven main classes to classpath
@@ -288,7 +288,7 @@ if defined jruby-needed (
   if not defined JRUBY_HOME (
     @rem in dev environment
     if "%in_dev_env%"=="true" (
-      set cached_classpath_jruby_filename=%HBASE_HOME%\target\cached_classpath_jruby.txt
+      set cached_classpath_jruby_filename=%HBASE_HOME%\hbase-build-configuration\target\cached_classpath_jruby.txt
       if not exist "!cached_classpath_jruby_filename!" (
         echo "As this is a development environment, we need !cached_classpath_jruby_filename! to be generated from maven (command: mvn install -DskipTests)"
         goto :eof
