@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.Get;

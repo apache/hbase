@@ -56,8 +56,8 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.servlet.http.HttpServlet;
 
-import org.apache.commons.lang3.SystemUtils;
-import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang.SystemUtils;
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1824,7 +1824,7 @@ public class HRegionServer extends HasThread implements
         if (((HRegion)r).shouldFlush(whyFlush)) {
           FlushRequester requester = server.getFlushRequester();
           if (requester != null) {
-            long randomDelay = RandomUtils.nextInt(0, RANGE_OF_DELAY) + MIN_DELAY_TIME;
+            long randomDelay = RandomUtils.nextInt(RANGE_OF_DELAY) + MIN_DELAY_TIME;
             LOG.info(getName() + " requesting flush of " +
               r.getRegionInfo().getRegionNameAsString() + " because " +
               whyFlush.toString() +
@@ -3510,7 +3510,7 @@ public class HRegionServer extends HasThread implements
 
   private boolean isHealthCheckerConfigured() {
     String healthScriptLocation = this.conf.get(HConstants.HEALTH_SCRIPT_LOC);
-    return org.apache.commons.lang3.StringUtils.isNotBlank(healthScriptLocation);
+    return org.apache.commons.lang.StringUtils.isNotBlank(healthScriptLocation);
   }
 
   /**

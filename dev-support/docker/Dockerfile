@@ -87,7 +87,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
 # See http://wiki.apache.org/commons/VfsProblems
-RUN cd /usr/share/maven/lib && ln -s ../../java/commons-lang3-3.6.jar .
+RUN cd /usr/share/maven/lib && ln -s ../../java/commons-lang.jar .
 
 ######
 # Install findbugs

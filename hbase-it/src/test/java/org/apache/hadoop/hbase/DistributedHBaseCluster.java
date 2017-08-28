@@ -286,13 +286,13 @@ public class DistributedHBaseCluster extends HBaseCluster {
   @Override
   public void waitUntilShutDown() {
     // Simply wait for a few seconds for now (after issuing serverManager.kill
-    throw new RuntimeException(HConstants.NOT_IMPLEMENTED);
+    throw new RuntimeException("Not implemented yet");
   }
 
   @Override
   public void shutdown() throws IOException {
     // not sure we want this
-    throw new RuntimeException(HConstants.NOT_IMPLEMENTED);
+    throw new RuntimeException("Not implemented yet");
   }
 
   @Override

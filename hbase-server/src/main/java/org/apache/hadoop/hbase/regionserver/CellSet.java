@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import java.util.Collection;
 import java.util.Comparator;
@@ -62,7 +61,7 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public Cell ceiling(Cell e) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public Iterator<Cell> descendingIterator() {
@@ -70,11 +69,11 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public NavigableSet<Cell> descendingSet() {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public Cell floor(Cell e) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public SortedSet<Cell> headSet(final Cell toElement) {
@@ -87,7 +86,7 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public Cell higher(Cell e) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public Iterator<Cell> iterator() {
@@ -95,24 +94,24 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public Cell lower(Cell e) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public Cell pollFirst() {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public Cell pollLast() {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public SortedSet<Cell> subSet(Cell fromElement, Cell toElement) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public NavigableSet<Cell> subSet(Cell fromElement,
       boolean fromInclusive, Cell toElement, boolean toInclusive) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public SortedSet<Cell> tailSet(Cell fromElement) {
@@ -124,7 +123,7 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public Comparator<? super Cell> comparator() {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public Cell first() {
@@ -140,7 +139,7 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public boolean addAll(Collection<? extends Cell> c) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public void clear() {
@@ -153,7 +152,7 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public boolean containsAll(Collection<?> c) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public boolean isEmpty() {
@@ -165,11 +164,11 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public boolean removeAll(Collection<?> c) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public boolean retainAll(Collection<?> c) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public Cell get(Cell kv) {
@@ -181,10 +180,10 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public Object[] toArray() {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   public <T> T[] toArray(T[] a) {
-    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+    throw new UnsupportedOperationException("Not implemented");
   }
 }

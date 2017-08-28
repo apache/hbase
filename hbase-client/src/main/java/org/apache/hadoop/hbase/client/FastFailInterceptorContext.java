@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 

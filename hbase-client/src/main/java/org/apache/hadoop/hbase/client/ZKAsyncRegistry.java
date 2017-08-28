@@ -29,7 +29,7 @@ import static org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper.removeMetaD
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.CuratorFramework;

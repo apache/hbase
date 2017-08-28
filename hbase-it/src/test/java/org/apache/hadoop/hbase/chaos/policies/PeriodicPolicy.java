@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.chaos.policies;
 
-import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
 /** A policy which does stuff every time interval. */
@@ -32,7 +32,7 @@ public abstract class PeriodicPolicy extends Policy {
   @Override
   public void run() {
     // Add some jitter.
-    int jitter = RandomUtils.nextInt(0, (int) periodMs);
+    int jitter = RandomUtils.nextInt((int) periodMs);
     LOG.info("Sleeping for " + jitter + " to add jitter");
     Threads.sleep(jitter);
 

@@ -18,7 +18,7 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
+  import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="java.util.Collections"
   import="java.util.Comparator"
   import="java.util.ArrayList"

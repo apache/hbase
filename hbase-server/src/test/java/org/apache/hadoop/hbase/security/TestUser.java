@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;

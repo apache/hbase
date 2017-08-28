@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ServerName;
 
@@ -52,7 +52,7 @@ public class UnbalanceRegionsAction extends Action {
     int targetServerCount = (int)Math.ceil(fractionOfServers * victimServers.size());
     List<ServerName> targetServers = new ArrayList<>(targetServerCount);
     for (int i = 0; i < targetServerCount; ++i) {
-      int victimIx = RandomUtils.nextInt(0, victimServers.size());
+      int victimIx = RandomUtils.nextInt(victimServers.size());
       targetServers.add(victimServers.remove(victimIx));
     }
     unbalanceRegions(status, victimServers, targetServers, fractionOfRegions);

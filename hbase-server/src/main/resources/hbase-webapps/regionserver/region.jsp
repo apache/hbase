@@ -21,7 +21,7 @@
   import="java.util.Collection"
   import="java.util.Date"
   import="java.util.List"
-  import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
+  import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HTableDescriptor"
   import="org.apache.hadoop.hbase.HColumnDescriptor"

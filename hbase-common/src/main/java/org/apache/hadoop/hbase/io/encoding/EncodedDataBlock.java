@@ -25,7 +25,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;

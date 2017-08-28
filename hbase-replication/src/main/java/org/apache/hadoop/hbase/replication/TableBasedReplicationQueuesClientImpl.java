@@ -18,10 +18,9 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -96,18 +95,18 @@ public class TableBasedReplicationQueuesClientImpl extends ReplicationTableBase
   @Override
   public int getHFileRefsNodeChangeVersion() throws KeeperException {
     // TODO
-    throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
+    throw new NotImplementedException();
   }
 
   @Override
   public List<String> getAllPeersFromHFileRefsQueue() throws KeeperException {
     // TODO
-    throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
+    throw new NotImplementedException();
   }
 
   @Override
   public List<String> getReplicableHFiles(String peerId) throws KeeperException {
     // TODO
-    throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
+    throw new NotImplementedException();
   }
 }

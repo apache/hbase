@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -61,7 +61,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
   /** Selects a random item from the given items */
   public static <T> T selectRandomItem(T[] items) {
-    return items[RandomUtils.nextInt(0, items.length)];
+    return items[RandomUtils.nextInt(items.length)];
   }
 
   /** Selects a random item from the given items with weights*/
@@ -71,7 +71,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
       totalWeight += pair.getSecond();
     }
 
-    int cutoff = RandomUtils.nextInt(0, totalWeight);
+    int cutoff = RandomUtils.nextInt(totalWeight);
     int cummulative = 0;
     T item = null;
 

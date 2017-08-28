@@ -19,7 +19,7 @@
 --%>
 <%@page import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType"%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
+  import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString"
   import="java.net.URLEncoder"
   import="java.util.ArrayList"
@@ -31,7 +31,7 @@
   import="java.util.Collection"
   import="java.util.Collections"
   import="java.util.Comparator"
-  import="org.apache.commons.lang3.StringEscapeUtils"
+  import="org.apache.commons.lang.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.HRegionInfo"
@@ -73,7 +73,7 @@
 
   MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
-  final String escaped_fqtn = StringEscapeUtils.escapeHtml4(fqtn);
+  final String escaped_fqtn = StringEscapeUtils.escapeHtml(fqtn);
   String sortKey = request.getParameter("sort");
   String reverse = request.getParameter("reverse");
   final boolean reverseOrder = (reverse==null||!reverse.equals("false"));
@@ -122,7 +122,7 @@
   <head>
     <meta charset="utf-8">
     <% if ( !readOnly && action != null ) { %>
-        <title>HBase Master: <%= StringEscapeUtils.escapeHtml4(master.getServerName().toString()) %></title>
+        <title>HBase Master: <%= StringEscapeUtils.escapeHtml(master.getServerName().toString()) %></title>
     <% } else { %>
         <title>Table: <%= escaped_fqtn %></title>
     <% } %>
@@ -276,7 +276,7 @@ if ( fqtn != null ) {
 %>
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-    <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(metaLocation.getHostname().toString()) + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
+    <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(metaLocation.getHostname().toString()) + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
     <td><%= readReq%></td>
     <td><%= writeReq%></td>
     <td><%= fileSize%></td>
@@ -317,7 +317,7 @@ if ( fqtn != null ) {
   } catch (Exception e) {
     // Nothing really to do here
     for(StackTraceElement element : e.getStackTrace()) {
-      %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
+      %><%= StringEscapeUtils.escapeHtml(element.toString()) %><%
     }
 %> Unknown <%
   }
@@ -398,7 +398,7 @@ if ( fqtn != null ) {
     for (HColumnDescriptor family: families) {
   %>
   <tr>
-    <td><%= StringEscapeUtils.escapeHtml4(family.getNameAsString()) %></td>
+    <td><%= StringEscapeUtils.escapeHtml(family.getNameAsString()) %></td>
     <td>
     <table class="table table-striped">
       <tr>
@@ -411,10 +411,10 @@ if ( fqtn != null ) {
     %>
       <tr>
         <td>
-          <%= StringEscapeUtils.escapeHtml4(familyKey.toString()) %>
+          <%= StringEscapeUtils.escapeHtml(familyKey.toString()) %>
 		</td>
         <td>
-          <%= StringEscapeUtils.escapeHtml4(familyValues.get(familyKey).toString()) %>
+          <%= StringEscapeUtils.escapeHtml(familyValues.get(familyKey).toString()) %>
         </td>
       </tr>
     <% } %>
@@ -708,7 +708,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   if (urlRegionServer != null) {
   %>
   <td>
-     <a href="<%= urlRegionServer %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
+     <a href="<%= urlRegionServer %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
   </td>
   <%
   } else {
@@ -761,7 +761,7 @@ if (withReplica) {
      String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
 %>
 <tr>
-  <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a></td>
+  <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a></td>
   <td><%= rdEntry.getValue()%></td>
 <%
 if (withReplica) {
@@ -776,7 +776,7 @@ if (withReplica) {
 <% }
 } catch(Exception ex) {
   for(StackTraceElement element : ex.getStackTrace()) {
-    %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
+    %><%= StringEscapeUtils.escapeHtml(element.toString()) %><%
   }
 } finally {
   admin.close();
@@ -894,7 +894,7 @@ Actions:
 
 <script>
 var index=0;
-var sortKeyValue='<%= StringEscapeUtils.escapeEcmaScript(sortKey) %>';
+var sortKeyValue='<%= StringEscapeUtils.escapeJavaScript(sortKey) %>';
 if(sortKeyValue=="readrequest")index=1;
 else if(sortKeyValue=="writerequest")index=2;
 else if(sortKeyValue=="size")index=3;

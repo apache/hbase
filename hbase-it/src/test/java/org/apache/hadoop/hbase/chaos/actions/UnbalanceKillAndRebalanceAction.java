@@ -24,7 +24,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ServerName;
 import org.junit.Assert;
@@ -65,7 +65,7 @@ public class UnbalanceKillAndRebalanceAction extends Action {
         liveCount + deadCount < victimServers.size());
     List<ServerName> targetServers = new ArrayList<>(liveCount);
     for (int i = 0; i < liveCount + deadCount; ++i) {
-      int victimIx = RandomUtils.nextInt(0, victimServers.size());
+      int victimIx = RandomUtils.nextInt(victimServers.size());
       targetServers.add(victimServers.remove(victimIx));
     }
     unbalanceRegions(status, victimServers, targetServers, HOARD_FRC_OF_REGIONS);
