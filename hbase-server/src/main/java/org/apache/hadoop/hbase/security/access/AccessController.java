@@ -954,7 +954,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
     } else if (env instanceof RegionCoprocessorEnvironment) {
       // if running at region
       regionEnv = (RegionCoprocessorEnvironment) env;
-      conf.addStringMap(regionEnv.getRegion().getTableDescriptor().getConfiguration());
+      conf.addBytesMap(regionEnv.getRegion().getTableDescriptor().getValues());
       zk = regionEnv.getRegionServerServices().getZooKeeper();
       compatibleEarlyTermination = conf.getBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT,
         AccessControlConstants.DEFAULT_ATTRIBUTE_EARLY_OUT);

@@ -192,7 +192,7 @@ public class TestRegionSnapshotTask {
         .setMemStoreFlushSize(5000)
         .setRegionSplitPolicyClassName(ConstantSizeRegionSplitPolicy.class.getName())
         .setMaxFileSize(100 * 1024 * 1024)
-        .setConfiguration("hbase.hstore.compactionThreshold", "250");
+        .setValue("hbase.hstore.compactionThreshold", "250");
 
     TableDescriptor td = builder.build();
     byte[] fam = Bytes.toBytes("fam");

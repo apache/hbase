@@ -2817,12 +2817,6 @@ public final class ProtobufUtil {
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       builder.addColumnFamilies(toColumnFamilySchema(hcd));
     }
-    for (Map.Entry<String, String> e : htd.getConfiguration().entrySet()) {
-      NameStringPair.Builder aBuilder = NameStringPair.newBuilder();
-      aBuilder.setName(e.getKey());
-      aBuilder.setValue(e.getValue());
-      builder.addConfiguration(aBuilder.build());
-    }
     return builder.build();
   }
 
@@ -2841,7 +2835,7 @@ public final class ProtobufUtil {
     ts.getAttributesList()
       .forEach(a -> builder.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray()));
     ts.getConfigurationList()
-      .forEach(a -> builder.setConfiguration(a.getName(), a.getValue()));
+      .forEach(a -> builder.setValue(a.getName(), a.getValue()));
     return builder.build();
   }
 

@@ -271,25 +271,6 @@ public class TestTableDescriptorBuilder {
     assertEquals(1111L, desc.getMemStoreFlushSize());
   }
 
-  /**
-   * Test that we add and remove strings from configuration properly.
-   */
-  @Test
-  public void testAddGetRemoveConfiguration() {
-    String key = "Some";
-    String value = "value";
-    TableDescriptor desc = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(name.getMethodName()))
-            .setConfiguration(key, value)
-            .build();
-    assertEquals(value, desc.getConfigurationValue(key));
-    desc = TableDescriptorBuilder
-            .newBuilder(desc)
-            .removeConfiguration(key)
-            .build();
-    assertEquals(null, desc.getConfigurationValue(key));
-  }
-
   @Test
   public void testClassMethodsAreBuilderStyle() {
     BuilderStyleTest.assertClassesAreBuilderStyle(TableDescriptorBuilder.class);

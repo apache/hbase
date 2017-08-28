@@ -1800,7 +1800,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (!conf.getBoolean(CONF_KEY, true)) {
       logWarn = true;
     }
-    String tableVal = htd.getConfigurationValue(CONF_KEY);
+    String tableVal = htd.getValue(CONF_KEY);
     if (tableVal != null && !Boolean.valueOf(tableVal)) {
       logWarn = true;
     }
@@ -1925,8 +1925,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       throws IOException {
     // FIFO compaction has some requirements
     // Actually FCP ignores periodic major compactions
-    String className =
-        htd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
+    String className = htd.getValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
     if (className == null) {
       className =
           conf.get(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
@@ -1934,7 +1933,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     int blockingFileCount = HStore.DEFAULT_BLOCKING_STOREFILE_COUNT;
-    String sv = htd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
+    String sv = htd.getValue(HStore.BLOCKING_STOREFILES_KEY);
     if (sv != null) {
       blockingFileCount = Integer.parseInt(sv);
     } else {
