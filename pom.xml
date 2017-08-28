@@ -1459,7 +1459,7 @@
     <spotbugs.version>3.1.0-RC3</spotbugs.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>1.0.0</hbase-thirdparty.version>
+    <hbase-thirdparty.version>1.0.1</hbase-thirdparty.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
