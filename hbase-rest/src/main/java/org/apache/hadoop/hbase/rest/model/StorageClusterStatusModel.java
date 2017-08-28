@@ -115,7 +115,7 @@ public class StorageClusterStatusModel
       private int storefiles;
       private int storefileSizeMB;
       private int memstoreSizeMB;
-      private int storefileIndexSizeMB;
+      private long storefileIndexSizeKB;
       private long readRequestsCount;
       private long writeRequestsCount;
       private int rootIndexSizeKB;
@@ -145,10 +145,10 @@ public class StorageClusterStatusModel
        * @param storefiles the number of store files
        * @param storefileSizeMB total size of store files, in MB
        * @param memstoreSizeMB total size of memstore, in MB
-       * @param storefileIndexSizeMB total size of store file indexes, in MB
+       * @param storefileIndexSizeKB total size of store file indexes, in KB
        */
       public Region(byte[] name, int stores, int storefiles,
-          int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB,
+          int storefileSizeMB, int memstoreSizeMB, long storefileIndexSizeKB,
           long readRequestsCount, long writeRequestsCount, int rootIndexSizeKB,
           int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
           long totalCompactingKVs, long currentCompactedKVs) {
@@ -157,7 +157,7 @@ public class StorageClusterStatusModel
         this.storefiles = storefiles;
         this.storefileSizeMB = storefileSizeMB;
         this.memstoreSizeMB = memstoreSizeMB;
-        this.storefileIndexSizeMB = storefileIndexSizeMB;
+        this.storefileIndexSizeKB = storefileIndexSizeKB;
         this.readRequestsCount = readRequestsCount;
         this.writeRequestsCount = writeRequestsCount;
         this.rootIndexSizeKB = rootIndexSizeKB;
@@ -208,11 +208,11 @@ public class StorageClusterStatusModel
       }
 
       /**
-       * @return the total size of store file indexes, in MB
+       * @return the total size of store file indexes, in KB
        */
       @XmlAttribute
-      public int getStorefileIndexSizeMB() {
-        return storefileIndexSizeMB;
+      public long getStorefileIndexSizeKB() {
+        return storefileIndexSizeKB;
       }
 
       /**
@@ -361,10 +361,10 @@ public class StorageClusterStatusModel
       }
 
       /**
-       * @param storefileIndexSizeMB total size of store file indexes, in MB
+       * @param storefileIndexSizeKB total size of store file indexes, in KB
        */
-      public void setStorefileIndexSizeMB(int storefileIndexSizeMB) {
-        this.storefileIndexSizeMB = storefileIndexSizeMB;
+      public void setStorefileIndexSizeKB(long storefileIndexSizeKB) {
+        this.storefileIndexSizeKB = storefileIndexSizeKB;
       }
     }
 
@@ -380,12 +380,12 @@ public class StorageClusterStatusModel
      * @param name the region name
      */
     public void addRegion(byte[] name, int stores, int storefiles,
-        int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB,
+        int storefileSizeMB, int memstoreSizeMB, long storefileIndexSizeKB,
         long readRequestsCount, long writeRequestsCount, int rootIndexSizeKB,
         int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
         long totalCompactingKVs, long currentCompactedKVs) {
       regions.add(new Region(name, stores, storefiles, storefileSizeMB,
-        memstoreSizeMB, storefileIndexSizeMB, readRequestsCount,
+        memstoreSizeMB, storefileIndexSizeKB, readRequestsCount,
         writeRequestsCount, rootIndexSizeKB, totalStaticIndexSizeKB,
         totalStaticBloomSizeKB, totalCompactingKVs, currentCompactedKVs));
     }
@@ -673,8 +673,8 @@ public class StorageClusterStatusModel
           sb.append(region.storefileSizeMB);
           sb.append("\n            memstoreSizeMB=");
           sb.append(region.memstoreSizeMB);
-          sb.append("\n            storefileIndexSizeMB=");
-          sb.append(region.storefileIndexSizeMB);
+          sb.append("\n            storefileIndexSizeKB=");
+          sb.append(region.storefileIndexSizeKB);
           sb.append("\n            readRequestsCount=");
           sb.append(region.readRequestsCount);
           sb.append("\n            writeRequestsCount=");
@@ -729,7 +729,7 @@ public class StorageClusterStatusModel
         regionBuilder.setStorefiles(region.storefiles);
         regionBuilder.setStorefileSizeMB(region.storefileSizeMB);
         regionBuilder.setMemstoreSizeMB(region.memstoreSizeMB);
-        regionBuilder.setStorefileIndexSizeMB(region.storefileIndexSizeMB);
+        regionBuilder.setStorefileIndexSizeKB(region.storefileIndexSizeKB);
         regionBuilder.setReadRequestsCount(region.readRequestsCount);
         regionBuilder.setWriteRequestsCount(region.writeRequestsCount);
         regionBuilder.setRootIndexSizeKB(region.rootIndexSizeKB);
@@ -775,7 +775,7 @@ public class StorageClusterStatusModel
           region.getStorefiles(),
           region.getStorefileSizeMB(),
           region.getMemstoreSizeMB(),
-          region.getStorefileIndexSizeMB(),
+          region.getStorefileIndexSizeKB(),
           region.getReadRequestsCount(),
           region.getWriteRequestsCount(),
           region.getRootIndexSizeKB(),

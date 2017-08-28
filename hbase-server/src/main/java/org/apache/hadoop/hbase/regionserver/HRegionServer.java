@@ -1683,7 +1683,7 @@ public class HRegionServer extends HasThread implements
     int storeUncompressedSizeMB = 0;
     int storefileSizeMB = 0;
     int memstoreSizeMB = (int) (r.getMemstoreSize() / 1024 / 1024);
-    int storefileIndexSizeMB = 0;
+    long storefileIndexSizeKB = 0;
     int rootIndexSizeKB = 0;
     int totalStaticIndexSizeKB = 0;
     int totalStaticBloomSizeKB = 0;
@@ -1695,7 +1695,7 @@ public class HRegionServer extends HasThread implements
       storefiles += store.getStorefilesCount();
       storeUncompressedSizeMB += (int) (store.getStoreSizeUncompressed() / 1024 / 1024);
       storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
-      storefileIndexSizeMB += (int) (store.getStorefilesIndexSize() / 1024 / 1024);
+      storefileIndexSizeKB += store.getStorefilesIndexSize() / 1024;
       CompactionProgress progress = store.getCompactionProgress();
       if (progress != null) {
         totalCompactingKVs += progress.totalCompactingKVs;
@@ -1722,7 +1722,7 @@ public class HRegionServer extends HasThread implements
       .setStoreUncompressedSizeMB(storeUncompressedSizeMB)
       .setStorefileSizeMB(storefileSizeMB)
       .setMemstoreSizeMB(memstoreSizeMB)
-      .setStorefileIndexSizeMB(storefileIndexSizeMB)
+      .setStorefileIndexSizeKB(storefileIndexSizeKB)
       .setRootIndexSizeKB(rootIndexSizeKB)
       .setTotalStaticIndexSizeKB(totalStaticIndexSizeKB)
       .setTotalStaticBloomSizeKB(totalStaticBloomSizeKB)
