@@ -299,10 +299,10 @@ public class RpcRetryingCallerWithReadReplicas {
 
     RegionLocations rl;
     try {
-      if (useCache) {
-        rl = cConnection.locateRegion(tableName, row, true, true, replicaId);
-      } else {
+      if (!useCache) {
         rl = cConnection.relocateRegion(tableName, row, replicaId);
+      } else {
+        rl = cConnection.locateRegion(tableName, row, useCache, true, replicaId);
       }
     } catch (DoNotRetryIOException e) {
       throw e;
