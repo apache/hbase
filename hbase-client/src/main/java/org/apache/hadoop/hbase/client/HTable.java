@@ -18,15 +18,46 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 // DO NOT MAKE USE OF THESE IMPORTS! THEY ARE HERE FOR COPROCESSOR ENDPOINTS ONLY.
 // Internally, we use shaded protobuf. This below are part of our public API.
+//SEE ABOVE NOTE!
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -43,37 +74,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
-import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-//SEE ABOVE NOTE!
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.Threads;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 
 /**
  * An implementation of {@link Table}. Used to communicate with a single HBase table.
@@ -746,6 +747,27 @@ public class HTable implements Table {
     return checkAndPut(row, family, qualifier, CompareOp.EQUAL, value, put);
   }
 
+  private boolean doCheckAndPut(final byte [] row, final byte [] family,
+                                final byte [] qualifier, final String opName,
+                                final byte [] value, final Put put)
+  throws IOException {
+    ClientServiceCallable<Boolean> callable =
+    new ClientServiceCallable<Boolean>(this.connection, getName(), row,
+    this.rpcControllerFactory.newController(), put.getPriority()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        CompareType compareType = CompareType.valueOf(opName);
+        MutateRequest request = RequestConverter.buildMutateRequest(
+        getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+        new BinaryComparator(value), compareType, put);
+        MutateResponse response = doMutate(request);
+        return Boolean.valueOf(response.getProcessed());
+      }
+    };
+    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).
+    callWithRetries(callable, this.operationTimeout);
+  }
+
   /**
    * {@inheritDoc}
    */
@@ -754,21 +776,20 @@ public class HTable implements Table {
       final byte [] qualifier, final CompareOp compareOp, final byte [] value,
       final Put put)
   throws IOException {
-    ClientServiceCallable<Boolean> callable =
-        new ClientServiceCallable<Boolean>(this.connection, getName(), row,
-            this.rpcControllerFactory.newController(), put.getPriority()) {
-      @Override
-      protected Boolean rpcCall() throws Exception {
-        CompareType compareType = CompareType.valueOf(compareOp.name());
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-          new BinaryComparator(value), compareType, put);
-        MutateResponse response = doMutate(request);
-        return Boolean.valueOf(response.getProcessed());
-      }
-    };
-    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).
-        callWithRetries(callable, this.operationTimeout);
+    return doCheckAndPut(row, family, qualifier, compareOp.name(), value, put);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean checkAndPut(final byte [] row, final byte [] family,
+                             final byte [] qualifier, final CompareOperator op,
+                             final byte [] value, final Put put)
+  throws IOException {
+    // The name of the operators in CompareOperator are intentionally those of the
+    // operators in the filter's CompareOp enum.
+    return doCheckAndPut(row, family, qualifier, op.name(), value, put);
   }
 
   /**
@@ -780,24 +801,20 @@ public class HTable implements Table {
     return checkAndDelete(row, family, qualifier, CompareOp.EQUAL, value, delete);
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean checkAndDelete(final byte [] row, final byte [] family,
-      final byte [] qualifier, final CompareOp compareOp, final byte [] value,
-      final Delete delete)
+  private boolean doCheckAndDelete(final byte [] row, final byte [] family,
+                                   final byte [] qualifier, final String opName,
+                                   final byte [] value, final Delete delete)
   throws IOException {
     CancellableRegionServerCallable<SingleResponse> callable =
-        new CancellableRegionServerCallable<SingleResponse>(
-            this.connection, getName(), row, this.rpcControllerFactory.newController(),
-            writeRpcTimeout, new RetryingTimeTracker().start(), delete.getPriority()) {
+    new CancellableRegionServerCallable<SingleResponse>(
+    this.connection, getName(), row, this.rpcControllerFactory.newController(),
+    writeRpcTimeout, new RetryingTimeTracker().start(), delete.getPriority()) {
       @Override
       protected SingleResponse rpcCall() throws Exception {
-        CompareType compareType = CompareType.valueOf(compareOp.name());
+        CompareType compareType = CompareType.valueOf(opName);
         MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-          new BinaryComparator(value), compareType, delete);
+        getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+        new BinaryComparator(value), compareType, delete);
         MutateResponse response = doMutate(request);
         return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
       }
@@ -805,16 +822,16 @@ public class HTable implements Table {
     List<Delete> rows = Collections.singletonList(delete);
     Object[] results = new Object[1];
     AsyncProcessTask task = AsyncProcessTask.newBuilder()
-            .setPool(pool)
-            .setTableName(tableName)
-            .setRowAccess(rows)
-            .setCallable(callable)
-            // TODO any better timeout?
-            .setRpcTimeout(Math.max(readRpcTimeout, writeRpcTimeout))
-            .setOperationTimeout(operationTimeout)
-            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
-            .setResults(results)
-            .build();
+    .setPool(pool)
+    .setTableName(tableName)
+    .setRowAccess(rows)
+    .setCallable(callable)
+    // TODO any better timeout?
+    .setRpcTimeout(Math.max(readRpcTimeout, writeRpcTimeout))
+    .setOperationTimeout(operationTimeout)
+    .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+    .setResults(results)
+    .build();
     AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
@@ -827,31 +844,49 @@ public class HTable implements Table {
    * {@inheritDoc}
    */
   @Override
-  public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
-    final CompareOp compareOp, final byte [] value, final RowMutations rm)
-    throws IOException {
+  public boolean checkAndDelete(final byte [] row, final byte [] family,
+      final byte [] qualifier, final CompareOp compareOp, final byte [] value,
+      final Delete delete)
+  throws IOException {
+    return doCheckAndDelete(row, family, qualifier, compareOp.name(), value, delete);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean checkAndDelete(final byte [] row, final byte [] family,
+                                final byte [] qualifier, final CompareOperator op,
+                                final byte [] value, final Delete delete)
+  throws IOException {
+    return doCheckAndDelete(row, family, qualifier, op.name(), value, delete);
+  }
+
+  private boolean doCheckAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
+                                final String opName, final byte [] value, final RowMutations rm)
+  throws IOException {
     CancellableRegionServerCallable<MultiResponse> callable =
-      new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
-        rpcControllerFactory.newController(), writeRpcTimeout, new RetryingTimeTracker().start(), rm.getMaxPriority()) {
-        @Override
-        protected MultiResponse rpcCall() throws Exception {
-          CompareType compareType = CompareType.valueOf(compareOp.name());
-          MultiRequest request = RequestConverter.buildMutateRequest(
-            getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-            new BinaryComparator(value), compareType, rm);
-          ClientProtos.MultiResponse response = doMulti(request);
-          ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
-          if (res.hasException()) {
-            Throwable ex = ProtobufUtil.toException(res.getException());
-            if (ex instanceof IOException) {
-              throw (IOException)ex;
-            }
-            throw new IOException("Failed to checkAndMutate row: "+
-              Bytes.toStringBinary(rm.getRow()), ex);
+    new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
+    rpcControllerFactory.newController(), writeRpcTimeout, new RetryingTimeTracker().start(), rm.getMaxPriority()) {
+      @Override
+      protected MultiResponse rpcCall() throws Exception {
+        CompareType compareType = CompareType.valueOf(opName);
+        MultiRequest request = RequestConverter.buildMutateRequest(
+        getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+        new BinaryComparator(value), compareType, rm);
+        ClientProtos.MultiResponse response = doMulti(request);
+        ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
+        if (res.hasException()) {
+          Throwable ex = ProtobufUtil.toException(res.getException());
+          if (ex instanceof IOException) {
+            throw (IOException)ex;
           }
-          return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
+          throw new IOException("Failed to checkAndMutate row: "+
+          Bytes.toStringBinary(rm.getRow()), ex);
         }
-      };
+        return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
+      }
+    };
 
     /**
      *  Currently, we use one array to store 'processed' flag which is returned by server.
@@ -859,16 +894,16 @@ public class HTable implements Table {
      * */
     Object[] results = new Object[rm.getMutations().size()];
     AsyncProcessTask task = AsyncProcessTask.newBuilder()
-            .setPool(pool)
-            .setTableName(tableName)
-            .setRowAccess(rm.getMutations())
-            .setResults(results)
-            .setCallable(callable)
-            // TODO any better timeout?
-            .setRpcTimeout(Math.max(readRpcTimeout, writeRpcTimeout))
-            .setOperationTimeout(operationTimeout)
-            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
-            .build();
+    .setPool(pool)
+    .setTableName(tableName)
+    .setRowAccess(rm.getMutations())
+    .setResults(results)
+    .setCallable(callable)
+    // TODO any better timeout?
+    .setRpcTimeout(Math.max(readRpcTimeout, writeRpcTimeout))
+    .setOperationTimeout(operationTimeout)
+    .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+    .build();
     AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
@@ -876,6 +911,26 @@ public class HTable implements Table {
     }
 
     return ((Result)results[0]).getExists();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
+    final CompareOp compareOp, final byte [] value, final RowMutations rm)
+  throws IOException {
+    return doCheckAndMutate(row, family, qualifier, compareOp.name(), value, rm);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
+                                final CompareOperator op, final byte [] value, final RowMutations rm)
+  throws IOException {
+    return doCheckAndMutate(row, family, qualifier, op.name(), value, rm);
   }
 
   /**

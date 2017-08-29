@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.allOf;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnly;
 
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 import java.util.List;
@@ -30,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -204,7 +204,7 @@ public interface AsyncTableBase {
    */
   default CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Put put) {
-    return checkAndPut(row, family, qualifier, CompareOp.EQUAL, value, put);
+    return checkAndPut(row, family, qualifier, CompareOperator.EQUAL, value, put);
   }
 
   /**
@@ -221,7 +221,7 @@ public interface AsyncTableBase {
    *         a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, Put put);
+                                         CompareOperator compareOp, byte[] value, Put put);
 
   /**
    * Atomically checks if a row/family/qualifier value equals to the expected value. If it does, it
@@ -237,7 +237,7 @@ public interface AsyncTableBase {
    */
   default CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Delete delete) {
-    return checkAndDelete(row, family, qualifier, CompareOp.EQUAL, value, delete);
+    return checkAndDelete(row, family, qualifier, CompareOperator.EQUAL, value, delete);
   }
 
   /**
@@ -254,7 +254,7 @@ public interface AsyncTableBase {
    *         by a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, Delete delete);
+                                            CompareOperator compareOp, byte[] value, Delete delete);
 
   /**
    * Performs multiple mutations atomically on a single row. Currently {@link Put} and
@@ -278,7 +278,7 @@ public interface AsyncTableBase {
    */
   default CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, RowMutations mutation) {
-    return checkAndMutate(row, family, qualifier, CompareOp.EQUAL, value, mutation);
+    return checkAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, mutation);
   }
 
   /**
@@ -295,7 +295,7 @@ public interface AsyncTableBase {
    *         a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, RowMutations mutation);
+                                            CompareOperator compareOp, byte[] value, RowMutations mutation);
 
   /**
    * Return all the results that match the given scan object.

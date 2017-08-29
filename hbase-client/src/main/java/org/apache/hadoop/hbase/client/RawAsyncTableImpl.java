@@ -37,13 +37,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.SingleRequestCallerBuilder;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -253,24 +253,24 @@ class RawAsyncTableImpl implements RawAsyncTable {
 
   @Override
   public CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, Put put) {
+                                                CompareOperator op, byte[] value, Put put) {
     return this.<Boolean> newCaller(row, rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Put, Boolean> mutate(controller, loc,
           stub, put,
           (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
-            new BinaryComparator(value), CompareType.valueOf(compareOp.name()), p),
+            new BinaryComparator(value), CompareType.valueOf(op.name()), p),
           (c, r) -> r.getProcessed()))
         .call();
   }
 
   @Override
   public CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, Delete delete) {
+                                                   CompareOperator op, byte[] value, Delete delete) {
     return this.<Boolean> newCaller(row, rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Delete, Boolean> mutate(controller,
           loc, stub, delete,
           (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
-            new BinaryComparator(value), CompareType.valueOf(compareOp.name()), d),
+            new BinaryComparator(value), CompareType.valueOf(op.name()), d),
           (c, r) -> r.getProcessed()))
         .call();
   }
@@ -330,12 +330,12 @@ class RawAsyncTableImpl implements RawAsyncTable {
 
   @Override
   public CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, RowMutations mutation) {
+                                                   CompareOperator op, byte[] value, RowMutations mutation) {
     return this.<Boolean> newCaller(mutation, rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Boolean> mutateRow(controller, loc,
           stub, mutation,
           (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
-            new BinaryComparator(value), CompareType.valueOf(compareOp.name()), rm),
+            new BinaryComparator(value), CompareType.valueOf(op.name()), rm),
           resp -> resp.getExists()))
         .call();
   }

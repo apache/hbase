@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -364,7 +365,7 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
   private void safeQueueUpdate(RowMutations mutate) throws ReplicationException, IOException{
     try (Table replicationTable = getOrBlockOnReplicationTable()) {
       boolean updateSuccess = replicationTable.checkAndMutate(mutate.getRow(),
-          CF_QUEUE, COL_QUEUE_OWNER, CompareFilter.CompareOp.EQUAL, serverNameBytes, mutate);
+          CF_QUEUE, COL_QUEUE_OWNER, CompareOperator.EQUAL, serverNameBytes, mutate);
       if (!updateSuccess) {
         throw new ReplicationException("Failed to update Replication Table because we lost queue " +
             " ownership");
@@ -409,7 +410,7 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
     // new owner and update the queue's history
     try (Table replicationTable = getOrBlockOnReplicationTable()) {
       boolean success = replicationTable.checkAndMutate(queue.getRow(),
-          CF_QUEUE, COL_QUEUE_OWNER, CompareFilter.CompareOp.EQUAL, Bytes.toBytes(originalServer),
+          CF_QUEUE, COL_QUEUE_OWNER, CompareOperator.EQUAL, Bytes.toBytes(originalServer),
           claimAndRenameQueue);
       return success;
     }

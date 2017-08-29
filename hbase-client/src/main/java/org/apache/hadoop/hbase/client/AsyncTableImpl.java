@@ -25,9 +25,9 @@ import java.util.concurrent.TimeUnit;
 import static java.util.stream.Collectors.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
@@ -122,14 +122,14 @@ class AsyncTableImpl implements AsyncTable {
 
   @Override
   public CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, Put put) {
-    return wrap(rawTable.checkAndPut(row, family, qualifier, compareOp, value, put));
+                                                CompareOperator op, byte[] value, Put put) {
+    return wrap(rawTable.checkAndPut(row, family, qualifier, op, value, put));
   }
 
   @Override
   public CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, Delete delete) {
-    return wrap(rawTable.checkAndDelete(row, family, qualifier, compareOp, value, delete));
+                                                   CompareOperator op, byte[] value, Delete delete) {
+    return wrap(rawTable.checkAndDelete(row, family, qualifier, op, value, delete));
   }
 
   @Override
@@ -139,8 +139,8 @@ class AsyncTableImpl implements AsyncTable {
 
   @Override
   public CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, RowMutations mutation) {
-    return wrap(rawTable.checkAndMutate(row, family, qualifier, compareOp, value, mutation));
+                                                   CompareOperator op, byte[] value, RowMutations mutation) {
+    return wrap(rawTable.checkAndMutate(row, family, qualifier, op, value, mutation));
   }
 
   @Override

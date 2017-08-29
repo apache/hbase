@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -170,6 +171,11 @@ public final class HTableWrapper implements Table {
     return table.checkAndPut(row, family, qualifier, compareOp, value, put);
   }
 
+  public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+                             CompareOperator op, byte[] value, Put put) throws IOException {
+    return table.checkAndPut(row, family, qualifier, op, value, put);
+  }
+
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Delete delete) throws IOException {
     return table.checkAndDelete(row, family, qualifier, value, delete);
@@ -178,6 +184,11 @@ public final class HTableWrapper implements Table {
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Delete delete) throws IOException {
     return table.checkAndDelete(row, family, qualifier, compareOp, value, delete);
+  }
+
+  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+                                CompareOperator op, byte[] value, Delete delete) throws IOException {
+    return table.checkAndDelete(row, family, qualifier, op, value, delete);
   }
 
   public long incrementColumnValue(byte[] row, byte[] family,
@@ -290,6 +301,13 @@ public final class HTableWrapper implements Table {
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
     return table.checkAndMutate(row, family, qualifier, compareOp, value, rm);
+  }
+
+  @Override
+  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+                                CompareOperator op, byte[] value, RowMutations rm)
+  throws IOException {
+    return table.checkAndMutate(row, family, qualifier, op, value, rm);
   }
 
   @Override

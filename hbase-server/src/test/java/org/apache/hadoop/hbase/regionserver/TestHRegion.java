@@ -18,54 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam3;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -78,6 +30,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -140,6 +93,8 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -180,6 +135,51 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam3;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Basic stand-alone testing of HRegion.  No clusters!
@@ -1713,7 +1713,7 @@ public class TestHRegion {
       put.addColumn(fam1, qf1, emptyVal);
 
       // checkAndPut with empty value
-      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(
+      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
           emptyVal), put, true);
       assertTrue(res);
 
@@ -1722,25 +1722,25 @@ public class TestHRegion {
       put.addColumn(fam1, qf1, val1);
 
       // checkAndPut with correct value
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(emptyVal),
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
           put, true);
       assertTrue(res);
 
       // not empty anymore
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(emptyVal),
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
           put, true);
       assertFalse(res);
 
       Delete delete = new Delete(row1);
       delete.addColumn(fam1, qf1);
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(emptyVal),
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
           delete, true);
       assertFalse(res);
 
       put = new Put(row1);
       put.addColumn(fam1, qf1, val2);
       // checkAndPut with correct value
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val1),
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
           put, true);
       assertTrue(res);
 
@@ -1748,12 +1748,12 @@ public class TestHRegion {
       delete = new Delete(row1);
       delete.addColumn(fam1, qf1);
       delete.addColumn(fam1, qf1);
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val2),
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val2),
           delete, true);
       assertTrue(res);
 
       delete = new Delete(row1);
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(emptyVal),
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
           delete, true);
       assertTrue(res);
 
@@ -1762,7 +1762,7 @@ public class TestHRegion {
       put.addColumn(fam1, qf1, val1);
 
       res = region
-          .checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new NullComparator(), put, true);
+          .checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new NullComparator(), put, true);
       assertTrue(res);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -1787,14 +1787,14 @@ public class TestHRegion {
       region.put(put);
 
       // checkAndPut with wrong value
-      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(
+      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
           val2), put, true);
       assertEquals(false, res);
 
       // checkAndDelete with wrong value
       Delete delete = new Delete(row1);
       delete.addFamily(fam1);
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val2),
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val2),
           put, true);
       assertEquals(false, res);
     } finally {
@@ -1819,14 +1819,14 @@ public class TestHRegion {
       region.put(put);
 
       // checkAndPut with correct value
-      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(
+      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
           val1), put, true);
       assertEquals(true, res);
 
       // checkAndDelete with correct value
       Delete delete = new Delete(row1);
       delete.addColumn(fam1, qf1);
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val1),
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
           delete, true);
       assertEquals(true, res);
     } finally {
@@ -1854,12 +1854,12 @@ public class TestHRegion {
       region.put(put);
 
       // Test CompareOp.LESS: original = val3, compare with val3, fail
-      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS,
+      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS,
           new BinaryComparator(val3), put, true);
       assertEquals(false, res);
 
       // Test CompareOp.LESS: original = val3, compare with val4, fail
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS,
           new BinaryComparator(val4), put, true);
       assertEquals(false, res);
 
@@ -1867,18 +1867,18 @@ public class TestHRegion {
       // succeed (now value = val2)
       put = new Put(row1);
       put.addColumn(fam1, qf1, val2);
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS,
           new BinaryComparator(val2), put, true);
       assertEquals(true, res);
 
       // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val3, fail
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS_OR_EQUAL,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS_OR_EQUAL,
           new BinaryComparator(val3), put, true);
       assertEquals(false, res);
 
       // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val2,
       // succeed (value still = val2)
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS_OR_EQUAL,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS_OR_EQUAL,
           new BinaryComparator(val2), put, true);
       assertEquals(true, res);
 
@@ -1886,17 +1886,17 @@ public class TestHRegion {
       // succeed (now value = val3)
       put = new Put(row1);
       put.addColumn(fam1, qf1, val3);
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS_OR_EQUAL,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS_OR_EQUAL,
           new BinaryComparator(val1), put, true);
       assertEquals(true, res);
 
       // Test CompareOp.GREATER: original = val3, compare with val3, fail
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER,
           new BinaryComparator(val3), put, true);
       assertEquals(false, res);
 
       // Test CompareOp.GREATER: original = val3, compare with val2, fail
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER,
           new BinaryComparator(val2), put, true);
       assertEquals(false, res);
 
@@ -1904,23 +1904,23 @@ public class TestHRegion {
       // succeed (now value = val2)
       put = new Put(row1);
       put.addColumn(fam1, qf1, val2);
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER,
           new BinaryComparator(val4), put, true);
       assertEquals(true, res);
 
       // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val1, fail
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER_OR_EQUAL,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER_OR_EQUAL,
           new BinaryComparator(val1), put, true);
       assertEquals(false, res);
 
       // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val2,
       // succeed (value still = val2)
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER_OR_EQUAL,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER_OR_EQUAL,
           new BinaryComparator(val2), put, true);
       assertEquals(true, res);
 
       // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val3, succeed
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER_OR_EQUAL,
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER_OR_EQUAL,
           new BinaryComparator(val3), put, true);
       assertEquals(true, res);
     } finally {
@@ -1955,7 +1955,7 @@ public class TestHRegion {
       put.add(kv);
 
       // checkAndPut with wrong value
-      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(
+      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
           val1), put, true);
       assertEquals(true, res);
 
@@ -1982,7 +1982,7 @@ public class TestHRegion {
       Put put = new Put(row2);
       put.addColumn(fam1, qual1, value1);
       try {
-        region.checkAndMutate(row, fam1, qual1, CompareOp.EQUAL,
+        region.checkAndMutate(row, fam1, qual1, CompareOperator.EQUAL,
             new BinaryComparator(value2), put, false);
         fail();
       } catch (org.apache.hadoop.hbase.DoNotRetryIOException expected) {
@@ -2031,7 +2031,7 @@ public class TestHRegion {
       delete.addColumn(fam1, qf1);
       delete.addColumn(fam2, qf1);
       delete.addColumn(fam1, qf3);
-      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(
+      boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
           val2), delete, true);
       assertEquals(true, res);
 
@@ -2047,7 +2047,7 @@ public class TestHRegion {
       // Family delete
       delete = new Delete(row1);
       delete.addFamily(fam2);
-      res = region.checkAndMutate(row1, fam2, qf1, CompareOp.EQUAL, new BinaryComparator(emptyVal),
+      res = region.checkAndMutate(row1, fam2, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
           delete, true);
       assertEquals(true, res);
 
@@ -2058,7 +2058,7 @@ public class TestHRegion {
 
       // Row delete
       delete = new Delete(row1);
-      res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val1),
+      res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
           delete, true);
       assertEquals(true, res);
       get = new Get(row1);
@@ -6279,7 +6279,7 @@ public class TestHRegion {
     p = new Put(row);
     p.setDurability(Durability.SKIP_WAL);
     p.addColumn(fam1, qual1, qual2);
-    region.checkAndMutate(row, fam1, qual1, CompareOp.EQUAL, new BinaryComparator(qual1), p, false);
+    region.checkAndMutate(row, fam1, qual1, CompareOperator.EQUAL, new BinaryComparator(qual1), p, false);
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
     assertEquals(c.getTimestamp(), 10L);
@@ -6373,7 +6373,7 @@ public class TestHRegion {
     p.addColumn(fam1, qual1, qual2);
     RowMutations rm = new RowMutations(row);
     rm.add(p);
-    assertTrue(region.checkAndRowMutate(row, fam1, qual1, CompareOp.EQUAL,
+    assertTrue(region.checkAndRowMutate(row, fam1, qual1, CompareOperator.EQUAL,
         new BinaryComparator(qual1), rm, false));
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);

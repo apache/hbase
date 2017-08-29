@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -225,6 +226,13 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+                             CompareOperator compareOp, byte[] value, Put put)
+  throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void delete(Delete delete) throws IOException {
     this.region.delete(delete);
   }
@@ -244,6 +252,13 @@ public class RegionAsTable implements Table {
   @Override
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Delete delete)
+  throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+                                CompareOperator compareOp, byte[] value, Delete delete)
   throws IOException {
     throw new UnsupportedOperationException();
   }
@@ -320,6 +335,14 @@ public class RegionAsTable implements Table {
   @Override
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
       byte[] value, RowMutations mutation)
+  throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+                                CompareOperator compareOp,
+                                byte[] value, RowMutations mutation)
   throws IOException {
     throw new UnsupportedOperationException();
   }

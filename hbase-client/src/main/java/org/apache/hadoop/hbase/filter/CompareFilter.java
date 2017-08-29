@@ -24,6 +24,7 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
@@ -49,8 +50,12 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Public
 public abstract class CompareFilter extends FilterBase {
-
-  /** Comparison operators. */
+  /**
+   * Comparison operators. For filters only!
+   * Use {@link CompareOperator} otherwise.
+   * It (intentionally) has at least the below enums with same names.
+   * TODO: Replace with generic {@link CompareOperator}
+   */
   @InterfaceAudience.Public
   public enum CompareOp {
     /** less than */

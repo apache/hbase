@@ -23,12 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
@@ -45,7 +41,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Service;
@@ -370,14 +365,14 @@ public interface Region extends ConfigurationObserver {
    * @param row to check
    * @param family column family to check
    * @param qualifier column qualifier to check
-   * @param compareOp the comparison operator
+   * @param op the comparison operator
    * @param comparator
    * @param mutation
    * @param writeToWAL
    * @return true if mutation was applied, false otherwise
    * @throws IOException
    */
-  boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOp compareOp,
+  boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
       ByteArrayComparable comparator, Mutation mutation, boolean writeToWAL) throws IOException;
 
   /**
@@ -388,14 +383,14 @@ public interface Region extends ConfigurationObserver {
    * @param row to check
    * @param family column family to check
    * @param qualifier column qualifier to check
-   * @param compareOp the comparison operator
+   * @param op the comparison operator
    * @param comparator
    * @param mutations
    * @param writeToWAL
    * @return true if mutations were applied, false otherwise
    * @throws IOException
    */
-  boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier, CompareOp compareOp,
+  boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
       ByteArrayComparable comparator, RowMutations mutations, boolean writeToWAL)
       throws IOException;
 

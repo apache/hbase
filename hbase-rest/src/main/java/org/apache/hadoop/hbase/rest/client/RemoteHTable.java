@@ -19,23 +19,16 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -70,10 +63,17 @@ import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * HTable interface to remote tables accessed via REST gateway
@@ -721,6 +721,12 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+                             CompareOperator compareOp, byte[] value, Put put) throws IOException {
+    throw new IOException("checkAndPut for non-equal comparison not implemented");
+  }
+
+  @Override
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Delete delete) throws IOException {
     Put put = new Put(row);
@@ -761,6 +767,12 @@ public class RemoteHTable implements Table {
   @Override
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Delete delete) throws IOException {
+    throw new IOException("checkAndDelete for non-equal comparison not implemented");
+  }
+
+  @Override
+  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+                                CompareOperator compareOp, byte[] value, Delete delete) throws IOException {
     throw new IOException("checkAndDelete for non-equal comparison not implemented");
   }
 
@@ -838,6 +850,11 @@ public class RemoteHTable implements Table {
 
   @Override public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
+    throw new UnsupportedOperationException("checkAndMutate not implemented");
+  }
+
+  @Override public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+                                          CompareOperator compareOp, byte[] value, RowMutations rm) throws IOException {
     throw new UnsupportedOperationException("checkAndMutate not implemented");
   }
 

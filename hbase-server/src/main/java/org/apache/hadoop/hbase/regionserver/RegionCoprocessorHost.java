@@ -37,6 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -64,7 +65,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver.MutationType;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -1007,7 +1007,7 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
    * @return true or false to return to client if default processing should
@@ -1015,7 +1015,7 @@ public class RegionCoprocessorHost
    * @throws IOException e
    */
   public Boolean preCheckAndPut(final byte [] row, final byte [] family,
-      final byte [] qualifier, final CompareOp compareOp,
+      final byte [] qualifier, final CompareOperator op,
       final ByteArrayComparable comparator, final Put put)
       throws IOException {
     return execOperationWithResult(true, false,
@@ -1024,7 +1024,7 @@ public class RegionCoprocessorHost
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
         setResult(oserver.preCheckAndPut(ctx, row, family, qualifier,
-          compareOp, comparator, put, getResult()));
+          op, comparator, put, getResult()));
       }
     });
   }
@@ -1033,7 +1033,7 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
    * @return true or false to return to client if default processing should
@@ -1041,15 +1041,15 @@ public class RegionCoprocessorHost
    * @throws IOException e
    */
   public Boolean preCheckAndPutAfterRowLock(final byte[] row, final byte[] family,
-      final byte[] qualifier, final CompareOp compareOp, final ByteArrayComparable comparator,
-      final Put put) throws IOException {
+                                            final byte[] qualifier, final CompareOperator op, final ByteArrayComparable comparator,
+                                            final Put put) throws IOException {
     return execOperationWithResult(true, false,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<Boolean>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
         setResult(oserver.preCheckAndPutAfterRowLock(ctx, row, family, qualifier,
-          compareOp, comparator, put, getResult()));
+          op, comparator, put, getResult()));
       }
     });
   }
@@ -1058,13 +1058,13 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
    * @throws IOException e
    */
   public boolean postCheckAndPut(final byte [] row, final byte [] family,
-      final byte [] qualifier, final CompareOp compareOp,
+      final byte [] qualifier, final CompareOperator op,
       final ByteArrayComparable comparator, final Put put,
       boolean result) throws IOException {
     return execOperationWithResult(result,
@@ -1073,7 +1073,7 @@ public class RegionCoprocessorHost
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
         setResult(oserver.postCheckAndPut(ctx, row, family, qualifier,
-          compareOp, comparator, put, getResult()));
+          op, comparator, put, getResult()));
       }
     });
   }
@@ -1082,7 +1082,7 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @return true or false to return to client if default processing should
@@ -1090,7 +1090,7 @@ public class RegionCoprocessorHost
    * @throws IOException e
    */
   public Boolean preCheckAndDelete(final byte [] row, final byte [] family,
-      final byte [] qualifier, final CompareOp compareOp,
+      final byte [] qualifier, final CompareOperator op,
       final ByteArrayComparable comparator, final Delete delete)
       throws IOException {
     return execOperationWithResult(true, false,
@@ -1099,7 +1099,7 @@ public class RegionCoprocessorHost
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
         setResult(oserver.preCheckAndDelete(ctx, row, family,
-            qualifier, compareOp, comparator, delete, getResult()));
+            qualifier, op, comparator, delete, getResult()));
       }
     });
   }
@@ -1108,7 +1108,7 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @return true or false to return to client if default processing should
@@ -1116,15 +1116,15 @@ public class RegionCoprocessorHost
    * @throws IOException e
    */
   public Boolean preCheckAndDeleteAfterRowLock(final byte[] row, final byte[] family,
-      final byte[] qualifier, final CompareOp compareOp, final ByteArrayComparable comparator,
-      final Delete delete) throws IOException {
+                                               final byte[] qualifier, final CompareOperator op, final ByteArrayComparable comparator,
+                                               final Delete delete) throws IOException {
     return execOperationWithResult(true, false,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<Boolean>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
         setResult(oserver.preCheckAndDeleteAfterRowLock(ctx, row,
-              family, qualifier, compareOp, comparator, delete, getResult()));
+              family, qualifier, op, comparator, delete, getResult()));
       }
     });
   }
@@ -1133,13 +1133,13 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @throws IOException e
    */
   public boolean postCheckAndDelete(final byte [] row, final byte [] family,
-      final byte [] qualifier, final CompareOp compareOp,
+      final byte [] qualifier, final CompareOperator op,
       final ByteArrayComparable comparator, final Delete delete,
       boolean result) throws IOException {
     return execOperationWithResult(result,
@@ -1148,7 +1148,7 @@ public class RegionCoprocessorHost
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
         setResult(oserver.postCheckAndDelete(ctx, row, family,
-            qualifier, compareOp, comparator, delete, getResult()));
+            qualifier, op, comparator, delete, getResult()));
       }
     });
   }

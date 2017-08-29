@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -250,9 +251,34 @@ public interface Table extends Closeable {
    * @param put data to put if check succeeds
    * @throws IOException e
    * @return true if the new put was executed, false otherwise
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   *  {@link #checkAndPut(byte[], byte[], byte[], CompareOperator, byte[], Put)}}
    */
+  @Deprecated
   boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
     CompareFilter.CompareOp compareOp, byte[] value, Put put) throws IOException;
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected
+   * value. If it does, it adds the put.  If the passed value is null, the check
+   * is for the lack of column (ie: non-existence)
+   *
+   * The expected value argument of this call is on the left and the current
+   * value of the cell is on the right side of the comparison operator.
+   *
+   * Ie. eg. GREATER operator means expected value > existing <=> add the put.
+   *
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param op comparison operator to use
+   * @param value the expected value
+   * @param put data to put if check succeeds
+   * @throws IOException e
+   * @return true if the new put was executed, false otherwise
+   */
+  boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+                      CompareOperator op, byte[] value, Put put) throws IOException;
 
   /**
    * Deletes the specified cells/row.
@@ -310,9 +336,34 @@ public interface Table extends Closeable {
    * @param delete data to delete if check succeeds
    * @throws IOException e
    * @return true if the new delete was executed, false otherwise
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   *  {@link #checkAndDelete(byte[], byte[], byte[], byte[], Delete)}
    */
+  @Deprecated
   boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
     CompareFilter.CompareOp compareOp, byte[] value, Delete delete) throws IOException;
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected
+   * value. If it does, it adds the delete.  If the passed value is null, the
+   * check is for the lack of column (ie: non-existence)
+   *
+   * The expected value argument of this call is on the left and the current
+   * value of the cell is on the right side of the comparison operator.
+   *
+   * Ie. eg. GREATER operator means expected value > existing <=> add the delete.
+   *
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param op comparison operator to use
+   * @param value the expected value
+   * @param delete data to delete if check succeeds
+   * @throws IOException e
+   * @return true if the new delete was executed, false otherwise
+   */
+  boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+                         CompareOperator op, byte[] value, Delete delete) throws IOException;
 
   /**
    * Performs multiple mutations atomically on a single row. Currently
@@ -556,9 +607,34 @@ public interface Table extends Closeable {
    * @param mutation  mutations to perform if check succeeds
    * @throws IOException e
    * @return true if the new put was executed, false otherwise
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   * {@link #checkAndMutate(byte[], byte[], byte[], CompareOperator, byte[], RowMutations)}
    */
+  @Deprecated
   boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
       CompareFilter.CompareOp compareOp, byte[] value, RowMutations mutation) throws IOException;
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected value.
+   * If it does, it performs the row mutations.  If the passed value is null, the check
+   * is for the lack of column (ie: non-existence)
+   *
+   * The expected value argument of this call is on the left and the current
+   * value of the cell is on the right side of the comparison operator.
+   *
+   * Ie. eg. GREATER operator means expected value > existing <=> perform row mutations.
+   *
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param op the comparison operator
+   * @param value the expected value
+   * @param mutation  mutations to perform if check succeeds
+   * @throws IOException e
+   * @return true if the new put was executed, false otherwise
+   */
+  boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+                         byte[] value, RowMutations mutation) throws IOException;
 
   /**
    * Set timeout (millisecond) of each operation in this Table instance, will override the value
