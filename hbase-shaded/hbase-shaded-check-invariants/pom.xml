@@ -41,7 +41,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-shaded-server</artifactId>
+      <artifactId>hbase-shaded-mapreduce</artifactId>
       <version>${project.version}</version>
     </dependency>
     <!-- parent pom defines these for children. :( :( :( -->

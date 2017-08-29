@@ -39,7 +39,7 @@
     </properties>
     <modules>
         <module>hbase-shaded-client</module>
-        <module>hbase-shaded-server</module>
+        <module>hbase-shaded-mapreduce</module>
         <module>hbase-shaded-check-invariants</module>
     </modules>
     <dependencies>
