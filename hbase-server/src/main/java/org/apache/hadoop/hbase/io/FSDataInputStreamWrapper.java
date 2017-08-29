@@ -127,13 +127,13 @@ public class FSDataInputStreamWrapper implements Closeable {
 
   private void setStreamOptions(FSDataInputStream in) {
     try {
-      this.stream.setDropBehind(dropBehind);
+      in.setDropBehind(dropBehind);
     } catch (Exception e) {
       // Skipped.
     }
     if (readahead >= 0) {
       try {
-        this.stream.setReadahead(readahead);
+        in.setReadahead(readahead);
       } catch (Exception e) {
         // Skipped.
       }
