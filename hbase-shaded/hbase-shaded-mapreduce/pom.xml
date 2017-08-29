@@ -27,8 +27,8 @@
         <version>2.0.0-alpha3-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
-    <artifactId>hbase-shaded-server</artifactId>
-    <name>Apache HBase - Shaded - Server</name>
+    <artifactId>hbase-shaded-mapreduce</artifactId>
+    <name>Apache HBase - Shaded - MapReduce</name>
     <build>
         <plugins>
             <plugin>
@@ -50,7 +50,7 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-server</artifactId>
+            <artifactId>hbase-mapreduce</artifactId>
             <exclusions>
               <!-- Jaxb-api is a part of Java SE now -->
               <exclusion>
