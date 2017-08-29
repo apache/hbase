@@ -51,9 +51,9 @@ public class Driver {
     pgd.addClass(CopyTable.NAME, CopyTable.class,
         "Export a table from local cluster to peer cluster.");
     pgd.addClass(VerifyReplication.NAME, VerifyReplication.class, "Compare" +
-        " the data from tables in two different clusters. WARNING: It" +
-        " doesn't work for incrementColumnValues'd cells since the" +
-        " timestamp is changed after being appended to the log.");
+        " data from tables in two different clusters. It" +
+        " doesn't work for incrementColumnValues'd cells since" +
+        " timestamp is changed after appending to WAL.");
     pgd.addClass(WALPlayer.NAME, WALPlayer.class, "Replay WAL files.");
     pgd.addClass(ExportSnapshot.NAME, ExportSnapshot.class, "Export" +
         " the specific snapshot to a given FileSystem.");

@@ -117,11 +117,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
-          <archive>
-            <manifest>
-              <mainClass>org/apache/hadoop/hbase/mapreduce/Driver</mainClass>
-            </manifest>
-          </archive>
           <!-- Exclude these 2 packages, because their dependency _binary_ files
             include the sources, and Maven 2.2 appears to add them to the sources to compile,
             weird -->
