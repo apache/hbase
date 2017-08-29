@@ -102,8 +102,8 @@ public class ReversedScannerCallable extends ScannerCallable {
     if (!instantiated || reload) {
       if (locateStartRow == null) {
         // Just locate the region with the row
-        RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(reload, id,
-            getConnection(), tableName, row);
+        RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload, id,
+            getConnection(), getTableName(), getRow());
         this.location = id < rl.size() ? rl.getRegionLocation(id) : null;
         if (this.location == null) {
           throw new IOException("Failed to find location, tableName="
@@ -160,8 +160,8 @@ public class ReversedScannerCallable extends ScannerCallable {
     List<HRegionLocation> regionList = new ArrayList<HRegionLocation>();
     byte[] currentKey = startKey;
     do {
-      RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(reload, id,
-          getConnection(), tableName, currentKey);
+      RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload, id,
+          getConnection(), getTableName(), currentKey);
       HRegionLocation regionLocation = id < rl.size() ? rl.getRegionLocation(id) : null;
       if (regionLocation != null && regionLocation.getRegionInfo().containsRow(currentKey)) {
         regionList.add(regionLocation);
