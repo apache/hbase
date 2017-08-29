@@ -362,8 +362,6 @@ public class TableMapReduceUtil {
     org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addHBaseDependencyJars(job);
     org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJarsForClasses(
       job,
-      // when making changes here, consider also mapreduce.TableMapReduceUtil
-      // pull job classes
       job.getMapOutputKeyClass(),
       job.getMapOutputValueClass(),
       job.getOutputKeyClass(),

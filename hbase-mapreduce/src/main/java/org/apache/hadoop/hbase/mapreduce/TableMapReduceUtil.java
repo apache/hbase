@@ -784,6 +784,7 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.protobuf.generated.ClientProtos.class, // hbase-protocol
       org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.class, // hbase-protocol-shaded
       org.apache.hadoop.hbase.client.Put.class,                      // hbase-client
+      org.apache.hadoop.hbase.ipc.RpcServer.class,                   // hbase-server
       org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
       org.apache.hadoop.hbase.mapreduce.JobUtil.class,               // hbase-hadoop2-compat
       org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-server
@@ -794,6 +795,7 @@ public class TableMapReduceUtil {
       org.apache.zookeeper.ZooKeeper.class,
       org.apache.hadoop.hbase.shaded.io.netty.channel.Channel.class,
       com.google.protobuf.Message.class,
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.class,
       org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists.class,
       org.apache.htrace.Trace.class,
       com.codahale.metrics.MetricRegistry.class);

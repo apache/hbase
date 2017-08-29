@@ -52,6 +52,20 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <!--Include the Driver class as the 'main'.
+                   Executing the jar will then show a list of the basic MR jobs.
+                   -->
+              <mainClass>org/apache/hadoop/hbase/mapreduce/Driver</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
       <!-- Testing plugins -->
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
