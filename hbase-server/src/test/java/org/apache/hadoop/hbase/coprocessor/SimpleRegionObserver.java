@@ -19,24 +19,11 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Append;
@@ -49,11 +36,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.Leases;
@@ -66,9 +51,22 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALKey;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * A sample region observer that tests the RegionObserver interface.
@@ -542,15 +540,15 @@ public class SimpleRegionObserver implements RegionObserver {
 
   @Override
   public boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
-      byte[] family, byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
-      Put put, boolean result) throws IOException {
+                                byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
+                                Put put, boolean result) throws IOException {
     ctPreCheckAndPut.incrementAndGet();
     return true;
   }
 
   @Override
   public boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
-      byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
+      byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
       ByteArrayComparable comparator, Put put, boolean result) throws IOException {
     ctPreCheckAndPutAfterRowLock.incrementAndGet();
     return true;
@@ -558,23 +556,23 @@ public class SimpleRegionObserver implements RegionObserver {
 
   @Override
   public boolean postCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
-      byte[] family, byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
-      Put put, boolean result) throws IOException {
+                                 byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
+                                 Put put, boolean result) throws IOException {
     ctPostCheckAndPut.incrementAndGet();
     return true;
   }
 
   @Override
   public boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
-      byte[] family, byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
-      Delete delete, boolean result) throws IOException {
+                                   byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
+                                   Delete delete, boolean result) throws IOException {
     ctPreCheckAndDelete.incrementAndGet();
     return true;
   }
 
   @Override
   public boolean preCheckAndDeleteAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
-      byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
+      byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
       ByteArrayComparable comparator, Delete delete, boolean result) throws IOException {
     ctPreCheckAndDeleteAfterRowLock.incrementAndGet();
     return true;
@@ -582,8 +580,8 @@ public class SimpleRegionObserver implements RegionObserver {
 
   @Override
   public boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
-      byte[] family, byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
-      Delete delete, boolean result) throws IOException {
+                                    byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
+                                    Delete delete, boolean result) throws IOException {
     ctPostCheckAndDelete.incrementAndGet();
     return true;
   }

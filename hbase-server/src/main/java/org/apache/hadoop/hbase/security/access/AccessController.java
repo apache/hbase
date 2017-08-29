@@ -18,20 +18,10 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +29,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -80,7 +71,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -110,6 +100,13 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
@@ -123,17 +120,19 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -1763,7 +1762,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   @Override
   public boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareFilter.CompareOp compareOp,
+      final CompareOperator op,
       final ByteArrayComparable comparator, final Put put,
       final boolean result) throws IOException {
     User user = getActiveUser(c);
@@ -1797,9 +1796,10 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public boolean preCheckAndPutAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte[] row, final byte[] family, final byte[] qualifier,
-      final CompareFilter.CompareOp compareOp, final ByteArrayComparable comparator, final Put put,
-      final boolean result) throws IOException {
+                                            final byte[] row, final byte[] family, final byte[] qualifier,
+                                            final CompareOperator opp, final ByteArrayComparable comparator, final Put put,
+                                            final boolean result)
+  throws IOException {
     if (put.getAttribute(CHECK_COVERING_PERM) != null) {
       // We had failure with table, cf and q perm checks and now giving a chance for cell
       // perm check
@@ -1826,7 +1826,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   @Override
   public boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareFilter.CompareOp compareOp,
+      final CompareOperator op,
       final ByteArrayComparable comparator, final Delete delete,
       final boolean result) throws IOException {
     // An ACL on a delete is useless, we shouldn't allow it
@@ -1856,7 +1856,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   @Override
   public boolean preCheckAndDeleteAfterRowLock(
       final ObserverContext<RegionCoprocessorEnvironment> c, final byte[] row, final byte[] family,
-      final byte[] qualifier, final CompareFilter.CompareOp compareOp,
+      final byte[] qualifier, final CompareOperator op,
       final ByteArrayComparable comparator, final Delete delete, final boolean result)
       throws IOException {
     if (delete.getAttribute(CHECK_COVERING_PERM) != null) {

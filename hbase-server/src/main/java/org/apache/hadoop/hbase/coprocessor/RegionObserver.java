@@ -19,17 +19,10 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -45,7 +38,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -63,8 +55,15 @@ import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALKey;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
 
 /**
  * Coprocessors implement this interface to observe and mediate client actions
@@ -789,7 +788,7 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
    * @param result
@@ -797,9 +796,9 @@ public interface RegionObserver extends Coprocessor {
    * processing
    */
   default boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final ByteArrayComparable comparator,
-      final Put put, final boolean result)
+                                 final byte [] row, final byte [] family, final byte [] qualifier,
+                                 final CompareOperator op, final ByteArrayComparable comparator,
+                                 final Put put, final boolean result)
     throws IOException {
     return result;
   }
@@ -822,7 +821,7 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
    * @param result
@@ -830,7 +829,7 @@ public interface RegionObserver extends Coprocessor {
    * processing
    */
   default boolean preCheckAndPutAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte[] row, final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
       final ByteArrayComparable comparator, final Put put,
       final boolean result) throws IOException {
     return result;
@@ -848,16 +847,16 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
    * @param result from the checkAndPut
    * @return the possibly transformed return value to return to client
    */
   default boolean postCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final ByteArrayComparable comparator,
-      final Put put, final boolean result)
+                                  final byte [] row, final byte [] family, final byte [] qualifier,
+                                  final CompareOperator op, final ByteArrayComparable comparator,
+                                  final Put put, final boolean result)
     throws IOException {
     return result;
   }
@@ -876,16 +875,16 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @param result
    * @return the value to return to client if bypassing default processing
    */
   default boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final ByteArrayComparable comparator,
-      final Delete delete, final boolean result)
+                                    final byte [] row, final byte [] family, final byte [] qualifier,
+                                    final CompareOperator op, final ByteArrayComparable comparator,
+                                    final Delete delete, final boolean result)
     throws IOException {
     return result;
   }
@@ -908,7 +907,7 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @param result
@@ -916,7 +915,8 @@ public interface RegionObserver extends Coprocessor {
    */
   default boolean preCheckAndDeleteAfterRowLock(
       final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte[] row, final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final byte[] row, final byte[] family, final byte[] qualifier,
+      final CompareOperator op,
       final ByteArrayComparable comparator, final Delete delete,
       final boolean result) throws IOException {
     return result;
@@ -934,16 +934,16 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param compareOp the comparison operation
+   * @param op the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @param result from the CheckAndDelete
    * @return the possibly transformed returned value to return to client
    */
   default boolean postCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final ByteArrayComparable comparator,
-      final Delete delete, final boolean result)
+                                     final byte [] row, final byte [] family, final byte [] qualifier,
+                                     final CompareOperator op, final ByteArrayComparable comparator,
+                                     final Delete delete, final boolean result)
     throws IOException {
     return result;
   }
