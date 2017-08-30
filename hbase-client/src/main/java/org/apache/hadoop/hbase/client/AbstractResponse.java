@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class is used to extend AP to process single action request, like delete, get etc.

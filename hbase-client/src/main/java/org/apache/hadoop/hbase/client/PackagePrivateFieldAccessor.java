@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A helper class used to access the package private field in o.a.h.h.client package.

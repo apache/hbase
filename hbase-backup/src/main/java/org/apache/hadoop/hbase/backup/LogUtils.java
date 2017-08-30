@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 

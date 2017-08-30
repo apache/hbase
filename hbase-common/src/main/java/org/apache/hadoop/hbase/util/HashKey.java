@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to calculate the hash {@link Hash} algorithms for Bloomfilters.

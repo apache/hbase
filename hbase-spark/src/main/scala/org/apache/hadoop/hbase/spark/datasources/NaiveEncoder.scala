@@ -16,7 +16,7 @@ package org.apache.hadoop.hbase.spark.datasources
  * limitations under the License.
  */
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.spark.datasources.JavaBytesEncoder.JavaBytesEncoder
 import org.apache.hadoop.hbase.spark.hbase._
 import org.apache.hadoop.hbase.util.Bytes

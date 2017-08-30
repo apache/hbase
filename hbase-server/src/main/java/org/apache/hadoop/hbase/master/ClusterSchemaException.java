@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @SuppressWarnings("serial")
 @InterfaceAudience.Private

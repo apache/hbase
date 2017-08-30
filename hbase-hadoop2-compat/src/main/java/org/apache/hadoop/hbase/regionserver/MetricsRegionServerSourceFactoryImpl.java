@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.MetricsIOSource;
 import org.apache.hadoop.hbase.io.MetricsIOSourceImpl;
 import org.apache.hadoop.hbase.io.MetricsIOWrapper;

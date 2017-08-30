@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * A CellScanner that knows its size in memory in bytes.

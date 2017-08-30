@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The implementation of {@link AsyncBufferedMutator}. Simply wrap an {@link AsyncTableBase}.

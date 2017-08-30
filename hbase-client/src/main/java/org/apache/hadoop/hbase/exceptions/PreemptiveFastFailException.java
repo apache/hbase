@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.exceptions;
 import java.net.ConnectException;
 
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown when the client believes that we are trying to communicate to has

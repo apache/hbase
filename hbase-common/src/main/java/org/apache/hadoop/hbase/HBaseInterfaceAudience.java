@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+
+// TODO move this to hbase-annotations non-test-jar
 
 /**
  * This class defines constants for different classes of hbase limited private apis

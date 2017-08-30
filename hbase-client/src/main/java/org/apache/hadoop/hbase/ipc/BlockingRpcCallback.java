@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Simple {@link RpcCallback} implementation providing a

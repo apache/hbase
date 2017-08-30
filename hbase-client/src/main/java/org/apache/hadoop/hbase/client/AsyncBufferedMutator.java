@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to communicate with a single HBase table in batches. Obtain an instance from a

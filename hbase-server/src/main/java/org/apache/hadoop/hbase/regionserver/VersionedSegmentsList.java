@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A list of segment managers coupled with the version of the memstore (version at the time it was

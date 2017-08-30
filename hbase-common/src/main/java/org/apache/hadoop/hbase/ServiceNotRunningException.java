@@ -17,7 +17,7 @@ package org.apache.hadoop.hbase;
  * limitations under the License.
  */
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @SuppressWarnings("serial")
 @InterfaceAudience.Private

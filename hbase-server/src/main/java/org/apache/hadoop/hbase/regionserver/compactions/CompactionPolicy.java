@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.Collection;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;

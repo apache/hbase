@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public interface ReplicationPeerConfigListener {

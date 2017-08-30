@@ -21,7 +21,7 @@ import java.util.Collection;
 import java.util.HashSet;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link FlushPolicy} that only flushes store larger than a given threshold. If no store is large
