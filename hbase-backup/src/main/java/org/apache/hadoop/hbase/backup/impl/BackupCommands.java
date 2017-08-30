@@ -32,6 +32,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_DESC;
 
 import java.io.IOException;
 import java.net.URI;
@@ -321,6 +323,12 @@ public final class BackupCommands {
           cmdline.hasOption(OPTION_WORKERS) ? Integer.parseInt(cmdline
               .getOptionValue(OPTION_WORKERS)) : -1;
 
+      if (cmdline.hasOption(OPTION_YARN_QUEUE_NAME)) {
+        String poolName = cmdline.getOptionValue(OPTION_YARN_QUEUE_NAME);
+        // Set system property value for MR job
+        System.setProperty("mapreduce.job.queuename", poolName);
+      }
+
       try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
 
         BackupRequest.Builder builder = new BackupRequest.Builder();
@@ -368,6 +376,8 @@ public final class BackupCommands {
       options.addOption(OPTION_BANDWIDTH, true, OPTION_BANDWIDTH_DESC);
       options.addOption(OPTION_SET, true, OPTION_SET_BACKUP_DESC);
       options.addOption(OPTION_TABLE, true, OPTION_TABLE_LIST_DESC);
+      options.addOption(OPTION_YARN_QUEUE_NAME, true, OPTION_YARN_QUEUE_NAME_DESC);
+
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);

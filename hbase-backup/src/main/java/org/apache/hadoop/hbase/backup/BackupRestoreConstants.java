@@ -89,6 +89,10 @@ public interface BackupRestoreConstants {
   public static final String OPTION_TABLE_MAPPING_DESC =
       "A comma separated list of target tables. "
           + "If specified, each table in <tables> must have a mapping";
+  public static final String OPTION_YARN_QUEUE_NAME = "q";
+  public static final String OPTION_YARN_QUEUE_NAME_DESC = "Yarn queue name to run backup create command on";
+  public static final String OPTION_YARN_QUEUE_NAME_RESTORE_DESC = "Yarn queue name to run backup restore command on";
+
 
   public static final String BACKUP_CONFIG_STRING =  BackupRestoreConstants.BACKUP_ENABLE_KEY + "=true\n"
       + "hbase.master.logcleaner.plugins="

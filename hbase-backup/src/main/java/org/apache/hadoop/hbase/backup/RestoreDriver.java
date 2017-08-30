@@ -29,6 +29,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_MAPPING;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_MAPPING_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_RESTORE_DESC;
 
 import java.io.IOException;
 import java.net.URI;
@@ -125,6 +127,13 @@ public class RestoreDriver extends AbstractHBaseTool {
       printToolUsage();
       return -1;
     }
+
+    if (cmd.hasOption(OPTION_YARN_QUEUE_NAME)) {
+      String queueName = cmd.getOptionValue(OPTION_YARN_QUEUE_NAME);
+      // Set system property value for MR job
+      System.setProperty("mapreduce.job.queuename", queueName);
+    }
+
     // parse main restore command options
     String[] remainArgs = cmd.getArgs();
     if (remainArgs.length != 2) {
@@ -195,8 +204,9 @@ public class RestoreDriver extends AbstractHBaseTool {
     addOptNoArg(OPTION_DEBUG, OPTION_DEBUG_DESC);
     addOptWithArg(OPTION_SET, OPTION_SET_RESTORE_DESC);
     addOptWithArg(OPTION_TABLE, OPTION_TABLE_LIST_DESC);
-
     addOptWithArg(OPTION_TABLE_MAPPING, OPTION_TABLE_MAPPING_DESC);
+    addOptWithArg(OPTION_YARN_QUEUE_NAME, OPTION_YARN_QUEUE_NAME_RESTORE_DESC);
+
   }
 
   @Override

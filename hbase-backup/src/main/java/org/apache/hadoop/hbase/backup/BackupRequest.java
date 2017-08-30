@@ -67,6 +67,11 @@ public final class BackupRequest {
       return this;
     }
 
+    public Builder withYarnPoolName(String name) {
+      request.setYarnPoolName(name);
+      return this;
+    }
+
     public BackupRequest build() {
       return request;
     }
@@ -79,6 +84,7 @@ public final class BackupRequest {
   private int totalTasks = -1;
   private long bandwidth = -1L;
   private String backupSetName;
+  private String yarnPoolName;
 
   private BackupRequest() {
   }
@@ -135,5 +141,13 @@ public final class BackupRequest {
   private BackupRequest setBackupSetName(String backupSetName) {
     this.backupSetName = backupSetName;
     return this;
+  }
+
+  public String getYarnPoolName() {
+    return yarnPoolName;
+  }
+
+  public void setYarnPoolName(String yarnPoolName) {
+    this.yarnPoolName = yarnPoolName;
   }
 }
