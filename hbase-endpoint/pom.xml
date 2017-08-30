@@ -166,6 +166,23 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <!-- The coprocessor.Export needs mapreduce.Import and mapreduce.Export to run the unit tests -->
+    <!-- see org.apache.hadoop.hbase.coprocessor.TestImportExport -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minikdc</artifactId>
+      <scope>test</scope>
+    </dependency>
     <!-- General dependencies -->
     <dependency>
       <groupId>commons-logging</groupId>
