@@ -204,10 +204,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
     "hbase.hregion.scan.loadColumnFamiliesOnDemand";
 
-  /** Config key for using mvcc pre-assign feature for put */
-  public static final String HREGION_MVCC_PRE_ASSIGN = "hbase.hregion.mvcc.preassign";
-  public static final boolean DEFAULT_HREGION_MVCC_PRE_ASSIGN = true;
-
   public static final String HREGION_UNASSIGN_FOR_FNFE = "hbase.hregion.unassign.for.fnfe";
   public static final boolean DEFAULT_HREGION_UNASSIGN_FOR_FNFE = true;
 

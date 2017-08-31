@@ -39,8 +39,6 @@ import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 @InterfaceAudience.Private
 public class NamespaceAuditor {
   private static final Log LOG = LogFactory.getLog(NamespaceAuditor.class);
-  static final String NS_AUDITOR_INIT_TIMEOUT = "hbase.namespace.auditor.init.timeout";
-  static final int DEFAULT_NS_AUDITOR_INIT_TIMEOUT = 120000;
   private NamespaceStateManager stateManager;
   private MasterServices masterServices;
 

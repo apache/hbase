@@ -789,35 +789,7 @@ public class TestAssignmentManager {
   }
 
   private class GoodSplitExecutor extends NoopRsExecutor {
-    
-    /*
-    @Override
-    protected RegionOpeningState execOpenRegion(ServerName server, RegionOpenInfo openReq)
-        throws IOException {
-      sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED);
-      // Concurrency?
-      // Now update the state of our cluster in regionsToRegionServers.
-      SortedSet<byte []> regions = regionsToRegionServers.get(server);
-      if (regions == null) {
-        regions = new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
-        regionsToRegionServers.put(server, regions);
-      }
-      HRegionInfo hri = HRegionInfo.convert(openReq.getRegion());
-      if (regions.contains(hri.getRegionName())) {
-        throw new UnsupportedOperationException(hri.getRegionNameAsString());
-      }
-      regions.add(hri.getRegionName());
-      return RegionOpeningState.OPENED;
-    }
 
-    @Override
-    protected CloseRegionResponse execCloseRegion(ServerName server, byte[] regionName)
-        throws IOException {
-      HRegionInfo hri = am.getRegionInfo(regionName);
-      sendTransitionReport(server, HRegionInfo.convert(hri), TransitionCode.CLOSED);
-      return CloseRegionResponse.newBuilder().setClosed(true).build();
-    }*/
-    
   }
 
   private void collectAssignmentManagerMetrics() {

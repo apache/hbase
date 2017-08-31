@@ -234,7 +234,7 @@ public class MiniZooKeeperCluster {
           standaloneServerFactory = new NIOServerCnxnFactory();
           standaloneServerFactory.configure(
             new InetSocketAddress(currentClientPort),
-            configuration.getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS, 1000));
+            configuration.getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS, HConstants.DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS));
         } catch (BindException e) {
           LOG.debug("Failed binding ZK Server to client port: " +
               currentClientPort, e);

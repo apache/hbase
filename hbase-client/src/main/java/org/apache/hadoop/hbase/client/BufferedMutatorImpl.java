@@ -58,12 +58,6 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class BufferedMutatorImpl implements BufferedMutator {
-  /**
-   * Key to use setting non-default BufferedMutator implementation
-   * classname via Configuration.
-   */
-  public static final String HBASE_BUFFEREDMUTATOR_CLASSNAME_KEY =
-      "hbase.client.bufferedmutator.classname";
 
   private static final Log LOG = LogFactory.getLog(BufferedMutatorImpl.class);
 

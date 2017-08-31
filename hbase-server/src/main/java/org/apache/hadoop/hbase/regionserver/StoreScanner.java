@@ -159,13 +159,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final long readPt;
   private boolean topChanged = false;
 
-  // used by the injection framework to test race between StoreScanner construction and compaction
-  enum StoreScannerCompactionRace {
-    BEFORE_SEEK,
-    AFTER_SEEK,
-    COMPACT_COMPLETE
-  }
-
   /** An internal constructor. */
   private StoreScanner(Optional<Store> store, Scan scan, ScanInfo scanInfo,
       int numColumns, long readPt, boolean cacheBlocks, ScanType scanType) {

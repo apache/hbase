@@ -47,12 +47,6 @@ public class DisableTableProcedure
 
   private Boolean traceEnabled = null;
 
-  enum MarkRegionOfflineOpResult {
-    MARK_ALL_REGIONS_OFFLINE_SUCCESSFUL,
-    BULK_ASSIGN_REGIONS_FAILED,
-    MARK_ALL_REGIONS_OFFLINE_INTERRUPTED,
-  }
-
   public DisableTableProcedure() {
     super();
   }
