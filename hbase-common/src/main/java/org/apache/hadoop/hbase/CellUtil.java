@@ -1551,25 +1551,6 @@ public final class CellUtil {
     };
   }
 
-  private static final Iterator<Tag> EMPTY_TAGS_ITR = new Iterator<Tag>() {
-    @Override
-    public boolean hasNext() {
-      return false;
-    }
-
-    @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IT_NO_SUCH_ELEMENT",
-      justification="Intentional")
-    public Tag next() {
-      return null;
-    }
-
-    @Override
-    public void remove() {
-      throw new UnsupportedOperationException();
-    }
-  };
-
   /**
    * Util method to iterate through the tags in the given cell.
    *

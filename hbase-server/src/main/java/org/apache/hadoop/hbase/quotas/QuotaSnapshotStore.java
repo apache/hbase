@@ -34,15 +34,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 public interface QuotaSnapshotStore<T> {
 
   /**
-   * The current state of a table with respect to the policy set forth by a quota.
-   */
-  @InterfaceAudience.Private
-  public enum ViolationState {
-    IN_VIOLATION,
-    IN_OBSERVANCE,
-  }
-
-  /**
    * Singleton to represent a table without a quota defined. It is never in violation.
    */
   public static final SpaceQuotaSnapshot NO_QUOTA = new SpaceQuotaSnapshot(

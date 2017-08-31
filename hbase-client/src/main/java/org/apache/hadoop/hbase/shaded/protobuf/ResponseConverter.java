@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCata
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.util.StringUtils;
@@ -241,36 +240,6 @@ public final class ResponseConverter {
   public static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
     if (proto == null || proto.getRegionInfoCount() == 0) return null;
     return ProtobufUtil.getRegionInfos(proto);
-  }
-
-  /**
-   * Get the region opening state from a OpenRegionResponse
-   *
-   * @param proto the OpenRegionResponse
-   * @return the region opening state
-   */
-  public static RegionOpeningState getRegionOpeningState
-      (final OpenRegionResponse proto) {
-    if (proto == null || proto.getOpeningStateCount() != 1) return null;
-    return RegionOpeningState.valueOf(
-      proto.getOpeningState(0).name());
-  }
-
-  /**
-   * Get a list of region opening state from a OpenRegionResponse
-   *
-   * @param proto the OpenRegionResponse
-   * @return the list of region opening state
-   */
-  public static List<RegionOpeningState> getRegionOpeningStateList(
-      final OpenRegionResponse proto) {
-    if (proto == null) return null;
-    List<RegionOpeningState> regionOpeningStates = new ArrayList<>(proto.getOpeningStateCount());
-    for (int i = 0; i < proto.getOpeningStateCount(); i++) {
-      regionOpeningStates.add(RegionOpeningState.valueOf(
-          proto.getOpeningState(i).name()));
-    }
-    return regionOpeningStates;
   }
 
   /**

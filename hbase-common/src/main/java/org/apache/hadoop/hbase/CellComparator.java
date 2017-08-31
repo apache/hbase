@@ -573,16 +573,6 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   }
 
   /**
-   * Comparator that compares row component only of a Cell
-   */
-  public static class RowComparator extends CellComparator {
-    @Override
-    public int compare(Cell a, Cell b) {
-      return compareRows(a, b);
-    }
-  }
-
-  /**
    * A {@link CellComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
    */

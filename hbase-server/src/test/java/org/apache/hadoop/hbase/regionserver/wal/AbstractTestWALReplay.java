@@ -153,7 +153,8 @@ public abstract class AbstractTestWALReplay {
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
     }
-    this.mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ?
+    this.mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
+            HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG) ?
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     this.wals = new WALFactory(conf, null, currentTest.getMethodName());
   }

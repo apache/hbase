@@ -743,42 +743,6 @@ public final class ByteBufferUtils {
     return l1 - l2;
   }
 
-  /*
-   * Both values are passed as is read by Unsafe. When platform is Little Endian, have to convert
-   * to corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
-   */
-  private static boolean lessThanUnsignedLong(long x1, long x2) {
-    if (UnsafeAccess.littleEndian) {
-      x1 = Long.reverseBytes(x1);
-      x2 = Long.reverseBytes(x2);
-    }
-    return (x1 + Long.MIN_VALUE) < (x2 + Long.MIN_VALUE);
-  }
-
-  /*
-   * Both values are passed as is read by Unsafe. When platform is Little Endian, have to convert
-   * to corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
-   */
-  private static boolean lessThanUnsignedInt(int x1, int x2) {
-    if (UnsafeAccess.littleEndian) {
-      x1 = Integer.reverseBytes(x1);
-      x2 = Integer.reverseBytes(x2);
-    }
-    return (x1 & 0xffffffffL) < (x2 & 0xffffffffL);
-  }
-
-  /*
-   * Both values are passed as is read by Unsafe. When platform is Little Endian, have to convert
-   * to corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
-   */
-  private static boolean lessThanUnsignedShort(short x1, short x2) {
-    if (UnsafeAccess.littleEndian) {
-      x1 = Short.reverseBytes(x1);
-      x2 = Short.reverseBytes(x2);
-    }
-    return (x1 & 0xffff) < (x2 & 0xffff);
-  }
-
   /**
    * Reads a short value at the given buffer's offset.
    * @param buffer

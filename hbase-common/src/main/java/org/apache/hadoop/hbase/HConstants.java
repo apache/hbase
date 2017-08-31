@@ -153,9 +153,6 @@ public final class HConstants {
   /** Cluster is standalone or pseudo-distributed */
   public static final boolean CLUSTER_IS_LOCAL = false;
 
-  /** Cluster is fully-distributed */
-  public static final boolean CLUSTER_IS_DISTRIBUTED = true;
-
   /** Default value for cluster distributed mode */
   public static final boolean DEFAULT_CLUSTER_DISTRIBUTED = CLUSTER_IS_LOCAL;
 
@@ -204,15 +201,6 @@ public final class HConstants {
 
   /** Default client port that the zookeeper listens on */
   public static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
-
-  /**
-   * Parameter name for the wait time for the recoverable zookeeper
-   */
-  public static final String ZOOKEEPER_RECOVERABLE_WAITTIME =
-      "hbase.zookeeper.recoverable.waittime";
-
-  /** Default wait time for the recoverable zookeeper */
-  public static final long DEFAULT_ZOOKEPER_RECOVERABLE_WAITIME = 10000;
 
   /** Parameter name for the root dir in ZK for this cluster */
   public static final String ZOOKEEPER_ZNODE_PARENT = "zookeeper.znode.parent";
@@ -265,9 +253,6 @@ public final class HConstants {
 
   /** Parameter name for what master implementation to use. */
   public static final String MASTER_IMPL= "hbase.master.impl";
-
-  /** Parameter name for what hbase client implementation to use. */
-  public static final String HBASECLIENT_IMPL= "hbase.hbaseclient.impl";
 
   /** Parameter name for how often threads should wake up */
   public static final String THREAD_WAKE_FREQUENCY = "hbase.server.thread.wakefrequency";
@@ -333,13 +318,6 @@ public final class HConstants {
 
   /** Any artifacts left from migration can be moved here */
   public static final String MIGRATION_NAME = ".migration";
-
-  /**
-   * The directory from which co-processor/custom filter jars can be loaded
-   * dynamically by the region servers. This value can be overridden by the
-   * hbase.dynamic.jars.dir config.
-   */
-  public static final String LIB_DIR = "lib";
 
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
@@ -621,11 +599,6 @@ public final class HConstants {
   public static final int FOREVER = Integer.MAX_VALUE;
 
   /**
-   * Seconds in a week
-   */
-  public static final int WEEK_IN_SECONDS = 7 * 24 * 3600;
-
-  /**
    * Seconds in a day, hour and minute
    */
   public static final int DAY_IN_SECONDS = 24 * 60 * 60;
@@ -653,17 +626,6 @@ public final class HConstants {
   public static final int [] RETRY_BACKOFF = {1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200};
 
   public static final String REGION_IMPL = "hbase.hregion.impl";
-
-  /** modifyTable op for replacing the table descriptor */
-  @InterfaceAudience.Private
-  public static enum Modify {
-    CLOSE_REGION,
-    TABLE_COMPACT,
-    TABLE_FLUSH,
-    TABLE_MAJOR_COMPACT,
-    TABLE_SET_HTD,
-    TABLE_SPLIT
-  }
 
   /**
    * Scope tag for locally scoped data.
@@ -953,9 +915,6 @@ public final class HConstants {
   /** Maximum time to retry for a failed bulk load request */
   public static final String BULKLOAD_MAX_RETRIES_NUMBER = "hbase.bulkload.retries.number";
 
-  /** HBCK special code name used as server name when manipulating ZK nodes */
-  public static final String HBCK_CODE_NAME = "HBCKServerName";
-
   public static final String KEY_FOR_HOSTNAME_SEEN_BY_MASTER =
     "hbase.regionserver.hostname.seen.by.master";
 
@@ -1054,13 +1013,6 @@ public final class HConstants {
   public static final String REGION_SERVER_REPLICATION_HANDLER_COUNT =
       "hbase.regionserver.replication.handler.count";
   public static final int DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT = 3;
-
-  public static final String MASTER_HANDLER_COUNT = "hbase.master.handler.count";
-  public static final int DEFAULT_MASTER_HANLDER_COUNT = 25;
-
-  /** Conf key that specifies timeout value to wait for a region ready */
-  public static final String LOG_REPLAY_WAIT_REGION_TIMEOUT =
-      "hbase.master.log.replay.wait.region.timeout";
 
   /** Conf key for enabling meta replication */
   public static final String USE_META_REPLICAS = "hbase.meta.replicas.use";

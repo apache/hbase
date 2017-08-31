@@ -71,23 +71,6 @@ public interface DeleteTracker extends ShipperListener {
   void reset();
 
   /**
-   * Return codes for comparison of two Deletes.
-   * <p>
-   * The codes tell the merging function what to do.
-   * <p>
-   * INCLUDE means add the specified Delete to the merged list. NEXT means move to the next element
-   * in the specified list(s).
-   */
-  enum DeleteCompare {
-    INCLUDE_OLD_NEXT_OLD,
-    INCLUDE_OLD_NEXT_BOTH,
-    INCLUDE_NEW_NEXT_NEW,
-    INCLUDE_NEW_NEXT_BOTH,
-    NEXT_OLD,
-    NEXT_NEW
-  }
-
-  /**
    * Returns codes for delete result. The codes tell the ScanQueryMatcher whether the kv is deleted
    * and why. Based on the delete result, the ScanQueryMatcher will decide the next operation
    */

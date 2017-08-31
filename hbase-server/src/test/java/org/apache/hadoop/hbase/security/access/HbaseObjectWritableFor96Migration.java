@@ -86,7 +86,6 @@ import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.WritableWithSize;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -172,7 +171,8 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
 
     // Hbase types
     addToMap(HColumnDescriptor.class, code++);
-    addToMap(HConstants.Modify.class, code++);
+    // HConstants.Modify no longer exists; increase code so other classes stay the same.
+    code++;
 
     // We used to have a class named HMsg but its been removed.  Rather than
     // just axe it, use following random Integer class -- we just chose any
@@ -262,7 +262,8 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
     code++;
     //addToMap(HServerLoad.class, code++);
 
-    addToMap(RegionOpeningState.class, code++);
+    // RegionOpeningState no longer exists; increase code so other classes stay the same.
+    code++;
 
     addToMap(HTableDescriptor[].class, code++);
 

@@ -228,9 +228,6 @@ public class HRegionServer extends HasThread implements
   // Time to pause if master says 'please hold'. Make configurable if needed.
   private static final int INIT_PAUSE_TIME_MS = 1000;
 
-  public static final String REGION_LOCK_AWAIT_TIME_SEC =
-      "hbase.regionserver.region.lock.await.time.sec";
-  public static final int DEFAULT_REGION_LOCK_AWAIT_TIME_SEC = 300;  // 5 min
   private static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
   /**
