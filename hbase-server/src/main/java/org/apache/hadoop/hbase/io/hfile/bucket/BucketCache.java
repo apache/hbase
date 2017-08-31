@@ -353,6 +353,7 @@ public class BucketCache implements BlockCache, HeapSize {
     return this.cacheEnabled;
   }
 
+  @Override
   public long getMaxSize() {
     return this.cacheCapacity;
   }

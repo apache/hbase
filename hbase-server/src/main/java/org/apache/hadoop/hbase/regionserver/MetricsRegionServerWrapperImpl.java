@@ -282,6 +282,11 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getMemstoreLimit() {
+	  return this.regionServer.getRegionServerAccounting().getGlobalMemstoreLimit();
+  }
+
+  @Override
   public long getBlockCacheSize() {
     if (this.blockCache == null) {
       return 0;

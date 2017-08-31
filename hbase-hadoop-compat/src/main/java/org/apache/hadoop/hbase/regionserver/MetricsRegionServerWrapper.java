@@ -207,6 +207,7 @@ public interface MetricsRegionServerWrapper {
    */
   int getFlushQueueSize();
 
+  public long getMemstoreLimit();
   /**
    * Get the size (in bytes) of the block cache that is free.
    */

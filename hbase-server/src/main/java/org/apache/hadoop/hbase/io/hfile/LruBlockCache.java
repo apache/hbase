@@ -840,6 +840,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    *
    * @return max size in bytes
    */
+
+  @Override
   public long getMaxSize() {
     return this.maxSize;
   }
