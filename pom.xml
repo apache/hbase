@@ -2088,27 +2088,17 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-  <!-- Dependencies needed by subprojects -->
   <dependencies>
-    <dependency>
-      <groupId>com.github.stephenc.findbugs</groupId>
-      <artifactId>findbugs-annotations</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-    </dependency>
-    <!-- Test dependencies -->
+    <!--REMOVE THIS. HERE TEMPORARILY.
+         Implication is that every module needs junit which is not so.
+         Cannot undo though because build runs test on each module and
+         it fails if no junit. TODO. -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-    </dependency>
   </dependencies>
+
   <!--
   To publish, use the following settings.xml file ( placed in ~/.m2/settings.xml )
 

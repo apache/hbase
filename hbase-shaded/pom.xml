@@ -49,11 +49,6 @@
          <version>${project.version}</version>
          <optional>true</optional>
       </dependency>
-      <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <scope>test</scope>
-      </dependency>
       <!-- log4j has to be non-optional for Hadoop 2 atleast -->
       <dependency>
         <groupId>log4j</groupId>

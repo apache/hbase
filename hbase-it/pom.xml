@@ -286,6 +286,16 @@
       <version>${netty.hadoop.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <!--For Hadoop-->
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <profiles>

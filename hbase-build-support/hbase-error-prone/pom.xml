@@ -35,7 +35,21 @@
   <dependencies>
     <dependency>
       <groupId>com.google.errorprone</groupId>
-      <artifactId>error_prone_core</artifactId>
+      <artifactId>error_prone_annotation</artifactId>
+      <version>${error-prone.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <!--mvn dependency:analyze says this is not used but compile fails
+            without it; going w/ the compiler's view of the world-->
+      <groupId>com.google.auto.service</groupId>
+      <artifactId>auto-service</artifactId>
+      <version>1.0-rc3</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_check_api</artifactId>
       <version>${error-prone.version}</version>
       <scope>provided</scope>
       <exclusions>
@@ -47,15 +61,9 @@
     </dependency>
     <dependency>
       <groupId>com.google.errorprone</groupId>
-      <artifactId>error_prone_annotation</artifactId>
-      <version>${error-prone.version}</version>
+      <artifactId>javac</artifactId>
+      <version>9-dev-r4023-3</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.google.auto.service</groupId>
-      <artifactId>auto-service</artifactId>
-      <version>1.0-rc3</version>
-      <optional>true</optional>
     </dependency>
   </dependencies>
 </project>
