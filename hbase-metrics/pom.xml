@@ -92,6 +92,8 @@
       <artifactId>hbase-common</artifactId>
     </dependency>
     <dependency>
+      <!--mvn dependency:analyze says this is not used but we actually
+           implement Interfaces from api module here so it is 'wrong'-->
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-metrics-api</artifactId>
     </dependency>
@@ -102,10 +104,6 @@
       <scope>test</scope>
     </dependency>
     <!-- General dependencies -->
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-    </dependency>
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-core</artifactId>
