@@ -1145,8 +1145,8 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     long offset() { // Java has no unsigned numbers
-      long o = ((long) offsetBase) & 0xFFFFFFFF;
-      o += (((long) (offset1)) & 0xFF) << 32;
+      long o = ((long) offsetBase) & 0xFFFFFFFFL; //This needs the L cast otherwise it will be sign extended as a negative number.
+      o += (((long) (offset1)) & 0xFF) << 32; //The 0xFF here does not need the L cast because it is treated as a positive int.
       return o << 8;
     }
 
