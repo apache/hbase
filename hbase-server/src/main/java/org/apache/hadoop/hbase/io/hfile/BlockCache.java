@@ -91,6 +91,12 @@ public interface BlockCache extends Iterable<CachedBlock> {
   long size();
 
   /**
+   * Returns the Max size of the block cache, in bytes.
+   * @return size of cache, in bytes
+   */
+  long getMaxSize();
+
+  /**
    * Returns the free size of the block cache, in bytes.
    * @return free space in cache, in bytes
    */

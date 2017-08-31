@@ -738,6 +738,11 @@ public class TestHeapMemoryManager {
     }
 
     @Override
+    public long getMaxSize() {
+      return 0;
+    }
+
+    @Override
     public long getFreeSize() {
       return 0;
     }

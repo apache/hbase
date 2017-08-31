@@ -206,6 +206,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getMemstoreLimit() {
+	  return 419;
+  }
+
+  @Override
   public long getBlockCacheFreeSize() {
     return 413;
   }

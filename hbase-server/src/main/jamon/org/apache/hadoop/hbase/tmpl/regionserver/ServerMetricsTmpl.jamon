@@ -112,6 +112,7 @@ MetricsRegionServerWrapper mWrap;
         <th>Direct Memory Used</th>
         <th>Direct Memory Configured</th>
         <th>Memstore Size</th>
+        <th>Memstore Limit</th>
     </tr>
 </tr>
 <tr>
@@ -127,7 +128,12 @@ MetricsRegionServerWrapper mWrap;
     <td>
         <% TraditionalBinaryPrefix.long2String(DirectMemoryUtils.getDirectMemorySize(), "B", 1) %>
     </td>
-    <td><% TraditionalBinaryPrefix.long2String(mWrap.getMemstoreSize(), "B", 1) %></td>
+    <td>
+        <% TraditionalBinaryPrefix.long2String(mWrap.getMemstoreSize(), "B", 1) %>
+    </td>
+    <td>
+        <% TraditionalBinaryPrefix.long2String(mWrap.getMemstoreLimit(), "B", 1) %>
+    </td>
 </tr>
 </table>
 </%def>
