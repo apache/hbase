@@ -994,18 +994,6 @@ public class HBaseAdmin implements Admin {
     return getAlterStatus(TableName.valueOf(tableName));
   }
 
-  /**
-   * {@inheritDoc}
-   * @deprecated Since 2.0. Will be removed in 3.0. Use
-   *     {@link #addColumnFamily(TableName, ColumnFamilyDescriptor)} instead.
-   */
-  @Override
-  @Deprecated
-  public void addColumn(final TableName tableName, final HColumnDescriptor columnFamily)
-  throws IOException {
-    addColumnFamily(tableName, columnFamily);
-  }
-
   @Override
   public void addColumnFamily(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
       throws IOException {
@@ -1090,18 +1078,6 @@ public class HBaseAdmin implements Admin {
     public String getOperationType() {
       return "DELETE_COLUMN_FAMILY";
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   * @deprecated As of 2.0. Will be removed in 3.0. Use
-   *     {@link #modifyColumnFamily(TableName, ColumnFamilyDescriptor)} instead.
-   */
-  @Override
-  @Deprecated
-  public void modifyColumn(final TableName tableName, final HColumnDescriptor columnFamily)
-  throws IOException {
-    modifyColumnFamily(tableName, columnFamily);
   }
 
   @Override
@@ -1872,29 +1848,19 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void modifyTable(final TableName tableName, final HTableDescriptor htd)
+  public void modifyTable(final TableName tableName, final TableDescriptor td)
       throws IOException {
-    get(modifyTableAsync(tableName, htd), syncWaitTimeout, TimeUnit.MILLISECONDS);
+    get(modifyTableAsync(tableName, td), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
-  public Future<Void> modifyTableAsync(final TableName tableName, final HTableDescriptor htd)
+  public Future<Void> modifyTableAsync(final TableName tableName, final TableDescriptor td)
       throws IOException {
-    if (!tableName.equals(htd.getTableName())) {
+    if (!tableName.equals(td.getTableName())) {
       throw new IllegalArgumentException("the specified table name '" + tableName +
-        "' doesn't match with the HTD one: " + htd.getTableName());
+        "' doesn't match with the HTD one: " + td.getTableName());
     }
-    ModifyTableResponse response = executeCallable(
-      new MasterCallable<ModifyTableResponse>(getConnection(), getRpcControllerFactory()) {
-        @Override
-        protected ModifyTableResponse rpcCall() throws Exception {
-          setPriority(tableName);
-          ModifyTableRequest request = RequestConverter.buildModifyTableRequest(
-            tableName, htd, ng.getNonceGroup(), ng.newNonce());
-          return master.modifyTable(getRpcController(), request);
-        }
-      });
-    return new ModifyTableFuture(this, tableName, response);
+    return modifyTableAsync(td);
   }
 
   private static class ModifyTableFuture extends TableFuture<Void> {
