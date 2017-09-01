@@ -438,7 +438,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
   }
 
   /**
-   * Dump the {@link org.apache.hadoop.hbase.HTableDescriptor}
+   * Dump the {@link org.apache.hadoop.hbase.client.TableDescriptor}
    */
   private void printSchema() {
     System.out.println("Table Descriptor");
