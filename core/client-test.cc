@@ -547,3 +547,151 @@ TEST_F(ClientTest, MultiGetsWithRegionSplits) {
   table->Close();
   client.Close();
 }
+
+void PerformMultiPuts(uint64_t num_rows, std::shared_ptr<hbase::Client> client,
+                      const std::string &table_name) {
+  auto tn = folly::to<hbase::pb::TableName>(table_name);
+  auto table = client->Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+  std::vector<hbase::Put> puts;
+  // Perform Puts
+  for (uint64_t i = 0; i < num_rows; i++) {
+    puts.push_back(Put{"test" + std::to_string(i)}.AddColumn("d", std::to_string(i),
+                                                             "value" + std::to_string(i)));
+  }
+  table->Put(puts);
+}
+
+void PerformMultiPuts(std::vector<hbase::Put> &puts, std::shared_ptr<Table> table) {
+  table->Put(puts);
+}
+
+TEST_F(ClientTest, MultiGetsWithMultiPuts) {
+  std::string table_name = "t";
+  // Using TestUtil to populate test data
+  ClientTest::test_util->CreateTable(table_name, "d");
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>(table_name);
+
+  SetClientParams();
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+
+  uint64_t num_rows = 50000;
+  PerformMultiPuts(num_rows, std::make_shared<hbase::Client>(client), table_name);
+
+  // Get connection to HBase Table
+  auto table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  std::vector<hbase::Get> gets;
+  MakeGets(num_rows, "test", gets);
+
+  auto results = table->Get(gets);
+
+  TestMultiResults(num_rows, results, gets);
+
+  table->Close();
+  client.Close();
+}
+
+TEST_F(ClientTest, MultiGetsWithMultiPutsAndSplitRegions) {
+  // Using TestUtil to populate test data
+  std::vector<std::string> keys{"test0",   "test100", "test200", "test300", "test400",
+                                "test500", "test600", "test700", "test800", "test900"};
+  std::string table_name = "t";
+  ClientTest::test_util->CreateTable(table_name, "d", keys);
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>(table_name);
+
+  SetClientParams();
+
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+
+  uint64_t num_rows = 50000;
+  PerformMultiPuts(num_rows, std::make_shared<hbase::Client>(client), table_name);
+
+  // Get connection to HBase Table
+  auto table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  std::vector<hbase::Get> gets;
+  MakeGets(num_rows, "test", gets);
+
+  auto results = table->Get(gets);
+
+  TestMultiResults(num_rows, results, gets);
+
+  table->Close();
+  client.Close();
+}
+
+TEST_F(ClientTest, MultiPuts) {
+  std::string table_name = "t";
+  // Using TestUtil to populate test data
+  ClientTest::test_util->CreateTable(table_name, "d");
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>(table_name);
+
+  SetClientParams();
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+  std::shared_ptr<Table> table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  uint64_t num_rows = 80000;
+  uint64_t batch_num_rows = 10000;
+  std::vector<hbase::Put> puts;
+  for (uint64_t i = 0; i < num_rows;) {
+    puts.clear();
+    // accumulate batch_num_rows at a time
+    for (uint64_t j = 0; j < batch_num_rows && i < num_rows; ++j) {
+      hbase::Put put("test" + std::to_string(i));
+      put.AddColumn("d", std::to_string(i), "value" + std::to_string(i));
+      puts.push_back(put);
+      i++;
+    }
+    PerformMultiPuts(puts, table);
+  }
+  table->Close();
+  client.Close();
+}
+
+TEST_F(ClientTest, MultiPutsWithRegionSplits) {
+  // Using TestUtil to populate test data
+  std::vector<std::string> keys{"test0",   "test100", "test200", "test300", "test400",
+                                "test500", "test600", "test700", "test800", "test900"};
+  std::string table_name = "t";
+  ClientTest::test_util->CreateTable(table_name, "d", keys);
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>(table_name);
+
+  SetClientParams();
+
+  // Create a client
+  hbase::Client client(*ClientTest::test_util->conf());
+  std::shared_ptr<Table> table = client.Table(tn);
+  ASSERT_TRUE(table) << "Unable to get connection to Table.";
+
+  uint64_t num_rows = 80000;
+  uint64_t batch_num_rows = 10000;
+  std::vector<hbase::Put> puts;
+  for (uint64_t i = 0; i < num_rows;) {
+    puts.clear();
+    // accumulate batch_num_rows at a time
+    for (uint64_t j = 0; j < batch_num_rows && i < num_rows; ++j) {
+      hbase::Put put("test" + std::to_string(i));
+      put.AddColumn("d", std::to_string(i), "value" + std::to_string(i));
+      puts.push_back(put);
+      i++;
+    }
+    PerformMultiPuts(puts, table);
+  }
+  table->Close();
+  client.Close();
+}

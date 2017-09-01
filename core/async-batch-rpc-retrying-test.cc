@@ -230,7 +230,12 @@ class MockAsyncConnection : public AsyncConnection,
     return retry_executor_;
   }
 
-  void Close() override {}
+  void Close() override {
+    retry_timer_->destroy();
+    retry_executor_->stop();
+    io_executor_->stop();
+    cpu_executor_->stop();
+  }
   std::shared_ptr<HBaseRpcController> CreateRpcController() override {
     return std::make_shared<HBaseRpcController>();
   }
@@ -254,15 +259,15 @@ class MockRawAsyncTableImpl {
   virtual ~MockRawAsyncTableImpl() = default;
 
   /* implement this in real RawAsyncTableImpl. */
-  folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Gets(
-      const std::vector<hbase::Get> &gets) {
+  template <typename REQ, typename RESP>
+  folly::Future<std::vector<folly::Try<RESP>>> Batch(const std::vector<REQ> &rows) {
     /* init request caller builder */
-    auto builder = conn_->caller_factory()->Batch();
+    auto builder = conn_->caller_factory()->Batch<REQ, RESP>();
 
     /* call with retry to get result */
     auto async_caller =
         builder->table(tn_)
-            ->actions(std::make_shared<std::vector<hbase::Get>>(gets))
+            ->actions(std::make_shared<std::vector<REQ>>(rows))
             ->rpc_timeout(conn_->connection_conf()->read_rpc_timeout())
             ->operation_timeout(conn_->connection_conf()->operation_timeout())
             ->pause(conn_->connection_conf()->pause())
@@ -278,9 +283,7 @@ class MockRawAsyncTableImpl {
   std::shared_ptr<hbase::pb::TableName> tn_;
 };
 
-void runMultiTest(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
-                  const std::string &table_name, bool split_regions, uint32_t tries = 3,
-                  uint32_t operation_timeout_millis = 600000, uint32_t num_rows = 1000) {
+std::string createTestTable(bool split_regions, const std::string &table_name) {
   std::vector<std::string> keys{"test0",   "test100", "test200", "test300", "test400",
                                 "test500", "test600", "test700", "test800", "test900"};
   std::string tableName = (split_regions) ? ("split-" + table_name) : table_name;
@@ -289,30 +292,12 @@ void runMultiTest(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
   } else {
     AsyncBatchRpcRetryTest::test_util->CreateTable(tableName, "d");
   }
+  return tableName;
+}
 
-  // Create TableName and Row to be fetched from HBase
-  auto tn = folly::to<hbase::pb::TableName>(tableName);
-
-  // Create a client
-  Client client(*AsyncBatchRpcRetryTest::test_util->conf());
-
-  // Get connection to HBase Table
-  auto table = client.Table(tn);
-
-  for (uint64_t i = 0; i < num_rows; i++) {
-    table->Put(Put{"test" + std::to_string(i)}.AddColumn("d", std::to_string(i),
-                                                         "value" + std::to_string(i)));
-  }
-
-  std::map<std::string, std::shared_ptr<RegionLocation>> region_locations;
-  std::vector<hbase::Get> gets;
-  for (uint64_t i = 0; i < num_rows; ++i) {
-    auto row = "test" + std::to_string(i);
-    hbase::Get get(row);
-    gets.push_back(get);
-    region_locations[row] = table->GetRegionLocation(row);
-  }
-
+std::shared_ptr<MockAsyncConnection> getAsyncConnection(
+    Client &client, uint32_t operation_timeout_millis, uint32_t tries,
+    std::shared_ptr<AsyncRegionLocatorBase> region_locator) {
   /* init region location and rpc channel */
   auto cpu_executor_ = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io_executor_ = client.async_connection()->io_executor();
@@ -332,35 +317,90 @@ void runMultiTest(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
       tries,                                              // max retries
       1);                                                 // start log errors count
 
+  return std::make_shared<MockAsyncConnection>(connection_conf, retry_timer, cpu_executor_,
+                                               io_executor_, retry_executor_, rpc_client,
+                                               region_locator);
+}
+
+template <typename ACTION>
+std::vector<std::shared_ptr<hbase::Row>> getRows(std::vector<ACTION> actions) {
+  std::vector<std::shared_ptr<hbase::Row>> rows;
+  for (auto action : actions) {
+    std::shared_ptr<hbase::Row> srow = std::make_shared<ACTION>(action);
+    rows.push_back(srow);
+  }
+  return rows;
+}
+
+template <typename REQ, typename RESP>
+std::vector<std::shared_ptr<hbase::Result>> getResults(std::vector<REQ> &actions,
+                                                       std::vector<folly::Try<RESP>> &tresults) {
+  std::vector<std::shared_ptr<hbase::Result>> results{};
+  uint64_t num = 0;
+  for (auto tresult : tresults) {
+    if (tresult.hasValue()) {
+      results.push_back(tresult.value());
+    } else if (tresult.hasException()) {
+      folly::exception_wrapper ew = tresult.exception();
+      LOG(ERROR) << "Caught exception:- " << ew.what().toStdString() << " for "
+                 << actions[num].row();
+      throw ew;
+    }
+    ++num;
+  }
+  return results;
+}
+
+template <typename ACTION>
+std::map<std::string, std::shared_ptr<RegionLocation>> getRegionLocationsAndActions(
+    uint64_t num_rows, std::vector<ACTION> &actions, std::shared_ptr<Table> table) {
+  std::map<std::string, std::shared_ptr<RegionLocation>> region_locations;
+  for (uint64_t i = 0; i < num_rows; ++i) {
+    auto row = "test" + std::to_string(i);
+    ACTION action(row);
+    actions.push_back(action);
+    region_locations[row] = table->GetRegionLocation(row);
+  }
+  return region_locations;
+}
+
+void runMultiGets(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
+                  const std::string &table_name, bool split_regions, uint32_t tries = 3,
+                  uint32_t operation_timeout_millis = 600000, uint64_t num_rows = 1000) {
+  auto tableName = createTestTable(split_regions, table_name);
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>(tableName);
+
+  // Create a client
+  Client client(*AsyncBatchRpcRetryTest::test_util->conf());
+
+  // Get connection to HBase Table
+  std::shared_ptr<Table> table = client.Table(tn);
+
+  for (uint64_t i = 0; i < num_rows; i++) {
+    table->Put(Put{"test" + std::to_string(i)}.AddColumn("d", std::to_string(i),
+                                                         "value" + std::to_string(i)));
+  }
+  std::vector<hbase::Get> gets;
+  auto region_locations = getRegionLocationsAndActions<hbase::Get>(num_rows, gets, table);
+
   /* set region locator */
   region_locator->set_region_location(region_locations);
 
   /* init hbase client connection */
-  auto conn = std::make_shared<MockAsyncConnection>(connection_conf, retry_timer, cpu_executor_,
-                                                    io_executor_, retry_executor_, rpc_client,
-                                                    region_locator);
+  auto conn = getAsyncConnection(client, operation_timeout_millis, tries, region_locator);
   conn->Init();
 
   /* init retry caller factory */
   auto tableImpl =
       std::make_shared<MockRawAsyncTableImpl>(conn, std::make_shared<hbase::pb::TableName>(tn));
 
-  auto tresults = tableImpl->Gets(gets).get(milliseconds(operation_timeout_millis));
-
+  std::vector<std::shared_ptr<hbase::Row>> rows = getRows<hbase::Get>(gets);
+  auto tresults = tableImpl->Batch<std::shared_ptr<hbase::Row>, std::shared_ptr<Result>>(rows).get(
+      milliseconds(operation_timeout_millis));
   ASSERT_TRUE(!tresults.empty()) << "tresults shouldn't be empty.";
-  std::vector<std::shared_ptr<hbase::Result>> results{};
-  uint32_t num = 0;
-  for (auto tresult : tresults) {
-    if (tresult.hasValue()) {
-      results.push_back(tresult.value());
-    } else if (tresult.hasException()) {
-      folly::exception_wrapper ew = tresult.exception();
-      LOG(ERROR) << "Caught exception:- " << ew.what().toStdString() << " for " << gets[num].row();
-      throw ew;
-    }
-    ++num;
-  }
 
+  auto results = getResults<hbase::Get, std::shared_ptr<Result>>(gets, tresults);
   // Test the values, should be same as in put executed on hbase shell
   ASSERT_TRUE(!results.empty()) << "Results shouldn't be empty.";
   uint32_t i = 0;
@@ -371,101 +411,184 @@ void runMultiTest(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
     EXPECT_EQ("value" + std::to_string(i), results[i]->Value("d", std::to_string(i)).value());
   }
 
-  retry_timer->destroy();
   table->Close();
   client.Close();
-  retry_executor_->stop();
-  io_executor_->stop();
-  cpu_executor_->stop();
+  conn->Close();
+}
+
+void runMultiPuts(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
+                  const std::string &table_name, bool split_regions, uint32_t tries = 3,
+                  uint32_t operation_timeout_millis = 600000, uint32_t num_rows = 1000) {
+  auto tableName = createTestTable(split_regions, table_name);
+
+  // Create TableName and Row to be fetched from HBase
+  auto tn = folly::to<hbase::pb::TableName>(tableName);
+
+  // Create a client
+  Client client(*AsyncBatchRpcRetryTest::test_util->conf());
+
+  // Get connection to HBase Table
+  std::shared_ptr<Table> table = client.Table(tn);
+
+  std::vector<hbase::Put> puts;
+  auto region_locations = getRegionLocationsAndActions<hbase::Put>(num_rows, puts, table);
+
+  /* set region locator */
+  region_locator->set_region_location(region_locations);
+
+  /* init hbase client connection */
+  auto conn = getAsyncConnection(client, operation_timeout_millis, tries, region_locator);
+  conn->Init();
+
+  /* init retry caller factory */
+  auto tableImpl =
+      std::make_shared<MockRawAsyncTableImpl>(conn, std::make_shared<hbase::pb::TableName>(tn));
+
+  std::vector<std::shared_ptr<hbase::Row>> rows = getRows<hbase::Put>(puts);
+  auto tresults = tableImpl->Batch<std::shared_ptr<hbase::Row>, std::shared_ptr<Result>>(rows).get(
+      milliseconds(operation_timeout_millis));
+  ASSERT_TRUE(!tresults.empty()) << "tresults shouldn't be empty.";
+
+  auto results = getResults<hbase::Put, std::shared_ptr<Result>>(puts, tresults);
+  // Test the values, should be same as in put executed on hbase shell
+  ASSERT_TRUE(!results.empty()) << "Results shouldn't be empty.";
+
+  table->Close();
+  client.Close();
+  conn->Close();
 }
 
 // Test successful case
 TEST_F(AsyncBatchRpcRetryTest, MultiGets) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockAsyncRegionLocator>());
-  runMultiTest(region_locator, "table1", false);
+  runMultiGets(region_locator, "table1", false);
 }
 
 // Tests the RPC failing 3 times, then succeeding
 TEST_F(AsyncBatchRpcRetryTest, HandleException) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockWrongRegionAsyncRegionLocator>(3));
-  runMultiTest(region_locator, "table2", false, 5);
+  runMultiGets(region_locator, "table2", false, 5);
 }
 
 // Tests the RPC failing 4 times, throwing an exception
 TEST_F(AsyncBatchRpcRetryTest, FailWithException) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockWrongRegionAsyncRegionLocator>(4));
-  EXPECT_ANY_THROW(runMultiTest(region_locator, "table3", false));
+  EXPECT_ANY_THROW(runMultiGets(region_locator, "table3", false));
 }
 
 // Tests the region location lookup failing 3 times, then succeeding
 TEST_F(AsyncBatchRpcRetryTest, HandleExceptionFromRegionLocationLookup) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockFailingAsyncRegionLocator>(3));
-  runMultiTest(region_locator, "table4", false);
+  runMultiGets(region_locator, "table4", false);
 }
 
 // Tests the region location lookup failing 5 times, throwing an exception
 TEST_F(AsyncBatchRpcRetryTest, FailWithExceptionFromRegionLocationLookup) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockFailingAsyncRegionLocator>(4));
-  EXPECT_ANY_THROW(runMultiTest(region_locator, "table5", false, 3));
+  EXPECT_ANY_THROW(runMultiGets(region_locator, "table5", false, 3));
 }
 
 // Tests hitting operation timeout, thus not retrying anymore
 TEST_F(AsyncBatchRpcRetryTest, FailWithOperationTimeout) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockFailingAsyncRegionLocator>(6));
-  EXPECT_ANY_THROW(runMultiTest(region_locator, "table6", false, 5, 100, 1000));
+  EXPECT_ANY_THROW(runMultiGets(region_locator, "table6", false, 5, 100, 1000));
 }
 
-/*
-  TODO: Below tests are failing with frequently with segfaults coming from
-  JNI internals indicating that we are doing something wrong in the JNI boundary.
-  However, we were not able to debug furhter yet. Disable the tests for now, and
-  come back later to fix the issue.
-
+//////////////////////
 // Test successful case
-TEST_F(AsyncBatchRpcRetryTest, MultiGetsSplitRegions) {
+TEST_F(AsyncBatchRpcRetryTest, MultiPuts) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockAsyncRegionLocator>());
-  runMultiTest(region_locator, "table7", true);
+  runMultiPuts(region_locator, "table1", false);
 }
 
 // Tests the RPC failing 3 times, then succeeding
-TEST_F(AsyncBatchRpcRetryTest, HandleExceptionSplitRegions) {
+TEST_F(AsyncBatchRpcRetryTest, PutsHandleException) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockWrongRegionAsyncRegionLocator>(3));
-  runMultiTest(region_locator, "table8", true, 5);
+  runMultiPuts(region_locator, "table2", false, 5);
 }
 
 // Tests the RPC failing 4 times, throwing an exception
-TEST_F(AsyncBatchRpcRetryTest, FailWithExceptionSplitRegions) {
+TEST_F(AsyncBatchRpcRetryTest, PutsFailWithException) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockWrongRegionAsyncRegionLocator>(4));
-  EXPECT_ANY_THROW(runMultiTest(region_locator, "table9", true));
+  EXPECT_ANY_THROW(runMultiPuts(region_locator, "table3", false));
 }
 
 // Tests the region location lookup failing 3 times, then succeeding
-TEST_F(AsyncBatchRpcRetryTest, HandleExceptionFromRegionLocationLookupSplitRegions) {
+TEST_F(AsyncBatchRpcRetryTest, PutsHandleExceptionFromRegionLocationLookup) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockFailingAsyncRegionLocator>(3));
-  runMultiTest(region_locator, "table10", true);
+  runMultiPuts(region_locator, "table4", false);
 }
 
 // Tests the region location lookup failing 5 times, throwing an exception
-TEST_F(AsyncBatchRpcRetryTest, FailWithExceptionFromRegionLocationLookupSplitRegions) {
+TEST_F(AsyncBatchRpcRetryTest, PutsFailWithExceptionFromRegionLocationLookup) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockFailingAsyncRegionLocator>(4));
-  EXPECT_ANY_THROW(runMultiTest(region_locator, "table11", true, 3));
+  EXPECT_ANY_THROW(runMultiPuts(region_locator, "table5", false, 3));
 }
 
 // Tests hitting operation timeout, thus not retrying anymore
-TEST_F(AsyncBatchRpcRetryTest, FailWithOperationTimeoutSplitRegions) {
+TEST_F(AsyncBatchRpcRetryTest, PutsFailWithOperationTimeout) {
   std::shared_ptr<AsyncRegionLocatorBase> region_locator(
       std::make_shared<MockFailingAsyncRegionLocator>(6));
-  EXPECT_ANY_THROW(runMultiTest(region_locator, "table12", true, 5, 100, 1000));
+  EXPECT_ANY_THROW(runMultiPuts(region_locator, "table6", false, 5, 100, 1000));
 }
-*/
+
+//////////////////////
+/*
+ TODO: Below tests are failing with frequently with segfaults coming from
+ JNI internals indicating that we are doing something wrong in the JNI boundary.
+ However, we were not able to debug furhter yet. Disable the tests for now, and
+ come back later to fix the issue.
+
+ // Test successful case
+ TEST_F(AsyncBatchRpcRetryTest, MultiGetsSplitRegions) {
+ std::shared_ptr<AsyncRegionLocatorBase> region_locator(
+ std::make_shared<MockAsyncRegionLocator>());
+ runMultiGets(region_locator, "table7", true);
+ }
+
+ // Tests the RPC failing 3 times, then succeeding
+ TEST_F(AsyncBatchRpcRetryTest, HandleExceptionSplitRegions) {
+ std::shared_ptr<AsyncRegionLocatorBase> region_locator(
+ std::make_shared<MockWrongRegionAsyncRegionLocator>(3));
+ runMultiGets(region_locator, "table8", true, 5);
+ }
+
+ // Tests the RPC failing 4 times, throwing an exception
+ TEST_F(AsyncBatchRpcRetryTest, FailWithExceptionSplitRegions) {
+ std::shared_ptr<AsyncRegionLocatorBase> region_locator(
+ std::make_shared<MockWrongRegionAsyncRegionLocator>(4));
+ EXPECT_ANY_THROW(runMultiGets(region_locator, "table9", true));
+ }
+
+ // Tests the region location lookup failing 3 times, then succeeding
+ TEST_F(AsyncBatchRpcRetryTest, HandleExceptionFromRegionLocationLookupSplitRegions) {
+ std::shared_ptr<AsyncRegionLocatorBase> region_locator(
+ std::make_shared<MockFailingAsyncRegionLocator>(3));
+ runMultiGets(region_locator, "table10", true);
+ }
+
+ // Tests the region location lookup failing 5 times, throwing an exception
+ TEST_F(AsyncBatchRpcRetryTest, FailWithExceptionFromRegionLocationLookupSplitRegions) {
+ std::shared_ptr<AsyncRegionLocatorBase> region_locator(
+ std::make_shared<MockFailingAsyncRegionLocator>(4));
+ EXPECT_ANY_THROW(runMultiGets(region_locator, "table11", true, 3));
+ }
+
+ // Tests hitting operation timeout, thus not retrying anymore
+ TEST_F(AsyncBatchRpcRetryTest, FailWithOperationTimeoutSplitRegions) {
+ std::shared_ptr<AsyncRegionLocatorBase> region_locator(
+ std::make_shared<MockFailingAsyncRegionLocator>(6));
+ EXPECT_ANY_THROW(runMultiGets(region_locator, "table12", true, 5, 100, 1000));
+ }
+ */

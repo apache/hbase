@@ -84,6 +84,7 @@ struct ServerNameHash {
   }
 };
 
+template <typename REQ, typename RESP>
 class AsyncBatchRpcRetryingCaller {
  public:
   using ActionsByServer =
@@ -94,15 +95,14 @@ class AsyncBatchRpcRetryingCaller {
   AsyncBatchRpcRetryingCaller(std::shared_ptr<AsyncConnection> conn,
                               std::shared_ptr<folly::HHWheelTimer> retry_timer,
                               std::shared_ptr<pb::TableName> table_name,
-                              const std::vector<hbase::Get> &actions,
-                              std::chrono::nanoseconds pause_ns, int32_t max_attempts,
-                              std::chrono::nanoseconds operation_timeout_ns,
+                              const std::vector<REQ> &actions, std::chrono::nanoseconds pause_ns,
+                              int32_t max_attempts, std::chrono::nanoseconds operation_timeout_ns,
                               std::chrono::nanoseconds rpc_timeout_ns,
                               int32_t start_log_errors_count);
 
   ~AsyncBatchRpcRetryingCaller();
 
-  folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Call();
+  folly::Future<std::vector<folly::Try<RESP>>> Call();
 
  private:
   int64_t RemainingTimeNs();
@@ -172,8 +172,8 @@ class AsyncBatchRpcRetryingCaller {
 
   int64_t start_ns_ = TimeUtil::GetNowNanos();
   int32_t tries_ = 1;
-  std::map<uint64_t, folly::Promise<std::shared_ptr<Result>>> action2promises_;
-  std::vector<folly::Future<std::shared_ptr<Result>>> action2futures_;
+  std::map<uint64_t, folly::Promise<RESP>> action2promises_;
+  std::vector<folly::Future<RESP>> action2futures_;
   std::map<uint64_t, std::shared_ptr<std::vector<ThrowableWithExtraContext>>> action2errors_;
 
   std::shared_ptr<AsyncRegionLocator> location_cache_ = nullptr;

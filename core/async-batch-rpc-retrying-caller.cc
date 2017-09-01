@@ -32,11 +32,12 @@ using std::chrono::milliseconds;
 
 namespace hbase {
 
-AsyncBatchRpcRetryingCaller::AsyncBatchRpcRetryingCaller(
+template <typename REQ, typename RESP>
+AsyncBatchRpcRetryingCaller<REQ, RESP>::AsyncBatchRpcRetryingCaller(
     std::shared_ptr<AsyncConnection> conn, std::shared_ptr<folly::HHWheelTimer> retry_timer,
-    std::shared_ptr<TableName> table_name, const std::vector<hbase::Get> &actions,
-    nanoseconds pause_ns, int32_t max_attempts, nanoseconds operation_timeout_ns,
-    nanoseconds rpc_timeout_ns, int32_t start_log_errors_count)
+    std::shared_ptr<TableName> table_name, const std::vector<REQ> &actions, nanoseconds pause_ns,
+    int32_t max_attempts, nanoseconds operation_timeout_ns, nanoseconds rpc_timeout_ns,
+    int32_t start_log_errors_count)
     : conn_(conn),
       retry_timer_(retry_timer),
       table_name_(table_name),
@@ -56,29 +57,31 @@ AsyncBatchRpcRetryingCaller::AsyncBatchRpcRetryingCaller(
   max_attempts_ = ConnectionUtils::Retries2Attempts(max_attempts);
   uint32_t index = 0;
   for (auto row : actions) {
-    actions_.push_back(std::make_shared<Action>(std::make_shared<hbase::Get>(row), index));
-    Promise<std::shared_ptr<Result>> prom{};
-    action2promises_.insert(
-        std::pair<uint64_t, Promise<std::shared_ptr<Result>>>(index, std::move(prom)));
+    actions_.push_back(std::make_shared<Action>(row, index));
+    Promise<RESP> prom{};
+    action2promises_.insert(std::pair<uint64_t, Promise<RESP>>(index, std::move(prom)));
     action2futures_.push_back(action2promises_[index++].getFuture());
   }
 }
 
-AsyncBatchRpcRetryingCaller::~AsyncBatchRpcRetryingCaller() {}
+template <typename REQ, typename RESP>
+AsyncBatchRpcRetryingCaller<REQ, RESP>::~AsyncBatchRpcRetryingCaller() {}
 
-Future<std::vector<Try<std::shared_ptr<Result>>>> AsyncBatchRpcRetryingCaller::Call() {
+template <typename REQ, typename RESP>
+Future<std::vector<Try<RESP>>> AsyncBatchRpcRetryingCaller<REQ, RESP>::Call() {
   GroupAndSend(actions_, 1);
   return collectAll(action2futures_);
 }
 
-int64_t AsyncBatchRpcRetryingCaller::RemainingTimeNs() {
+template <typename REQ, typename RESP>
+int64_t AsyncBatchRpcRetryingCaller<REQ, RESP>::RemainingTimeNs() {
   return operation_timeout_ns_.count() - (TimeUtil::GetNowNanos() - start_ns_);
 }
 
-void AsyncBatchRpcRetryingCaller::LogException(int32_t tries,
-                                               std::shared_ptr<RegionRequest> region_request,
-                                               const folly::exception_wrapper &ew,
-                                               std::shared_ptr<ServerName> server_name) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::LogException(
+    int32_t tries, std::shared_ptr<RegionRequest> region_request,
+    const folly::exception_wrapper &ew, std::shared_ptr<ServerName> server_name) {
   if (tries > start_log_errors_count_) {
     std::string regions;
     regions += region_request->region_location()->region_name() + ", ";
@@ -88,7 +91,8 @@ void AsyncBatchRpcRetryingCaller::LogException(int32_t tries,
   }
 }
 
-void AsyncBatchRpcRetryingCaller::LogException(
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::LogException(
     int32_t tries, const std::vector<std::shared_ptr<RegionRequest>> &region_requests,
     const folly::exception_wrapper &ew, std::shared_ptr<ServerName> server_name) {
   if (tries > start_log_errors_count_) {
@@ -102,29 +106,35 @@ void AsyncBatchRpcRetryingCaller::LogException(
   }
 }
 
-const std::string AsyncBatchRpcRetryingCaller::GetExtraContextForError(
+template <typename REQ, typename RESP>
+const std::string AsyncBatchRpcRetryingCaller<REQ, RESP>::GetExtraContextForError(
     std::shared_ptr<ServerName> server_name) {
   return server_name ? server_name->ShortDebugString() : "";
 }
 
-void AsyncBatchRpcRetryingCaller::AddError(const std::shared_ptr<Action> &action,
-                                           const folly::exception_wrapper &ew,
-                                           std::shared_ptr<ServerName> server_name) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::AddError(const std::shared_ptr<Action> &action,
+                                                      const folly::exception_wrapper &ew,
+                                                      std::shared_ptr<ServerName> server_name) {
   ThrowableWithExtraContext twec(ew, TimeUtil::GetNowNanos(), GetExtraContextForError(server_name));
   AddAction2Error(action->original_index(), twec);
 }
 
-void AsyncBatchRpcRetryingCaller::AddError(const std::vector<std::shared_ptr<Action>> &actions,
-                                           const folly::exception_wrapper &ew,
-                                           std::shared_ptr<ServerName> server_name) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::AddError(
+    const std::vector<std::shared_ptr<Action>> &actions, const folly::exception_wrapper &ew,
+    std::shared_ptr<ServerName> server_name) {
   for (const auto action : actions) {
     AddError(action, ew, server_name);
   }
 }
 
-void AsyncBatchRpcRetryingCaller::FailOne(const std::shared_ptr<Action> &action, int32_t tries,
-                                          const folly::exception_wrapper &ew, int64_t current_time,
-                                          const std::string extras) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::FailOne(const std::shared_ptr<Action> &action,
+                                                     int32_t tries,
+                                                     const folly::exception_wrapper &ew,
+                                                     int64_t current_time,
+                                                     const std::string extras) {
   auto action_index = action->original_index();
   auto itr = action2promises_.find(action_index);
   if (itr != action2promises_.end()) {
@@ -138,16 +148,18 @@ void AsyncBatchRpcRetryingCaller::FailOne(const std::shared_ptr<Action> &action,
       RetriesExhaustedException(tries - 1, action2errors_[action_index]));
 }
 
-void AsyncBatchRpcRetryingCaller::FailAll(const std::vector<std::shared_ptr<Action>> &actions,
-                                          int32_t tries, const folly::exception_wrapper &ew,
-                                          std::shared_ptr<ServerName> server_name) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::FailAll(
+    const std::vector<std::shared_ptr<Action>> &actions, int32_t tries,
+    const folly::exception_wrapper &ew, std::shared_ptr<ServerName> server_name) {
   for (const auto action : actions) {
     FailOne(action, tries, ew, TimeUtil::GetNowNanos(), GetExtraContextForError(server_name));
   }
 }
 
-void AsyncBatchRpcRetryingCaller::FailAll(const std::vector<std::shared_ptr<Action>> &actions,
-                                          int32_t tries) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::FailAll(
+    const std::vector<std::shared_ptr<Action>> &actions, int32_t tries) {
   for (const auto action : actions) {
     auto action_index = action->original_index();
     auto itr = action2promises_.find(action_index);
@@ -159,8 +171,9 @@ void AsyncBatchRpcRetryingCaller::FailAll(const std::vector<std::shared_ptr<Acti
   }
 }
 
-void AsyncBatchRpcRetryingCaller::AddAction2Error(uint64_t action_index,
-                                                  const ThrowableWithExtraContext &twec) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::AddAction2Error(
+    uint64_t action_index, const ThrowableWithExtraContext &twec) {
   auto erritr = action2errors_.find(action_index);
   if (erritr != action2errors_.end()) {
     erritr->second->push_back(twec);
@@ -171,9 +184,11 @@ void AsyncBatchRpcRetryingCaller::AddAction2Error(uint64_t action_index,
   return;
 }
 
-void AsyncBatchRpcRetryingCaller::OnError(const ActionsByRegion &actions_by_region, int32_t tries,
-                                          const folly::exception_wrapper &ew,
-                                          std::shared_ptr<ServerName> server_name) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::OnError(const ActionsByRegion &actions_by_region,
+                                                     int32_t tries,
+                                                     const folly::exception_wrapper &ew,
+                                                     std::shared_ptr<ServerName> server_name) {
   std::vector<std::shared_ptr<Action>> copied_actions;
   std::vector<std::shared_ptr<RegionRequest>> region_requests;
   for (const auto &action_by_region : actions_by_region) {
@@ -192,8 +207,9 @@ void AsyncBatchRpcRetryingCaller::OnError(const ActionsByRegion &actions_by_regi
   TryResubmit(copied_actions, tries);
 }
 
-void AsyncBatchRpcRetryingCaller::TryResubmit(const std::vector<std::shared_ptr<Action>> &actions,
-                                              int32_t tries) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::TryResubmit(
+    const std::vector<std::shared_ptr<Action>> &actions, int32_t tries) {
   int64_t delay_ns;
   if (operation_timeout_ns_.count() > 0) {
     int64_t max_delay_ns = RemainingTimeNs() - ConnectionUtils::kSleepDeltaNs;
@@ -213,9 +229,10 @@ void AsyncBatchRpcRetryingCaller::TryResubmit(const std::vector<std::shared_ptr<
   });
 }
 
+template <typename REQ, typename RESP>
 Future<std::vector<Try<std::shared_ptr<RegionLocation>>>>
-AsyncBatchRpcRetryingCaller::GetRegionLocations(const std::vector<std::shared_ptr<Action>> &actions,
-                                                int64_t locate_timeout_ns) {
+AsyncBatchRpcRetryingCaller<REQ, RESP>::GetRegionLocations(
+    const std::vector<std::shared_ptr<Action>> &actions, int64_t locate_timeout_ns) {
   auto locs = std::vector<Future<std::shared_ptr<RegionLocation>>>{};
   for (auto const &action : actions) {
     locs.push_back(location_cache_->LocateRegion(*table_name_, action->action()->row(),
@@ -225,8 +242,9 @@ AsyncBatchRpcRetryingCaller::GetRegionLocations(const std::vector<std::shared_pt
   return collectAll(locs);
 }
 
-void AsyncBatchRpcRetryingCaller::GroupAndSend(const std::vector<std::shared_ptr<Action>> &actions,
-                                               int32_t tries) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::GroupAndSend(
+    const std::vector<std::shared_ptr<Action>> &actions, int32_t tries) {
   int64_t locate_timeout_ns;
   if (operation_timeout_ns_.count() > 0) {
     locate_timeout_ns = RemainingTimeNs();
@@ -300,8 +318,9 @@ void AsyncBatchRpcRetryingCaller::GroupAndSend(const std::vector<std::shared_ptr
   return;
 }
 
-Future<std::vector<Try<std::unique_ptr<Response>>>> AsyncBatchRpcRetryingCaller::GetMultiResponse(
-    const ActionsByServer &actions_by_server) {
+template <typename REQ, typename RESP>
+Future<std::vector<Try<std::unique_ptr<Response>>>>
+AsyncBatchRpcRetryingCaller<REQ, RESP>::GetMultiResponse(const ActionsByServer &actions_by_server) {
   auto multi_calls = std::vector<Future<std::unique_ptr<hbase::Response>>>{};
   auto user = User::defaultUser();
   for (const auto &action_by_server : actions_by_server) {
@@ -315,7 +334,9 @@ Future<std::vector<Try<std::unique_ptr<Response>>>> AsyncBatchRpcRetryingCaller:
   return collectAll(multi_calls);
 }
 
-void AsyncBatchRpcRetryingCaller::Send(const ActionsByServer &actions_by_server, int32_t tries) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::Send(const ActionsByServer &actions_by_server,
+                                                  int32_t tries) {
   int64_t remaining_ns;
   if (operation_timeout_ns_.count() > 0) {
     remaining_ns = RemainingTimeNs();
@@ -371,7 +392,8 @@ void AsyncBatchRpcRetryingCaller::Send(const ActionsByServer &actions_by_server,
   return;
 }
 
-void AsyncBatchRpcRetryingCaller::OnComplete(
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::OnComplete(
     const ActionsByRegion &actions_by_region, int32_t tries,
     const std::shared_ptr<ServerName> server_name,
     const std::unique_ptr<hbase::MultiResponse> multi_response) {
@@ -418,12 +440,12 @@ void AsyncBatchRpcRetryingCaller::OnComplete(
   return;
 }
 
-void AsyncBatchRpcRetryingCaller::OnComplete(const std::shared_ptr<Action> &action,
-                                             const std::shared_ptr<RegionRequest> &region_request,
-                                             int32_t tries,
-                                             const std::shared_ptr<ServerName> &server_name,
-                                             const std::shared_ptr<RegionResult> &region_result,
-                                             std::vector<std::shared_ptr<Action>> &failed_actions) {
+template <typename REQ, typename RESP>
+void AsyncBatchRpcRetryingCaller<REQ, RESP>::OnComplete(
+    const std::shared_ptr<Action> &action, const std::shared_ptr<RegionRequest> &region_request,
+    int32_t tries, const std::shared_ptr<ServerName> &server_name,
+    const std::shared_ptr<RegionResult> &region_result,
+    std::vector<std::shared_ptr<Action>> &failed_actions) {
   std::string err_msg;
   try {
     auto result_or_exc = region_result->ResultOrException(action->original_index());
@@ -461,4 +483,6 @@ void AsyncBatchRpcRetryingCaller::OnComplete(const std::shared_ptr<Action> &acti
   return;
 }
 
+template class AsyncBatchRpcRetryingCaller<std::shared_ptr<hbase::Row>,
+                                           std::shared_ptr<hbase::Result>>;
 } /* namespace hbase */

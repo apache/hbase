@@ -173,14 +173,23 @@ std::unique_ptr<Request> RequestConverter::ToMultiRequest(
       auto pb_action = pb_region_action->add_action();
       auto pget = region_action->action();
       // We store only hbase::Get in hbase::Action as of now. It will be changed later on.
-      CHECK(pget) << "Unexpected. action can't be null";
-      auto pb_get = RequestConverter::ToGet(*pget);
-      pb_action->set_allocated_get(pb_get.release());
+      CHECK(pget) << "Unexpected. action can't be null.";
+      std::string error_msg("");
+      if (typeid(*pget) == typeid(hbase::Get)) {
+        auto getp = dynamic_cast<hbase::Get *>(pget.get());
+        pb_action->set_allocated_get(RequestConverter::ToGet(*getp).release());
+      } else if (typeid(*pget) == typeid(hbase::Put)) {
+        auto putp = dynamic_cast<hbase::Put *>(pget.get());
+        pb_action->set_allocated_mutation(
+            RequestConverter::ToMutation(MutationType::MutationProto_MutationType_PUT, *putp, -1)
+                .release());
+      } else {
+        throw std::runtime_error("Unexpected action type encountered.");
+      }
       pb_action->set_index(action_num);
       action_num++;
     }
   }
-
   return pb_req;
 }
 
@@ -355,4 +364,5 @@ std::unique_ptr<Request> RequestConverter::AppendToMutateRequest(const Append &a
   VLOG(3) << "Req is " << pb_req->req_msg()->ShortDebugString();
   return pb_req;
 }
+
 } /* namespace hbase */
