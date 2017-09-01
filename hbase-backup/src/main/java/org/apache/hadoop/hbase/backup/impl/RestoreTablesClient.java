@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.backup.util.RestoreTool;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
-import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles.LoadQueueItem;
+import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles.LoadQueueItem;
 
 /**
  * Restore table implementation
@@ -231,7 +231,7 @@ public class RestoreTablesClient {
         LoadIncrementalHFiles loader = BackupUtils.createLoader(conf);
         for (int i = 0; i < sTableList.size(); i++) {
           if (mapForSrc[i] != null && !mapForSrc[i].isEmpty()) {
-            loaderResult = loader.run(null, mapForSrc[i], tTableArray[i]);
+            loaderResult = loader.run(mapForSrc[i], tTableArray[i]);
             LOG.debug("bulk loading " + sTableList.get(i) + " to " + tTableArray[i]);
             if (loaderResult.isEmpty()) {
               String msg = "Couldn't bulk load for " + sTableList.get(i) + " to " + tTableArray[i];

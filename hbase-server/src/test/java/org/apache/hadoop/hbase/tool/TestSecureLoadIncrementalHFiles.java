@@ -1,4 +1,6 @@
 /**
+ * Copyright The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,55 +17,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mapreduce;
+package org.apache.hadoop.hbase.tool;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
+import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
-
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
 /**
- * Reruns TestSecureLoadIncrementalHFilesSplitRecovery
- * using LoadIncrementalHFiles in secure mode.
- * This suite is unable to verify the security handoff/turnove
- * as miniCluster is running as system user thus has root privileges
- * and delegation tokens don't seem to work on miniDFS.
- *
- * Thus SecureBulkload can only be completely verified by running
- * integration tests against a secure cluster. This suite is still
- * invaluable as it verifies the other mechanisms that need to be
+ * Reruns TestLoadIncrementalHFiles using LoadIncrementalHFiles in secure mode. This suite is unable
+ * to verify the security handoff/turnover as miniCluster is running as system user thus has root
+ * privileges and delegation tokens don't seem to work on miniDFS.
+ * <p>
+ * Thus SecureBulkload can only be completely verified by running integration tests against a secure
+ * cluster. This suite is still invaluable as it verifies the other mechanisms that need to be
  * supported as part of a LoadIncrementalFiles call.
  */
-@Category({MapReduceTests.class, LargeTests.class})
-public class TestSecureLoadIncrementalHFilesSplitRecovery extends TestLoadIncrementalHFilesSplitRecovery {
+@Category({ MiscTests.class, LargeTests.class })
+public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
 
-  //This "overrides" the parent static method
-  //make sure they are in sync
   @BeforeClass
-  public static void setupCluster() throws Exception {
-    util = new HBaseTestingUtility();
+  public static void setUpBeforeClass() throws Exception {
     // set the always on security provider
     UserProvider.setUserProviderForTesting(util.getConfiguration(),
       HadoopSecurityEnabledUserProviderForTesting.class);
     // setup configuration
     SecureTestUtil.enableSecurity(util.getConfiguration());
+    util.getConfiguration().setInt(LoadIncrementalHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
+      MAX_FILES_PER_REGION_PER_FAMILY);
+    // change default behavior so that tag values are returned with normal rpcs
+    util.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
+      KeyValueCodecWithTags.class.getCanonicalName());
 
     util.startMiniCluster();
 
     // Wait for the ACL table to become available
     util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
+
+    setupNamespace();
   }
 
-  //Disabling this test as it does not work in secure mode
-  @Test (timeout=180000)
-  @Override
-  public void testBulkLoadPhaseFailure() {
-  }
 }

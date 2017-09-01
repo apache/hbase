@@ -41,7 +41,7 @@ import java.util.List;
  *  path/to/hbase-spark.jar {path/to/output/HFiles}
  *
  * This example will output put hfiles in {path/to/output/HFiles}, and user can run
- * 'hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles' to load the HFiles into table to verify this example.
+ * 'hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles' to load the HFiles into table to verify this example.
  */
 final public class JavaHBaseBulkLoadExample {
   private JavaHBaseBulkLoadExample() {}

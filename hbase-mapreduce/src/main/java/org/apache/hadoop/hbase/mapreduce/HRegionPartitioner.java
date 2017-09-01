@@ -42,7 +42,7 @@ import org.apache.hadoop.mapreduce.Partitioner;
  *
  * <p>This class is not suitable as partitioner creating hfiles
  * for incremental bulk loads as region spread will likely change between time of
- * hfile creation and load time. See {@link LoadIncrementalHFiles}
+ * hfile creation and load time. See {@link org.apache.hadoop.hbase.tool.LoadIncrementalHFiles}
  * and <a href="http://hbase.apache.org/book.html#arch.bulk.load">Bulk Load</a>.</p>
  *
  * @param <KEY>  The type of the key.
