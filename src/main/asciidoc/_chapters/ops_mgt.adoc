@@ -577,7 +577,7 @@ There are two ways to invoke this utility, with explicit classname and via the d
 
 .Explicit Classname
 ----
-$ bin/hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles <hdfs://storefileoutput> <tablename>
+$ bin/hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles <hdfs://storefileoutput> <tablename>
 ----
 
 .Driver

@@ -420,6 +420,10 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
+  public String getNameAsString() {
+    return desc.getNameAsString();
+  }
+
   public ColumnFamilyDescriptorBuilder setBlockCacheEnabled(boolean value) {
     desc.setBlockCacheEnabled(value);
     return this;
@@ -468,6 +472,10 @@ public class ColumnFamilyDescriptorBuilder {
   public ColumnFamilyDescriptorBuilder setCompressionType(Compression.Algorithm value) {
     desc.setCompressionType(value);
     return this;
+  }
+
+  public Compression.Algorithm getCompressionType() {
+    return desc.getCompressionType();
   }
 
   public ColumnFamilyDescriptorBuilder setConfiguration(final String key, final String value) {
@@ -610,7 +618,7 @@ public class ColumnFamilyDescriptorBuilder {
      */
     @InterfaceAudience.Private
     public ModifyableColumnFamilyDescriptor(final byte[] name) {
-      this(isLegalColumnFamilyName(name), getDefaultValuesBytes(), Collections.EMPTY_MAP);
+      this(isLegalColumnFamilyName(name), getDefaultValuesBytes(), Collections.emptyMap());
     }
 
     /**

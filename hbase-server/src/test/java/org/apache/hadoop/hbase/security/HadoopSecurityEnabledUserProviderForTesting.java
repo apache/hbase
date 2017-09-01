@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mapreduce;
+package org.apache.hadoop.hbase.security;
 
 import org.apache.hadoop.hbase.security.UserProvider;
 
