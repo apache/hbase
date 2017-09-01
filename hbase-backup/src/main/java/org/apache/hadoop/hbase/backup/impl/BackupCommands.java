@@ -324,9 +324,9 @@ public final class BackupCommands {
               .getOptionValue(OPTION_WORKERS)) : -1;
 
       if (cmdline.hasOption(OPTION_YARN_QUEUE_NAME)) {
-        String poolName = cmdline.getOptionValue(OPTION_YARN_QUEUE_NAME);
+        String queueName = cmdline.getOptionValue(OPTION_YARN_QUEUE_NAME);
         // Set system property value for MR job
-        System.setProperty("mapreduce.job.queuename", poolName);
+        System.setProperty("mapreduce.job.queuename", queueName);
       }
 
       try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
