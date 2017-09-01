@@ -51,10 +51,10 @@ INCLUDES := $(addprefix -I,$(INCLUDE_DIR))
 LIB_DIR := /usr/local
 LIB_LIBDIR := $(LIB_DIR)/lib
 LIB_INCDIR := $(LIB_DIR)/include
-LIB_RELEASE := $(RELEASE_PATH)/libHbaseClient.so
-ARC_RELEASE := $(RELEASE_PATH)/libHbaseClient.a
-LIB_DEBUG := $(DEBUG_PATH)/libHbaseClient_d.so
-ARC_DEBUG := $(DEBUG_PATH)/libHbaseClient_d.a
+LIB_RELEASE := $(RELEASE_PATH)/libHBaseClient.so
+ARC_RELEASE := $(RELEASE_PATH)/libHBaseClient.a
+LIB_DEBUG := $(DEBUG_PATH)/libHBaseClient_d.so
+ARC_DEBUG := $(DEBUG_PATH)/libHBaseClient_d.a
 
 build: checkdirs protos $(LIB_DEBUG) $(LIB_RELEASE) $(ARC_DEBUG) $(ARC_RELEASE)
 
@@ -92,14 +92,14 @@ protos: $(PROTO_CXX_DIR) $(PROTOSRC) $(PROTOHDR)
 	@make -j8 all -f Makefile.protos
 
 install:
-	cp $(LIB_RELEASE) $(LIB_LIBDIR)/libHbaseClient.so
-	cp $(ARC_RELEASE) $(LIB_LIBDIR)/libHbaseClient.a
-	cp $(LIB_DEBUG) $(LIB_LIBDIR)/libHbaseClient_d.so
-	cp $(ARC_DEBUG) $(LIB_LIBDIR)/libHbaseClient_d.a
+	cp $(LIB_RELEASE) $(LIB_LIBDIR)/libHBaseClient.so
+	cp $(ARC_RELEASE) $(LIB_LIBDIR)/libHBaseClient.a
+	cp $(LIB_DEBUG) $(LIB_LIBDIR)/libHBaseClient_d.so
+	cp $(ARC_DEBUG) $(LIB_LIBDIR)/libHBaseClient_d.a
 	ldconfig
-	
+
 uninstall:
-	rm -f $(LIB_LIBDIR)/libHbaseClient.so $(LIB_LIBDIR)/libHbaseClient.a $(LIB_LIBDIR)/libHbaseClient_d.so $(ARC_DEBUG) $(LIB_LIBDIR)/libHbaseClient_d.a
+	rm -f $(LIB_LIBDIR)/libHBaseClient.so $(LIB_LIBDIR)/libHBaseClient.a $(LIB_LIBDIR)/libHBaseClient_d.so $(ARC_DEBUG) $(LIB_LIBDIR)/libHBaseClient_d.a
 	ldconfig
 
 $(PROTO_CXX_DIR):
