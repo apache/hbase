@@ -135,7 +135,8 @@ class SingleRequestCallerBuilder
   Callable<RESP> callable_;
 };  // end of SingleRequestCallerBuilder
 
-class BatchCallerBuilder : public std::enable_shared_from_this<BatchCallerBuilder> {
+template <typename REQ, typename RESP>
+class BatchCallerBuilder : public std::enable_shared_from_this<BatchCallerBuilder<REQ, RESP>> {
  public:
   explicit BatchCallerBuilder(std::shared_ptr<AsyncConnection> conn,
                               std::shared_ptr<folly::HHWheelTimer> retry_timer)
@@ -143,14 +144,14 @@ class BatchCallerBuilder : public std::enable_shared_from_this<BatchCallerBuilde
 
   virtual ~BatchCallerBuilder() = default;
 
-  typedef std::shared_ptr<BatchCallerBuilder> SharedThisPtr;
+  typedef std::shared_ptr<BatchCallerBuilder<REQ, RESP>> SharedThisPtr;
 
   SharedThisPtr table(std::shared_ptr<pb::TableName> table_name) {
     table_name_ = table_name;
     return shared_this();
   }
 
-  SharedThisPtr actions(std::shared_ptr<std::vector<hbase::Get>> actions) {
+  SharedThisPtr actions(std::shared_ptr<std::vector<REQ>> actions) {
     actions_ = actions;
     return shared_this();
   }
@@ -180,10 +181,10 @@ class BatchCallerBuilder : public std::enable_shared_from_this<BatchCallerBuilde
     return shared_this();
   }
 
-  folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Call() { return Build()->Call(); }
+  folly::Future<std::vector<folly::Try<RESP>>> Call() { return Build()->Call(); }
 
-  std::shared_ptr<AsyncBatchRpcRetryingCaller> Build() {
-    return std::make_shared<AsyncBatchRpcRetryingCaller>(
+  std::shared_ptr<AsyncBatchRpcRetryingCaller<REQ, RESP>> Build() {
+    return std::make_shared<AsyncBatchRpcRetryingCaller<REQ, RESP>>(
         conn_, retry_timer_, table_name_, *actions_, pause_ns_, max_attempts_,
         operation_timeout_nanos_, rpc_timeout_nanos_, start_log_errors_count_);
   }
@@ -197,7 +198,7 @@ class BatchCallerBuilder : public std::enable_shared_from_this<BatchCallerBuilde
   std::shared_ptr<AsyncConnection> conn_;
   std::shared_ptr<folly::HHWheelTimer> retry_timer_;
   std::shared_ptr<hbase::pb::TableName> table_name_ = nullptr;
-  std::shared_ptr<std::vector<hbase::Get>> actions_ = nullptr;
+  std::shared_ptr<std::vector<REQ>> actions_ = nullptr;
   std::chrono::nanoseconds pause_ns_;
   int32_t max_attempts_ = 0;
   std::chrono::nanoseconds operation_timeout_nanos_;
@@ -329,8 +330,9 @@ class AsyncRpcRetryingCallerFactory {
     return std::make_shared<SingleRequestCallerBuilder<RESP>>(conn_, retry_timer_);
   }
 
-  std::shared_ptr<BatchCallerBuilder> Batch() {
-    return std::make_shared<BatchCallerBuilder>(conn_, retry_timer_);
+  template <typename REQ, typename RESP>
+  std::shared_ptr<BatchCallerBuilder<REQ, RESP>> Batch() {
+    return std::make_shared<BatchCallerBuilder<REQ, RESP>>(conn_, retry_timer_);
   }
 
   std::shared_ptr<ScanCallerBuilder> Scan() {

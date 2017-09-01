@@ -119,10 +119,14 @@ class Table {
    * @param - append Append object to perform HBase Append operation.
    */
   std::shared_ptr<hbase::Result> Append(const hbase::Append &append);
-  // TODO: Batch Puts
 
   std::shared_ptr<ResultScanner> Scan(const hbase::Scan &scan);
 
+  /**
+     * @brief - Multi Puts.
+     * @param - puts vector of hbase::Put.
+     */
+  void Put(const std::vector<hbase::Put> &puts);
   /**
    * @brief - Close the client connection.
    */

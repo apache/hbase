@@ -83,8 +83,11 @@ class RawAsyncTable {
 
   folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Get(
       const std::vector<hbase::Get>& gets);
-  folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Batch(
-      const std::vector<hbase::Get>& gets);
+  template <typename REQ, typename RESP>
+  folly::Future<std::vector<folly::Try<RESP>>> Batch(const std::vector<REQ>& rows,
+                                                     std::chrono::nanoseconds timeout);
+  folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> Put(
+      const std::vector<hbase::Put>& puts);
 
  private:
   /* Data */

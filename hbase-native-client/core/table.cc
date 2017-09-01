@@ -128,4 +128,17 @@ std::vector<std::shared_ptr<hbase::Result>> Table::Get(const std::vector<hbase::
   return results;
 }
 
+void Table::Put(const std::vector<hbase::Put> &puts) {
+  auto tresults = async_table_->Put(puts).get(operation_timeout());
+  uint32_t num = 0;
+  for (auto tresult : tresults) {
+    if (tresult.hasException()) {
+      LOG(ERROR) << "Caught exception:- " << tresult.exception().what() << " for "
+                 << puts[num++].row();
+      throw tresult.exception();
+    }
+  }
+  return;
+}
+
 } /* namespace hbase */

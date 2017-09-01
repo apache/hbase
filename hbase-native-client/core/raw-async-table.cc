@@ -197,18 +197,26 @@ folly::Future<std::shared_ptr<Result>> RawAsyncTable::Append(const hbase::Append
 
   return caller->Call().then([caller](const auto r) { return r; });
 }
+
 folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> RawAsyncTable::Get(
     const std::vector<hbase::Get>& gets) {
-  return this->Batch(gets);
+  std::vector<std::shared_ptr<hbase::Row>> rows;
+  for (auto get : gets) {
+    std::shared_ptr<hbase::Row> srow = std::make_shared<hbase::Get>(get);
+    rows.push_back(srow);
+  }
+  return this->Batch<std::shared_ptr<hbase::Row>, std::shared_ptr<Result>>(
+      rows, connection_conf_->read_rpc_timeout());
 }
 
-folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> RawAsyncTable::Batch(
-    const std::vector<hbase::Get>& gets) {
+template <typename REQ, typename RESP>
+folly::Future<std::vector<folly::Try<RESP>>> RawAsyncTable::Batch(
+    const std::vector<REQ>& rows, std::chrono::nanoseconds timeout) {
   auto caller = connection_->caller_factory()
-                    ->Batch()
+                    ->Batch<REQ, RESP>()
                     ->table(table_name_)
-                    ->actions(std::make_shared<std::vector<hbase::Get>>(gets))
-                    ->rpc_timeout(connection_conf_->read_rpc_timeout())
+                    ->actions(std::make_shared<std::vector<REQ>>(rows))
+                    ->rpc_timeout(timeout)
                     ->operation_timeout(connection_conf_->operation_timeout())
                     ->pause(connection_conf_->pause())
                     ->max_attempts(connection_conf_->max_retries())
@@ -236,5 +244,16 @@ std::shared_ptr<hbase::Scan> RawAsyncTable::SetDefaultScanConfig(const hbase::Sc
     new_scan->SetMaxResultSize(default_scanner_max_result_size_);
   }
   return new_scan;
+}
+
+folly::Future<std::vector<folly::Try<std::shared_ptr<Result>>>> RawAsyncTable::Put(
+    const std::vector<hbase::Put>& puts) {
+  std::vector<std::shared_ptr<hbase::Row>> rows;
+  for (auto put : puts) {
+    std::shared_ptr<hbase::Row> srow = std::make_shared<hbase::Put>(put);
+    rows.push_back(srow);
+  }
+  return this->Batch<std::shared_ptr<hbase::Row>, std::shared_ptr<Result>>(
+      rows, connection_conf_->write_rpc_timeout());
 }
 }  // namespace hbase
