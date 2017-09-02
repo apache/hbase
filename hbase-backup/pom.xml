@@ -109,6 +109,12 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-mapreduce</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
@@ -157,11 +163,6 @@
       <artifactId>log4j</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -179,7 +180,7 @@
         </property>
       </activation>
       <dependencies>
-        <!--dependency>
+        <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
           <exclusions>
@@ -223,14 +224,57 @@
               <groupId>com.google.code.findbugs</groupId>
               <artifactId>jsr305</artifactId>
             </exclusion>
+            <!--We let hadoop include guava here. It uses it
+                 in the Configuration class -->
           </exclusions>
-        </dependency-->
-<!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
+        </dependency>
         <dependency>
+          <!--Hadoop2 Uses Guava in Configuration class at least-->
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+          <version>${hadoop.guava.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.code.findbugs</groupId>
+              <artifactId>jsr305</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <!--This module seems to need this.-->
           <groupId>io.netty</groupId>
           <artifactId>netty</artifactId>
           <version>${netty.hadoop.version}</version>
-          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.code.findbugs</groupId>
+              <artifactId>jsr305</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-core</artifactId>
+          <version>${hadoop-two.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>javax.servlet</groupId>
+              <artifactId>servlet-api</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>javax.inject</groupId>
+              <artifactId>javax.inject</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-distcp</artifactId>
+          <version>${hadoop-two.version}</version>
         </dependency>
       </dependencies>
     </profile>

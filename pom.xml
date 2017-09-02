@@ -1379,6 +1379,7 @@
          They ought to match the values found in our default hadoop profile, which is
          currently "hadoop-2.0". See HBASE-15925 for more info. -->
     <hadoop.version>${hadoop-two.version}</hadoop.version>
+    <hadoop.guava.version>11.0.2</hadoop.guava.version>
     <compat.module>hbase-hadoop2-compat</compat.module>
     <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
     <!-- end HBASE-15925 default hadoop compatibility values -->
