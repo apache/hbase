@@ -24,8 +24,14 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+
 
 /**
  * Immutable POJO class for representing a table name.
@@ -53,6 +59,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public final class TableName implements Comparable<TableName> {
+  private static final Log LOG = LogFactory.getLog(TableName.class);
 
   /** See {@link #createTableNameIfNecessary(ByteBuffer, ByteBuffer)} */
   private static final Set<TableName> tableCache = new CopyOnWriteArraySet<>();
@@ -76,9 +83,11 @@ public final class TableName implements Comparable<TableName> {
       "(?:(?:(?:"+VALID_NAMESPACE_REGEX+"\\"+NAMESPACE_DELIM+")?)" +
          "(?:"+VALID_TABLE_QUALIFIER_REGEX+"))";
 
-  /** The hbase:meta table's name. */
-  public static final TableName META_TABLE_NAME =
-      valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+  public static final String DEFAULT_META_TABLE_NAME_STR = "meta";
+  public static final String META_TABLE_SUFFIX = "hbase.meta.table.suffix";
+
+  /** The meta table's name. */
+  public static final TableName META_TABLE_NAME = getMetaTableName(HBaseConfiguration.create());
 
   /** The Namespace table's name. */
   public static final TableName NAMESPACE_TABLE_NAME =
@@ -535,4 +544,29 @@ public final class TableName implements Comparable<TableName> {
     return this.nameAsString.compareTo(tableName.getNameAsString());
   }
 
+  @VisibleForTesting
+  static TableName getMetaTableName(Configuration conf) {
+    String metaTableName = DEFAULT_META_TABLE_NAME_STR;
+    String metaTableSuffix = conf.get(META_TABLE_SUFFIX, "");
+
+    if(isValidMetaTableSuffix(metaTableSuffix)) {
+      metaTableName = DEFAULT_META_TABLE_NAME_STR + "_" + metaTableSuffix;
+    }
+    return (valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, metaTableName));
+  }
+
+  @VisibleForTesting
+  static boolean isValidMetaTableSuffix(String metaTableSuffix) {
+    if(StringUtils.isBlank(metaTableSuffix)) {
+      return false;
+    }
+
+    try {
+      isLegalTableQualifierName(Bytes.toBytes(metaTableSuffix));
+    } catch(IllegalArgumentException iae) {
+      LOG.warn("Invalid meta table suffix", iae);
+      return false;
+    }
+    return true;
+  }
 }
