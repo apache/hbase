@@ -106,9 +106,6 @@ public final class BackupCommands {
 
   public static final String REPAIR_CMD_USAGE = "Usage: hbase backup repair\n";
 
-  public static final String CANCEL_CMD_USAGE = "Usage: hbase backup cancel <backup_id>\n"
-      + "  backup_id       Backup image id\n";
-
   public static final String SET_CMD_USAGE = "Usage: hbase backup set COMMAND [name] [tables]\n"
       + "  name            Backup set name\n"
       + "  tables          Comma separated list of tables.\n" + "COMMAND is one of:\n"
@@ -220,9 +217,6 @@ public final class BackupCommands {
       break;
     case DELETE:
       cmd = new DeleteCommand(conf, cmdline);
-      break;
-    case CANCEL:
-      cmd = new CancelCommand(conf, cmdline);
       break;
     case HISTORY:
       cmd = new HistoryCommand(conf, cmdline);
@@ -427,8 +421,6 @@ public final class BackupCommands {
         System.out.println(PROGRESS_CMD_USAGE);
       } else if (BackupCommand.DELETE.name().equalsIgnoreCase(type)) {
         System.out.println(DELETE_CMD_USAGE);
-      } else if (BackupCommand.CANCEL.name().equalsIgnoreCase(type)) {
-        System.out.println(CANCEL_CMD_USAGE);
       } else if (BackupCommand.SET.name().equalsIgnoreCase(type)) {
         System.out.println(SET_CMD_USAGE);
       } else {
@@ -736,25 +728,6 @@ public final class BackupCommands {
     @Override
     protected void printUsage() {
       System.out.println(MERGE_CMD_USAGE);
-    }
-  }
-
-  // TODO Cancel command
-
-  private static class CancelCommand extends Command {
-
-    CancelCommand(Configuration conf, CommandLine cmdline) {
-      super(conf);
-      this.cmdline = cmdline;
-    }
-
-    @Override
-    public void execute() throws IOException {
-      throw new UnsupportedOperationException("Cancel command is not supported yet.");
-    }
-
-    @Override
-    protected void printUsage() {
     }
   }
 
