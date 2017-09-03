@@ -826,9 +826,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
     // Run the MR Job
     if (!job.waitForCompletion(true)) {
-      // TODO: Replace the fixed string with job.getStatus().getFailureInfo()
-      // when it will be available on all the supported versions.
-      throw new ExportSnapshotException("Copy Files Map-Reduce Job failed");
+      throw new ExportSnapshotException(job.getStatus().getFailureInfo());
     }
   }
 
