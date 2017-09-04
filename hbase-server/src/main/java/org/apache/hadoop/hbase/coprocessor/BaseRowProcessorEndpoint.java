@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Optional;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,19 +46,19 @@ import com.google.protobuf.Service;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public abstract class BaseRowProcessorEndpoint<S extends Message, T extends Message> 
-extends RowProcessorService implements CoprocessorService, Coprocessor {
+public abstract class BaseRowProcessorEndpoint<S extends Message, T extends Message>
+extends RowProcessorService implements RegionCoprocessor {
   private RegionCoprocessorEnvironment env;
   /**
    * Pass a processor to region to process multiple rows atomically.
-   * 
+   *
    * The RowProcessor implementations should be the inner classes of your
    * RowProcessorEndpoint. This way the RowProcessor can be class-loaded with
    * the Coprocessor endpoint together.
    *
    * See {@code TestRowProcessorEndpoint} for example.
    *
-   * The request contains information for constructing processor 
+   * The request contains information for constructing processor
    * (see {@link #constructRowProcessorFromRequest}. The processor object defines
    * the read-modify-write procedure.
    */
@@ -83,8 +83,8 @@ extends RowProcessorService implements CoprocessorService, Coprocessor {
   }
 
   @Override
-  public Service getService() {
-    return this;
+  public Optional<Service> getService() {
+    return Optional.of(this);
   }
 
   /**

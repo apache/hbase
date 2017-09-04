@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
@@ -66,7 +68,6 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.visibility.VisibilityController.VisibilityReplication;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -393,7 +394,12 @@ public class TestVisibilityLabelsReplication {
   // A simple BaseRegionbserver impl that allows to add a non-visibility tag from the
   // attributes of the Put mutation.  The existing cells in the put mutation is overwritten
   // with a new cell that has the visibility tags and the non visibility tag
-  public static class SimpleCP implements RegionObserver {
+  public static class SimpleCP implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put m, WALEdit edit,
         Durability durability) throws IOException {
@@ -422,8 +428,13 @@ public class TestVisibilityLabelsReplication {
     }
   }
 
-  public static class TestCoprocessorForTagsAtSink implements RegionObserver {
+  public static class TestCoprocessorForTagsAtSink implements RegionCoprocessor, RegionObserver {
     public static List<Tag> tags = null;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,

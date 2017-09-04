@@ -27,7 +27,8 @@ import org.apache.yetus.audience.InterfaceStability;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface RegionServerCoprocessorEnvironment extends CoprocessorEnvironment {
+public interface RegionServerCoprocessorEnvironment
+    extends CoprocessorEnvironment<RegionServerCoprocessor> {
   /**
    * Gets the region server services.
    *

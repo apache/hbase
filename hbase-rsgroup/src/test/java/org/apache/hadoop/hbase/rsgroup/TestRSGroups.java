@@ -97,8 +97,8 @@ public class TestRSGroups extends TestRSGroupsBase {
     admin.setBalancerRunning(false,true);
     rsGroupAdmin = new VerifyingRSGroupAdminClient(
         new RSGroupAdminClient(TEST_UTIL.getConnection()), TEST_UTIL.getConfiguration());
-    rsGroupAdminEndpoint =
-        master.getMasterCoprocessorHost().findCoprocessors(RSGroupAdminEndpoint.class).get(0);
+    rsGroupAdminEndpoint = (RSGroupAdminEndpoint)
+        master.getMasterCoprocessorHost().findCoprocessor(RSGroupAdminEndpoint.class.getName());
   }
 
   @AfterClass

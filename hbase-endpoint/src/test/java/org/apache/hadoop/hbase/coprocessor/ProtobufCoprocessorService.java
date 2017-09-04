@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.coprocessor;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.util.Threads;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * Test implementation of a coprocessor endpoint exposing the
@@ -41,13 +41,12 @@ import java.io.IOException;
  * only.
  */
 public class ProtobufCoprocessorService extends TestRpcServiceProtos.TestProtobufRpcProto
-    implements CoprocessorService, Coprocessor {
-  public ProtobufCoprocessorService() {
-  }
+    implements MasterCoprocessor, RegionCoprocessor {
+  public ProtobufCoprocessorService() {}
 
   @Override
-  public Service getService() {
-    return this;
+  public Optional<Service> getService() {
+    return Optional.of(this);
   }
 
   @Override

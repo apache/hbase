@@ -21,14 +21,14 @@ package org.apache.hadoop.hbase.coprocessor.example;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
@@ -48,8 +48,7 @@ import com.google.protobuf.Service;
  * hbase-examples/src/main/protobuf/Examples.proto.
  * </p>
  */
-public class RowCountEndpoint extends ExampleProtos.RowCountService
-    implements Coprocessor, CoprocessorService {
+public class RowCountEndpoint extends ExampleProtos.RowCountService implements RegionCoprocessor {
   private RegionCoprocessorEnvironment env;
 
   public RowCountEndpoint() {
@@ -59,8 +58,8 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
    * Just returns a reference to this object, which implements the RowCounterService interface.
    */
   @Override
-  public Service getService() {
-    return this;
+  public Optional<Service> getService() {
+    return Optional.of(this);
   }
 
   /**

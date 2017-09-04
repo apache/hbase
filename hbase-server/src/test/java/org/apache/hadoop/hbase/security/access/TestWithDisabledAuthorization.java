@@ -112,7 +112,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
   @Rule public TestTableName TEST_TABLE = new TestTableName();
 
   // default users
-  
+
   // superuser
   private static User SUPERUSER;
   // user granted with all global permission
@@ -153,12 +153,10 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
         TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
     ACCESS_CONTROLLER = (AccessController) cpHost.findCoprocessor(AccessController.class.getName());
-    CP_ENV = cpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
-      Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    CP_ENV = cpHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
     RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
       .getRegionServerCoprocessorHost();
-    RSCP_ENV = rsHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
-      Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    RSCP_ENV = rsHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
@@ -193,7 +191,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
 
     Region region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE.getTableName()).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
-    RCP_ENV = rcpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
+    RCP_ENV = rcpHost.createEnvironment(ACCESS_CONTROLLER,
       Coprocessor.PRIORITY_HIGHEST, 1, TEST_UTIL.getConfiguration());
 
     // Set up initial grants

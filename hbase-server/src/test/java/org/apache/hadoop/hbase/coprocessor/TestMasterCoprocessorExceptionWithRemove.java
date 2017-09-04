@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -73,11 +74,16 @@ public class TestMasterCoprocessorExceptionWithRemove {
     }
   }
 
-  public static class BuggyMasterObserver implements MasterObserver {
+  public static class BuggyMasterObserver implements MasterCoprocessor, MasterObserver {
     private boolean preCreateTableCalled;
     private boolean postCreateTableCalled;
     private boolean startCalled;
     private boolean postStartMasterCalled;
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
 
     @SuppressWarnings("null")
     @Override
@@ -144,8 +150,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    BuggyMasterObserver cp = (BuggyMasterObserver)host.findCoprocessor(
-        BuggyMasterObserver.class.getName());
+    BuggyMasterObserver cp = host.findCoprocessor(BuggyMasterObserver.class);
     assertFalse("No table created yet", cp.wasCreateTableCalled());
 
     // Set a watch on the zookeeper /hbase/master node. If the master dies,

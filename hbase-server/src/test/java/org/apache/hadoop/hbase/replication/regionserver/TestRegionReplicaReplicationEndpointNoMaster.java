@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.WALCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.WALCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.WALObserver;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -148,10 +150,16 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
 
   static ConcurrentLinkedQueue<Entry> entries = new ConcurrentLinkedQueue<>();
 
-  public static class WALEditCopro implements WALObserver {
+  public static class WALEditCopro implements WALCoprocessor, WALObserver {
     public WALEditCopro() {
       entries.clear();
     }
+
+    @Override
+    public Optional<WALObserver> getWALObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
                              RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {

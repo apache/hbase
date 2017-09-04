@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import junit.framework.TestCase;
 
@@ -50,8 +51,14 @@ public class TestRegionObserverStacking extends TestCase {
     = new HBaseTestingUtility();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
-  public static class ObserverA implements RegionObserver {
+  public static class ObserverA implements RegionCoprocessor, RegionObserver {
     long id;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
         final Put put, final WALEdit edit,
@@ -65,8 +72,14 @@ public class TestRegionObserverStacking extends TestCase {
     }
   }
 
-  public static class ObserverB implements RegionObserver {
+  public static class ObserverB implements RegionCoprocessor, RegionObserver {
     long id;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
         final Put put, final WALEdit edit,
@@ -80,8 +93,13 @@ public class TestRegionObserverStacking extends TestCase {
     }
   }
 
-  public static class ObserverC implements RegionObserver {
+  public static class ObserverC implements RegionCoprocessor, RegionObserver {
     long id;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,

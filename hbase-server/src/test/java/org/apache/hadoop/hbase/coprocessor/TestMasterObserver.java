@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
@@ -95,7 +96,7 @@ public class TestMasterObserver {
   public static CountDownLatch tableCreationLatch = new CountDownLatch(1);
   public static CountDownLatch tableDeletionLatch = new CountDownLatch(1);
 
-  public static class CPMasterObserver implements MasterObserver {
+  public static class CPMasterObserver implements MasterCoprocessor, MasterObserver {
 
     private boolean bypass = false;
     private boolean preCreateTableCalled;
@@ -280,6 +281,11 @@ public class TestMasterObserver {
       postRequestLockCalled = false;
       preLockHeartbeatCalled = false;
       postLockHeartbeatCalled = false;
+    }
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
     }
 
     @Override
@@ -1503,8 +1509,7 @@ public class TestMasterObserver {
     assertTrue("Master should be active", master.isActiveMaster());
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     assertNotNull("CoprocessorHost should not be null", host);
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     assertNotNull("CPMasterObserver coprocessor not found or not installed!", cp);
 
     // check basic lifecycle
@@ -1521,8 +1526,7 @@ public class TestMasterObserver {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.enableBypass(true);
     cp.resetStates();
     assertFalse("No table created yet", cp.wasCreateTableCalled());
@@ -1698,8 +1702,7 @@ public class TestMasterObserver {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
 
     // create a table
@@ -1760,8 +1763,7 @@ public class TestMasterObserver {
     String testNamespace = "observed_ns";
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
 
     cp.enableBypass(false);
     cp.resetStates();
@@ -1866,8 +1868,7 @@ public class TestMasterObserver {
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.enableBypass(false);
     cp.resetStates();
 
@@ -1955,8 +1956,7 @@ public class TestMasterObserver {
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
 
     GetTableDescriptorsRequest req =
@@ -1973,8 +1973,7 @@ public class TestMasterObserver {
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
 
     master.getMasterRpcServices().getTableNames(null,
@@ -1989,8 +1988,7 @@ public class TestMasterObserver {
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
 
     master.abortProcedure(1, true);
@@ -2005,8 +2003,7 @@ public class TestMasterObserver {
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
 
     master.getProcedures();
@@ -2021,8 +2018,7 @@ public class TestMasterObserver {
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
-    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
 
     master.getLocks();
@@ -2043,8 +2039,7 @@ public class TestMasterObserver {
   @Test
   public void testQueueLockAndLockHeartbeatOperations() throws Exception {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    CPMasterObserver cp = (CPMasterObserver)master.getMasterCoprocessorHost().findCoprocessor(
-        CPMasterObserver.class.getName());
+    CPMasterObserver cp = master.getMasterCoprocessorHost().findCoprocessor(CPMasterObserver.class);
     cp.resetStates();
 
     final TableName tableName = TableName.valueOf("testLockedTable");

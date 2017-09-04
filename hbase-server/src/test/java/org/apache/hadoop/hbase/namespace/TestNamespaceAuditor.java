@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.namespace;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -52,11 +53,14 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -278,7 +282,8 @@ public class TestNamespaceAuditor {
     assertNull("Namespace state not found to be null.", stateInfo);
   }
 
-  public static class CPRegionServerObserver implements RegionServerObserver {
+  public static class CPRegionServerObserver
+      implements RegionServerCoprocessor, RegionServerObserver {
     private volatile boolean shouldFailMerge = false;
 
     public void failMerge(boolean fail) {
@@ -292,13 +297,23 @@ public class TestNamespaceAuditor {
         wait();
       }
     }
+
+    @Override
+    public Optional<RegionServerObserver> getRegionServerObserver() {
+      return Optional.of(this);
+    }
   }
 
-  public static class CPMasterObserver implements MasterObserver {
+  public static class CPMasterObserver implements MasterCoprocessor, MasterObserver {
     private volatile boolean shouldFailMerge = false;
 
     public void failMerge(boolean fail) {
       shouldFailMerge = fail;
+    }
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
     }
 
     @Override
@@ -353,7 +368,7 @@ public class TestNamespaceAuditor {
     // Fail region merge through Coprocessor hook
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     MasterCoprocessorHost cpHost = cluster.getMaster().getMasterCoprocessorHost();
-    Coprocessor coprocessor = cpHost.findCoprocessor(CPMasterObserver.class.getName());
+    Coprocessor coprocessor = cpHost.findCoprocessor(CPMasterObserver.class);
     CPMasterObserver masterObserver = (CPMasterObserver) coprocessor;
     masterObserver.failMerge(true);
 
@@ -445,7 +460,7 @@ public class TestNamespaceAuditor {
     return Bytes.toBytes("" + key);
   }
 
-  public static class CustomObserver implements RegionObserver {
+  public static class CustomObserver implements RegionCoprocessor, RegionObserver {
     volatile CountDownLatch postCompact;
 
     @Override
@@ -457,6 +472,11 @@ public class TestNamespaceAuditor {
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {
       postCompact = new CountDownLatch(1);
+    }
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
     }
   }
 
@@ -522,9 +542,14 @@ public class TestNamespaceAuditor {
         .getMasterQuotaManager().getNamespaceQuotaManager();
   }
 
-  public static class MasterSyncObserver implements MasterObserver {
+  public static class MasterSyncObserver implements MasterCoprocessor, MasterObserver {
     volatile CountDownLatch tableDeletionLatch;
     static boolean throwExceptionInPreCreateTableAction;
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -551,8 +576,8 @@ public class TestNamespaceAuditor {
   private void deleteTable(final TableName tableName) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = (MasterSyncObserver)UTIL.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    MasterSyncObserver observer = UTIL.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class);
     ADMIN.deleteTable(tableName);
     observer.tableDeletionLatch.await();
   }

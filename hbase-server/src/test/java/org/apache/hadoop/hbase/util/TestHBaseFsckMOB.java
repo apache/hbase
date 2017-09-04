@@ -50,7 +50,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        MasterSyncObserver.class.getName());
+        MasterSyncCoprocessor.class.getName());
 
     conf.setInt("hbase.regionserver.handler.count", 2);
     conf.setInt("hbase.regionserver.metahandler.count", 30);

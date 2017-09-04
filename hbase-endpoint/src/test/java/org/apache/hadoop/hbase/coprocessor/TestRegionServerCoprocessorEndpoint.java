@@ -22,9 +22,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
@@ -102,21 +102,12 @@ public class TestRegionServerCoprocessorEndpoint {
         ((RemoteWithExtrasException) controller.getFailedOn().getCause()).getClassName().trim());
   }
 
-  static class DummyRegionServerEndpoint extends DummyService implements Coprocessor, SingletonCoprocessorService {
+  public static class DummyRegionServerEndpoint extends DummyService
+      implements RegionServerCoprocessor {
 
     @Override
-    public Service getService() {
-      return this;
-    }
-
-    @Override
-    public void start(CoprocessorEnvironment env) throws IOException {
-      // TODO Auto-generated method stub
-    }
-
-    @Override
-    public void stop(CoprocessorEnvironment env) throws IOException {
-      // TODO Auto-generated method stub
+    public Optional<Service> getService() {
+      return Optional.of(this);
     }
 
     @Override

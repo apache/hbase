@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -72,7 +73,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
  * A sample region observer that tests the RegionObserver interface.
  * It works with TestRegionObserverInterface to provide the test case.
  */
-public class SimpleRegionObserver implements RegionObserver {
+public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
 
   final AtomicInteger ctBeforeDelete = new AtomicInteger(1);
   final AtomicInteger ctPreOpen = new AtomicInteger(0);
@@ -132,6 +133,11 @@ public class SimpleRegionObserver implements RegionObserver {
 
   public void setThrowOnPostFlush(Boolean val){
     throwOnPostFlush.set(val);
+  }
+
+  @Override
+  public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(this);
   }
 
   @Override

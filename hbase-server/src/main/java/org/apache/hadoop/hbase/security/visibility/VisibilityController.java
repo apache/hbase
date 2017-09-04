@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,14 +65,13 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -101,7 +101,6 @@ import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
-import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
@@ -122,8 +121,9 @@ import com.google.protobuf.Service;
  * visibility labels
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class VisibilityController implements MasterObserver, RegionObserver,
-    VisibilityLabelsService.Interface, CoprocessorService {
+// TODO: break out Observer functions into separate class/sub-class.
+public class VisibilityController implements MasterCoprocessor, RegionCoprocessor,
+    VisibilityLabelsService.Interface, MasterObserver, RegionObserver {
 
   private static final Log LOG = LogFactory.getLog(VisibilityController.class);
   private static final Log AUDITLOG = LogFactory.getLog("SecurityLogger."
@@ -176,10 +176,6 @@ public class VisibilityController implements MasterObserver, RegionObserver,
         + " accordingly.");
     }
 
-    if (env instanceof RegionServerCoprocessorEnvironment) {
-      throw new RuntimeException("Visibility controller should not be configured as "
-          + "'hbase.coprocessor.regionserver.classes'.");
-    }
     // Do not create for master CPs
     if (!(env instanceof MasterCoprocessorEnvironment)) {
       visibilityLabelService = VisibilityLabelServiceManager.getInstance()
@@ -190,6 +186,22 @@ public class VisibilityController implements MasterObserver, RegionObserver,
   @Override
   public void stop(CoprocessorEnvironment env) throws IOException {
 
+  }
+
+  /**************************** Observer/Service Getters ************************************/
+  @Override
+  public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(this);
+  }
+
+  @Override
+  public Optional<MasterObserver> getMasterObserver() {
+    return Optional.of(this);
+  }
+
+  @Override
+  public Optional<Service> getService() {
+    return Optional.of(VisibilityLabelsProtos.VisibilityLabelsService.newReflectiveService(this));
   }
 
   /********************************* Master related hooks **********************************/
@@ -761,11 +773,6 @@ public class VisibilityController implements MasterObserver, RegionObserver,
   }
 
   @Override
-  public Service getService() {
-    return VisibilityLabelsProtos.VisibilityLabelsService.newReflectiveService(this);
-  }
-
-  @Override
   public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
     // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
@@ -1083,35 +1090,6 @@ public class VisibilityController implements MasterObserver, RegionObserver,
           .matchVisibility(putVisTags, putCellVisTagsFormat, deleteCellVisTags,
               deleteCellVisTagsFormat);
       return matchFound ? ReturnCode.INCLUDE : ReturnCode.SKIP;
-    }
-  }
-
-  /**
-   * A RegionServerObserver impl that provides the custom
-   * VisibilityReplicationEndpoint. This class should be configured as the
-   * 'hbase.coprocessor.regionserver.classes' for the visibility tags to be
-   * replicated as string.  The value for the configuration should be
-   * 'org.apache.hadoop.hbase.security.visibility.VisibilityController$VisibilityReplication'.
-   */
-  public static class VisibilityReplication implements RegionServerObserver {
-    private Configuration conf;
-    private VisibilityLabelService visibilityLabelService;
-
-    @Override
-    public void start(CoprocessorEnvironment env) throws IOException {
-      this.conf = env.getConfiguration();
-      visibilityLabelService = VisibilityLabelServiceManager.getInstance()
-          .getVisibilityLabelService(this.conf);
-    }
-
-    @Override
-    public void stop(CoprocessorEnvironment env) throws IOException {
-    }
-
-    @Override
-    public ReplicationEndpoint postCreateReplicationEndPoint(
-        ObserverContext<RegionServerCoprocessorEnvironment> ctx, ReplicationEndpoint endpoint) {
-      return new VisibilityReplicationEndpoint(endpoint, visibilityLabelService);
     }
   }
 

@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Result;
@@ -251,8 +252,14 @@ public class TestHRegionServerBulkLoad {
     }
   }
 
-  public static class MyObserver implements RegionObserver {
+  public static class MyObserver implements RegionCoprocessor, RegionObserver {
     static int sleepDuration;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
         InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker)

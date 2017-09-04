@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -35,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -170,10 +172,15 @@ public class TestAsyncAdminBuilder {
     }
   }
 
-  public static class TestRpcTimeoutCoprocessor implements MasterObserver {
+  public static class TestRpcTimeoutCoprocessor implements MasterCoprocessor, MasterObserver {
     public TestRpcTimeoutCoprocessor() {
     }
 
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
     @Override
     public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
         String namespace) throws IOException {
@@ -181,10 +188,15 @@ public class TestAsyncAdminBuilder {
     }
   }
 
-  public static class TestOperationTimeoutCoprocessor implements MasterObserver {
+  public static class TestOperationTimeoutCoprocessor implements MasterCoprocessor, MasterObserver {
     AtomicLong sleepTime = new AtomicLong(0);
 
     public TestOperationTimeoutCoprocessor() {
+    }
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
     }
 
     @Override
@@ -197,10 +209,15 @@ public class TestAsyncAdminBuilder {
     }
   }
 
-  public static class TestMaxRetriesCoprocessor implements MasterObserver {
+  public static class TestMaxRetriesCoprocessor implements MasterCoprocessor, MasterObserver {
     AtomicLong retryNum = new AtomicLong(0);
 
     public TestMaxRetriesCoprocessor() {
+    }
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
     }
 
     @Override

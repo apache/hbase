@@ -36,8 +36,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -55,6 +57,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -160,9 +163,20 @@ public class TestRegionServerAbort {
     assertFalse(cluster.getRegionServer(0).isStopped());
   }
 
-  public static class StopBlockingRegionObserver implements RegionServerObserver, RegionObserver {
+  public static class StopBlockingRegionObserver
+      implements RegionServerCoprocessor, RegionCoprocessor, RegionServerObserver, RegionObserver {
     public static final String DO_ABORT = "DO_ABORT";
     private boolean stopAllowed;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
+    @Override
+    public Optional<RegionServerObserver> getRegionServerObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
@@ -184,10 +198,6 @@ public class TestRegionServerAbort {
 
     public void setStopAllowed(boolean allowed) {
       this.stopAllowed = allowed;
-    }
-
-    public boolean isStopAllowed() {
-      return stopAllowed;
     }
   }
 

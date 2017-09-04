@@ -41,6 +41,7 @@ import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -63,7 +64,12 @@ public class TestOpenTableInCoprocessor {
   /**
    * Custom coprocessor that just copies the write to another table.
    */
-  public static class SendToOtherTableCoprocessor implements RegionObserver {
+  public static class SendToOtherTableCoprocessor implements RegionCoprocessor, RegionObserver {
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
@@ -80,7 +86,7 @@ public class TestOpenTableInCoprocessor {
   /**
    * Coprocessor that creates an HTable with a pool to write to another table
    */
-  public static class CustomThreadPoolCoprocessor implements RegionObserver {
+  public static class CustomThreadPoolCoprocessor implements RegionCoprocessor, RegionObserver {
 
     /**
      * Get a pool that has only ever one thread. A second action added to the pool (running
@@ -95,6 +101,11 @@ public class TestOpenTableInCoprocessor {
               new SynchronousQueue<>(), Threads.newDaemonThreadFactory("hbase-table"));
       pool.allowCoreThreadTimeOut(true);
       return pool;
+    }
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
     }
 
     @Override

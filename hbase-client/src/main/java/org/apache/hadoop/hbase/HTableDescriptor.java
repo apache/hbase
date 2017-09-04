@@ -681,8 +681,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
-   * or Endpoint.
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionCoprocessor.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
    * a region is opened.
@@ -696,8 +695,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
-   * or Endpoint.
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionCoprocessor.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
    * a region is opened.
@@ -717,8 +715,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
-   * or Endpoint.
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionCoprocessor.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
    * a region is opened.

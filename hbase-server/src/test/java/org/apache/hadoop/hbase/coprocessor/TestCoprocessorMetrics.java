@@ -95,7 +95,7 @@ public class TestCoprocessorMetrics {
   /**
    * MasterObserver that has a Timer metric for create table operation.
    */
-  public static class CustomMasterObserver implements MasterObserver {
+  public static class CustomMasterObserver implements MasterCoprocessor, MasterObserver {
     private Timer createTableTimer;
     private long start = Long.MIN_VALUE;
 
@@ -125,14 +125,25 @@ public class TestCoprocessorMetrics {
         createTableTimer  = registry.timer("CreateTable");
       }
     }
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
   }
 
   /**
    * RegionServerObserver that has a Counter for rollWAL requests.
    */
-  public static class CustomRegionServerObserver implements RegionServerObserver {
+  public static class CustomRegionServerObserver implements RegionServerCoprocessor,
+      RegionServerObserver {
     /** This is the Counter metric object to keep track of the current count across invocations */
     private Counter rollWALCounter;
+
+    @Override public Optional<RegionServerObserver> getRegionServerObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void postRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
         throws IOException {
@@ -156,7 +167,7 @@ public class TestCoprocessorMetrics {
   /**
    * WALObserver that has a Counter for walEdits written.
    */
-  public static class CustomWALObserver implements WALObserver {
+  public static class CustomWALObserver implements WALCoprocessor, WALObserver {
     private Counter walEditsCount;
 
     @Override
@@ -177,18 +188,27 @@ public class TestCoprocessorMetrics {
         }
       }
     }
+
+    @Override public Optional<WALObserver> getWALObserver() {
+      return Optional.of(this);
+    }
   }
 
   /**
    * RegionObserver that has a Counter for preGet()
    */
-  public static class CustomRegionObserver implements RegionObserver {
+  public static class CustomRegionObserver implements RegionCoprocessor, RegionObserver {
     private Counter preGetCounter;
 
     @Override
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
                          List<Cell> results) throws IOException {
       preGetCounter.increment();
+    }
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
     }
 
     @Override

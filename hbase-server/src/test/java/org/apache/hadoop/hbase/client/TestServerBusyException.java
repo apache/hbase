@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.ServerTooBusyException;
@@ -66,8 +68,13 @@ public class TestServerBusyException {
   @Rule
   public TestName name = new TestName();
 
-  public static class SleepCoprocessor implements RegionObserver {
+  public static class SleepCoprocessor implements RegionCoprocessor, RegionObserver {
     public static final int SLEEP_TIME = 5000;
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Get get, final List<Cell> results) throws IOException {
@@ -95,9 +102,15 @@ public class TestServerBusyException {
 
   }
 
-  public static class SleepLongerAtFirstCoprocessor implements RegionObserver {
+  public static class SleepLongerAtFirstCoprocessor implements RegionCoprocessor, RegionObserver {
     public static final int SLEEP_TIME = 2000;
     static final AtomicLong ct = new AtomicLong(0);
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Get get, final List<Cell> results) throws IOException {

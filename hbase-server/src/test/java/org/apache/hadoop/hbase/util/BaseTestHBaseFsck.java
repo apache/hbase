@@ -25,6 +25,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -594,9 +596,14 @@ public class BaseTestHBaseFsck {
   @org.junit.Rule
   public TestName name = new TestName();
 
-  public static class MasterSyncObserver implements MasterObserver {
+  public static class MasterSyncCoprocessor implements MasterCoprocessor, MasterObserver {
     volatile CountDownLatch tableCreationLatch = null;
     volatile CountDownLatch tableDeletionLatch = null;
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void postCompletedCreateTableAction(
@@ -626,16 +633,16 @@ public class BaseTestHBaseFsck {
     byte [][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
-    observer.tableCreationLatch = new CountDownLatch(1);
+    MasterSyncCoprocessor coproc = testUtil.getHBaseCluster().getMaster()
+        .getMasterCoprocessorHost().findCoprocessor(MasterSyncCoprocessor.class);
+    coproc.tableCreationLatch = new CountDownLatch(1);
     if (splitKeys != null) {
       admin.createTable(htd, splitKeys);
     } else {
       admin.createTable(htd);
     }
-    observer.tableCreationLatch.await();
-    observer.tableCreationLatch = null;
+    coproc.tableCreationLatch.await();
+    coproc.tableCreationLatch = null;
     testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
   }
 
@@ -643,16 +650,16 @@ public class BaseTestHBaseFsck {
     throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
-    observer.tableDeletionLatch = new CountDownLatch(1);
+    MasterSyncCoprocessor coproc = testUtil.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncCoprocessor.class);
+    coproc.tableDeletionLatch = new CountDownLatch(1);
     try {
       admin.disableTable(tableName);
     } catch (Exception e) {
       LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
     }
     admin.deleteTable(tableName);
-    observer.tableDeletionLatch.await();
-    observer.tableDeletionLatch = null;
+    coproc.tableDeletionLatch.await();
+    coproc.tableDeletionLatch = null;
   }
 }

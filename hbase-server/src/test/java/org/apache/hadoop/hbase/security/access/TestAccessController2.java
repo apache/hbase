@@ -485,14 +485,13 @@ public class TestAccessController2 extends SecureTestUtil {
     MasterCoprocessorHost cpHost =
         TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     cpHost.load(MyAccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
-    AccessController ACCESS_CONTROLLER = (AccessController) cpHost.findCoprocessor(
-      MyAccessController.class.getName());
+    AccessController ACCESS_CONTROLLER = cpHost.findCoprocessor(MyAccessController.class);
     MasterCoprocessorEnvironment CP_ENV = cpHost.createEnvironment(
-      MyAccessController.class, ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+      ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
     RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
         .getRegionServerCoprocessorHost();
     RegionServerCoprocessorEnvironment RSCP_ENV = rsHost.createEnvironment(
-      MyAccessController.class, ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+      ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
   }
 
   @Test (timeout=180000)

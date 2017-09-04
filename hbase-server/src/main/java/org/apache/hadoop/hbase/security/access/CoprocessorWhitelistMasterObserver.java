@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.regex.Matcher;
 
 import org.apache.commons.io.FilenameUtils;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -43,13 +45,18 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Master observer for restricting coprocessor assignments.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class CoprocessorWhitelistMasterObserver implements MasterObserver {
+public class CoprocessorWhitelistMasterObserver implements MasterCoprocessor, MasterObserver {
 
   public static final String CP_COPROCESSOR_WHITELIST_PATHS_KEY =
       "hbase.coprocessor.region.whitelist.paths";
 
   private static final Log LOG = LogFactory
       .getLog(CoprocessorWhitelistMasterObserver.class);
+
+  @Override
+  public Optional<MasterObserver> getMasterObserver() {
+    return Optional.of(this);
+  }
 
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,

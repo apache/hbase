@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -159,12 +161,17 @@ public class HConnectionTestingUtility {
   /**
    * This coproceesor sleep 2s at first increment/append rpc call.
    */
-  public static class SleepAtFirstRpcCall implements RegionObserver {
+  public static class SleepAtFirstRpcCall implements RegionCoprocessor, RegionObserver {
     static final AtomicLong ct = new AtomicLong(0);
     static final String SLEEP_TIME_CONF_KEY =
         "hbase.coprocessor.SleepAtFirstRpcCall.sleepTime";
     static final long DEFAULT_SLEEP_TIME = 2000;
     static final AtomicLong sleepTime = new AtomicLong(DEFAULT_SLEEP_TIME);
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     public SleepAtFirstRpcCall() {
     }

@@ -161,7 +161,7 @@ public class TestRSGroupsOfflineMode {
 
     // Get groupInfoManager from the new active master.
     RSGroupInfoManager groupMgr = ((MiniHBaseCluster)cluster).getMaster().getMasterCoprocessorHost()
-            .findCoprocessors(RSGroupAdminEndpoint.class).get(0).getGroupInfoManager();
+            .findCoprocessor(RSGroupAdminEndpoint.class).getGroupInfoManager();
     // Make sure balancer is in offline mode, since this is what we're testing.
     assertFalse(groupMgr.isOnline());
     // Verify the group affiliation that's loaded from ZK instead of tables.

@@ -38,7 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost.Environment;
+import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.io.MultipleIOException;
@@ -70,7 +70,7 @@ public final class HTableWrapper implements Table {
    * @throws IOException
    */
   public static Table createWrapper(List<Table> openTables,
-      TableName tableName, Environment env, ExecutorService pool) throws IOException {
+      TableName tableName, BaseEnvironment env, ExecutorService pool) throws IOException {
     return new HTableWrapper(openTables, tableName,
         CoprocessorHConnection.getConnectionForEnvironment(env), pool);
   }

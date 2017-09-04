@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -77,8 +77,7 @@ import com.google.protobuf.Service;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public class MultiRowMutationEndpoint extends MultiRowMutationService implements
-CoprocessorService, Coprocessor {
+public class MultiRowMutationEndpoint extends MultiRowMutationService implements RegionCoprocessor {
   private RegionCoprocessorEnvironment env;
   @Override
   public void mutateRows(RpcController controller, MutateRowsRequest request,
@@ -120,10 +119,9 @@ CoprocessorService, Coprocessor {
     done.run(response);
   }
 
-
   @Override
-  public Service getService() {
-    return this;
+  public Optional<Service> getService() {
+    return Optional.of(this);
   }
 
   /**

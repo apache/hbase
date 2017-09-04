@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -87,7 +88,11 @@ public class TestHTableWrapper {
   private static final byte[] bytes4 = Bytes.toBytes(4);
   private static final byte[] bytes5 = Bytes.toBytes(5);
 
-  static class DummyRegionObserver implements RegionObserver {
+  public static class DummyRegionObserver implements MasterCoprocessor, MasterObserver {
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
   }
 
   private Table hTableInterface;
@@ -135,14 +140,14 @@ public class TestHTableWrapper {
   public void testHTableInterfaceMethods() throws Exception {
     Configuration conf = util.getConfiguration();
     MasterCoprocessorHost cpHost = util.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
-    Class<?> implClazz = DummyRegionObserver.class;
+    Class<? extends MasterCoprocessor> implClazz = DummyRegionObserver.class;
     cpHost.load(implClazz, Coprocessor.PRIORITY_HIGHEST, conf);
     CoprocessorEnvironment env = cpHost.findCoprocessorEnvironment(implClazz.getName());
     assertEquals(Coprocessor.VERSION, env.getVersion());
     assertEquals(VersionInfo.getVersion(), env.getHBaseVersion());
     hTableInterface = env.getTable(TEST_TABLE);
     checkHTableInterfaceMethods();
-    cpHost.shutdown(env);
+    cpHost.shutdown((MasterCoprocessorEnvironment) env);
   }
 
   private void checkHTableInterfaceMethods() throws Exception {

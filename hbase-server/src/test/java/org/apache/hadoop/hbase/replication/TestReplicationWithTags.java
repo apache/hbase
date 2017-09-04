@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -197,7 +199,12 @@ public class TestReplicationWithTags {
     }
   }
 
-  public static class TestCoprocessorForTagsAtSource implements RegionObserver {
+  public static class TestCoprocessorForTagsAtSource implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
@@ -230,8 +237,13 @@ public class TestReplicationWithTags {
     }
   }
 
-  public static class TestCoprocessorForTagsAtSink implements RegionObserver {
+  public static class TestCoprocessorForTagsAtSink implements RegionCoprocessor, RegionObserver {
     public static List<Tag> tags = null;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,

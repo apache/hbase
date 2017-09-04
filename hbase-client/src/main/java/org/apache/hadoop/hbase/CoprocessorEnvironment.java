@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.client.Table;
  * Coprocessor environment state.
  */
 @InterfaceAudience.Private
-public interface CoprocessorEnvironment {
+public interface CoprocessorEnvironment<C extends Coprocessor> {
 
   /** @return the Coprocessor interface version */
   int getVersion();
@@ -39,7 +39,7 @@ public interface CoprocessorEnvironment {
   String getHBaseVersion();
 
   /** @return the loaded coprocessor instance */
-  Coprocessor getInstance();
+  C getInstance();
 
   /** @return the priority assigned to the loaded coprocessor */
   int getPriority();
@@ -67,4 +67,13 @@ public interface CoprocessorEnvironment {
    * @return the classloader for the loaded coprocessor instance
    */
   ClassLoader getClassLoader();
+
+  /**
+   * After a coprocessor has been loaded in an encapsulation of an environment, CoprocessorHost
+   * calls this function to initialize the environment.
+   */
+  void startup() throws IOException;
+
+  /** Clean up the environment. Called by CoprocessorHost when it itself is shutting down. */
+  void shutdown();
 }

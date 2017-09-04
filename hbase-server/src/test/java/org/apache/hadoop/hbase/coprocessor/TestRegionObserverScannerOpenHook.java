@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.conf.Configuration;
@@ -103,13 +104,22 @@ public class TestRegionObserverScannerOpenHook {
   /**
    * Do the default logic in {@link RegionObserver} interface.
    */
-  public static class EmptyRegionObsever implements RegionObserver {
+  public static class EmptyRegionObsever implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
   }
 
   /**
    * Don't return any data from a scan by creating a custom {@link StoreScanner}.
    */
-  public static class NoDataFromScan implements RegionObserver {
+  public static class NoDataFromScan implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt)
@@ -137,7 +147,11 @@ public class TestRegionObserverScannerOpenHook {
   /**
    * Don't allow any data in a flush by creating a custom {@link StoreScanner}.
    */
-  public static class NoDataFromFlush implements RegionObserver {
+  public static class NoDataFromFlush implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public InternalScanner preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
@@ -152,7 +166,12 @@ public class TestRegionObserverScannerOpenHook {
    * Don't allow any data to be written out in the compaction by creating a custom
    * {@link StoreScanner}.
    */
-  public static class NoDataFromCompaction implements RegionObserver {
+  public static class NoDataFromCompaction implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,

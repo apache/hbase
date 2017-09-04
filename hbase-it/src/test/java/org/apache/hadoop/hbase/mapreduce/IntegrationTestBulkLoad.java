@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -155,12 +157,18 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   private boolean load = false;
   private boolean check = false;
 
-  public static class SlowMeCoproScanOperations implements RegionObserver {
+  public static class SlowMeCoproScanOperations implements RegionCoprocessor, RegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(2000);
     Random r = new Random();
     AtomicLong countOfNext = new AtomicLong(0);
     AtomicLong countOfOpen = new AtomicLong(0);
     public SlowMeCoproScanOperations() {}
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Scan scan, final RegionScanner s) throws IOException {

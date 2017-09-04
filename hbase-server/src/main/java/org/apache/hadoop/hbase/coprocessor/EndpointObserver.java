@@ -50,7 +50,7 @@ import com.google.protobuf.Service;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface EndpointObserver extends Coprocessor {
+public interface EndpointObserver {
 
   /**
    * Called before an Endpoint service method is invoked.

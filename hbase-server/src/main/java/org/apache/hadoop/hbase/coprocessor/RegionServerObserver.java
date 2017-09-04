@@ -53,7 +53,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface RegionServerObserver extends Coprocessor {
+public interface RegionServerObserver {
   /**
    * Called before stopping region server.
    * @param ctx the environment to interact with the framework and region server.

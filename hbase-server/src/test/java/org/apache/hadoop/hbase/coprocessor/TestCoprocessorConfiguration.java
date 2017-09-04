@@ -20,13 +20,13 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -74,7 +74,8 @@ public class TestCoprocessorConfiguration {
   private static final AtomicBoolean systemCoprocessorLoaded = new AtomicBoolean();
   private static final AtomicBoolean tableCoprocessorLoaded = new AtomicBoolean();
 
-  public static class SystemCoprocessor implements Coprocessor {
+  public static class SystemCoprocessor implements MasterCoprocessor, RegionCoprocessor,
+      RegionServerCoprocessor {
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       systemCoprocessorLoaded.set(true);
@@ -84,7 +85,7 @@ public class TestCoprocessorConfiguration {
     public void stop(CoprocessorEnvironment env) throws IOException { }
   }
 
-  public static class TableCoprocessor implements Coprocessor {
+  public static class TableCoprocessor implements RegionCoprocessor {
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       tableCoprocessorLoaded.set(true);
@@ -108,7 +109,7 @@ public class TestCoprocessorConfiguration {
       systemCoprocessorLoaded.get(),
       CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED);
     assertEquals("Table coprocessors loading default was not honored",
-      tableCoprocessorLoaded.get(), 
+      tableCoprocessorLoaded.get(),
       CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED &&
       CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED);
   }

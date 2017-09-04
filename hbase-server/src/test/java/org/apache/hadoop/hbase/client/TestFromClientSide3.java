@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -688,7 +690,7 @@ public class TestFromClientSide3 {
 
   private void testPreBatchMutate(TableName tableName, Runnable rn)throws Exception {
     HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addCoprocessor(WatiingForScanObserver.class.getName());
+    desc.addCoprocessor(WaitingForScanObserver.class.getName());
     desc.addFamily(new HColumnDescriptor(FAMILY));
     TEST_UTIL.getAdmin().createTable(desc);
     ExecutorService service = Executors.newFixedThreadPool(2);
@@ -720,7 +722,7 @@ public class TestFromClientSide3 {
   public void testLockLeakWithDelta() throws Exception, Throwable {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addCoprocessor(WatiingForMultiMutationsObserver.class.getName());
+    desc.addCoprocessor(WaitingForMultiMutationsObserver.class.getName());
     desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     TEST_UTIL.getAdmin().createTable(desc);
@@ -735,7 +737,7 @@ public class TestFromClientSide3 {
         try (Table table = con.getTable(tableName)) {
           Put put = new Put(ROW);
           put.addColumn(FAMILY, QUALIFIER, VALUE);
-          // the put will be blocked by WatiingForMultiMutationsObserver.
+          // the put will be blocked by WaitingForMultiMutationsObserver.
           table.put(put);
         } catch (IOException ex) {
           throw new RuntimeException(ex);
@@ -753,7 +755,7 @@ public class TestFromClientSide3 {
       });
       appendService.shutdown();
       appendService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-      WatiingForMultiMutationsObserver observer = find(tableName, WatiingForMultiMutationsObserver.class);
+      WaitingForMultiMutationsObserver observer = find(tableName, WaitingForMultiMutationsObserver.class);
       observer.latch.countDown();
       putService.shutdown();
       putService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -774,7 +776,7 @@ public class TestFromClientSide3 {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addCoprocessor(MultiRowMutationEndpoint.class.getName());
-    desc.addCoprocessor(WatiingForMultiMutationsObserver.class.getName());
+    desc.addCoprocessor(WaitingForMultiMutationsObserver.class.getName());
     desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     TEST_UTIL.getAdmin().createTable(desc);
@@ -793,7 +795,7 @@ public class TestFromClientSide3 {
         try (Table table = con.getTable(tableName)) {
           Put put0 = new Put(rowLocked);
           put0.addColumn(FAMILY, QUALIFIER, value0);
-          // the put will be blocked by WatiingForMultiMutationsObserver.
+          // the put will be blocked by WaitingForMultiMutationsObserver.
           table.put(put0);
         } catch (IOException ex) {
           throw new RuntimeException(ex);
@@ -830,7 +832,7 @@ public class TestFromClientSide3 {
       });
       cpService.shutdown();
       cpService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-      WatiingForMultiMutationsObserver observer = find(tableName, WatiingForMultiMutationsObserver.class);
+      WaitingForMultiMutationsObserver observer = find(tableName, WaitingForMultiMutationsObserver.class);
       observer.latch.countDown();
       putService.shutdown();
       putService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -975,8 +977,15 @@ public class TestFromClientSide3 {
     return clz.cast(cp);
   }
 
-  public static class WatiingForMultiMutationsObserver implements RegionObserver {
+  public static class WaitingForMultiMutationsObserver
+      implements RegionCoprocessor, RegionObserver {
     final CountDownLatch latch = new CountDownLatch(1);
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
             final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -988,8 +997,14 @@ public class TestFromClientSide3 {
     }
   }
 
-  public static class WatiingForScanObserver implements RegionObserver {
+  public static class WaitingForScanObserver implements RegionCoprocessor, RegionObserver {
     private final CountDownLatch latch = new CountDownLatch(1);
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
             final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
