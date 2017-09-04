@@ -1379,7 +1379,7 @@
     <protobuf.plugin.version>0.5.0</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.9.3</thrift.version>
-    <zookeeper.version>3.4.9</zookeeper.version>
+    <zookeeper.version>3.4.10</zookeeper.version>
     <slf4j.version>1.7.24</slf4j.version>
     <clover.version>4.0.3</clover.version>
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
