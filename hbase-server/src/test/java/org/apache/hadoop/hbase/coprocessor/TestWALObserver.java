@@ -109,9 +109,9 @@ public class TestWALObserver {
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
-        SampleRegionWALObserver.class.getName());
+        SampleRegionWALCoprocessor.class.getName());
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        SampleRegionWALObserver.class.getName());
+        SampleRegionWALCoprocessor.class.getName());
     conf.setInt("dfs.client.block.recovery.retries", 2);
 
     TEST_UTIL.startMiniCluster(1);
@@ -173,10 +173,10 @@ public class TestWALObserver {
   @Test
   public void testWALObserverWriteToWAL() throws Exception {
     final WAL log = wals.getWAL(UNSPECIFIED_REGION, null);
-    verifyWritesSeen(log, getCoprocessor(log, SampleRegionWALObserver.class), false);
+    verifyWritesSeen(log, getCoprocessor(log, SampleRegionWALCoprocessor.class), false);
   }
 
-  private void verifyWritesSeen(final WAL log, final SampleRegionWALObserver cp,
+  private void verifyWritesSeen(final WAL log, final SampleRegionWALCoprocessor cp,
       final boolean seesLegacy) throws Exception {
     HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(TEST_TABLE));
     final HTableDescriptor htd = createBasic3FamilyHTD(Bytes
@@ -277,7 +277,7 @@ public class TestWALObserver {
     }
     WAL log = wals.getWAL(UNSPECIFIED_REGION, null);
     try {
-      SampleRegionWALObserver cp = getCoprocessor(log, SampleRegionWALObserver.class);
+      SampleRegionWALCoprocessor cp = getCoprocessor(log, SampleRegionWALCoprocessor.class);
 
       cp.setTestValues(TEST_TABLE, null, null, null, null, null, null, null);
 
@@ -354,9 +354,8 @@ public class TestWALObserver {
             hri, htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
         long seqid2 = region.getOpenSeqNum();
 
-        SampleRegionWALObserver cp2 =
-          (SampleRegionWALObserver)region.getCoprocessorHost().findCoprocessor(
-              SampleRegionWALObserver.class.getName());
+        SampleRegionWALCoprocessor cp2 =
+          region.getCoprocessorHost().findCoprocessor(SampleRegionWALCoprocessor.class);
         // TODO: asserting here is problematic.
         assertNotNull(cp2);
         assertTrue(cp2.isPreWALRestoreCalled());
@@ -376,13 +375,13 @@ public class TestWALObserver {
   @Test
   public void testWALObserverLoaded() throws Exception {
     WAL log = wals.getWAL(UNSPECIFIED_REGION, null);
-    assertNotNull(getCoprocessor(log, SampleRegionWALObserver.class));
+    assertNotNull(getCoprocessor(log, SampleRegionWALCoprocessor.class));
   }
 
   @Test
   public void testWALObserverRoll() throws Exception {
     final WAL wal = wals.getWAL(UNSPECIFIED_REGION, null);
-    final SampleRegionWALObserver cp = getCoprocessor(wal, SampleRegionWALObserver.class);
+    final SampleRegionWALCoprocessor cp = getCoprocessor(wal, SampleRegionWALCoprocessor.class);
     cp.setTestValues(TEST_TABLE, null, null, null, null, null, null, null);
 
     assertFalse(cp.isPreWALRollCalled());
@@ -393,11 +392,11 @@ public class TestWALObserver {
     assertTrue(cp.isPostWALRollCalled());
   }
 
-  private SampleRegionWALObserver getCoprocessor(WAL wal,
-      Class<? extends SampleRegionWALObserver> clazz) throws Exception {
+  private SampleRegionWALCoprocessor getCoprocessor(WAL wal,
+      Class<? extends SampleRegionWALCoprocessor> clazz) throws Exception {
     WALCoprocessorHost host = wal.getCoprocessorHost();
     Coprocessor c = host.findCoprocessor(clazz.getName());
-    return (SampleRegionWALObserver) c;
+    return (SampleRegionWALCoprocessor) c;
   }
 
   /*

@@ -22,12 +22,14 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.metrics.Counter;
@@ -45,36 +47,49 @@ import org.apache.hadoop.hbase.metrics.Timer;
  *
  * @see ExampleMasterObserverWithMetrics
  */
-public class ExampleRegionObserverWithMetrics implements RegionObserver {
+public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
 
   private Counter preGetCounter;
   private Timer costlyOperationTimer;
+  private ExampleRegionObserver observer;
 
-  @Override
-  public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results)
-      throws IOException {
-    // Increment the Counter whenever the coprocessor is called
-    preGetCounter.increment();
-  }
+  class ExampleRegionObserver implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
-  @Override
-  public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
-                        List<Cell> results) throws IOException {
-    // do a costly (high latency) operation which we want to measure how long it takes by
-    // using a Timer (which is a Meter and a Histogram).
-    long start = System.nanoTime();
-    try {
-      performCostlyOperation();
-    } finally {
-      costlyOperationTimer.updateNanos(System.nanoTime() - start);
+    @Override
+    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+        List<Cell> results) throws IOException {
+      // Increment the Counter whenever the coprocessor is called
+      preGetCounter.increment();
+    }
+
+    @Override
+    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+        List<Cell> results) throws IOException {
+      // do a costly (high latency) operation which we want to measure how long it takes by
+      // using a Timer (which is a Meter and a Histogram).
+      long start = System.nanoTime();
+      try {
+        performCostlyOperation();
+      } finally {
+        costlyOperationTimer.updateNanos(System.nanoTime() - start);
+      }
+    }
+
+    private void performCostlyOperation() {
+      try {
+        // simulate the operation by sleeping.
+        Thread.sleep(ThreadLocalRandom.current().nextLong(100));
+      } catch (InterruptedException ignore) {
+      }
     }
   }
 
-  private void performCostlyOperation() {
-    try {
-      // simulate the operation by sleeping.
-      Thread.sleep(ThreadLocalRandom.current().nextLong(100));
-    } catch (InterruptedException ignore) {}
+  @Override public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(observer);
   }
 
   @Override
@@ -88,6 +103,7 @@ public class ExampleRegionObserverWithMetrics implements RegionObserver {
       // at the region server level per-regionserver.
       MetricRegistry registry =
           ((RegionCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
+      observer = new ExampleRegionObserver();
 
       if (preGetCounter == null) {
         // Create a new Counter, or get the already registered counter.

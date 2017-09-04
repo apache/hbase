@@ -155,8 +155,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
     // on an arbitrary server.
     for (JVMClusterUtil.RegionServerThread rst:
         UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
-      ACCESS_CONTROLLER = (AccessController)rst.getRegionServer().getRegionServerCoprocessorHost().
-        findCoprocessor(AccessController.class.getName());
+      ACCESS_CONTROLLER = rst.getRegionServer().getRegionServerCoprocessorHost().
+        findCoprocessor(AccessController.class);
       if (ACCESS_CONTROLLER != null) break;
     }
     if (ACCESS_CONTROLLER == null) throw new NullPointerException();

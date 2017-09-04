@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.Waiter;
 
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -83,11 +85,16 @@ public class TestReplicaWithCluster {
   /**
    * This copro is used to synchronize the tests.
    */
-  public static class SlowMeCopro implements RegionObserver {
+  public static class SlowMeCopro implements RegionCoprocessor, RegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(0);
     static final AtomicReference<CountDownLatch> cdl = new AtomicReference<>(new CountDownLatch(0));
 
     public SlowMeCopro() {
+    }
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
     }
 
     @Override
@@ -119,9 +126,14 @@ public class TestReplicaWithCluster {
   /**
    * This copro is used to simulate region server down exception for Get and Scan
    */
-  public static class RegionServerStoppedCopro implements RegionObserver {
+  public static class RegionServerStoppedCopro implements RegionCoprocessor, RegionObserver {
 
     public RegionServerStoppedCopro() {
+    }
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
     }
 
     @Override
@@ -164,9 +176,15 @@ public class TestReplicaWithCluster {
   /**
    * This copro is used to slow down the primary meta region scan a bit
    */
-  public static class RegionServerHostingPrimayMetaRegionSlowOrStopCopro implements RegionObserver {
+  public static class RegionServerHostingPrimayMetaRegionSlowOrStopCopro
+      implements RegionCoprocessor, RegionObserver {
     static boolean slowDownPrimaryMetaScan = false;
     static boolean throwException = false;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,

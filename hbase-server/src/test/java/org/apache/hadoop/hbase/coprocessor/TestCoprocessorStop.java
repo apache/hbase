@@ -49,7 +49,7 @@ public class TestCoprocessorStop {
   private static final String REGIONSERVER_FILE =
                               "regionserver" + System.currentTimeMillis();
 
-  public static class FooCoprocessor implements Coprocessor {
+  public static class FooCoprocessor implements MasterCoprocessor, RegionServerCoprocessor {
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       String where = null;

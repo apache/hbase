@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.constraint;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -42,13 +44,18 @@ import org.apache.hadoop.hbase.wal.WALEdit;
  * implemented on any given system by a coprocessor.
  */
 @InterfaceAudience.Private
-public class ConstraintProcessor implements RegionObserver {
+public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
 
   private static final Log LOG = LogFactory.getLog(ConstraintProcessor.class);
 
   private final ClassLoader classloader;
 
   private List<? extends Constraint> constraints = new ArrayList<>();
+
+  @Override
+  public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(this);
+  }
 
   /**
    * Create the constraint processor.

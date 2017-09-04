@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -74,6 +75,7 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
@@ -543,7 +545,7 @@ public class TestFromClientSide {
    * This is a coprocessor to inject a test failure so that a store scanner.reseek() call will
    * fail with an IOException() on the first call.
    */
-  public static class ExceptionInReseekRegionObserver implements RegionObserver {
+  public static class ExceptionInReseekRegionObserver implements RegionCoprocessor, RegionObserver {
     static AtomicLong reqCount = new AtomicLong(0);
     static AtomicBoolean isDoNotRetry = new AtomicBoolean(false); // whether to throw DNRIOE
     static AtomicBoolean throwOnce = new AtomicBoolean(true); // whether to only throw once
@@ -552,6 +554,11 @@ public class TestFromClientSide {
       reqCount.set(0);
       isDoNotRetry.set(false);
       throwOnce.set(true);
+    }
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
     }
 
     class MyStoreScanner extends StoreScanner {

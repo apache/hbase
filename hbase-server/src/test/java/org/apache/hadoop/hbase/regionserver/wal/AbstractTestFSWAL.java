@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
+import org.apache.hadoop.hbase.coprocessor.SampleRegionWALCoprocessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -110,7 +110,7 @@ public abstract class AbstractTestFSWAL {
     TEST_UTIL.getConfiguration().setInt("dfs.client.block.recovery.retries", 1);
     TEST_UTIL.getConfiguration().setInt("hbase.ipc.client.connection.maxidletime", 500);
     TEST_UTIL.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
-      SampleRegionWALObserver.class.getName());
+      SampleRegionWALCoprocessor.class.getName());
     TEST_UTIL.startMiniDFSCluster(3);
 
     CONF = TEST_UTIL.getConfiguration();
@@ -141,7 +141,7 @@ public abstract class AbstractTestFSWAL {
       wal = newWAL(FS, FSUtils.getWALRootDir(CONF), DIR.toString(), HConstants.HREGION_OLDLOGDIR_NAME,
         CONF, null, true, null, null);
       WALCoprocessorHost host = wal.getCoprocessorHost();
-      Coprocessor c = host.findCoprocessor(SampleRegionWALObserver.class.getName());
+      Coprocessor c = host.findCoprocessor(SampleRegionWALCoprocessor.class);
       assertNotNull(c);
     } finally {
       if (wal != null) {

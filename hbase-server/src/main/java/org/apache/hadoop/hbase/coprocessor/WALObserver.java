@@ -66,7 +66,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface WALObserver extends Coprocessor {
+public interface WALObserver {
   /**
    * Called before a {@link WALEdit}
    * is writen to WAL.

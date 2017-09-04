@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBul
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface BulkLoadObserver extends Coprocessor {
+public interface BulkLoadObserver {
     /**
       * Called as part of SecureBulkLoadEndpoint.prepareBulkLoad() RPC call.
       * It can't bypass the default action, e.g., ctx.bypass() won't have effect.

@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
+
 import static junit.framework.TestCase.assertTrue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -29,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -101,7 +104,11 @@ public class TestResultFromCoprocessor {
     }
   }
 
-  public static class MyObserver implements RegionObserver {
+  public static class MyObserver implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public Result postAppend(final ObserverContext<RegionCoprocessorEnvironment> c,

@@ -99,7 +99,7 @@ import org.apache.yetus.audience.InterfaceStability;
 // TODO as method signatures need to break, update to
 // ObserverContext<? extends RegionCoprocessorEnvironment>
 // so we can use additional environment state that isn't exposed to coprocessors.
-public interface RegionObserver extends Coprocessor {
+public interface RegionObserver {
   /** Mutation type for postMutationBeforeWAL hook */
   enum MutationType {
     APPEND, INCREMENT

@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.OptionalInt;
 
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -213,9 +215,14 @@ public class TestCoprocessorScanPolicy {
     EnvironmentEdgeManager.reset();
   }
 
-  public static class ScanObserver implements RegionObserver {
+  public static class ScanObserver implements RegionCoprocessor, RegionObserver {
     private Map<TableName, Long> ttls = new HashMap<>();
     private Map<TableName, Integer> versions = new HashMap<>();
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     // lame way to communicate with the coprocessor,
     // since it is loaded by a different class loader

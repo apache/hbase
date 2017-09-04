@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.metrics.MetricRegistry;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface MasterCoprocessorEnvironment extends CoprocessorEnvironment {
+public interface MasterCoprocessorEnvironment extends CoprocessorEnvironment<MasterCoprocessor> {
   /** @return reference to the HMaster services */
   MasterServices getMasterServices();
 

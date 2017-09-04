@@ -39,7 +39,7 @@ public class TestCoprocessorHost {
   /**
    * An {@link Abortable} implementation for tests.
    */
-  class TestAbortable implements Abortable {
+  private class TestAbortable implements Abortable {
     private volatile boolean aborted = false;
 
     @Override
@@ -56,13 +56,23 @@ public class TestCoprocessorHost {
   @Test
   public void testDoubleLoadingAndPriorityValue() {
     final Configuration conf = HBaseConfiguration.create();
-    CoprocessorHost<CoprocessorEnvironment> host =
-        new CoprocessorHost<CoprocessorEnvironment>(new TestAbortable()) {
-      final Configuration cpHostConf = conf;
+    CoprocessorHost<RegionCoprocessor, CoprocessorEnvironment<RegionCoprocessor>> host =
+        new CoprocessorHost<RegionCoprocessor, CoprocessorEnvironment<RegionCoprocessor>>(
+            new TestAbortable()) {
+          @Override
+          public RegionCoprocessor checkAndGetInstance(Class<?> implClass)
+              throws InstantiationException, IllegalAccessException {
+            if(RegionCoprocessor.class.isAssignableFrom(implClass)) {
+              return (RegionCoprocessor)implClass.newInstance();
+            }
+            return null;
+          }
+
+          final Configuration cpHostConf = conf;
 
       @Override
-      public CoprocessorEnvironment createEnvironment(Class<?> implClass,
-          final Coprocessor instance, final int priority, int sequence, Configuration conf) {
+      public CoprocessorEnvironment createEnvironment(final RegionCoprocessor instance,
+          final int priority, int sequence, Configuration conf) {
         return new CoprocessorEnvironment() {
           final Coprocessor envInstance = instance;
 
@@ -107,6 +117,12 @@ public class TestCoprocessorHost {
           }
 
           @Override
+          public void startup() throws IOException {}
+
+          @Override
+          public void shutdown() {}
+
+          @Override
           public ClassLoader getClassLoader() {
             return null;
           }
@@ -116,13 +132,16 @@ public class TestCoprocessorHost {
     final String key = "KEY";
     final String coprocessor = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
     // Try and load a coprocessor three times
-    conf.setStrings(key, coprocessor, coprocessor, coprocessor, SimpleRegionObserverV2.class.getName());
+    conf.setStrings(key, coprocessor, coprocessor, coprocessor,
+        SimpleRegionObserverV2.class.getName());
     host.loadSystemCoprocessors(conf, key);
     // Two coprocessors(SimpleRegionObserver and SimpleRegionObserverV2) loaded
-    Assert.assertEquals(2, host.coprocessors.size());
+    Assert.assertEquals(2, host.coprocEnvironments.size());
     // Check the priority value
-    CoprocessorEnvironment simpleEnv = host.findCoprocessorEnvironment(SimpleRegionObserver.class.getName());
-    CoprocessorEnvironment simpleEnv_v2 = host.findCoprocessorEnvironment(SimpleRegionObserverV2.class.getName());
+    CoprocessorEnvironment simpleEnv = host.findCoprocessorEnvironment(
+        SimpleRegionObserver.class.getName());
+    CoprocessorEnvironment simpleEnv_v2 = host.findCoprocessorEnvironment(
+        SimpleRegionObserverV2.class.getName());
     assertNotNull(simpleEnv);
     assertNotNull(simpleEnv_v2);
     assertEquals(Coprocessor.PRIORITY_SYSTEM, simpleEnv.getPriority());

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.coprocessor.example;
 import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.OptionalInt;
 
 import org.apache.commons.logging.Log;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -51,20 +53,25 @@ import org.apache.zookeeper.ZooKeeper;
  * This is an example showing how a RegionObserver could configured
  * via ZooKeeper in order to control a Region compaction, flush, and scan policy.
  *
- * This also demonstrated the use of shared 
+ * This also demonstrated the use of shared
  * {@link org.apache.hadoop.hbase.coprocessor.RegionObserver} state.
  * See {@link RegionCoprocessorEnvironment#getSharedData()}.
  *
  * This would be useful for an incremental backup tool, which would indicate the last
  * time of a successful backup via ZK and instruct HBase to not delete data that was
- * inserted since (based on wall clock time). 
+ * inserted since (based on wall clock time).
  *
  * This implements org.apache.zookeeper.Watcher directly instead of using
- * {@link org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher}, 
+ * {@link org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher},
  * because RegionObservers come and go and currently
  * listeners registered with ZooKeeperWatcher cannot be removed.
  */
-public class ZooKeeperScanPolicyObserver implements RegionObserver {
+public class ZooKeeperScanPolicyObserver implements RegionCoprocessor, RegionObserver {
+  @Override
+  public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(this);
+  }
+
   // The zk ensemble info is put in hbase config xml with given custom key.
   public static final String ZK_ENSEMBLE_KEY = "ZooKeeperScanPolicyObserver.zookeeper.ensemble";
   public static final String ZK_SESSION_TIMEOUT_KEY =

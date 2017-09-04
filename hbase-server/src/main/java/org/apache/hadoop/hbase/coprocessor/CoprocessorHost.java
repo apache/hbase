@@ -25,12 +25,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,22 +45,22 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTableWrapper;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedList;
-import org.apache.hadoop.hbase.util.VersionInfo;
 
 /**
  * Provides the common setup framework and runtime services for coprocessor
  * invocation from HBase services.
- * @param <E> the specific environment extension that a concrete implementation
+ * @param <C> type of specific coprocessor this host will handle
+ * @param <E> type of specific coprocessor environment this host requires.
  * provides
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
+public abstract class CoprocessorHost<C extends Coprocessor, E extends CoprocessorEnvironment<C>> {
   public static final String REGION_COPROCESSOR_CONF_KEY =
       "hbase.coprocessor.region.classes";
   public static final String REGIONSERVER_COPROCESSOR_CONF_KEY =
@@ -81,7 +82,8 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   protected Abortable abortable;
   /** Ordered set of loaded coprocessors with lock */
-  protected SortedList<E> coprocessors = new SortedList<>(new EnvironmentPriorityComparator());
+  protected final SortedList<E> coprocEnvironments =
+      new SortedList<>(new EnvironmentPriorityComparator());
   protected Configuration conf;
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
@@ -96,7 +98,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * Not to be confused with the per-object _coprocessors_ (above),
    * coprocessorNames is static and stores the set of all coprocessors ever
    * loaded by any thread in this JVM. It is strictly additive: coprocessors are
-   * added to coprocessorNames, by loadInstance() but are never removed, since
+   * added to coprocessorNames, by checkAndLoadInstance() but are never removed, since
    * the intention is to preserve a history of all loaded coprocessors for
    * diagnosis in case of server crash (HBASE-4014).
    */
@@ -118,7 +120,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   public Set<String> getCoprocessors() {
     Set<String> returnValue = new TreeSet<>();
-    for (CoprocessorEnvironment e: coprocessors) {
+    for (E e: coprocEnvironments) {
       returnValue.add(e.getInstance().getClass().getSimpleName());
     }
     return returnValue;
@@ -135,7 +137,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       return;
     }
 
-    Class<?> implClass = null;
+    Class<?> implClass;
 
     // load default coprocessors from configure file
     String[] defaultCPClasses = conf.getStrings(confKey);
@@ -156,10 +158,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         implClass = cl.loadClass(className);
         // Add coprocessors as we go to guard against case where a coprocessor is specified twice
         // in the configuration
-        this.coprocessors.add(loadInstance(implClass, priority, conf));
-        LOG.info("System coprocessor " + className + " was loaded " +
-            "successfully with priority (" + priority + ").");
-        ++priority;
+        E env = checkAndLoadInstance(implClass, priority, conf);
+        if (env != null) {
+          this.coprocEnvironments.add(env);
+          LOG.info(
+              "System coprocessor " + className + " was loaded " + "successfully with priority (" + priority + ").");
+          ++priority;
+        }
       } catch (Throwable t) {
         // We always abort if system coprocessors cannot be loaded
         abortServer(className, t);
@@ -196,7 +201,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   public E load(Path path, String className, int priority,
       Configuration conf, String[] includedClassPrefixes) throws IOException {
-    Class<?> implClass = null;
+    Class<?> implClass;
     LOG.debug("Loading coprocessor class " + className + " with path " +
         path + " and priority " + priority);
 
@@ -223,7 +228,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     try{
       // switch temporarily to the thread classloader for custom CP
       currentThread.setContextClassLoader(cl);
-      E cpInstance = loadInstance(implClass, priority, conf);
+      E cpInstance = checkAndLoadInstance(implClass, priority, conf);
       return cpInstance;
     } finally {
       // restore the fresh (host) classloader
@@ -231,16 +236,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     }
   }
 
-  /**
-   * @param implClass Implementation class
-   * @param priority priority
-   * @param conf configuration
-   * @throws java.io.IOException Exception
-   */
-  public void load(Class<?> implClass, int priority, Configuration conf)
+  @VisibleForTesting
+  public void load(Class<? extends C> implClass, int priority, Configuration conf)
       throws IOException {
-    E env = loadInstance(implClass, priority, conf);
-    coprocessors.add(env);
+    E env = checkAndLoadInstance(implClass, priority, conf);
+    coprocEnvironments.add(env);
   }
 
   /**
@@ -249,29 +249,22 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param conf configuration
    * @throws java.io.IOException Exception
    */
-  public E loadInstance(Class<?> implClass, int priority, Configuration conf)
+  public E checkAndLoadInstance(Class<?> implClass, int priority, Configuration conf)
       throws IOException {
-    if (!Coprocessor.class.isAssignableFrom(implClass)) {
-      throw new IOException("Configured class " + implClass.getName() + " must implement "
-          + Coprocessor.class.getName() + " interface ");
-    }
-
     // create the instance
-    Coprocessor impl;
-    Object o = null;
+    C impl;
     try {
-      o = implClass.newInstance();
-      impl = (Coprocessor)o;
-    } catch (InstantiationException e) {
-      throw new IOException(e);
-    } catch (IllegalAccessException e) {
+      impl = checkAndGetInstance(implClass);
+      if (impl == null) {
+        LOG.error("Cannot load coprocessor " + implClass.getSimpleName());
+        return null;
+      }
+    } catch (InstantiationException|IllegalAccessException e) {
       throw new IOException(e);
     }
     // create the environment
-    E env = createEnvironment(implClass, impl, priority, loadSequence.incrementAndGet(), conf);
-    if (env instanceof Environment) {
-      ((Environment)env).startup();
-    }
+    E env = createEnvironment(impl, priority, loadSequence.incrementAndGet(), conf);
+    env.startup();
     // HBASE-4014: maintain list of loaded coprocessors for later crash analysis
     // if server (master or regionserver) aborts.
     coprocessorNames.add(implClass.getName());
@@ -281,31 +274,43 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   /**
    * Called when a new Coprocessor class is loaded
    */
-  public abstract E createEnvironment(Class<?> implClass, Coprocessor instance,
-      int priority, int sequence, Configuration conf);
+  public abstract E createEnvironment(C instance, int priority, int sequence, Configuration conf);
 
-  public void shutdown(CoprocessorEnvironment e) {
-    if (e instanceof Environment) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Stop coprocessor " + e.getInstance().getClass().getName());
-      }
-      ((Environment)e).shutdown();
-    } else {
-      LOG.warn("Shutdown called on unknown environment: "+
-          e.getClass().getName());
+  /**
+   * Called when a new Coprocessor class needs to be loaded. Checks if type of the given class
+   * is what the corresponding host implementation expects. If it is of correct type, returns an
+   * instance of the coprocessor to be loaded. If not, returns null.
+   * If an exception occurs when trying to create instance of a coprocessor, it's passed up and
+   * eventually results into server aborting.
+   */
+  public abstract C checkAndGetInstance(Class<?> implClass)
+      throws InstantiationException, IllegalAccessException;
+
+  public void shutdown(E e) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Stop coprocessor " + e.getInstance().getClass().getName());
     }
+    e.shutdown();
   }
 
   /**
-   * Find a coprocessor implementation by class name
-   * @param className the class name
-   * @return the coprocessor, or null if not found
+   * Find coprocessors by full class name or simple name.
    */
-  public Coprocessor findCoprocessor(String className) {
-    for (E env: coprocessors) {
+  public C findCoprocessor(String className) {
+    for (E env: coprocEnvironments) {
       if (env.getInstance().getClass().getName().equals(className) ||
           env.getInstance().getClass().getSimpleName().equals(className)) {
         return env.getInstance();
+      }
+    }
+    return null;
+  }
+
+  @VisibleForTesting
+  public <T extends C> T findCoprocessor(Class<T> cls) {
+    for (E env: coprocEnvironments) {
+      if (cls.isAssignableFrom(env.getInstance().getClass())) {
+        return (T) env.getInstance();
       }
     }
     return null;
@@ -316,11 +321,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param cls the class/interface to look for
    * @return the list of coprocessors, or null if not found
    */
-  public <T extends Coprocessor> List<T> findCoprocessors(Class<T> cls) {
+  public <T extends C> List<T> findCoprocessors(Class<T> cls) {
     ArrayList<T> ret = new ArrayList<>();
 
-    for (E env: coprocessors) {
-      Coprocessor cp = env.getInstance();
+    for (E env: coprocEnvironments) {
+      C cp = env.getInstance();
 
       if(cp != null) {
         if (cls.isAssignableFrom(cp.getClass())) {
@@ -332,32 +337,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   }
 
   /**
-   * Find list of CoprocessorEnvironment that extend/implement the given class/interface
-   * @param cls the class/interface to look for
-   * @return the list of CoprocessorEnvironment, or null if not found
-   */
-  public List<CoprocessorEnvironment> findCoprocessorEnvironment(Class<?> cls) {
-    ArrayList<CoprocessorEnvironment> ret = new ArrayList<>();
-
-    for (E env: coprocessors) {
-      Coprocessor cp = env.getInstance();
-
-      if(cp != null) {
-        if (cls.isAssignableFrom(cp.getClass())) {
-          ret.add(env);
-        }
-      }
-    }
-    return ret;
-  }
-
-  /**
    * Find a coprocessor environment by class name
    * @param className the class name
    * @return the coprocessor, or null if not found
    */
-  public CoprocessorEnvironment findCoprocessorEnvironment(String className) {
-    for (E env: coprocessors) {
+  @VisibleForTesting
+  public E findCoprocessorEnvironment(String className) {
+    for (E env: coprocEnvironments) {
       if (env.getInstance().getClass().getName().equals(className) ||
           env.getInstance().getClass().getSimpleName().equals(className)) {
         return env;
@@ -374,7 +360,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   Set<ClassLoader> getExternalClassLoaders() {
     Set<ClassLoader> externalClassLoaders = new HashSet<>();
     final ClassLoader systemClassLoader = this.getClass().getClassLoader();
-    for (E env : coprocessors) {
+    for (E env : coprocEnvironments) {
       ClassLoader cl = env.getInstance().getClass().getClassLoader();
       if (cl != systemClassLoader){
         //do not include system classloader
@@ -388,8 +374,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * Environment priority comparator.
    * Coprocessors are chained in sorted order.
    */
-  static class EnvironmentPriorityComparator
-      implements Comparator<CoprocessorEnvironment> {
+  static class EnvironmentPriorityComparator implements Comparator<CoprocessorEnvironment> {
     @Override
     public int compare(final CoprocessorEnvironment env1,
         final CoprocessorEnvironment env2) {
@@ -407,153 +392,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     }
   }
 
-  /**
-   * Encapsulation of the environment of each coprocessor
-   */
-  public static class Environment implements CoprocessorEnvironment {
-
-    /** The coprocessor */
-    public Coprocessor impl;
-    /** Chaining priority */
-    protected int priority = Coprocessor.PRIORITY_USER;
-    /** Current coprocessor state */
-    Coprocessor.State state = Coprocessor.State.UNINSTALLED;
-    /** Accounting for tables opened by the coprocessor */
-    protected List<Table> openTables =
-      Collections.synchronizedList(new ArrayList<Table>());
-    private int seq;
-    private Configuration conf;
-    private ClassLoader classLoader;
-
-    /**
-     * Constructor
-     * @param impl the coprocessor instance
-     * @param priority chaining priority
-     */
-    public Environment(final Coprocessor impl, final int priority,
-        final int seq, final Configuration conf) {
-      this.impl = impl;
-      this.classLoader = impl.getClass().getClassLoader();
-      this.priority = priority;
-      this.state = Coprocessor.State.INSTALLED;
-      this.seq = seq;
-      this.conf = conf;
-    }
-
-    /** Initialize the environment */
-    public void startup() throws IOException {
-      if (state == Coprocessor.State.INSTALLED ||
-          state == Coprocessor.State.STOPPED) {
-        state = Coprocessor.State.STARTING;
-        Thread currentThread = Thread.currentThread();
-        ClassLoader hostClassLoader = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(this.getClassLoader());
-          impl.start(this);
-          state = Coprocessor.State.ACTIVE;
-        } finally {
-          currentThread.setContextClassLoader(hostClassLoader);
-        }
-      } else {
-        LOG.warn("Not starting coprocessor "+impl.getClass().getName()+
-            " because not inactive (state="+state.toString()+")");
-      }
-    }
-
-    /** Clean up the environment */
-    protected void shutdown() {
-      if (state == Coprocessor.State.ACTIVE) {
-        state = Coprocessor.State.STOPPING;
-        Thread currentThread = Thread.currentThread();
-        ClassLoader hostClassLoader = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(this.getClassLoader());
-          impl.stop(this);
-          state = Coprocessor.State.STOPPED;
-        } catch (IOException ioe) {
-          LOG.error("Error stopping coprocessor "+impl.getClass().getName(), ioe);
-        } finally {
-          currentThread.setContextClassLoader(hostClassLoader);
-        }
-      } else {
-        LOG.warn("Not stopping coprocessor "+impl.getClass().getName()+
-            " because not active (state="+state.toString()+")");
-      }
-      synchronized (openTables) {
-        // clean up any table references
-        for (Table table: openTables) {
-          try {
-            ((HTableWrapper)table).internalClose();
-          } catch (IOException e) {
-            // nothing can be done here
-            LOG.warn("Failed to close " +
-                table.getName(), e);
-          }
-        }
-      }
-    }
-
-    @Override
-    public Coprocessor getInstance() {
-      return impl;
-    }
-
-    @Override
-    public ClassLoader getClassLoader() {
-      return classLoader;
-    }
-
-    @Override
-    public int getPriority() {
-      return priority;
-    }
-
-    @Override
-    public int getLoadSequence() {
-      return seq;
-    }
-
-    /** @return the coprocessor environment version */
-    @Override
-    public int getVersion() {
-      return Coprocessor.VERSION;
-    }
-
-    /** @return the HBase release */
-    @Override
-    public String getHBaseVersion() {
-      return VersionInfo.getVersion();
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return conf;
-    }
-
-    /**
-     * Open a table from within the Coprocessor environment
-     * @param tableName the table name
-     * @return an interface for manipulating the table
-     * @exception java.io.IOException Exception
-     */
-    @Override
-    public Table getTable(TableName tableName) throws IOException {
-      return this.getTable(tableName, null);
-    }
-
-    /**
-     * Open a table from within the Coprocessor environment
-     * @param tableName the table name
-     * @return an interface for manipulating the table
-     * @exception java.io.IOException Exception
-     */
-    @Override
-    public Table getTable(TableName tableName, ExecutorService pool) throws IOException {
-      return HTableWrapper.createWrapper(openTables, tableName, this, pool);
-    }
-  }
-
-  protected void abortServer(final CoprocessorEnvironment environment, final Throwable e) {
+  protected void abortServer(final E environment, final Throwable e) {
     abortServer(environment.getInstance().getClass().getName(), e);
   }
 
@@ -586,8 +425,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   // etc) mention this nuance of our exception handling so that coprocessor can throw appropriate
   // exceptions depending on situation. If any changes are made to this logic, make sure to
   // update all classes' comments.
-  protected void handleCoprocessorThrowable(final CoprocessorEnvironment env, final Throwable e)
-      throws IOException {
+  protected void handleCoprocessorThrowable(final E env, final Throwable e) throws IOException {
     if (e instanceof IOException) {
       throw (IOException)e;
     }
@@ -610,7 +448,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
                 "environment",e);
       }
 
-      coprocessors.remove(env);
+      coprocEnvironments.remove(env);
       try {
         shutdown(env);
       } catch (Exception x) {
@@ -695,4 +533,192 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
           "'. Details of the problem: " + message);
     }
   }
+
+  /**
+   * Implementations defined function to get an observer of type {@code O} from a coprocessor of
+   * type {@code C}. Concrete implementations of CoprocessorHost define one getter for each
+   * observer they can handle. For e.g. RegionCoprocessorHost will use 3 getters, one for
+   * each of RegionObserver, EndpointObserver and BulkLoadObserver.
+   * These getters are used by {@code ObserverOperation} to get appropriate observer from the
+   * coprocessor.
+   */
+  @FunctionalInterface
+  public interface ObserverGetter<C, O> extends Function<C, Optional<O>> {}
+
+  private abstract class ObserverOperation<O> extends ObserverContext<E> {
+    ObserverGetter<C, O> observerGetter;
+
+    ObserverOperation(ObserverGetter<C, O> observerGetter) {
+      this(observerGetter, RpcServer.getRequestUser());
+    }
+
+    ObserverOperation(ObserverGetter<C, O> observerGetter, User user) {
+      super(user);
+      this.observerGetter = observerGetter;
+    }
+
+    abstract void callObserver() throws IOException;
+    protected void postEnvCall() {}
+  }
+
+  // Can't derive ObserverOperation from ObserverOperationWithResult (R = Void) because then all
+  // ObserverCaller implementations will have to have a return statement.
+  // O = observer, E = environment, C = coprocessor, R=result type
+  public abstract class ObserverOperationWithoutResult<O> extends ObserverOperation<O> {
+    protected abstract void call(O observer) throws IOException;
+
+    public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter) {
+      super(observerGetter);
+    }
+
+    public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter, User user) {
+      super(observerGetter, user);
+    }
+
+    /**
+     * In case of coprocessors which have many kinds of observers (for eg, {@link RegionCoprocessor}
+     * has BulkLoadObserver, RegionObserver, etc), some implementations may not need all
+     * observers, in which case they will return null for that observer's getter.
+     * We simply ignore such cases.
+     */
+    @Override
+    void callObserver() throws IOException {
+      Optional<O> observer = observerGetter.apply(getEnvironment().getInstance());
+      if (observer.isPresent()) {
+        call(observer.get());
+      }
+    }
+  }
+
+  public abstract class ObserverOperationWithResult<O, R> extends ObserverOperation<O> {
+    protected abstract R call(O observer) throws IOException;
+
+    private R result;
+
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter) {
+      super(observerGetter);
+    }
+
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, User user) {
+      super(observerGetter, user);
+    }
+
+    void setResult(final R result) {
+      this.result = result;
+    }
+
+    protected R getResult() {
+      return this.result;
+    }
+
+    void callObserver() throws IOException {
+      Optional<O> observer = observerGetter.apply(getEnvironment().getInstance());
+      if (observer.isPresent()) {
+        result = call(observer.get());
+      }
+    }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////
+  // Functions to execute observer hooks and handle results (if any)
+  //////////////////////////////////////////////////////////////////////////////////////////
+  protected <O, R> R execOperationWithResult(final R defaultValue,
+      final ObserverOperationWithResult<O, R> observerOperation) throws IOException {
+    if (observerOperation == null) {
+      return defaultValue;
+    }
+    observerOperation.setResult(defaultValue);
+    execOperation(observerOperation);
+    return observerOperation.getResult();
+  }
+
+  // what does bypass mean?
+  protected <O, R> R execOperationWithResult(final boolean ifBypass, final R defaultValue,
+      final ObserverOperationWithResult<O, R> observerOperation) throws IOException {
+    if (observerOperation == null) {
+      return ifBypass ? null : defaultValue;
+    } else {
+      observerOperation.setResult(defaultValue);
+      boolean bypass = execOperation(true, observerOperation);
+      R result = observerOperation.getResult();
+      return bypass == ifBypass ? result : null;
+    }
+  }
+
+  protected <O> boolean execOperation(final ObserverOperation<O> observerOperation)
+      throws IOException {
+    return execOperation(true, observerOperation);
+  }
+
+  protected <O> boolean execOperation(final boolean earlyExit,
+      final ObserverOperation<O> observerOperation) throws IOException {
+    if (observerOperation == null) return false;
+    boolean bypass = false;
+    List<E> envs = coprocEnvironments.get();
+    for (E env : envs) {
+      observerOperation.prepare(env);
+      Thread currentThread = Thread.currentThread();
+      ClassLoader cl = currentThread.getContextClassLoader();
+      try {
+        currentThread.setContextClassLoader(env.getClassLoader());
+        observerOperation.callObserver();
+      } catch (Throwable e) {
+        handleCoprocessorThrowable(env, e);
+      } finally {
+        currentThread.setContextClassLoader(cl);
+      }
+      bypass |= observerOperation.shouldBypass();
+      if (earlyExit && observerOperation.shouldComplete()) {
+        break;
+      }
+      observerOperation.postEnvCall();
+    }
+    return bypass;
+  }
+
+
+  /**
+   * Coprocessor classes can be configured in any order, based on that priority is set and
+   * chained in a sorted order. Should be used preStop*() hooks i.e. when master/regionserver is
+   * going down. This function first calls coprocessor methods (using ObserverOperation.call())
+   * and then shutdowns the environment in postEnvCall(). <br>
+   * Need to execute all coprocessor methods first then postEnvCall(), otherwise some coprocessors
+   * may remain shutdown if any exception occurs during next coprocessor execution which prevent
+   * master/regionserver stop or cluster shutdown. (Refer:
+   * <a href="https://issues.apache.org/jira/browse/HBASE-16663">HBASE-16663</a>
+   * @return true if bypaas coprocessor execution, false if not.
+   * @throws IOException
+   */
+  protected <O> boolean execShutdown(final ObserverOperation<O> observerOperation)
+      throws IOException {
+    if (observerOperation == null) return false;
+    boolean bypass = false;
+    List<E> envs = coprocEnvironments.get();
+    // Iterate the coprocessors and execute ObserverOperation's call()
+    for (E env : envs) {
+      observerOperation.prepare(env);
+      Thread currentThread = Thread.currentThread();
+      ClassLoader cl = currentThread.getContextClassLoader();
+      try {
+        currentThread.setContextClassLoader(env.getClassLoader());
+        observerOperation.callObserver();
+      } catch (Throwable e) {
+        handleCoprocessorThrowable(env, e);
+      } finally {
+        currentThread.setContextClassLoader(cl);
+      }
+      bypass |= observerOperation.shouldBypass();
+      if (observerOperation.shouldComplete()) {
+        break;
+      }
+    }
+
+    // Iterate the coprocessors and execute ObserverOperation's postEnvCall()
+    for (E env : envs) {
+      observerOperation.prepare(env);
+      observerOperation.postEnvCall();
+    }
+    return bypass;
+  }
+
 }

@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -411,9 +412,14 @@ public class TestRegionObserverInterface {
   }
 
   /* Overrides compaction to only output rows with keys that are even numbers */
-  public static class EvenOnlyCompactor implements RegionObserver {
+  public static class EvenOnlyCompactor implements RegionCoprocessor, RegionObserver {
     long lastCompaction;
     long lastFlush;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
@@ -494,8 +500,7 @@ public class TestRegionObserverInterface {
     }
 
     HRegion firstRegion = cluster.getRegions(compactTable).get(0);
-    Coprocessor cp =
-        firstRegion.getCoprocessorHost().findCoprocessor(EvenOnlyCompactor.class.getName());
+    Coprocessor cp = firstRegion.getCoprocessorHost().findCoprocessor(EvenOnlyCompactor.class);
     assertNotNull("EvenOnlyCompactor coprocessor should be loaded", cp);
     EvenOnlyCompactor compactor = (EvenOnlyCompactor) cp;
 
@@ -656,7 +661,7 @@ public class TestRegionObserverInterface {
   }
 
   // check each region whether the coprocessor upcalls are called or not.
-  private void verifyMethodResult(Class<?> c, String methodName[], TableName tableName,
+  private void verifyMethodResult(Class<?> coprocessor, String methodName[], TableName tableName,
       Object value[]) throws IOException {
     try {
       for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
@@ -671,14 +676,14 @@ public class TestRegionObserverInterface {
           RegionCoprocessorHost cph =
               t.getRegionServer().getOnlineRegion(r.getRegionName()).getCoprocessorHost();
 
-          Coprocessor cp = cph.findCoprocessor(c.getName());
+          Coprocessor cp = cph.findCoprocessor(coprocessor.getName());
           assertNotNull(cp);
           for (int i = 0; i < methodName.length; ++i) {
-            Method m = c.getMethod(methodName[i]);
+            Method m = coprocessor.getMethod(methodName[i]);
             Object o = m.invoke(cp);
-            assertTrue("Result of " + c.getName() + "." + methodName[i] + " is expected to be "
-                + value[i].toString() + ", while we get " + o.toString(),
-              o.equals(value[i]));
+            assertTrue("Result of " + coprocessor.getName() + "." + methodName[i]
+                    + " is expected to be " + value[i].toString() + ", while we get "
+                    + o.toString(), o.equals(value[i]));
           }
         }
       }

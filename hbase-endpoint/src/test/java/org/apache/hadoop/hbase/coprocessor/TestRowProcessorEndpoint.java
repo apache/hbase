@@ -310,7 +310,7 @@ public class TestRowProcessorEndpoint {
    * So they can be loaded with the endpoint on the coprocessor.
    */
   public static class RowProcessorEndpoint<S extends Message,T extends Message>
-  extends BaseRowProcessorEndpoint<S,T> implements CoprocessorService {
+  extends BaseRowProcessorEndpoint<S,T> {
     public static class IncrementCounterProcessor extends
         BaseRowProcessor<IncrementCounterProcessorTestProtos.IncCounterProcessorRequest,
         IncrementCounterProcessorTestProtos.IncCounterProcessorResponse> {
@@ -417,7 +417,7 @@ public class TestRowProcessorEndpoint {
 
       @Override
       public FriendsOfFriendsProcessorResponse getResult() {
-        FriendsOfFriendsProcessorResponse.Builder builder = 
+        FriendsOfFriendsProcessorResponse.Builder builder =
             FriendsOfFriendsProcessorResponse.newBuilder();
         builder.addAllResult(result);
         return builder.build();
@@ -469,7 +469,7 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void initialize(FriendsOfFriendsProcessorRequest request) 
+      public void initialize(FriendsOfFriendsProcessorRequest request)
           throws IOException {
         this.person = request.getPerson().toByteArray();
         this.row = request.getRow().toByteArray();
@@ -546,7 +546,7 @@ public class TestRowProcessorEndpoint {
             // Delete from the current row and add to the other row
             Delete d = new Delete(rows[i]);
             KeyValue kvDelete =
-                new KeyValue(rows[i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), 
+                new KeyValue(rows[i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
                     kv.getTimestamp(), KeyValue.Type.Delete);
             d.add(kvDelete);
             Put p = new Put(rows[1 - i]);

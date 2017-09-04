@@ -23,28 +23,21 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Optional;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TestAsyncAdminBase;
-import org.apache.hadoop.hbase.coprocessor.TestRegionServerCoprocessorEndpoint.DummyRegionServerEndpoint;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyService;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
-import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
-import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
@@ -56,7 +49,6 @@ import org.junit.runners.Parameterized;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 
 @RunWith(Parameterized.class)
 @Category({ ClientTests.class, MediumTests.class })
@@ -133,14 +125,14 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     }
   }
 
-  static class DummyRegionServerEndpoint extends DummyService implements Coprocessor, SingletonCoprocessorService {
+  public static class DummyRegionServerEndpoint extends DummyService
+      implements RegionServerCoprocessor {
 
-    public DummyRegionServerEndpoint() {
-    }
+    public DummyRegionServerEndpoint() {}
 
     @Override
-    public Service getService() {
-      return this;
+    public Optional<Service> getService() {
+      return Optional.of(this);
     }
 
     @Override

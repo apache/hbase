@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.protobuf.RpcCallback;
@@ -35,7 +36,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -70,8 +71,9 @@ import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 
+// TODO: Encapsulate MasterObserver functions into separate subclass.
 @InterfaceAudience.Private
-public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService {
+public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   private static final Log LOG = LogFactory.getLog(RSGroupAdminEndpoint.class);
 
   private MasterServices master = null;
@@ -94,8 +96,13 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
   }
 
   @Override
-  public Service getService() {
-    return groupAdminService;
+  public Optional<Service> getService() {
+    return Optional.of(groupAdminService);
+  }
+
+  @Override
+  public Optional<MasterObserver> getMasterObserver() {
+    return Optional.of(this);
   }
 
   RSGroupInfoManager getGroupInfoManager() {
@@ -107,12 +114,6 @@ public class RSGroupAdminEndpoint implements MasterObserver, CoprocessorService 
    * This class calls {@link RSGroupAdminServer} for actual work, converts result to protocol
    * buffer response, handles exceptions if any occurred and then calls the {@code RpcCallback} with
    * the response.
-   * Since our CoprocessorHost asks the Coprocessor for a Service
-   * ({@link CoprocessorService#getService()}) instead of doing "coproc instanceOf Service"
-   * and requiring Coprocessor itself to be Service (something we do with our observers),
-   * we can use composition instead of inheritance here. That makes it easy to manage
-   * functionalities in concise classes (sometimes inner classes) instead of single class doing
-   * many different things.
    */
   private class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
     @Override

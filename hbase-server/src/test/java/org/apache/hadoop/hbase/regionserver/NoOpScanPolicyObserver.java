@@ -21,12 +21,14 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.OptionalInt;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TestFromClientSideWithCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
@@ -38,7 +40,12 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
  * {@link TestCompactionWithCoprocessor} to make sure that a wide range
  * of functionality still behaves as expected.
  */
-public class NoOpScanPolicyObserver implements RegionObserver {
+public class NoOpScanPolicyObserver implements RegionCoprocessor, RegionObserver {
+
+  @Override
+  public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(this);
+  }
 
   /**
    * Reimplement the default behavior

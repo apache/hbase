@@ -120,7 +120,7 @@ public class TestAccessController3 extends SecureTestUtil {
   private static AccessController ACCESS_CONTROLLER;
   private static RegionServerCoprocessorEnvironment RSCP_ENV;
   private static RegionCoprocessorEnvironment RCP_ENV;
-  
+
   private static boolean callSuperTwice = true;
 
   @Rule
@@ -161,15 +161,13 @@ public class TestAccessController3 extends SecureTestUtil {
       TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     cpHost.load(FaultyAccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
     ACCESS_CONTROLLER = (AccessController) cpHost.findCoprocessor(accessControllerClassName);
-    CP_ENV = cpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
-      Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    CP_ENV = cpHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
     RegionServerCoprocessorHost rsHost;
     do {
       rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
           .getRegionServerCoprocessorHost();
     } while (rsHost == null);
-    RSCP_ENV = rsHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
-      Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    RSCP_ENV = rsHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
@@ -219,8 +217,7 @@ public class TestAccessController3 extends SecureTestUtil {
 
     Region region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
-    RCP_ENV = rcpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
-      Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    RCP_ENV = rcpHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Set up initial grants
 

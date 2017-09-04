@@ -26,7 +26,9 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 /**
  * Coprocessor endpoints providing protobuf services should implement this
  * interface and return the {@link Service} instance via {@link #getService()}.
+ * @deprecated Since 2.0. Will be removed in 3.0
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface CoprocessorService {

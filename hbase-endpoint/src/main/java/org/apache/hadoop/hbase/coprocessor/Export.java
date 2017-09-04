@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -87,8 +87,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public class Export extends ExportProtos.ExportService
-        implements Coprocessor, CoprocessorService {
+public class Export extends ExportProtos.ExportService implements RegionCoprocessor {
 
   private static final Log LOG = LogFactory.getLog(Export.class);
   private static final Class<? extends CompressionCodec> DEFAULT_CODEC = DefaultCodec.class;
@@ -312,8 +311,8 @@ public class Export extends ExportProtos.ExportService
   }
 
   @Override
-  public Service getService() {
-    return this;
+  public Optional<Service> getService() {
+    return Optional.of(this);
   }
 
   @Override

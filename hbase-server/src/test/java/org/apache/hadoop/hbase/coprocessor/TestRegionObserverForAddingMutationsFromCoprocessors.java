@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -194,7 +195,12 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestMultiMutationCoprocessor implements RegionObserver {
+  public static class TestMultiMutationCoprocessor implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
         MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -211,7 +217,12 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestDeleteCellCoprocessor implements RegionObserver {
+  public static class TestDeleteCellCoprocessor implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
         MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -230,7 +241,12 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestDeleteFamilyCoprocessor implements RegionObserver {
+  public static class TestDeleteFamilyCoprocessor implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
         MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -249,7 +265,12 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestDeleteRowCoprocessor implements RegionObserver {
+  public static class TestDeleteRowCoprocessor implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
         MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -268,8 +289,14 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
-  public static class TestWALObserver implements WALObserver {
+  public static class TestWALObserver implements WALCoprocessor, WALObserver {
     static WALEdit savedEdit = null;
+
+    @Override
+    public Optional<WALObserver> getWALObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
                              RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {

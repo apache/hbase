@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
+import org.apache.hadoop.hbase.coprocessor.SampleRegionWALCoprocessor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
@@ -137,7 +137,7 @@ public class TestWALFactory {
     TEST_UTIL.getConfiguration().setInt("hbase.lease.recovery.timeout", 10000);
     TEST_UTIL.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 1000);
     TEST_UTIL.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
-        SampleRegionWALObserver.class.getName());
+        SampleRegionWALCoprocessor.class.getName());
     TEST_UTIL.startMiniDFSCluster(3);
 
     conf = TEST_UTIL.getConfiguration();
@@ -669,7 +669,7 @@ public class TestWALFactory {
   public void testWALCoprocessorLoaded() throws Exception {
     // test to see whether the coprocessor is loaded or not.
     WALCoprocessorHost host = wals.getWAL(UNSPECIFIED_REGION, null).getCoprocessorHost();
-    Coprocessor c = host.findCoprocessor(SampleRegionWALObserver.class.getName());
+    Coprocessor c = host.findCoprocessor(SampleRegionWALCoprocessor.class);
     assertNotNull(c);
   }
 

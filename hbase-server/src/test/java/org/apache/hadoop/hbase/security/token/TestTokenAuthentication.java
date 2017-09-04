@@ -49,7 +49,9 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -261,11 +263,16 @@ public class TestTokenAuthentication {
       final RegionServerServices mockServices = TEST_UTIL.createMockRegionServerService(rpcServer);
 
       // mock up coprocessor environment
-      super.start(new RegionCoprocessorEnvironment() {
+      super.start( new RegionCoprocessorEnvironment()  {
         @Override
         public HRegion getRegion() { return null; }
 
         @Override
+        public void startup() throws IOException {}
+
+        @Override
+        public void shutdown() {}
+
         public CoprocessorRegionServerServices getCoprocessorRegionServerServices() {
           return mockServices;
         }
@@ -285,7 +292,7 @@ public class TestTokenAuthentication {
         public String getHBaseVersion() { return null; }
 
         @Override
-        public Coprocessor getInstance() { return null; }
+        public RegionCoprocessor getInstance() { return null; }
 
         @Override
         public int getPriority() { return 0; }

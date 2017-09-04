@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -28,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType;
@@ -57,7 +57,7 @@ import com.google.protobuf.Service;
 
 /**
  * Defines a protocol to delete data in bulk based on a scan. The scan can be range scan or with
- * conditions(filters) etc.This can be used to delete rows, column family(s), column qualifier(s) 
+ * conditions(filters) etc.This can be used to delete rows, column family(s), column qualifier(s)
  * or version(s) of columns.When delete type is FAMILY or COLUMN, which all family(s) or column(s)
  * getting deleted will be determined by the Scan. Scan need to select all the families/qualifiers
  * which need to be deleted.When delete type is VERSION, Which column(s) and version(s) to be
@@ -65,16 +65,16 @@ import com.google.protobuf.Service;
  * which needs to be deleted.When a timestamp is passed only one version at that timestamp will be
  * deleted(even if Scan fetches many versions). When timestamp passed as null, all the versions
  * which the Scan selects will get deleted.
- * 
+ *
  * <br> Example: <pre><code>
  * Scan scan = new Scan();
  * // set scan properties(rowkey range, filters, timerange etc).
  * HTable ht = ...;
  * long noOfDeletedRows = 0L;
- * Batch.Call&lt;BulkDeleteService, BulkDeleteResponse&gt; callable = 
+ * Batch.Call&lt;BulkDeleteService, BulkDeleteResponse&gt; callable =
  *     new Batch.Call&lt;BulkDeleteService, BulkDeleteResponse&gt;() {
  *   ServerRpcController controller = new ServerRpcController();
- *   BlockingRpcCallback&lt;BulkDeleteResponse&gt; rpcCallback = 
+ *   BlockingRpcCallback&lt;BulkDeleteResponse&gt; rpcCallback =
  *     new BlockingRpcCallback&lt;BulkDeleteResponse&gt;();
  *
  *   public BulkDeleteResponse call(BulkDeleteService service) throws IOException {
@@ -95,16 +95,15 @@ import com.google.protobuf.Service;
  * }
  * </code></pre>
  */
-public class BulkDeleteEndpoint extends BulkDeleteService implements CoprocessorService,
-    Coprocessor {
+public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCoprocessor {
   private static final String NO_OF_VERSIONS_TO_DELETE = "noOfVersionsToDelete";
   private static final Log LOG = LogFactory.getLog(BulkDeleteEndpoint.class);
 
   private RegionCoprocessorEnvironment env;
 
   @Override
-  public Service getService() {
-    return this;
+  public Optional<Service> getService() {
+    return Optional.of(this);
   }
 
   @Override

@@ -31,11 +31,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
@@ -60,8 +60,8 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
  * @param R PB message that is used to transport Promoted (&lt;S&gt;) instance
  */
 @InterfaceAudience.Private
-public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message> 
-extends AggregateService implements CoprocessorService, Coprocessor {
+public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message>
+extends AggregateService implements RegionCoprocessor {
   protected static final Log log = LogFactory.getLog(AggregateImplementation.class);
   private RegionCoprocessorEnvironment env;
 
@@ -156,7 +156,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
         results.clear();
       } while (hasMoreRows);
       if (min != null) {
-        response = AggregateResponse.newBuilder().addFirstPart( 
+        response = AggregateResponse.newBuilder().addFirstPart(
           ci.getProtoForCellType(min).toByteString()).build();
       }
     } catch (IOException e) {
@@ -211,7 +211,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
         results.clear();
       } while (hasMoreRows);
       if (sumVal != null) {
-        response = AggregateResponse.newBuilder().addFirstPart( 
+        response = AggregateResponse.newBuilder().addFirstPart(
           ci.getProtoForPromotedType(sumVal).toByteString()).build();
       }
     } catch (IOException e) {
@@ -262,7 +262,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       } while (hasMoreRows);
       ByteBuffer bb = ByteBuffer.allocate(8).putLong(counter);
       bb.rewind();
-      response = AggregateResponse.newBuilder().addFirstPart( 
+      response = AggregateResponse.newBuilder().addFirstPart(
           ByteString.copyFrom(bb)).build();
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -310,7 +310,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
       List<Cell> results = new ArrayList<>();
       boolean hasMoreRows = false;
-    
+
       do {
         results.clear();
         hasMoreRows = scanner.next(results);
@@ -371,7 +371,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       List<Cell> results = new ArrayList<>();
 
       boolean hasMoreRows = false;
-    
+
       do {
         tempVal = null;
         hasMoreRows = scanner.next(results);
@@ -413,7 +413,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
    * It is computed for the combination of column
    * family and column qualifier(s) in the given row range as defined in the
    * Scan object. In its current implementation, it takes one column family and
-   * two column qualifiers. The first qualifier is for values column and 
+   * two column qualifiers. The first qualifier is for values column and
    * the second qualifier (optional) is for weight column.
    */
   @Override
@@ -437,7 +437,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       List<Cell> results = new ArrayList<>();
 
       boolean hasMoreRows = false;
-    
+
       do {
         tempVal = null;
         tempWeight = null;
@@ -461,7 +461,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       ByteString first_sumWeights = ci.getProtoForPromotedType(s).toByteString();
       AggregateResponse.Builder pair = AggregateResponse.newBuilder();
       pair.addFirstPart(first_sumVal);
-      pair.addFirstPart(first_sumWeights); 
+      pair.addFirstPart(first_sumWeights);
       response = pair.build();
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -500,8 +500,8 @@ extends AggregateService implements CoprocessorService, Coprocessor {
   }
 
   @Override
-  public Service getService() {
-    return this;
+  public Optional<Service> getService() {
+    return Optional.of(this);
   }
 
   /**
@@ -527,5 +527,5 @@ extends AggregateService implements CoprocessorService, Coprocessor {
   public void stop(CoprocessorEnvironment env) throws IOException {
     // nothing to do
   }
-  
+
 }

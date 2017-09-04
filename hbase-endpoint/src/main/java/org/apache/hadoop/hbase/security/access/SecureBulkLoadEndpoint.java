@@ -21,14 +21,13 @@ package org.apache.hadoop.hbase.security.access;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -48,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Coprocessor service for bulk loads in secure mode.
@@ -55,8 +55,7 @@ import com.google.protobuf.Service;
  */
 @InterfaceAudience.Private
 @Deprecated
-public class SecureBulkLoadEndpoint extends SecureBulkLoadService
-    implements CoprocessorService, Coprocessor {
+public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements RegionCoprocessor {
 
   public static final long VERSION = 0L;
 
@@ -176,7 +175,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   }
 
   @Override
-  public Service getService() {
-    return this;
+  public Optional<Service> getService() {
+    return Optional.of(this);
   }
 }

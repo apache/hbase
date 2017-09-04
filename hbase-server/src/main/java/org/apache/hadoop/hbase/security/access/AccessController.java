@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -74,13 +75,15 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -169,8 +172,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </p>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class AccessController implements MasterObserver, RegionObserver, RegionServerObserver,
-      AccessControlService.Interface, CoprocessorService, EndpointObserver, BulkLoadObserver {
+public class AccessController implements MasterCoprocessor, RegionCoprocessor,
+    RegionServerCoprocessor, AccessControlService.Interface,
+    MasterObserver, RegionObserver, RegionServerObserver, EndpointObserver, BulkLoadObserver {
+  // TODO: encapsulate observer functions into separate class/sub-class.
 
   private static final Log LOG = LogFactory.getLog(AccessController.class);
 
@@ -986,6 +991,39 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
       TableAuthManager.release(authManager);
     }
   }
+
+  /*********************************** Observer/Service Getters ***********************************/
+  @Override
+  public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(this);
+  }
+
+  @Override
+  public Optional<MasterObserver> getMasterObserver() {
+    return Optional.of(this);
+  }
+
+  @Override
+  public Optional<EndpointObserver> getEndpointObserver() {
+    return Optional.of(this);
+  }
+
+  @Override
+  public Optional<BulkLoadObserver> getBulkLoadObserver() {
+    return Optional.of(this);
+  }
+
+  @Override
+  public Optional<RegionServerObserver> getRegionServerObserver() {
+    return Optional.of(this);
+  }
+
+  @Override
+  public Optional<Service> getService() {
+    return Optional.of(AccessControlProtos.AccessControlService.newReflectiveService(this));
+  }
+
+  /*********************************** Observer implementations ***********************************/
 
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -2446,11 +2484,6 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     }
     done.run(response);
-  }
-
-  @Override
-  public Service getService() {
-    return AccessControlProtos.AccessControlService.newReflectiveService(this);
   }
 
   private Region getRegion(RegionCoprocessorEnvironment e) {

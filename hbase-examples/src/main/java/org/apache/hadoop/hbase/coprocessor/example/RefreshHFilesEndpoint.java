@@ -23,16 +23,16 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.protobuf.generated.RefreshHFilesProtos;
 import org.apache.hadoop.hbase.regionserver.Store;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * Coprocessor endpoint to refresh HFiles on replica.
@@ -43,7 +43,7 @@ import java.io.IOException;
  * </p>
  */
 public class RefreshHFilesEndpoint extends RefreshHFilesProtos.RefreshHFilesService
-  implements Coprocessor, CoprocessorService {
+  implements RegionCoprocessor {
   protected static final Log LOG = LogFactory.getLog(RefreshHFilesEndpoint.class);
   private RegionCoprocessorEnvironment env;
 
@@ -51,8 +51,8 @@ public class RefreshHFilesEndpoint extends RefreshHFilesProtos.RefreshHFilesServ
   }
 
   @Override
-  public Service getService() {
-    return this;
+  public Optional<Service> getService() {
+    return Optional.of(this);
   }
 
   @Override

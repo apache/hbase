@@ -181,9 +181,8 @@ To implement an Endpoint, you need to:
  <a href="https://developers.google.com/protocol-buffers/docs/proto#services">protocol buffer guide</a>
  for more details on defining services.</li>
  <li>Generate the Service and Message code using the protoc compiler</li>
- <li>Implement the generated Service interface in your coprocessor class and implement the
- <code>CoprocessorService</code> interface.  The <code>CoprocessorService.getService()</code>
- method should return a reference to the Endpoint's protocol buffer Service instance.
+ <li>Implement the generated Service interface and override get*Service() method in
+ relevant Coprocessor to return a reference to the Endpoint's protocol buffer Service instance.
 </ul>
 <p>
 For a more detailed discussion of how to implement a coprocessor Endpoint, along with some sample

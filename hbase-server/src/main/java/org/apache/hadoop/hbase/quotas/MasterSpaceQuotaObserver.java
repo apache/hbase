@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -24,6 +25,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -35,13 +37,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
  * are deleted.
  */
 @InterfaceAudience.Private
-public class MasterSpaceQuotaObserver implements MasterObserver {
+public class MasterSpaceQuotaObserver implements MasterCoprocessor, MasterObserver {
   public static final String REMOVE_QUOTA_ON_TABLE_DELETE = "hbase.quota.remove.on.table.delete";
   public static final boolean REMOVE_QUOTA_ON_TABLE_DELETE_DEFAULT = true;
 
   private CoprocessorEnvironment cpEnv;
   private Configuration conf;
   private boolean quotasEnabled = false;
+
+  @Override
+  public Optional<MasterObserver> getMasterObserver() {
+    return Optional.of(this);
+  }
 
   @Override
   public void start(CoprocessorEnvironment ctx) throws IOException {

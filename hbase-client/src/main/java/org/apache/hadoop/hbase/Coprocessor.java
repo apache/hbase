@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Optional;
 
+import com.google.protobuf.Service;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -53,9 +55,22 @@ public interface Coprocessor {
     STOPPED
   }
 
-  // Interface
+  /**
+   * Called by the {@link CoprocessorEnvironment} during it's own startup to initialize the
+   * coprocessor.
+   */
   default void start(CoprocessorEnvironment env) throws IOException {}
 
+  /**
+   * Called by the {@link CoprocessorEnvironment} during it's own shutdown to stop the
+   * coprocessor.
+   */
   default void stop(CoprocessorEnvironment env) throws IOException {}
 
+  /**
+   * Coprocessor endpoints providing protobuf services should implement this interface.
+   */
+  default Optional<Service> getService() {
+    return Optional.empty();
+  }
 }

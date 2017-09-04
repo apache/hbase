@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface WALCoprocessorEnvironment extends CoprocessorEnvironment {
+public interface WALCoprocessorEnvironment extends CoprocessorEnvironment<WALCoprocessor> {
   /** @return reference to the region server's WAL */
   WAL getWAL();
 

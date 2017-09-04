@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
@@ -65,7 +67,12 @@ public class TestScannerWithCorruptHFile {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  public static class CorruptHFileCoprocessor implements RegionObserver {
+  public static class CorruptHFileCoprocessor implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
       InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {

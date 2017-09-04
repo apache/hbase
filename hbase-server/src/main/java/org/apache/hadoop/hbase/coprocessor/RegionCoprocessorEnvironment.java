@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceStability;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment {
+public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<RegionCoprocessor> {
   /** @return the region associated with this coprocessor */
   Region getRegion();
 
@@ -61,6 +61,4 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment {
   // so we do not want to allow coprocessors to export metrics at the region level. We can allow
   // getMetricRegistryForTable() to allow coprocessors to track metrics per-table, per-regionserver.
   MetricRegistry getMetricRegistryForRegionServer();
-
-
 }

@@ -24,6 +24,7 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -304,8 +306,7 @@ public class SecureTestUtil {
     List<AccessController> result = Lists.newArrayList();
     for (RegionServerThread t: cluster.getLiveRegionServerThreads()) {
       for (Region region: t.getRegionServer().getOnlineRegionsLocalContext()) {
-        Coprocessor cp = region.getCoprocessorHost()
-          .findCoprocessor(AccessController.class.getName());
+        Coprocessor cp = region.getCoprocessorHost().findCoprocessor(AccessController.class);
         if (cp != null) {
           result.add((AccessController)cp);
         }
@@ -622,9 +623,14 @@ public class SecureTestUtil {
     });
   }
 
-  public static class MasterSyncObserver implements MasterObserver {
+  public static class MasterSyncObserver implements MasterCoprocessor, MasterObserver {
     volatile CountDownLatch tableCreationLatch = null;
     volatile CountDownLatch tableDeletionLatch = null;
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void postCompletedCreateTableAction(
@@ -678,8 +684,8 @@ public class SecureTestUtil {
       byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class);
     observer.tableCreationLatch = new CountDownLatch(1);
     if (splitKeys != null) {
       admin.createTable(htd, splitKeys);
@@ -710,8 +716,8 @@ public class SecureTestUtil {
       throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class);
     observer.tableDeletionLatch = new CountDownLatch(1);
     try {
       admin.disableTable(tableName);

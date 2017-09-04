@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -68,8 +70,13 @@ public class TestSettingTimeoutOnBlockingPoint {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  public static class SleepCoprocessor implements RegionObserver {
+  public static class SleepCoprocessor implements RegionCoprocessor, RegionObserver {
     public static final int SLEEP_TIME = 10000;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public Result preIncrementAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> e,

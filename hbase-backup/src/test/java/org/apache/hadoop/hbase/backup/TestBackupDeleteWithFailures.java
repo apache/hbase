@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -67,9 +69,7 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
     POST_DELETE_SNAPSHOT_FAILURE
   }
 
-  public static class MasterSnapshotObserver implements MasterObserver {
-
-
+  public static class MasterSnapshotObserver implements MasterCoprocessor, MasterObserver {
     List<Failure> failures = new ArrayList<Failure>();
 
     public void setFailures(Failure ... f) {
@@ -77,6 +77,11 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
       for (int i = 0; i < f.length; i++) {
         failures.add(f[i]);
       }
+    }
+
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
     }
 
     @Override
@@ -121,8 +126,8 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
 
 
   private MasterSnapshotObserver getMasterSnapshotObserver() {
-    return (MasterSnapshotObserver)TEST_UTIL.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSnapshotObserver.class.getName());
+    return TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost()
+        .findCoprocessor(MasterSnapshotObserver.class);
   }
 
   @Test

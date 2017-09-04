@@ -54,7 +54,12 @@ public class TestClassLoading {
   private static final Log LOG = LogFactory.getLog(TestClassLoading.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  public static class TestMasterCoprocessor implements MasterObserver {}
+  public static class TestMasterCoprocessor implements MasterCoprocessor, MasterObserver {
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
+  }
 
   private static MiniDFSCluster cluster;
 
@@ -69,7 +74,7 @@ public class TestClassLoading {
   private static Class<?> regionCoprocessor1 = ColumnAggregationEndpoint.class;
   // TOOD: Fix the import of this handler.  It is coming in from a package that is far away.
   private static Class<?> regionCoprocessor2 = TestServerCustomProtocol.PingHandler.class;
-  private static Class<?> regionServerCoprocessor = SampleRegionWALObserver.class;
+  private static Class<?> regionServerCoprocessor = SampleRegionWALCoprocessor.class;
   private static Class<?> masterCoprocessor = TestMasterCoprocessor.class;
 
   private static final String[] regionServerSystemCoprocessors =
@@ -110,8 +115,9 @@ public class TestClassLoading {
   }
 
   static File buildCoprocessorJar(String className) throws Exception {
-    String code = "import org.apache.hadoop.hbase.coprocessor.*;" +
-      "public class " + className + " implements RegionObserver {}";
+    String code =
+        "import org.apache.hadoop.hbase.coprocessor.*;" +
+            "public class " + className + " implements RegionCoprocessor {}";
     return ClassLoaderTestHelper.buildJar(
       TEST_UTIL.getDataTestDir().toString(), className, code);
   }
@@ -537,19 +543,6 @@ public class TestClassLoading {
         java.util.Arrays.toString(
             TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessors());
     assertEquals(loadedMasterCoprocessorsVerify, loadedMasterCoprocessors);
-  }
-
-  @Test
-  public void testFindCoprocessors() {
-    // HBASE 12277: 
-    CoprocessorHost masterCpHost =
-                             TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost();
-
-    List<MasterObserver> masterObservers = masterCpHost.findCoprocessors(MasterObserver.class);
-
-    assertTrue(masterObservers != null && masterObservers.size() > 0);
-    assertEquals(masterCoprocessor.getSimpleName(),
-                 masterObservers.get(0).getClass().getSimpleName());
   }
 
   private void waitForTable(TableName name) throws InterruptedException, IOException {
