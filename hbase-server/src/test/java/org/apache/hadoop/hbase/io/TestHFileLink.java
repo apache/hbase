@@ -102,7 +102,8 @@ public class TestHFileLink {
           TableName.NAMESPACE_DELIM, '=') + "=" + encodedRegion + "-" + storeFileName;
 
       TableName tableNames[] = {TableName.valueOf("tableName1"),
-          TableName.valueOf("ns", "tableName2")};
+          TableName.valueOf("ns", "tableName2"),
+              TableName.valueOf("refTable:refTable")};
 
       for( TableName tableName : tableNames) {
         Path tableDir = FSUtils.getTableDir(rootDir, tableName);
@@ -112,7 +113,7 @@ public class TestHFileLink {
         //Verify back reference creation
         assertEquals(encodedRegion+"."+
             tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='),
-            HFileLink.createBackReferenceName(tableName.getNameAsString(),
+            HFileLink.createBackReferenceName(FSUtils.getTableName(tableDir).getNameAsString(),
                 encodedRegion));
 
         //verify parsing back reference
