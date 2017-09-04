@@ -393,4 +393,16 @@ public class TestNamespace {
     fail("Should have thrown exception " + exceptionClass);
   }
 
+  @Test
+  public void testValueOfNamespaceAndQualifier() {
+    TableName name0 = TableName.valueOf("table");
+    TableName name1 = TableName.valueOf("table", "table");
+    assertEquals(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, name0.getNamespaceAsString());
+    assertEquals("table", name0.getQualifierAsString());
+    assertEquals("table", name0.getNameAsString());
+    assertEquals("table", name1.getNamespaceAsString());
+    assertEquals("table", name1.getQualifierAsString());
+    assertEquals("table:table", name1.getNameAsString());
+  }
+
 }
