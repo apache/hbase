@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.tool;
 
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -113,7 +114,8 @@ public class TestCanaryTool {
     ToolRunner.run(testingUtility.getConfiguration(), canary, args);
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
     assertEquals("verify no write error count", 0, canary.getWriteFailures().size());
-    verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+    verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class),
+      isA(ColumnFamilyDescriptor.class), anyLong());
   }
 
   @Test
@@ -217,11 +219,13 @@ public class TestCanaryTool {
     Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
     Canary canary = new Canary(executor, sink);
     String[] args = { "-t", "10000", name.getMethodName() };
-    org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
+    org.apache.hadoop.conf.Configuration conf =
+      new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
     conf.setBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, true);
     ToolRunner.run(conf, canary, args);
     verify(sink, atLeastOnce())
-        .publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+        .publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class),
+        isA(ColumnFamilyDescriptor.class), anyLong());
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
   }
 
