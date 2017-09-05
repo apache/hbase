@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -177,7 +177,7 @@ public abstract class Segment {
     return KeyValueUtil.length(cell);
   }
 
-  public abstract boolean shouldSeek(Scan scan, long oldestUnexpiredTS);
+  public abstract boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS);
 
   public abstract long getMinTimestamp();
 
