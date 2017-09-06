@@ -71,7 +71,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.TestTableName;
+import org.apache.hadoop.hbase.TestTableName;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;

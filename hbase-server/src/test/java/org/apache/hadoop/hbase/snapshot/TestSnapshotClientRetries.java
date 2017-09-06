@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.TestTableName;
+import org.apache.hadoop.hbase.TestTableName;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
