@@ -23,6 +23,7 @@ import org.codehaus.jackson.annotate.JsonValue;
 
 import java.io.Serializable;
 
+import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
 
@@ -47,7 +48,7 @@ public class StorageClusterVersionModel implements Serializable {
   /**
    * @return the storage cluster version
    */
-  @XmlValue
+  @XmlAttribute(name="Version")
   public String getVersion() {
     return version;
   }
@@ -62,7 +63,6 @@ public class StorageClusterVersionModel implements Serializable {
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */
-  @JsonValue
   @Override
   public String toString() {
     return version;

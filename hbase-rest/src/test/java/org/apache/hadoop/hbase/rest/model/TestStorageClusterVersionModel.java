@@ -30,9 +30,9 @@ public class TestStorageClusterVersionModel extends TestModelBase<StorageCluster
     super(StorageClusterVersionModel.class);
     AS_XML =
       "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"+
-      "<ClusterVersion>" + VERSION + "</ClusterVersion>";
+      "<ClusterVersion Version=\"" + VERSION + "\"/>";
 
-    AS_JSON = "\"0.0.1-testing\"";
+    AS_JSON = "{\"Version\": \"0.0.1-testing\"}";
   }
 
   protected StorageClusterVersionModel buildTestModel() {
