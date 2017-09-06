@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.rest;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
@@ -38,6 +39,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.*;
 
+import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -128,6 +131,12 @@ public class TestVersionResource {
     Response response = client.get("/version", Constants.MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
+    ObjectMapper mapper = new JacksonJaxbJsonProvider()
+            .locateMapper(VersionModel.class, MediaType.APPLICATION_JSON_TYPE);
+    VersionModel model
+            = mapper.readValue(response.getBody(), VersionModel.class);
+    validate(model);
+    LOG.info("success retrieving Stargate version as JSON");
   }
 
   @Test
@@ -169,11 +178,17 @@ public class TestVersionResource {
   }
 
   @Test
-  public void doTestGetStorageClusterVersionJSON() throws IOException {
+  public void testGetStorageClusterVersionJSON() throws IOException {
     Response response = client.get("/version/cluster", Constants.MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
+    ObjectMapper mapper = new JacksonJaxbJsonProvider()
+            .locateMapper(StorageClusterVersionModel.class, MediaType.APPLICATION_JSON_TYPE);
+    StorageClusterVersionModel clusterVersionModel
+            = mapper.readValue(response.getBody(), StorageClusterVersionModel.class);
+    assertNotNull(clusterVersionModel);
+    assertNotNull(clusterVersionModel.getVersion());
+    LOG.info("success retrieving storage cluster version as JSON");
   }
-
 }
 
