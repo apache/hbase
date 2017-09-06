@@ -85,7 +85,7 @@ Future<std::unique_ptr<Response>> RpcTestService::operator()(std::unique_ptr<Req
     response->set_resp_msg(pb_resp_msg);
     VLOG(1) << "RPC server:"
             << " error called.";
-    response->set_exception(folly::make_exception_wrapper<RpcTestException>("server error!"));
+    response->set_exception(RpcTestException("server error!"));
 
   } else if (method_name == "pause") {
     auto pb_resp_msg = std::make_shared<EmptyResponseProto>();

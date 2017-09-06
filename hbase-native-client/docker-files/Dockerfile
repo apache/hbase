@@ -86,7 +86,7 @@ RUN git clone https://github.com/google/protobuf.git /usr/src/protobuf && \
 
 # Update folly
 RUN cd /usr/src/ && \
-  ver=2017.06.19.00 && \
+  ver=2017.09.04.00 && \
   wget https://github.com/facebook/folly/archive/v$ver.tar.gz && \
   tar zxf v$ver.tar.gz && \
   rm -rf v$ver.tar.gz && \
@@ -106,7 +106,7 @@ RUN cd /usr/src/ && \
 
 # Update wangle
 RUN cd /usr/src/ && \
-  ver=2017.06.26.00 && \
+  ver=2017.09.04.00 && \
   wget https://github.com/facebook/wangle/archive/v$ver.tar.gz && \
   tar zxf v$ver.tar.gz && \
   rm -rf v$ver.tar.gz && \
