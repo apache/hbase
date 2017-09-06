@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.ClassSize;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
@@ -112,8 +112,8 @@ public class MutableSegment extends Segment {
   }
 
   @Override
-  public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
-    return (this.timeRangeTracker.includesTimeRange(scan.getTimeRange())
+  public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS) {
+    return (this.timeRangeTracker.includesTimeRange(tr)
         && (this.timeRangeTracker.getMax() >= oldestUnexpiredTS));
   }
 

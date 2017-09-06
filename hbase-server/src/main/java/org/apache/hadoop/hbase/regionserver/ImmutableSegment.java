@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 
 import java.io.IOException;
@@ -130,8 +129,8 @@ public class ImmutableSegment extends Segment {
   /////////////////////  PUBLIC METHODS  /////////////////////
 
   @Override
-  public boolean shouldSeek(Scan scan, long oldestUnexpiredTS) {
-    return this.timeRange.includesTimeRange(scan.getTimeRange()) &&
+  public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS) {
+    return this.timeRange.includesTimeRange(tr) &&
         this.timeRange.getMax() >= oldestUnexpiredTS;
   }
 

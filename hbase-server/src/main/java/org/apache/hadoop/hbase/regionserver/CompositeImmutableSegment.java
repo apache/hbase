@@ -18,12 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -122,7 +122,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   }
 
   @Override
-  public boolean shouldSeek(Scan scan, long oldestUnexpiredTS){
+  public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS){
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
