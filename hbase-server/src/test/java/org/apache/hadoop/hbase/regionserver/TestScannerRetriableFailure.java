@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.TestTableName;
+import org.apache.hadoop.hbase.TestTableName;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
