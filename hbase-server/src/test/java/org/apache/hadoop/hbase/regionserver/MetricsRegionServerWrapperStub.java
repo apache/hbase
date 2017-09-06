@@ -261,6 +261,46 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getL1CacheHitCount() {
+    return 200;
+  }
+
+  @Override
+  public long getL1CacheMissCount() {
+    return 100;
+  }
+
+  @Override
+  public double getL1CacheHitRatio() {
+    return 80;
+  }
+
+  @Override
+  public double getL1CacheMissRatio() {
+    return 20;
+  }
+
+  @Override
+  public long getL2CacheHitCount() {
+    return 800;
+  }
+
+  @Override
+  public long getL2CacheMissCount() {
+    return 200;
+  }
+
+  @Override
+  public double getL2CacheHitRatio() {
+    return 90;
+  }
+
+  @Override
+  public double getL2CacheMissRatio() {
+    return 10;
+  }
+
+  @Override
   public long getUpdatesBlockedTime() {
     return 419;
   }

@@ -259,6 +259,46 @@ public interface MetricsRegionServerWrapper {
   long getBlockCacheFailedInsertions();
 
   /**
+   * Hit count of L1 cache.
+   */
+  public long getL1CacheHitCount();
+
+  /**
+   * Miss count of L1 cache.
+   */
+  public long getL1CacheMissCount();
+
+  /**
+   * Hit ratio of L1 cache.
+   */
+  public double getL1CacheHitRatio();
+
+  /**
+   * Miss ratio of L1 cache.
+   */
+  public double getL1CacheMissRatio();
+
+  /**
+   * Hit count of L2 cache.
+   */
+  public long getL2CacheHitCount();
+
+  /**
+   * Miss count of L2 cache.
+   */
+  public long getL2CacheMissCount();
+
+  /**
+   * Hit ratio of L2 cache.
+   */
+  public double getL2CacheHitRatio();
+
+  /**
+   * Miss ratio of L2 cache.
+   */
+  public double getL2CacheMissRatio();
+
+  /**
    * Force a re-computation of the metrics.
    */
   void forceRecompute();
