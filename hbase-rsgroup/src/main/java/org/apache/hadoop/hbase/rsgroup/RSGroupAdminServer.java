@@ -492,7 +492,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     AssignmentManager assignmentManager = master.getAssignmentManager();
     LoadBalancer balancer = master.getLoadBalancer();
 
-    boolean balancerRan;
     synchronized (balancer) {
       // If balance not true, don't run balancer.
       if (!((HMaster) master).isBalancerOn()) return false;
@@ -530,8 +529,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         }
       }
       long startTime = System.currentTimeMillis();
-      balancerRan = plans != null;
-      if (plans != null && !plans.isEmpty()) {
+      boolean balancerRan = !plans.isEmpty();
+      if (balancerRan) {
         LOG.info("RSGroup balance " + groupName + " starting with plan count: " + plans.size());
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
@@ -543,8 +542,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postBalanceRSGroup(groupName, balancerRan);
       }
+      return balancerRan;
     }
-    return balancerRan;
   }
 
   @Override
