@@ -256,6 +256,8 @@ public class CompactionPipeline {
 
   private void swapSuffix(List<? extends Segment> suffix, ImmutableSegment segment,
       boolean closeSegmentsInSuffix) {
+    pipeline.removeAll(suffix);
+    if(segment != null) pipeline.addLast(segment);
     // During index merge we won't be closing the segments undergoing the merge. Segment#close()
     // will release the MSLAB chunks to pool. But in case of index merge there wont be any data copy
     // from old MSLABs. So the new cells in new segment also refers to same chunks. In case of data
@@ -267,8 +269,6 @@ public class CompactionPipeline {
         itemInSuffix.close();
       }
     }
-    pipeline.removeAll(suffix);
-    if(segment != null) pipeline.addLast(segment);
   }
 
   public Segment getTail() {

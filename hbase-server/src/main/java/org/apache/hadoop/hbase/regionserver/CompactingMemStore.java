@@ -57,6 +57,12 @@ public class CompactingMemStore extends AbstractMemStore {
       "hbase.hregion.compacting.memstore.type";
   public static final String COMPACTING_MEMSTORE_TYPE_DEFAULT =
       String.valueOf(MemoryCompactionPolicy.BASIC);
+  // The external setting of the compacting MemStore behaviour
+  public static final String COMPACTING_MEMSTORE_INDEX_KEY =
+      "hbase.hregion.compacting.memstore.index";
+  // usage of CellArrayMap is default, later it will be decided how to use CellChunkMap
+  public static final String COMPACTING_MEMSTORE_INDEX_DEFAULT =
+      String.valueOf(IndexType.ARRAY_MAP);
   // Default fraction of in-memory-flush size w.r.t. flush-to-disk size
   public static final String IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY =
       "hbase.memstore.inmemoryflush.threshold.factor";
@@ -78,10 +84,22 @@ public class CompactingMemStore extends AbstractMemStore {
   private final AtomicBoolean allowCompaction = new AtomicBoolean(true);
   private boolean compositeSnapshot = true;
 
+  /**
+   * Types of indexes (part of immutable segments) to be used after flattening,
+   * compaction, or merge are applied.
+   */
+  public enum IndexType {
+    CSLM_MAP,   // ConcurrentSkipLisMap
+    ARRAY_MAP,  // CellArrayMap
+    CHUNK_MAP   // CellChunkMap
+  }
+
+  private IndexType indexType = IndexType.ARRAY_MAP;  // default implementation
 
   public static final long DEEP_OVERHEAD = ClassSize.align( AbstractMemStore.DEEP_OVERHEAD
-      + 6 * ClassSize.REFERENCE     // Store, RegionServicesForStores, CompactionPipeline,
-                                    // MemStoreCompactor, inMemoryFlushInProgress, allowCompaction
+      + 7 * ClassSize.REFERENCE     // Store, RegionServicesForStores, CompactionPipeline,
+                                    // MemStoreCompactor, inMemoryFlushInProgress, allowCompaction,
+                                    // indexType
       + Bytes.SIZEOF_LONG           // inmemoryFlushSize
       + 2 * Bytes.SIZEOF_BOOLEAN    // compositeSnapshot and inWalReplay
       + 2 * ClassSize.ATOMIC_BOOLEAN// inMemoryFlushInProgress and allowCompaction
@@ -96,6 +114,8 @@ public class CompactingMemStore extends AbstractMemStore {
     this.pipeline = new CompactionPipeline(getRegionServices());
     this.compactor = createMemStoreCompactor(compactionPolicy);
     initInmemoryFlushSize(conf);
+    indexType = IndexType.valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_INDEX_KEY,
+        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_DEFAULT));
   }
 
   @VisibleForTesting

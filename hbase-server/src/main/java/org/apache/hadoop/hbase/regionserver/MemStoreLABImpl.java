@@ -269,4 +269,14 @@ public class MemStoreLABImpl implements MemStoreLAB {
     }
     return pooledChunks;
   }
+
+  @VisibleForTesting Integer getNumOfChunksReturnedToPool() {
+    int i = 0;
+    for (Integer id : this.chunks) {
+      if (chunkCreator.isChunkInPool(id)) {
+        i++;
+      }
+    }
+    return i;
+  }
 }
