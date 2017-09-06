@@ -41,7 +41,7 @@ public class TestXmlParsing {
   @Test
   public void testParsingClusterVersion() throws Exception {
     final String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-        + "<ClusterVersion>2.0.0</ClusterVersion>";
+        + "<ClusterVersion Version=\"2.0.0\"/>";
     Client client = mock(Client.class);
     RemoteAdmin admin = new RemoteAdmin(client, HBaseConfiguration.create(), null);
     Response resp = new Response(200, null, xml.getBytes());
