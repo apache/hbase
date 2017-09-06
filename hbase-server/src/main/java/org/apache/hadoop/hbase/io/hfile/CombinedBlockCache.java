@@ -112,6 +112,11 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
+  public long getMaxSize() {
+    return lruCache.getMaxSize() + l2Cache.getMaxSize();
+  }
+
+  @Override
   public long getFreeSize() {
     return lruCache.getFreeSize() + l2Cache.getFreeSize();
   }

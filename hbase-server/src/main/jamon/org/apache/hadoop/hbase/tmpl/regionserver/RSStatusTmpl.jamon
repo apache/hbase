@@ -109,12 +109,12 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
     </section>
 
     <section>
-    <& ../common/TaskMonitorTmpl; filter = filter &>
+    <h2>Block Cache</h2>
+    <& BlockCacheTmpl; cacheConfig = regionServer.getCacheConfig(); config = regionServer.getConfiguration() &>
     </section>
 
     <section>
-    <h2>Block Cache</h2>
-    <& BlockCacheTmpl; cacheConfig = regionServer.getCacheConfig(); config = regionServer.getConfiguration() &>
+    <& ../common/TaskMonitorTmpl; filter = filter &>
     </section>
 
     <section>

@@ -195,6 +195,11 @@ public class MemcachedBlockCache implements BlockCache {
   }
 
   @Override
+  public long getMaxSize() {
+    return 0;
+  }
+
+  @Override
   public long getFreeSize() {
     return 0;
   }
