@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +37,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -183,8 +182,9 @@ public class CreateTableProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.CreateTableStateData.Builder state =
       MasterProcedureProtos.CreateTableStateData.newBuilder()
@@ -195,15 +195,16 @@ public class CreateTableProcedure
         state.addRegionInfo(HRegionInfo.convert(hri));
       }
     }
-    state.build().writeDelimitedTo(stream);
+    serializer.serialize(state.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.CreateTableStateData state =
-      MasterProcedureProtos.CreateTableStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.CreateTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
     tableDescriptor = ProtobufUtil.toTableDescriptor(state.getTableSchema());
     if (state.getRegionInfoCount() == 0) {

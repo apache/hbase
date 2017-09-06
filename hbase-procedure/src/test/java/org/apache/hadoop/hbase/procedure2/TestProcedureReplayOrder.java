@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -29,9 +27,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Int64Value;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 
@@ -195,13 +193,17 @@ public class TestProcedureReplayOrder {
     protected boolean abort(TestProcedureEnv env) { return true; }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
-      StreamUtils.writeLong(stream, execId);
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      Int64Value.Builder builder = Int64Value.newBuilder().setValue(execId);
+      serializer.serialize(builder.build());
     }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
-      execId = StreamUtils.readLong(stream);
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      Int64Value value = serializer.deserialize(Int64Value.class);
+      execId = value.getValue();
       step = 2;
     }
   }

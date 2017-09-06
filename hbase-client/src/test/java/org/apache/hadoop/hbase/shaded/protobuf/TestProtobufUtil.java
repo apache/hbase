@@ -19,23 +19,26 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.ProcedureState;
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Any;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.BytesValue;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
@@ -43,21 +46,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
-
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 @Category(SmallTests.class)
 public class TestProtobufUtil {
+  public TestProtobufUtil() {
+  }
+
   @Test
   public void testException() throws IOException {
     NameBytesPair.Builder builder = NameBytesPair.newBuilder();
@@ -263,125 +264,6 @@ public class TestProtobufUtil {
     assertTrue(CellComparator.COMPARATOR.compare(offheapKV, newOffheapKV) == 0);
   }
 
-  public TestProtobufUtil() {
-  }
-
-  private static ProcedureInfo createProcedureInfo(long procId)
-  {
-    return new ProcedureInfo(procId, "java.lang.Object", null,
-        ProcedureState.RUNNABLE, -1, null, null, 0, 0, null);
-  }
-
-  private static void assertProcedureInfoEquals(ProcedureInfo expected,
-      ProcedureInfo result)
-  {
-    if (expected == result) {
-      return;
-    } else if (expected == null || result == null) {
-      fail();
-    }
-
-    assertEquals(expected.getProcId(), result.getProcId());
-  }
-
-  private static void assertLockInfoEquals(LockInfo expected, LockInfo result)
-  {
-    assertEquals(expected.getResourceType(), result.getResourceType());
-    assertEquals(expected.getResourceName(), result.getResourceName());
-    assertEquals(expected.getLockType(), result.getLockType());
-    assertProcedureInfoEquals(expected.getExclusiveLockOwnerProcedure(),
-        result.getExclusiveLockOwnerProcedure());
-    assertEquals(expected.getSharedLockCount(), result.getSharedLockCount());
-  }
-
-  private static void assertWaitingProcedureEquals(
-      LockInfo.WaitingProcedure expected, LockInfo.WaitingProcedure result)
-  {
-    assertEquals(expected.getLockType(), result.getLockType());
-    assertProcedureInfoEquals(expected.getProcedure(),
-        result.getProcedure());
-  }
-
-  @Test
-  public void testServerLockInfo() {
-    LockInfo lock = new LockInfo();
-    lock.setResourceType(LockInfo.ResourceType.SERVER);
-    lock.setResourceName("server");
-    lock.setLockType(LockInfo.LockType.SHARED);
-    lock.setSharedLockCount(2);
-
-    LockServiceProtos.LockInfo proto = ProtobufUtil.toProtoLockInfo(lock);
-    LockInfo lock2 = ProtobufUtil.toLockInfo(proto);
-
-    assertLockInfoEquals(lock, lock2);
-  }
-
-  @Test
-  public void testNamespaceLockInfo() {
-    LockInfo lock = new LockInfo();
-    lock.setResourceType(LockInfo.ResourceType.NAMESPACE);
-    lock.setResourceName("ns");
-    lock.setLockType(LockInfo.LockType.EXCLUSIVE);
-    lock.setExclusiveLockOwnerProcedure(createProcedureInfo(2));
-
-    LockServiceProtos.LockInfo proto = ProtobufUtil.toProtoLockInfo(lock);
-    LockInfo lock2 = ProtobufUtil.toLockInfo(proto);
-
-    assertLockInfoEquals(lock, lock2);
-  }
-
-  @Test
-  public void testTableLockInfo() {
-    LockInfo lock = new LockInfo();
-    lock.setResourceType(LockInfo.ResourceType.TABLE);
-    lock.setResourceName("table");
-    lock.setLockType(LockInfo.LockType.SHARED);
-    lock.setSharedLockCount(2);
-
-    LockServiceProtos.LockInfo proto = ProtobufUtil.toProtoLockInfo(lock);
-    LockInfo lock2 = ProtobufUtil.toLockInfo(proto);
-
-    assertLockInfoEquals(lock, lock2);
-  }
-
-  @Test
-  public void testRegionLockInfo() {
-    LockInfo lock = new LockInfo();
-    lock.setResourceType(LockInfo.ResourceType.REGION);
-    lock.setResourceName("region");
-    lock.setLockType(LockInfo.LockType.EXCLUSIVE);
-    lock.setExclusiveLockOwnerProcedure(createProcedureInfo(2));
-
-    LockServiceProtos.LockInfo proto = ProtobufUtil.toProtoLockInfo(lock);
-    LockInfo lock2 = ProtobufUtil.toLockInfo(proto);
-
-    assertLockInfoEquals(lock, lock2);
-  }
-
-  @Test
-  public void testExclusiveWaitingLockInfo() {
-    LockInfo.WaitingProcedure waitingProcedure = new LockInfo.WaitingProcedure();
-    waitingProcedure.setLockType(LockInfo.LockType.EXCLUSIVE);
-    waitingProcedure.setProcedure(createProcedureInfo(1));
-
-    LockServiceProtos.WaitingProcedure proto = ProtobufUtil.toProtoWaitingProcedure(waitingProcedure);
-    LockInfo.WaitingProcedure waitingProcedure2 = ProtobufUtil.toWaitingProcedure(proto);
-
-    assertWaitingProcedureEquals(waitingProcedure, waitingProcedure2);
-  }
-
-  @Test
-  public void testSharedWaitingLockInfo() {
-    LockInfo.WaitingProcedure waitingProcedure = new LockInfo.WaitingProcedure();
-    waitingProcedure.setLockType(LockInfo.LockType.SHARED);
-    waitingProcedure.setProcedure(createProcedureInfo(2));
-
-    LockServiceProtos.WaitingProcedure proto = ProtobufUtil.toProtoWaitingProcedure(waitingProcedure);
-    LockInfo.WaitingProcedure waitingProcedure2 = ProtobufUtil.toWaitingProcedure(proto);
-
-    assertWaitingProcedureEquals(waitingProcedure, waitingProcedure2);
-  }
-
   /**
    * Test Increment Mutate conversions.
    *
@@ -456,5 +338,129 @@ public class TestProtobufUtil {
     // reset the timestamp to the original mutate
     mutateBuilder.setTimestamp(append.getTimeStamp());
     assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.APPEND, append));
+  }
+
+  private static ProcedureProtos.Procedure.Builder createProcedureBuilder(long procId) {
+    ProcedureProtos.Procedure.Builder builder = ProcedureProtos.Procedure.newBuilder();
+    builder.setProcId(procId);
+    builder.setClassName("java.lang.Object");
+    builder.setSubmittedTime(0);
+    builder.setState(ProcedureProtos.ProcedureState.RUNNABLE);
+    builder.setLastUpdate(0);
+
+    return builder;
+  }
+
+  private static ProcedureProtos.Procedure createProcedure(long procId) {
+    return createProcedureBuilder(procId).build();
+  }
+
+  private static LockServiceProtos.LockedResource createLockedResource(
+      LockServiceProtos.LockedResourceType resourceType, String resourceName,
+      LockServiceProtos.LockType lockType,
+      ProcedureProtos.Procedure exclusiveLockOwnerProcedure, int sharedLockCount) {
+    LockServiceProtos.LockedResource.Builder build = LockServiceProtos.LockedResource.newBuilder();
+    build.setResourceType(resourceType);
+    build.setResourceName(resourceName);
+    build.setLockType(lockType);
+    if (exclusiveLockOwnerProcedure != null) {
+      build.setExclusiveLockOwnerProcedure(exclusiveLockOwnerProcedure);
+    }
+    build.setSharedLockCount(sharedLockCount);
+
+    return build.build();
+  }
+
+  @Test
+  public void testProcedureInfo() {
+    ProcedureProtos.Procedure.Builder builder = createProcedureBuilder(1);
+    ByteString stateBytes = ByteString.copyFrom(new byte[] { 65 });
+    BytesValue state = BytesValue.newBuilder().setValue(stateBytes).build();
+    builder.addStateMessage(Any.pack(state));
+    ProcedureProtos.Procedure procedure = builder.build();
+
+    String procJson = ProtobufUtil.toProcedureJson(Lists.newArrayList(procedure));
+    assertEquals("[{"
+        + "\"className\":\"java.lang.Object\","
+        + "\"procId\":\"1\","
+        + "\"submittedTime\":\"0\","
+        + "\"state\":\"RUNNABLE\","
+        + "\"lastUpdate\":\"0\","
+        + "\"stateMessage\":[{\"value\":\"QQ==\"}]"
+        + "}]", procJson);
+  }
+
+  @Test
+  public void testServerLockInfo() {
+    LockServiceProtos.LockedResource resource = createLockedResource(
+        LockServiceProtos.LockedResourceType.SERVER, "server",
+        LockServiceProtos.LockType.SHARED, null, 2);
+
+    String lockJson = ProtobufUtil.toLockJson(Lists.newArrayList(resource));
+    assertEquals("[{"
+        + "\"resourceType\":\"SERVER\","
+        + "\"resourceName\":\"server\","
+        + "\"lockType\":\"SHARED\","
+        + "\"sharedLockCount\":2"
+        + "}]", lockJson);
+  }
+
+  @Test
+  public void testNamespaceLockInfo() {
+    LockServiceProtos.LockedResource resource = createLockedResource(
+        LockServiceProtos.LockedResourceType.NAMESPACE, "ns",
+        LockServiceProtos.LockType.EXCLUSIVE, createProcedure(2), 0);
+
+    String lockJson = ProtobufUtil.toLockJson(Lists.newArrayList(resource));
+    assertEquals("[{"
+        + "\"resourceType\":\"NAMESPACE\","
+        + "\"resourceName\":\"ns\","
+        + "\"lockType\":\"EXCLUSIVE\","
+        + "\"exclusiveLockOwnerProcedure\":{"
+          + "\"className\":\"java.lang.Object\","
+          + "\"procId\":\"2\","
+          + "\"submittedTime\":\"0\","
+          + "\"state\":\"RUNNABLE\","
+          + "\"lastUpdate\":\"0\""
+        + "},"
+        + "\"sharedLockCount\":0"
+        + "}]", lockJson);
+  }
+
+  @Test
+  public void testTableLockInfo() {
+    LockServiceProtos.LockedResource resource = createLockedResource(
+        LockServiceProtos.LockedResourceType.TABLE, "table",
+        LockServiceProtos.LockType.SHARED, null, 2);
+
+    String lockJson = ProtobufUtil.toLockJson(Lists.newArrayList(resource));
+    assertEquals("[{"
+        + "\"resourceType\":\"TABLE\","
+        + "\"resourceName\":\"table\","
+        + "\"lockType\":\"SHARED\","
+        + "\"sharedLockCount\":2"
+        + "}]", lockJson);
+  }
+
+  @Test
+  public void testRegionLockInfo() {
+    LockServiceProtos.LockedResource resource = createLockedResource(
+        LockServiceProtos.LockedResourceType.REGION, "region",
+        LockServiceProtos.LockType.EXCLUSIVE, createProcedure(3), 0);
+
+    String lockJson = ProtobufUtil.toLockJson(Lists.newArrayList(resource));
+    assertEquals("[{"
+        + "\"resourceType\":\"REGION\","
+        + "\"resourceName\":\"region\","
+        + "\"lockType\":\"EXCLUSIVE\","
+        + "\"exclusiveLockOwnerProcedure\":{"
+          + "\"className\":\"java.lang.Object\","
+          + "\"procId\":\"3\","
+          + "\"submittedTime\":\"0\","
+          + "\"state\":\"RUNNABLE\","
+          + "\"lastUpdate\":\"0\""
+        + "},"
+        + "\"sharedLockCount\":0"
+        + "}]", lockJson);
   }
 }

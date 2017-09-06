@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -53,21 +51,21 @@ import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
-import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MergeTableRegionsState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The procedure to Merge a region in a table.
@@ -346,8 +344,9 @@ public class MergeTableRegionsProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     final MasterProcedureProtos.MergeTableRegionsStateData.Builder mergeTableRegionsMsg =
         MasterProcedureProtos.MergeTableRegionsStateData.newBuilder()
@@ -357,15 +356,16 @@ public class MergeTableRegionsProcedure
     for (int i = 0; i < regionsToMerge.length; ++i) {
       mergeTableRegionsMsg.addRegionInfo(HRegionInfo.convert(regionsToMerge[i]));
     }
-    mergeTableRegionsMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(mergeTableRegionsMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     final MasterProcedureProtos.MergeTableRegionsStateData mergeTableRegionsMsg =
-        MasterProcedureProtos.MergeTableRegionsStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.MergeTableRegionsStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(mergeTableRegionsMsg.getUserInfo()));
 
     assert(mergeTableRegionsMsg.getRegionInfoCount() == 2);
@@ -479,7 +479,7 @@ public class MergeTableRegionsProcedure
           new IOException("Merge of " + regionsStr + " failed because merge switch is off"));
       return false;
     }
-    
+
 
     // Ask the remote regionserver if regions are mergeable. If we get an IOE, report it
     // along w/ the failure so can see why we are not mergeable at this time.

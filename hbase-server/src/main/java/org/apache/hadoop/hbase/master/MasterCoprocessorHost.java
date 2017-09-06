@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -54,7 +53,9 @@ import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.procedure2.LockType;
+import org.apache.hadoop.hbase.procedure2.LockedResource;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
@@ -691,42 +692,42 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preListProcedures() throws IOException {
+  public boolean preGetProcedures() throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.preListProcedures(ctx);
+        oserver.preGetProcedures(ctx);
       }
     });
   }
 
-  public void postListProcedures(final List<ProcedureInfo> procInfoList) throws IOException {
+  public void postGetProcedures(final List<Procedure<?>> procInfoList) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.postListProcedures(ctx, procInfoList);
+        oserver.postGetProcedures(ctx, procInfoList);
       }
     });
   }
 
-  public boolean preListLocks() throws IOException {
+  public boolean preGetLocks() throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.preListLocks(ctx);
+        oserver.preGetLocks(ctx);
       }
     });
   }
 
-  public void postListLocks(final List<LockInfo> lockInfoList) throws IOException {
+  public void postGetLocks(final List<LockedResource> lockedResources) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.postListLocks(ctx, lockInfoList);
+        oserver.postGetLocks(ctx, lockedResources);
       }
     });
   }
@@ -1837,7 +1838,7 @@ public class MasterCoprocessorHost
   }
 
   public void preRequestLock(String namespace, TableName tableName, HRegionInfo[] regionInfos,
-      LockProcedure.LockType type, String description) throws IOException {
+      LockType type, String description) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -1848,7 +1849,7 @@ public class MasterCoprocessorHost
   }
 
   public void postRequestLock(String namespace, TableName tableName, HRegionInfo[] regionInfos,
-      LockProcedure.LockType type, String description) throws IOException {
+      LockType type, String description) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)

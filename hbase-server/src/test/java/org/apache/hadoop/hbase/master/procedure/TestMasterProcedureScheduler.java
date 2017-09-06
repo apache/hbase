@@ -32,10 +32,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
-import org.apache.hadoop.hbase.procedure2.LockInfo.WaitingProcedure;
+import org.apache.hadoop.hbase.procedure2.LockType;
+import org.apache.hadoop.hbase.procedure2.LockedResource;
+import org.apache.hadoop.hbase.procedure2.LockedResourceType;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -903,7 +904,7 @@ public class TestMasterProcedureScheduler {
     }
   }
 
-  private static LockProcedure createLockProcedure(LockProcedure.LockType lockType, long procId) throws Exception {
+  private static LockProcedure createLockProcedure(LockType lockType, long procId) throws Exception {
     LockProcedure procedure = new LockProcedure();
 
     Field typeField = LockProcedure.class.getDeclaredField("type");
@@ -918,31 +919,31 @@ public class TestMasterProcedureScheduler {
   }
 
   private static LockProcedure createExclusiveLockProcedure(long procId) throws Exception {
-    return createLockProcedure(LockProcedure.LockType.EXCLUSIVE, procId);
+    return createLockProcedure(LockType.EXCLUSIVE, procId);
   }
 
   private static LockProcedure createSharedLockProcedure(long procId) throws Exception {
-    return createLockProcedure(LockProcedure.LockType.SHARED, procId);
+    return createLockProcedure(LockType.SHARED, procId);
   }
 
-  private static void assertLockResource(LockInfo lock,
-      LockInfo.ResourceType resourceType, String resourceName)
+  private static void assertLockResource(LockedResource resource,
+      LockedResourceType resourceType, String resourceName)
   {
-    assertEquals(resourceType, lock.getResourceType());
-    assertEquals(resourceName, lock.getResourceName());
+    assertEquals(resourceType, resource.getResourceType());
+    assertEquals(resourceName, resource.getResourceName());
   }
 
-  private static void assertExclusiveLock(LockInfo lock, long procId)
+  private static void assertExclusiveLock(LockedResource resource, Procedure<?> procedure)
   {
-    assertEquals(LockInfo.LockType.EXCLUSIVE, lock.getLockType());
-    assertEquals(procId, lock.getExclusiveLockOwnerProcedure().getProcId());
-    assertEquals(0, lock.getSharedLockCount());
+    assertEquals(LockType.EXCLUSIVE, resource.getLockType());
+    assertEquals(procedure, resource.getExclusiveLockOwnerProcedure());
+    assertEquals(0, resource.getSharedLockCount());
   }
 
-  private static void assertSharedLock(LockInfo lock, int lockCount)
+  private static void assertSharedLock(LockedResource resource, int lockCount)
   {
-    assertEquals(LockInfo.LockType.SHARED, lock.getLockType());
-    assertEquals(lockCount, lock.getSharedLockCount());
+    assertEquals(LockType.SHARED, resource.getLockType());
+    assertEquals(lockCount, resource.getSharedLockCount());
   }
 
   @Test
@@ -950,13 +951,13 @@ public class TestMasterProcedureScheduler {
     LockProcedure procedure = createExclusiveLockProcedure(0);
     queue.waitServerExclusiveLock(procedure, ServerName.valueOf("server1,1234,0"));
 
-    List<LockInfo> locks = queue.listLocks();
-    assertEquals(1, locks.size());
+    List<LockedResource> resources = queue.getLocks();
+    assertEquals(1, resources.size());
 
-    LockInfo serverLock = locks.get(0);
-    assertLockResource(serverLock, LockInfo.ResourceType.SERVER, "server1,1234,0");
-    assertExclusiveLock(serverLock, 0);
-    assertTrue(serverLock.getWaitingProcedures().isEmpty());
+    LockedResource serverResource = resources.get(0);
+    assertLockResource(serverResource, LockedResourceType.SERVER, "server1,1234,0");
+    assertExclusiveLock(serverResource, procedure);
+    assertTrue(serverResource.getWaitingProcedures().isEmpty());
   }
 
   @Test
@@ -964,19 +965,19 @@ public class TestMasterProcedureScheduler {
     LockProcedure procedure = createExclusiveLockProcedure(1);
     queue.waitNamespaceExclusiveLock(procedure, "ns1");
 
-    List<LockInfo> locks = queue.listLocks();
+    List<LockedResource> locks = queue.getLocks();
     assertEquals(2, locks.size());
 
-    LockInfo namespaceLock = locks.get(0);
-    assertLockResource(namespaceLock, LockInfo.ResourceType.NAMESPACE, "ns1");
-    assertExclusiveLock(namespaceLock, 1);
-    assertTrue(namespaceLock.getWaitingProcedures().isEmpty());
+    LockedResource namespaceResource = locks.get(0);
+    assertLockResource(namespaceResource, LockedResourceType.NAMESPACE, "ns1");
+    assertExclusiveLock(namespaceResource, procedure);
+    assertTrue(namespaceResource.getWaitingProcedures().isEmpty());
 
-    LockInfo tableLock = locks.get(1);
-    assertLockResource(tableLock, LockInfo.ResourceType.TABLE,
+    LockedResource tableResource = locks.get(1);
+    assertLockResource(tableResource, LockedResourceType.TABLE,
         TableName.NAMESPACE_TABLE_NAME.getNameAsString());
-    assertSharedLock(tableLock, 1);
-    assertTrue(tableLock.getWaitingProcedures().isEmpty());
+    assertSharedLock(tableResource, 1);
+    assertTrue(tableResource.getWaitingProcedures().isEmpty());
   }
 
   @Test
@@ -984,18 +985,18 @@ public class TestMasterProcedureScheduler {
     LockProcedure procedure = createExclusiveLockProcedure(2);
     queue.waitTableExclusiveLock(procedure, TableName.valueOf("ns2", "table2"));
 
-    List<LockInfo> locks = queue.listLocks();
+    List<LockedResource> locks = queue.getLocks();
     assertEquals(2, locks.size());
 
-    LockInfo namespaceLock = locks.get(0);
-    assertLockResource(namespaceLock, LockInfo.ResourceType.NAMESPACE, "ns2");
-    assertSharedLock(namespaceLock, 1);
-    assertTrue(namespaceLock.getWaitingProcedures().isEmpty());
+    LockedResource namespaceResource = locks.get(0);
+    assertLockResource(namespaceResource, LockedResourceType.NAMESPACE, "ns2");
+    assertSharedLock(namespaceResource, 1);
+    assertTrue(namespaceResource.getWaitingProcedures().isEmpty());
 
-    LockInfo tableLock = locks.get(1);
-    assertLockResource(tableLock, LockInfo.ResourceType.TABLE, "ns2:table2");
-    assertExclusiveLock(tableLock, 2);
-    assertTrue(tableLock.getWaitingProcedures().isEmpty());
+    LockedResource tableResource = locks.get(1);
+    assertLockResource(tableResource, LockedResourceType.TABLE, "ns2:table2");
+    assertExclusiveLock(tableResource, procedure);
+    assertTrue(tableResource.getWaitingProcedures().isEmpty());
   }
 
   @Test
@@ -1005,23 +1006,23 @@ public class TestMasterProcedureScheduler {
 
     queue.waitRegion(procedure, regionInfo);
 
-    List<LockInfo> locks = queue.listLocks();
-    assertEquals(3, locks.size());
+    List<LockedResource> resources = queue.getLocks();
+    assertEquals(3, resources.size());
 
-    LockInfo namespaceLock = locks.get(0);
-    assertLockResource(namespaceLock, LockInfo.ResourceType.NAMESPACE, "ns3");
-    assertSharedLock(namespaceLock, 1);
-    assertTrue(namespaceLock.getWaitingProcedures().isEmpty());
+    LockedResource namespaceResource = resources.get(0);
+    assertLockResource(namespaceResource, LockedResourceType.NAMESPACE, "ns3");
+    assertSharedLock(namespaceResource, 1);
+    assertTrue(namespaceResource.getWaitingProcedures().isEmpty());
 
-    LockInfo tableLock = locks.get(1);
-    assertLockResource(tableLock, LockInfo.ResourceType.TABLE, "ns3:table3");
-    assertSharedLock(tableLock, 1);
-    assertTrue(tableLock.getWaitingProcedures().isEmpty());
+    LockedResource tableResource = resources.get(1);
+    assertLockResource(tableResource, LockedResourceType.TABLE, "ns3:table3");
+    assertSharedLock(tableResource, 1);
+    assertTrue(tableResource.getWaitingProcedures().isEmpty());
 
-    LockInfo regionLock = locks.get(2);
-    assertLockResource(regionLock, LockInfo.ResourceType.REGION, regionInfo.getEncodedName());
-    assertExclusiveLock(regionLock, 3);
-    assertTrue(regionLock.getWaitingProcedures().isEmpty());
+    LockedResource regionResource = resources.get(2);
+    assertLockResource(regionResource, LockedResourceType.REGION, regionInfo.getEncodedName());
+    assertExclusiveLock(regionResource, procedure);
+    assertTrue(regionResource.getWaitingProcedures().isEmpty());
   }
 
   @Test
@@ -1035,28 +1036,28 @@ public class TestMasterProcedureScheduler {
     LockProcedure procedure3 = createExclusiveLockProcedure(3);
     queue.waitTableExclusiveLock(procedure3, TableName.valueOf("ns4", "table4"));
 
-    List<LockInfo> locks = queue.listLocks();
-    assertEquals(2, locks.size());
+    List<LockedResource> resources = queue.getLocks();
+    assertEquals(2, resources.size());
 
-    LockInfo namespaceLock = locks.get(0);
-    assertLockResource(namespaceLock, LockInfo.ResourceType.NAMESPACE, "ns4");
-    assertSharedLock(namespaceLock, 1);
-    assertTrue(namespaceLock.getWaitingProcedures().isEmpty());
+    LockedResource namespaceResource = resources.get(0);
+    assertLockResource(namespaceResource, LockedResourceType.NAMESPACE, "ns4");
+    assertSharedLock(namespaceResource, 1);
+    assertTrue(namespaceResource.getWaitingProcedures().isEmpty());
 
-    LockInfo tableLock = locks.get(1);
-    assertLockResource(tableLock, LockInfo.ResourceType.TABLE, "ns4:table4");
-    assertExclusiveLock(tableLock, 1);
+    LockedResource tableLock = resources.get(1);
+    assertLockResource(tableLock, LockedResourceType.TABLE, "ns4:table4");
+    assertExclusiveLock(tableLock, procedure1);
 
-    List<WaitingProcedure> waitingProcedures = tableLock.getWaitingProcedures();
+    List<Procedure<?>> waitingProcedures = tableLock.getWaitingProcedures();
     assertEquals(2, waitingProcedures.size());
 
-    WaitingProcedure waitingProcedure1 = waitingProcedures.get(0);
-    assertEquals(LockInfo.LockType.SHARED, waitingProcedure1.getLockType());
-    assertEquals(2, waitingProcedure1.getProcedure().getProcId());
+    LockProcedure waitingProcedure2 = (LockProcedure) waitingProcedures.get(0);
+    assertEquals(LockType.SHARED, waitingProcedure2.getType());
+    assertEquals(procedure2, waitingProcedure2);
 
-    WaitingProcedure waitingProcedure2 = waitingProcedures.get(1);
-    assertEquals(LockInfo.LockType.EXCLUSIVE, waitingProcedure2.getLockType());
-    assertEquals(3, waitingProcedure2.getProcedure().getProcId());
+    LockProcedure waitingProcedure3 = (LockProcedure) waitingProcedures.get(1);
+    assertEquals(LockType.EXCLUSIVE, waitingProcedure3.getType());
+    assertEquals(procedure3, waitingProcedure3);
   }
 }
 

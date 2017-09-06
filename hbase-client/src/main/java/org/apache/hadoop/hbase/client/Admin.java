@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -46,7 +45,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
@@ -1454,19 +1452,19 @@ public interface Admin extends Abortable, Closeable {
     final boolean mayInterruptIfRunning) throws IOException;
 
   /**
-   * List procedures
-   * @return procedure list
+   * Get procedures.
+   * @return procedure list in JSON
    * @throws IOException
    */
-  ProcedureInfo[] listProcedures()
+  String getProcedures()
       throws IOException;
 
   /**
-   * List locks.
-   * @return lock list
+   * Get locks.
+   * @return lock list in JSON
    * @throws IOException if a remote or network exception occurs
    */
-  LockInfo[] listLocks()
+  String getLocks()
       throws IOException;
 
   /**

@@ -29,13 +29,11 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Options;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallable;
@@ -804,15 +802,15 @@ public interface AsyncAdmin {
 
   /**
    * List procedures
-   * @return procedure list wrapped by {@link CompletableFuture}
+   * @return procedure list JSON wrapped by {@link CompletableFuture}
    */
-  CompletableFuture<List<ProcedureInfo>> listProcedures();
+  CompletableFuture<String> getProcedures();
 
   /**
-   * List procedure locks.
-   * @return lock list wrapped by {@link CompletableFuture}
+   * List locks.
+   * @return lock list JSON wrapped by {@link CompletableFuture}
    */
-  CompletableFuture<List<LockInfo>> listProcedureLocks();
+  CompletableFuture<String> getLocks();
 
   /**
    * Mark a region server as draining to prevent additional regions from getting assigned to it.

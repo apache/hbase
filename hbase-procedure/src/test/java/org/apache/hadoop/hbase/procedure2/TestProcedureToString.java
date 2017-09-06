@@ -20,9 +20,6 @@ package org.apache.hadoop.hbase.procedure2;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ServerCrashState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -57,11 +54,13 @@ public class TestProcedureToString {
     }
 
     @Override
-    protected void serializeStateData(OutputStream stream) throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
 
     @Override
-    protected void deserializeStateData(InputStream stream) throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
   }
 

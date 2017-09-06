@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -78,9 +77,10 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
-import org.apache.hadoop.hbase.master.locking.LockProcedure.LockType;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.procedure2.LockType;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -1208,36 +1208,44 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   }
 
   @Override
-  public void preListProcedures(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  public void preGetProcedures(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
-    // We are delegating the authorization check to postListProcedures as we don't have
+    // We are delegating the authorization check to postGetProcedures as we don't have
     // any concrete set of procedures to work with
   }
 
   @Override
-  public void postListProcedures(
+  public void postGetProcedures(
       ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<ProcedureInfo> procInfoList) throws IOException {
-    if (procInfoList.isEmpty()) {
+      List<Procedure<?>> procList) throws IOException {
+    if (procList.isEmpty()) {
       return;
     }
 
     // Retains only those which passes authorization checks, as the checks weren't done as part
-    // of preListProcedures.
-    Iterator<ProcedureInfo> itr = procInfoList.iterator();
+    // of preGetProcedures.
+    Iterator<Procedure<?>> itr = procList.iterator();
     User user = getActiveUser(ctx);
     while (itr.hasNext()) {
-      ProcedureInfo procInfo = itr.next();
+      Procedure<?> proc = itr.next();
       try {
-        if (!ProcedureInfo.isProcedureOwner(procInfo, user)) {
+        String owner = proc.getOwner();
+        if (owner == null || !owner.equals(user.getShortName())) {
           // If the user is not the procedure owner, then we should further probe whether
           // he can see the procedure.
-          requirePermission(user, "listProcedures", Action.ADMIN);
+          requirePermission(user, "getProcedures", Action.ADMIN);
         }
       } catch (AccessDeniedException e) {
         itr.remove();
       }
     }
+  }
+
+  @Override
+  public void preGetLocks(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    User user = getActiveUser(ctx);
+    requirePermission(user, "getLocks", Action.ADMIN);
   }
 
   @Override

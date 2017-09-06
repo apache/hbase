@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -41,7 +40,8 @@ import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.procedure2.LockedResource;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+
 import com.google.protobuf.Service;
 
 import static org.mockito.Mockito.mock;
@@ -226,12 +227,12 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public List<ProcedureInfo> listProcedures() throws IOException {
+  public List<Procedure<?>> getProcedures() throws IOException {
     return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
   @Override
-  public List<LockInfo> listLocks() throws IOException {
+  public List<LockedResource> getLocks() throws IOException {
     return null;
   }
 

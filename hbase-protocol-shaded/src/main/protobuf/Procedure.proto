@@ -23,6 +23,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "google/protobuf/any.proto";
 import "ErrorHandling.proto";
 
 enum ProcedureState {
@@ -55,7 +56,8 @@ message Procedure {
   // user state/results
   optional ForeignExceptionMessage exception = 10;
   optional bytes result = 11;           // opaque (user) result structure
-  optional bytes state_data = 12;       // opaque (user) procedure internal-state
+  optional bytes state_data = 12;       // opaque (user) procedure internal-state - OBSOLATE
+  repeated google.protobuf.Any state_message = 15; // opaque (user) procedure internal-state
 
   // Nonce to prevent same procedure submit by multiple times
   optional uint64 nonce_group = 13 [default = 0];

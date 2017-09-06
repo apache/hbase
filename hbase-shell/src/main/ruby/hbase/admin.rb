@@ -1198,12 +1198,12 @@ module Hbase
 
     # List all procedures
     def list_procedures
-      @admin.listProcedures
+      @admin.getProcedures
     end
 
     # List all locks
     def list_locks
-      @admin.listLocks
+      @admin.getLocks
     end
 
     # Parse arguments and update HTableDescriptor accordingly

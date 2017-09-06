@@ -193,7 +193,7 @@ public class TestProcedureAdmin {
   }
 
   @Test(timeout=60000)
-  public void testListProcedure() throws Exception {
+  public void testGetProcedure() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -206,10 +206,10 @@ public class TestProcedureAdmin {
     // Wait for one step to complete
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
-    List<Procedure> listProcedures = procExec.listProcedures();
-    assertTrue(listProcedures.size() >= 1);
+    List<Procedure<?>> procedures = procExec.getProcedures();
+    assertTrue(procedures.size() >= 1);
     boolean found = false;
-    for (Procedure proc: listProcedures) {
+    for (Procedure<?> proc: procedures) {
       if (proc.getProcId() == procId) {
         assertTrue(proc.isRunnable());
         found = true;
@@ -223,8 +223,8 @@ public class TestProcedureAdmin {
     ProcedureTestingUtility.restart(procExec);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
-    listProcedures = procExec.listProcedures();
-    for (Procedure proc: listProcedures) {
+    procedures = procExec.getProcedures();
+    for (Procedure proc: procedures) {
       assertTrue(proc.isSuccess());
     }
   }

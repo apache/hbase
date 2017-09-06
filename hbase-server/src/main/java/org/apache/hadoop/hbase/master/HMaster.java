@@ -68,7 +68,6 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -138,11 +137,10 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.MasterSpaceQuotaObserver;
@@ -3051,41 +3049,35 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public List<ProcedureInfo> listProcedures() throws IOException {
+  public List<Procedure<?>> getProcedures() throws IOException {
     if (cpHost != null) {
-      cpHost.preListProcedures();
+      cpHost.preGetProcedures();
     }
 
-    final List<Procedure> procList = this.procedureExecutor.listProcedures();
-    final List<ProcedureInfo> procInfoList = new ArrayList<>(procList.size());
-
-    for (Procedure proc : procList) {
-      ProcedureInfo procInfo = ProcedureUtil.convertToProcedureInfo(proc);
-      procInfoList.add(procInfo);
-    }
+    final List<Procedure<?>> procList = this.procedureExecutor.getProcedures();
 
     if (cpHost != null) {
-      cpHost.postListProcedures(procInfoList);
+      cpHost.postGetProcedures(procList);
     }
 
-    return procInfoList;
+    return procList;
   }
 
   @Override
-  public List<LockInfo> listLocks() throws IOException {
+  public List<LockedResource> getLocks() throws IOException {
     if (cpHost != null) {
-      cpHost.preListLocks();
+      cpHost.preGetLocks();
     }
 
     MasterProcedureScheduler procedureScheduler = procedureExecutor.getEnvironment().getProcedureScheduler();
 
-    final List<LockInfo> lockInfoList = procedureScheduler.listLocks();
+    final List<LockedResource> lockedResources = procedureScheduler.getLocks();
 
     if (cpHost != null) {
-      cpHost.postListLocks(lockInfoList);
+      cpHost.postGetLocks(lockedResources);
     }
 
-    return lockInfoList;
+    return lockedResources;
   }
 
   /**

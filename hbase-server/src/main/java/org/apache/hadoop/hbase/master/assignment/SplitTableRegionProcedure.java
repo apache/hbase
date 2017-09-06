@@ -22,9 +22,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InterruptedIOException;
-import java.io.OutputStream;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -39,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -59,6 +56,7 @@ import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProced
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SplitTableRegionState;
@@ -323,8 +321,9 @@ public class SplitTableRegionProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     final MasterProcedureProtos.SplitTableRegionStateData.Builder splitTableRegionMsg =
         MasterProcedureProtos.SplitTableRegionStateData.newBuilder()
@@ -332,15 +331,16 @@ public class SplitTableRegionProcedure
         .setParentRegionInfo(HRegionInfo.convert(getRegion()))
         .addChildRegionInfo(HRegionInfo.convert(daughter_1_HRI))
         .addChildRegionInfo(HRegionInfo.convert(daughter_2_HRI));
-    splitTableRegionMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(splitTableRegionMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     final MasterProcedureProtos.SplitTableRegionStateData splitTableRegionsMsg =
-        MasterProcedureProtos.SplitTableRegionStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.SplitTableRegionStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(splitTableRegionsMsg.getUserInfo()));
     setRegion(HRegionInfo.convert(splitTableRegionsMsg.getParentRegionInfo()));
     assert(splitTableRegionsMsg.getChildRegionInfoCount() == 2);
@@ -678,6 +678,7 @@ public class SplitTableRegionProcedure
       this.family = family;
     }
 
+    @Override
     public Pair<Path,Path> call() throws IOException {
       return splitStoreFile(regionFs, family, sf);
     }

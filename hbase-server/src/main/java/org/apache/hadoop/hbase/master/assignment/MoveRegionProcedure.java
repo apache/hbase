@@ -20,8 +20,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MoveRegionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MoveRegionStateData;
@@ -124,8 +123,9 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
   }
 
   @Override
-  protected void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     final MoveRegionStateData.Builder state = MoveRegionStateData.newBuilder()
         // No need to serialize the HRegionInfo. The super class has the region.
@@ -133,14 +133,16 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
     if (plan.getDestination() != null) {
       state.setDestinationServer(ProtobufUtil.toServerName(plan.getDestination()));
     }
-    state.build().writeDelimitedTo(stream);
+
+    serializer.serialize(state.build());
   }
 
   @Override
-  protected void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
-    final MoveRegionStateData state = MoveRegionStateData.parseDelimitedFrom(stream);
+    final MoveRegionStateData state = serializer.deserialize(MoveRegionStateData.class);
     final HRegionInfo regionInfo = getRegion(); // Get it from super class deserialization.
     final ServerName sourceServer = ProtobufUtil.toServerName(state.getSourceServer());
     final ServerName destinationServer = state.hasDestinationServer() ?

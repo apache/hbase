@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -79,7 +78,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
@@ -108,7 +106,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
@@ -134,9 +131,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProced
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
@@ -149,10 +150,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedur
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
@@ -180,7 +178,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMaster
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
@@ -2216,40 +2213,27 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public ProcedureInfo[] listProcedures() throws IOException {
-    return executeCallable(new MasterCallable<ProcedureInfo[]>(getConnection(),
+  public String getProcedures() throws IOException {
+    return executeCallable(new MasterCallable<String>(getConnection(),
         getRpcControllerFactory()) {
       @Override
-      protected ProcedureInfo[] rpcCall() throws Exception {
-        List<ProcedureProtos.Procedure> procList = master.listProcedures(
-            getRpcController(), ListProceduresRequest.newBuilder().build()).getProcedureList();
-        ProcedureInfo[] procInfoList = new ProcedureInfo[procList.size()];
-        for (int i = 0; i < procList.size(); i++) {
-          procInfoList[i] = ProtobufUtil.toProcedureInfo(procList.get(i));
-        }
-        return procInfoList;
+      protected String rpcCall() throws Exception {
+        GetProceduresRequest request = GetProceduresRequest.newBuilder().build();
+        GetProceduresResponse response = master.getProcedures(getRpcController(), request);
+        return ProtobufUtil.toProcedureJson(response.getProcedureList());
       }
     });
   }
 
   @Override
-  public LockInfo[] listLocks() throws IOException {
-    return executeCallable(new MasterCallable<LockInfo[]>(getConnection(),
+  public String getLocks() throws IOException {
+    return executeCallable(new MasterCallable<String>(getConnection(),
         getRpcControllerFactory()) {
       @Override
-      protected LockInfo[] rpcCall() throws Exception {
-        ListLocksRequest request = ListLocksRequest.newBuilder().build();
-        ListLocksResponse response = master.listLocks(getRpcController(), request);
-        List<LockServiceProtos.LockInfo> locksProto = response.getLockList();
-
-        LockInfo[] locks = new LockInfo[locksProto.size()];
-
-        for (int i = 0; i < locks.length; i++) {
-          LockServiceProtos.LockInfo lockProto = locksProto.get(i);
-          locks[i] = ProtobufUtil.toLockInfo(lockProto);
-        }
-
-        return locks;
+      protected String rpcCall() throws Exception {
+        GetLocksRequest request = GetLocksRequest.newBuilder().build();
+        GetLocksResponse response = master.getLocks(getRpcController(), request);
+        return ProtobufUtil.toLockJson(response.getLockList());
       }
     });
   }

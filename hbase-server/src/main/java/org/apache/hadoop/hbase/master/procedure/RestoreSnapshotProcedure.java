@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -45,6 +43,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -229,8 +228,9 @@ public class RestoreSnapshotProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.RestoreSnapshotStateData.Builder restoreSnapshotMsg =
       MasterProcedureProtos.RestoreSnapshotStateData.newBuilder()
@@ -267,15 +267,16 @@ public class RestoreSnapshotProcedure
         restoreSnapshotMsg.addParentToChildRegionsPairList (parentToChildrenPair);
       }
     }
-    restoreSnapshotMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(restoreSnapshotMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.RestoreSnapshotStateData restoreSnapshotMsg =
-      MasterProcedureProtos.RestoreSnapshotStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.RestoreSnapshotStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(restoreSnapshotMsg.getUserInfo()));
     snapshot = restoreSnapshotMsg.getSnapshot();
     modifiedTableDescriptor =

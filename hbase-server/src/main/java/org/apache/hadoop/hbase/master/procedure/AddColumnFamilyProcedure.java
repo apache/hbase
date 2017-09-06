@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -33,6 +31,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.AddColumnFamilyState;
@@ -166,8 +165,9 @@ public class AddColumnFamilyProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.AddColumnFamilyStateData.Builder addCFMsg =
         MasterProcedureProtos.AddColumnFamilyStateData.newBuilder()
@@ -179,15 +179,16 @@ public class AddColumnFamilyProcedure
           .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
     }
 
-    addCFMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(addCFMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.AddColumnFamilyStateData addCFMsg =
-        MasterProcedureProtos.AddColumnFamilyStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.AddColumnFamilyStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(addCFMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(addCFMsg.getTableName());
     cfDescriptor = ProtobufUtil.toColumnFamilyDescriptor(addCFMsg.getColumnfamilySchema());

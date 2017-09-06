@@ -544,18 +544,18 @@ message AbortProcedureResponse {
   required bool is_procedure_aborted = 1;
 }
 
-message ListProceduresRequest {
+message GetProceduresRequest {
 }
 
-message ListProceduresResponse {
+message GetProceduresResponse {
   repeated Procedure procedure = 1;
 }
 
-message ListLocksRequest {
+message GetLocksRequest {
 }
 
-message ListLocksResponse {
-  repeated LockInfo lock = 1;
+message GetLocksResponse {
+  repeated LockedResource lock = 1;
 }
 
 message SetQuotaRequest {
@@ -917,11 +917,11 @@ service MasterService {
     returns(AbortProcedureResponse);
 
   /** returns a list of procedures */
-  rpc ListProcedures(ListProceduresRequest)
-    returns(ListProceduresResponse);
+  rpc GetProcedures(GetProceduresRequest)
+    returns(GetProceduresResponse);
 
-  rpc ListLocks(ListLocksRequest)
-    returns(ListLocksResponse);
+  rpc GetLocks(GetLocksRequest)
+    returns(GetLocksResponse);
 
   /** Add a replication peer */
   rpc AddReplicationPeer(AddReplicationPeerRequest)

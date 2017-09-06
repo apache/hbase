@@ -27,14 +27,14 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -45,9 +45,9 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -114,7 +114,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.snapshotManifest = SnapshotManifest.create(conf, fs, workingDir, snapshot, monitor);
 
     this.tableLock = master.getLockManager().createMasterLock(
-        snapshotTable, LockProcedure.LockType.EXCLUSIVE,
+        snapshotTable, LockType.EXCLUSIVE,
         this.getClass().getName() + ": take snapshot " + snapshot.getName());
 
     // prepare the verify
@@ -134,6 +134,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     return htd;
   }
 
+  @Override
   public TakeSnapshotHandler prepare() throws Exception {
     super.prepare();
     // after this, you should ensure to release this lock in case of exceptions

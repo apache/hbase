@@ -29,14 +29,16 @@
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv"
-  import="org.apache.hadoop.hbase.ProcedureInfo"
-  import="org.apache.hadoop.hbase.procedure2.LockInfo"
+  import="org.apache.hadoop.hbase.master.procedure.ProcedureDescriber"
+  import="org.apache.hadoop.hbase.procedure2.LockedResource"
   import="org.apache.hadoop.hbase.procedure2.Procedure"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
+  import="org.apache.hadoop.hbase.procedure2.ProcedureUtil"
   import="org.apache.hadoop.hbase.procedure2.store.wal.ProcedureWALFile"
   import="org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore"
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
-
+  import="org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos"
+  import="org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil"
 %>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
@@ -48,7 +50,7 @@
   long millisFromLastRoll = walStore.getMillisFromLastRoll();
   ArrayList<ProcedureWALFile> procedureWALFiles = walStore.getActiveLogs();
   Set<ProcedureWALFile> corruptedWALFiles = walStore.getCorruptedLogs();
-  List<Procedure> procedures = procExecutor.listProcedures();
+  List<Procedure<?>> procedures = procExecutor.getProcedures();
   Collections.sort(procedures, new Comparator<Procedure>() {
     @Override
     public int compare(Procedure lhs, Procedure rhs) {
@@ -58,7 +60,7 @@
     }
   });
 
-  List<LockInfo> locks = master.listLocks();
+  List<LockedResource> lockedResources = master.getLocks();
 %>
 <!DOCTYPE html>
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -118,17 +120,19 @@
         <th>Start Time</th>
         <th>Last Update</th>
         <th>Errors</th>
+        <th>Parameters</th>
     </tr>
     <% for (Procedure<?> proc : procedures) { %>
       <tr>
         <td><%= proc.getProcId() %></td>
         <td><%= proc.hasParent() ? proc.getParentProcId() : "" %></td>
         <td><%= escapeXml(proc.getState().toString()) %></td>
-        <td><%= escapeXml(proc.getOwner()) %></td>
+        <td><%= proc.hasOwner() ? escapeXml(proc.getOwner()) : "" %></td>
         <td><%= escapeXml(proc.getProcName()) %></td>
         <td><%= new Date(proc.getSubmittedTime()) %></td>
         <td><%= new Date(proc.getLastUpdate()) %></td>
         <td><%= escapeXml(proc.isFailed() ? proc.getException().unwrapRemoteIOException().getMessage() : "") %></td>
+        <td><%= escapeXml(ProcedureDescriber.describeParameters(proc)) %></td>
       </tr>
     <% } %>
   </table>
@@ -244,40 +248,35 @@
           <h1>Locks</h1>
       </div>
   </div>
-  <% for (LockInfo lock : locks) { %>
-    <h2><%= lock.getResourceType() %>: <%= lock.getResourceName() %></h2>
+  <% for (LockedResource lockedResource : lockedResources) { %>
+    <h2><%= lockedResource.getResourceType() %>: <%= lockedResource.getResourceName() %></h2>
     <%
-      switch (lock.getLockType()) {
+      switch (lockedResource.getLockType()) {
       case EXCLUSIVE:
     %>
     <p>Lock type: EXCLUSIVE</p>
-    <p>Owner procedure ID: <%= lock.getExclusiveLockOwnerProcedure().getProcId() %></p>
+    <p>Owner procedure: <%= escapeXml(ProcedureDescriber.describe(lockedResource.getExclusiveLockOwnerProcedure())) %></p>
     <%
         break;
       case SHARED:
     %>
     <p>Lock type: SHARED</p>
-    <p>Number of shared locks: <%= lock.getSharedLockCount() %></p>
+    <p>Number of shared locks: <%= lockedResource.getSharedLockCount() %></p>
     <%
         break;
       }
 
-      List<LockInfo.WaitingProcedure> waitingProcedures = lock.getWaitingProcedures();
+      List<Procedure<?>> waitingProcedures = lockedResource.getWaitingProcedures();
 
       if (!waitingProcedures.isEmpty()) {
     %>
 	    <h3>Waiting procedures</h3>
 	    <table class="table table-striped" width="90%" >
-		    <tr>
-		      <th>Lock type</th>
-		      <th>Procedure ID</th>
-		    </tr>
-		    <% for (LockInfo.WaitingProcedure waitingProcedure : waitingProcedures) { %>
-		      <tr>
-	          <td><%= waitingProcedure.getLockType() %></td>
-	          <td><%= waitingProcedure.getProcedure().getProcId() %></td>
-		      </tr>
-		    <% } %>
+        <% for (Procedure<?> proc : procedures) { %>
+         <tr>
+            <td><%= escapeXml(ProcedureDescriber.describe(proc)) %></td>
+          </tr>
+        <% } %>
 	    </table>
     <% } %>
   <% } %>

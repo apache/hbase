@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
@@ -38,7 +39,6 @@ import org.apache.zookeeper.KeeperException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Set;
 
 /**
@@ -81,7 +81,7 @@ public class RecoverMetaProcedure
 
   /**
    * This constructor is also used when deserializing from a procedure store; we'll construct one
-   * of these then call {@link #deserializeStateData(InputStream)}. Do not use directly.
+   * of these then call #deserializeStateData(InputStream). Do not use directly.
    */
   public RecoverMetaProcedure() {
     this(null, false);
@@ -183,22 +183,24 @@ public class RecoverMetaProcedure
   }
 
   @Override
-  protected void serializeStateData(OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
     MasterProcedureProtos.RecoverMetaStateData.Builder state =
         MasterProcedureProtos.RecoverMetaStateData.newBuilder().setShouldSplitWal(shouldSplitWal);
     if (failedMetaServer != null) {
       state.setFailedMetaServer(ProtobufUtil.toServerName(failedMetaServer));
     }
     state.setReplicaId(replicaId);
-    state.build().writeDelimitedTo(stream);
+    serializer.serialize(state.build());
   }
 
   @Override
-  protected void deserializeStateData(InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
     MasterProcedureProtos.RecoverMetaStateData state =
-        MasterProcedureProtos.RecoverMetaStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.RecoverMetaStateData.class);
     this.shouldSplitWal = state.hasShouldSplitWal() && state.getShouldSplitWal();
     this.failedMetaServer = state.hasFailedMetaServer() ?
         ProtobufUtil.toServerName(state.getFailedMetaServer()) : null;

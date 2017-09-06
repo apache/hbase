@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionTransitionProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
@@ -96,7 +96,7 @@ implements ServerProcedureInterface {
 
   /**
    * Used when deserializing from a procedure store; we'll construct one of these then call
-   * {@link #deserializeStateData(InputStream)}. Do not use directly.
+   * #deserializeStateData(InputStream). Do not use directly.
    */
   public ServerCrashProcedure() {
     super();
@@ -285,8 +285,9 @@ implements ServerProcedureInterface {
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.ServerCrashStateData.Builder state =
       MasterProcedureProtos.ServerCrashStateData.newBuilder().
@@ -298,15 +299,16 @@ implements ServerProcedureInterface {
         state.addRegionsOnCrashedServer(HRegionInfo.convert(hri));
       }
     }
-    state.build().writeDelimitedTo(stream);
+    serializer.serialize(state.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.ServerCrashStateData state =
-      MasterProcedureProtos.ServerCrashStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.ServerCrashStateData.class);
     this.serverName = ProtobufUtil.toServerName(state.getServerName());
     this.carryingMeta = state.hasCarryingMeta()? state.getCarryingMeta(): false;
     // shouldSplitWAL has a default over in pb so this invocation will always work.
