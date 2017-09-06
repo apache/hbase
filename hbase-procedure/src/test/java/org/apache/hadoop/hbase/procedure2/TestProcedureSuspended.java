@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.procedure2;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -251,11 +249,13 @@ public class TestProcedureSuspended {
     protected boolean abort(TestProcEnv env) { return false; }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
   }
 

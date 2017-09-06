@@ -27,8 +27,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
+import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
@@ -36,8 +38,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -65,9 +65,6 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   public static final int DEFAULT_LOCAL_MASTER_LOCKS_TIMEOUT_MS = 600000;
   public static final String LOCAL_MASTER_LOCKS_TIMEOUT_MS_CONF =
       "hbase.master.procedure.local.master.locks.timeout.ms";
-
-  // Also used in serialized states, changes will affect backward compatibility.
-  public enum LockType { SHARED, EXCLUSIVE }
 
   private String namespace;
   private TableName tableName;
@@ -265,7 +262,8 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  protected void serializeStateData(final OutputStream stream) throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
     final LockProcedureData.Builder builder = LockProcedureData.newBuilder()
           .setLockType(LockServiceProtos.LockType.valueOf(type.name()))
           .setDescription(description);
@@ -281,12 +279,13 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     if (lockAcquireLatch != null) {
       builder.setIsMasterLock(true);
     }
-    builder.build().writeDelimitedTo(stream);
+    serializer.serialize(builder.build());
   }
 
   @Override
-  protected void deserializeStateData(final InputStream stream) throws IOException {
-    final LockProcedureData state = LockProcedureData.parseDelimitedFrom(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    final LockProcedureData state = serializer.deserialize(LockProcedureData.class);
     type = LockType.valueOf(state.getLockType().name());
     description = state.getDescription();
     if (state.getRegionInfoCount() > 0) {

@@ -38,7 +38,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Options;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -47,7 +46,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallable;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -469,13 +467,13 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<ProcedureInfo>> listProcedures() {
-    return wrap(rawAdmin.listProcedures());
+  public CompletableFuture<String> getProcedures() {
+    return wrap(rawAdmin.getProcedures());
   }
 
   @Override
-  public CompletableFuture<List<LockInfo>> listProcedureLocks() {
-    return wrap(rawAdmin.listProcedureLocks());
+  public CompletableFuture<String> getLocks() {
+    return wrap(rawAdmin.getLocks());
   }
 
   @Override

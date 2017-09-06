@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CountDownLatch;
 
@@ -31,6 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Int32Value;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -382,17 +381,19 @@ public class TestProcedureRecovery {
     }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
-      super.serializeStateData(stream);
-      stream.write(Bytes.toBytes(iResult));
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      super.serializeStateData(serializer);
+      Int32Value.Builder builder = Int32Value.newBuilder().setValue(iResult);
+      serializer.serialize(builder.build());
     }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
-      super.deserializeStateData(stream);
-      byte[] data = new byte[4];
-      stream.read(data);
-      iResult = Bytes.toInt(data);
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      super.deserializeStateData(serializer);
+      Int32Value value = serializer.deserialize(Int32Value.class);
+      iResult = value.getValue();
     }
   }
 

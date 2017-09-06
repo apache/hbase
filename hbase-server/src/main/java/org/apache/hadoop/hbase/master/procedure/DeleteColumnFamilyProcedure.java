@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -32,6 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -172,8 +171,9 @@ public class DeleteColumnFamilyProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.DeleteColumnFamilyStateData.Builder deleteCFMsg =
         MasterProcedureProtos.DeleteColumnFamilyStateData.newBuilder()
@@ -185,14 +185,15 @@ public class DeleteColumnFamilyProcedure
           .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
     }
 
-    deleteCFMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(deleteCFMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
     MasterProcedureProtos.DeleteColumnFamilyStateData deleteCFMsg =
-        MasterProcedureProtos.DeleteColumnFamilyStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.DeleteColumnFamilyStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(deleteCFMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(deleteCFMsg.getTableName());
     familyName = deleteCFMsg.getColumnfamilyName().toByteArray();

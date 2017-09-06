@@ -18,9 +18,16 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.SimpleMasterProcedureManager;
@@ -34,16 +41,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
-import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Class to test asynchronous procedure admin operations.
@@ -98,8 +95,8 @@ public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void listProcedure() throws Exception {
-    List<ProcedureInfo> procList = admin.listProcedures().get();
-    assertTrue(procList.size() >= 0);
+    String procList = admin.getProcedures().get();
+    assertTrue(procList.startsWith("["));
   }
 
   @Test

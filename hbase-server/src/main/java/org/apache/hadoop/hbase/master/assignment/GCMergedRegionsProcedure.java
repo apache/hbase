@@ -18,9 +18,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -29,6 +26,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -132,21 +130,23 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
   }
 
   @Override
-  protected void serializeStateData(OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
     final MasterProcedureProtos.GCMergedRegionsStateData.Builder msg =
         MasterProcedureProtos.GCMergedRegionsStateData.newBuilder().
         setParentA(HRegionInfo.convert(this.father)).
         setParentB(HRegionInfo.convert(this.mother)).
         setMergedChild(HRegionInfo.convert(this.mergedChild));
-    msg.build().writeDelimitedTo(stream);
+    serializer.serialize(msg.build());
   }
 
   @Override
-  protected void deserializeStateData(InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
     final MasterProcedureProtos.GCMergedRegionsStateData msg =
-        MasterProcedureProtos.GCMergedRegionsStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.GCMergedRegionsStateData.class);
     this.father = HRegionInfo.convert(msg.getParentA());
     this.mother = HRegionInfo.convert(msg.getParentB());
     this.mergedChild = HRegionInfo.convert(msg.getMergedChild());

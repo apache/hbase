@@ -29,10 +29,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.mob.ExpiredMobFileCleaner;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.procedure2.LockType;
 
 /**
  * The Class ExpiredMobFileCleanerChore for running cleaner regularly to remove the expired
@@ -68,7 +68,7 @@ public class ExpiredMobFileCleanerChore extends ScheduledChore {
             // clean only for mob-enabled column.
             // obtain a read table lock before cleaning, synchronize with MobFileCompactionChore.
             final LockManager.MasterLock lock = master.getLockManager().createMasterLock(
-                MobUtils.getTableLockName(htd.getTableName()), LockProcedure.LockType.SHARED,
+                MobUtils.getTableLockName(htd.getTableName()), LockType.SHARED,
                 this.getClass().getSimpleName() + ": Cleaning expired mob files");
             try {
               lock.acquire();

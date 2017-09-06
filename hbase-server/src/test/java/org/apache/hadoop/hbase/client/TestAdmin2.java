@@ -44,8 +44,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -683,9 +681,15 @@ public class TestAdmin2 {
   }
 
   @Test(timeout = 300000)
-  public void testListProcedures() throws Exception {
-    ProcedureInfo[] procList = admin.listProcedures();
-    assertTrue(procList.length >= 0);
+  public void testGetProcedures() throws Exception {
+    String procList = admin.getProcedures();
+    assertTrue(procList.startsWith("["));
+  }
+
+  @Test(timeout = 300000)
+  public void testGetLocks() throws Exception {
+    String lockList = admin.getLocks();
+    assertTrue(lockList.startsWith("["));
   }
 
   /*

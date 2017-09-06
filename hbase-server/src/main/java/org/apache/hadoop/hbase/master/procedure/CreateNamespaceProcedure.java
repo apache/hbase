@@ -19,9 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -29,6 +26,7 @@ import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateNamespaceState;
@@ -135,21 +133,23 @@ public class CreateNamespaceProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.CreateNamespaceStateData.Builder createNamespaceMsg =
         MasterProcedureProtos.CreateNamespaceStateData.newBuilder().setNamespaceDescriptor(
           ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
-    createNamespaceMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(createNamespaceMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.CreateNamespaceStateData createNamespaceMsg =
-        MasterProcedureProtos.CreateNamespaceStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.CreateNamespaceStateData.class);
     nsDescriptor = ProtobufUtil.toNamespaceDescriptor(createNamespaceMsg.getNamespaceDescriptor());
   }
 

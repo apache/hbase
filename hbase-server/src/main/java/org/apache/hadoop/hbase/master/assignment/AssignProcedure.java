@@ -20,9 +20,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -38,6 +35,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionOpenOperation;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -121,7 +119,8 @@ public class AssignProcedure extends RegionTransitionProcedure {
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
     final AssignRegionStateData.Builder state = AssignRegionStateData.newBuilder()
         .setTransitionState(getTransitionState())
         .setRegionInfo(HRegionInfo.convert(getRegionInfo()));
@@ -131,12 +130,13 @@ public class AssignProcedure extends RegionTransitionProcedure {
     if (this.targetServer != null) {
       state.setTargetServer(ProtobufUtil.toServerName(this.targetServer));
     }
-    state.build().writeDelimitedTo(stream);
+    serializer.serialize(state.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    final AssignRegionStateData state = AssignRegionStateData.parseDelimitedFrom(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    final AssignRegionStateData state = serializer.deserialize(AssignRegionStateData.class);
     setTransitionState(state.getTransitionState());
     setRegionInfo(HRegionInfo.convert(state.getRegionInfo()));
     forceNewPlan = state.getForceNewPlan();

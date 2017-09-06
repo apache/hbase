@@ -32,8 +32,6 @@ import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -58,7 +56,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -102,12 +99,12 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
-import org.apache.hadoop.hbase.master.locking.LockProcedure.LockType;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
+import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -578,17 +575,19 @@ public class TestAccessController extends SecureTestUtil {
     }
 
     @Override
-    protected void serializeStateData(OutputStream stream) throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
       TestProcedureProtos.TestTableDDLStateData.Builder testTableDDLMsg =
           TestProcedureProtos.TestTableDDLStateData.newBuilder()
           .setTableName(tableName.getNameAsString());
-      testTableDDLMsg.build().writeDelimitedTo(stream);
+      serializer.serialize(testTableDDLMsg.build());
     }
 
     @Override
-    protected void deserializeStateData(InputStream stream) throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
       TestProcedureProtos.TestTableDDLStateData testTableDDLMsg =
-          TestProcedureProtos.TestTableDDLStateData.parseDelimitedFrom(stream);
+          serializer.deserialize(TestProcedureProtos.TestTableDDLStateData.class);
       tableName = TableName.valueOf(testTableDDLMsg.getTableName());
     }
 
@@ -630,32 +629,43 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testListProcedures() throws Exception {
+  public void testGetProcedures() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec =
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
     proc.setOwner(USER_OWNER);
     procExec.submitProcedure(proc);
-    final List<Procedure> procList = procExec.listProcedures();
+    final List<Procedure<?>> procList = procExec.getProcedures();
 
-    AccessTestAction listProceduresAction = new AccessTestAction() {
+    AccessTestAction getProceduresAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        List<ProcedureInfo> procInfoList = new ArrayList<>(procList.size());
-        for(Procedure p : procList) {
-          procInfoList.add(ProcedureUtil.convertToProcedureInfo(p));
-        }
         ACCESS_CONTROLLER
-        .postListProcedures(ObserverContext.createAndPrepare(CP_ENV, null), procInfoList);
+        .postGetProcedures(ObserverContext.createAndPrepare(CP_ENV, null), procList);
        return null;
       }
     };
 
-    verifyAllowed(listProceduresAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyAllowed(listProceduresAction, USER_OWNER);
+    verifyAllowed(getProceduresAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyAllowed(getProceduresAction, USER_OWNER);
     verifyIfNull(
-      listProceduresAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
+      getProceduresAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
+  }
+
+  @Test (timeout=180000)
+  public void testGetLocks() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGetLocks(ObserverContext.createAndPrepare(CP_ENV, null));
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE,
+      USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test (timeout=180000)

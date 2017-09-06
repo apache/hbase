@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.procedure2.LockType;
 
 /**
  * The Class MobCompactChore for running compaction regularly to merge small mob files.
@@ -64,7 +64,7 @@ public class MobCompactionChore extends ScheduledChore {
         boolean reported = false;
         try {
           final LockManager.MasterLock lock = master.getLockManager().createMasterLock(
-              MobUtils.getTableLockName(htd.getTableName()), LockProcedure.LockType.EXCLUSIVE,
+              MobUtils.getTableLockName(htd.getTableName()), LockType.EXCLUSIVE,
               this.getClass().getName() + ": mob compaction");
           for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
             if (!hcd.isMobEnabled()) {

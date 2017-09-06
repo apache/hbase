@@ -22,8 +22,6 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -241,7 +239,7 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   /**
-   * Map the the procId returned by submitProcedure(), the Root-ProcID, to the ProcedureInfo.
+   * Map the the procId returned by submitProcedure(), the Root-ProcID, to the Procedure.
    * Once a Root-Procedure completes (success or failure), the result will be added to this map.
    * The user of ProcedureExecutor should call getResult(procId) to get the result.
    */
@@ -750,14 +748,22 @@ public class ProcedureExecutor<TEnvironment> {
     }
   }
 
-  private static class FailedProcedure<TEnvironment> extends Procedure<TEnvironment> {
+  public static class FailedProcedure<TEnvironment> extends Procedure<TEnvironment> {
     private String procName;
 
-    public FailedProcedure(NonceKey nonceKey, String procName, User owner,
-        IOException exception) {
+    public FailedProcedure() {
+    }
+
+    public FailedProcedure(long procId, String procName, User owner,
+        NonceKey nonceKey, IOException exception) {
       this.procName = procName;
-      setNonceKey(nonceKey);
+      setProcId(procId);
+      setState(ProcedureState.ROLLEDBACK);
       setOwner(owner);
+      setNonceKey(nonceKey);
+      long currentTime = EnvironmentEdgeManager.currentTime();
+      setSubmittedTime(currentTime);
+      setLastUpdate(currentTime);
       setFailure(Objects.toString(exception.getMessage(), ""), exception);
     }
 
@@ -785,11 +791,13 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     @Override
-    protected void serializeStateData(OutputStream stream) throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
 
     @Override
-    protected void deserializeStateData(InputStream stream) throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
   }
 
@@ -809,7 +817,9 @@ public class ProcedureExecutor<TEnvironment> {
     final Long procId = nonceKeysToProcIdsMap.get(nonceKey);
     if (procId == null || completed.containsKey(procId)) return;
 
-    Procedure proc = new FailedProcedure(nonceKey, procName, procOwner, exception);
+    Procedure<?> proc = new FailedProcedure(procId.longValue(),
+        procName, procOwner, nonceKey, exception);
+
     completed.putIfAbsent(procId, new CompletedProcedureRetainer(proc));
   }
 
@@ -1045,15 +1055,17 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   /**
-   * List procedures.
+   * Get procedures.
    * @return the procedures in a list
    */
-  public List<Procedure> listProcedures() {
-    final List<Procedure> procedureLists = new ArrayList<>(procedures.size() + completed.size());
-    procedureLists.addAll(procedures.values());
+  public List<Procedure<?>> getProcedures() {
+    final List<Procedure<?>> procedureLists = new ArrayList<>(procedures.size() + completed.size());
+    for (Procedure<?> procedure : procedures.values()) {
+      procedureLists.add(procedure);
+    }
     // Note: The procedure could show up twice in the list with different state, as
     // it could complete after we walk through procedures list and insert into
-    // procedureList - it is ok, as we will use the information in the ProcedureInfo
+    // procedureList - it is ok, as we will use the information in the Procedure
     // to figure it out; to prevent this would increase the complexity of the logic.
     for (CompletedProcedureRetainer retainer: completed.values()) {
       procedureLists.add(retainer.getProcedure());

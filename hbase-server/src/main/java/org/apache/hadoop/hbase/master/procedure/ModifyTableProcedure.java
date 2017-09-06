@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -42,6 +40,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyTableState;
@@ -185,8 +184,9 @@ public class ModifyTableProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.ModifyTableStateData.Builder modifyTableMsg =
         MasterProcedureProtos.ModifyTableStateData.newBuilder()
@@ -199,15 +199,16 @@ public class ModifyTableProcedure
           .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
     }
 
-    modifyTableMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(modifyTableMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.ModifyTableStateData modifyTableMsg =
-        MasterProcedureProtos.ModifyTableStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.ModifyTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(modifyTableMsg.getUserInfo()));
     modifiedTableDescriptor = ProtobufUtil.toTableDescriptor(modifyTableMsg.getModifiedTableSchema());
     deleteColumnFamilyInModify = modifyTableMsg.getDeleteColumnFamilyInModify();

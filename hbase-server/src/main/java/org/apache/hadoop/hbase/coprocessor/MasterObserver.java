@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -43,7 +42,9 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.procedure2.LockType;
+import org.apache.hadoop.hbase.procedure2.LockedResource;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
@@ -970,38 +971,38 @@ public interface MasterObserver extends Coprocessor {
       throws IOException {}
 
   /**
-   * Called before a listProcedures request has been processed.
+   * Called before a getProcedures request has been processed.
    * @param ctx the environment to interact with the framework and master
    */
-  default void preListProcedures(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  default void preGetProcedures(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {}
 
   /**
-   * Called after a listProcedures request has been processed.
+   * Called after a getProcedures request has been processed.
    * @param ctx the environment to interact with the framework and master
-   * @param procInfoList the list of procedures about to be returned
+   * @param procList the list of procedures about to be returned
    */
-  default void postListProcedures(
+  default void postGetProcedures(
       ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<ProcedureInfo> procInfoList) throws IOException {}
+      List<Procedure<?>> procList) throws IOException {}
 
   /**
-   * Called before a listLocks request has been processed.
+   * Called before a getLocks request has been processed.
    * @param ctx the environment to interact with the framework and master
    * @throws IOException if something went wrong
    */
-  default void preListLocks(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  default void preGetLocks(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {}
 
   /**
-   * Called after a listLocks request has been processed.
+   * Called after a getLocks request has been processed.
    * @param ctx the environment to interact with the framework and master
-   * @param lockInfoList the list of locks about to be returned
+   * @param lockedResources the list of locks about to be returned
    * @throws IOException if something went wrong
    */
-  default void postListLocks(
+  default void postGetLocks(
       ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<LockInfo> lockInfoList) throws IOException {}
+      List<LockedResource> lockedResources) throws IOException {}
 
   /**
    * Called prior to moving a given region from one region server to another.
@@ -1890,7 +1891,7 @@ public interface MasterObserver extends Coprocessor {
    * @param ctx the environment to interact with the framework and master
    */
   default void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-      TableName tableName, HRegionInfo[] regionInfos, LockProcedure.LockType type,
+      TableName tableName, HRegionInfo[] regionInfos, LockType type,
       String description) throws IOException {}
 
   /**
@@ -1898,7 +1899,7 @@ public interface MasterObserver extends Coprocessor {
    * @param ctx the environment to interact with the framework and master
    */
   default void postRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-      TableName tableName, HRegionInfo[] regionInfos, LockProcedure.LockType type,
+      TableName tableName, HRegionInfo[] regionInfos, LockType type,
       String description) throws IOException {}
 
   /**

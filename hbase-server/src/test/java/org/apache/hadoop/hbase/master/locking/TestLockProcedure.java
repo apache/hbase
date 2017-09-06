@@ -18,40 +18,9 @@
 
 package org.apache.hadoop.hbase.master.locking;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.locking.LockServiceClient;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.MasterRpcServices;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.*;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.hamcrest.core.IsInstanceOf;
-import org.hamcrest.core.StringStartsWith;
-import org.junit.rules.TestRule;
-import org.junit.experimental.categories.Category;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TestName;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,9 +28,44 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.locking.LockServiceClient;
+import org.apache.hadoop.hbase.master.MasterRpcServices;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.LockType;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockResponse;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.hamcrest.core.IsInstanceOf;
+import org.hamcrest.core.StringStartsWith;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestLockProcedure {
@@ -130,7 +134,7 @@ public class TestLockProcedure {
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     // Kill all running procedures.
-    for (Procedure<?> proc : procExec.listProcedures()) {
+    for (Procedure<?> proc : procExec.getProcedures()) {
       procExec.abort(proc.getProcId());
       ProcedureTestingUtility.waitProcedure(procExec, proc);
     }
@@ -138,17 +142,17 @@ public class TestLockProcedure {
   }
 
   private LockRequest getNamespaceLock(String namespace, String description) {
-    return LockServiceClient.buildLockRequest(LockType.EXCLUSIVE,
+    return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE,
         namespace, null, null, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   private LockRequest getTableExclusiveLock(TableName tableName, String description) {
-    return LockServiceClient.buildLockRequest(LockType.EXCLUSIVE,
+    return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE,
         null, tableName, null, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   private LockRequest getRegionLock(List<HRegionInfo> regionInfos, String description) {
-    return LockServiceClient.buildLockRequest(LockType.EXCLUSIVE,
+    return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE,
         null, null, regionInfos, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
@@ -345,7 +349,7 @@ public class TestLockProcedure {
     CountDownLatch latch = new CountDownLatch(1);
     // MasterRpcServices don't set latch with LockProcedure, so create one and submit it directly.
     LockProcedure lockProc = new LockProcedure(UTIL.getConfiguration(),
-        TableName.valueOf("table"), LockProcedure.LockType.EXCLUSIVE, "desc", latch);
+        TableName.valueOf("table"), org.apache.hadoop.hbase.procedure2.LockType.EXCLUSIVE, "desc", latch);
     procExec.submitProcedure(lockProc);
     assertTrue(latch.await(2000, TimeUnit.MILLISECONDS));
     releaseLock(lockProc.getProcId());
@@ -359,7 +363,7 @@ public class TestLockProcedure {
     CountDownLatch latch = new CountDownLatch(1);
     // MasterRpcServices don't set latch with LockProcedure, so create one and submit it directly.
     LockProcedure lockProc = new LockProcedure(UTIL.getConfiguration(),
-        TableName.valueOf("table"), LockProcedure.LockType.EXCLUSIVE, "desc", latch);
+        TableName.valueOf("table"), LockType.EXCLUSIVE, "desc", latch);
     procExec.submitProcedure(lockProc);
     assertTrue(awaitForLocked(lockProc.getProcId(), 2000));
     Thread.sleep(LOCAL_LOCKS_TIMEOUT / 2);
@@ -421,7 +425,7 @@ public class TestLockProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
     CountDownLatch latch = new CountDownLatch(1);
     LockProcedure lockProc = new LockProcedure(UTIL.getConfiguration(),
-        TableName.valueOf("table"), LockProcedure.LockType.EXCLUSIVE, "desc", latch);
+        TableName.valueOf("table"), LockType.EXCLUSIVE, "desc", latch);
     procExec.submitProcedure(lockProc);
     assertTrue(latch.await(2000, TimeUnit.MILLISECONDS));
 

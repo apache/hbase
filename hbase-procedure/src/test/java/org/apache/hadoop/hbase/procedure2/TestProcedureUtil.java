@@ -18,11 +18,7 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.util.JsonFormat;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -34,8 +30,6 @@ import static org.junit.Assert.assertEquals;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureUtil {
-  private static final Log LOG = LogFactory.getLog(TestProcedureUtil.class);
-
   @Test
   public void testValidation() throws Exception {
     ProcedureUtil.validateClass(new TestProcedure(10));
@@ -49,34 +43,15 @@ public class TestProcedureUtil {
   @Test
   public void testConvert() throws Exception {
     // check Procedure to protobuf conversion
-    final TestProcedure proc1 = new TestProcedure(10);
+    final TestProcedure proc1 = new TestProcedure(10, 1, new byte[] { 65 });
     final ProcedureProtos.Procedure proto1 = ProcedureUtil.convertToProtoProcedure(proc1);
     final TestProcedure proc2 = (TestProcedure)ProcedureUtil.convertToProcedure(proto1);
     final ProcedureProtos.Procedure proto2 = ProcedureUtil.convertToProtoProcedure(proc2);
     assertEquals(false, proto2.hasResult());
     assertEquals("Procedure protobuf does not match", proto1, proto2);
-
-    // remove the state-data from the procedure protobuf to compare it to the gen ProcedureInfo
-    final ProcedureProtos.Procedure pbproc = proto2.toBuilder().clearStateData().build();
-
-    // check ProcedureInfo to protobuf conversion
-    final ProcedureInfo protoInfo1 = ProcedureUtil.convertToProcedureInfo(proc1);
-    final ProcedureProtos.Procedure proto3 = ProcedureUtil.convertToProtoProcedure(protoInfo1);
-    final ProcedureInfo protoInfo2 = ProcedureUtil.convertToProcedureInfo(proto3);
-    final ProcedureProtos.Procedure proto4 = ProcedureUtil.convertToProtoProcedure(protoInfo2);
-    assertEquals("ProcedureInfo protobuf does not match", proto3, proto4);
-    assertEquals("ProcedureInfo/Procedure protobuf does not match", pbproc, proto3);
-    assertEquals("ProcedureInfo/Procedure protobuf does not match", pbproc, proto4);
   }
 
   public static class TestProcedureNoDefaultConstructor extends TestProcedure {
     public TestProcedureNoDefaultConstructor(int x) {}
-  }
-
-  public static void main(final String [] args) throws Exception {
-    final TestProcedure proc1 = new TestProcedure(10);
-    final ProcedureProtos.Procedure proto1 = ProcedureUtil.convertToProtoProcedure(proc1);
-    JsonFormat.Printer printer = JsonFormat.printer().omittingInsignificantWhitespace();
-    System.out.println(printer.print(proto1));
   }
 }

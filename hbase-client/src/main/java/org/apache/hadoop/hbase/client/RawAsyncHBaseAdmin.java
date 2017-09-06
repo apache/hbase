@@ -37,38 +37,29 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcChannel;
-
-import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
-import org.apache.hadoop.hbase.shaded.io.netty.util.TimerTask;
-
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Options;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
-import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.ClusterStatus.Options;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.AdminRequestCallerBuilder;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.MasterRequestCallerBuilder;
@@ -80,7 +71,6 @@ import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
@@ -88,13 +78,13 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
+import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
+import org.apache.hadoop.hbase.shaded.io.netty.util.TimerTask;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -112,8 +102,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
@@ -124,40 +114,44 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceReq
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteSnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNamesResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
@@ -176,12 +170,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrM
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
@@ -252,6 +242,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcChannel;
 
 /**
  * The implementation of AsyncAdmin.
@@ -1403,6 +1397,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
+  @Override
   public CompletableFuture<Void> addReplicationPeer(String peerId,
       ReplicationPeerConfig peerConfig) {
     return this
@@ -1448,6 +1443,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
         .call();
   }
 
+  @Override
   public CompletableFuture<ReplicationPeerConfig> getReplicationPeerConfig(String peerId) {
     return this
         .<ReplicationPeerConfig> newMasterCaller()
@@ -1976,27 +1972,26 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<ProcedureInfo>> listProcedures() {
+  public CompletableFuture<String> getProcedures() {
     return this
-        .<List<ProcedureInfo>> newMasterCaller()
+        .<String> newMasterCaller()
         .action(
           (controller, stub) -> this
-              .<ListProceduresRequest, ListProceduresResponse, List<ProcedureInfo>> call(
-                controller, stub, ListProceduresRequest.newBuilder().build(),
-                (s, c, req, done) -> s.listProcedures(c, req, done),
-                resp -> resp.getProcedureList().stream().map(ProtobufUtil::toProcedureInfo)
-                    .collect(Collectors.toList()))).call();
+              .<GetProceduresRequest, GetProceduresResponse, String> call(
+                controller, stub, GetProceduresRequest.newBuilder().build(),
+                (s, c, req, done) -> s.getProcedures(c, req, done),
+                resp -> ProtobufUtil.toProcedureJson(resp.getProcedureList()))).call();
   }
 
   @Override
-  public CompletableFuture<List<LockInfo>> listProcedureLocks() {
+  public CompletableFuture<String> getLocks() {
     return this
-        .<List<LockInfo>> newMasterCaller()
+        .<String> newMasterCaller()
         .action(
-          (controller, stub) -> this.<ListLocksRequest, ListLocksResponse, List<LockInfo>> call(
-            controller, stub, ListLocksRequest.newBuilder().build(),
-            (s, c, req, done) -> s.listLocks(c, req, done), resp -> resp.getLockList().stream()
-                .map(ProtobufUtil::toLockInfo).collect(Collectors.toList()))).call();
+          (controller, stub) -> this.<GetLocksRequest, GetLocksResponse, String> call(
+            controller, stub, GetLocksRequest.newBuilder().build(),
+            (s, c, req, done) -> s.getLocks(c, req, done),
+            resp -> ProtobufUtil.toLockJson(resp.getLockList()))).call();
   }
 
   @Override
@@ -2220,6 +2215,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "CREATE";
     }
@@ -2231,6 +2227,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "DELETE";
     }
@@ -2248,6 +2245,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "TRUNCATE";
     }
@@ -2259,6 +2257,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "ENABLE";
     }
@@ -2270,6 +2269,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "DISABLE";
     }
@@ -2281,6 +2281,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "ADD_COLUMN_FAMILY";
     }
@@ -2292,6 +2293,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "DELETE_COLUMN_FAMILY";
     }
@@ -2303,6 +2305,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "MODIFY_COLUMN_FAMILY";
     }
@@ -2314,6 +2317,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, namespaceName);
     }
 
+    @Override
     String getOperationType() {
       return "CREATE_NAMESPACE";
     }
@@ -2325,6 +2329,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, namespaceName);
     }
 
+    @Override
     String getOperationType() {
       return "DELETE_NAMESPACE";
     }
@@ -2336,6 +2341,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, namespaceName);
     }
 
+    @Override
     String getOperationType() {
       return "MODIFY_NAMESPACE";
     }
@@ -2347,6 +2353,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "MERGE_REGIONS";
     }
@@ -2358,6 +2365,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       super(admin, tableName);
     }
 
+    @Override
     String getOperationType() {
       return "SPLIT_REGION";
     }

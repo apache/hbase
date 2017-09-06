@@ -20,9 +20,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
@@ -35,6 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteNamespaceState;
@@ -147,8 +145,9 @@ public class DeleteNamespaceProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.DeleteNamespaceStateData.Builder deleteNamespaceMsg =
         MasterProcedureProtos.DeleteNamespaceStateData.newBuilder().setNamespaceName(namespaceName);
@@ -156,15 +155,16 @@ public class DeleteNamespaceProcedure
       deleteNamespaceMsg.setNamespaceDescriptor(
         ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
     }
-    deleteNamespaceMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(deleteNamespaceMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.DeleteNamespaceStateData deleteNamespaceMsg =
-        MasterProcedureProtos.DeleteNamespaceStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.DeleteNamespaceStateData.class);
     namespaceName = deleteNamespaceMsg.getNamespaceName();
     if (deleteNamespaceMsg.hasNamespaceDescriptor()) {
       nsDescriptor =

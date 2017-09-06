@@ -1294,17 +1294,17 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
-      public MasterProtos.ListProceduresResponse listProcedures(
+      public MasterProtos.GetProceduresResponse getProcedures(
           RpcController controller,
-          MasterProtos.ListProceduresRequest request) throws ServiceException {
-        return stub.listProcedures(controller, request);
+          MasterProtos.GetProceduresRequest request) throws ServiceException {
+        return stub.getProcedures(controller, request);
       }
 
       @Override
-      public MasterProtos.ListLocksResponse listLocks(
+      public MasterProtos.GetLocksResponse getLocks(
           RpcController controller,
-          MasterProtos.ListLocksRequest request) throws ServiceException {
-        return stub.listLocks(controller, request);
+          MasterProtos.GetLocksRequest request) throws ServiceException {
+        return stub.getLocks(controller, request);
       }
 
       @Override

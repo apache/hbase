@@ -20,11 +20,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.ConnectException;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,6 +35,7 @@ import org.apache.hadoop.hbase.master.procedure.ServerCrashException;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionCloseOperation;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
@@ -47,7 +43,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.U
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-
 
 /**
  * Procedure that describes the unassignment of a single region.
@@ -128,7 +123,8 @@ public class UnassignProcedure extends RegionTransitionProcedure {
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
     UnassignRegionStateData.Builder state = UnassignRegionStateData.newBuilder()
         .setTransitionState(getTransitionState())
         .setHostingServer(ProtobufUtil.toServerName(this.hostingServer))
@@ -139,12 +135,14 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     if (force) {
       state.setForce(true);
     }
-    state.build().writeDelimitedTo(stream);
+    serializer.serialize(state.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    final UnassignRegionStateData state = UnassignRegionStateData.parseDelimitedFrom(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    final UnassignRegionStateData state =
+        serializer.deserialize(UnassignRegionStateData.class);
     setTransitionState(state.getTransitionState());
     setRegionInfo(HRegionInfo.convert(state.getRegionInfo()));
     this.hostingServer = ProtobufUtil.toServerName(state.getHostingServer());

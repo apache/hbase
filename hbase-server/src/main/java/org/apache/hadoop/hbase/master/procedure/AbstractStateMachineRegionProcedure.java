@@ -19,14 +19,12 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
@@ -84,6 +82,7 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
    * @param env MasterProcedureEnv
    * @throws IOException
    */
+  @Override
   protected void checkTableModifiable(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table exists
     if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
@@ -96,6 +95,7 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
     return true;
   }
 
+  @Override
   protected LockState acquireLock(final MasterProcedureEnv env) {
     if (env.waitInitialized(this)) return LockState.LOCK_EVENT_WAIT;
     if (env.getProcedureScheduler().waitRegions(this, getTableName(), getRegion())) {
@@ -105,6 +105,7 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
     return LockState.LOCK_ACQUIRED;
   }
 
+  @Override
   protected void releaseLock(final MasterProcedureEnv env) {
     this.lock = false;
     env.getProcedureScheduler().wakeRegions(this, getTableName(), getRegion());
@@ -120,14 +121,16 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
   }
 
   @Override
-  protected void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
-    HRegionInfo.convert(getRegion()).writeDelimitedTo(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
+    serializer.serialize(HRegionInfo.convert(getRegion()));
   }
 
   @Override
-  protected void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
-    this.hri = HRegionInfo.convert(HBaseProtos.RegionInfo.parseDelimitedFrom(stream));
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
+    this.hri = HRegionInfo.convert(serializer.deserialize(HBaseProtos.RegionInfo.class));
   }
 }

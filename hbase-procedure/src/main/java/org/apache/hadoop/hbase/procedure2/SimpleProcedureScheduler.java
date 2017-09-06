@@ -78,12 +78,13 @@ public class SimpleProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   @Override
-  public List<LockInfo> listLocks() {
+  public List<LockedResource> getLocks() {
     return Collections.emptyList();
   }
 
   @Override
-  public LockInfo getLockInfoForResource(LockInfo.ResourceType resourceType, String resourceName) {
+  public LockedResource getLockResource(LockedResourceType resourceType,
+      String resourceName) {
     return null;
   }
 }

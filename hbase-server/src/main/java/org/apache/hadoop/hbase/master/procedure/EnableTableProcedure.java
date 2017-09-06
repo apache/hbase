@@ -19,9 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -32,6 +29,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.EnableTableState;
@@ -170,8 +168,9 @@ public class EnableTableProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.EnableTableStateData.Builder enableTableMsg =
         MasterProcedureProtos.EnableTableStateData.newBuilder()
@@ -179,15 +178,16 @@ public class EnableTableProcedure
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
             .setSkipTableStateCheck(skipTableStateCheck);
 
-    enableTableMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(enableTableMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.EnableTableStateData enableTableMsg =
-        MasterProcedureProtos.EnableTableStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.EnableTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(enableTableMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(enableTableMsg.getTableName());
     skipTableStateCheck = enableTableMsg.getSkipTableStateCheck();

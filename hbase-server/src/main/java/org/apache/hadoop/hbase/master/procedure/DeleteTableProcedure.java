@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,6 +46,7 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -203,8 +202,9 @@ public class DeleteTableProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.DeleteTableStateData.Builder state =
       MasterProcedureProtos.DeleteTableStateData.newBuilder()
@@ -215,15 +215,16 @@ public class DeleteTableProcedure
         state.addRegionInfo(HRegionInfo.convert(hri));
       }
     }
-    state.build().writeDelimitedTo(stream);
+    serializer.serialize(state.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.DeleteTableStateData state =
-      MasterProcedureProtos.DeleteTableStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.DeleteTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
     tableName = ProtobufUtil.toTableName(state.getTableName());
     if (state.getRegionInfoCount() == 0) {

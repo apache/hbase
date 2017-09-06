@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -41,7 +40,8 @@ import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.procedure2.LockedResource;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
@@ -362,18 +362,18 @@ public interface MasterServices extends Server {
       throws IOException;
 
   /**
-   * List procedures
+   * Get procedures
    * @return procedure list
    * @throws IOException
    */
-  public List<ProcedureInfo> listProcedures() throws IOException;
+  public List<Procedure<?>> getProcedures() throws IOException;
 
   /**
-   * List locks
+   * Get locks
    * @return lock list
    * @throws IOException
    */
-  public List<LockInfo> listLocks() throws IOException;
+  public List<LockedResource> getLocks() throws IOException;
 
   /**
    * Get list of table descriptors by namespace

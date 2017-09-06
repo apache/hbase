@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -285,17 +283,19 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   @Override
-  protected void serializeStateData(final OutputStream stream) throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
     StateMachineProcedureData.Builder data = StateMachineProcedureData.newBuilder();
     for (int i = 0; i < stateCount; ++i) {
       data.addState(states[i]);
     }
-    data.build().writeDelimitedTo(stream);
+    serializer.serialize(data.build());
   }
 
   @Override
-  protected void deserializeStateData(final InputStream stream) throws IOException {
-    StateMachineProcedureData data = StateMachineProcedureData.parseDelimitedFrom(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    StateMachineProcedureData data = serializer.deserialize(StateMachineProcedureData.class);
     stateCount = data.getStateCount();
     if (stateCount > 0) {
       states = new int[stateCount];

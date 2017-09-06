@@ -23,8 +23,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -37,11 +35,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.BytesValue;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Threads;
@@ -367,11 +366,13 @@ public class ProcedureTestingUtility {
     protected boolean abort(TEnv env) { return false; }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
   }
 
@@ -416,19 +417,23 @@ public class ProcedureTestingUtility {
     }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
-      StreamUtils.writeRawVInt32(stream, data != null ? data.length : 0);
-      if (data != null) stream.write(data);
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      ByteString dataString = ByteString.copyFrom((data == null) ? new byte[0] : data);
+      BytesValue.Builder builder = BytesValue.newBuilder().setValue(dataString);
+      serializer.serialize(builder.build());
     }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
-      int len = StreamUtils.readRawVarint32(stream);
-      if (len > 0) {
-        data = new byte[len];
-        stream.read(data);
-      } else {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      BytesValue bytesValue = serializer.deserialize(BytesValue.class);
+      ByteString dataString = bytesValue.getValue();
+
+      if (dataString.isEmpty()) {
         data = null;
+      } else {
+        data = dataString.toByteArray();
       }
     }
 

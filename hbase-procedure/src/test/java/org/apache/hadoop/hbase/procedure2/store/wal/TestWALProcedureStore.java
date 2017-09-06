@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
@@ -43,9 +44,9 @@ import org.apache.hadoop.hbase.procedure2.SequentialProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Int64Value;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 
 import org.junit.After;
@@ -514,7 +515,7 @@ public class TestWALProcedureStore {
     storeRestart(loader);
     assertTrue(procStore.getCorruptedLogs() != null);
     assertEquals(1, procStore.getCorruptedLogs().size());
-    assertEquals(85, loader.getLoadedCount());
+    assertEquals(87, loader.getLoadedCount());
     assertEquals(0, loader.getCorruptedCount());
   }
 
@@ -911,22 +912,22 @@ public class TestWALProcedureStore {
     protected boolean abort(Void env) { return false; }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
       long procId = getProcId();
       if (procId % 2 == 0) {
-        stream.write(Bytes.toBytes(procId));
+        Int64Value.Builder builder = Int64Value.newBuilder().setValue(procId);
+        serializer.serialize(builder.build());
       }
     }
 
     @Override
-    protected void deserializeStateData(InputStream stream) throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
       long procId = getProcId();
       if (procId % 2 == 0) {
-        byte[] bProcId = new byte[8];
-        assertEquals(8, stream.read(bProcId));
-        assertEquals(procId, Bytes.toLong(bProcId));
-      } else {
-        assertEquals(0, stream.available());
+        Int64Value value = serializer.deserialize(Int64Value.class);
+        assertEquals(procId, value.getValue());
       }
     }
   }
