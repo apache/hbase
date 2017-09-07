@@ -74,10 +74,6 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
   public final static String SPLIT_THREADS = "hbase.regionserver.thread.split";
   public final static int SPLIT_THREADS_DEFAULT = 1;
 
-  // Configuration keys for merge threads
-  public final static String MERGE_THREADS = "hbase.regionserver.thread.merge";
-  public final static int MERGE_THREADS_DEFAULT = 1;
-
   public static final String REGION_SERVER_REGION_SPLIT_LIMIT =
       "hbase.regionserver.regionSplitLimit";
   public static final int DEFAULT_REGION_SERVER_REGION_SPLIT_LIMIT= 1000;
@@ -88,7 +84,6 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
   private final ThreadPoolExecutor longCompactions;
   private final ThreadPoolExecutor shortCompactions;
   private final ThreadPoolExecutor splits;
-  private final ThreadPoolExecutor mergePool;
 
   private volatile ThroughputController compactionThroughputController;
 
@@ -151,15 +146,6 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
             return new Thread(r, name);
           }
       });
-    int mergeThreads = conf.getInt(MERGE_THREADS, MERGE_THREADS_DEFAULT);
-    this.mergePool = (ThreadPoolExecutor) Executors.newFixedThreadPool(
-        mergeThreads, new ThreadFactory() {
-          @Override
-          public Thread newThread(Runnable r) {
-            String name = n + "-merges-" + System.currentTimeMillis();
-            return new Thread(r, name);
-          }
-        });
 
     // compaction throughput controller
     this.compactionThroughputController =

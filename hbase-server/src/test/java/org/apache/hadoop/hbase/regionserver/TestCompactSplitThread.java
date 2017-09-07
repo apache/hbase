@@ -80,7 +80,6 @@ public class TestCompactSplitThread {
     conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 3);
     conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 4);
     conf.setInt(CompactSplit.SPLIT_THREADS, 5);
-    conf.setInt(CompactSplit.MERGE_THREADS, 6);
   }
 
   @After
@@ -118,7 +117,6 @@ public class TestCompactSplitThread {
       conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 4);
       conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 5);
       conf.setInt(CompactSplit.SPLIT_THREADS, 6);
-      conf.setInt(CompactSplit.MERGE_THREADS, 7);
       try {
         regionServer.compactSplitThread.onConfigurationChange(conf);
       } catch (IllegalArgumentException iae) {
@@ -134,7 +132,6 @@ public class TestCompactSplitThread {
       conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 2);
       conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 3);
       conf.setInt(CompactSplit.SPLIT_THREADS, 4);
-      conf.setInt(CompactSplit.MERGE_THREADS, 5);
       try {
         regionServer.compactSplitThread.onConfigurationChange(conf);
       } catch (IllegalArgumentException iae) {
