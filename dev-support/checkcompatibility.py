@@ -116,7 +116,12 @@ def checkout_java_tree(rev, path):
 
 def get_git_hash(revname):
     """ Convert 'revname' to its SHA-1 hash. """
-    return check_output(["git", "rev-parse", revname],
+    try:
+        return check_output(["git", "rev-parse", revname],
+                        cwd=get_repo_dir()).strip()
+    except:
+        revname = "origin/" + revname
+        return check_output(["git", "rev-parse", revname],
                         cwd=get_repo_dir()).strip()
 
 
