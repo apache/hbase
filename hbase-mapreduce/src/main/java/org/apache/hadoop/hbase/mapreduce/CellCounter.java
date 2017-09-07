@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -124,8 +125,6 @@ public class CellCounter extends Configured implements Tool {
      * @param values  The columns.
      * @param context The current context.
      * @throws IOException When something is broken with the data.
-     * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN,
-     *      org.apache.hadoop.mapreduce.Mapper.Context)
      */
 
     @Override
@@ -260,7 +259,7 @@ public class CellCounter extends Configured implements Tool {
     if (filterCriteria == null) return null;
     if (filterCriteria.startsWith("^")) {
       String regexPattern = filterCriteria.substring(1, filterCriteria.length());
-      rowFilter = new RowFilter(CompareFilter.CompareOp.EQUAL, new RegexStringComparator(regexPattern));
+      rowFilter = new RowFilter(CompareOperator.EQUAL, new RegexStringComparator(regexPattern));
     } else {
       rowFilter = new PrefixFilter(Bytes.toBytesBinary(filterCriteria));
     }

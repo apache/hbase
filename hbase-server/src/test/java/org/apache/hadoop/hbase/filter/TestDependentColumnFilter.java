@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -192,7 +193,7 @@ public class TestDependentColumnFilter {
 
     // include a comparator operation
     filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, false,
-        CompareOp.EQUAL, new BinaryComparator(MATCH_VAL));
+    CompareOperator.EQUAL, new BinaryComparator(MATCH_VAL));
     scan = new Scan();
     scan.setFilter(filter);
     scan.setMaxVersions(Integer.MAX_VALUE);
@@ -209,7 +210,7 @@ public class TestDependentColumnFilter {
 
     // include a comparator operation and drop comparator
     filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true,
-        CompareOp.EQUAL, new BinaryComparator(MATCH_VAL));
+    CompareOperator.EQUAL, new BinaryComparator(MATCH_VAL));
     scan = new Scan();
     scan.setFilter(filter);
     scan.setMaxVersions(Integer.MAX_VALUE);
@@ -268,7 +269,7 @@ public class TestDependentColumnFilter {
       filter.toString().contains("null"));
 
     // Test constructor with explicit null comparator
-    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOp.EQUAL, null);
+    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOperator.EQUAL, null);
     assertNotNull(filter.toString());
     assertTrue("check string contains 'null' as compatator is null",
       filter.toString().contains("null"));
@@ -277,7 +278,7 @@ public class TestDependentColumnFilter {
   @Test
   public void testToStringWithNonNullComparator() {
     Filter filter =
-        new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOp.EQUAL,
+        new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOperator.EQUAL,
             new BinaryComparator(MATCH_VAL));
     assertNotNull(filter.toString());
     assertTrue("check string contains comparator value", filter.toString().contains("match"));

@@ -32,6 +32,7 @@ import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -765,12 +766,40 @@ public class ParseFilter {
     }
   }
 
-/**
- * Takes a compareOperator symbol as a byte array and returns the corresponding CompareOperator
- * <p>
- * @param compareOpAsByteArray the comparatorOperator symbol as a byte array
- * @return the Compare Operator
- */
+  /**
+   * Takes a compareOperator symbol as a byte array and returns the corresponding CompareOperator
+   * @deprecated Since 2.0
+   * <p>
+   * @param compareOpAsByteArray the comparatorOperator symbol as a byte array
+   * @return the Compare Operator
+   */
+  public static CompareOperator createCompareOperator (byte [] compareOpAsByteArray) {
+    ByteBuffer compareOp = ByteBuffer.wrap(compareOpAsByteArray);
+    if (compareOp.equals(ParseConstants.LESS_THAN_BUFFER))
+      return CompareOperator.LESS;
+    else if (compareOp.equals(ParseConstants.LESS_THAN_OR_EQUAL_TO_BUFFER))
+      return CompareOperator.LESS_OR_EQUAL;
+    else if (compareOp.equals(ParseConstants.GREATER_THAN_BUFFER))
+      return CompareOperator.GREATER;
+    else if (compareOp.equals(ParseConstants.GREATER_THAN_OR_EQUAL_TO_BUFFER))
+      return CompareOperator.GREATER_OR_EQUAL;
+    else if (compareOp.equals(ParseConstants.NOT_EQUAL_TO_BUFFER))
+      return CompareOperator.NOT_EQUAL;
+    else if (compareOp.equals(ParseConstants.EQUAL_TO_BUFFER))
+      return CompareOperator.EQUAL;
+    else
+      throw new IllegalArgumentException("Invalid compare operator");
+  }
+
+  /**
+   * Takes a compareOperator symbol as a byte array and returns the corresponding CompareOperator
+   * @deprecated Since 2.0
+   * <p>
+   * @param compareOpAsByteArray the comparatorOperator symbol as a byte array
+   * @return the Compare Operator
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #createCompareOperator(byte [])}
+   */
+  @Deprecated
   public static CompareFilter.CompareOp createCompareOp (byte [] compareOpAsByteArray) {
     ByteBuffer compareOp = ByteBuffer.wrap(compareOpAsByteArray);
     if (compareOp.equals(ParseConstants.LESS_THAN_BUFFER))

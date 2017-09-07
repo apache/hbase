@@ -132,7 +132,7 @@ public class TestCheckAndMutate {
       // put the same row again with C column deleted
       RowMutations rm = makeRowMutationsWithColumnCDeleted();
       boolean res = table.checkAndMutate(ROWKEY, FAMILY, Bytes.toBytes("A"),
-        CompareFilter.CompareOp.EQUAL, Bytes.toBytes("a"), rm);
+        CompareOperator.EQUAL, Bytes.toBytes("a"), rm);
       assertTrue(res);
 
       // get row back and assert the values
@@ -141,7 +141,7 @@ public class TestCheckAndMutate {
       //Test that we get a region level exception
       try {
         rm = getBogusRowMutations();
-        table.checkAndMutate(ROWKEY, FAMILY, Bytes.toBytes("A"), CompareFilter.CompareOp.EQUAL,
+        table.checkAndMutate(ROWKEY, FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
             Bytes.toBytes("a"), rm);
         fail("Expected NoSuchColumnFamilyException");
       } catch (RetriesExhaustedWithDetailsException e) {

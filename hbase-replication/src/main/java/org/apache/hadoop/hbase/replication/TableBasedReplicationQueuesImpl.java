@@ -433,7 +433,7 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
     }
     scan.setMaxResultSize(1);
     SingleColumnValueFilter checkOwner = new SingleColumnValueFilter(CF_QUEUE, COL_QUEUE_OWNER,
-      CompareFilter.CompareOp.EQUAL, serverNameBytes);
+    CompareOperator.EQUAL, serverNameBytes);
     scan.setFilter(checkOwner);
     ResultScanner scanner = null;
     try (Table replicationTable = getOrBlockOnReplicationTable()) {

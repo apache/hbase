@@ -31,6 +31,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
@@ -383,10 +384,10 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
       case DependentColumnFilter:
         filter = new DependentColumnFilter(Base64.decode(family),
             qualifier != null ? Base64.decode(qualifier) : null,
-            dropDependentColumn, CompareOp.valueOf(op), comparator.build());
+            dropDependentColumn, CompareOperator.valueOf(op), comparator.build());
         break;
       case FamilyFilter:
-        filter = new FamilyFilter(CompareOp.valueOf(op), comparator.build());
+        filter = new FamilyFilter(CompareOperator.valueOf(op), comparator.build());
         break;
       case FilterList: {
         List<Filter> list = new ArrayList<>(filters.size());
@@ -421,18 +422,18 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         filter = new PrefixFilter(Base64.decode(value));
         break;
       case QualifierFilter:
-        filter = new QualifierFilter(CompareOp.valueOf(op), comparator.build());
+        filter = new QualifierFilter(CompareOperator.valueOf(op), comparator.build());
         break;
       case RandomRowFilter:
         filter = new RandomRowFilter(chance);
         break;
       case RowFilter:
-        filter = new RowFilter(CompareOp.valueOf(op), comparator.build());
+        filter = new RowFilter(CompareOperator.valueOf(op), comparator.build());
         break;
       case SingleColumnValueFilter:
         filter = new SingleColumnValueFilter(Base64.decode(family),
           qualifier != null ? Base64.decode(qualifier) : null,
-          CompareOp.valueOf(op), comparator.build());
+        CompareOperator.valueOf(op), comparator.build());
         if (ifMissing != null) {
           ((SingleColumnValueFilter)filter).setFilterIfMissing(ifMissing);
         }
@@ -443,7 +444,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
       case SingleColumnValueExcludeFilter:
         filter = new SingleColumnValueExcludeFilter(Base64.decode(family),
           qualifier != null ? Base64.decode(qualifier) : null,
-          CompareOp.valueOf(op), comparator.build());
+        CompareOperator.valueOf(op), comparator.build());
         if (ifMissing != null) {
           ((SingleColumnValueExcludeFilter)filter).setFilterIfMissing(ifMissing);
         }
@@ -458,7 +459,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         filter = new TimestampsFilter(timestamps);
         break;
       case ValueFilter:
-        filter = new ValueFilter(CompareOp.valueOf(op), comparator.build());
+        filter = new ValueFilter(CompareOperator.valueOf(op), comparator.build());
         break;
       case WhileMatchFilter:
         filter = new WhileMatchFilter(filters.get(0).build());

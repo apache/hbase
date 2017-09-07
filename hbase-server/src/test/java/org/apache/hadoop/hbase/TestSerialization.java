@@ -131,7 +131,7 @@ public class TestSerialization {
   }
 
   @Test public void testCompareFilter() throws Exception {
-    Filter f = new RowFilter(CompareOp.EQUAL,
+    Filter f = new RowFilter(CompareOperator.EQUAL,
       new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     byte [] bytes = f.toByteArray();
     Filter ff = RowFilter.parseFrom(bytes);

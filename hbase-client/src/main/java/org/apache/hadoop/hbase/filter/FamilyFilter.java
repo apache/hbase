@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -51,17 +52,31 @@ public class FamilyFilter extends CompareFilter {
    *
    * @param familyCompareOp  the compare op for column family matching
    * @param familyComparator the comparator for column family matching
+   * @deprecated  Since 2.0.0. Will be removed in 3.0.0.
+   *  Use {@link #FamilyFilter(CompareOperator, ByteArrayComparable)}
    */
+  @Deprecated
   public FamilyFilter(final CompareOp familyCompareOp,
                       final ByteArrayComparable familyComparator) {
       super(familyCompareOp, familyComparator);
+  }
+
+  /**
+   * Constructor.
+   *
+   * @param op  the compare op for column family matching
+   * @param familyComparator the comparator for column family matching
+   */
+  public FamilyFilter(final CompareOperator op,
+                      final ByteArrayComparable familyComparator) {
+    super(op, familyComparator);
   }
 
   @Override
   public ReturnCode filterKeyValue(Cell v) {
     int familyLength = v.getFamilyLength();
     if (familyLength > 0) {
-      if (compareFamily(this.compareOp, this.comparator, v)) {
+      if (compareFamily(getCompareOperator(), this.comparator, v)) {
         return ReturnCode.NEXT_ROW;
       }
     }
@@ -70,7 +85,7 @@ public class FamilyFilter extends CompareFilter {
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     ArrayList<?> arguments = CompareFilter.extractArguments(filterArguments);
-    CompareOp compareOp = (CompareOp)arguments.get(0);
+    CompareOperator compareOp = (CompareOperator)arguments.get(0);
     ByteArrayComparable comparator = (ByteArrayComparable)arguments.get(1);
     return new FamilyFilter(compareOp, comparator);
   }
@@ -99,8 +114,8 @@ public class FamilyFilter extends CompareFilter {
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-    final CompareOp valueCompareOp =
-      CompareOp.valueOf(proto.getCompareFilter().getCompareOp().name());
+    final CompareOperator valueCompareOp =
+      CompareOperator.valueOf(proto.getCompareFilter().getCompareOp().name());
     ByteArrayComparable valueComparator = null;
     try {
       if (proto.getCompareFilter().hasComparator()) {
@@ -113,7 +128,6 @@ public class FamilyFilter extends CompareFilter {
   }
 
   /**
-   * @param other
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -565,12 +566,12 @@ public class TestFilterList {
     //  OR (family=fam AND qualifier=qual2)
     final FilterList flist = new FilterList(Operator.MUST_PASS_ONE, Lists.<Filter>newArrayList(
         new FilterList(Operator.MUST_PASS_ALL, Lists.<Filter>newArrayList(
-            new FamilyFilter(CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("fam"))),
-            new QualifierFilter(CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("qual1"))),
+            new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("fam"))),
+            new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("qual1"))),
             new KeyOnlyFilter())),
         new FilterList(Operator.MUST_PASS_ALL, Lists.<Filter>newArrayList(
-            new FamilyFilter(CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("fam"))),
-            new QualifierFilter(CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("qual2")))))));
+            new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("fam"))),
+            new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("qual2")))))));
 
     final KeyValue kvQual1 = new KeyValue(
         Bytes.toBytes("row"), Bytes.toBytes("fam"), Bytes.toBytes("qual1"), Bytes.toBytes("value"));

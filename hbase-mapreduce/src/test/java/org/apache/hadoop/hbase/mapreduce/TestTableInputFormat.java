@@ -417,7 +417,8 @@ public class TestTableInputFormat {
         for (byte[] family : inputColumns) {
           scan.addFamily(family);
         }
-        Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+        Filter exampleFilter =
+          new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
         scan.setFilter(exampleFilter);
         setScan(scan);
       } catch (IOException exception) {
@@ -445,7 +446,8 @@ public class TestTableInputFormat {
         for (byte[] family : inputColumns) {
           scan.addFamily(family);
         }
-        Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+        Filter exampleFilter =
+          new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
         scan.setFilter(exampleFilter);
         setScan(scan);
       } catch (IOException exception) {
@@ -471,7 +473,8 @@ public class TestTableInputFormat {
       for (byte[] family : inputColumns) {
         scan.addFamily(family);
       }
-      Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+      Filter exampleFilter =
+        new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
       scan.setFilter(exampleFilter);
       setScan(scan);
     }

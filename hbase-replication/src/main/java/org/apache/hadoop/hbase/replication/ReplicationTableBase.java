@@ -18,6 +18,7 @@
 */
 package org.apache.hadoop.hbase.replication;
 
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -325,7 +326,7 @@ abstract class ReplicationTableBase {
   protected ResultScanner getQueuesBelongingToServer(String server) throws IOException {
     Scan scan = new Scan();
     SingleColumnValueFilter filterMyQueues = new SingleColumnValueFilter(CF_QUEUE, COL_QUEUE_OWNER,
-      CompareFilter.CompareOp.EQUAL, Bytes.toBytes(server));
+    CompareOperator.EQUAL, Bytes.toBytes(server));
     scan.setFilter(filterMyQueues);
     scan.addColumn(CF_QUEUE, COL_QUEUE_OWNER);
     scan.addColumn(CF_QUEUE, COL_QUEUE_OWNER_HISTORY);

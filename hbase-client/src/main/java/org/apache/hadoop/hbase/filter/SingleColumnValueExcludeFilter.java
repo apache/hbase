@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -52,10 +53,28 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @param qualifier name of column qualifier
    * @param compareOp operator
    * @param value value to compare column values against
+   * {@link #SingleColumnValueExcludeFilter(byte[], byte[], CompareOperator, byte[])}
    */
+  @Deprecated
   public SingleColumnValueExcludeFilter(byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value) {
     super(family, qualifier, compareOp, value);
+  }
+
+  /**
+   * Constructor for binary compare of the value of a single column. If the
+   * column is found and the condition passes, all columns of the row will be
+   * emitted; except for the tested column value. If the column is not found or
+   * the condition fails, the row will not be emitted.
+   *
+   * @param family name of column family
+   * @param qualifier name of column qualifier
+   * @param op operator
+   * @param value value to compare column values against
+   */
+  public SingleColumnValueExcludeFilter(byte[] family, byte[] qualifier,
+                                        CompareOperator op, byte[] value) {
+    super(family, qualifier, op, value);
   }
 
   /**
@@ -72,11 +91,35 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @param qualifier name of column qualifier
    * @param compareOp operator
    * @param comparator Comparator to use.
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   * {@link #SingleColumnValueExcludeFilter(byte[], byte[], CompareOperator, ByteArrayComparable)}
    */
+  @Deprecated
   public SingleColumnValueExcludeFilter(byte[] family, byte[] qualifier,
       CompareOp compareOp, ByteArrayComparable comparator) {
     super(family, qualifier, compareOp, comparator);
   }
+
+  /**
+   * Constructor for binary compare of the value of a single column. If the
+   * column is found and the condition passes, all columns of the row will be
+   * emitted; except for the tested column value. If the condition fails, the
+   * row will not be emitted.
+   * <p>
+   * Use the filterIfColumnMissing flag to set whether the rest of the columns
+   * in a row will be emitted if the specified column to check is not found in
+   * the row.
+   *
+   * @param family name of column family
+   * @param qualifier name of column qualifier
+   * @param op operator
+   * @param comparator Comparator to use.
+   */
+  public SingleColumnValueExcludeFilter(byte[] family, byte[] qualifier,
+                                        CompareOperator op, ByteArrayComparable comparator) {
+    super(family, qualifier, op, comparator);
+  }
+
 
   /**
    * Constructor for protobuf deserialization only.
@@ -86,11 +129,30 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @param comparator
    * @param filterIfMissing
    * @param latestVersionOnly
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   * {@link #SingleColumnValueExcludeFilter(byte[], byte[], CompareOperator, ByteArrayComparable, boolean, boolean)}
    */
+  @Deprecated
   protected SingleColumnValueExcludeFilter(final byte[] family, final byte[] qualifier,
       final CompareOp compareOp, ByteArrayComparable comparator, final boolean filterIfMissing,
       final boolean latestVersionOnly) {
-    super(family, qualifier, compareOp, comparator, filterIfMissing, latestVersionOnly);
+    this(family, qualifier, CompareOperator.valueOf(compareOp.name()), comparator,
+      filterIfMissing, latestVersionOnly);
+  }
+
+  /**
+   * Constructor for protobuf deserialization only.
+   * @param family
+   * @param qualifier
+   * @param op
+   * @param comparator
+   * @param filterIfMissing
+   * @param latestVersionOnly
+   */
+  protected SingleColumnValueExcludeFilter(final byte[] family, final byte[] qualifier,
+      final CompareOperator op, ByteArrayComparable comparator, final boolean filterIfMissing,
+      final boolean latestVersionOnly) {
+    super(family, qualifier, op, comparator, filterIfMissing, latestVersionOnly);
   }
 
   // We cleaned result row in FilterRow to be consistent with scanning process.
@@ -151,8 +213,8 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
     }
 
     FilterProtos.SingleColumnValueFilter parentProto = proto.getSingleColumnValueFilter();
-    final CompareOp compareOp =
-      CompareOp.valueOf(parentProto.getCompareOp().name());
+    final CompareOperator compareOp =
+      CompareOperator.valueOf(parentProto.getCompareOp().name());
     final ByteArrayComparable comparator;
     try {
       comparator = ProtobufUtil.toComparator(parentProto.getComparator());
@@ -167,7 +229,6 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   }
 
   /**
-   * @param other
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

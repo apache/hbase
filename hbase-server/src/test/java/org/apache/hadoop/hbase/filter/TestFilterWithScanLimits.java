@@ -30,6 +30,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -63,7 +64,7 @@ public class TestFilterWithScanLimits extends FilterTestingCluster {
       scan.setBatch(2);
       SingleColumnValueFilter filter = new SingleColumnValueFilter(
           Bytes.toBytes(columnFamily), Bytes.toBytes("c5"),
-          CompareFilter.CompareOp.EQUAL, new SubstringComparator("2_c5"));
+      CompareOperator .EQUAL, new SubstringComparator("2_c5"));
 
       // add filter after batch defined
       scan.setFilter(filter);

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -71,7 +72,7 @@ public class SingleColumnValueFilter extends FilterBase {
 
   protected byte [] columnFamily;
   protected byte [] columnQualifier;
-  protected CompareOp compareOp;
+  protected CompareOperator op;
   protected org.apache.hadoop.hbase.filter.ByteArrayComparable comparator;
   protected boolean foundColumn = false;
   protected boolean matchedColumn = false;
@@ -91,10 +92,34 @@ public class SingleColumnValueFilter extends FilterBase {
    * @param qualifier name of column qualifier
    * @param compareOp operator
    * @param value value to compare column values against
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   * {@link #SingleColumnValueFilter(byte[], byte[], CompareOperator, byte[])} instead.
    */
+  @Deprecated
   public SingleColumnValueFilter(final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final byte[] value) {
-    this(family, qualifier, compareOp, new org.apache.hadoop.hbase.filter.BinaryComparator(value));
+    this(family, qualifier, CompareOperator.valueOf(compareOp.name()),
+      new org.apache.hadoop.hbase.filter.BinaryComparator(value));
+  }
+
+  /**
+   * Constructor for binary compare of the value of a single column.  If the
+   * column is found and the condition passes, all columns of the row will be
+   * emitted.  If the condition fails, the row will not be emitted.
+   * <p>
+   * Use the filterIfColumnMissing flag to set whether the rest of the columns
+   * in a row will be emitted if the specified column to check is not found in
+   * the row.
+   *
+   * @param family name of column family
+   * @param qualifier name of column qualifier
+   * @param op operator
+   * @param value value to compare column values against
+   */
+  public SingleColumnValueFilter(final byte [] family, final byte [] qualifier,
+                                 final CompareOperator op, final byte[] value) {
+    this(family, qualifier, op,
+      new org.apache.hadoop.hbase.filter.BinaryComparator(value));
   }
 
   /**
@@ -110,13 +135,36 @@ public class SingleColumnValueFilter extends FilterBase {
    * @param qualifier name of column qualifier
    * @param compareOp operator
    * @param comparator Comparator to use.
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   * {@link #SingleColumnValueFilter(byte[], byte[], CompareOperator, ByteArrayComparable)} instead.
    */
+  @Deprecated
   public SingleColumnValueFilter(final byte [] family, final byte [] qualifier,
       final CompareOp compareOp,
       final org.apache.hadoop.hbase.filter.ByteArrayComparable comparator) {
+    this(family, qualifier, CompareOperator.valueOf(compareOp.name()), comparator);
+  }
+
+  /**
+   * Constructor for binary compare of the value of a single column.  If the
+   * column is found and the condition passes, all columns of the row will be
+   * emitted.  If the condition fails, the row will not be emitted.
+   * <p>
+   * Use the filterIfColumnMissing flag to set whether the rest of the columns
+   * in a row will be emitted if the specified column to check is not found in
+   * the row.
+   *
+   * @param family name of column family
+   * @param qualifier name of column qualifier
+   * @param op operator
+   * @param comparator Comparator to use.
+   */
+  public SingleColumnValueFilter(final byte [] family, final byte [] qualifier,
+      final CompareOperator op,
+      final org.apache.hadoop.hbase.filter.ByteArrayComparable comparator) {
     this.columnFamily = family;
     this.columnQualifier = qualifier;
-    this.compareOp = compareOp;
+    this.op = op;
     this.comparator = comparator;
   }
 
@@ -128,21 +176,47 @@ public class SingleColumnValueFilter extends FilterBase {
    * @param comparator
    * @param filterIfMissing
    * @param latestVersionOnly
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   * {@link #SingleColumnValueFilter(byte[], byte[], CompareOperator, ByteArrayComparable,
+   *   boolean, boolean)} instead.
    */
+  @Deprecated
   protected SingleColumnValueFilter(final byte[] family, final byte[] qualifier,
       final CompareOp compareOp, org.apache.hadoop.hbase.filter.ByteArrayComparable comparator,
       final boolean filterIfMissing,
       final boolean latestVersionOnly) {
-    this(family, qualifier, compareOp, comparator);
+    this(family, qualifier, CompareOperator.valueOf(compareOp.name()), comparator, filterIfMissing,
+      latestVersionOnly);
+  }
+
+  /**
+   * Constructor for protobuf deserialization only.
+   * @param family
+   * @param qualifier
+   * @param op
+   * @param comparator
+   * @param filterIfMissing
+   * @param latestVersionOnly
+   */
+  protected SingleColumnValueFilter(final byte[] family, final byte[] qualifier,
+      final CompareOperator op, org.apache.hadoop.hbase.filter.ByteArrayComparable comparator,
+       final boolean filterIfMissing, final boolean latestVersionOnly) {
+    this(family, qualifier, op, comparator);
     this.filterIfMissing = filterIfMissing;
     this.latestVersionOnly = latestVersionOnly;
   }
 
   /**
    * @return operator
+   * @deprecated  since 2.0.0. Will be removed in 3.0.0. Use {@link #getCompareOperator()} instead.
    */
+  @Deprecated
   public CompareOp getOperator() {
-    return compareOp;
+    return CompareOp.valueOf(op.name());
+  }
+
+  public CompareOperator getCompareOperator() {
+    return op;
   }
 
   /**
@@ -195,22 +269,7 @@ public class SingleColumnValueFilter extends FilterBase {
 
   private boolean filterColumnValue(final Cell cell) {
     int compareResult = CellComparator.compareValue(cell, this.comparator);
-    switch (this.compareOp) {
-    case LESS:
-      return compareResult <= 0;
-    case LESS_OR_EQUAL:
-      return compareResult < 0;
-    case EQUAL:
-      return compareResult != 0;
-    case NOT_EQUAL:
-      return compareResult == 0;
-    case GREATER_OR_EQUAL:
-      return compareResult > 0;
-    case GREATER:
-      return compareResult >= 0;
-    default:
-      throw new RuntimeException("Unknown Compare op " + compareOp.name());
-    }
+    return CompareFilter.compare(this.op, compareResult);
   }
 
   public boolean filterRow() {
@@ -276,21 +335,21 @@ public class SingleColumnValueFilter extends FilterBase {
                                 "Expected 4 or 6 but got: %s", filterArguments.size());
     byte [] family = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
     byte [] qualifier = ParseFilter.removeQuotesFromByteArray(filterArguments.get(1));
-    CompareOp compareOp = ParseFilter.createCompareOp(filterArguments.get(2));
+    CompareOperator op = ParseFilter.createCompareOperator(filterArguments.get(2));
     org.apache.hadoop.hbase.filter.ByteArrayComparable comparator = ParseFilter.createComparator(
       ParseFilter.removeQuotesFromByteArray(filterArguments.get(3)));
 
     if (comparator instanceof RegexStringComparator ||
         comparator instanceof SubstringComparator) {
-      if (compareOp != CompareOp.EQUAL &&
-          compareOp != CompareOp.NOT_EQUAL) {
+      if (op != CompareOperator.EQUAL &&
+          op != CompareOperator.NOT_EQUAL) {
         throw new IllegalArgumentException ("A regexstring comparator and substring comparator " +
                                             "can only be used with EQUAL and NOT_EQUAL");
       }
     }
 
     SingleColumnValueFilter filter = new SingleColumnValueFilter(family, qualifier,
-                                                                 compareOp, comparator);
+                                                                 op, comparator);
 
     if (filterArguments.size() == 6) {
       boolean filterIfMissing = ParseFilter.convertByteArrayToBoolean(filterArguments.get(4));
@@ -310,7 +369,7 @@ public class SingleColumnValueFilter extends FilterBase {
     if (this.columnQualifier != null) {
       builder.setColumnQualifier(UnsafeByteOperations.unsafeWrap(this.columnQualifier));
     }
-    HBaseProtos.CompareType compareOp = CompareType.valueOf(this.compareOp.name());
+    HBaseProtos.CompareType compareOp = CompareType.valueOf(this.op.name());
     builder.setCompareOp(compareOp);
     builder.setComparator(ProtobufUtil.toComparator(this.comparator));
     builder.setFilterIfMissing(this.filterIfMissing);
@@ -341,8 +400,8 @@ public class SingleColumnValueFilter extends FilterBase {
       throw new DeserializationException(e);
     }
 
-    final CompareOp compareOp =
-      CompareOp.valueOf(proto.getCompareOp().name());
+    final CompareOperator compareOp =
+      CompareOperator.valueOf(proto.getCompareOp().name());
     final org.apache.hadoop.hbase.filter.ByteArrayComparable comparator;
     try {
       comparator = ProtobufUtil.toComparator(proto.getComparator());
@@ -357,7 +416,6 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   /**
-   * @param other
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
@@ -368,7 +426,7 @@ public class SingleColumnValueFilter extends FilterBase {
     SingleColumnValueFilter other = (SingleColumnValueFilter)o;
     return Bytes.equals(this.getFamily(), other.getFamily())
       && Bytes.equals(this.getQualifier(), other.getQualifier())
-      && this.compareOp.equals(other.compareOp)
+      && this.op.equals(other.op)
       && this.getComparator().areSerializedFieldsEqual(other.getComparator())
       && this.getFilterIfMissing() == other.getFilterIfMissing()
       && this.getLatestVersionOnly() == other.getLatestVersionOnly();
@@ -387,7 +445,7 @@ public class SingleColumnValueFilter extends FilterBase {
   public String toString() {
     return String.format("%s (%s, %s, %s, %s)",
         this.getClass().getSimpleName(), Bytes.toStringBinary(this.columnFamily),
-        Bytes.toStringBinary(this.columnQualifier), this.compareOp.name(),
+        Bytes.toStringBinary(this.columnQualifier), this.op.name(),
         Bytes.toStringBinary(this.comparator.getValue()));
   }
 }

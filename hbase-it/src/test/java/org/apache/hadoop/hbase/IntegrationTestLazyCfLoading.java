@@ -165,7 +165,7 @@ public class IntegrationTestLazyCfLoading {
 
     public Filter getScanFilter() {
       SingleColumnValueFilter scf = new SingleColumnValueFilter(ESSENTIAL_CF, FILTER_COLUMN,
-          CompareFilter.CompareOp.EQUAL, Bytes.toBytes(ACCEPTED_VALUE));
+          CompareOperator.EQUAL, Bytes.toBytes(ACCEPTED_VALUE));
       scf.setFilterIfMissing(true);
       return scf;
     }

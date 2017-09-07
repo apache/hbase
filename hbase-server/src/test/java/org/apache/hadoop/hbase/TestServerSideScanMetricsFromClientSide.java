@@ -205,21 +205,21 @@ public class TestServerSideScanMetricsFromClientSide {
     }
 
     // The filter should filter out all rows, but we still expect to see every row.
-    Filter filter = new RowFilter(CompareOp.EQUAL, new BinaryComparator("xyz".getBytes()));
+    Filter filter = new RowFilter(CompareOperator.EQUAL, new BinaryComparator("xyz".getBytes()));
     scan = new Scan(baseScan);
     scan.setFilter(filter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
 
     // Filter should pass on all rows
     SingleColumnValueFilter singleColumnValueFilter =
-        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.EQUAL, VALUE);
+        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.EQUAL, VALUE);
     scan = new Scan(baseScan);
     scan.setFilter(singleColumnValueFilter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
 
     // Filter should filter out all rows
     singleColumnValueFilter =
-        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.NOT_EQUAL, VALUE);
+        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.NOT_EQUAL, VALUE);
     scan = new Scan(baseScan);
     scan.setFilter(singleColumnValueFilter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
@@ -255,7 +255,7 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, null, 0);
 
     // Row filter doesn't match any row key. All rows should be filtered
-    Filter filter = new RowFilter(CompareOp.EQUAL, new BinaryComparator("xyz".getBytes()));
+    Filter filter = new RowFilter(CompareOperator.EQUAL, new BinaryComparator("xyz".getBytes()));
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     // Filter will return results containing only the first key. Number of entire rows filtered
@@ -273,16 +273,17 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     // Matching column value should exist in each row. No rows should be filtered.
-    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.EQUAL, VALUE);
+    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.EQUAL, VALUE);
     testRowsFilteredMetric(baseScan, filter, 0);
 
     // No matching column value should exist in any row. Filter all rows
-    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.NOT_EQUAL, VALUE);
+    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0],
+      CompareOperator.NOT_EQUAL, VALUE);
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     List<Filter> filters = new ArrayList<>();
-    filters.add(new RowFilter(CompareOp.EQUAL, new BinaryComparator(ROWS[0])));
-    filters.add(new RowFilter(CompareOp.EQUAL, new BinaryComparator(ROWS[3])));
+    filters.add(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROWS[0])));
+    filters.add(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROWS[3])));
     int numberOfMatchingRowFilters = filters.size();
     filter = new FilterList(Operator.MUST_PASS_ONE, filters);
     testRowsFilteredMetric(baseScan, filter, ROWS.length - numberOfMatchingRowFilters);
@@ -294,7 +295,7 @@ public class TestServerSideScanMetricsFromClientSide {
     for (int family = 0; family < FAMILIES.length; family++) {
       for (int qualifier = 0; qualifier < QUALIFIERS.length; qualifier++) {
         filters.add(new SingleColumnValueExcludeFilter(FAMILIES[family], QUALIFIERS[qualifier],
-            CompareOp.EQUAL, VALUE));
+          CompareOperator.EQUAL, VALUE));
       }
     }
     filter = new FilterList(Operator.MUST_PASS_ONE, filters);
