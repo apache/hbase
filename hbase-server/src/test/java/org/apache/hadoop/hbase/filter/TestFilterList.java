@@ -502,8 +502,8 @@ public class TestFilterList {
     // Should take the min if given two hints
     FilterList filterList = new FilterList(Operator.MUST_PASS_ONE,
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
-    assertEquals(0,
-      CellComparatorImpl.COMPARATOR.compare(filterList.getNextCellHint(null), minKeyValue));
+    assertEquals(0, CellComparatorImpl.COMPARATOR.compare(filterList.getNextCellHint(null),
+      minKeyValue));
 
     // Should have no hint if any filter has no hint
     filterList = new FilterList(Operator.MUST_PASS_ONE,
