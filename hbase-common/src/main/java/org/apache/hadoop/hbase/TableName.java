@@ -569,4 +569,8 @@ public final class TableName implements Comparable<TableName> {
     }
     return true;
   }
+
+  public boolean isMeta() {
+    return isMetaTableName(this);
+  }
 }

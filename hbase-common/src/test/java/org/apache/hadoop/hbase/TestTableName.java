@@ -233,6 +233,14 @@ public class TestTableName extends TestWatcher {
     assertEquals(TableName.getMetaTableName(conf).getNameAsString(), metaTableNameWithSuffix);
   }
 
+  @Test
+  public void testIsMeta() {
+    String userTableContainingMeta = "default:meta";
+
+    assertTrue(TableName.META_TABLE_NAME.isMeta());
+    assertFalse(TableName.valueOf(userTableContainingMeta).isMeta());
+  }
+
   private TableName validateNames(TableName expected, Names names) {
     assertEquals(expected.getNameAsString(), names.nn);
     assertArrayEquals(expected.getName(), names.nnb);
