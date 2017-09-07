@@ -53,6 +53,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -453,7 +454,7 @@ public class TestFromClientSide {
     FilterList allFilters = new FilterList(/* FilterList.Operator.MUST_PASS_ALL */);
     allFilters.addFilter(new PrefixFilter(Bytes.toBytes(keyPrefix)));
     SingleColumnValueFilter filter = new SingleColumnValueFilter(Bytes
-        .toBytes("trans-tags"), Bytes.toBytes("qual2"), CompareOp.EQUAL, Bytes
+        .toBytes("trans-tags"), Bytes.toBytes("qual2"), CompareOperator.EQUAL, Bytes
         .toBytes(value));
     filter.setFilterIfMissing(true);
     allFilters.addFilter(filter);
@@ -542,15 +543,15 @@ public class TestFromClientSide {
 
     key = new byte [] {'a', 'a', 'a'};
     int countBBB = TEST_UTIL.countRows(t,
-      createScanWithRowFilter(key, null, CompareFilter.CompareOp.EQUAL));
+      createScanWithRowFilter(key, null, CompareOperator.EQUAL));
     assertEquals(1, countBBB);
 
     int countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, null,
-      CompareFilter.CompareOp.GREATER_OR_EQUAL));
+      CompareOperator.GREATER_OR_EQUAL));
     // Because started at start of table.
     assertEquals(0, countGreater);
     countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, endKey,
-      CompareFilter.CompareOp.GREATER_OR_EQUAL));
+      CompareOperator.GREATER_OR_EQUAL));
     assertEquals(rowCount - endKeyCount, countGreater);
   }
 
@@ -694,7 +695,7 @@ public class TestFromClientSide {
    * @return Scan with RowFilter that does LESS than passed key.
    */
   private Scan createScanWithRowFilter(final byte [] key) {
-    return createScanWithRowFilter(key, null, CompareFilter.CompareOp.LESS);
+    return createScanWithRowFilter(key, null, CompareOperator.LESS);
   }
 
   /*
@@ -704,7 +705,7 @@ public class TestFromClientSide {
    * @return Scan with RowFilter that does CompareOp op on passed key.
    */
   private Scan createScanWithRowFilter(final byte [] key,
-      final byte [] startRow, CompareFilter.CompareOp op) {
+      final byte [] startRow, CompareOperator op) {
     // Make sure key is of some substance... non-null and > than first key.
     assertTrue(key != null && key.length > 0 &&
       Bytes.BYTES_COMPARATOR.compare(key, new byte [] {'a', 'a', 'a'}) >= 0);
@@ -826,7 +827,7 @@ public class TestFromClientSide {
     }
     Scan scan = new Scan();
     scan.addFamily(FAMILY);
-    Filter filter = new QualifierFilter(CompareOp.EQUAL,
+    Filter filter = new QualifierFilter(CompareOperator.EQUAL,
       new RegexStringComparator("col[1-5]"));
     scan.setFilter(filter);
     ResultScanner scanner = ht.getScanner(scan);
@@ -859,7 +860,7 @@ public class TestFromClientSide {
     }
     Scan scan = new Scan();
     scan.addFamily(FAMILY);
-    Filter filter = new SingleColumnValueFilter(FAMILY, QUALIFIER, CompareOp.GREATER,
+    Filter filter = new SingleColumnValueFilter(FAMILY, QUALIFIER, CompareOperator.GREATER,
       new LongComparator(500));
     scan.setFilter(filter);
     ResultScanner scanner = ht.getScanner(scan);
@@ -1478,7 +1479,7 @@ public class TestFromClientSide {
 
     RowMutations mutate = new RowMutations(ROW);
     mutate.add(new Put(ROW).addColumn(FAMILY, null, Bytes.toBytes("checkAndMutate")));
-    table.checkAndMutate(ROW, FAMILY, null, CompareOp.EQUAL, Bytes.toBytes("checkAndPut"), mutate);
+    table.checkAndMutate(ROW, FAMILY, null, CompareOperator.EQUAL, Bytes.toBytes("checkAndPut"), mutate);
 
     delete = new Delete(ROW);
     delete.addColumns(FAMILY, null);
@@ -4913,47 +4914,47 @@ public class TestFromClientSide {
 
     // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
     // turns out "match"
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.GREATER, value1, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value1, put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value1, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value1, put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.GREATER_OR_EQUAL, value1, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value1, put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.LESS, value1, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value1, put2);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value1, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value1, put2);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.NOT_EQUAL, value1, put3);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value1, put3);
     assertEquals(ok, true);
 
     // cell = "cccc", using "dddd" to compare only LARGER/LARGER_OR_EQUAL/NOT_EQUAL
     // turns out "match"
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.LESS, value4, put3);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value4, put3);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value4, put3);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value4, put3);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value4, put3);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value4, put3);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.GREATER, value4, put3);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value4, put3);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.GREATER_OR_EQUAL, value4, put3);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value4, put3);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.NOT_EQUAL, value4, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value4, put2);
     assertEquals(ok, true);
 
     // cell = "bbbb", using "bbbb" to compare only GREATER_OR_EQUAL/LESS_OR_EQUAL/EQUAL
     // turns out "match"
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.GREATER, value2, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value2, put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.NOT_EQUAL, value2, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value2, put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.LESS, value2, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value2, put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.GREATER_OR_EQUAL, value2, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value2, put2);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value2, put2);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value2, put2);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value2, put3);
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value2, put3);
     assertEquals(ok, true);
   }
 
@@ -4997,55 +4998,55 @@ public class TestFromClientSide {
 
     // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
     // turns out "match"
-    boolean ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER, value1, delete);
+    boolean ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value1, delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value1, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value1, delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER_OR_EQUAL, value1, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value1, delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS, value1, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value1, delete);
     assertEquals(ok, true);
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value1, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value1, delete);
     assertEquals(ok, true);
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.NOT_EQUAL, value1, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value1, delete);
     assertEquals(ok, true);
 
     // cell = "cccc", using "dddd" to compare only LARGER/LARGER_OR_EQUAL/NOT_EQUAL
     // turns out "match"
     table.put(put3);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS, value4, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value4, delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value4, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value4, delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value4, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value4, delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER, value4, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value4, delete);
     assertEquals(ok, true);
     table.put(put3);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER_OR_EQUAL, value4, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value4, delete);
     assertEquals(ok, true);
     table.put(put3);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.NOT_EQUAL, value4, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value4, delete);
     assertEquals(ok, true);
 
     // cell = "bbbb", using "bbbb" to compare only GREATER_OR_EQUAL/LESS_OR_EQUAL/EQUAL
     // turns out "match"
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER, value2, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value2, delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.NOT_EQUAL, value2, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value2, delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS, value2, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value2, delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER_OR_EQUAL, value2, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value2, delete);
     assertEquals(ok, true);
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value2, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value2, delete);
     assertEquals(ok, true);
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value2, delete);
+    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value2, delete);
     assertEquals(ok, true);
   }
 
@@ -5450,7 +5451,7 @@ public class TestFromClientSide {
     scan.setStartRow(Bytes.toBytes(1));
     scan.setStopRow(Bytes.toBytes(3));
     scan.addColumn(FAMILY, FAMILY);
-    scan.setFilter(new RowFilter(CompareFilter.CompareOp.NOT_EQUAL,
+    scan.setFilter(new RowFilter(CompareOperator.NOT_EQUAL,
         new BinaryComparator(Bytes.toBytes(1))));
 
     ResultScanner scanner = foo.getScanner(scan);
@@ -5757,7 +5758,7 @@ public class TestFromClientSide {
     Scan scan = new Scan();
     scan.setReversed(true);
     scan.addFamily(FAMILY);
-    Filter filter = new QualifierFilter(CompareOp.EQUAL,
+    Filter filter = new QualifierFilter(CompareOperator.EQUAL,
         new RegexStringComparator("col[1-5]"));
     scan.setFilter(filter);
     ResultScanner scanner = ht.getScanner(scan);
@@ -6561,7 +6562,7 @@ public class TestFromClientSide {
     table.put(put);
 
     Scan scan =
-        new Scan().setFilter(new ValueFilter(CompareOp.EQUAL, new SubstringComparator("value-a")))
+        new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
             .setMaxVersions(3);
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
@@ -6571,7 +6572,7 @@ public class TestFromClientSide {
 
     Get get =
         new Get(ROW)
-            .setFilter(new ValueFilter(CompareOp.EQUAL, new SubstringComparator("value-a")))
+            .setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
             .setMaxVersions(3);
     result = table.get(get);
     // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
@@ -6580,7 +6581,7 @@ public class TestFromClientSide {
 
     // Test with max versions 1, it should still read ts[1]
     scan =
-        new Scan().setFilter(new ValueFilter(CompareOp.EQUAL, new SubstringComparator("value-a")))
+        new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
             .setMaxVersions(1);
     scanner = table.getScanner(scan);
     result = scanner.next();
@@ -6591,7 +6592,7 @@ public class TestFromClientSide {
     // Test with max versions 1, it should still read ts[1]
     get =
         new Get(ROW)
-            .setFilter(new ValueFilter(CompareOp.EQUAL, new SubstringComparator("value-a")))
+            .setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
             .setMaxVersions(1);
     result = table.get(get);
     // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
@@ -6600,7 +6601,7 @@ public class TestFromClientSide {
 
     // Test with max versions 5, it should still read ts[1]
     scan =
-        new Scan().setFilter(new ValueFilter(CompareOp.EQUAL, new SubstringComparator("value-a")))
+        new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
             .setMaxVersions(5);
     scanner = table.getScanner(scan);
     result = scanner.next();
@@ -6611,7 +6612,7 @@ public class TestFromClientSide {
     // Test with max versions 5, it should still read ts[1]
     get =
         new Get(ROW)
-            .setFilter(new ValueFilter(CompareOp.EQUAL, new SubstringComparator("value-a")))
+            .setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
             .setMaxVersions(5);
     result = table.get(get);
     // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3

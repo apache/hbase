@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
@@ -55,7 +56,7 @@ public class TestSingleColumnValueExcludeFilter {
   @Test
   public void testFilterKeyValue() throws Exception {
     Filter filter = new SingleColumnValueExcludeFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-        CompareOp.EQUAL, VAL_1);
+    CompareOperator.EQUAL, VAL_1);
 
     // A 'match' situation
     List<Cell> kvs = new ArrayList<>();

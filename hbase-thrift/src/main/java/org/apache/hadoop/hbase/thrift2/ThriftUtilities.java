@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections4.MapUtils;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -570,15 +571,15 @@ public class ThriftUtilities {
     }
   }
 
-  public static CompareOp compareOpFromThrift(TCompareOp tCompareOp) {
+  public static CompareOperator compareOpFromThrift(TCompareOp tCompareOp) {
     switch (tCompareOp.getValue()) {
-      case 0: return CompareOp.LESS;
-      case 1: return CompareOp.LESS_OR_EQUAL;
-      case 2: return CompareOp.EQUAL;
-      case 3: return CompareOp.NOT_EQUAL;
-      case 4: return CompareOp.GREATER_OR_EQUAL;
-      case 5: return CompareOp.GREATER;
-      case 6: return CompareOp.NO_OP;
+      case 0: return CompareOperator.LESS;
+      case 1: return CompareOperator.LESS_OR_EQUAL;
+      case 2: return CompareOperator.EQUAL;
+      case 3: return CompareOperator.NOT_EQUAL;
+      case 4: return CompareOperator.GREATER_OR_EQUAL;
+      case 5: return CompareOperator.GREATER;
+      case 6: return CompareOperator.NO_OP;
       default: return null;
     }
   }

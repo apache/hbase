@@ -405,7 +405,8 @@ public class TestTableInputFormat {
           Bytes.toBytes("columnB") };
         // mandatory
         setInputColumns(inputColumns);
-        Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+        Filter exampleFilter =
+          new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
         // optional
         setRowFilter(exampleFilter);
       } catch (IOException exception) {
@@ -449,7 +450,8 @@ public class TestTableInputFormat {
         Bytes.toBytes("columnB") };
       // mandatory
       setInputColumns(inputColumns);
-      Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+      Filter exampleFilter =
+        new RowFilter(CompareOperator.EQUAL, new RegexStringComparator("aa.*"));
       // optional
       setRowFilter(exampleFilter);
     }

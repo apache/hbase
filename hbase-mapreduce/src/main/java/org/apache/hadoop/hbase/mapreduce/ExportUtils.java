@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -86,7 +87,7 @@ public final class ExportUtils {
     if (filterCriteria == null) return null;
     if (filterCriteria.startsWith("^")) {
       String regexPattern = filterCriteria.substring(1, filterCriteria.length());
-      exportFilter = new RowFilter(CompareFilter.CompareOp.EQUAL, new RegexStringComparator(regexPattern));
+      exportFilter = new RowFilter(CompareOperator.EQUAL, new RegexStringComparator(regexPattern));
     } else {
       exportFilter = new PrefixFilter(Bytes.toBytesBinary(filterCriteria));
     }

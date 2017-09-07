@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -78,7 +79,7 @@ public class TestFilterWrapper {
       List<Filter> fs = new ArrayList<>();
 
       DependentColumnFilter f1 = new DependentColumnFilter(Bytes.toBytes("f1"),
-          Bytes.toBytes("c5"), true, CompareFilter.CompareOp.EQUAL,
+          Bytes.toBytes("c5"), true, CompareOperator.EQUAL,
           new SubstringComparator("c5"));
       PageFilter f2 = new PageFilter(2);
       fs.add(f1);

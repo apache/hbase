@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -50,9 +51,22 @@ public class QualifierFilter extends CompareFilter {
    * Constructor.
    * @param op the compare op for column qualifier matching
    * @param qualifierComparator the comparator for column qualifier matching
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0.
+   * Use {@link #QualifierFilter(CompareOperator, ByteArrayComparable)} instead.
    */
+  @Deprecated
   public QualifierFilter(final CompareOp op,
       final ByteArrayComparable qualifierComparator) {
+    super(op, qualifierComparator);
+  }
+
+  /**
+   * Constructor.
+   * @param op the compare op for column qualifier matching
+   * @param qualifierComparator the comparator for column qualifier matching
+   */
+  public QualifierFilter(final CompareOperator op,
+                         final ByteArrayComparable qualifierComparator) {
     super(op, qualifierComparator);
   }
 
@@ -60,7 +74,7 @@ public class QualifierFilter extends CompareFilter {
   public ReturnCode filterKeyValue(Cell v) {
     int qualifierLength = v.getQualifierLength();
     if (qualifierLength > 0) {
-      if (compareQualifier(this.compareOp, this.comparator, v)) {
+      if (compareQualifier(getCompareOperator(), this.comparator, v)) {
         return ReturnCode.SKIP;
       }
     }
@@ -69,7 +83,7 @@ public class QualifierFilter extends CompareFilter {
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     ArrayList<?> arguments = CompareFilter.extractArguments(filterArguments);
-    CompareOp compareOp = (CompareOp)arguments.get(0);
+    CompareOperator compareOp = (CompareOperator)arguments.get(0);
     ByteArrayComparable comparator = (ByteArrayComparable)arguments.get(1);
     return new QualifierFilter(compareOp, comparator);
   }
@@ -98,8 +112,8 @@ public class QualifierFilter extends CompareFilter {
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-    final CompareOp valueCompareOp =
-      CompareOp.valueOf(proto.getCompareFilter().getCompareOp().name());
+    final CompareOperator valueCompareOp =
+      CompareOperator.valueOf(proto.getCompareFilter().getCompareOp().name());
     ByteArrayComparable valueComparator = null;
     try {
       if (proto.getCompareFilter().hasComparator()) {
@@ -112,7 +126,6 @@ public class QualifierFilter extends CompareFilter {
   }
 
   /**
-   * @param other
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

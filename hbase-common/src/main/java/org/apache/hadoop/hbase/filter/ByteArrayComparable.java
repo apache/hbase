@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /** Base class for byte array comparators */
 @InterfaceAudience.Public
-// TODO Now we are deviating a lot from the actual Comparable<byte[]> what this implements, by
+// TODO Now we are deviating a lot from the actual Comparable<byte[]> that this implements, by
 // adding special compareTo methods. We have to clean it. Deprecate this class and replace it
 // with a more generic one which says it compares bytes (not necessary a byte array only)
 // BytesComparable implements Comparable<Byte> will work?

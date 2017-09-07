@@ -134,8 +134,7 @@ public interface Table extends Closeable {
    */
   <R> void batchCallback(
     final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback
-  )
-    throws IOException, InterruptedException;
+  ) throws IOException, InterruptedException;
 
   /**
    * Extracts certain cells from a given row.

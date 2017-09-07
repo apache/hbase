@@ -273,14 +273,14 @@ FilterList list = new FilterList(FilterList.Operator.MUST_PASS_ONE);
 SingleColumnValueFilter filter1 = new SingleColumnValueFilter(
   cf,
   column,
-  CompareOp.EQUAL,
+  CompareOperator.EQUAL,
   Bytes.toBytes("my value")
   );
 list.add(filter1);
 SingleColumnValueFilter filter2 = new SingleColumnValueFilter(
   cf,
   column,
-  CompareOp.EQUAL,
+  CompareOperator.EQUAL,
   Bytes.toBytes("my other value")
   );
 list.add(filter2);
@@ -295,8 +295,8 @@ scan.setFilter(list);
 
 A SingleColumnValueFilter (see:
 http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html)
-can be used to test column values for equivalence (`CompareOp.EQUAL`),
-inequality (`CompareOp.NOT_EQUAL`), or ranges (e.g., `CompareOp.GREATER`). The following is an
+can be used to test column values for equivalence (`CompareOperaor.EQUAL`),
+inequality (`CompareOperaor.NOT_EQUAL`), or ranges (e.g., `CompareOperaor.GREATER`). The following is an
 example of testing equivalence of a column to a String value "my value"...
 
 [source,java]
@@ -304,7 +304,7 @@ example of testing equivalence of a column to a String value "my value"...
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
   cf,
   column,
-  CompareOp.EQUAL,
+  CompareOperaor.EQUAL,
   Bytes.toBytes("my value")
   );
 scan.setFilter(filter);
@@ -327,7 +327,7 @@ RegexStringComparator comp = new RegexStringComparator("my.");   // any value th
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
   cf,
   column,
-  CompareOp.EQUAL,
+  CompareOperaor.EQUAL,
   comp
   );
 scan.setFilter(filter);
@@ -348,7 +348,7 @@ SubstringComparator comp = new SubstringComparator("y val");   // looking for 'm
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
   cf,
   column,
-  CompareOp.EQUAL,
+  CompareOperaor.EQUAL,
   comp
   );
 scan.setFilter(filter);

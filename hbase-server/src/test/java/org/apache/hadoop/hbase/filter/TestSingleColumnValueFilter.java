@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
@@ -73,36 +74,36 @@ public class TestSingleColumnValueFilter {
 
   private Filter basicFilterNew() {
     return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-      CompareOp.GREATER_OR_EQUAL, VAL_2);
+    CompareOperator.GREATER_OR_EQUAL, VAL_2);
   }
 
   private Filter nullFilterNew() {
-    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER, CompareOp.NOT_EQUAL,
+    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER, CompareOperator.NOT_EQUAL,
         new NullComparator());
   }
 
   private Filter substrFilterNew() {
     return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-      CompareOp.EQUAL,
+    CompareOperator.EQUAL,
       new SubstringComparator(QUICK_SUBSTR));
   }
 
   private Filter regexFilterNew() {
     return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-      CompareOp.EQUAL,
+    CompareOperator.EQUAL,
       new RegexStringComparator(QUICK_REGEX));
   }
 
   private Filter regexFilterNew(Pattern pattern) {
     return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-        CompareOp.EQUAL,
+    CompareOperator.EQUAL,
         new RegexStringComparator(pattern.pattern(), pattern.flags()));
   }
 
   @Test
   public void testLongComparator() throws IOException {
     Filter filter = new SingleColumnValueFilter(COLUMN_FAMILY,
-        COLUMN_QUALIFIER, CompareOp.GREATER, new LongComparator(100L));
+        COLUMN_QUALIFIER, CompareOperator.GREATER, new LongComparator(100L));
     KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
       Bytes.toBytes(1L));
     assertTrue("less than", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);

@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -196,9 +197,9 @@ public class QuotaTableUtil {
 
       if (!Strings.isEmpty(filter.getNamespaceFilter())) {
         FilterList nsFilters = new FilterList(FilterList.Operator.MUST_PASS_ALL);
-        nsFilters.addFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
+        nsFilters.addFilter(new RowFilter(CompareOperator.EQUAL,
             new RegexStringComparator(getUserRowKeyRegex(filter.getUserFilter()), 0)));
-        nsFilters.addFilter(new QualifierFilter(CompareFilter.CompareOp.EQUAL,
+        nsFilters.addFilter(new QualifierFilter(CompareOperator.EQUAL,
             new RegexStringComparator(
               getSettingsQualifierRegexForUserNamespace(filter.getNamespaceFilter()), 0)));
         userFilters.addFilter(nsFilters);
@@ -206,25 +207,25 @@ public class QuotaTableUtil {
       }
       if (!Strings.isEmpty(filter.getTableFilter())) {
         FilterList tableFilters = new FilterList(FilterList.Operator.MUST_PASS_ALL);
-        tableFilters.addFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
+        tableFilters.addFilter(new RowFilter(CompareOperator.EQUAL,
             new RegexStringComparator(getUserRowKeyRegex(filter.getUserFilter()), 0)));
-        tableFilters.addFilter(new QualifierFilter(CompareFilter.CompareOp.EQUAL,
+        tableFilters.addFilter(new QualifierFilter(CompareOperator.EQUAL,
             new RegexStringComparator(
               getSettingsQualifierRegexForUserTable(filter.getTableFilter()), 0)));
         userFilters.addFilter(tableFilters);
         hasFilter = true;
       }
       if (!hasFilter) {
-        userFilters.addFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
+        userFilters.addFilter(new RowFilter(CompareOperator.EQUAL,
             new RegexStringComparator(getUserRowKeyRegex(filter.getUserFilter()), 0)));
       }
 
       filterList.addFilter(userFilters);
     } else if (!Strings.isEmpty(filter.getTableFilter())) {
-      filterList.addFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
+      filterList.addFilter(new RowFilter(CompareOperator.EQUAL,
           new RegexStringComparator(getTableRowKeyRegex(filter.getTableFilter()), 0)));
     } else if (!Strings.isEmpty(filter.getNamespaceFilter())) {
-      filterList.addFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
+      filterList.addFilter(new RowFilter(CompareOperator.EQUAL,
           new RegexStringComparator(getNamespaceRowKeyRegex(filter.getNamespaceFilter()), 0)));
     }
     return filterList;
