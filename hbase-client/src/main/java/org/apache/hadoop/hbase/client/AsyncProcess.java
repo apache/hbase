@@ -1676,7 +1676,7 @@ class AsyncProcess {
           lastLog = now;
           LOG.info("#" + id + ", waiting for some tasks to finish. Expected max="
               + max + ", tasksInProgress=" + currentInProgress +
-              " hasError=" + hasError() + tableName == null ? "" : ", tableName=" + tableName);
+              " hasError=" + hasError() + (tableName == null ? "" : ", tableName=" + tableName));
           if (currentInProgress <= thresholdToLogUndoneTaskDetails) {
             logDetailsOfUndoneTasks(currentInProgress);
           }
