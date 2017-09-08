@@ -68,14 +68,20 @@ using folly::exception_wrapper;
 class AsyncBatchRpcRetryTest : public ::testing::Test {
  public:
   static std::unique_ptr<hbase::TestUtil> test_util;
+  static std::string tableName;
 
   static void SetUpTestCase() {
     google::InstallFailureSignalHandler();
     test_util = std::make_unique<hbase::TestUtil>();
     test_util->StartMiniCluster(2);
+    std::vector<std::string> keys{"test0",   "test100", "test200", "test300", "test400",
+                                  "test500", "test600", "test700", "test800", "test900"};
+    tableName = "split-table1";
+    test_util->CreateTable(tableName, "d", keys);
   }
 };
 std::unique_ptr<hbase::TestUtil> AsyncBatchRpcRetryTest::test_util = nullptr;
+std::string AsyncBatchRpcRetryTest::tableName;
 
 class AsyncRegionLocatorBase : public AsyncRegionLocator {
  public:
@@ -283,18 +289,6 @@ class MockRawAsyncTableImpl {
   std::shared_ptr<hbase::pb::TableName> tn_;
 };
 
-std::string createTestTable(bool split_regions, const std::string &table_name) {
-  std::vector<std::string> keys{"test0",   "test100", "test200", "test300", "test400",
-                                "test500", "test600", "test700", "test800", "test900"};
-  std::string tableName = (split_regions) ? ("split-" + table_name) : table_name;
-  if (split_regions) {
-    AsyncBatchRpcRetryTest::test_util->CreateTable(tableName, "d", keys);
-  } else {
-    AsyncBatchRpcRetryTest::test_util->CreateTable(tableName, "d");
-  }
-  return tableName;
-}
-
 std::shared_ptr<MockAsyncConnection> getAsyncConnection(
     Client &client, uint32_t operation_timeout_millis, uint32_t tries,
     std::shared_ptr<AsyncRegionLocatorBase> region_locator) {
@@ -367,9 +361,8 @@ std::map<std::string, std::shared_ptr<RegionLocation>> getRegionLocationsAndActi
 void runMultiGets(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
                   const std::string &table_name, bool split_regions, uint32_t tries = 3,
                   uint32_t operation_timeout_millis = 600000, uint64_t num_rows = 1000) {
-  auto tableName = createTestTable(split_regions, table_name);
   // Create TableName and Row to be fetched from HBase
-  auto tn = folly::to<hbase::pb::TableName>(tableName);
+  auto tn = folly::to<hbase::pb::TableName>(AsyncBatchRpcRetryTest::tableName);
 
   // Create a client
   Client client(*AsyncBatchRpcRetryTest::test_util->conf());
@@ -419,10 +412,8 @@ void runMultiGets(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
 void runMultiPuts(std::shared_ptr<AsyncRegionLocatorBase> region_locator,
                   const std::string &table_name, bool split_regions, uint32_t tries = 3,
                   uint32_t operation_timeout_millis = 600000, uint32_t num_rows = 1000) {
-  auto tableName = createTestTable(split_regions, table_name);
-
   // Create TableName and Row to be fetched from HBase
-  auto tn = folly::to<hbase::pb::TableName>(tableName);
+  auto tn = folly::to<hbase::pb::TableName>(AsyncBatchRpcRetryTest::tableName);
 
   // Create a client
   Client client(*AsyncBatchRpcRetryTest::test_util->conf());
@@ -543,13 +534,6 @@ TEST_F(AsyncBatchRpcRetryTest, PutsFailWithOperationTimeout) {
   EXPECT_ANY_THROW(runMultiPuts(region_locator, "table6", false, 5, 100, 1000));
 }
 
-//////////////////////
-/*
- TODO: Below tests are failing with frequently with segfaults coming from
- JNI internals indicating that we are doing something wrong in the JNI boundary.
- However, we were not able to debug furhter yet. Disable the tests for now, and
- come back later to fix the issue.
-
  // Test successful case
  TEST_F(AsyncBatchRpcRetryTest, MultiGetsSplitRegions) {
  std::shared_ptr<AsyncRegionLocatorBase> region_locator(
@@ -591,4 +575,3 @@ TEST_F(AsyncBatchRpcRetryTest, PutsFailWithOperationTimeout) {
  std::make_shared<MockFailingAsyncRegionLocator>(6));
  EXPECT_ANY_THROW(runMultiGets(region_locator, "table12", true, 5, 100, 1000));
  }
- */
