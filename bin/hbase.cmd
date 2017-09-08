@@ -415,11 +415,6 @@ goto :eof
   set CLASS=org.apache.hadoop.hbase.util.HBaseFsck
   goto :eof
 
-@rem TODO remove older 'hlog' command
-:hlog
-  set CLASS=org.apache.hadoop.hbase.wal.WALPrettyPrinter
-  goto :eof
-
 :wal
   set CLASS=org.apache.hadoop.hbase.wal.WALPrettyPrinter
   goto :eof

@@ -332,7 +332,7 @@ See <<hfile_tool>>.
 === WAL Tools
 
 [[hlog_tool]]
-==== `FSHLog` tool
+==== FSHLog tool
 
 The main method on `FSHLog` offers manual split and dump facilities.
 Pass it WALs or the product of a split, the content of the _recovered.edits_.
@@ -353,9 +353,9 @@ Similarly you can force a split of a log file directory by doing:
 ----
 
 [[hlog_tool.prettyprint]]
-===== WAL Pretty Printer
+===== WALPrettyPrinter
 
-The WAL Pretty Printer is a tool with configurable options to print the contents of a WAL.
+The `WALPrettyPrinter` is a tool with configurable options to print the contents of a WAL.
 You can invoke it via the HBase cli with the 'wal' command.
 
 ----
@@ -365,7 +365,7 @@ You can invoke it via the HBase cli with the 'wal' command.
 .WAL Printing in older versions of HBase
 [NOTE]
 ====
-Prior to version 2.0, the WAL Pretty Printer was called the `HLogPrettyPrinter`, after an internal name for HBase's write ahead log.
+Prior to version 2.0, the `WALPrettyPrinter` was called the `HLogPrettyPrinter`, after an internal name for HBase's write ahead log.
 In those versions, you can print the contents of a WAL using the same configuration as above, but with the 'hlog' command.
 
 ----
