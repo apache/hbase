@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
@@ -3001,42 +3003,71 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert proto ClusterStatus.Options to ClusterStatusProtos.Options
-   * @param opt
-   * @return proto ClusterStatus.Options
+   * Convert ClusterStatusProtos.Option to ClusterStatus.Option
+   * @param option a ClusterStatusProtos.Option
+   * @return converted ClusterStatus.Option
    */
-  public static ClusterStatus.Options toOptions (ClusterStatusProtos.Options opt) {
-    ClusterStatus.Options option = ClusterStatus.Options.getDefaultOptions();
-    if (!opt.getIncludeHbaseVersion()) option.excludeHBaseVersion();
-    if (!opt.getIncludeLiveServers()) option.excludeLiveServers();
-    if (!opt.getIncludeDeadServers()) option.excludeDeadServers();
-    if (!opt.getIncludeRegionsState()) option.excludeRegionState();
-    if (!opt.getIncludeClusterId()) option.excludeClusterId();
-    if (!opt.getIncludeMasterCoprocessors()) option.excludeMasterCoprocessors();
-    if (!opt.getIncludeMaster()) option.excludeMaster();
-    if (!opt.getIncludeBackupMasters()) option.excludeBackupMasters();
-    if (!opt.getIncludeBalancerOn()) option.excludeBalancerOn();
-    return option;
+  public static ClusterStatus.Option toOption(ClusterStatusProtos.Option option) {
+    switch (option) {
+      case HBASE_VERSION: return ClusterStatus.Option.HBASE_VERSION;
+      case LIVE_SERVERS: return ClusterStatus.Option.LIVE_SERVERS;
+      case DEAD_SERVERS: return ClusterStatus.Option.DEAD_SERVERS;
+      case REGIONS_IN_TRANSITION: return ClusterStatus.Option.REGIONS_IN_TRANSITION;
+      case CLUSTER_ID: return ClusterStatus.Option.CLUSTER_ID;
+      case MASTER_COPROCESSORS: return ClusterStatus.Option.MASTER_COPROCESSORS;
+      case MASTER: return ClusterStatus.Option.MASTER;
+      case BACKUP_MASTERS: return ClusterStatus.Option.BACKUP_MASTERS;
+      case BALANCER_ON: return ClusterStatus.Option.BALANCER_ON;
+      // should not reach here
+      default: throw new IllegalArgumentException("Invalid option: " + option);
+    }
   }
 
   /**
-   * Convert ClusterStatus.Options to proto ClusterStatusProtos.Options
-   * @param opt
-   * @return ClusterStatus.Options
+   * Convert ClusterStatus.Option to ClusterStatusProtos.Option
+   * @param option a ClusterStatus.Option
+   * @return converted ClusterStatusProtos.Option
    */
-  public static ClusterStatusProtos.Options toOptions(ClusterStatus.Options opt) {
-    ClusterStatusProtos.Options.Builder option =
-        ClusterStatusProtos.Options.newBuilder();
-    option.setIncludeHbaseVersion(opt.includeHBaseVersion())
-          .setIncludeLiveServers(opt.includeLiveServers())
-          .setIncludeDeadServers(opt.includeDeadServers())
-          .setIncludeRegionsState(opt.includeRegionState())
-          .setIncludeClusterId(opt.includeClusterId())
-          .setIncludeMasterCoprocessors(opt.includeMasterCoprocessors())
-          .setIncludeMaster(opt.includeMaster())
-          .setIncludeBackupMasters(opt.includeBackupMasters())
-          .setIncludeBalancerOn(opt.includeBalancerOn());
-    return option.build();
+  public static ClusterStatusProtos.Option toOption(ClusterStatus.Option option) {
+    switch (option) {
+      case HBASE_VERSION: return ClusterStatusProtos.Option.HBASE_VERSION;
+      case LIVE_SERVERS: return ClusterStatusProtos.Option.LIVE_SERVERS;
+      case DEAD_SERVERS: return ClusterStatusProtos.Option.DEAD_SERVERS;
+      case REGIONS_IN_TRANSITION: return ClusterStatusProtos.Option.REGIONS_IN_TRANSITION;
+      case CLUSTER_ID: return ClusterStatusProtos.Option.CLUSTER_ID;
+      case MASTER_COPROCESSORS: return ClusterStatusProtos.Option.MASTER_COPROCESSORS;
+      case MASTER: return ClusterStatusProtos.Option.MASTER;
+      case BACKUP_MASTERS: return ClusterStatusProtos.Option.BACKUP_MASTERS;
+      case BALANCER_ON: return ClusterStatusProtos.Option.BALANCER_ON;
+      // should not reach here
+      default: throw new IllegalArgumentException("Invalid option: " + option);
+    }
+  }
+
+  /**
+   * Convert a list of ClusterStatusProtos.Option to an enum set of ClusterStatus.Option
+   * @param options
+   * @return an enum set of ClusterStatus.Option
+   */
+  public static EnumSet<Option> toOptions(List<ClusterStatusProtos.Option> options) {
+    EnumSet<Option> result = EnumSet.noneOf(Option.class);
+    for (ClusterStatusProtos.Option opt : options) {
+      result.add(toOption(opt));
+    }
+    return result;
+  }
+
+  /**
+   * Convert an enum set of ClusterStatus.Option to a list of ClusterStatusProtos.Option
+   * @param options
+   * @return a list of ClusterStatusProtos.Option
+   */
+  public static List<ClusterStatusProtos.Option> toOptions(EnumSet<Option> options) {
+    List<ClusterStatusProtos.Option> result = new ArrayList<>(options.size());
+    for (ClusterStatus.Option opt : options) {
+      result.add(toOption(opt));
+    }
+    return result;
   }
 
   /**
