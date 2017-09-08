@@ -63,9 +63,11 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * <li> List of hfiles and wals
  * <li> Stats about hfiles and logs sizes, percentage of shared with the source table, ...
  * </ol>
+ * @deprecated All the protos references will be changed to standalone POJOs from 2.0 onwards
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public final class SnapshotInfo extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(SnapshotInfo.class);
 
