@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -114,7 +115,7 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
 
     final String n = Thread.currentThread().getName();
 
-    StealJobQueue<Runnable> stealJobQueue = new StealJobQueue<>();
+    StealJobQueue<Runnable> stealJobQueue = new StealJobQueue<Runnable>(COMPARATOR);
     this.longCompactions = new ThreadPoolExecutor(largeThreads, largeThreads,
         60, TimeUnit.SECONDS, stealJobQueue,
         new ThreadFactory() {
@@ -424,9 +425,60 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
     return this.regionSplitLimit;
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
-      justification="Contrived use of compareTo")
-  private class CompactionRunner implements Runnable, Comparable<CompactionRunner> {
+  private static final Comparator<Runnable> COMPARATOR =
+      new Comparator<Runnable>() {
+
+    private int compare(CompactionRequest r1, CompactionRequest r2) {
+      if (r1 == r2) {
+        return 0; //they are the same request
+      }
+      // less first
+      int cmp = Integer.compare(r1.getPriority(), r2.getPriority());
+      if (cmp != 0) {
+        return cmp;
+      }
+      cmp = Long.compare(r1.getSelectionNanoTime(), r2.getSelectionNanoTime());
+      if (cmp != 0) {
+        return cmp;
+      }
+
+      // break the tie based on hash code
+      return System.identityHashCode(r1) - System.identityHashCode(r2);
+    }
+
+    @Override
+    public int compare(Runnable r1, Runnable r2) {
+      // CompactionRunner first
+      if (r1 instanceof CompactionRunner) {
+        if (!(r2 instanceof CompactionRunner)) {
+          return -1;
+        }
+      } else {
+        if (r2 instanceof CompactionRunner) {
+          return 1;
+        } else {
+          // break the tie based on hash code
+          return System.identityHashCode(r1) - System.identityHashCode(r2);
+        }
+      }
+      CompactionRunner o1 = (CompactionRunner) r1;
+      CompactionRunner o2 = (CompactionRunner) r2;
+      // less first
+      int cmp = Integer.compare(o1.queuedPriority, o2.queuedPriority);
+      if (cmp != 0) {
+        return cmp;
+      }
+      CompactionContext c1 = o1.compaction;
+      CompactionContext c2 = o2.compaction;
+      if (c1 == null) {
+        return c2 == null ? 0 : 1;
+      } else {
+        return c2 == null ? -1 : compare(c1.getRequest(), c2.getRequest());
+      }
+    }
+  };
+
+  private final class CompactionRunner implements Runnable {
     private final Store store;
     private final HRegion region;
     private CompactionContext compaction;
@@ -435,17 +487,17 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
     private User user;
     private long time;
 
-    public CompactionRunner(Store store, Region region,
-        CompactionContext compaction, ThreadPoolExecutor parent, User user) {
+    public CompactionRunner(Store store, Region region, CompactionContext compaction,
+        ThreadPoolExecutor parent, User user) {
       super();
       this.store = store;
-      this.region = (HRegion)region;
+      this.region = (HRegion) region;
       this.compaction = compaction;
-      this.queuedPriority = (this.compaction == null)
-          ? store.getCompactPriority() : compaction.getRequest().getPriority();
+      this.queuedPriority =
+          compaction == null ? store.getCompactPriority() : compaction.getRequest().getPriority();
       this.parent = parent;
       this.user = user;
-      this.time =  System.currentTimeMillis();
+      this.time = System.currentTimeMillis();
     }
 
     @Override
@@ -553,17 +605,6 @@ public class CompactSplit implements CompactionRequestor, PropagatingConfigurati
       ex.printStackTrace(pw);
       pw.flush();
       return sw.toString();
-    }
-
-    @Override
-    public int compareTo(CompactionRunner o) {
-      // Only compare the underlying request (if any), for queue sorting purposes.
-      int compareVal = queuedPriority - o.queuedPriority; // compare priority
-      if (compareVal != 0) return compareVal;
-      CompactionContext tc = this.compaction, oc = o.compaction;
-      // Sort pre-selected (user?) compactions before system ones with equal priority.
-      return (tc == null) ? ((oc == null) ? 0 : 1)
-          : ((oc == null) ? -1 : tc.getRequest().compareTo(oc.getRequest()));
     }
   }
 

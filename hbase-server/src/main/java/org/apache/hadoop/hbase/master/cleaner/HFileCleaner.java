@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.cleaner;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -26,13 +27,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.StealJobQueue;
@@ -111,7 +112,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
         conf.getInt(LARGE_HFILE_QUEUE_INIT_SIZE, DEFAULT_LARGE_HFILE_QUEUE_INIT_SIZE);
     smallQueueInitSize =
         conf.getInt(SMALL_HFILE_QUEUE_INIT_SIZE, DEFAULT_SMALL_HFILE_QUEUE_INIT_SIZE);
-    largeFileQueue = new StealJobQueue<>(largeQueueInitSize, smallQueueInitSize);
+    largeFileQueue = new StealJobQueue<>(largeQueueInitSize, smallQueueInitSize, COMPARATOR);
     smallFileQueue = largeFileQueue.getStealFromQueue();
     largeFileDeleteThreadNumber =
         conf.getInt(LARGE_HFILE_DELETE_THREAD_NUMBER, DEFAULT_LARGE_HFILE_DELETE_THREAD_NUMBER);
@@ -299,7 +300,21 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
     }
   }
 
-  static class HFileDeleteTask implements Comparable<HFileDeleteTask> {
+  private static final Comparator<HFileDeleteTask> COMPARATOR = new Comparator<HFileDeleteTask>() {
+
+    @Override
+    public int compare(HFileDeleteTask o1, HFileDeleteTask o2) {
+      // larger file first so reverse compare
+      int cmp = Long.compare(o2.fileLength, o1.fileLength);
+      if (cmp != 0) {
+        return cmp;
+      }
+      // just use hashCode to generate a stable result.
+      return System.identityHashCode(o1) - System.identityHashCode(o2);
+    }
+  };
+
+  private static final class HFileDeleteTask {
     private static final long MAX_WAIT = 60 * 1000L;
     private static final long WAIT_UNIT = 1000L;
 
@@ -340,31 +355,6 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
         return false;
       }
       return this.result;
-    }
-
-    @Override
-    public int compareTo(HFileDeleteTask o) {
-      long sub = this.fileLength - o.fileLength;
-      // smaller value with higher priority in PriorityQueue, and we intent to delete the larger
-      // file first.
-      return (sub > 0) ? -1 : (sub < 0 ? 1 : 0);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || !(o instanceof HFileDeleteTask)) {
-        return false;
-      }
-      HFileDeleteTask otherTask = (HFileDeleteTask) o;
-      return this.filePath.equals(otherTask.filePath) && (this.fileLength == otherTask.fileLength);
-    }
-
-    @Override
-    public int hashCode() {
-      return filePath.hashCode();
     }
   }
 
@@ -414,7 +404,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
     for (HFileDeleteTask task : smallFileQueue) {
       leftOverTasks.add(task);
     }
-    largeFileQueue = new StealJobQueue<>(largeQueueInitSize, smallQueueInitSize);
+    largeFileQueue = new StealJobQueue<>(largeQueueInitSize, smallQueueInitSize, COMPARATOR);
     smallFileQueue = largeFileQueue.getStealFromQueue();
     threads.clear();
     startHFileDeleteThreads();

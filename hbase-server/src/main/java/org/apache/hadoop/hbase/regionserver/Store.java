@@ -53,7 +53,8 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
 
   /* The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)
-   */ int PRIORITY_USER = 1;
+   */
+  int PRIORITY_USER = 1;
   int NO_PRIORITY = Integer.MIN_VALUE;
 
   // General Accessors
