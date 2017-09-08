@@ -27,10 +27,8 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.io.VersionedWritable;
 
 import com.google.common.base.Objects;
-
 
 /**
  * Status information on the HBase cluster.
@@ -70,17 +68,9 @@ import com.google.common.base.Objects;
  * </pre>
  */
 @InterfaceAudience.Public
-public class ClusterStatus extends VersionedWritable {
-  /**
-   * Version for object serialization.  Incremented for changes in serialized
-   * representation.
-   * <dl>
-   *   <dt>0</dt> <dd>Initial version</dd>
-   *   <dt>1</dt> <dd>Added cluster ID</dd>
-   *   <dt>2</dt> <dd>Added Map of ServerName to ServerLoad</dd>
-   *   <dt>3</dt> <dd>Added master and backupMasters</dd>
-   * </dl>
-   */
+public class ClusterStatus {
+
+  // TODO: remove this in 3.0
   private static final byte VERSION = 2;
 
   private String hbaseVersion;
@@ -209,8 +199,7 @@ public class ClusterStatus extends VersionedWritable {
     }
     ClusterStatus other = (ClusterStatus) o;
     //TODO Override the equals() methods in ServerLoad.
-    return (getVersion() == other.getVersion()) &&
-      Objects.equal(getHBaseVersion(), other.getHBaseVersion()) &&
+    return Objects.equal(getHBaseVersion(), other.getHBaseVersion()) &&
       Objects.equal(this.liveServers, other.liveServers) &&
       getDeadServerNames().containsAll(other.getDeadServerNames()) &&
       Arrays.equals(getMasterCoprocessors(), other.getMasterCoprocessors()) &&
@@ -222,11 +211,16 @@ public class ClusterStatus extends VersionedWritable {
    * @see java.lang.Object#hashCode()
    */
   public int hashCode() {
-    return VERSION + Objects.hashCode(hbaseVersion, liveServers, deadServers,
+    return Objects.hashCode(hbaseVersion, liveServers, deadServers,
       master, backupMasters);
   }
 
-  /** @return the object version number */
+  /**
+   *
+   * @return the object version number
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   */
+  @Deprecated
   public byte getVersion() {
     return VERSION;
   }
@@ -369,6 +363,7 @@ public class ClusterStatus extends VersionedWritable {
   /**
    * Builder for construct a ClusterStatus.
    */
+  @InterfaceAudience.Private
   public static class Builder {
     private String hbaseVersion = null;
     private Map<ServerName, ServerLoad> liveServers = null;
