@@ -458,22 +458,6 @@ public class MetricsRegionServerSourceImpl
           .addCounter(Interns.info(BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT, ""),
               rsWrap.getDeleteFamilyBloomHitCount())
           .addCounter(Interns.info(BLOCK_CACHE_TRAILER_HIT_COUNT, ""), rsWrap.getTrailerHitCount())
-          .addGauge(Interns.info(L1_CACHE_HIT_COUNT, L1_CACHE_HIT_COUNT_DESC),
-                  rsWrap.getL1CacheHitCount())
-          .addGauge(Interns.info(L1_CACHE_MISS_COUNT, L1_CACHE_MISS_COUNT_DESC),
-                  rsWrap.getL1CacheMissCount())
-          .addGauge(Interns.info(L1_CACHE_HIT_RATIO, L1_CACHE_HIT_RATIO_DESC),
-                  rsWrap.getL1CacheHitRatio())
-          .addGauge(Interns.info(L1_CACHE_MISS_RATIO, L1_CACHE_MISS_RATIO_DESC),
-                  rsWrap.getL1CacheMissRatio())
-          .addGauge(Interns.info(L2_CACHE_HIT_COUNT, L2_CACHE_HIT_COUNT_DESC),
-                  rsWrap.getL2CacheHitCount())
-          .addGauge(Interns.info(L2_CACHE_MISS_COUNT, L2_CACHE_MISS_COUNT_DESC),
-                  rsWrap.getL2CacheMissCount())
-          .addGauge(Interns.info(L2_CACHE_HIT_RATIO, L2_CACHE_HIT_RATIO_DESC),
-                  rsWrap.getL2CacheHitRatio())
-          .addGauge(Interns.info(L2_CACHE_MISS_RATIO, L2_CACHE_MISS_RATIO_DESC),
-                  rsWrap.getL2CacheMissRatio())
           .addCounter(Interns.info(UPDATES_BLOCKED_TIME, UPDATES_BLOCKED_DESC),
               rsWrap.getUpdatesBlockedTime())
           .addCounter(Interns.info(FLUSHED_CELLS, FLUSHED_CELLS_DESC),

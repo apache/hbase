@@ -525,8 +525,6 @@ public class CacheConfig {
   // Clear this if in tests you'd make more than one block cache instance.
   @VisibleForTesting
   static BlockCache GLOBAL_BLOCK_CACHE_INSTANCE;
-  private static LruBlockCache GLOBAL_L1_CACHE_INSTANCE = null;
-  private static BlockCache GLOBAL_L2_CACHE_INSTANCE = null;
 
   /** Boolean whether we have disabled the block cache entirely. */
   @VisibleForTesting
@@ -537,7 +535,6 @@ public class CacheConfig {
    * @return An L1 instance.  Currently an instance of LruBlockCache.
    */
   private static LruBlockCache getL1(final Configuration c) {
-    if (GLOBAL_L1_CACHE_INSTANCE != null) return GLOBAL_L1_CACHE_INSTANCE;
     final long lruCacheSize = HeapMemorySizeUtil.getLruCacheSize(c);
     if (lruCacheSize < 0) {
       blockCacheDisabled = true;
@@ -546,8 +543,7 @@ public class CacheConfig {
     int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
     LOG.info("Allocating LruBlockCache size=" +
       StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
-    GLOBAL_L1_CACHE_INSTANCE = new LruBlockCache(lruCacheSize, blockSize, true, c);
-    return GLOBAL_L1_CACHE_INSTANCE;
+    return new LruBlockCache(lruCacheSize, blockSize, true, c);
   }
 
   /**
@@ -564,26 +560,10 @@ public class CacheConfig {
 
     // If we want to use an external block cache then create that.
     if (useExternal) {
-      GLOBAL_L2_CACHE_INSTANCE = getExternalBlockcache(c);
-    } else {
-      // otherwise use the bucket cache.
-      GLOBAL_L2_CACHE_INSTANCE = getBucketCache(c);
+      return getExternalBlockcache(c);
     }
-    return GLOBAL_L2_CACHE_INSTANCE;
-  }
-
-  public CacheStats getL1Stats() {
-    if (GLOBAL_L1_CACHE_INSTANCE != null) {
-      return GLOBAL_L1_CACHE_INSTANCE.getStats();
-    }
-    return null;
-  }
-
-  public CacheStats getL2Stats() {
-    if (GLOBAL_L2_CACHE_INSTANCE != null) {
-      return GLOBAL_L2_CACHE_INSTANCE.getStats();
-    }
-    return null;
+    // otherwise use the bucket cache.
+    return getBucketCache(c);
   }
 
   private static BlockCache getExternalBlockcache(Configuration c) {
