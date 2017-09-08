@@ -226,14 +226,14 @@ message ClusterStatus {
   optional bool balancer_on = 9;
 }
 
-message Options {
-  optional bool include_hbase_version = 1 [default = true];
-  optional bool include_live_servers = 2 [default = true];
-  optional bool include_dead_servers = 3 [default = true];
-  optional bool include_regions_state = 4 [default = true];
-  optional bool include_cluster_id = 5 [default = true];
-  optional bool include_master_coprocessors = 6 [default = true];
-  optional bool include_master = 7 [default = true];
-  optional bool include_backup_masters = 8 [default = true];
-  optional bool include_balancer_on = 9 [default = true];
+enum Option {
+  HBASE_VERSION = 0;
+  CLUSTER_ID = 1;
+  LIVE_SERVERS = 2;
+  DEAD_SERVERS = 3;
+  MASTER = 4;
+  BACKUP_MASTERS = 5;
+  MASTER_COPROCESSORS = 6;
+  REGIONS_IN_TRANSITION = 7;
+  BALANCER_ON = 8;
 }

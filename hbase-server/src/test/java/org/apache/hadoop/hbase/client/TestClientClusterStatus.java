@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.ClusterStatus.Options;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -73,7 +73,7 @@ public class TestClientClusterStatus {
   @Test
   public void testDefaults() throws Exception {
     ClusterStatus origin = ADMIN.getClusterStatus();
-    ClusterStatus defaults = ADMIN.getClusterStatus(Options.getDefaultOptions());
+    ClusterStatus defaults = ADMIN.getClusterStatus(EnumSet.allOf(Option.class));
     Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
     Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
     Assert.assertTrue(origin.getAverageLoad() == defaults.getAverageLoad());
@@ -84,18 +84,8 @@ public class TestClientClusterStatus {
   }
 
   @Test
-  public void testExclude() throws Exception {
-    ClusterStatus.Options options = Options.getDefaultOptions();
-    // Only retrieve master's coprocessors which are null in this test env.
-    options.excludeHBaseVersion()
-           .excludeBackupMasters()
-           .excludeBalancerOn()
-           .excludeClusterId()
-           .excludeLiveServers()
-           .excludeDeadServers()
-           .excludeMaster()
-           .excludeRegionState();
-    ClusterStatus status = ADMIN.getClusterStatus(options);
+  public void testNone() throws Exception {
+    ClusterStatus status = ADMIN.getClusterStatus(EnumSet.noneOf(Option.class));
     // Other cluster status info should be either null or empty.
     Assert.assertTrue(status.getMasterCoprocessors().length == 0);
     Assert.assertNull(status.getHBaseVersion());
@@ -106,6 +96,11 @@ public class TestClientClusterStatus {
     Assert.assertTrue(status.getDeadServerNames().isEmpty());
     Assert.assertNull(status.getMaster());
     Assert.assertTrue(status.getBackupMasters().isEmpty());
+    // No npe thrown is expected
+    Assert.assertNotNull(status.hashCode());
+    ClusterStatus nullEqualsCheck =
+        ADMIN.getClusterStatus(EnumSet.noneOf(Option.class));
+    Assert.assertNotNull(status.equals(nullEqualsCheck));
   }
 
   @Test
@@ -117,7 +112,7 @@ public class TestClientClusterStatus {
     CompletableFuture<ClusterStatus> originFuture =
         asyncAdmin.getClusterStatus();
     CompletableFuture<ClusterStatus> defaultsFuture =
-        asyncAdmin.getClusterStatus(Options.getDefaultOptions());
+        asyncAdmin.getClusterStatus(EnumSet.allOf(Option.class));
     ClusterStatus origin = originFuture.get();
     ClusterStatus defaults = defaultsFuture.get();
     Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
@@ -143,14 +138,7 @@ public class TestClientClusterStatus {
       }
     }
     // Retrieve live servers and dead servers info.
-    ClusterStatus.Options options = Options.getDefaultOptions();
-    options.excludeHBaseVersion()
-           .excludeBackupMasters()
-           .excludeBalancerOn()
-           .excludeClusterId()
-           .excludeMaster()
-           .excludeMasterCoprocessors()
-           .excludeRegionState();
+    EnumSet<Option> options = EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS);
     ClusterStatus status = ADMIN.getClusterStatus(options);
     Assert.assertNotNull(status);
     Assert.assertNotNull(status.getServers());
@@ -187,14 +175,7 @@ public class TestClientClusterStatus {
     Assert.assertEquals(1, numActive);
     Assert.assertEquals(MASTERS, masterThreads.size());
     // Retrieve master and backup masters infos only.
-    ClusterStatus.Options options = Options.getDefaultOptions();
-    options.excludeHBaseVersion()
-           .excludeBalancerOn()
-           .excludeClusterId()
-           .excludeLiveServers()
-           .excludeDeadServers()
-           .excludeMasterCoprocessors()
-           .excludeRegionState();
+    EnumSet<Option> options = EnumSet.of(Option.MASTER, Option.BACKUP_MASTERS);
     ClusterStatus status = ADMIN.getClusterStatus(options);
     Assert.assertTrue(status.getMaster().equals(activeName));
     Assert.assertEquals(MASTERS - 1, status.getBackupMastersSize());
@@ -202,12 +183,9 @@ public class TestClientClusterStatus {
 
   @Test
   public void testOtherStatusInfos() throws Exception {
-    ClusterStatus.Options options = Options.getDefaultOptions();
-    options.excludeMaster()
-           .excludeBackupMasters()
-           .excludeRegionState()
-           .excludeLiveServers()
-           .excludeBackupMasters();
+    EnumSet<Option> options =
+        EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
+                   Option.CLUSTER_ID, Option.BALANCER_ON);
     ClusterStatus status = ADMIN.getClusterStatus(options);
     Assert.assertTrue(status.getMasterCoprocessors().length == 0);
     Assert.assertNotNull(status.getHBaseVersion());

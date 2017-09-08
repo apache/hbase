@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -56,7 +57,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.ClusterStatus.Options;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -2457,43 +2458,51 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return cluster status
    */
   public ClusterStatus getClusterStatus() throws InterruptedIOException {
-    return getClusterStatus(Options.getDefaultOptions());
+    return getClusterStatus(EnumSet.allOf(Option.class));
   }
 
   /**
    * @return cluster status
    */
-  public ClusterStatus getClusterStatus(Options options) throws InterruptedIOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Retrieving cluster status info. " + options);
-    }
+  public ClusterStatus getClusterStatus(EnumSet<Option> options) throws InterruptedIOException {
     ClusterStatus.Builder builder = ClusterStatus.newBuilder();
-    if (options.includeHBaseVersion()) {
-      builder.setHBaseVersion(VersionInfo.getVersion());
-    }
-    if (options.includeClusterId()) {
-      builder.setClusterId(getClusterId());
-    }
-    if (options.includeLiveServers() && serverManager != null) {
-      builder.setLiveServers(serverManager.getOnlineServers());
-    }
-    if (options.includeDeadServers() && serverManager != null) {
-      builder.setDeadServers(serverManager.getDeadServers().copyServerNames());
-    }
-    if (options.includeMaster()) {
-      builder.setMaster(getServerName());
-    }
-    if (options.includeBackupMasters()) {
-      builder.setBackupMasters(getBackupMasters());
-    }
-    if (options.includeRegionState() && assignmentManager != null) {
-      builder.setRegionState(assignmentManager.getRegionStates().getRegionsStateInTransition());
-    }
-    if (options.includeMasterCoprocessors() && cpHost != null) {
-      builder.setMasterCoprocessors(getMasterCoprocessors());
-    }
-    if (options.includeBalancerOn() && loadBalancerTracker != null) {
-      builder.setBalancerOn(loadBalancerTracker.isBalancerOn());
+    for (Option opt : options) {
+      switch (opt) {
+        case HBASE_VERSION: builder.setHBaseVersion(VersionInfo.getVersion()); break;
+        case CLUSTER_ID: builder.setClusterId(getClusterId()); break;
+        case MASTER: builder.setMaster(getServerName()); break;
+        case BACKUP_MASTERS: builder.setBackupMasters(getBackupMasters()); break;
+        case LIVE_SERVERS: {
+          if (serverManager != null) {
+            builder.setLiveServers(serverManager.getOnlineServers());
+          }
+          break;
+        }
+        case DEAD_SERVERS: {
+          if (serverManager != null) {
+            builder.setDeadServers(serverManager.getDeadServers().copyServerNames());
+          }
+          break;
+        }
+        case MASTER_COPROCESSORS: {
+          if (cpHost != null) {
+            builder.setMasterCoprocessors(getMasterCoprocessors());
+          }
+          break;
+        }
+        case REGIONS_IN_TRANSITION: {
+          if (assignmentManager != null) {
+            builder.setRegionState(assignmentManager.getRegionStates().getRegionsStateInTransition());
+          }
+          break;
+        }
+        case BALANCER_ON: {
+          if (loadBalancerTracker != null) {
+            builder.setBalancerOn(loadBalancerTracker.isBalancerOn());
+          }
+          break;
+        }
+      }
     }
     return builder.build();
   }

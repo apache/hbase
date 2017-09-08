@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +32,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.ClusterStatus.Options;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -1231,17 +1232,27 @@ public interface Admin extends Abortable, Closeable {
   void stopRegionServer(final String hostnamePort) throws IOException;
 
   /**
+   * Get whole cluster status, containing status about:
+   * <pre>
+   * hbase version
+   * cluster id
+   * primary/backup master(s)
+   * master's coprocessors
+   * live/dead regionservers
+   * balancer
+   * regions in transition
+   * </pre>
    * @return cluster status
    * @throws IOException if a remote or network exception occurs
    */
   ClusterStatus getClusterStatus() throws IOException;
 
   /**
-   * Get cluster status with options to filter out unwanted status.
+   * Get cluster status with a set of {@link Option} to get desired status.
    * @return cluster status
    * @throws IOException if a remote or network exception occurs
    */
-  ClusterStatus getClusterStatus(Options options) throws IOException;
+  ClusterStatus getClusterStatus(EnumSet<Option> options) throws IOException;
 
   /**
    * Get {@link RegionLoad} of all regions hosted on a regionserver.
