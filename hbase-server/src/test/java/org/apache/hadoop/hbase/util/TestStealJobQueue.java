@@ -42,7 +42,7 @@ public class TestStealJobQueue {
 
   @Before
   public void setup() {
-    stealJobQueue = new StealJobQueue<>();
+    stealJobQueue = new StealJobQueue<>(Integer::compare);
     stealFromQueue = stealJobQueue.getStealFromQueue();
 
   }
@@ -170,7 +170,8 @@ public class TestStealJobQueue {
 
   @Test
   public void testInteractWithThreadPool() throws InterruptedException {
-    StealJobQueue<Runnable> stealTasksQueue = new StealJobQueue<>();
+    StealJobQueue<Runnable> stealTasksQueue =
+        new StealJobQueue<>((r1, r2) -> ((TestTask) r1).compareTo((TestTask) r2));
     final CountDownLatch stealJobCountDown = new CountDownLatch(3);
     final CountDownLatch stealFromCountDown = new CountDownLatch(3);
     ThreadPoolExecutor stealPool = new ThreadPoolExecutor(3, 3, 1, TimeUnit.DAYS, stealTasksQueue) {

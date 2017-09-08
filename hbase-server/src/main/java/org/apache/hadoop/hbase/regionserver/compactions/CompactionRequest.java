@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.LimitedPrivate({ "coprocessor" })
 @InterfaceStability.Evolving
-public class CompactionRequest implements Comparable<CompactionRequest> {
+public class CompactionRequest {
 
   // was this compaction promoted to an off-peak
   private boolean isOffPeak = false;
@@ -49,7 +49,7 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
   // CompactRequest object creation time.
   private long selectionTime;
   // System time used to compare objects in FIFO order. TODO: maybe use selectionTime?
-  private Long timeInNanos;
+  private long timeInNanos;
   private String regionName = "";
   private String storeName = "";
   private long totalSize = -1L;
@@ -71,6 +71,7 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
 
   public void updateFiles(Collection<StoreFile> files) {
     this.filesToCompact = files;
+    recalculateSize();
   }
 
   /**
@@ -102,43 +103,6 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
     this.totalSize = other.totalSize;
     recalculateSize();
     return this;
-  }
-
-  /**
-   * This function will define where in the priority queue the request will
-   * end up.  Those with the highest priorities will be first.  When the
-   * priorities are the same it will first compare priority then date
-   * to maintain a FIFO functionality.
-   *
-   * <p>Note: The enqueue timestamp is accurate to the nanosecond. if two
-   * requests have same timestamp then this function will break the tie
-   * arbitrarily with hashCode() comparing.
-   */
-  @Override
-  public int compareTo(CompactionRequest request) {
-    //NOTE: The head of the priority queue is the least element
-    if (this.equals(request)) {
-      return 0; //they are the same request
-    }
-    int compareVal;
-
-    compareVal = priority - request.priority; //compare priority
-    if (compareVal != 0) {
-      return compareVal;
-    }
-
-    compareVal = timeInNanos.compareTo(request.timeInNanos);
-    if (compareVal != 0) {
-      return compareVal;
-    }
-
-    // break the tie based on hash code
-    return this.hashCode() - request.hashCode();
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    return (this == obj);
   }
 
   public Collection<StoreFile> getFiles() {
@@ -187,6 +151,10 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
 
   public long getSelectionTime() {
     return this.selectionTime;
+  }
+
+  public long getSelectionNanoTime() {
+    return this.timeInNanos;
   }
 
   /**
