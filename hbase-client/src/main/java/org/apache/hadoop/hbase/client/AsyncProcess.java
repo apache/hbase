@@ -448,7 +448,7 @@ class AsyncProcess {
       LOG.info("#" + id + (max < 0 ? ", waiting for any free slot"
       : ", waiting for some tasks to finish. Expected max="
       + max) + ", tasksInProgress=" + currentInProgress +
-      " hasError=" + hasError() + tableName == null ? "" : ", tableName=" + tableName);
+      " hasError=" + hasError() + (tableName == null ? "" : ", tableName=" + tableName));
     };
   }
 
