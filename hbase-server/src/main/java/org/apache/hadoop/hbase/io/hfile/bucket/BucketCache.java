@@ -402,7 +402,7 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
       final boolean cacheDataInL1) {
-    cacheBlockWithWait(cacheKey, cachedItem, inMemory, wait_when_cache);
+    cacheBlockWithWait(cacheKey, cachedItem, inMemory, cacheDataInL1, wait_when_cache);
   }
 
   /**
@@ -413,13 +413,26 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param wait if true, blocking wait when queue is full
    */
   public void cacheBlockWithWait(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
-      boolean wait) {
+      boolean cacheDataInL1, boolean wait) {
     if (LOG.isTraceEnabled()) LOG.trace("Caching key=" + cacheKey + ", item=" + cachedItem);
     if (!cacheEnabled) {
       return;
     }
 
     if (backingMap.containsKey(cacheKey)) {
+      /*
+       * Compare already cached block only if lruBlockCache is not used to cache data blocks
+       */
+      if (!cacheDataInL1) {
+        Cacheable existingBlock = getBlock(cacheKey, false, false, false);
+        if (BlockCacheUtil.compareCacheBlock(cachedItem, existingBlock) != 0) {
+          throw new RuntimeException("Cached block contents differ, which should not have happened."
+                                    + "cacheKey:" + cacheKey);
+        }
+      }
+      String msg = "Caching an already cached block: " + cacheKey;
+      msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
+      LOG.warn(msg);
       return;
     }
 
