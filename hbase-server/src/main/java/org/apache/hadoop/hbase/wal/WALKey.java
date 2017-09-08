@@ -539,9 +539,9 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     this.encodedRegionName = encodedRegionName;
   }
 
-  public WALProtos.WALKey.Builder getBuilder(
+  public WALProtos.WALEdit.Builder getBuilder(
       WALCellCodec.ByteStringCompressor compressor) throws IOException {
-    WALProtos.WALKey.Builder builder = WALProtos.WALKey.newBuilder();
+    WALProtos.WALEdit.Builder builder = WALProtos.WALEdit.newBuilder();
     if (compressionContext == null) {
       builder.setEncodedRegionName(UnsafeByteOperations.unsafeWrap(this.encodedRegionName));
       builder.setTableName(UnsafeByteOperations.unsafeWrap(this.tablename.getName()));
@@ -580,42 +580,42 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     return builder;
   }
 
-  public void readFieldsFromPb(WALProtos.WALKey walKey,
+  public void readFieldsFromPb(WALProtos.WALEdit walEdit,
                                WALCellCodec.ByteStringUncompressor uncompressor)
       throws IOException {
     if (this.compressionContext != null) {
       this.encodedRegionName = uncompressor.uncompress(
-          walKey.getEncodedRegionName(), compressionContext.regionDict);
+          walEdit.getEncodedRegionName(), compressionContext.regionDict);
       byte[] tablenameBytes = uncompressor.uncompress(
-          walKey.getTableName(), compressionContext.tableDict);
+      walEdit.getTableName(), compressionContext.tableDict);
       this.tablename = TableName.valueOf(tablenameBytes);
     } else {
-      this.encodedRegionName = walKey.getEncodedRegionName().toByteArray();
-      this.tablename = TableName.valueOf(walKey.getTableName().toByteArray());
+      this.encodedRegionName = walEdit.getEncodedRegionName().toByteArray();
+      this.tablename = TableName.valueOf(walEdit.getTableName().toByteArray());
     }
     clusterIds.clear();
-    for (HBaseProtos.UUID clusterId : walKey.getClusterIdsList()) {
+    for (HBaseProtos.UUID clusterId : walEdit.getClusterIdsList()) {
       clusterIds.add(new UUID(clusterId.getMostSigBits(), clusterId.getLeastSigBits()));
     }
-    if (walKey.hasNonceGroup()) {
-      this.nonceGroup = walKey.getNonceGroup();
+    if (walEdit.hasNonceGroup()) {
+      this.nonceGroup = walEdit.getNonceGroup();
     }
-    if (walKey.hasNonce()) {
-      this.nonce = walKey.getNonce();
+    if (walEdit.hasNonce()) {
+      this.nonce = walEdit.getNonce();
     }
     this.replicationScope = null;
-    if (walKey.getScopesCount() > 0) {
+    if (walEdit.getScopesCount() > 0) {
       this.replicationScope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for (FamilyScope scope : walKey.getScopesList()) {
+      for (FamilyScope scope : walEdit.getScopesList()) {
         byte[] family = (compressionContext == null) ? scope.getFamily().toByteArray() :
           uncompressor.uncompress(scope.getFamily(), compressionContext.familyDict);
         this.replicationScope.put(family, scope.getScopeType().getNumber());
       }
     }
-    setSequenceId(walKey.getLogSequenceNumber());
-    this.writeTime = walKey.getWriteTime();
-    if(walKey.hasOrigSequenceNumber()) {
-      this.origLogSeqNum = walKey.getOrigSequenceNumber();
+    setSequenceId(walEdit.getLogSequenceNumber());
+    this.writeTime = walEdit.getWriteTime();
+    if(walEdit.hasOrigSequenceNumber()) {
+      this.origLogSeqNum = walEdit.getOrigSequenceNumber();
     }
   }
 
