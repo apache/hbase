@@ -373,7 +373,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     LruCachedBlock cb = map.get(cacheKey);
     if (cb != null) {
       // compare the contents, if they are not equal, we are in big trouble
-      if (compare(buf, cb.getBuffer()) != 0) {
+      if (BlockCacheUtil.compareCacheBlock(buf, cb.getBuffer()) != 0) {
         throw new RuntimeException("Cached block contents differ, which should not have happened."
           + "cacheKey:" + cacheKey);
       }
@@ -431,15 +431,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
           ", mapSize=" + mapSize);
       }
     }
-  }
-
-  private int compare(Cacheable left, Cacheable right) {
-    ByteBuffer l = ByteBuffer.allocate(left.getSerializedLength());
-    left.serialize(l);
-    ByteBuffer r = ByteBuffer.allocate(right.getSerializedLength());
-    right.serialize(r);
-    return Bytes.compareTo(l.array(), l.arrayOffset(), l.limit(),
-      r.array(), r.arrayOffset(), r.limit());
   }
 
   /**
@@ -577,7 +568,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
         boolean wait = getCurrentSize() < acceptableSize();
         boolean inMemory = block.getPriority() == BlockPriority.MEMORY;
         ((BucketCache)victimHandler).cacheBlockWithWait(block.getCacheKey(), block.getBuffer(),
-            inMemory, wait);
+            inMemory, true, wait);
       } else {
         victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
       }
