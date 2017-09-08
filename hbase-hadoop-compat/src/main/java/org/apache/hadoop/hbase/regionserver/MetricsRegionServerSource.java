@@ -345,23 +345,6 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT = "blockCacheDeleteFamilyBloomHitCount";
   String BLOCK_CACHE_TRAILER_HIT_COUNT = "blockCacheTrailerHitCount";
 
-  String L1_CACHE_HIT_COUNT = "l1CacheHitCount";
-  String L1_CACHE_HIT_COUNT_DESC = "L1 cache hit count.";
-  String L1_CACHE_MISS_COUNT = "l1CacheMissCount";
-  String L1_CACHE_MISS_COUNT_DESC = "L1 cache miss count.";
-  String L1_CACHE_HIT_RATIO = "l1CacheHitRatio";
-  String L1_CACHE_HIT_RATIO_DESC = "L1 cache hit ratio.";
-  String L1_CACHE_MISS_RATIO = "l1CacheMissRatio";
-  String L1_CACHE_MISS_RATIO_DESC = "L1 cache miss ratio.";
-  String L2_CACHE_HIT_COUNT = "l2CacheHitCount";
-  String L2_CACHE_HIT_COUNT_DESC = "L2 cache hit count.";
-  String L2_CACHE_MISS_COUNT = "l2CacheMissCount";
-  String L2_CACHE_MISS_COUNT_DESC = "L2 cache miss count.";
-  String L2_CACHE_HIT_RATIO = "l2CacheHitRatio";
-  String L2_CACHE_HIT_RATIO_DESC = "L2 cache hit ratio.";
-  String L2_CACHE_MISS_RATIO = "l2CacheMissRatio";
-  String L2_CACHE_MISS_RATIO_DESC = "L2 cache miss ratio.";
-
   String RS_START_TIME_NAME = "regionServerStartTime";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";
