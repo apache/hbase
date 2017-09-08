@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -26,6 +27,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -169,6 +171,15 @@ public class BlockCacheUtil {
       if (cbsbf.update(cb)) break;
     }
     return cbsbf;
+  }
+
+  public static int compareCacheBlock(Cacheable left, Cacheable right) {
+    ByteBuffer l = ByteBuffer.allocate(left.getSerializedLength());
+    left.serialize(l);
+    ByteBuffer r = ByteBuffer.allocate(right.getSerializedLength());
+    right.serialize(r);
+    return Bytes.compareTo(l.array(), l.arrayOffset(), l.limit(),
+             r.array(), r.arrayOffset(), r.limit());
   }
 
   /**
