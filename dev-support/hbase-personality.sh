@@ -167,6 +167,50 @@ function personality_modules
 
 ###################################################
 
+add_test_type shadedjars
+
+
+function shadedjars_initialize
+{
+  yetus_debug "initializing shaded client checks."
+  maven_add_install shadedjars
+  add_test shadedjars
+}
+
+function shadedjars_clean
+{
+  "${MAVEN}" "${MAVEN_ARGS[@]}" clean -fae -pl hbase_shaded/hbase-shaded-check-invariants -am -Prelease
+}
+
+## @description test the shaded client artifacts
+## @audience private
+## @stability evolving
+## @param repostatus
+function shadedjars_rebuild
+{
+  local repostatus=$1
+  local logfile="${PATCH_DIR}/${repostatus}-shadedjars.txt"
+
+  big_console_header "Checking shaded client builds on ${repostatus}"
+
+  echo_and_redirect "${logfile}" \
+    "${MAVEN}" "${MAVEN_ARGS[@]}" clean verify -fae --batch-mode \
+      -pl hbase-shaded/hbase-shaded-check-invariants -am \
+      -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
+      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+
+  count=$(${GREP} -c '\[ERROR\]' "${logfile}")
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 shadedjars "${repostatus} has ${count} errors when building our shaded downstream artifacts."
+    return 1
+  fi
+
+  add_vote_table +1 shadedjars "${repostatus} has no errors when building our shaded downstream artifacts."
+  return 0
+}
+
+###################################################
+
 add_test_type hadoopcheck
 
 ## @description  hadoopcheck file filter
