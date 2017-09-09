@@ -124,7 +124,7 @@ public class HStore implements Store {
   // keep in accordance with HDFS default storage policy
   public static final String DEFAULT_BLOCK_STORAGE_POLICY = "HOT";
   public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
-  public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 7;
+  public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 10;
 
   private static final Log LOG = LogFactory.getLog(HStore.class);
 

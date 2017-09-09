@@ -112,7 +112,7 @@ public abstract class RpcExecutor {
     this.conf = conf;
     this.abortable = abortable;
 
-    float callQueuesHandlersFactor = this.conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0);
+    float callQueuesHandlersFactor = this.conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0.1f);
     this.numCallQueues = computeNumCallQueues(handlerCount, callQueuesHandlersFactor);
     this.queues = new ArrayList<>(this.numCallQueues);
 
