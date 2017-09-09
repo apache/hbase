@@ -463,7 +463,7 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.client.write.buffer</name>
     <value>2097152</value>
-    <description>Default size of the HTable client write buffer in bytes.
+    <description>Default size of the BufferedMutator write buffer in bytes.
     A bigger buffer takes more memory -- on both the client and server
     side since server instantiates the passed write buffer to process
     it -- but a larger buffer size reduces the number of RPCs made.

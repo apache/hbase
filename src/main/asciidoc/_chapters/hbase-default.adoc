@@ -620,7 +620,7 @@ Property from ZooKeeper's config zoo.cfg.
 *`hbase.client.write.buffer`*::
 +
 .Description
-Default size of the HTable client write buffer in bytes.
+Default size of the BufferedMutator write buffer in bytes.
     A bigger buffer takes more memory -- on both the client and server
     side since server instantiates the passed write buffer to process
     it -- but a larger buffer size reduces the number of RPCs made.
