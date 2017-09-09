@@ -148,17 +148,21 @@ public interface Table extends Closeable {
   Result get(Get get) throws IOException;
 
   /**
-   * Extracts certain cells from the given rows, in batch.
+   * Extracts specified cells from the given rows, as a batch.
    *
    * @param gets The objects that specify what data to fetch and from which rows.
    * @return The data coming from the specified rows, if it exists.  If the row specified doesn't
    * exist, the {@link Result} instance returned won't contain any {@link
-   * org.apache.hadoop.hbase.KeyValue}, as indicated by {@link Result#isEmpty()}. If there are any
-   * failures even after retries, there will be a null in the results array for those Gets, AND an
-   * exception will be thrown. The ordering of the Result array corresponds to the order of the
-   * list of Get requests.
+   * org.apache.hadoop.hbase.Cell}s, as indicated by {@link Result#isEmpty()}. If there are any
+   * failures even after retries, there will be a <code>null</code> in the results' array for those
+   * Gets, AND an exception will be thrown. The ordering of the Result array corresponds to the order
+   * of the list of passed in Gets.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.90.0
+   * @apiNote {@link #put(List)} runs pre-flight validations on the input list on client.
+   * Currently {@link #get(List)} doesn't run any validations on the client-side, currently there
+   * is no need, but this may change in the future. An
+   * {@link IllegalArgumentException} will be thrown in this case.
    */
   Result[] get(List<Get> gets) throws IOException;
 
@@ -207,9 +211,17 @@ public interface Table extends Closeable {
   void put(Put put) throws IOException;
 
   /**
-   * Puts some data in the table, in batch.
+   * Batch puts the specified data into the table.
    * <p>
-   * This can be used for group commit, or for submitting user defined batches.
+   * This can be used for group commit, or for submitting user defined batches. Before sending
+   * a batch of mutations to the server, the client runs a few validations on the input list. If an
+   * error is found, for example, a mutation was supplied but was missing it's column an
+   * {@link IllegalArgumentException} will be thrown and no mutations will be applied. If there
+   * are any failures even after retries, a {@link RetriesExhaustedWithDetailsException} will be
+   * thrown. RetriesExhaustedWithDetailsException contains lists of failed mutations and
+   * corresponding remote exceptions. The ordering of mutations and exceptions in the
+   * encapsulating exception corresponds to the order of the input list of Put requests.
+   *
    * @param puts The list of mutations to apply.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
@@ -289,15 +301,27 @@ public interface Table extends Closeable {
   void delete(Delete delete) throws IOException;
 
   /**
-   * Deletes the specified cells/rows in bulk.
-   * @param deletes List of things to delete.  List gets modified by this
-   * method (in particular it gets re-ordered, so the order in which the elements
-   * are inserted in the list gives no guarantee as to the order in which the
-   * {@link Delete}s are executed).
+   * Batch Deletes the specified cells/rows from the table.
+   * <p>
+   * If a specified row does not exist, {@link Delete} will report as though sucessful
+   * delete; no exception will be thrown. If there are any failures even after retries,
+   * a * {@link RetriesExhaustedWithDetailsException} will be thrown.
+   * RetriesExhaustedWithDetailsException contains lists of failed {@link Delete}s and
+   * corresponding remote exceptions.
+   *
+   * @param deletes List of things to delete. The input list gets modified by this
+   * method. All successfully applied {@link Delete}s in the list are removed (in particular it
+   * gets re-ordered, so the order in which the elements are inserted in the list gives no
+   * guarantee as to the order in which the {@link Delete}s are executed).
    * @throws IOException if a remote or network exception occurs. In that case
    * the {@code deletes} argument will contain the {@link Delete} instances
    * that have not be successfully applied.
    * @since 0.20.1
+   * @apiNote In 3.0.0 version, the input list {@code deletes} will no longer be modified. Also,
+   * {@link #put(List)} runs pre-flight validations on the input list on client. Currently
+   * {@link #delete(List)} doesn't run validations on the client, there is no need currently,
+   * but this may change in the future. An * {@link IllegalArgumentException} will be thrown
+   * in this case.
    */
   void delete(List<Delete> deletes) throws IOException;
 
