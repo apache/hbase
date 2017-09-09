@@ -444,11 +444,55 @@ See Jonathan Hsieh's link:https://blog.cloudera.com/blog/2012/06/online-hbase-ba
 === Export
 
 Export is a utility that will dump the contents of table to HDFS in a sequence file.
-Invoke via:
+The Export can be run via a Coprocessor Endpoint or MapReduce. Invoke via:
 
+*mapreduce-based Export*
 ----
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.Export <tablename> <outputdir> [<versions> [<starttime> [<endtime>]]]
 ----
+
+*endpoint-based Export*
+----
+$ bin/hbase org.apache.hadoop.hbase.coprocessor.Export <tablename> <outputdir> [<versions> [<starttime> [<endtime>]]]
+----
+
+*The Comparison of Endpoint-based Export And Mapreduce-based Export*
+|===
+||Endpoint-based Export|Mapreduce-based Export
+
+|HBase version requirement
+|2.0+
+|0.2.1+
+
+|Maven dependency
+|hbase-endpoint
+|hbase-mapreduce (2.0+), hbase-server(prior to 2.0)
+
+|Requirement before dump
+|mount the endpoint.Export on the target table
+|deploy the MapReduce framework
+
+|Read latency
+|low, directly read the data from region
+|normal, traditional RPC scan
+
+|Read Scalability
+|depend on number of regions
+|depend on number of mappers (see TableInputFormatBase#getSplits)
+
+|Timeout
+|operation timeout. configured by hbase.client.operation.timeout
+|scan timeout. configured by hbase.client.scanner.timeout.period
+
+|Permission requirement
+|READ, EXECUTE
+|READ
+
+|Fault tolerance
+|no
+|depend on MapReduce
+|===
+
 
 NOTE: To see usage instructions, run the command with no options. Available options include
 specifying column families and applying filters during the export.
