@@ -98,6 +98,18 @@
               </exclusion>
               <!-- Jetty not used by our MR support -->
               <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-http</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-security</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
               </exclusion>
@@ -120,6 +132,10 @@
               <exclusion>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-webapp</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.glassfish.web</groupId>
+                <artifactId>javax.servlet.jsp</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>org.glassfish.jersey.containers</groupId>
