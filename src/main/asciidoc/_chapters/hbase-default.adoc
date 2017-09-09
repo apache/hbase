@@ -461,12 +461,11 @@ The host name or IP address of the name server (DNS)
 
       A split policy determines when a region should be split. The various other split policies that
       are available currently are ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy,
-      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy,
-      BusyRegionSplitPolicy, SteppingSplitPolicy etc.
+      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.
 
 +
 .Default
-`org.apache.hadoop.hbase.regionserver.SteppingSplitPolicy`
+`org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy`
 
 
 [[zookeeper.session.timeout]]
@@ -2112,7 +2111,7 @@ Fully qualified name of class implementing coordinated state manager.
 
 +
 .Default
-`16`
+`10`
 
 
 [[hbase.replication.rpc.codec]]

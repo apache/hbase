@@ -323,7 +323,7 @@ possible configurations would overwhelm and obscure the important.
     <description>
       A split policy determines when a region should be split. The various other split policies that
       are available currently are BusyRegionSplitPolicy, ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy,
-      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy, and SteppingSplitPolicy.
+      DelimitedKeyPrefixRegionSplitPolicy, and KeyPrefixRegionSplitPolicy.
       DisabledRegionSplitPolicy blocks manual region splitting.
     </description>
   </property>

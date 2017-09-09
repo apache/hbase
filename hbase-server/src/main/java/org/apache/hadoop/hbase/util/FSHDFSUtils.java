@@ -201,11 +201,11 @@ public class FSHDFSUtils extends FSUtils {
     // This setting should be a little bit above what the cluster dfs heartbeat is set to.
     long firstPause = conf.getInt("hbase.lease.recovery.first.pause", 4000);
     // This should be set to how long it'll take for us to timeout against primary datanode if it
-    // is dead.  We set it to 64 seconds, 4 second than the default READ_TIMEOUT in HDFS, the
+    // is dead.  We set it to 61 seconds, 1 second than the default READ_TIMEOUT in HDFS, the
     // default value for DFS_CLIENT_SOCKET_TIMEOUT_KEY. If recovery is still failing after this
     // timeout, then further recovery will take liner backoff with this base, to avoid endless
     // preemptions when this value is not properly configured.
-    long subsequentPauseBase = conf.getLong("hbase.lease.recovery.dfs.timeout", 64 * 1000);
+    long subsequentPauseBase = conf.getLong("hbase.lease.recovery.dfs.timeout", 61 * 1000);
 
     Method isFileClosedMeth = null;
     // whether we need to look for isFileClosed method

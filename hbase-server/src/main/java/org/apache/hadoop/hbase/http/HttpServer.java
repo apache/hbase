@@ -513,10 +513,10 @@ public class HttpServer implements FilterContainer {
     final String appDir = getWebAppsPath(b.name);
 
 
-    int maxThreads = b.conf.getInt(HTTP_MAX_THREADS, 16);
-    // If HTTP_MAX_THREADS is less than or equal to 0, QueueThreadPool() will use the
-    // default value (currently 200).
-    QueuedThreadPool threadPool = maxThreads <= 0 ? new QueuedThreadPool()
+    int maxThreads = b.conf.getInt(HTTP_MAX_THREADS, -1);
+    // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
+    // default value (currently 250).
+    QueuedThreadPool threadPool = maxThreads == -1 ? new QueuedThreadPool()
         : new QueuedThreadPool(maxThreads);
     threadPool.setDaemon(true);
     this.webServer = new Server(threadPool);

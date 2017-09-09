@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
-import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
@@ -336,7 +335,7 @@ public class RESTServer implements Constants {
 
     // Load filters from configuration.
     String[] filterClasses = servlet.getConfiguration().getStrings(FILTER_CLASSES,
-        GzipFilter.class.getName());
+      ArrayUtils.EMPTY_STRING_ARRAY);
     for (String filter : filterClasses) {
       filter = filter.trim();
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
