@@ -217,7 +217,7 @@ Please use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/C
 
 In HBase 1.0 and later, link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] is deprecated in favor of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table]. `Table` does not use autoflush. To do buffered writes, use the BufferedMutator class.
 
-Before a `Table` or `HTable` instance is discarded, invoke either `close()` or `flushCommits()`, so `Put`s will not be lost.
+In HBase 2.0 and later, link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] does not use BufferedMutator to execute the ``Put`` operation. Refer to link:https://issues.apache.org/jira/browse/HBASE-18500[HBASE-18500] for more information.
 
 For additional information on write durability, review the link:/acid-semantics.html[ACID semantics] page.
 
