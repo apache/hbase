@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 /**
  * A split policy determines when a region should be split.
- * @see SteppingSplitPolicy Default split policy since 2.0.0
  * @see IncreasingToUpperBoundRegionSplitPolicy Default split policy since
  *      0.94.0
  * @see ConstantSizeRegionSplitPolicy Default split policy before 0.94.0
@@ -41,7 +40,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class RegionSplitPolicy extends Configured {
   private static final Class<? extends RegionSplitPolicy>
-    DEFAULT_SPLIT_POLICY_CLASS = SteppingSplitPolicy.class;
+    DEFAULT_SPLIT_POLICY_CLASS = IncreasingToUpperBoundRegionSplitPolicy.class;
 
   /**
    * The region configured for this split policy.

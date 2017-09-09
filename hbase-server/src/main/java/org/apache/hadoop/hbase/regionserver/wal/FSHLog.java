@@ -216,7 +216,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       FSUtils.getDefaultReplication(fs, this.walDir));
     this.lowReplicationRollLimit = conf.getInt("hbase.regionserver.hlog.lowreplication.rolllimit",
       5);
-    this.closeErrorsTolerated = conf.getInt("hbase.regionserver.logroll.errors.tolerated", 2);
+    this.closeErrorsTolerated = conf.getInt("hbase.regionserver.logroll.errors.tolerated", 0);
 
     // rollWriter sets this.hdfs_out if it can.
     rollWriter();

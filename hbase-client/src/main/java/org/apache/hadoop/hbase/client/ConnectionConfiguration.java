@@ -31,7 +31,7 @@ public class ConnectionConfiguration {
   public static final String WRITE_BUFFER_SIZE_KEY = "hbase.client.write.buffer";
   public static final long WRITE_BUFFER_SIZE_DEFAULT = 2097152;
   public static final String MAX_KEYVALUE_SIZE_KEY = "hbase.client.keyvalue.maxsize";
-  public static final int MAX_KEYVALUE_SIZE_DEFAULT = 10485760;
+  public static final int MAX_KEYVALUE_SIZE_DEFAULT = -1;
 
   private final long writeBufferSize;
   private final int metaOperationTimeout;
