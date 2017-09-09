@@ -552,6 +552,7 @@ public class HTable implements Table {
     } catch (InterruptedException e) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     } finally {
+      // TODO: to be consistent with batch put(), do not modify input list
       // mutate list so that it is empty for complete success, or contains only failed records
       // results are returned in the same order as the requests in list walk the list backwards,
       // so we can remove from list without impacting the indexes of earlier members

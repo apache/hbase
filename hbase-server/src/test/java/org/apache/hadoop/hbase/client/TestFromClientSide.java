@@ -76,8 +76,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
@@ -116,9 +114,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -139,6 +135,7 @@ public class TestFromClientSide {
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
+  private static final byte[] INVALID_FAMILY = Bytes.toBytes("invalidTestFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
   protected static int SLAVES = 3;
@@ -171,22 +168,6 @@ public class TestFromClientSide {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
-    // Nothing to do.
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {
-    // Nothing to do.
   }
 
   /**
@@ -2375,6 +2356,115 @@ public class TestFromClientSide {
       result = ht.get(get);
       assertTrue(result.isEmpty());
     }
+  }
+
+  /**
+   * Test batch operations with combination of valid and invalid args
+   */
+  @Test
+  public void testBatchOperationsWithErrors() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table foo = TEST_UTIL.createTable(tableName, new byte[][] {FAMILY}, 10);
+
+    int NUM_OPS = 100;
+    int FAILED_OPS = 50;
+
+    RetriesExhaustedWithDetailsException expectedException = null;
+    IllegalArgumentException iae = null;
+
+    // 1.1 Put with no column families (local validation, runtime exception)
+    List<Put> puts = new ArrayList<Put>(NUM_OPS);
+    for (int i = 0; i != NUM_OPS; i++) {
+      Put put = new Put(Bytes.toBytes(i));
+      puts.add(put);
+    }
+
+    try {
+      foo.put(puts);
+    } catch (IllegalArgumentException e) {
+      iae = e;
+    }
+    assertNotNull(iae);
+    assertEquals(NUM_OPS, puts.size());
+
+    // 1.2 Put with invalid column family
+    iae = null;
+    puts.clear();
+    for (int i = 0; i != NUM_OPS; i++) {
+      Put put = new Put(Bytes.toBytes(i));
+      put.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY, Bytes.toBytes(i));
+      puts.add(put);
+    }
+
+    try {
+      foo.put(puts);
+    } catch (RetriesExhaustedWithDetailsException e) {
+      expectedException = e;
+    }
+    assertNotNull(expectedException);
+    assertEquals(FAILED_OPS, expectedException.exceptions.size());
+    assertTrue(expectedException.actions.contains(puts.get(1)));
+
+    // 2.1 Get non-existent rows
+    List<Get> gets = new ArrayList<>(NUM_OPS);
+    for (int i = 0; i < NUM_OPS; i++) {
+      Get get = new Get(Bytes.toBytes(i));
+      // get.addColumn(FAMILY, FAMILY);
+      gets.add(get);
+    }
+    Result[] getsResult = foo.get(gets);
+
+    assertNotNull(getsResult);
+    assertEquals(NUM_OPS, getsResult.length);
+    assertNull(getsResult[1].getRow());
+
+    // 2.2 Get with invalid column family
+    gets.clear();
+    getsResult = null;
+    expectedException = null;
+    for (int i = 0; i < NUM_OPS; i++) {
+      Get get = new Get(Bytes.toBytes(i));
+      get.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY);
+      gets.add(get);
+    }
+    try {
+      getsResult = foo.get(gets);
+    } catch (RetriesExhaustedWithDetailsException e) {
+      expectedException = e;
+    }
+    assertNull(getsResult);
+    assertNotNull(expectedException);
+    assertEquals(FAILED_OPS, expectedException.exceptions.size());
+    assertTrue(expectedException.actions.contains(gets.get(1)));
+
+    // 3.1 Delete with invalid column family
+    expectedException = null;
+    List<Delete> deletes = new ArrayList<>(NUM_OPS);
+    for (int i = 0; i < NUM_OPS; i++) {
+      Delete delete = new Delete(Bytes.toBytes(i));
+      delete.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY);
+      deletes.add(delete);
+    }
+    try {
+      foo.delete(deletes);
+    } catch (RetriesExhaustedWithDetailsException e) {
+      expectedException = e;
+    }
+    assertEquals((NUM_OPS - FAILED_OPS), deletes.size());
+    assertNotNull(expectedException);
+    assertEquals(FAILED_OPS, expectedException.exceptions.size());
+    assertTrue(expectedException.actions.contains(deletes.get(1)));
+
+
+    // 3.2 Delete non-existent rows
+    deletes.clear();
+    for (int i = 0; i < NUM_OPS; i++) {
+      Delete delete = new Delete(Bytes.toBytes(i));
+      deletes.add(delete);
+    }
+    foo.delete(deletes);
+
+    assertTrue(deletes.isEmpty());
   }
 
   /*
@@ -5421,7 +5511,7 @@ public class TestFromClientSide {
     List<HRegionLocation> regionsInRange = new ArrayList<>();
     byte[] currentKey = startKey;
     final boolean endKeyIsEndOfTable = Bytes.equals(endKey, HConstants.EMPTY_END_ROW);
-    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName);) {
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       do {
         HRegionLocation regionLocation = r.getRegionLocation(currentKey);
         regionsInRange.add(regionLocation);
