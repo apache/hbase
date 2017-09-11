@@ -323,7 +323,7 @@ possible configurations would overwhelm and obscure the important.
     <description>
       A split policy determines when a region should be split. The various other split policies that
       are available currently are BusyRegionSplitPolicy, ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy,
-      DelimitedKeyPrefixRegionSplitPolicy, and KeyPrefixRegionSplitPolicy.
+      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy, and SteppingSplitPolicy.
       DisabledRegionSplitPolicy blocks manual region splitting.
     </description>
   </property>
@@ -490,7 +490,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.client.max.perserver.tasks</name>
-    <value>5</value>
+    <value>2</value>
     <description>The maximum number of concurrent mutation tasks a single HTable instance will
     send to a single region server.</description>
   </property>
@@ -581,7 +581,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.normalizer.period</name>
-    <value>1800000</value>
+    <value>300000</value>
     <description>Period at which the region normalizer runs in the Master.</description>
   </property>
   <property>

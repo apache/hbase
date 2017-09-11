@@ -244,7 +244,7 @@ public final class HConstants {
   public static final String ZK_SESSION_TIMEOUT = "zookeeper.session.timeout";
 
   /** Default value for ZooKeeper session timeout */
-  public static final int DEFAULT_ZK_SESSION_TIMEOUT = 180 * 1000;
+  public static final int DEFAULT_ZK_SESSION_TIMEOUT = 90 * 1000;
 
   /** Parameter name for port region server listens on. */
   public static final String REGIONSERVER_PORT = "hbase.regionserver.port";
@@ -798,7 +798,7 @@ public final class HConstants {
   /**
    * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.
    */
-  public static final int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 31;
+  public static final int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 35;
 
   /**
    * Parameter name to set the default scanner caching for all clients.
@@ -1356,7 +1356,7 @@ public final class HConstants {
 
   public static final String SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT =
       "hbase.snapshot.restore.take.failsafe.snapshot";
-  public static final boolean DEFAULT_SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT = false;
+  public static final boolean DEFAULT_SNAPSHOT_RESTORE_TAKE_FAILSAFE_SNAPSHOT = true;
 
   public static final String SNAPSHOT_RESTORE_FAILSAFE_NAME =
       "hbase.snapshot.restore.failsafe.name";

@@ -461,11 +461,12 @@ The host name or IP address of the name server (DNS)
 
       A split policy determines when a region should be split. The various other split policies that
       are available currently are ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy,
-      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.
+      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy,
+      BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 +
 .Default
-`org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy`
+`org.apache.hadoop.hbase.regionserver.SteppingSplitPolicy`
 
 
 [[zookeeper.session.timeout]]
@@ -694,7 +695,7 @@ The maximum number of concurrent tasks a single HTable instance will
     send to a single region server.
 +
 .Default
-`5`
+`2`
 
 
 [[hbase.client.max.perregion.tasks]]
@@ -2111,7 +2112,7 @@ Fully qualified name of class implementing coordinated state manager.
 
 +
 .Default
-`10`
+`16`
 
 
 [[hbase.replication.rpc.codec]]
