@@ -1461,6 +1461,11 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
     requirePermission(getActiveUser(ctx), "split", tableName, null, null, Action.ADMIN);
   }
 
+  @Override
+  public void preClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+    requirePermission(getActiveUser(ctx), "clearDeadServers", Action.ADMIN);
+  }
+
   /* ---- RegionObserver implementation ---- */
 
   @Override

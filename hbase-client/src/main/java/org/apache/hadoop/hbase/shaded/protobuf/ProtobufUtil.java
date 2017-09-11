@@ -410,6 +410,17 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Convert a list of protocol buffer ServerName to a list of ServerName
+   * @param proto protocol buffer ServerNameList
+   * @return a list of ServerName
+   */
+  public static List<ServerName> toServerNameList(
+          List<HBaseProtos.ServerName> proto) {
+    return proto.stream().map(ProtobufUtil::toServerName)
+            .collect(Collectors.toList());
+  }
+
+  /**
    * Get a list of NamespaceDescriptor from ListNamespaceDescriptorsResponse protobuf
    * @param proto the ListNamespaceDescriptorsResponse
    * @return a list of NamespaceDescriptor

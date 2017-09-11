@@ -113,6 +113,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
@@ -169,6 +171,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
@@ -2898,6 +2902,28 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
     });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>> listDeadServers() {
+    return this.<List<ServerName>> newMasterCaller()
+      .action((controller, stub) -> this
+        .<ListDeadServersRequest, ListDeadServersResponse, List<ServerName>> call(
+          controller, stub, ListDeadServersRequest.newBuilder().build(),
+          (s, c, req, done) -> s.listDeadServers(c, req, done),
+          (resp) -> ProtobufUtil.toServerNameList(resp.getServerNameList())))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>> clearDeadServers(List<ServerName> servers) {
+    return this.<List<ServerName>> newMasterCaller()
+      .action((controller, stub) -> this
+        .<ClearDeadServersRequest, ClearDeadServersResponse, List<ServerName>> call(
+          controller, stub, RequestConverter.buildClearDeadServersRequest(servers),
+          (s, c, req, done) -> s.clearDeadServers(c, req, done),
+          (resp) -> ProtobufUtil.toServerNameList(resp.getServerNameList())))
+      .call();
   }
 
   private <T> ServerRequestCallerBuilder<T> newServerCaller() {

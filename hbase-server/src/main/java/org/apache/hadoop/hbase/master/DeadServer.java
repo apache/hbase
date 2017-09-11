@@ -202,4 +202,17 @@ public class DeadServer {
       return o1.getSecond().compareTo(o2.getSecond());
     }
   };
+
+  /**
+   * remove the specified dead server
+   * @param deadServerName the dead server name
+   * @return true if this server was removed
+   */
+
+  public synchronized boolean removeDeadServer(final ServerName deadServerName) {
+    if (deadServers.remove(deadServerName) == null) {
+      return false;
+    }
+    return true;
+  }
 }

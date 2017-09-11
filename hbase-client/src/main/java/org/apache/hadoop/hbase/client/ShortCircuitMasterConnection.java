@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
@@ -90,6 +92,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
@@ -623,6 +627,18 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public GetQuotaStatesResponse getQuotaStates(RpcController controller,
       GetQuotaStatesRequest request) throws ServiceException {
     return stub.getQuotaStates(controller, request);
+  }
+
+  @Override
+  public ClearDeadServersResponse clearDeadServers(RpcController controller,
+      ClearDeadServersRequest request) throws ServiceException {
+    return stub.clearDeadServers(controller, request);
+  }
+
+  @Override
+  public ListDeadServersResponse listDeadServers(RpcController controller,
+      ListDeadServersRequest request) throws ServiceException {
+    return stub.listDeadServers(controller, request);
   }
 
   @Override

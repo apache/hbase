@@ -358,6 +358,8 @@ Shell.load_command_group(
     splitormerge_switch
     splitormerge_enabled
     clear_compaction_queues
+    list_deadservers
+    clear_deadservers
   ],
   # TODO: remove older hlog_roll command
   aliases: {

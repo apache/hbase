@@ -639,4 +639,14 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
       CoprocessorCallable<S, R> callable, ServerName serverName) {
     return wrap(rawAdmin.coprocessorService(stubMaker, callable, serverName));
   }
+
+  @Override
+  public CompletableFuture<List<ServerName>> listDeadServers() {
+    return wrap(rawAdmin.listDeadServers());
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>> clearDeadServers(List<ServerName> servers) {
+    return wrap(rawAdmin.clearDeadServers(servers));
+  }
 }

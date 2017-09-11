@@ -1249,5 +1249,27 @@ module Hbase
       end
       @admin.clearCompactionQueues(ServerName.valueOf(server_name), queues)
     end
+
+    #----------------------------------------------------------------------------------------------
+    # clear dead region servers
+    def list_deadservers
+      @admin.listDeadServers.to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # clear dead region servers
+    def clear_deadservers(dead_servers)
+      # Flatten params array
+      dead_servers = dead_servers.flatten.compact
+      if dead_servers.empty?
+        servers = list_deadservers
+      else
+        servers = java.util.ArrayList.new
+        dead_servers.each do |s|
+          servers.add(ServerName.valueOf(s))
+        end
+      end
+      @admin.clearDeadServers(servers).to_a
+    end
   end
 end
