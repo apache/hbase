@@ -1484,6 +1484,7 @@
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
     <rsgroup.test.jar>hbase-rsgroup-${project.version}-tests.jar</rsgroup.test.jar>
+    <mapreduce.test.jar>hbase-mapreduce-${project.version}-tests.jar</mapreduce.test.jar>
     <shell-executable>bash</shell-executable>
     <surefire.version>2.19.1</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
