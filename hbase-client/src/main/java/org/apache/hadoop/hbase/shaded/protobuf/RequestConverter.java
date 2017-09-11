@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
@@ -1808,6 +1809,14 @@ public final class RequestConverter {
     ClearCompactionQueuesRequest.Builder builder = ClearCompactionQueuesRequest.newBuilder();
     for(String name: queues) {
       builder.addQueueName(name);
+    }
+    return builder.build();
+  }
+
+  public static ClearDeadServersRequest buildClearDeadServersRequest(List<ServerName> deadServers) {
+    ClearDeadServersRequest.Builder builder = ClearDeadServersRequest.newBuilder();
+    for(ServerName server: deadServers) {
+      builder.addServerName(ProtobufUtil.toServerName(server));
     }
     return builder.build();
   }

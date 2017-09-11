@@ -1116,4 +1116,17 @@ public interface AsyncAdmin {
    */
   <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
     CoprocessorCallable<S, R> callable, ServerName serverName);
+
+  /**
+   * List all the dead region servers.
+   * @return - returns a list of dead region servers wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<ServerName>> listDeadServers();
+
+  /**
+   * Clear dead region servers from master.
+   * @param servers list of dead region servers.
+   * @return - returns a list of servers that not cleared wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<ServerName>> clearDeadServers(final List<ServerName> servers);
 }

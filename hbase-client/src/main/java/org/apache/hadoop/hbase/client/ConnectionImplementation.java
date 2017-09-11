@@ -1775,6 +1775,18 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           RpcController controller, GetQuotaStatesRequest request) throws ServiceException {
         return stub.getQuotaStates(controller, request);
       }
+
+      @Override
+      public MasterProtos.ListDeadServersResponse listDeadServers(RpcController controller,
+          MasterProtos.ListDeadServersRequest request) throws ServiceException {
+        return stub.listDeadServers(controller, request);
+      }
+
+      @Override
+      public MasterProtos.ClearDeadServersResponse clearDeadServers(RpcController controller,
+          MasterProtos.ClearDeadServersRequest request) throws ServiceException {
+        return stub.clearDeadServers(controller, request);
+      }
     };
   }
 

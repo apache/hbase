@@ -151,5 +151,23 @@ public class TestDeadServer {
     Assert.assertTrue(d.isEmpty());
   }
 
+  @Test
+  public void testClearDeadServer(){
+    DeadServer d = new DeadServer();
+    d.add(hostname123);
+    d.add(hostname1234);
+    Assert.assertEquals(2, d.size());
+
+    d.removeDeadServer(hostname123);
+    Assert.assertEquals(1, d.size());
+    d.removeDeadServer(hostname1234);
+    Assert.assertTrue(d.isEmpty());
+
+    d.add(hostname1234);
+    Assert.assertFalse(d.removeDeadServer(hostname123_2));
+    Assert.assertEquals(1, d.size());
+    Assert.assertTrue(d.removeDeadServer(hostname1234));
+    Assert.assertTrue(d.isEmpty());
+  }
 }
 

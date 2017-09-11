@@ -1917,4 +1917,28 @@ public interface MasterObserver extends Coprocessor {
    */
   default void postLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
       LockProcedure proc, boolean keepAlive) throws IOException {}
+
+  /**
+   * Called before list dead region servers.
+   */
+  default void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * Called after list dead region servers.
+   */
+  default void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * Called before clear dead region servers.
+   */
+  default void preClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * Called after clear dead region servers.
+   */
+  default void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
 }

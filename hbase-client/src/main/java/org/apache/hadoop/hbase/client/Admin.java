@@ -2265,4 +2265,18 @@ public interface Admin extends Abortable, Closeable {
    */
   void clearCompactionQueues(final ServerName sn, final Set<String> queues)
     throws IOException, InterruptedException;
+
+  /**
+   * List dead region servers.
+   * @return List of dead region servers.
+   */
+  List<ServerName> listDeadServers() throws IOException;
+
+  /**
+   * Clear dead region servers from master.
+   * @param servers list of dead region servers.
+   * @throws IOException if a remote or network exception occurs
+   * @return List of servers that are not cleared
+   */
+  List<ServerName> clearDeadServers(final List<ServerName> servers) throws IOException;
 }
