@@ -77,6 +77,7 @@ Arrays.sort(serverNames);
 <tr>
     <th>ServerName</th>
     <th>Start time</th>
+    <th>Last contact</th>
     <th>Version</th>
     <th>Requests Per Second</th>
     <th>Num. Regions</th>
@@ -96,6 +97,7 @@ Arrays.sort(serverNames);
     
     double requestsPerSecond = 0.0;
     int numRegionsOnline = 0;
+    long lastContact = 0;
 
     if (sl != null) {
         requestsPerSecond = sl.getRequestsPerSecond();
@@ -103,12 +105,14 @@ Arrays.sort(serverNames);
         totalRegions += sl.getNumberOfRegions();
         // Is this correct?  Adding a rate to a measure.
         totalRequests += sl.getNumberOfRequests();
+        lastContact = (System.currentTimeMillis() - sl.getReportTime())/1000;
     }
     long startcode = serverName.getStartcode();
 </%java>
 <tr>
     <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
     <td><% new Date(startcode) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(lastContact, "s", 1) %></td>
     <td><% version %></td>
     <td><% String.format("%.0f", requestsPerSecond) %></td>
     <td><% numRegionsOnline %></td>
@@ -117,6 +121,7 @@ Arrays.sort(serverNames);
 }
 </%java>
 <tr><td>Total:<% servers.size() %></td>
+<td></td>
 <td></td>
 <%if inconsistentNodeNum > 0%>
   <td style="color:red;"><% inconsistentNodeNum %> nodes with inconsistent version</td>
