@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -1366,7 +1366,7 @@ public interface RegionObserver extends Coprocessor {
       HRegionInfo info, Path edits) throws IOException {}
 
   /**
-   * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
+   * Called before a {@link WALEdit}
    * replayed for this region.
    * @param ctx the environment provided by the region server
    */
@@ -1374,7 +1374,7 @@ public interface RegionObserver extends Coprocessor {
       HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
-   * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
+   * Called after a {@link WALEdit}
    * replayed for this region.
    * @param ctx the environment provided by the region server
    */

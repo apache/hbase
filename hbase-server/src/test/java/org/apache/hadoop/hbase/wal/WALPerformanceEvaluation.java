@@ -74,7 +74,6 @@ import com.codahale.metrics.MetricFilter;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
