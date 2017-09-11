@@ -91,7 +91,7 @@ The catalog table `hbase:meta` exists as an HBase table and is filtered out of t
 [[arch.catalog.meta]]
 === hbase:meta
 
-The `hbase:meta` table (previously called `.META.`) keeps a list of all regions in the system and is stored in ZooKeeper.
+The `hbase:meta` table (previously called `.META.`) keeps a list of all regions in the system, and the location of `hbase:meta` is stored in ZooKeeper.
 
 The `hbase:meta` table structure is as follows:
 
