@@ -18,11 +18,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.security.User;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -33,15 +38,23 @@ import org.mockito.stubbing.Answer;
  */
 public class StatefulStoreMockMaker {
   // Add and expand the methods and answers as needed.
-  public CompactionContext selectCompaction() { return null; }
-  public void cancelCompaction(Object originalContext) {}
-  public int getPriority() { return 0; }
+  public Optional<CompactionContext> selectCompaction() {
+    return Optional.empty();
+  }
 
-  private class SelectAnswer implements Answer<CompactionContext> {
-    public CompactionContext answer(InvocationOnMock invocation) throws Throwable {
+  public void cancelCompaction(Object originalContext) {
+  }
+
+  public int getPriority() {
+    return 0;
+  }
+
+  private class SelectAnswer implements Answer<Optional<CompactionContext>> {
+    public Optional<CompactionContext> answer(InvocationOnMock invocation) throws Throwable {
       return selectCompaction();
     }
   }
+
   private class PriorityAnswer implements Answer<Integer> {
     public Integer answer(InvocationOnMock invocation) throws Throwable {
       return getPriority();
@@ -53,15 +66,13 @@ public class StatefulStoreMockMaker {
     }
   }
 
-  public Store createStoreMock(String name) throws Exception {
-    Store store = mock(Store.class, name);
-    when(store.requestCompaction(
-        anyInt(), isNull(CompactionRequest.class))).then(new SelectAnswer());
-    when(store.requestCompaction(
-      anyInt(), isNull(CompactionRequest.class), any(User.class))).then(new SelectAnswer());
+  public HStore createStoreMock(String name) throws Exception {
+    HStore store = mock(HStore.class, name);
+    when(store.requestCompaction(anyInt(), any(CompactionLifeCycleTracker.class), any(User.class)))
+        .then(new SelectAnswer());
     when(store.getCompactPriority()).then(new PriorityAnswer());
-    doAnswer(new CancelAnswer()).when(
-        store).cancelRequestedCompaction(any(CompactionContext.class));
+    doAnswer(new CancelAnswer()).when(store)
+        .cancelRequestedCompaction(any(CompactionContext.class));
     return store;
   }
 }

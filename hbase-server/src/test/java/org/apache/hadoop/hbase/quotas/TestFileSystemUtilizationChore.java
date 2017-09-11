@@ -36,9 +36,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -324,7 +324,7 @@ public class TestFileSystemUtilizationChore {
     final HRegionInfo info = mock(HRegionInfo.class);
     when(r.getRegionInfo()).thenReturn(info);
     List<Store> stores = new ArrayList<>();
-    when(r.getStores()).thenReturn(stores);
+    when(r.getStores()).thenReturn((List) stores);
     for (Long storeSize : storeSizes) {
       final Store s = mock(Store.class);
       stores.add(s);
@@ -338,7 +338,7 @@ public class TestFileSystemUtilizationChore {
     final HRegionInfo info = mock(HRegionInfo.class);
     when(r.getRegionInfo()).thenReturn(info);
     List<Store> stores = new ArrayList<>();
-    when(r.getStores()).thenReturn(stores);
+    when(r.getStores()).thenReturn((List) stores);
     assertEquals(
         "Logic error, storeSizes and linkSizes must be equal in size", storeSizes.size(),
         hfileSizes.size());

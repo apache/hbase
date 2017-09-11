@@ -18,25 +18,21 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 /**
  * This class holds all logical details necessary to run a compaction.
  */
-@InterfaceAudience.LimitedPrivate({ "coprocessor" })
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class CompactionRequest {
 
   // was this compaction promoted to an off-peak
@@ -53,56 +49,18 @@ public class CompactionRequest {
   private String regionName = "";
   private String storeName = "";
   private long totalSize = -1L;
-
-  /**
-   * This ctor should be used by coprocessors that want to subclass CompactionRequest.
-   */
-  public CompactionRequest() {
-    this.selectionTime = EnvironmentEdgeManager.currentTime();
-    this.timeInNanos = System.nanoTime();
-  }
+  private CompactionLifeCycleTracker tracker = CompactionLifeCycleTracker.DUMMY;
 
   public CompactionRequest(Collection<StoreFile> files) {
-    this();
-    Preconditions.checkNotNull(files);
-    this.filesToCompact = files;
+    this.selectionTime = EnvironmentEdgeManager.currentTime();
+    this.timeInNanos = System.nanoTime();
+    this.filesToCompact = Preconditions.checkNotNull(files, "files for compaction can not null");
     recalculateSize();
   }
 
   public void updateFiles(Collection<StoreFile> files) {
-    this.filesToCompact = files;
+    this.filesToCompact = Preconditions.checkNotNull(files, "files for compaction can not null");
     recalculateSize();
-  }
-
-  /**
-   * Called before compaction is executed by CompactSplitThread; for use by coproc subclasses.
-   */
-  public void beforeExecute() {}
-
-  /**
-   * Called after compaction is executed by CompactSplitThread; for use by coproc subclasses.
-   */
-  public void afterExecute() {}
-
-  /**
-   * Combines the request with other request. Coprocessors subclassing CR may override
-   * this if they want to do clever things based on CompactionPolicy selection that
-   * is passed to this method via "other". The default implementation just does a copy.
-   * @param other Request to combine with.
-   * @return The result (may be "this" or "other").
-   */
-  public CompactionRequest combineWith(CompactionRequest other) {
-    this.filesToCompact = new ArrayList<>(other.getFiles());
-    this.isOffPeak = other.isOffPeak;
-    this.isMajor = other.isMajor;
-    this.priority = other.priority;
-    this.selectionTime = other.selectionTime;
-    this.timeInNanos = other.timeInNanos;
-    this.regionName = other.regionName;
-    this.storeName = other.storeName;
-    this.totalSize = other.totalSize;
-    recalculateSize();
-    return this;
   }
 
   public Collection<StoreFile> getFiles() {
@@ -168,6 +126,14 @@ public class CompactionRequest {
         : (isMajor ? DisplayCompactionType.MAJOR : DisplayCompactionType.ALL_FILES);
   }
 
+  public void setTracker(CompactionLifeCycleTracker tracker) {
+    this.tracker = tracker;
+  }
+
+  public CompactionLifeCycleTracker getTracker() {
+    return tracker;
+  }
+
   @Override
   public String toString() {
     String fsList = filesToCompact.stream().filter(f -> f.getReader() != null)
@@ -186,12 +152,7 @@ public class CompactionRequest {
    * @param files files that should be included in the compaction
    */
   private void recalculateSize() {
-    long sz = 0;
-    for (StoreFile sf : this.filesToCompact) {
-      StoreFileReader r = sf.getReader();
-      sz += r == null ? 0 : r.length();
-    }
-    this.totalSize = sz;
+    this.totalSize = filesToCompact.stream().map(StoreFile::getReader)
+        .mapToLong(r -> r != null ? r.length() : 0L).sum();
   }
 }
-

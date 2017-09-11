@@ -64,11 +64,6 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   List<WAL> getWALs() throws IOException;
 
   /**
-   * @return Implementation of {@link CompactionRequestor} or null.
-   */
-  CompactionRequestor getCompactionRequester();
-
-  /**
    * @return Implementation of {@link FlushRequester} or null.
    */
   FlushRequester getFlushRequester();
