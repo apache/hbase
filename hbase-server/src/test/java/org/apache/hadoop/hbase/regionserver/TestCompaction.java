@@ -33,8 +33,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
@@ -65,7 +66,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -298,15 +298,16 @@ public class TestCompaction {
     Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
 
     // setup a region/store with some files
-    Store store = r.getStore(COLUMN_FAMILY);
+    HStore store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
     for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
       createStoreFile(r);
     }
 
     CountDownLatch latch = new CountDownLatch(1);
-    TrackableCompactionRequest request = new TrackableCompactionRequest(latch);
-    thread.requestCompaction(r, store, "test custom comapction", Store.PRIORITY_USER, request,null);
+    Tracker tracker = new Tracker(latch);
+    thread.requestCompaction(r, store, "test custom comapction", Store.PRIORITY_USER, tracker,
+      null);
     // wait for the latch to complete.
     latch.await();
 
@@ -322,7 +323,7 @@ public class TestCompaction {
     Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
 
     // setup a region/store with some files
-    Store store = r.getStore(COLUMN_FAMILY);
+    HStore store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
     for (int i = 0; i < HStore.DEFAULT_BLOCKING_STOREFILE_COUNT - 1; i++) {
       createStoreFile(r);
@@ -337,9 +338,9 @@ public class TestCompaction {
     long preFailedCount = metricsWrapper.getNumCompactionsFailed();
 
     CountDownLatch latch = new CountDownLatch(1);
-    TrackableCompactionRequest request = new TrackableCompactionRequest(latch);
+    Tracker tracker = new Tracker(latch);
     thread.requestCompaction(mockRegion, store, "test custom comapction", Store.PRIORITY_USER,
-        request, null);
+      tracker, null);
     // wait for the latch to complete.
     latch.await(120, TimeUnit.SECONDS);
 
@@ -370,20 +371,17 @@ public class TestCompaction {
 
     // setup a region/store with some files
     int numStores = r.getStores().size();
-    List<Pair<CompactionRequest, Store>> requests = new ArrayList<>(numStores);
     CountDownLatch latch = new CountDownLatch(numStores);
+    Tracker tracker = new Tracker(latch);
     // create some store files and setup requests for each store on which we want to do a
     // compaction
-    for (Store store : r.getStores()) {
+    for (HStore store : r.getStores()) {
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());
-      requests.add(new Pair<>(new TrackableCompactionRequest(latch), store));
+      thread.requestCompaction(r, store, "test mulitple custom comapctions", Store.PRIORITY_USER,
+        tracker, null);
     }
-
-    thread.requestCompaction(r, "test mulitple custom comapctions", Store.PRIORITY_USER,
-      Collections.unmodifiableList(requests), null);
-
     // wait for the latch to complete.
     latch.await();
 
@@ -428,7 +426,7 @@ public class TestCompaction {
     }
 
     @Override
-    public synchronized CompactionContext selectCompaction() {
+    public synchronized Optional<CompactionContext> selectCompaction() {
       CompactionContext ctx = new TestCompactionContext(new ArrayList<>(notCompacting));
       compacting.addAll(notCompacting);
       notCompacting.clear();
@@ -437,7 +435,7 @@ public class TestCompaction {
       } catch (IOException ex) {
         fail("Shouldn't happen");
       }
-      return ctx;
+      return Optional.of(ctx);
     }
 
     @Override
@@ -499,14 +497,14 @@ public class TestCompaction {
     }
 
     @Override
-    public CompactionContext selectCompaction() {
+    public Optional<CompactionContext> selectCompaction() {
       this.blocked = new BlockingCompactionContext();
       try {
         this.blocked.select(null, false, false, false);
       } catch (IOException ex) {
         fail("Shouldn't happen");
       }
-      return this.blocked;
+      return Optional.of(blocked);
     }
 
     @Override
@@ -527,13 +525,13 @@ public class TestCompaction {
     }
 
     @Override
-    public Store createStoreMock(String name) throws Exception {
+    public HStore createStoreMock(String name) throws Exception {
       return createStoreMock(Integer.MIN_VALUE, name);
     }
 
-    public Store createStoreMock(int priority, String name) throws Exception {
+    public HStore createStoreMock(int priority, String name) throws Exception {
       // Override the mock to always return the specified priority.
-      Store s = super.createStoreMock(name);
+      HStore s = super.createStoreMock(name);
       when(s.getCompactPriority()).thenReturn(priority);
       return s;
     }
@@ -555,7 +553,7 @@ public class TestCompaction {
     // Set up the region mock that redirects compactions.
     HRegion r = mock(HRegion.class);
     when(
-      r.compact(any(CompactionContext.class), any(Store.class),
+      r.compact(any(CompactionContext.class), any(HStore.class),
         any(ThroughputController.class), any(User.class))).then(new Answer<Boolean>() {
       @Override
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
@@ -568,7 +566,7 @@ public class TestCompaction {
     // Set up store mocks for 2 "real" stores and the one we use for blocking CST.
     ArrayList<Integer> results = new ArrayList<>();
     StoreMockMaker sm = new StoreMockMaker(results), sm2 = new StoreMockMaker(results);
-    Store store = sm.createStoreMock("store1"), store2 = sm2.createStoreMock("store2");
+    HStore store = sm.createStoreMock("store1"), store2 = sm2.createStoreMock("store2");
     BlockingStoreMockMaker blocker = new BlockingStoreMockMaker();
 
     // First, block the compaction thread so that we could muck with queue.
@@ -691,24 +689,20 @@ public class TestCompaction {
   }
 
   /**
-   * Simple {@link CompactionRequest} on which you can wait until the requested compaction finishes.
+   * Simple {@link CompactionLifeCycleTracker} on which you can wait until the requested compaction
+   * finishes.
    */
-  public static class TrackableCompactionRequest extends CompactionRequest {
-    private CountDownLatch done;
+  public static class Tracker implements CompactionLifeCycleTracker {
 
-    /**
-     * Constructor for a custom compaction. Uses the setXXX methods to update the state of the
-     * compaction before being used.
-     */
-    public TrackableCompactionRequest(CountDownLatch finished) {
-      super();
-      this.done = finished;
+    private final CountDownLatch done;
+
+    public Tracker(CountDownLatch done) {
+      this.done = done;
     }
 
     @Override
-    public void afterExecute() {
-      super.afterExecute();
-      this.done.countDown();
+    public void afterExecute(Store store) {
+      done.countDown();
     }
   }
 }

@@ -117,7 +117,7 @@ public class TestSplitWalDataLoss {
       }
     }).when(spiedRegion).internalFlushCacheAndCommit(Matchers.<WAL> any(),
       Matchers.<MonitoredTask> any(), Matchers.<PrepareFlushResult> any(),
-      Matchers.<Collection<Store>> any());
+      Matchers.<Collection<HStore>> any());
     // Find region key; don't pick up key for hbase:meta by mistake.
     String key = null;
     for (Map.Entry<String, Region> entry: rs.onlineRegions.entrySet()) {

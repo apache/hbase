@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class FlushAllStoresPolicy extends FlushPolicy {
 
   @Override
-  public Collection<Store> selectStoresToFlush() {
+  public Collection<HStore> selectStoresToFlush() {
     return region.stores.values();
   }
 

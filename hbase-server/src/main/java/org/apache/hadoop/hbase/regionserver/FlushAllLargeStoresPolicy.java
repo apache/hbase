@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * enough, then all stores will be flushed.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy{
+public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy {
 
   private static final Log LOG = LogFactory.getLog(FlushAllLargeStoresPolicy.class);
 
@@ -48,20 +48,22 @@ public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy{
   }
 
   @Override
-  public Collection<Store> selectStoresToFlush() {
+  public Collection<HStore> selectStoresToFlush() {
     // no need to select stores if only one family
     if (region.getTableDescriptor().getColumnFamilyCount() == 1) {
       return region.stores.values();
     }
     // start selection
-    Collection<Store> stores = region.stores.values();
-    Set<Store> specificStoresToFlush = new HashSet<>();
-    for (Store store : stores) {
+    Collection<HStore> stores = region.stores.values();
+    Set<HStore> specificStoresToFlush = new HashSet<>();
+    for (HStore store : stores) {
       if (shouldFlush(store)) {
         specificStoresToFlush.add(store);
       }
     }
-    if (!specificStoresToFlush.isEmpty()) return specificStoresToFlush;
+    if (!specificStoresToFlush.isEmpty()) {
+      return specificStoresToFlush;
+    }
 
     // Didn't find any CFs which were above the threshold for selection.
     if (LOG.isDebugEnabled()) {
@@ -71,8 +73,8 @@ public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy{
   }
 
   @Override
-  protected boolean shouldFlush(Store store) {
-    return (super.shouldFlush(store) || region.shouldFlushStore(store));
+  protected boolean shouldFlush(HStore store) {
+    return super.shouldFlush(store) || region.shouldFlushStore(store);
   }
 
 }

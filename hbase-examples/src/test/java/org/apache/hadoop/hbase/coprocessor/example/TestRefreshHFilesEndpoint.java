@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -144,15 +145,17 @@ public class TestRefreshHFilesEndpoint {
     }
 
     @Override
-    public List<Store> getStores() {
-      List<Store> list = new ArrayList<Store>(stores.size());
+    public List<HStore> getStores() {
+      List<HStore> list = new ArrayList<>(stores.size());
       /**
        * This is used to trigger the custom definition (faulty)
        * of refresh HFiles API.
        */
       try {
-        if (this.store == null)
-          store = new HStoreWithFaultyRefreshHFilesAPI(this, new HColumnDescriptor(FAMILY), this.conf);
+        if (this.store == null) {
+          store = new HStoreWithFaultyRefreshHFilesAPI(this,
+              ColumnFamilyDescriptorBuilder.of(FAMILY), this.conf);
+        }
         list.add(store);
       } catch (IOException ioe) {
         LOG.info("Couldn't instantiate custom store implementation", ioe);

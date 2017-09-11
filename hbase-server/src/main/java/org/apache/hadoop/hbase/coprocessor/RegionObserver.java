@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.util.Pair;
@@ -186,10 +186,10 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param store the store where compaction is being requested
    * @param candidates the store files currently available for compaction
-   * @param request custom compaction request
+   * @param tracker tracker used to track the life cycle of a compaction
    */
   default void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      List<StoreFile> candidates, CompactionRequest request) throws IOException {}
+      List<StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {}
 
   /**
    * Called after the {@link StoreFile}s to compact have been selected from the available
@@ -197,10 +197,10 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param store the store being compacted
    * @param selected the store files selected to compact
-   * @param request custom compaction request
+   * @param tracker tracker used to track the life cycle of a compaction
    */
   default void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      ImmutableList<StoreFile> selected, CompactionRequest request) {}
+      ImmutableList<StoreFile> selected, CompactionLifeCycleTracker tracker) {}
 
   /**
    * Called prior to writing the {@link StoreFile}s selected for compaction into a new
@@ -220,13 +220,13 @@ public interface RegionObserver extends Coprocessor {
    * @param store the store being compacted
    * @param scanner the scanner over existing data used in the store file rewriting
    * @param scanType type of Scan
-   * @param request the requested compaction
+   * @param tracker tracker used to track the life cycle of a compaction
    * @return the scanner to use during compaction. Should not be {@code null} unless the
    *         implementation is writing new store files on its own.
    */
-  default InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, InternalScanner scanner, ScanType scanType,
-      CompactionRequest request) throws IOException {
+  default InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker)
+      throws IOException {
     return scanner;
   }
 
@@ -245,14 +245,14 @@ public interface RegionObserver extends Coprocessor {
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved store
    *          files
    * @param s the base scanner, if not {@code null}, from previous RegionObserver in the chain
-   * @param request compaction request
+   * @param tracker used to track the life cycle of a compaction
    * @param readPoint the readpoint to create scanner
    * @return the scanner to use during compaction. {@code null} if the default implementation is to
    *          be used.
    */
   default InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
-      InternalScanner s, CompactionRequest request, long readPoint) throws IOException {
+      InternalScanner s, CompactionLifeCycleTracker tracker, long readPoint) throws IOException {
     return s;
   }
 
@@ -261,10 +261,10 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param store the store being compacted
    * @param resultFile the new store file written out during compaction
-   * @param request the requested compaction
+   * @param tracker used to track the life cycle of a compaction
    */
   default void postCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      StoreFile resultFile, CompactionRequest request) throws IOException {}
+      StoreFile resultFile, CompactionLifeCycleTracker tracker) throws IOException {}
 
   /**
    * Called before the region is reported as closed to the master.
@@ -798,12 +798,12 @@ public interface RegionObserver extends Coprocessor {
    * Called before a store opens a new scanner.
    * This hook is called when a "user" scanner is opened.
    * <p>
-   * See {@link #preFlushScannerOpen(ObserverContext, Store, List, InternalScanner, long)} and {@link #preCompactScannerOpen(ObserverContext,
-   *  Store, List, ScanType, long, InternalScanner, CompactionRequest, long)}
-   * to override scanners created for flushes or compactions, resp.
+   * See {@link #preFlushScannerOpen(ObserverContext, Store, List, InternalScanner, long)}
+   * and {@link #preCompactScannerOpen(ObserverContext, Store, List, ScanType, long,
+   * InternalScanner, CompactionLifeCycleTracker, long)} to override scanners created for flushes
+   * or compactions, resp.
    * <p>
-   * Call CoprocessorEnvironment#complete to skip any subsequent chained
-   * coprocessors.
+   * Call CoprocessorEnvironment#complete to skip any subsequent chained coprocessors.
    * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
    * effect in this hook.
    * <p>

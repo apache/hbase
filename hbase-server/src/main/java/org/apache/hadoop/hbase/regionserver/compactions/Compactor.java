@@ -338,14 +338,14 @@ public abstract class Compactor<T extends CellSink> {
    * @param readPoint the read point to help create scanner by Coprocessor if required.
    * @return Scanner override by coprocessor; null if not overriding.
    */
-  protected InternalScanner preCreateCoprocScanner(final CompactionRequest request,
-      final ScanType scanType, final long earliestPutTs, final List<StoreFileScanner> scanners,
-      User user, final long readPoint) throws IOException {
+  protected InternalScanner preCreateCoprocScanner(CompactionRequest request, ScanType scanType,
+      long earliestPutTs, List<StoreFileScanner> scanners, User user, long readPoint)
+      throws IOException {
     if (store.getCoprocessorHost() == null) {
       return null;
     }
     return store.getCoprocessorHost().preCompactScannerOpen(store, scanners, scanType,
-        earliestPutTs, request, user, readPoint);
+      earliestPutTs, request.getTracker(), user, readPoint);
   }
 
   /**
@@ -355,12 +355,13 @@ public abstract class Compactor<T extends CellSink> {
    * @param scanner The default scanner created for compaction.
    * @return Scanner scanner to use (usually the default); null if compaction should not proceed.
    */
-  protected InternalScanner postCreateCoprocScanner(final CompactionRequest request,
-      final ScanType scanType, final InternalScanner scanner, User user) throws IOException {
+  protected InternalScanner postCreateCoprocScanner(CompactionRequest request, ScanType scanType,
+      InternalScanner scanner, User user) throws IOException {
     if (store.getCoprocessorHost() == null) {
       return scanner;
     }
-    return store.getCoprocessorHost().preCompact(store, scanner, scanType, request, user);
+    return store.getCoprocessorHost().preCompact(store, scanner, scanType, request.getTracker(),
+      user);
   }
 
   /**

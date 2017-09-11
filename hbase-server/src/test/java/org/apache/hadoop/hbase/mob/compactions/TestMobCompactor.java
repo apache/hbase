@@ -86,7 +86,7 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -716,14 +716,14 @@ public class TestMobCompactor {
   }
 
   /**
-   * This copro overwrites the default compaction policy. It always chooses two latest
-   * hfiles and compacts them into a new one.
+   * This copro overwrites the default compaction policy. It always chooses two latest hfiles and
+   * compacts them into a new one.
    */
   public static class CompactTwoLatestHfilesCopro implements RegionObserver {
+
     @Override
-    public void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final List<StoreFile> candidates, final CompactionRequest request)
-      throws IOException {
+    public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+        List<StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {
 
       int count = candidates.size();
       if (count >= 2) {

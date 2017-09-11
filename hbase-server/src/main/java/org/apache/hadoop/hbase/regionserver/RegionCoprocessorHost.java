@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
 import org.apache.hadoop.hbase.security.User;
@@ -499,18 +500,18 @@ public class RegionCoprocessorHost
   /**
    * See
    * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long,
-   *   InternalScanner, CompactionRequest, long)}
+   *   InternalScanner, CompactionLifeCycleTracker, long)}
    */
-  public InternalScanner preCompactScannerOpen(final Store store,
-      final List<StoreFileScanner> scanners, final ScanType scanType, final long earliestPutTs,
-      final CompactionRequest request, final User user, final long readPoint) throws IOException {
+  public InternalScanner preCompactScannerOpen(Store store, List<StoreFileScanner> scanners,
+      ScanType scanType, long earliestPutTs, CompactionLifeCycleTracker tracker, User user,
+      long readPoint) throws IOException {
     return execOperationWithResult(null,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>(user) {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
         setResult(oserver.preCompactScannerOpen(ctx, store, scanners, scanType,
-          earliestPutTs, getResult(), request, readPoint));
+          earliestPutTs, getResult(), tracker, readPoint));
       }
     });
   }
@@ -520,17 +521,17 @@ public class RegionCoprocessorHost
    * available candidates.
    * @param store The store where compaction is being requested
    * @param candidates The currently available store files
-   * @param request custom compaction request
+   * @param tracker used to track the life cycle of a compaction
    * @return If {@code true}, skip the normal selection process and use the current list
    * @throws IOException
    */
-  public boolean preCompactSelection(final Store store, final List<StoreFile> candidates,
-      final CompactionRequest request, final User user) throws IOException {
+  public boolean preCompactSelection(Store store, List<StoreFile> candidates,
+      CompactionLifeCycleTracker tracker, User user) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.preCompactSelection(ctx, store, candidates, request);
+        oserver.preCompactSelection(ctx, store, candidates, tracker);
       }
     });
   }
@@ -540,21 +541,17 @@ public class RegionCoprocessorHost
    * candidates.
    * @param store The store where compaction is being requested
    * @param selected The store files selected to compact
-   * @param request custom compaction
+   * @param tracker used to track the life cycle of a compaction
    */
-  public void postCompactSelection(final Store store, final ImmutableList<StoreFile> selected,
-      final CompactionRequest request, final User user) {
-    try {
-      execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
-        @Override
-        public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-            throws IOException {
-          oserver.postCompactSelection(ctx, store, selected, request);
-        }
-      });
-    } catch (IOException e) {
-      LOG.warn(e);
-    }
+  public void postCompactSelection(Store store, ImmutableList<StoreFile> selected,
+      CompactionLifeCycleTracker tracker, User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+      @Override
+      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postCompactSelection(ctx, store, selected, tracker);
+      }
+    });
   }
 
   /**
@@ -562,18 +559,17 @@ public class RegionCoprocessorHost
    * @param store the store being compacted
    * @param scanner the scanner used to read store data during compaction
    * @param scanType type of Scan
-   * @param request the compaction that will be executed
+   * @param tracker used to track the life cycle of a compaction
    * @throws IOException
    */
-  public InternalScanner preCompact(final Store store, final InternalScanner scanner,
-      final ScanType scanType, final CompactionRequest request, final User user)
-      throws IOException {
+  public InternalScanner preCompact(Store store, InternalScanner scanner, ScanType scanType,
+      CompactionLifeCycleTracker tracker, User user) throws IOException {
     return execOperationWithResult(false, scanner,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>(user) {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        setResult(oserver.preCompact(ctx, store, getResult(), scanType, request));
+        setResult(oserver.preCompact(ctx, store, getResult(), scanType, tracker));
       }
     });
   }
@@ -582,16 +578,16 @@ public class RegionCoprocessorHost
    * Called after the store compaction has completed.
    * @param store the store being compacted
    * @param resultFile the new store file written during compaction
-   * @param request the compaction that is being executed
+   * @param tracker used to track the life cycle of a compaction
    * @throws IOException
    */
-  public void postCompact(final Store store, final StoreFile resultFile,
-      final CompactionRequest request, final User user) throws IOException {
+  public void postCompact(Store store, StoreFile resultFile, CompactionLifeCycleTracker tracker,
+      User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.postCompact(ctx, store, resultFile, request);
+        oserver.postCompact(ctx, store, resultFile, tracker);
       }
     });
   }

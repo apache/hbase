@@ -784,7 +784,7 @@ public class TestBlockEvictionFromClient {
   }
 
   private BlockCache setCacheProperties(Region region) {
-    Iterator<Store> strItr = region.getStores().iterator();
+    Iterator<? extends Store> strItr = region.getStores().iterator();
     BlockCache cache = null;
     while (strItr.hasNext()) {
       Store store = strItr.next();
