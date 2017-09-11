@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 
 // imports for things that haven't moved yet
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 /**
  * This is a utility class, used by tests, which fails operation specified by FailureType enum

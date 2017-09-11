@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
