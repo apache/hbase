@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.Objects;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Factory for creating {@link SpaceQuotaSnapshotNotifier} implementations. Implementations

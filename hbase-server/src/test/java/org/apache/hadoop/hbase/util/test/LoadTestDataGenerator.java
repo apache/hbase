@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;

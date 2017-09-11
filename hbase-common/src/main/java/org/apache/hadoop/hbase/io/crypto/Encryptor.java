@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.crypto;
 import java.io.OutputStream;
 import java.security.Key;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Encryptors apply a cipher to an OutputStream to produce ciphertext.

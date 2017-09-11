@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.io;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An optional interface to 'size' writables.

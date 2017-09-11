@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * BackupRestoreConstants holds a bunch of HBase Backup and Restore constants

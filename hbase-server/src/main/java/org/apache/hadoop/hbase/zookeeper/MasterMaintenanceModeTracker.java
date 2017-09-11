@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**

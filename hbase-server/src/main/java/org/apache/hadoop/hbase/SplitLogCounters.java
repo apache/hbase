@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Counters kept by the distributed WAL split log process.

@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelInboundHandlerAdapter;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.group.ChannelGroup;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Decoder for rpc request.

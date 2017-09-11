@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.codec.prefixtree.encode.other;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Specifies the type of columnnode writer.

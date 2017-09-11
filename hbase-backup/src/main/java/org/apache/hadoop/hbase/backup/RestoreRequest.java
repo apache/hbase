@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * POJO class for restore request

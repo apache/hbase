@@ -23,6 +23,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage;
@@ -31,12 +32,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.Sta
  * Helper to convert Exceptions and StackTraces from/to protobuf.
  * (see ErrorHandling.proto for the internal of the proto messages)
  */
-// @InterfaceAudience.Private
-// @InterfaceStability.Evolving
-// This class has NO InterfaceAudience. It is commented out. We do not want to import
-// InterfaceAudience. This would be only class in this module with the IA import and we do not want
-// to have this module depend annotations module just for one class.
-// NO InterfaceAudience defaults to mean InterfaceAudience.Private!
+@InterfaceAudience.Private
 public final class ForeignExceptionUtil {
   private ForeignExceptionUtil() { }
 

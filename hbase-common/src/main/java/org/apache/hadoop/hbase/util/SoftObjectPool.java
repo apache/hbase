@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ObjectPool.ObjectFactory;
 
 /**

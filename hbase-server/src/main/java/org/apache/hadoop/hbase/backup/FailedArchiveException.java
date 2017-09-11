@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.Collection;

@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -51,11 +52,7 @@ import java.util.concurrent.ExecutionException;
  * good network connection to the HBase regionservers. Any other use will likely slow down HBase
  * greatly.
  */
-// @InterfaceAudience.Private
-// This class has NO InterfaceAudience. It is commented out. We do not want to import
-// InterfaceAudience. This would be only class in this module with the IA import and we do not want
-// to have this module depend annotations module just for one class.
-// NO InterfaceAudience defaults to mean InterfaceAudience.Private!
+@InterfaceAudience.Private
 public class MemcachedBlockCache implements BlockCache {
   private static final Log LOG = LogFactory.getLog(MemcachedBlockCache.class.getName());
 

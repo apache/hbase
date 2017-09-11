@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.types;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A helper for building {@link Struct} instances.

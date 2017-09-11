@@ -25,7 +25,7 @@ import java.io.OutputStream;
 import java.security.SecureRandom;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;

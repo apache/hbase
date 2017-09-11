@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.channel.SimpleChannelInboundHandl
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Handle connection preamble.

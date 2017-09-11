@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.spark
 import java.util
 
 import org.apache.hadoop.hbase.{HConstants, TableName}
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.spark.rdd.RDD

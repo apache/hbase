@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.metrics;
 
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HBase Metrics are grouped in different MetricRegistry'ies. All metrics that correspond to a

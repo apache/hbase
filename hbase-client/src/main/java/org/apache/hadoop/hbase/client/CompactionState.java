@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * POJO representing the compaction state
