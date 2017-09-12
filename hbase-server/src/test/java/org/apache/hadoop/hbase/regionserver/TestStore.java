@@ -907,6 +907,10 @@ public class TestStore {
 
     assertEquals(0, this.store.getStorefilesCount());
 
+    // Test refreshing store files when no store files are there
+    store.refreshStoreFiles();
+    assertEquals(0, this.store.getStorefilesCount());
+
     // add some data, flush
     this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null), null);
     flush(1);
