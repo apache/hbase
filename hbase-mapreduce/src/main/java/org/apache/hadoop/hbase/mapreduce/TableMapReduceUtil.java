@@ -787,7 +787,7 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.ipc.RpcServer.class,                   // hbase-server
       org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
       org.apache.hadoop.hbase.mapreduce.JobUtil.class,               // hbase-hadoop2-compat
-      org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-server
+      org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-mapreduce
       org.apache.hadoop.hbase.metrics.impl.FastLongHistogram.class,  // hbase-metrics
       org.apache.hadoop.hbase.metrics.Snapshot.class,                // hbase-metrics-api
       prefixTreeCodecClass, //  hbase-prefix-tree (if null will be skipped)
@@ -798,7 +798,8 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.class,
       org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists.class,
       org.apache.htrace.Trace.class,
-      com.codahale.metrics.MetricRegistry.class);
+      com.codahale.metrics.MetricRegistry.class,
+      org.apache.commons.lang3.ArrayUtils.class);
   }
 
   /**
