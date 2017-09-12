@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -239,8 +240,8 @@ public class TestCoprocessorScanPolicy {
 
     @Override
     public InternalScanner preFlushScannerOpen(
-        final ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
+        final ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+        List<KeyValueScanner> scanners, InternalScanner s, long readPoint) throws IOException {
       Long newTtl = ttls.get(store.getTableName());
       if (newTtl != null) {
         System.out.println("PreFlush:" + newTtl);
@@ -262,7 +263,7 @@ public class TestCoprocessorScanPolicy {
     public InternalScanner preCompactScannerOpen(
         final ObserverContext<RegionCoprocessorEnvironment> c, Store store,
         List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
-        InternalScanner s) throws IOException {
+        InternalScanner s, CompactionRequest request, long readPoint) throws IOException {
       Long newTtl = ttls.get(store.getTableName());
       Integer newVersions = versions.get(store.getTableName());
       ScanInfo oldSI = store.getScanInfo();

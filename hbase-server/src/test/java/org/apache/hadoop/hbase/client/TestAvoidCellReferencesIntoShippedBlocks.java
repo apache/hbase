@@ -255,15 +255,8 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
   public static class CompactorRegionObserver implements RegionObserver {
     @Override
     public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
-        long earliestPutTs, InternalScanner s) throws IOException {
-      return createCompactorScanner(store, scanners, scanType, earliestPutTs);
-    }
-
-    @Override
-    public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
-        long earliestPutTs, InternalScanner s, CompactionRequest request) throws IOException {
+        Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
+        InternalScanner s, CompactionRequest request, long readPoint) throws IOException {
       return createCompactorScanner(store, scanners, scanType, earliestPutTs);
     }
 

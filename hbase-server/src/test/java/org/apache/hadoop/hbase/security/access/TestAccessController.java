@@ -902,7 +902,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCompact(ObserverContext.createAndPrepare(RCP_ENV, null), null, null,
-          ScanType.COMPACT_RETAIN_DELETES);
+          ScanType.COMPACT_RETAIN_DELETES, null);
         return null;
       }
     };
