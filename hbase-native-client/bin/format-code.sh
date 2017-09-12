@@ -18,6 +18,11 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+declare -a MODULES=( client connection exceptions security serde utils test-util )
 
-find core connection exceptions serde utils test-util security -name "*.h" -or -name "*.cc" | xargs -P8 clang-format -i --style='{BasedOnStyle: Google, ColumnLimit: 100}'
-find core connection exceptions serde utils test-util third-party security -name "BUCK" | xargs -P8 yapf -i --style=google
+for m in ${MODULES[@]}; do
+  find src/hbase/$m -name "*.h" -or -name "*.cc" | xargs -P8 clang-format -i --style='{BasedOnStyle: Google, ColumnLimit: 100}'
+  find src/hbase/$m -name "BUCK" | xargs -P8 yapf -i --style=google
+done
+
+find third-party -name "BUCK" | xargs -P8 yapf -i --style=google

@@ -1,0 +1,68 @@
+##
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This is the library dealing with a single connection
+# to a single server.
+cxx_library(
+    name="connection",
+    srcs=[
+        "client-dispatcher.cc",
+        "client-handler.cc",
+        "connection-factory.cc",
+        "connection-pool.cc",
+        "pipeline.cc",
+        "request.cc",
+        "rpc-client.cc",
+        "sasl-handler.cc",
+        "sasl-util.cc",
+        "rpc-test-server.cc",
+        "rpc-test-server-handler.cc",
+        "rpc-fault-injector.cc",
+    ],
+    deps=[
+        "//include/hbase/connection:connection",
+        "//src/hbase/if:if",
+        "//src/hbase/utils:utils",
+        "//src/hbase/serde:serde",
+        "//src/hbase/security:security",
+        "//third-party:folly",
+        "//third-party:wangle",
+        "//src/hbase/exceptions:exceptions",
+    ],
+    compiler_flags=['-Weffc++'],
+    linker_flags=['-L/usr/local/lib', '-lsasl2', '-lkrb5'],
+    exported_linker_flags=['-L/usr/local/lib', '-lsasl2', '-lkrb5'],
+    visibility=[
+        '//src/hbase/client/...',
+    ],)
+cxx_test(
+    name="connection-pool-test",
+    srcs=[
+        "connection-pool-test.cc",
+    ],
+    deps=[
+        ":connection",
+    ],)
+cxx_test(
+    name="rpc-test",
+    srcs=[
+        "rpc-test.cc",
+    ],
+    deps=[
+        ":connection",
+    ],
+    run_test_separately=True,)

@@ -19,17 +19,20 @@
 CC := g++
 LD := g++
 
+SRC_HBASE := src/hbase
+INCLUDE_HBASE := include/
 BUILD_PATH := build
 DEBUG_PATH := $(BUILD_PATH)/debug
 RELEASE_PATH := $(BUILD_PATH)/release
-PROTO_SRC_DIR := if
-PROTO_CXX_DIR := $(BUILD_PATH)/if
-MODULES := connection core exceptions security serde utils
+PROTO_SRC_DIR := $(SRC_HBASE)/if
+PROTO_CXX_DIR := $(BUILD_PATH)/$(PROTO_SRC_DIR)
+MODULES := connection client exceptions security serde utils
 TEST_MODULES := test-util # These modules contain test code, not included in the build for the lib
-SRC_DIR := $(MODULES)
-DEBUG_BUILD_DIR := $(addprefix $(DEBUG_PATH)/,$(MODULES))
-RELEASE_BUILD_DIR := $(addprefix $(RELEASE_PATH)/,$(MODULES))
-INCLUDE_DIR := . $(BUILD_PATH)
+SRC_DIR := $(addprefix $(SRC_HBASE)/,$(MODULES))
+DEBUG_BUILD_DIR := $(addprefix $(DEBUG_PATH)/hbase/,$(MODULES))
+RELEASE_BUILD_DIR := $(addprefix $(RELEASE_PATH)/hbase/,$(MODULES))
+
+INCLUDE_DIR := . src $(BUILD_PATH)/src $(INCLUDE_HBASE)
 TEST_BUILD_INCLUDE_DIR := $(INLCUDE_DIR) $(JAVA_HOME)/include/ $(JAVA_HOME)/include/linux
 
 #flags to pass to the CPP compiler & linker
@@ -42,14 +45,14 @@ LINKFLAG := -shared
 #define list of source files and object files
 ALLSRC := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
 EXCLUDE_SRC := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*-test.cc)) \
-	core/simple-client.cc core/load-client.cc
+	$(SRC_HBASE)/client/simple-client.cc $(SRC_HBASE)/client/load-client.cc
 SRC := $(filter-out $(EXCLUDE_SRC), $(ALLSRC))
-PROTOSRC := $(patsubst %.proto, $(addprefix $(BUILD_PATH)/,%.pb.cc),$(wildcard if/*.proto))
-PROTOHDR := $(patsubst %.proto, $(addprefix $(BUILD_PATH)/,%.pb.h),$(wildcard if/*.proto))
-DEBUG_OBJ := $(patsubst %.cc,$(DEBUG_PATH)/%.o,$(SRC))
-DEBUG_OBJ += $(patsubst %.cc,$(DEBUG_PATH)/%.o,$(PROTOSRC))
-RELEASE_OBJ := $(patsubst %.cc,$(RELEASE_PATH)/%.o,$(SRC))
-RELEASE_OBJ += $(patsubst %.cc,$(RELEASE_PATH)/%.o,$(PROTOSRC))
+PROTOSRC := $(patsubst $(PROTO_SRC_DIR)/%.proto, $(addprefix $(PROTO_CXX_DIR)/,%.pb.cc),$(wildcard $(PROTO_SRC_DIR)/*.proto))
+PROTOHDR := $(patsubst $(PROTO_SRC_DIR)/%.proto, $(addprefix $(PROTO_CXX_DIR)/,%.pb.h),$(wildcard $(PROTO_SRC_DIR)/*.proto))
+DEBUG_OBJ := $(patsubst $(SRC_HBASE)/%.cc,$(DEBUG_PATH)/hbase/%.o,$(SRC))
+DEBUG_OBJ += $(patsubst $(PROTO_CXX_DIR)/%.cc,$(DEBUG_PATH)/hbase/if/%.o,$(PROTOSRC))
+RELEASE_OBJ := $(patsubst $(SRC_HBASE)/%.cc,$(RELEASE_PATH)/hbase/%.o,$(SRC))
+RELEASE_OBJ += $(patsubst $(PROTO_CXX_DIR)/%.cc,$(RELEASE_PATH)/hbase/if/%.o,$(PROTOSRC))
 INCLUDES := $(addprefix -I,$(INCLUDE_DIR))
 
 LIB_DIR := /usr/local
@@ -59,8 +62,9 @@ LIB_RELEASE := $(RELEASE_PATH)/libHBaseClient.so
 ARC_RELEASE := $(RELEASE_PATH)/libHBaseClient.a
 LIB_DEBUG := $(DEBUG_PATH)/libHBaseClient_d.so
 ARC_DEBUG := $(DEBUG_PATH)/libHBaseClient_d.a
+LOCAL_INCLUDE_DIR := /usr/local/include/
 
-build: checkdirs protos $(LIB_DEBUG) $(LIB_RELEASE) $(ARC_DEBUG) $(ARC_RELEASE)
+build: checkdirs protos copyfiles $(LIB_DEBUG) $(LIB_RELEASE) $(ARC_DEBUG) $(ARC_RELEASE)
 
 vpath %.cc $(SRC_DIR)
 
@@ -80,7 +84,7 @@ $1/%.o: %.cc
 	$(CC) -c $$< -o $$@ -MF$$(@:%.o=%.d) -MT$$@ $(CPPFLAGS_RELEASE) $(INCLUDES)
 endef
 
-.PHONY: all clean install 
+.PHONY: all clean install copyfiles
 
 checkdirs: $(DEBUG_BUILD_DIR) $(RELEASE_BUILD_DIR) $(PROTO_CXX_DIR)
 
@@ -88,22 +92,32 @@ copyfiles:
 	@bin/copy-protobuf.sh
 	@bin/copy-version.sh
 
+# .proto files are in src/hbase/if. These are compiled into C++ code by the 
+# protoc compiler, and turned into .cc and .h files under build/src/hbase/if
 $(PROTO_CXX_DIR)/%.pb.cc $(PROTO_CXX_DIR)/%.pb.h: $(PROTO_SRC_DIR)/%.proto
 	@protoc --proto_path=$(PROTO_SRC_DIR) --cpp_out=$(PROTO_CXX_DIR) $<
 
-#Run parallel jobs to speed up compilation
+# protos target compiles the .cc and .h files into .o files for the protobuf
+# generated source files
 protos: $(PROTO_CXX_DIR) $(PROTOSRC) $(PROTOHDR)
 	@make -j8 all -f Makefile.protos
 
-install:
+install_headers:
+	cp -r $(INCLUDE_HBASE)/hbase $(LOCAL_INCLUDE_DIR)
+	cp -r $(PROTO_CXX_DIR) $(LOCAL_INCLUDE_DIR)/hbase/
+
+uninstall_headers:
+	rm -rf $(LOCAL_INCLUDE_DIR)/hbase
+
+install: install_headers
 	cp $(LIB_RELEASE) $(LIB_LIBDIR)/libHBaseClient.so
 	cp $(ARC_RELEASE) $(LIB_LIBDIR)/libHBaseClient.a
 	cp $(LIB_DEBUG) $(LIB_LIBDIR)/libHBaseClient_d.so
 	cp $(ARC_DEBUG) $(LIB_LIBDIR)/libHBaseClient_d.a
 	ldconfig
 
-uninstall:
-	rm -f $(LIB_LIBDIR)/libHBaseClient.so $(LIB_LIBDIR)/libHBaseClient.a $(LIB_LIBDIR)/libHBaseClient_d.so $(ARC_DEBUG) $(LIB_LIBDIR)/libHBaseClient_d.a
+uninstall: uninstall_headers
+	rm -f $(LIB_LIBDIR)/libHBaseClient.so $(LIB_LIBDIR)/libHBaseClient.a $(LIB_LIBDIR)/libHBaseClient_d.so $(LIB_LIBDIR)/libHBaseClient_d.a
 	ldconfig
 
 $(PROTO_CXX_DIR):

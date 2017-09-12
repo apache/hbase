@@ -26,4 +26,4 @@ third-party/*
 /gcc-debug/
 
 # Generated files
-utils/version.h
+src/hbase/utils/version.h
