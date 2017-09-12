@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.zookeeper.KeeperException;
@@ -187,8 +188,9 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
   }
 
   @Override
-  public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
+  public InternalScanner preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, List<KeyValueScanner> scanners, InternalScanner s, long readPoint)
+      throws IOException {
     ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
     if (scanInfo == null) {
       // take default action
@@ -199,10 +201,9 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
   }
 
   @Override
-  public InternalScanner preCompactScannerOpen(
-      final ObserverContext<RegionCoprocessorEnvironment> c,
+  public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
-      InternalScanner s) throws IOException {
+      InternalScanner s, CompactionRequest request, long readPoint) throws IOException {
     ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
     if (scanInfo == null) {
       // take default action
@@ -213,9 +214,9 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
   }
 
   @Override
-  public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final Scan scan, final NavigableSet<byte[]> targetCols,
-      final KeyValueScanner s) throws IOException {
+  public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPoint)
+      throws IOException {
     ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
     if (scanInfo == null) {
       // take default action

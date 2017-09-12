@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.TestWALActionsListener;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -252,9 +253,8 @@ public class TestHRegionServerBulkLoad {
   public static class MyObserver implements RegionObserver {
     static int sleepDuration;
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-        final Store store, final InternalScanner scanner, final ScanType scanType)
-            throws IOException {
+    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
+        InternalScanner scanner, ScanType scanType, CompactionRequest request) throws IOException {
       try {
         Thread.sleep(sleepDuration);
       } catch (InterruptedException ie) {

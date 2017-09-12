@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.TestFromClientSideWithCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
 /**
  * RegionObserver that just reimplements the default behavior,
@@ -44,7 +45,8 @@ public class NoOpScanPolicyObserver implements RegionObserver {
    */
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
+      Store store, List<KeyValueScanner> scanners, InternalScanner s, long readPoint)
+      throws IOException {
     ScanInfo oldSI = store.getScanInfo();
     ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(),
         oldSI.getTtl(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
@@ -59,7 +61,7 @@ public class NoOpScanPolicyObserver implements RegionObserver {
   public InternalScanner preCompactScannerOpen(
       final ObserverContext<RegionCoprocessorEnvironment> c, Store store,
       List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
-      InternalScanner s) throws IOException {
+      InternalScanner s, CompactionRequest request, long readPoint) throws IOException {
     // this demonstrates how to override the scanners default behavior
     ScanInfo oldSI = store.getScanInfo();
     ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(),
@@ -69,8 +71,8 @@ public class NoOpScanPolicyObserver implements RegionObserver {
   }
 
   @Override
-  public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, final Scan scan, final NavigableSet<byte[]> targetCols, KeyValueScanner s)
+  public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPoint)
       throws IOException {
     Region r = c.getEnvironment().getRegion();
     return scan.isReversed() ? new ReversedStoreScanner(store,

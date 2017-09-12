@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,8 +40,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -73,17 +76,15 @@ import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -96,8 +97,8 @@ public class RegionCoprocessorHost
 
   private static final Log LOG = LogFactory.getLog(RegionCoprocessorHost.class);
   // The shared data map
-  private static ReferenceMap sharedDataMap =
-      new ReferenceMap(AbstractReferenceMap.ReferenceStrength.HARD,
+  private static final ReferenceMap<String, ConcurrentMap<String, Object>> SHARED_DATA_MAP =
+      new ReferenceMap<>(AbstractReferenceMap.ReferenceStrength.HARD,
           AbstractReferenceMap.ReferenceStrength.WEAK);
 
   // optimization: no need to call postScannerFilterRow, if no coprocessor implements it
@@ -401,14 +402,11 @@ public class RegionCoprocessorHost
     }
     ConcurrentMap<String, Object> classData;
     // make sure only one thread can add maps
-    synchronized (sharedDataMap) {
+    synchronized (SHARED_DATA_MAP) {
       // as long as at least one RegionEnvironment holds on to its classData it will
       // remain in this map
-      classData = (ConcurrentMap<String, Object>)sharedDataMap.get(implClass.getName());
-      if (classData == null) {
-        classData = new ConcurrentHashMap<>();
-        sharedDataMap.put(implClass.getName(), classData);
-      }
+      classData =
+          SHARED_DATA_MAP.computeIfAbsent(implClass.getName(), k -> new ConcurrentHashMap<>());
     }
     return new RegionEnvironment(instance, priority, seq, conf, region,
         rsServices, classData);
@@ -672,136 +670,7 @@ public class RegionCoprocessorHost
     });
   }
 
-  /**
-   * Invoked just before a split
-   * @throws IOException
-   */
-  @Deprecated
-  public void preSplit(final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.preSplit(ctx);
-      }
-    });
-  }
-
-  /**
-   * Invoked just before a split
-   * @throws IOException
-   *
-   * Note: the logic moves to Master; it is unused in RS
-   */
-  @Deprecated
-  public void preSplit(final byte[] splitRow, final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.preSplit(ctx, splitRow);
-      }
-    });
-  }
-
-  /**
-   * Invoked just after a split
-   * @param l the new left-hand daughter region
-   * @param r the new right-hand daughter region
-   * @throws IOException
-   *
-   * Note: the logic moves to Master; it is unused in RS
-   */
-  @Deprecated
-  public void postSplit(final Region l, final Region r, final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.postSplit(ctx, l, r);
-      }
-    });
-  }
-
-  /**
-  * Note: the logic moves to Master; it is unused in RS
-  */
- @Deprecated
-  public boolean preSplitBeforePONR(final byte[] splitKey,
-      final List<Mutation> metaEntries, final User user) throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.preSplitBeforePONR(ctx, splitKey, metaEntries);
-      }
-    });
-  }
-
-  /**
-  * Note: the logic moves to Master; it is unused in RS
-  */
-  @Deprecated
-  public void preSplitAfterPONR(final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.preSplitAfterPONR(ctx);
-      }
-    });
-  }
-
-  /**
-   * Invoked just before the rollback of a failed split is started
-   * @throws IOException
-   *
-  * Note: the logic moves to Master; it is unused in RS
-  */
-  @Deprecated
-  public void preRollBackSplit(final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.preRollBackSplit(ctx);
-      }
-    });
-  }
-
-  /**
-   * Invoked just after the rollback of a failed split is done
-   * @throws IOException
-   *
-  * Note: the logic moves to Master; it is unused in RS
-  */
-  @Deprecated
-  public void postRollBackSplit(final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.postRollBackSplit(ctx);
-      }
-    });
-  }
-
-  /**
-   * Invoked after a split is completed irrespective of a failure or success.
-   * @throws IOException
-   */
-  public void postCompleteSplit() throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.postCompleteSplit(ctx);
-      }
-    });
-  }
-
   // RegionObserver support
-
   /**
    * @param get the Get request
    * @return true if default processing should be bypassed
@@ -1272,8 +1141,7 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preStoreScannerOpen(ObserverContext,
-   *    Store, Scan, NavigableSet, KeyValueScanner)}
+   * {@link RegionObserver#preStoreScannerOpen(ObserverContext, Store, Scan, NavigableSet, KeyValueScanner, long)}
    */
   public KeyValueScanner preStoreScannerOpen(final Store store, final Scan scan,
       final NavigableSet<byte[]> targetCols, final long readPt) throws IOException {

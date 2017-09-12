@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -139,7 +140,8 @@ public class TestRegionObserverScannerOpenHook {
 
     @Override
     public InternalScanner preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
+        Store store, List<KeyValueScanner> scanners, InternalScanner s, long readPoint)
+        throws IOException {
       scanners.forEach(KeyValueScanner::close);
       return NO_DATA;
     }
@@ -153,7 +155,8 @@ public class TestRegionObserverScannerOpenHook {
     @Override
     public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
-        long earliestPutTs, InternalScanner s) throws IOException {
+        long earliestPutTs, InternalScanner s, CompactionRequest request, long readPoint)
+        throws IOException {
       scanners.forEach(KeyValueScanner::close);
       return NO_DATA;
     }
