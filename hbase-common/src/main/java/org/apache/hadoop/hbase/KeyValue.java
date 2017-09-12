@@ -1237,10 +1237,11 @@ public class KeyValue implements ExtendedCell {
   //---------------------------------------------------------------------------
 
   /**
+   * To be used only in tests where the Cells are clearly assumed to be of type KeyValue
+   * and that we need access to the backing array to do some test case related assertions.
    * @return The byte array backing this KeyValue.
-   * @deprecated Since 0.98.0.  Use Cell Interface instead.  Do not presume single backing buffer.
    */
-  @Deprecated
+  @VisibleForTesting
   public byte [] getBuffer() {
     return this.bytes;
   }
