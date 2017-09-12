@@ -21,11 +21,11 @@ CC := g++
 BUILD_PATH := build
 DEBUG_PATH := $(BUILD_PATH)/debug
 RELEASE_PATH := $(BUILD_PATH)/release
-MODULES := $(BUILD_PATH)/if
-SRC_DIR := $(MODULES)
-DEBUG_BUILD_DIR := $(addprefix $(DEBUG_PATH)/,$(MODULES))
-RELEASE_BUILD_DIR := $(addprefix $(RELEASE_PATH)/,$(MODULES))
-INCLUDE_DIR := . $(BUILD_PATH)/if
+MODULES := if
+SRC_DIR := $(BUILD_PATH)/src/hbase/$(MODULES)
+DEBUG_BUILD_DIR := $(addprefix $(DEBUG_PATH)/hbase/,$(MODULES))
+RELEASE_BUILD_DIR := $(addprefix $(RELEASE_PATH)/hbase/,$(MODULES))
+INCLUDE_DIR := . $(BUILD_PATH)/src/hbase/if
 
 #flags to pass to the CPP compiler & linker
 CPPFLAGS_DEBUG := -D_GLIBCXX_USE_CXX11_ABI=0 -g -Wall -std=c++14 -pedantic -fPIC -MMD -MP
@@ -33,8 +33,8 @@ CPPFLAGS_RELEASE := -D_GLIBCXX_USE_CXX11_ABI=0 -DNDEBUG -O2 -Wall -std=c++14 -pe
 
 #define list of source files and object files
 SRC := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
-DEBUG_OBJ := $(patsubst %.cc,$(DEBUG_PATH)/%.o,$(SRC))
-RELEASE_OBJ := $(patsubst %.cc,$(RELEASE_PATH)/%.o,$(SRC))
+DEBUG_OBJ := $(patsubst $(SRC_DIR)/%.cc,$(DEBUG_PATH)/hbase/if/%.o,$(SRC))
+RELEASE_OBJ := $(patsubst $(SRC_DIR)/%.cc,$(RELEASE_PATH)/hbase/if/%.o,$(SRC))
 INCLUDES := $(addprefix -I,$(INCLUDE_DIR))
 
 all: $(DEBUG_BUILD_DIR) $(RELEASE_BUILD_DIR) $(DEBUG_OBJ) $(RELEASE_OBJ)

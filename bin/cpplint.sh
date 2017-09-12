@@ -20,6 +20,8 @@ IFS=$'\n\t'
 CPPLINT_LOC=https://raw.githubusercontent.com/google/styleguide/gh-pages/cpplint/cpplint.py
 OUTPUT=build/cpplint.py
 
+declare -a MODULES=( client connection exceptions security serde utils test-util )
+
 # Download if not already there
 wget -nc $CPPLINT_LOC -O $OUTPUT
 
@@ -27,4 +29,11 @@ wget -nc $CPPLINT_LOC -O $OUTPUT
 # Exclude the following rules: build/header_guard (We use #pragma once instead)
 #                              readability/todo (TODOs are generic)
 #                              build/c++11 (We are building with c++14)
-find core connection exceptions serde utils test-util security -name "*.h" -or -name "*.cc" | xargs -P8 python $OUTPUT --filter=-build/header_guard,-readability/todo,-build/c++11 --linelength=100
+for m in ${MODULES[@]}; do
+  if [ $m != "security" ]; then  #These are empty
+    exec find src/hbase/$m -name "*.h" -or -name "*.cc" | xargs -P8 python $OUTPUT --filter=-build/header_guard,-readability/todo,-build/c++11 --linelength=100
+  fi
+  if [ $m != "test-util" ]; then
+    exec find include/hbase/$m -name "*.h" -or -name "*.cc" | xargs -P8 python $OUTPUT --filter=-build/header_guard,-readability/todo,-build/c++11 --linelength=100
+  fi
+done

@@ -21,5 +21,5 @@ IFS=$'\n\t'
 # Copy the version.h generated from hbase-common/src/saveVersion.sh script via the mvn build
 BIN_DIR=$(dirname "$0")
 VERSION_SOURCE_DIR="${BIN_DIR}/../../hbase-common/target/generated-sources/native/utils/"
-VERSION_DEST_DIR="${BIN_DIR}/../utils/"
+VERSION_DEST_DIR="${BIN_DIR}/../include/hbase/utils/"
 cp $VERSION_SOURCE_DIR/* $VERSION_DEST_DIR/
