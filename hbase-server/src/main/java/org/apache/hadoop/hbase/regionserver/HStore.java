@@ -612,17 +612,25 @@ public class HStore implements Store {
   private void refreshStoreFilesInternal(Collection<StoreFileInfo> newFiles) throws IOException {
     StoreFileManager sfm = storeEngine.getStoreFileManager();
     Collection<StoreFile> currentFiles = sfm.getStorefiles();
-    if (currentFiles == null) currentFiles = new ArrayList<StoreFile>(0);
-
-    if (newFiles == null) newFiles = new ArrayList<StoreFileInfo>(0);
+    Collection<StoreFile> compactedFiles = sfm.getCompactedfiles();
+    if (currentFiles == null) currentFiles = Collections.emptySet();
+    if (newFiles == null) newFiles = Collections.emptySet();
+    if (compactedFiles == null) compactedFiles = Collections.emptySet();
 
     HashMap<StoreFileInfo, StoreFile> currentFilesSet =
         new HashMap<StoreFileInfo, StoreFile>(currentFiles.size());
     for (StoreFile sf : currentFiles) {
       currentFilesSet.put(sf.getFileInfo(), sf);
     }
-    HashSet<StoreFileInfo> newFilesSet = new HashSet<StoreFileInfo>(newFiles);
+    HashMap<StoreFileInfo, StoreFile> compactedFilesSet =
+        new HashMap<StoreFileInfo, StoreFile>(compactedFiles.size());
+    for (StoreFile sf : compactedFiles) {
+      compactedFilesSet.put(sf.getFileInfo(), sf);
+    }
 
+    Set<StoreFileInfo> newFilesSet = new HashSet<StoreFileInfo>(newFiles);
+    //Exclude the files that have already been compacted
+    newFilesSet = Sets.difference(newFilesSet, compactedFilesSet.keySet());
     Set<StoreFileInfo> toBeAddedFiles = Sets.difference(newFilesSet, currentFilesSet.keySet());
     Set<StoreFileInfo> toBeRemovedFiles = Sets.difference(currentFilesSet.keySet(), newFilesSet);
 
