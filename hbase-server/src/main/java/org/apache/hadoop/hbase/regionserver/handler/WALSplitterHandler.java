@@ -76,7 +76,7 @@ public class WALSplitterHandler extends EventHandler {
           SplitLogCounters.tot_wkr_task_done, splitTaskDetails);
         break;
       case PREEMPTED:
-        SplitLogCounters.tot_wkr_preempt_task.incrementAndGet();
+        SplitLogCounters.tot_wkr_preempt_task.increment();
         LOG.warn("task execution preempted " + splitTaskDetails.getWALFile());
         break;
       case ERR:

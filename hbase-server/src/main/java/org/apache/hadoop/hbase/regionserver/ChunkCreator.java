@@ -30,6 +30,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -217,7 +218,7 @@ public class ChunkCreator {
     /** Statistics thread */
     private static final int statThreadPeriod = 60 * 5;
     private final AtomicLong chunkCount = new AtomicLong();
-    private final AtomicLong reusedChunkCount = new AtomicLong();
+    private final LongAdder reusedChunkCount = new LongAdder();
 
     MemStoreChunkPool(int maxCount, int initialCount, float poolSizePercentage) {
       this.maxCount = maxCount;
@@ -250,7 +251,7 @@ public class ChunkCreator {
       Chunk chunk = reclaimedChunks.poll();
       if (chunk != null) {
         chunk.reset();
-        reusedChunkCount.incrementAndGet();
+        reusedChunkCount.increment();
       } else {
         // Make a chunk iff we have not yet created the maxCount chunks
         while (true) {
@@ -298,7 +299,7 @@ public class ChunkCreator {
       private void logStats() {
         if (!LOG.isDebugEnabled()) return;
         long created = chunkCount.get();
-        long reused = reusedChunkCount.get();
+        long reused = reusedChunkCount.sum();
         long total = created + reused;
         LOG.debug("Stats: current pool size=" + reclaimedChunks.size()
             + ",created chunk count=" + created

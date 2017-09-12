@@ -48,6 +48,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -165,13 +166,13 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private UniqueIndexMap<Integer> deserialiserMap = new UniqueIndexMap<>();
 
-  private final AtomicLong realCacheSize = new AtomicLong(0);
-  private final AtomicLong heapSize = new AtomicLong(0);
+  private final LongAdder realCacheSize = new LongAdder();
+  private final LongAdder heapSize = new LongAdder();
   /** Current number of cached elements */
-  private final AtomicLong blockNumber = new AtomicLong(0);
+  private final LongAdder blockNumber = new LongAdder();
 
   /** Cache access count (sequential ID) */
-  private final AtomicLong accessCount = new AtomicLong(0);
+  private final AtomicLong accessCount = new AtomicLong();
 
   private static final int DEFAULT_CACHE_WAIT_TIME = 50;
   // Used in test now. If the flag is false and the cache speed is very fast,
@@ -469,8 +470,8 @@ public class BucketCache implements BlockCache, HeapSize {
       ramCache.remove(cacheKey);
       cacheStats.failInsert();
     } else {
-      this.blockNumber.incrementAndGet();
-      this.heapSize.addAndGet(cachedItem.heapSize());
+      this.blockNumber.increment();
+      this.heapSize.add(cachedItem.heapSize());
       blocksByHFile.add(cacheKey);
     }
   }
@@ -545,10 +546,10 @@ public class BucketCache implements BlockCache, HeapSize {
   @VisibleForTesting
   void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry, boolean decrementBlockNumber) {
     bucketAllocator.freeBlock(bucketEntry.offset());
-    realCacheSize.addAndGet(-1 * bucketEntry.getLength());
+    realCacheSize.add(-1 * bucketEntry.getLength());
     blocksByHFile.remove(cacheKey);
     if (decrementBlockNumber) {
-      this.blockNumber.decrementAndGet();
+      this.blockNumber.decrement();
     }
   }
 
@@ -591,8 +592,8 @@ public class BucketCache implements BlockCache, HeapSize {
   private RAMQueueEntry checkRamCache(BlockCacheKey cacheKey) {
     RAMQueueEntry removedBlock = ramCache.remove(cacheKey);
     if (removedBlock != null) {
-      this.blockNumber.decrementAndGet();
-      this.heapSize.addAndGet(-1 * removedBlock.getData().heapSize());
+      this.blockNumber.decrement();
+      this.heapSize.add(-1 * removedBlock.getData().heapSize());
     }
     return removedBlock;
   }
@@ -689,7 +690,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   public long getRealCacheSize() {
-    return this.realCacheSize.get();
+    return this.realCacheSize.sum();
   }
 
   private long acceptableSize() {
@@ -791,7 +792,7 @@ public class BucketCache implements BlockCache, HeapSize {
       if (LOG.isDebugEnabled() && msgBuffer != null) {
         LOG.debug("Free started because \"" + why + "\"; " + msgBuffer.toString() +
           " of current used=" + StringUtils.byteDesc(currentSize) + ", actual cacheSize=" +
-          StringUtils.byteDesc(realCacheSize.get()) + ", total=" + StringUtils.byteDesc(totalSize));
+          StringUtils.byteDesc(realCacheSize.sum()) + ", total=" + StringUtils.byteDesc(totalSize));
       }
 
       long bytesToFreeWithExtra = (long) Math.floor(bytesToFreeWithoutExtra
@@ -1016,7 +1017,7 @@ public class BucketCache implements BlockCache, HeapSize {
         // Always remove from ramCache even if we failed adding it to the block cache above.
         RAMQueueEntry ramCacheEntry = ramCache.remove(key);
         if (ramCacheEntry != null) {
-          heapSize.addAndGet(-1 * entries.get(i).getData().heapSize());
+          heapSize.add(-1 * entries.get(i).getData().heapSize());
         } else if (bucketEntries[i] != null){
           // Block should have already been evicted. Remove it and free space.
           ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntries[i].offset());
@@ -1195,12 +1196,12 @@ public class BucketCache implements BlockCache, HeapSize {
 
   @Override
   public long heapSize() {
-    return this.heapSize.get();
+    return this.heapSize.sum();
   }
 
   @Override
   public long size() {
-    return this.realCacheSize.get();
+    return this.realCacheSize.sum();
   }
 
   @Override
@@ -1215,7 +1216,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   @Override
   public long getBlockCount() {
-    return this.blockNumber.get();
+    return this.blockNumber.sum();
   }
 
   @Override
@@ -1438,7 +1439,7 @@ public class BucketCache implements BlockCache, HeapSize {
     public BucketEntry writeToCache(final IOEngine ioEngine,
         final BucketAllocator bucketAllocator,
         final UniqueIndexMap<Integer> deserialiserMap,
-        final AtomicLong realCacheSize) throws CacheFullException, IOException,
+        final LongAdder realCacheSize) throws CacheFullException, IOException,
         BucketAllocatorException {
       int len = data.getSerializedLength();
       // This cacheable thing can't be serialized
@@ -1468,7 +1469,7 @@ public class BucketCache implements BlockCache, HeapSize {
         throw ioe;
       }
 
-      realCacheSize.addAndGet(len);
+      realCacheSize.add(len);
       return bucketEntry;
     }
   }

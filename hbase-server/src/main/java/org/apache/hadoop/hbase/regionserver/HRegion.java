@@ -281,12 +281,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final LongAdder blockedRequestsCount = new LongAdder();
 
   // Compaction LongAdders
-  final AtomicLong compactionsFinished = new AtomicLong(0L);
-  final AtomicLong compactionsFailed = new AtomicLong(0L);
-  final AtomicLong compactionNumFilesCompacted = new AtomicLong(0L);
-  final AtomicLong compactionNumBytesCompacted = new AtomicLong(0L);
-  final AtomicLong compactionsQueued = new AtomicLong(0L);
-  final AtomicLong flushesQueued = new AtomicLong(0L);
+  final LongAdder compactionsFinished = new LongAdder();
+  final LongAdder compactionsFailed = new LongAdder();
+  final LongAdder compactionNumFilesCompacted = new LongAdder();
+  final LongAdder compactionNumBytesCompacted = new LongAdder();
+  final LongAdder compactionsQueued = new LongAdder();
+  final LongAdder flushesQueued = new LongAdder();
 
   private final WAL wal;
   private final HRegionFileSystem fs;
@@ -2272,7 +2272,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
 
         if(fs.isFlushSucceeded()) {
-          flushesQueued.set(0L);
+          flushesQueued.reset();
         }
 
         status.markComplete("Flush successful");
@@ -8100,27 +8100,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     int newValue = (isMajor ? majorInProgress : minorInProgress).decrementAndGet();
 
     // metrics
-    compactionsFinished.incrementAndGet();
-    compactionNumFilesCompacted.addAndGet(numFiles);
-    compactionNumBytesCompacted.addAndGet(filesSizeCompacted);
+    compactionsFinished.increment();
+    compactionNumFilesCompacted.add(numFiles);
+    compactionNumBytesCompacted.add(filesSizeCompacted);
 
     assert newValue >= 0;
   }
 
   public void reportCompactionRequestFailure() {
-    compactionsFailed.incrementAndGet();
+    compactionsFailed.increment();
   }
 
   public void incrementCompactionsQueuedCount() {
-    compactionsQueued.incrementAndGet();
+    compactionsQueued.increment();
   }
 
   public void decrementCompactionsQueuedCount() {
-    compactionsQueued.decrementAndGet();
+    compactionsQueued.decrement();
   }
 
   public void incrementFlushesQueuedCount() {
-    flushesQueued.incrementAndGet();
+    flushesQueued.increment();
   }
 
   @VisibleForTesting

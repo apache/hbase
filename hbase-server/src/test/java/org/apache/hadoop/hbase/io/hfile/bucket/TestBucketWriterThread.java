@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
@@ -139,7 +140,7 @@ public class TestBucketWriterThread {
     RAMQueueEntry spiedRqe = Mockito.spy(rqe);
     Mockito.doThrow(new IOException("Mocked!")).when(spiedRqe).
       writeToCache((IOEngine)Mockito.any(), (BucketAllocator)Mockito.any(),
-        (UniqueIndexMap<Integer>)Mockito.any(), (AtomicLong)Mockito.any());
+        (UniqueIndexMap<Integer>)Mockito.any(), (LongAdder) Mockito.any());
     this.q.add(spiedRqe);
     doDrainOfOneEntry(bc, wt, q);
     // Cache disabled when ioes w/o ever healing.
@@ -162,7 +163,7 @@ public class TestBucketWriterThread {
     Mockito.doThrow(cfe).
       doReturn(mockedBucketEntry).
       when(spiedRqe).writeToCache((IOEngine)Mockito.any(), (BucketAllocator)Mockito.any(),
-        (UniqueIndexMap<Integer>)Mockito.any(), (AtomicLong)Mockito.any());
+        (UniqueIndexMap<Integer>)Mockito.any(), (LongAdder) Mockito.any());
     this.q.add(spiedRqe);
     doDrainOfOneEntry(bc, wt, q);
   }

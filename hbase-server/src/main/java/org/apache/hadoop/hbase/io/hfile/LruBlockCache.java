@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.lang.ref.WeakReference;
-import java.nio.ByteBuffer;
 import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.List;
@@ -32,6 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
@@ -178,13 +178,13 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   private final AtomicLong size;
 
   /** Current size of data blocks */
-  private final AtomicLong dataBlockSize;
+  private final LongAdder dataBlockSize;
 
   /** Current number of cached elements */
   private final AtomicLong elements;
 
   /** Current number of cached data block elements */
-  private final AtomicLong dataBlockElements;
+  private final LongAdder dataBlockElements;
 
   /** Cache access count (sequential ID) */
   private final AtomicLong count;
@@ -321,8 +321,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     this.stats = new CacheStats(this.getClass().getSimpleName());
     this.count = new AtomicLong(0);
     this.elements = new AtomicLong(0);
-    this.dataBlockElements = new AtomicLong(0);
-    this.dataBlockSize = new AtomicLong(0);
+    this.dataBlockElements = new LongAdder();
+    this.dataBlockSize = new LongAdder();
     this.overhead = calculateOverhead(maxSize, blockSize, mapConcurrencyLevel);
     this.size = new AtomicLong(this.overhead);
     this.hardCapacityLimitFactor = hardLimitFactor;
@@ -409,7 +409,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     map.put(cacheKey, cb);
     long val = elements.incrementAndGet();
     if (buf.getBlockType().isData()) {
-       dataBlockElements.incrementAndGet();
+       dataBlockElements.increment();
     }
     if (LOG.isTraceEnabled()) {
       long size = map.size();
@@ -462,7 +462,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       heapsize *= -1;
     }
     if (bt != null && bt.isData()) {
-       dataBlockSize.addAndGet(heapsize);
+       dataBlockSize.add(heapsize);
     }
     return size.addAndGet(heapsize);
   }
@@ -569,7 +569,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       assertCounterSanity(size, val);
     }
     if (block.getBuffer().getBlockType().isData()) {
-       dataBlockElements.decrementAndGet();
+       dataBlockElements.decrement();
     }
     if (evictedByEvictionProcess) {
       // When the eviction of the block happened because of invalidation of HFiles, no need to
@@ -844,7 +844,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public long getCurrentDataSize() {
-    return this.dataBlockSize.get();
+    return this.dataBlockSize.sum();
   }
 
   @Override
@@ -864,7 +864,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public long getDataBlockCount() {
-    return this.dataBlockElements.get();
+    return this.dataBlockElements.sum();
   }
 
   EvictionThread getEvictionThread() {

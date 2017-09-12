@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.lang.management.MemoryType;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -38,11 +38,11 @@ import org.apache.hadoop.hbase.util.Pair;
 public class RegionServerAccounting {
 
   // memstore data size
-  private final AtomicLong globalMemstoreDataSize = new AtomicLong(0);
+  private final LongAdder globalMemstoreDataSize = new LongAdder();
   // memstore heap size. When off heap MSLAB in place, this will be only heap overhead of the Cell
   // POJOs and entry overhead of them onto memstore. When on heap MSLAB, this will be include heap
   // overhead as well as the cell data size. Ya cell data is in on heap area only then.
-  private final AtomicLong globalMemstoreHeapSize = new AtomicLong(0);
+  private final LongAdder globalMemstoreHeapSize = new LongAdder();
 
   // Store the edits size during replaying WAL. Use this to roll back the
   // global memstore size once a region opening failed.
@@ -115,14 +115,14 @@ public class RegionServerAccounting {
    * @return the global Memstore data size in the RegionServer
    */
   public long getGlobalMemstoreDataSize() {
-    return globalMemstoreDataSize.get();
+    return globalMemstoreDataSize.sum();
   }
 
   /**
    * @return the global memstore heap size in the RegionServer
    */
   public long getGlobalMemstoreHeapSize() {
-    return this.globalMemstoreHeapSize.get();
+    return this.globalMemstoreHeapSize.sum();
   }
 
   /**
@@ -130,13 +130,13 @@ public class RegionServerAccounting {
    *        the global Memstore size 
    */
   public void incGlobalMemstoreSize(MemstoreSize memStoreSize) {
-    globalMemstoreDataSize.addAndGet(memStoreSize.getDataSize());
-    globalMemstoreHeapSize.addAndGet(memStoreSize.getHeapSize());
+    globalMemstoreDataSize.add(memStoreSize.getDataSize());
+    globalMemstoreHeapSize.add(memStoreSize.getHeapSize());
   }
 
   public void decGlobalMemstoreSize(MemstoreSize memStoreSize) {
-    globalMemstoreDataSize.addAndGet(-memStoreSize.getDataSize());
-    globalMemstoreHeapSize.addAndGet(-memStoreSize.getHeapSize());
+    globalMemstoreDataSize.add(-memStoreSize.getDataSize());
+    globalMemstoreHeapSize.add(-memStoreSize.getHeapSize());
   }
 
   /**

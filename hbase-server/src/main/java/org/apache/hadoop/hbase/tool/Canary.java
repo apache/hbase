@@ -45,6 +45,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -250,24 +251,24 @@ public final class Canary implements Tool {
 
   public static class RegionStdOutSink extends StdOutSink {
 
-    private Map<String, AtomicLong> perTableReadLatency = new HashMap<>();
-    private AtomicLong writeLatency = new AtomicLong();
+    private Map<String, LongAdder> perTableReadLatency = new HashMap<>();
+    private LongAdder writeLatency = new LongAdder();
 
-    public Map<String, AtomicLong> getReadLatencyMap() {
+    public Map<String, LongAdder> getReadLatencyMap() {
       return this.perTableReadLatency;
     }
 
-    public AtomicLong initializeAndGetReadLatencyForTable(String tableName) {
-      AtomicLong initLatency = new AtomicLong(0L);
+    public LongAdder initializeAndGetReadLatencyForTable(String tableName) {
+      LongAdder initLatency = new LongAdder();
       this.perTableReadLatency.put(tableName, initLatency);
       return initLatency;
     }
 
     public void initializeWriteLatency() {
-      this.writeLatency.set(0L);
+      this.writeLatency.reset();
     }
 
-    public AtomicLong getWriteLatency() {
+    public LongAdder getWriteLatency() {
       return this.writeLatency;
     }
   }
@@ -323,10 +324,10 @@ public final class Canary implements Tool {
     private TaskType taskType;
     private boolean rawScanEnabled;
     private ServerName serverName;
-    private AtomicLong readWriteLatency;
+    private LongAdder readWriteLatency;
 
     RegionTask(Connection connection, HRegionInfo region, ServerName serverName, RegionStdOutSink sink,
-        TaskType taskType, boolean rawScanEnabled, AtomicLong rwLatency) {
+        TaskType taskType, boolean rawScanEnabled, LongAdder rwLatency) {
       this.connection = connection;
       this.region = region;
       this.serverName = serverName;
@@ -414,7 +415,7 @@ public final class Canary implements Tool {
             rs.next();
           }
           stopWatch.stop();
-          this.readWriteLatency.addAndGet(stopWatch.getTime());
+          this.readWriteLatency.add(stopWatch.getTime());
           sink.publishReadTiming(serverName, region, column, stopWatch.getTime());
         } catch (Exception e) {
           sink.publishReadFailure(serverName, region, column, e);
@@ -466,7 +467,7 @@ public final class Canary implements Tool {
             long startTime = System.currentTimeMillis();
             table.put(put);
             long time = System.currentTimeMillis() - startTime;
-            this.readWriteLatency.addAndGet(time);
+            this.readWriteLatency.add(time);
             sink.publishWriteTiming(serverName, region, column, time);
           } catch (Exception e) {
             sink.publishWriteFailure(serverName, region, column, e);
@@ -1049,7 +1050,7 @@ public final class Canary implements Tool {
             }
             this.initialized = true;
             for (String table : tables) {
-              AtomicLong readLatency = regionSink.initializeAndGetReadLatencyForTable(table);
+              LongAdder readLatency = regionSink.initializeAndGetReadLatencyForTable(table);
               taskFutures.addAll(Canary.sniff(admin, regionSink, table, executor, TaskType.READ,
                 this.rawScanEnabled, readLatency));
             }
@@ -1068,7 +1069,7 @@ public final class Canary implements Tool {
             }
             // sniff canary table with write operation
             regionSink.initializeWriteLatency();
-            AtomicLong writeTableLatency = regionSink.getWriteLatency();
+            LongAdder writeTableLatency = regionSink.getWriteLatency();
             taskFutures.addAll(Canary.sniff(admin, regionSink, admin.getTableDescriptor(writeTableName),
               executor, TaskType.WRITE, this.rawScanEnabled, writeTableLatency));
           }
@@ -1080,7 +1081,7 @@ public final class Canary implements Tool {
               LOG.error("Sniff region failed!", e);
             }
           }
-          Map<String, AtomicLong> actualReadTableLatency = regionSink.getReadLatencyMap();
+          Map<String, LongAdder> actualReadTableLatency = regionSink.getReadLatencyMap();
           for (Map.Entry<String, Long> entry : configuredReadTableTimeouts.entrySet()) {
             String tableName = entry.getKey();
             if (actualReadTableLatency.containsKey(tableName)) {
@@ -1167,7 +1168,7 @@ public final class Canary implements Tool {
       for (HTableDescriptor table : admin.listTables()) {
         if (admin.isTableEnabled(table.getTableName())
             && (!table.getTableName().equals(writeTableName))) {
-          AtomicLong readLatency = regionSink.initializeAndGetReadLatencyForTable(table.getNameAsString());
+          LongAdder readLatency = regionSink.initializeAndGetReadLatencyForTable(table.getNameAsString());
           taskFutures.addAll(Canary.sniff(admin, sink, table, executor, taskType, this.rawScanEnabled, readLatency));
         }
       }
@@ -1235,7 +1236,7 @@ public final class Canary implements Tool {
    * @throws Exception
    */
   private static List<Future<Void>> sniff(final Admin admin, final Sink sink, String tableName,
-      ExecutorService executor, TaskType taskType, boolean rawScanEnabled, AtomicLong readLatency) throws Exception {
+      ExecutorService executor, TaskType taskType, boolean rawScanEnabled, LongAdder readLatency) throws Exception {
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("checking table is enabled and getting table descriptor for table %s",
         tableName));
@@ -1254,7 +1255,7 @@ public final class Canary implements Tool {
    */
   private static List<Future<Void>> sniff(final Admin admin, final Sink sink,
       HTableDescriptor tableDesc, ExecutorService executor, TaskType taskType,
-      boolean rawScanEnabled, AtomicLong rwLatency) throws Exception {
+      boolean rawScanEnabled, LongAdder rwLatency) throws Exception {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("reading list of regions for table %s", tableDesc.getTableName()));

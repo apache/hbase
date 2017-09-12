@@ -27,7 +27,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.MinMaxPriorityQueue;
 import org.apache.commons.collections4.map.LinkedMap;
@@ -347,7 +347,7 @@ public final class BucketAllocator {
    * @throws BucketAllocatorException
    */
   BucketAllocator(long availableSpace, int[] bucketSizes, Map<BlockCacheKey, BucketEntry> map,
-      AtomicLong realCacheSize) throws BucketAllocatorException {
+      LongAdder realCacheSize) throws BucketAllocatorException {
     this(availableSpace, bucketSizes);
 
     // each bucket has an offset, sizeindex. probably the buckets are too big
@@ -398,7 +398,7 @@ public final class BucketAllocator {
         bsi.instantiateBucket(b);
         reconfigured[bucketNo] = true;
       }
-      realCacheSize.addAndGet(foundLen);
+      realCacheSize.add(foundLen);
       buckets[bucketNo].addAllocation(foundOffset);
       usedSize += buckets[bucketNo].getItemAllocationSize();
       bucketSizeInfos[bucketSizeIndex].blockAllocated(b);

@@ -206,7 +206,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       if (task.unforcedResubmits.get() >= resubmitThreshold) {
         if (!task.resubmitThresholdReached) {
           task.resubmitThresholdReached = true;
-          SplitLogCounters.tot_mgr_resubmit_threshold_reached.incrementAndGet();
+          SplitLogCounters.tot_mgr_resubmit_threshold_reached.increment();
           LOG.info("Skipping resubmissions of task " + path + " because threshold "
               + resubmitThreshold + " reached");
         }
@@ -215,7 +215,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       // race with heartbeat() that might be changing last_version
       version = task.last_version;
     } else {
-      SplitLogCounters.tot_mgr_resubmit_force.incrementAndGet();
+      SplitLogCounters.tot_mgr_resubmit_force.increment();
       version = -1;
     }
     LOG.info("resubmitting task " + path);
@@ -231,7 +231,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     }
     task.setUnassigned();
     rescan(Long.MAX_VALUE);
-    SplitLogCounters.tot_mgr_resubmit.incrementAndGet();
+    SplitLogCounters.tot_mgr_resubmit.increment();
     return true;
   }
 
@@ -273,7 +273,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         .getZooKeeper()
         .getData(path, this.watcher, new GetDataAsyncCallback(),
           Long.valueOf(-1) /* retry count */);
-    SplitLogCounters.tot_mgr_get_data_queued.incrementAndGet();
+    SplitLogCounters.tot_mgr_get_data_queued.increment();
   }
 
   /**
@@ -354,7 +354,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   }
 
   private void deleteNode(String path, Long retries) {
-    SplitLogCounters.tot_mgr_node_delete_queued.incrementAndGet();
+    SplitLogCounters.tot_mgr_node_delete_queued.increment();
     // Once a task znode is ready for delete, that is it is in the TASK_DONE
     // state, then no one should be writing to it anymore. That is no one
     // will be updating the znode version any more.
@@ -370,9 +370,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     task = details.getTasks().remove(path);
     if (task == null) {
       if (ZKSplitLog.isRescanNode(watcher, path)) {
-        SplitLogCounters.tot_mgr_rescan_deleted.incrementAndGet();
+        SplitLogCounters.tot_mgr_rescan_deleted.increment();
       }
-      SplitLogCounters.tot_mgr_missing_state_in_delete.incrementAndGet();
+      SplitLogCounters.tot_mgr_missing_state_in_delete.increment();
       LOG.debug("deleted task without in memory state " + path);
       return;
     }
@@ -380,7 +380,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       task.status = DELETED;
       task.notify();
     }
-    SplitLogCounters.tot_mgr_task_deleted.incrementAndGet();
+    SplitLogCounters.tot_mgr_task_deleted.increment();
   }
 
   private void deleteNodeFailure(String path) {
@@ -389,7 +389,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   }
 
   private void createRescanSuccess(String path) {
-    SplitLogCounters.tot_mgr_rescan.incrementAndGet();
+    SplitLogCounters.tot_mgr_rescan.increment();
     getDataSetWatch(path, zkretries);
   }
 
@@ -416,7 +416,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     SplitLogTask slt = new SplitLogTask.Unassigned(details.getServerName(), getRecoveryMode());
     ZKUtil.asyncCreate(this.watcher, path, slt.toByteArray(), new CreateAsyncCallback(),
       retry_count);
-    SplitLogCounters.tot_mgr_node_create_queued.incrementAndGet();
+    SplitLogCounters.tot_mgr_node_create_queued.increment();
     return;
   }
 
@@ -434,7 +434,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   private void getDataSetWatch(String path, Long retry_count) {
     this.watcher.getRecoverableZooKeeper().getZooKeeper()
         .getData(path, this.watcher, new GetDataAsyncCallback(), retry_count);
-    SplitLogCounters.tot_mgr_get_data_queued.incrementAndGet();
+    SplitLogCounters.tot_mgr_get_data_queued.increment();
   }
 
 
@@ -446,7 +446,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         setDone(path, SUCCESS);
         return;
       }
-      SplitLogCounters.tot_mgr_null_data.incrementAndGet();
+      SplitLogCounters.tot_mgr_null_data.increment();
       LOG.fatal("logic error - got null data " + path);
       setDone(path, FAILURE);
       return;
@@ -497,17 +497,17 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     Task task = details.getTasks().get(path);
     if (task == null) {
       if (!ZKSplitLog.isRescanNode(watcher, path)) {
-        SplitLogCounters.tot_mgr_unacquired_orphan_done.incrementAndGet();
+        SplitLogCounters.tot_mgr_unacquired_orphan_done.increment();
         LOG.debug("unacquired orphan task is done " + path);
       }
     } else {
       synchronized (task) {
         if (task.status == IN_PROGRESS) {
           if (status == SUCCESS) {
-            SplitLogCounters.tot_mgr_log_split_success.incrementAndGet();
+            SplitLogCounters.tot_mgr_log_split_success.increment();
             LOG.info("Done splitting " + path);
           } else {
-            SplitLogCounters.tot_mgr_log_split_err.incrementAndGet();
+            SplitLogCounters.tot_mgr_log_split_err.increment();
             LOG.warn("Error splitting " + path);
           }
           task.status = status;
@@ -536,7 +536,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   private Task findOrCreateOrphanTask(String path) {
     return computeIfAbsent(details.getTasks(), path, Task::new, () -> {
       LOG.info("creating orphan task " + path);
-      SplitLogCounters.tot_mgr_orphan_task_acquired.incrementAndGet();
+      SplitLogCounters.tot_mgr_orphan_task_acquired.increment();
     });
   }
 
@@ -547,7 +547,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         LOG.info("task " + path + " acquired by " + workerName);
       }
       task.heartbeat(EnvironmentEdgeManager.currentTime(), new_version, workerName);
-      SplitLogCounters.tot_mgr_heartbeat.incrementAndGet();
+      SplitLogCounters.tot_mgr_heartbeat.increment();
     } else {
       // duplicate heartbeats - heartbeats w/o zk node version
       // changing - are possible. The timeout thread does
@@ -898,7 +898,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       LOG.debug("failed to resubmit task " + path + " version changed");
       return false;
     } catch (KeeperException e) {
-      SplitLogCounters.tot_mgr_resubmit_failed.incrementAndGet();
+      SplitLogCounters.tot_mgr_resubmit_failed.increment();
       LOG.warn("failed to resubmit " + path, e);
       return false;
     }
@@ -947,7 +947,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
     @Override
     public void processResult(int rc, String path, Object ctx, String name) {
-      SplitLogCounters.tot_mgr_node_create_result.incrementAndGet();
+      SplitLogCounters.tot_mgr_node_create_result.increment();
       if (rc != 0) {
         if (needAbandonRetries(rc, "Create znode " + path)) {
           createNodeFailure(path);
@@ -961,16 +961,16 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
           // And all code pieces correctly handle the case of suddenly
           // disappearing task-znode.
           LOG.debug("found pre-existing znode " + path);
-          SplitLogCounters.tot_mgr_node_already_exists.incrementAndGet();
+          SplitLogCounters.tot_mgr_node_already_exists.increment();
         } else {
           Long retry_count = (Long) ctx;
           LOG.warn("create rc =" + KeeperException.Code.get(rc) + " for " + path
               + " remaining retries=" + retry_count);
           if (retry_count == 0) {
-            SplitLogCounters.tot_mgr_node_create_err.incrementAndGet();
+            SplitLogCounters.tot_mgr_node_create_err.increment();
             createNodeFailure(path);
           } else {
-            SplitLogCounters.tot_mgr_node_create_retry.incrementAndGet();
+            SplitLogCounters.tot_mgr_node_create_retry.increment();
             createNode(path, retry_count - 1);
           }
           return;
@@ -988,13 +988,13 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
     @Override
     public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
-      SplitLogCounters.tot_mgr_get_data_result.incrementAndGet();
+      SplitLogCounters.tot_mgr_get_data_result.increment();
       if (rc != 0) {
         if (needAbandonRetries(rc, "GetData from znode " + path)) {
           return;
         }
         if (rc == KeeperException.Code.NONODE.intValue()) {
-          SplitLogCounters.tot_mgr_get_data_nonode.incrementAndGet();
+          SplitLogCounters.tot_mgr_get_data_nonode.increment();
           LOG.warn("task znode " + path + " vanished or not created yet.");
           // ignore since we should not end up in a case where there is in-memory task,
           // but no znode. The only case is between the time task is created in-memory
@@ -1011,10 +1011,10 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " + path
             + " remaining retries=" + retry_count);
         if (retry_count == 0) {
-          SplitLogCounters.tot_mgr_get_data_err.incrementAndGet();
+          SplitLogCounters.tot_mgr_get_data_err.increment();
           getDataSetWatchFailure(path);
         } else {
-          SplitLogCounters.tot_mgr_get_data_retry.incrementAndGet();
+          SplitLogCounters.tot_mgr_get_data_retry.increment();
           getDataSetWatch(path, retry_count - 1);
         }
         return;
@@ -1036,14 +1036,14 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
     @Override
     public void processResult(int rc, String path, Object ctx) {
-      SplitLogCounters.tot_mgr_node_delete_result.incrementAndGet();
+      SplitLogCounters.tot_mgr_node_delete_result.increment();
       if (rc != 0) {
         if (needAbandonRetries(rc, "Delete znode " + path)) {
           details.getFailedDeletions().add(path);
           return;
         }
         if (rc != KeeperException.Code.NONODE.intValue()) {
-          SplitLogCounters.tot_mgr_node_delete_err.incrementAndGet();
+          SplitLogCounters.tot_mgr_node_delete_err.increment();
           Long retry_count = (Long) ctx;
           LOG.warn("delete rc=" + KeeperException.Code.get(rc) + " for " + path
               + " remaining retries=" + retry_count);
