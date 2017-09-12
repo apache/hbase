@@ -134,17 +134,17 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public long getNumFilesCompacted() {
-    return this.region.compactionNumFilesCompacted.get();
+    return this.region.compactionNumFilesCompacted.sum();
   }
 
   @Override
   public long getNumBytesCompacted() {
-    return this.region.compactionNumBytesCompacted.get();
+    return this.region.compactionNumBytesCompacted.sum();
   }
 
   @Override
   public long getNumCompactionsCompleted() {
-    return this.region.compactionsFinished.get();
+    return this.region.compactionsFinished.sum();
   }
 
   @Override
@@ -161,17 +161,17 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public long getNumCompactionsFailed() {
-    return this.region.compactionsFailed.get();
+    return this.region.compactionsFailed.sum();
   }
 
   @Override
   public long getNumCompactionsQueued() {
-    return this.region.compactionsQueued.get();
+    return this.region.compactionsQueued.sum();
   }
 
   @Override
   public long getNumFlushesQueued() {
-    return this.region.flushesQueued.get();
+    return this.region.flushesQueued.sum();
   }
 
   @Override

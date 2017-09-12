@@ -27,7 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -151,32 +151,32 @@ public class TestSplitLogWorker {
     }
   }
 
-  private void waitForCounter(AtomicLong ctr, long oldval, long newval, long timems)
+  private void waitForCounter(LongAdder ctr, long oldval, long newval, long timems)
       throws Exception {
-    assertTrue("ctr=" + ctr.get() + ", oldval=" + oldval + ", newval=" + newval,
+    assertTrue("ctr=" + ctr.sum() + ", oldval=" + oldval + ", newval=" + newval,
       waitForCounterBoolean(ctr, oldval, newval, timems));
   }
 
-  private boolean waitForCounterBoolean(final AtomicLong ctr, final long oldval, long newval,
+  private boolean waitForCounterBoolean(final LongAdder ctr, final long oldval, long newval,
       long timems) throws Exception {
 
     return waitForCounterBoolean(ctr, oldval, newval, timems, true);
   }
 
-  private boolean waitForCounterBoolean(final AtomicLong ctr, final long oldval, final long newval,
+  private boolean waitForCounterBoolean(final LongAdder ctr, final long oldval, final long newval,
       long timems, boolean failIfTimeout) throws Exception {
 
     long timeWaited = TEST_UTIL.waitFor(timems, 10, failIfTimeout,
       new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-            return (ctr.get() >= newval);
+            return (ctr.sum() >= newval);
       }
     });
 
     if( timeWaited > 0) {
       // when not timed out
-      assertEquals(newval, ctr.get());
+      assertEquals(newval, ctr.sum());
     }
     return true;
   }
@@ -293,7 +293,7 @@ public class TestSplitLogWorker {
       // not it, that we fell through to the next counter in line and it was set.
       assertTrue(waitForCounterBoolean(SplitLogCounters.tot_wkr_failed_to_grab_task_owned, 0, 1,
           WAIT_TIME, false) ||
-        SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.get() == 1);
+        SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.sum() == 1);
       byte [] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TRFT));
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);
       assertTrue(slt.isOwned(SVR1) || slt.isOwned(SVR2));

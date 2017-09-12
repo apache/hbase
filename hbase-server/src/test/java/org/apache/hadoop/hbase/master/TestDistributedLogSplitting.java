@@ -45,6 +45,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1049,15 +1050,15 @@ public class TestDistributedLogSplitting {
       long waitTime = 80000;
       long endt = curt + waitTime;
       while (curt < endt) {
-        if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
-            tot_wkr_final_transition_failed.get() + tot_wkr_task_done.get() +
-            tot_wkr_preempt_task.get()) == 0) {
+        if ((tot_wkr_task_resigned.sum() + tot_wkr_task_err.sum() +
+            tot_wkr_final_transition_failed.sum() + tot_wkr_task_done.sum() +
+            tot_wkr_preempt_task.sum()) == 0) {
           Thread.yield();
           curt = System.currentTimeMillis();
         } else {
-          assertTrue(1 <= (tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
-              tot_wkr_final_transition_failed.get() + tot_wkr_task_done.get() +
-              tot_wkr_preempt_task.get()));
+          assertTrue(1 <= (tot_wkr_task_resigned.sum() + tot_wkr_task_err.sum() +
+              tot_wkr_final_transition_failed.sum() + tot_wkr_task_done.sum() +
+              tot_wkr_preempt_task.sum()));
           return;
         }
       }
@@ -1717,16 +1718,16 @@ public class TestDistributedLogSplitting {
     }
   }
 
-  private void waitForCounter(AtomicLong ctr, long oldval, long newval,
+  private void waitForCounter(LongAdder ctr, long oldval, long newval,
       long timems) {
     long curt = System.currentTimeMillis();
     long endt = curt + timems;
     while (curt < endt) {
-      if (ctr.get() == oldval) {
+      if (ctr.sum() == oldval) {
         Thread.yield();
         curt = System.currentTimeMillis();
       } else {
-        assertEquals(newval, ctr.get());
+        assertEquals(newval, ctr.sum());
         return;
       }
     }

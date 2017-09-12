@@ -18,7 +18,7 @@
   */
 package org.apache.hadoop.hbase.coordination;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  * {@link #isStop()} a flag indicates whether worker should finish <BR>
  * {@link #registerListener()} called from {@link SplitLogWorker#run()} and could register listener
  * for external changes in coordination (if required) <BR>
- * {@link #endTask(SplitLogTask, AtomicLong, SplitTaskDetails)} notify coordination engine that
+ * {@link #endTask(SplitLogTask, LongAdder, SplitTaskDetails)} notify coordination engine that
  * <p>
  * Important methods for WALSplitterHandler: <BR>
  * splitting task has completed.
@@ -121,7 +121,7 @@ public interface SplitLogWorkerCoordination {
    * @param splitTaskDetails details about log split task (specific to coordination engine being
    *          used).
    */
-  void endTask(SplitLogTask slt, AtomicLong ctr, SplitTaskDetails splitTaskDetails);
+  void endTask(SplitLogTask slt, LongAdder ctr, SplitTaskDetails splitTaskDetails);
 
   /**
    * Interface for log-split tasks Used to carry implementation details in encapsulated way through

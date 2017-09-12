@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -156,7 +156,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
         String taskpath = currentTask;
         if (taskpath != null && taskpath.equals(path)) {
           LOG.info("retrying data watch on " + path);
-          SplitLogCounters.tot_wkr_get_data_retry.incrementAndGet();
+          SplitLogCounters.tot_wkr_get_data_retry.increment();
           getDataSetWatchAsync();
         } else {
           // no point setting a watch on the task which this worker is not
@@ -169,7 +169,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   public void getDataSetWatchAsync() {
     watcher.getRecoverableZooKeeper().getZooKeeper()
         .getData(currentTask, watcher, new GetDataAsyncCallback(), null);
-    SplitLogCounters.tot_wkr_get_data_queued.incrementAndGet();
+    SplitLogCounters.tot_wkr_get_data_queued.increment();
   }
 
   void getDataSetWatchSuccess(String path, byte[] data) {
@@ -221,12 +221,12 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
     try {
       try {
         if ((data = ZKUtil.getDataNoWatch(watcher, path, stat)) == null) {
-          SplitLogCounters.tot_wkr_failed_to_grab_task_no_data.incrementAndGet();
+          SplitLogCounters.tot_wkr_failed_to_grab_task_no_data.increment();
           return;
         }
       } catch (KeeperException e) {
         LOG.warn("Failed to get data for znode " + path, e);
-        SplitLogCounters.tot_wkr_failed_to_grab_task_exception.incrementAndGet();
+        SplitLogCounters.tot_wkr_failed_to_grab_task_exception.increment();
         return;
       }
       SplitLogTask slt;
@@ -234,11 +234,11 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
         slt = SplitLogTask.parseFrom(data);
       } catch (DeserializationException e) {
         LOG.warn("Failed parse data for znode " + path, e);
-        SplitLogCounters.tot_wkr_failed_to_grab_task_exception.incrementAndGet();
+        SplitLogCounters.tot_wkr_failed_to_grab_task_exception.increment();
         return;
       }
       if (!slt.isUnassigned()) {
-        SplitLogCounters.tot_wkr_failed_to_grab_task_owned.incrementAndGet();
+        SplitLogCounters.tot_wkr_failed_to_grab_task_owned.increment();
         return;
       }
 
@@ -246,7 +246,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
           attemptToOwnTask(true, watcher, server.getServerName(), path,
             slt.getMode(), stat.getVersion());
       if (currentVersion < 0) {
-        SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.incrementAndGet();
+        SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.increment();
         return;
       }
 
@@ -262,7 +262,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
       }
 
       LOG.info("worker " + server.getServerName() + " acquired task " + path);
-      SplitLogCounters.tot_wkr_task_acquired.incrementAndGet();
+      SplitLogCounters.tot_wkr_task_acquired.increment();
       getDataSetWatchAsync();
 
       submitTask(path, slt.getMode(), currentVersion, reportPeriod);
@@ -371,11 +371,11 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
       Stat stat = zkw.getRecoverableZooKeeper().setData(task, slt.toByteArray(), taskZKVersion);
       if (stat == null) {
         LOG.warn("zk.setData() returned null for path " + task);
-        SplitLogCounters.tot_wkr_task_heartbeat_failed.incrementAndGet();
+        SplitLogCounters.tot_wkr_task_heartbeat_failed.increment();
         return FAILED_TO_OWN_TASK;
       }
       latestZKVersion = stat.getVersion();
-      SplitLogCounters.tot_wkr_task_heartbeat.incrementAndGet();
+      SplitLogCounters.tot_wkr_task_heartbeat.increment();
       return latestZKVersion;
     } catch (KeeperException e) {
       if (!isFirstTime) {
@@ -392,7 +392,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
           + StringUtils.stringifyException(e1));
       Thread.currentThread().interrupt();
     }
-    SplitLogCounters.tot_wkr_task_heartbeat_failed.incrementAndGet();
+    SplitLogCounters.tot_wkr_task_heartbeat_failed.increment();
     return FAILED_TO_OWN_TASK;
   }
 
@@ -440,7 +440,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
           return;
         }
       }
-      SplitLogCounters.tot_wkr_task_grabing.incrementAndGet();
+      SplitLogCounters.tot_wkr_task_grabing.increment();
       synchronized (taskReadyLock) {
         while (seq_start == taskReadySeq.get()) {
           taskReadyLock.wait(checkInterval);
@@ -567,7 +567,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
 
     @Override
     public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
-      SplitLogCounters.tot_wkr_get_data_result.incrementAndGet();
+      SplitLogCounters.tot_wkr_get_data_result.increment();
       if (rc != 0) {
         LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " + path);
         getDataSetWatchFailure(path);
@@ -588,14 +588,14 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    * @param ctr
    */
   @Override
-  public void endTask(SplitLogTask slt, AtomicLong ctr, SplitTaskDetails details) {
+  public void endTask(SplitLogTask slt, LongAdder ctr, SplitTaskDetails details) {
     ZkSplitTaskDetails zkDetails = (ZkSplitTaskDetails) details;
     String task = zkDetails.getTaskNode();
     int taskZKVersion = zkDetails.getCurTaskZKVersion().intValue();
     try {
       if (ZKUtil.setData(watcher, task, slt.toByteArray(), taskZKVersion)) {
         LOG.info("successfully transitioned task " + task + " to final state " + slt);
-        ctr.incrementAndGet();
+        ctr.increment();
         return;
       }
       LOG.warn("failed to transistion task " + task + " to end state " + slt
@@ -609,7 +609,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
     } catch (KeeperException e) {
       LOG.warn("failed to end task, " + task + " " + slt, e);
     }
-    SplitLogCounters.tot_wkr_final_transition_failed.incrementAndGet();
+    SplitLogCounters.tot_wkr_final_transition_failed.increment();
   }
 
   /**

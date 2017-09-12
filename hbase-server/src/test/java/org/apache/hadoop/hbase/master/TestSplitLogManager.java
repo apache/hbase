@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -171,12 +172,12 @@ public class TestSplitLogManager {
     long eval();
   }
 
-  private void waitForCounter(final AtomicLong ctr, long oldval, long newval, long timems)
+  private void waitForCounter(final LongAdder ctr, long oldval, long newval, long timems)
       throws Exception {
     Expr e = new Expr() {
       @Override
       public long eval() {
-        return ctr.get();
+        return ctr.sum();
       }
     };
     waitForCounter(e, oldval, newval, timems);
@@ -199,7 +200,7 @@ public class TestSplitLogManager {
   private Task findOrCreateOrphanTask(String path) {
     return slm.tasks.computeIfAbsent(path, k -> {
       LOG.info("creating orphan task " + k);
-      SplitLogCounters.tot_mgr_orphan_task_acquired.incrementAndGet();
+      SplitLogCounters.tot_mgr_orphan_task_acquired.increment();
       return new Task();
     });
   }
@@ -214,7 +215,7 @@ public class TestSplitLogManager {
     slm.enqueueSplitTask(name, batch);
     assertEquals(1, batch.installed);
     assertTrue(findOrCreateOrphanTask(tasknode).batch == batch);
-    assertEquals(1L, tot_mgr_node_create_queued.get());
+    assertEquals(1L, tot_mgr_node_create_queued.sum());
 
     LOG.debug("waiting for task node creation");
     listener.waitForCreation();
@@ -286,7 +287,7 @@ public class TestSplitLogManager {
     Task task2 = findOrCreateOrphanTask(tasknode);
     assertTrue(task == task2);
     LOG.debug("task = " + task);
-    assertEquals(1L, tot_mgr_resubmit.get());
+    assertEquals(1L, tot_mgr_resubmit.sum());
     assertEquals(1, task.incarnation.get());
     assertEquals(0, task.unforcedResubmits.get());
     assertTrue(task.isOrphan());
@@ -323,7 +324,7 @@ public class TestSplitLogManager {
     waitForCounter(tot_mgr_heartbeat, 2, 3, to/2);
     waitForCounter(tot_mgr_resubmit_threshold_reached, 0, 1, to + to/2);
     Thread.sleep(to + to/2);
-    assertEquals(2L, tot_mgr_resubmit.get() - tot_mgr_resubmit_force.get());
+    assertEquals(2L, tot_mgr_resubmit.sum() - tot_mgr_resubmit_force.sum());
   }
 
   @Test (timeout=180000)
@@ -342,10 +343,10 @@ public class TestSplitLogManager {
     waitForCounter(new Expr() {
       @Override
       public long eval() {
-        return (tot_mgr_resubmit.get() + tot_mgr_resubmit_failed.get());
+        return (tot_mgr_resubmit.sum() + tot_mgr_resubmit_failed.sum());
       }
     }, 0, 1, 5*60000); // wait long enough
-    Assert.assertEquals("Could not run test. Lost ZK connection?", 0, tot_mgr_resubmit_failed.get());
+    Assert.assertEquals("Could not run test. Lost ZK connection?", 0, tot_mgr_resubmit_failed.sum());
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
@@ -400,23 +401,23 @@ public class TestSplitLogManager {
   @Test (timeout=180000)
   public void testTaskResigned() throws Exception {
     LOG.info("TestTaskResigned - resubmit task node once in RESIGNED state");
-    assertEquals(tot_mgr_resubmit.get(), 0);
+    assertEquals(tot_mgr_resubmit.sum(), 0);
     slm = new SplitLogManager(master, conf);
-    assertEquals(tot_mgr_resubmit.get(), 0);
+    assertEquals(tot_mgr_resubmit.sum(), 0);
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
-    assertEquals(tot_mgr_resubmit.get(), 0);
+    assertEquals(tot_mgr_resubmit.sum(), 0);
     final ServerName worker1 = ServerName.valueOf("worker1,1,1");
-    assertEquals(tot_mgr_resubmit.get(), 0);
+    assertEquals(tot_mgr_resubmit.sum(), 0);
     SplitLogTask slt = new SplitLogTask.Resigned(worker1, this.mode);
-    assertEquals(tot_mgr_resubmit.get(), 0);
+    assertEquals(tot_mgr_resubmit.sum(), 0);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     ZKUtil.checkExists(zkw, tasknode);
     // Could be small race here.
-    if (tot_mgr_resubmit.get() == 0) {
+    if (tot_mgr_resubmit.sum() == 0) {
       waitForCounter(tot_mgr_resubmit, 0, 1, to/2);
     }
-    assertEquals(tot_mgr_resubmit.get(), 1);
+    assertEquals(tot_mgr_resubmit.sum(), 1);
 
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
     slt = SplitLogTask.parseFrom(taskstate);
@@ -472,10 +473,10 @@ public class TestSplitLogManager {
     final ServerName worker1 = ServerName.valueOf("worker1,1,1");
     SplitLogTask slt = new SplitLogTask.Owned(worker1, this.mode);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
-    if (tot_mgr_heartbeat.get() == 0) waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
+    if (tot_mgr_heartbeat.sum() == 0) waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
     slm.handleDeadWorker(worker1);
-    if (tot_mgr_resubmit.get() == 0) waitForCounter(tot_mgr_resubmit, 0, 1, to+to/2);
-    if (tot_mgr_resubmit_dead_server_task.get() == 0) {
+    if (tot_mgr_resubmit.sum() == 0) waitForCounter(tot_mgr_resubmit, 0, 1, to+to/2);
+    if (tot_mgr_resubmit_dead_server_task.sum() == 0) {
       waitForCounter(tot_mgr_resubmit_dead_server_task, 0, 1, to + to/2);
     }
 
@@ -497,10 +498,10 @@ public class TestSplitLogManager {
 
     SplitLogTask slt = new SplitLogTask.Owned(worker1, this.mode);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
-    if (tot_mgr_heartbeat.get() == 0) waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
+    if (tot_mgr_heartbeat.sum() == 0) waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
 
     // Not yet resubmitted.
-    Assert.assertEquals(0, tot_mgr_resubmit.get());
+    Assert.assertEquals(0, tot_mgr_resubmit.sum());
 
     // This server becomes dead
     Mockito.when(sm.isServerOnline(worker1)).thenReturn(false);
@@ -508,7 +509,7 @@ public class TestSplitLogManager {
     Thread.sleep(1300); // The timeout checker is done every 1000 ms (hardcoded).
 
     // It has been resubmitted
-    Assert.assertEquals(1, tot_mgr_resubmit.get());
+    Assert.assertEquals(1, tot_mgr_resubmit.sum());
   }
 
   @Test (timeout=180000)

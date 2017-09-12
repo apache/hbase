@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
@@ -76,9 +77,9 @@ public class MobFileCache {
   // caches access count
   private final AtomicLong count = new AtomicLong(0);
   private long lastAccess = 0;
-  private final AtomicLong miss = new AtomicLong(0);
+  private final LongAdder miss = new LongAdder();
   private long lastMiss = 0;
-  private final AtomicLong evictedFileCount = new AtomicLong(0);
+  private final LongAdder evictedFileCount = new LongAdder();
   private long lastEvictedFileCount = 0;
 
   // a lock to sync the evict to guarantee the eviction occurs in sequence.
@@ -163,7 +164,7 @@ public class MobFileCache {
       for (CachedMobFile evictedFile : evictedFiles) {
         closeFile(evictedFile);
       }
-      evictedFileCount.addAndGet(evictedFiles.size());
+      evictedFileCount.add(evictedFiles.size());
     }
   }
 
@@ -180,7 +181,7 @@ public class MobFileCache {
         CachedMobFile evictedFile = map.remove(fileName);
         if (evictedFile != null) {
           evictedFile.close();
-          evictedFileCount.incrementAndGet();
+          evictedFileCount.increment();
         }
       } catch (IOException e) {
         LOG.error("Failed to evict the file " + fileName, e);
@@ -219,7 +220,7 @@ public class MobFileCache {
             cached = CachedMobFile.create(fs, path, conf, cacheConf);
             cached.open();
             map.put(fileName, cached);
-            miss.incrementAndGet();
+            miss.increment();
           }
         }
         cached.open();
@@ -294,7 +295,7 @@ public class MobFileCache {
    * @return The count of misses to the mob file cache.
    */
   public long getMissCount() {
-    return miss.get();
+    return miss.sum();
   }
 
   /**
@@ -302,7 +303,7 @@ public class MobFileCache {
    * @return The number of items evicted from the mob file cache.
    */
   public long getEvictedFileCount() {
-    return evictedFileCount.get();
+    return evictedFileCount.sum();
   }
 
   /**
@@ -310,7 +311,7 @@ public class MobFileCache {
    * @return The hit ratio to the mob file cache.
    */
   public double getHitRatio() {
-    return count.get() == 0 ? 0 : ((float) (count.get() - miss.get())) / (float) count.get();
+    return count.get() == 0 ? 0 : ((float) (count.get() - miss.sum())) / (float) count.get();
   }
 
   /**
@@ -318,8 +319,8 @@ public class MobFileCache {
    */
   public void printStatistics() {
     long access = count.get() - lastAccess;
-    long missed = miss.get() - lastMiss;
-    long evicted = evictedFileCount.get() - lastEvictedFileCount;
+    long missed = miss.sum() - lastMiss;
+    long evicted = evictedFileCount.sum() - lastEvictedFileCount;
     int hitRatio = access == 0 ? 0 : (int) (((float) (access - missed)) / (float) access * 100);
     LOG.info("MobFileCache Statistics, access: " + access + ", miss: " + missed + ", hit: "
         + (access - missed) + ", hit ratio: " + hitRatio + "%, evicted files: " + evicted);

@@ -248,7 +248,7 @@ public class SplitLogManager {
       logDirs + " for serverName=" + serverNames);
     FileStatus[] logfiles = getFileList(logDirs, filter);
     status.setStatus("Checking directory contents...");
-    SplitLogCounters.tot_mgr_log_split_batch_start.incrementAndGet();
+    SplitLogCounters.tot_mgr_log_split_batch_start.increment();
     LOG.info("Started splitting " + logfiles.length + " logs in " + logDirs +
       " for " + serverNames);
     long t = EnvironmentEdgeManager.currentTime();
@@ -278,7 +278,7 @@ public class SplitLogManager {
 
     if (batch.done != batch.installed) {
       batch.isDead = true;
-      SplitLogCounters.tot_mgr_log_split_batch_err.incrementAndGet();
+      SplitLogCounters.tot_mgr_log_split_batch_err.increment();
       LOG.warn("error while splitting logs in " + logDirs + " installed = " + batch.installed
           + " but only " + batch.done + " done");
       String msg = "error or interrupted while splitting logs in " + logDirs + " Task = " + batch;
@@ -302,7 +302,7 @@ public class SplitLogManager {
           LOG.warn("Unable to delete log src dir. Ignoring. " + logDir, ioe);
         }
       }
-      SplitLogCounters.tot_mgr_log_split_batch_success.incrementAndGet();
+      SplitLogCounters.tot_mgr_log_split_batch_success.increment();
     }
     String msg =
         "finished splitting (more than or equal to) " + totalSize + " bytes in " + batch.installed
@@ -474,7 +474,7 @@ public class SplitLogManager {
         }
         while (oldtask.status == FAILURE) {
           LOG.debug("wait for status of task " + path + " to change to DELETED");
-          SplitLogCounters.tot_mgr_wait_for_zk_delete.incrementAndGet();
+          SplitLogCounters.tot_mgr_wait_for_zk_delete.increment();
           try {
             oldtask.wait();
           } catch (InterruptedException e) {
@@ -694,7 +694,7 @@ public class SplitLogManager {
         }
         found_assigned_task = true;
         if (localDeadWorkers != null && localDeadWorkers.contains(cur_worker)) {
-          SplitLogCounters.tot_mgr_resubmit_dead_server_task.incrementAndGet();
+          SplitLogCounters.tot_mgr_resubmit_dead_server_task.increment();
           if (getSplitLogManagerCoordination().resubmitTask(path, task, FORCE)) {
             resubmitted++;
           } else {
@@ -741,7 +741,7 @@ public class SplitLogManager {
           }
         }
         getSplitLogManagerCoordination().checkTasks();
-        SplitLogCounters.tot_mgr_resubmit_unassigned.incrementAndGet();
+        SplitLogCounters.tot_mgr_resubmit_unassigned.increment();
         LOG.debug("resubmitting unassigned task(s) after timeout");
       }
       Set<String> failedDeletions =
