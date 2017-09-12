@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 // TODO: Key and WALEdit are never used separately, or in one-to-many relation, for practical
 //       purposes. They need to be merged into WALEntry.
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
+@InterfaceAudience.Private
 public class WALKey implements SequenceId, Comparable<WALKey> {
 
   /**
