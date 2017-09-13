@@ -210,9 +210,7 @@ public class DeleteNamespaceProcedure
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitNamespaceManagerInitialized(this)) {
-      return false;
-    }
+    if (env.waitInitialized(this)) return false;
     return env.getProcedureQueue().tryAcquireNamespaceExclusiveLock(this, getNamespaceName());
   }
 
