@@ -2605,6 +2605,24 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
+  public void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException { }
+
+  @Override
+  public void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException { }
+
+  @Override
+  public void preClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    requirePermission("clearDeadServers", Action.ADMIN);
+  }
+
+  @Override
+  public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException { }
+
+  @Override
   public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, Region regionA,
       Region regionB) throws IOException {
     requirePermission("mergeRegions", regionA.getTableDesc().getTableName(), null, null,

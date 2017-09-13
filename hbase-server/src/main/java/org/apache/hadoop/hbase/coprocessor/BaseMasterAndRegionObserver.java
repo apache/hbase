@@ -65,6 +65,26 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
+  @Override
+  public void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
+  @Override
+  public void preClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
+  @Override
+  public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
+  @Override
   public void preCreateTableHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {

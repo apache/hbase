@@ -1172,6 +1172,47 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preListDeadServers() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+              throws IOException {
+        oserver.preListDeadServers(ctx);
+      }
+    });
+  }
+
+  public void postListDeadServers() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+              throws IOException {
+        oserver.postListDeadServers(ctx);
+      }
+    });
+  }
+
+  public void preClearDeadServers() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+              throws IOException {
+        oserver.preClearDeadServers(ctx);
+      }
+    });
+  }
+
+  public void postClearDeadServers() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+              throws IOException {
+        oserver.postClearDeadServers(ctx);
+      }
+    });
+  }
+
+
   private static abstract class CoprocessorOperation
       extends ObserverContext<MasterCoprocessorEnvironment> {
     public CoprocessorOperation() {
