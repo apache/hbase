@@ -54,10 +54,10 @@ public class TestCreateTableHandler {
   private static final Log LOG = LogFactory.getLog(TestCreateTableHandler.class);
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
   private static boolean throwException = false;
+  
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean("hbase.master.start.wait.for.namespacemanager", true);
     TEST_UTIL.startMiniCluster(1);
   }
 

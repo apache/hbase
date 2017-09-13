@@ -18,10 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -41,6 +44,7 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Rule;
@@ -80,7 +84,6 @@ public class TestRSKilledWhenInitializing {
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
-    conf.setBoolean("hbase.master.start.wait.for.namespacemanager", false);
     // Start the cluster
     final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniDFSCluster(3);
@@ -97,45 +100,23 @@ public class TestRSKilledWhenInitializing {
       }
       // Now wait on master to see NUM_RS + 1 servers as being online, thats NUM_RS plus
       // the Master itself (because Master hosts hbase:meta and checks in as though it a RS).
-      ServerManager serverManager = master.getMaster().getServerManager();
       List<ServerName> onlineServersList = null;
       do {
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
       } while (onlineServersList.size() < NUM_RS);
-
-      LOG.info("!!!Print online Server list: " + onlineServersList);
       // Wait until killedRS is set. Means RegionServer is starting to go down.
       while (killedRS.get() == null) {
         Threads.sleep(1);
       }
-      LOG.info("!!!Print dead server: " + killedRS);
-      LOG.info("!!!Print online Server list: " + serverManager.getOnlineServersList());
       // Wait on the RegionServer to fully die.
       while (cluster.getLiveRegionServers().size() >= NUM_RS) {
         Threads.sleep(1);
       }
-
-      LOG.info("!!!Print live server size: " + cluster.getLiveRegionServers().size());
-      LOG.info("!!!Print online Server list after kill: " + serverManager.getOnlineServersList());
-      LOG.info("!!!Print is server " + killedRS.get() + " online: " + serverManager.isServerOnline(killedRS.get()));
-
       // Make sure Master is fully up before progressing. Could take a while if regions
       // being reassigned.
       while (!master.getMaster().isInitialized()) {
         Threads.sleep(1);
       }
-
-      int i=0;
-      while (i < 100000) {
-        if (!serverManager.isServerOnline(killedRS.get())) {
-          break;
-        }
-        Threads.sleep(100);
-        i +=100;
-      }
-      LOG.info("!!!Print online Server list after kill: " + serverManager.getOnlineServersList());
-      LOG.info("!!!Print wait: " + i + " ms.");
-      LOG.info("!!!Print is server " + killedRS.get() + " online: " + serverManager.isServerOnline(killedRS.get()));
 
       // Now in steady state. Make sure the killed RS is no longer registered.
       // branch-1 works differently to master branch.

@@ -66,9 +66,6 @@ public class TestRegionOpen {
 
   @BeforeClass
   public static void before() throws Exception {
-    // This test depends on namespace region open; therefore, we have to wait for namespace
-    // manager start before continue.
-    HTU.getConfiguration().setBoolean("hbase.master.start.wait.for.namespacemanager", true);
     HTU.startMiniCluster(NB_SERVERS);
   }
 
@@ -86,6 +83,7 @@ public class TestRegionOpen {
     final TableName tableName = TableName.valueOf(TestRegionOpen.class.getSimpleName());
     ThreadPoolExecutor exec = getRS().getExecutorService()
         .getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
+
     assertEquals(1, exec.getCompletedTaskCount()); // namespace region
 
     HTableDescriptor htd = new HTableDescriptor(tableName);

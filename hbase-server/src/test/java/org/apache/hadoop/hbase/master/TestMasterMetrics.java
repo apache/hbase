@@ -66,9 +66,6 @@ public class TestMasterMetrics {
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
     TEST_UTIL = new HBaseTestingUtility();
-    // The metrics depends on namespace region is online, therefore, we have to
-    // wait for namespace manager starting.
-    TEST_UTIL.getConfiguration().setBoolean("hbase.master.start.wait.for.namespacemanager", true);
     TEST_UTIL.startMiniCluster(1, 1, 1, null, MyMaster.class, null);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");

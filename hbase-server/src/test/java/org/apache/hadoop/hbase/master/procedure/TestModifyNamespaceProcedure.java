@@ -48,10 +48,6 @@ public class TestModifyNamespaceProcedure {
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
-    // We have to disable the async namespace manager startup due to the recovery and rollback
-    // tests would halt the execution of procedure.  If at that time the namespace table is
-    // not created, it would be forced to stop/wait and cause the test to fail.
-    conf.setBoolean("hbase.master.start.wait.for.namespacemanager", true);
   }
 
   @BeforeClass
