@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.NavigableMap;
+import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,10 +37,13 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -134,7 +135,7 @@ public abstract class TestTableInputFormatScanBase {
    */
   public static class ScanReducer
   extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
-                  NullWritable, NullWritable> {
+                    NullWritable, NullWritable> {
 
     private String first = null;
     private String last = null;
@@ -247,28 +248,28 @@ public abstract class TestTableInputFormatScanBase {
 
 
   /**
-   * Tests a MR scan using data skew auto-balance
+   * Tests Number of inputSplits for MR job when specify number of mappers for TableInputFormatXXX
+   * This test does not run MR job
    *
    * @throws IOException
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
-  public void testNumOfSplits(String ratio, int expectedNumOfSplits) throws IOException,
-          InterruptedException,
-          ClassNotFoundException {
+  public void testNumOfSplits(int splitsPerRegion, int expectedNumOfSplits) throws IOException,
+      InterruptedException,
+      ClassNotFoundException {
     String jobName = "TestJobForNumOfSplits";
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     Scan scan = new Scan();
     scan.addFamily(INPUT_FAMILYS[0]);
     scan.addFamily(INPUT_FAMILYS[1]);
-    c.set("hbase.mapreduce.input.autobalance", "true");
-    c.set("hbase.mapreduce.input.autobalance.maxskewratio", ratio);
+    c.setInt("hbase.mapreduce.tableinput.mappers.per.region", splitsPerRegion);
     c.set(KEY_STARTROW, "");
     c.set(KEY_LASTROW, "");
     Job job = new Job(c, jobName);
     TableMapReduceUtil.initTableMapperJob(TABLE_NAME.getNameAsString(), scan, ScanMapper.class,
-            ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
+        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
     TableInputFormat tif = new TableInputFormat();
     tif.setConf(job.getConfiguration());
     Assert.assertEquals(TABLE_NAME, table.getName());
@@ -277,11 +278,61 @@ public abstract class TestTableInputFormatScanBase {
   }
 
   /**
-   * Tests for the getSplitKey() method in TableInputFormatBase.java
+   * Run MR job to check the number of mapper = expectedNumOfSplits
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws ClassNotFoundException
    */
-  public void testGetSplitKey(byte[] startKey, byte[] endKey, byte[] splitKey, boolean isText) {
-    byte[] result = TableInputFormatBase.getSplitKey(startKey, endKey, isText);
-      Assert.assertArrayEquals(splitKey, result);
+  public void testNumOfSplitsMR(int splitsPerRegion, int expectedNumOfSplits) throws IOException,
+      InterruptedException,
+      ClassNotFoundException {
+    String jobName = "TestJobForNumOfSplits-MR";
+    LOG.info("Before map/reduce startup - job " + jobName);
+    JobConf c = new JobConf(TEST_UTIL.getConfiguration());
+    Scan scan = new Scan();
+    scan.addFamily(INPUT_FAMILYS[0]);
+    scan.addFamily(INPUT_FAMILYS[1]);
+    c.setInt("hbase.mapreduce.tableinput.mappers.per.region", splitsPerRegion);
+    c.set(KEY_STARTROW, "");
+    c.set(KEY_LASTROW, "");
+    Job job = Job.getInstance(c, jobName);
+    TableMapReduceUtil.initTableMapperJob(TABLE_NAME.getNameAsString(), scan, ScanMapper.class,
+        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
+    job.setReducerClass(ScanReducer.class);
+    job.setNumReduceTasks(1);
+    job.setOutputFormatClass(NullOutputFormat.class);
+    assertTrue("job failed!", job.waitForCompletion(true));
+    // for some reason, hbase does not expose JobCounter.TOTAL_LAUNCHED_MAPS,
+    // we use TaskCounter.SHUFFLED_MAPS to get total launched maps
+    assertEquals("Saw the wrong count of mappers per region", expectedNumOfSplits,
+        job.getCounters().findCounter(TaskCounter.SHUFFLED_MAPS).getValue());
+  }
+
+  /**
+   * Run MR job to test autobalance for setting number of mappers for TIF
+   * This does not run real MR job
+   */
+  public void testAutobalanceNumOfSplit() throws IOException {
+    // set up splits for testing
+    List<InputSplit> splits = new ArrayList<>(5);
+    int[] regionLen = {10, 20, 20, 40, 60};
+    for (int i = 0; i < 5; i++) {
+      InputSplit split = new TableSplit(TABLE_NAME, new Scan(),
+          Bytes.toBytes(i), Bytes.toBytes(i + 1), "", "", regionLen[i] * 1048576);
+      splits.add(split);
+    }
+    TableInputFormat tif = new TableInputFormat();
+    List<InputSplit> res = tif.calculateAutoBalancedSplits(splits, 1073741824);
+
+    assertEquals("Saw the wrong number of splits", 5, res.size());
+    TableSplit ts1 = (TableSplit) res.get(0);
+    assertEquals("The first split end key should be", 2, Bytes.toInt(ts1.getEndRow()));
+    TableSplit ts2 = (TableSplit) res.get(1);
+    assertEquals("The second split regionsize should be", 20 * 1048576, ts2.getLength());
+    TableSplit ts3 = (TableSplit) res.get(2);
+    assertEquals("The third split start key should be", 3, Bytes.toInt(ts3.getStartRow()));
+    TableSplit ts4 = (TableSplit) res.get(4);
+    assertNotEquals("The seventh split start key should not be", 4, Bytes.toInt(ts4.getStartRow()));
   }
 }
 
