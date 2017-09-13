@@ -55,9 +55,11 @@ public class ServerLoad {
   private int totalStaticBloomSizeKB = 0;
   private long totalCompactingKVs = 0;
   private long currentCompactedKVs = 0;
+  private long reportTime = 0;
 
   public ServerLoad(ClusterStatusProtos.ServerLoad serverLoad) {
     this.serverLoad = serverLoad;
+    this.reportTime = System.currentTimeMillis();
     for (ClusterStatusProtos.RegionLoad rl: serverLoad.getRegionLoadsList()) {
       stores += rl.getStores();
       storefiles += rl.getStorefiles();
@@ -323,4 +325,8 @@ public class ServerLoad {
 
   public static final ServerLoad EMPTY_SERVERLOAD =
     new ServerLoad(ClusterStatusProtos.ServerLoad.newBuilder().build());
+
+  public long getReportTime() {
+    return reportTime;
+  }
 }
