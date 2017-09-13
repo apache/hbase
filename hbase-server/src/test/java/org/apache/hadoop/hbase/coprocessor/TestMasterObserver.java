@@ -270,6 +270,26 @@ public class TestMasterObserver {
       postDispatchMergeCalled = true;
     }
 
+    @Override
+    public void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+        throws IOException {
+    }
+
+    @Override
+    public void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+        throws IOException {
+    }
+
+    @Override
+    public void preClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+        throws IOException {
+    }
+
+    @Override
+    public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+        throws IOException {
+    }
+
     public boolean wasDispatchMergeCalled() {
       return preDispatchMergeCalled && postDispatchMergeCalled;
     }

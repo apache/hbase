@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableResponse;
@@ -135,6 +136,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshot
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListDeadServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
@@ -4898,6 +4900,34 @@ public class HBaseAdmin implements Admin {
       }
     });
   }
+
+  @Override
+  public List<ServerName> listDeadServers() throws IOException {
+    return executeCallable(new MasterCallable<List<ServerName>>(getConnection()) {
+      @Override
+      public List<ServerName> call(int callTimeout) throws ServiceException {
+        ListDeadServersRequest req = ListDeadServersRequest.newBuilder().build();
+        return ProtobufUtil.toServerNameList(
+                master.listDeadServers(null, req).getServerNameList());
+      }
+    });
+  }
+
+  @Override
+  public List<ServerName> clearDeadServers(final List<ServerName> servers) throws IOException {
+    if (servers == null || servers.size() == 0) {
+      throw new IllegalArgumentException("servers cannot be null or empty");
+    }
+    return executeCallable(new MasterCallable<List<ServerName>>(getConnection()) {
+      @Override
+      public List<ServerName> call(int callTimeout) throws Exception {
+        ClearDeadServersRequest req = RequestConverter.buildClearDeadServersRequest(servers);
+        return ProtobufUtil.toServerNameList(
+                master.clearDeadServers(null, req).getServerNameList());
+      }
+    });
+  }
+
 
   private RpcControllerFactory getRpcControllerFactory() {
     return rpcControllerFactory;

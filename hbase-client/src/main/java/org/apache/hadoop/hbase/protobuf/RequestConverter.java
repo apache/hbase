@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
@@ -1806,6 +1807,14 @@ public final class RequestConverter {
     builder.setSynchronous(synchronous);
     for (Admin.MasterSwitchType switchType : switchTypes) {
       builder.addSwitchTypes(convert(switchType));
+    }
+    return builder.build();
+  }
+
+  public static ClearDeadServersRequest buildClearDeadServersRequest(List<ServerName> deadServers) {
+    ClearDeadServersRequest.Builder builder = ClearDeadServersRequest.newBuilder();
+    for(ServerName server: deadServers) {
+      builder.addServerName(ProtobufUtil.toServerName(server));
     }
     return builder.build();
   }

@@ -1044,4 +1044,25 @@ public interface MasterObserver extends Coprocessor {
    */
   void postDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> c,
       final HRegionInfo regionA, final HRegionInfo regionB) throws IOException;
+
+  /**
+   * Called before list dead region servers.
+   */
+  void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException;
+
+  /**
+   * Called after list dead region servers.
+   */
+  void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException;
+
+  /**
+   * Called before clear dead region servers.
+   */
+  void preClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException;
+
+  /**
+   * Called after clear dead region servers.
+   */
+  void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException;
+
 }

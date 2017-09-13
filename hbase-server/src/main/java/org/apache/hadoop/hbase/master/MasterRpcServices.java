@@ -69,6 +69,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionReque
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
@@ -123,6 +125,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshot
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListDeadServersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListDeadServersResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest;
@@ -1135,6 +1139,66 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(e);
     }
   }
+
+  @Override
+  public ListDeadServersResponse listDeadServers(RpcController controller,
+      ListDeadServersRequest request) throws ServiceException {
+
+    LOG.debug(master.getClientIdAuditPrefix() + " list dead region servers.");
+    ListDeadServersResponse.Builder response = ListDeadServersResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      if (master.cpHost != null) {
+        master.cpHost.preListDeadServers();
+      }
+
+      Set<ServerName> servers = master.getServerManager().getDeadServers().copyServerNames();
+      for (ServerName server : servers) {
+        response.addServerName(ProtobufUtil.toServerName(server));
+      }
+
+      if (master.cpHost != null) {
+        master.cpHost.postListDeadServers();
+      }
+    } catch (IOException io) {
+      throw new ServiceException(io);
+    }
+
+    return response.build();
+  }
+
+  @Override
+  public ClearDeadServersResponse clearDeadServers(RpcController controller,
+      ClearDeadServersRequest request) throws ServiceException {
+    LOG.debug(master.getClientIdAuditPrefix() + " clear dead region servers.");
+    ClearDeadServersResponse.Builder response = ClearDeadServersResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      if (master.cpHost != null) {
+        master.cpHost.preClearDeadServers();
+      }
+
+      if (master.getServerManager().areDeadServersInProgress()) {
+        LOG.debug("Some dead server is still under processing, won't clear the dead server list");
+        response.addAllServerName(request.getServerNameList());
+      } else {
+        for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
+          if (!master.getServerManager().getDeadServers()
+                  .removeDeadServer(ProtobufUtil.toServerName(pbServer))) {
+            response.addServerName(pbServer);
+          }
+        }
+      }
+
+      if (master.cpHost != null) {
+        master.cpHost.postClearDeadServers();
+      }
+    } catch (IOException io) {
+      throw new ServiceException(io);
+    }
+    return response.build();
+  }
+
 
   @Override
   public ListNamespaceDescriptorsResponse listNamespaceDescriptors(RpcController c,

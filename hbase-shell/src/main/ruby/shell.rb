@@ -344,6 +344,8 @@ Shell.load_command_group(
     trace
     splitormerge_switch
     splitormerge_enabled
+    list_deadservers
+    clear_deadservers
   ],
   # TODO remove older hlog_roll command
   :aliases => {

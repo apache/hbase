@@ -396,6 +396,20 @@ public final class ProtobufUtil {
     }
     return ServerName.valueOf(hostName, port, startCode);
   }
+  /**
+   * Convert a list of protocol buffer ServerName to a list of ServerName
+   * @param proto protocol buffer ServerNameList
+   * @return a list of ServerName
+   */
+  public static List<ServerName> toServerNameList(
+      List<HBaseProtos.ServerName> proto) {
+    List<ServerName> servers = new ArrayList<ServerName>();
+    for (HBaseProtos.ServerName pbServer : proto) {
+      servers.add(toServerName(pbServer));
+    }
+    return servers;
+  }
+
 
   /**
    * Get HTableDescriptor[] from GetTableDescriptorsResponse protobuf
