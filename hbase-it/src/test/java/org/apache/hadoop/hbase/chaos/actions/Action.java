@@ -254,7 +254,7 @@ public class Action {
     HBaseTestingUtility util = this.context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
 
-    TableDescriptor tableDescriptor = admin.listTableDescriptor(tableName);
+    TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
     ColumnFamilyDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
 
     if (columnDescriptors == null || columnDescriptors.length == 0) {

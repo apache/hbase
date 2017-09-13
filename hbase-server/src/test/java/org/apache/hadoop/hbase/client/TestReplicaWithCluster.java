@@ -319,14 +319,14 @@ public class TestReplicaWithCluster {
     Assert.assertFalse(r.isStale());
 
     // Add a CF, it should work.
-    TableDescriptor bHdt = HTU.getAdmin().listTableDescriptor(td.getTableName());
+    TableDescriptor bHdt = HTU.getAdmin().getDescriptor(td.getTableName());
     td = TableDescriptorBuilder.newBuilder(td)
             .addColumnFamily(ColumnFamilyDescriptorBuilder.of(row))
             .build();
     HTU.getAdmin().disableTable(td.getTableName());
     HTU.getAdmin().modifyTable(td);
     HTU.getAdmin().enableTable(td.getTableName());
-    TableDescriptor nHdt = HTU.getAdmin().listTableDescriptor(td.getTableName());
+    TableDescriptor nHdt = HTU.getAdmin().getDescriptor(td.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
         bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
 
@@ -350,7 +350,7 @@ public class TestReplicaWithCluster {
     }
 
     Admin admin = HTU.getAdmin();
-    nHdt =admin.listTableDescriptor(td.getTableName());
+    nHdt =admin.getDescriptor(td.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
         bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
 

@@ -154,7 +154,7 @@ public class TestHColumnDescriptorDefaultVersions {
     Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
-    TableDescriptor htd = admin.listTableDescriptor(tableName);
+    TableDescriptor htd = admin.getDescriptor(tableName);
     ColumnFamilyDescriptor[] hcds = htd.getColumnFamilies();
     verifyHColumnDescriptor(expected, hcds, tableName, families);
 
