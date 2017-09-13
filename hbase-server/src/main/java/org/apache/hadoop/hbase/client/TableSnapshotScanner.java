@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * snapshot/data files will completely circumvent the access control enforced by HBase.
  * See org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class TableSnapshotScanner extends AbstractClientScanner {
 
   private static final Log LOG = LogFactory.getLog(TableSnapshotScanner.class);
