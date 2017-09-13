@@ -2566,9 +2566,9 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   }
 
   @Override
-  public void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo regionA, HRegionInfo regionB) throws IOException {
-    requirePermission(getActiveUser(ctx), "mergeRegions", regionA.getTable(), null, null,
+  public void preMergeRegions(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                              final HRegionInfo[] regionsToMerge) throws IOException {
+    requirePermission(getActiveUser(ctx), "mergeRegions", regionsToMerge[0].getTable(), null, null,
       Action.ADMIN);
   }
 
