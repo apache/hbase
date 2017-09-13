@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -46,6 +47,7 @@ import org.junit.rules.TestName;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -203,7 +205,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
         }
       }
       Put put = new Put(metaKey);
-      Collection<ServerName> var = admin.getClusterStatus().getServers();
+      Collection<ServerName> var = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
       ServerName sn = var.toArray(new ServerName[var.size()])[0];
       //add a location with replicaId as 2 (since we already have replicas with replicaid 0 and 1)
       MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), -1, 2);
@@ -285,7 +287,8 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
         }
       }
       // get all the online regions in the regionservers
-      Collection<ServerName> servers = admin.getClusterStatus().getServers();
+      Collection<ServerName> servers =
+          admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
       Set<HRegionInfo> onlineRegions = new HashSet<>();
       for (ServerName s : servers) {
         List<HRegionInfo> list = admin.getOnlineRegions(s);

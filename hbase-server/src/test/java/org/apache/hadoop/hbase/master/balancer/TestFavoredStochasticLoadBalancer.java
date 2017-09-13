@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
@@ -151,7 +153,8 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
     regions.addAll(admin.getTableRegions(TableName.META_TABLE_NAME));
     regions.addAll(admin.getTableRegions(TableName.NAMESPACE_TABLE_NAME));
-    List<ServerName> servers = Lists.newArrayList(admin.getClusterStatus().getServers());
+    List<ServerName> servers = Lists.newArrayList(
+      admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers());
     Map<ServerName, List<HRegionInfo>> map = balancer.roundRobinAssignment(regions, servers);
     for (List<HRegionInfo> regionInfos : map.values()) {
       regions.removeAll(regionInfos);
@@ -177,10 +180,12 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
       assertEquals(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, favNodes.size());
     }
 
-    Map<ServerName, List<Integer>> replicaLoadMap =
-        fnm.getReplicaLoad(Lists.newArrayList(admin.getClusterStatus().getServers()));
+    Map<ServerName, List<Integer>> replicaLoadMap = fnm.getReplicaLoad(
+      Lists.newArrayList(admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+                              .getServers()));
     assertTrue("Not all replica load collected.",
-      admin.getClusterStatus().getServers().size() == replicaLoadMap.size());
+      admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+           .getServers().size() == replicaLoadMap.size());
     for (Entry<ServerName, List<Integer>> entry : replicaLoadMap.entrySet()) {
       assertTrue(entry.getValue().size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
       assertTrue(entry.getValue().get(0) >= 0);
@@ -190,10 +195,12 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
     admin.disableTable(TableName.valueOf(tableName));
     admin.deleteTable(TableName.valueOf(tableName));
-    replicaLoadMap =
-        fnm.getReplicaLoad(Lists.newArrayList(admin.getClusterStatus().getServers()));
+    replicaLoadMap = fnm.getReplicaLoad(Lists.newArrayList(
+      admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()));
     assertTrue("replica load found " + replicaLoadMap.size() + " instead of 0.",
-      replicaLoadMap.size() == admin.getClusterStatus().getServers().size());
+      replicaLoadMap.size() == admin
+          .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()
+          .size());
   }
 
   @Test
@@ -213,7 +220,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
     LoadBalancer balancer = master.getLoadBalancer();
     ServerName destination = balancer.randomAssignment(hri, Lists.newArrayList(admin
-        .getClusterStatus().getServers()));
+        .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()));
     assertNotNull(destination);
     List<ServerName> favoredNodes = fnm.getFavoredNodes(hri);
     assertNotNull(favoredNodes);
@@ -279,7 +286,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     assertNotNull(currentFN);
 
     List<ServerName> serversForNewFN = Lists.newArrayList();
-    for (ServerName sn : admin.getClusterStatus().getServers()) {
+    for (ServerName sn : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
       serversForNewFN.add(ServerName.valueOf(sn.getHostname(), sn.getPort(), NON_STARTCODE));
     }
     for (ServerName sn : currentFN) {
@@ -379,7 +386,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
     // Regenerate FN and assign, everything else should be fine
     List<ServerName> serversForNewFN = Lists.newArrayList();
-    for (ServerName sn : admin.getClusterStatus().getServers()) {
+    for (ServerName sn : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
       serversForNewFN.add(ServerName.valueOf(sn.getHostname(), sn.getPort(), NON_STARTCODE));
     }
 
@@ -473,7 +480,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
     // Regenerate FN and assign, everything else should be fine
     List<ServerName> serversForNewFN = Lists.newArrayList();
-    for (ServerName sn : admin.getClusterStatus().getServers()) {
+    for (ServerName sn : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
       serversForNewFN.add(ServerName.valueOf(sn.getHostname(), sn.getPort(), NON_STARTCODE));
     }
 

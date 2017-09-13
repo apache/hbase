@@ -29,6 +29,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -745,8 +747,9 @@ public class RegionMover extends AbstractHBaseTool {
    * @throws IOException
    */
   private void stripMaster(ArrayList<String> regionServers, Admin admin) throws IOException {
-    String masterHostname = admin.getClusterStatus().getMaster().getHostname();
-    int masterPort = admin.getClusterStatus().getMaster().getPort();
+    ServerName master = admin.getClusterStatus(EnumSet.of(Option.MASTER)).getMaster();
+    String masterHostname = master.getHostname();
+    int masterPort = master.getPort();
     try {
       stripServer(regionServers, masterHostname, masterPort);
     } catch (Exception e) {
@@ -821,7 +824,8 @@ public class RegionMover extends AbstractHBaseTool {
    * @throws IOException
    */
   private ArrayList<String> getServers(Admin admin) throws IOException {
-    ArrayList<ServerName> serverInfo = new ArrayList<>(admin.getClusterStatus().getServers());
+    ArrayList<ServerName> serverInfo = new ArrayList<>(
+        admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers());
     ArrayList<String> regionServers = new ArrayList<>(serverInfo.size());
     for (ServerName server : serverInfo) {
       regionServers.add(server.getServerName());

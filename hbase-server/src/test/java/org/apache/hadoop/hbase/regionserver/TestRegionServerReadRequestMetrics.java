@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,6 +52,7 @@ import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +95,7 @@ public class TestRegionServerReadRequestMetrics {
     TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
-    serverNames = admin.getClusterStatus().getServers();
+    serverNames = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
     table = createTable();
     putData();
     tableRegions = admin.getTableRegions(TABLE_NAME);
@@ -154,7 +156,7 @@ public class TestRegionServerReadRequestMetrics {
     boolean metricsUpdated = false;
     for (int i = 0; i < MAX_TRY; i++) {
       for (ServerName serverName : serverNames) {
-        serverLoad = admin.getClusterStatus().getLoad(serverName);
+        serverLoad = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getLoad(serverName);
 
         Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
         for (HRegionInfo tableRegion : tableRegions) {

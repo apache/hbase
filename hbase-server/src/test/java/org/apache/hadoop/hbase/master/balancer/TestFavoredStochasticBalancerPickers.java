@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
@@ -131,14 +133,14 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     TEST_UTIL.getHBaseCluster().startRegionServerAndWait(60000);
 
     Map<ServerName, List<HRegionInfo>> serverAssignments = Maps.newHashMap();
-    ClusterStatus status = admin.getClusterStatus();
+    ClusterStatus status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
     for (ServerName sn : status.getServers()) {
       if (!ServerName.isSameAddress(sn, masterServerName)) {
         serverAssignments.put(sn, admin.getOnlineRegions(sn));
       }
     }
     RegionLocationFinder regionFinder = new RegionLocationFinder();
-    regionFinder.setClusterStatus(admin.getClusterStatus());
+    regionFinder.setClusterStatus(admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)));
     regionFinder.setConf(conf);
     regionFinder.setServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     Cluster cluster = new Cluster(serverAssignments, null, regionFinder, new RackManager(conf));
@@ -182,7 +184,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     int maxRegions = 0;
     ServerName maxLoadedServer = null;
 
-    for (ServerName sn : admin.getClusterStatus().getServers()) {
+    for (ServerName sn : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
       if (admin.getOnlineRegions(sn).size() > maxRegions) {
         if (excludeNodes == null || !doesMatchExcludeNodes(excludeNodes, sn)) {
           maxRegions = admin.getOnlineRegions(sn).size();

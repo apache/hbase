@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
@@ -123,7 +125,8 @@ public class HBaseFsckRepair {
     while (EnvironmentEdgeManager.currentTime() < expiration) {
       try {
         boolean inTransition = false;
-        for (RegionState rs: admin.getClusterStatus().getRegionsInTransition()) {
+        for (RegionState rs : admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
+                                   .getRegionsInTransition()) {
           if (rs.getRegion().equals(region)) {
             inTransition = true;
             break;

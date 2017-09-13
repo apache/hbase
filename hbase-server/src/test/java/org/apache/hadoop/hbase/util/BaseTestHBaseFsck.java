@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -328,7 +330,7 @@ public class BaseTestHBaseFsck {
    * Get region info from local cluster.
    */
   Map<ServerName, List<String>> getDeployedHRIs(final Admin admin) throws IOException {
-    ClusterStatus status = admin.getClusterStatus();
+    ClusterStatus status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
     Collection<ServerName> regionServers = status.getServers();
     Map<ServerName, List<String>> mm = new HashMap<>();
     for (ServerName hsi : regionServers) {

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import java.util.EnumSet;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
@@ -33,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
 
 @InterfaceAudience.Private
@@ -64,7 +66,9 @@ public class StorageClusterVersionResource extends ResourceBase {
     servlet.getMetrics().incrementRequests(1);
     try {
       StorageClusterVersionModel model = new StorageClusterVersionModel();
-      model.setVersion(servlet.getAdmin().getClusterStatus().getHBaseVersion());
+      model.setVersion(
+        servlet.getAdmin().getClusterStatus(EnumSet.of(Option.HBASE_VERSION))
+            .getHBaseVersion());
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);
       servlet.getMetrics().incrementSucessfulGetRequests(1);

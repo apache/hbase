@@ -845,21 +845,21 @@ public interface AsyncAdmin {
    * @return current master server name wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<ServerName> getMaster() {
-    return getClusterStatus().thenApply(ClusterStatus::getMaster);
+    return getClusterStatus(EnumSet.of(Option.MASTER)).thenApply(ClusterStatus::getMaster);
   }
 
   /**
    * @return current backup master list wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<Collection<ServerName>> getBackupMasters() {
-    return getClusterStatus().thenApply(ClusterStatus::getBackupMasters);
+    return getClusterStatus(EnumSet.of(Option.BACKUP_MASTERS)).thenApply(ClusterStatus::getBackupMasters);
   }
 
   /**
    * @return current live region servers list wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
-    return getClusterStatus().thenApply(ClusterStatus::getServers);
+    return getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).thenApply(ClusterStatus::getServers);
   }
 
   /**

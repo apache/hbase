@@ -23,6 +23,7 @@ import java.math.BigInteger;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -417,7 +419,7 @@ public class RegionSplitter {
    */
   private static int getRegionServerCount(final Connection connection) throws IOException {
     try (Admin admin = connection.getAdmin()) {
-      ClusterStatus status = admin.getClusterStatus();
+      ClusterStatus status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
       Collection<ServerName> servers = status.getServers();
       return servers == null || servers.isEmpty()? 0: servers.size();
     }

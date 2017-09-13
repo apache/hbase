@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -4037,7 +4039,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       // create a table a pre-splits regions.
       // The number of splits is set as:
       //    region servers * regions per region server).
-      int numberOfServers = admin.getClusterStatus().getServers().size();
+      int numberOfServers =
+          admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()
+              .size();
       if (numberOfServers == 0) {
         throw new IllegalStateException("No live regionservers");
       }

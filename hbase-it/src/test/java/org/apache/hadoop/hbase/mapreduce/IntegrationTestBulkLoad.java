@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -38,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -747,7 +749,9 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     // Scale this up on a real cluster
     if (util.isDistributedCluster()) {
       util.getConfiguration().setIfUnset(NUM_MAPS_KEY,
-          Integer.toString(util.getAdmin().getClusterStatus().getServersSize() * 10)
+          Integer.toString(util.getAdmin()
+                               .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+                               .getServersSize() * 10)
       );
       util.getConfiguration().setIfUnset(NUM_IMPORT_ROUNDS_KEY, "5");
     } else {

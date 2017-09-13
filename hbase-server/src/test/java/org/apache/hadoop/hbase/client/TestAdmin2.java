@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -37,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -701,7 +703,8 @@ public class TestAdmin2 {
     assertTrue(drainingServers.isEmpty());
 
     // Drain all region servers.
-    Collection<ServerName> clusterServers = admin.getClusterStatus().getServers();
+    Collection<ServerName> clusterServers =
+        admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
     drainingServers = new ArrayList<>();
     for (ServerName server : clusterServers) {
       drainingServers.add(server);
