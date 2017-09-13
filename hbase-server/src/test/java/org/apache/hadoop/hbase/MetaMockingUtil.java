@@ -105,17 +105,4 @@ public class MetaMockingUtil {
     return Result.create(kvs);
   }
 
-  /**
-   * @param sn  ServerName to use making startcode and server in meta
-   * @param hri Region to serialize into HRegionInfo
-   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
-   * @throws IOException
-   */
-  public static Result getMetaTableRowResultAsSplitRegion(final HRegionInfo hri,
-      final ServerName sn) throws IOException {
-    hri.setOffline(true);
-    hri.setSplit(true);
-    return getMetaTableRowResult(hri, sn);
-  }
-
 }

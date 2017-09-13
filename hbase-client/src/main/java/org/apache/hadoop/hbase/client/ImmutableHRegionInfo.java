@@ -16,36 +16,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Read-only Region info.
+ */
+@Deprecated // deprecated for hbase 2.0, remove for hbase 3.0. see HRegionInfo.
 @InterfaceAudience.Private
-class UnmodifyableHRegionInfo extends HRegionInfo {
+public class ImmutableHRegionInfo extends HRegionInfo {
+
   /*
-   * Creates an unmodifyable copy of an HRegionInfo
+   * Creates an immutable copy of an HRegionInfo.
    *
-   * @param info
+   * @param other
    */
-  UnmodifyableHRegionInfo(HRegionInfo info) {
-    super(info);
+  public ImmutableHRegionInfo(HRegionInfo other) {
+    super(other);
   }
 
-  /**
-   * @param split set split status
-   */
   @Override
   public void setSplit(boolean split) {
     throw new UnsupportedOperationException("HRegionInfo is read-only");
   }
 
-  /**
-   * @param offLine set online - offline status
-   */
   @Override
-  public void setOffline(boolean offLine) {
+  public void setOffline(boolean offline) {
     throw new UnsupportedOperationException("HRegionInfo is read-only");
   }
 }
