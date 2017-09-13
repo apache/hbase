@@ -177,7 +177,7 @@ public class RestoreTool {
         LOG.debug("Found descriptor " + tableDescriptor + " through " + incrBackupId);
 
         TableName newTableName = newTableNames[i];
-        TableDescriptor newTableDescriptor = admin.listTableDescriptor(newTableName);
+        TableDescriptor newTableDescriptor = admin.getDescriptor(newTableName);
         List<ColumnFamilyDescriptor> families = Arrays.asList(tableDescriptor.getColumnFamilies());
         List<ColumnFamilyDescriptor> existingFamilies =
             Arrays.asList(newTableDescriptor.getColumnFamilies());

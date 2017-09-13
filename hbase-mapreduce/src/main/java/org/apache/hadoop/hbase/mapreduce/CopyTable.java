@@ -161,7 +161,7 @@ public class CopyTable extends Configured implements Tool {
       try (Connection conn = ConnectionFactory.createConnection(getConf());
           Admin admin = conn.getAdmin()) {
         HFileOutputFormat2.configureIncrementalLoadMap(job,
-            admin.listTableDescriptor((TableName.valueOf(dstTableName))));
+            admin.getDescriptor((TableName.valueOf(dstTableName))));
       }
     } else {
       TableMapReduceUtil.initTableMapperJob(tableName, scan,

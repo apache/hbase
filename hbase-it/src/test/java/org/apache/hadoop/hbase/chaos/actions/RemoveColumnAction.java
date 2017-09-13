@@ -52,7 +52,7 @@ public class RemoveColumnAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    TableDescriptor tableDescriptor = admin.listTableDescriptor(tableName);
+    TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
     ColumnFamilyDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
 
     if (columnDescriptors.length <= (protectedColumns == null ? 1 : protectedColumns.size())) {

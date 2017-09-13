@@ -422,7 +422,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         LOG.info("Creating table:" + td);
         admin.createTable(td, startKey, endKey, numRegions);
         Assert.assertTrue("Table: " + td + " was not created", admin.tableExists(tableName));
-        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
         Assert.assertTrue(
           "After create, Table: " + tableName + " in not enabled", admin.isTableEnabled(tableName));
         enabledTables.put(tableName, freshTableDesc);
@@ -461,7 +461,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         admin.disableTable(tableName);
         Assert.assertTrue("Table: " + selected + " was not disabled",
             admin.isTableDisabled(tableName));
-        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
         Assert.assertTrue(
           "After disable, Table: " + tableName + " is not disabled",
           admin.isTableDisabled(tableName));
@@ -510,7 +510,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         admin.enableTable(tableName);
         Assert.assertTrue("Table: " + selected + " was not enabled",
             admin.isTableEnabled(tableName));
-        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
         Assert.assertTrue(
           "After enable, Table: " + tableName + " in not enabled", admin.isTableEnabled(tableName));
         enabledTables.put(tableName, freshTableDesc);
@@ -607,7 +607,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         LOG.info("Adding column family: " + cfd + " to table: " + tableName);
         admin.addColumnFamily(tableName, cfd);
         // assertion
-        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
         Assert.assertTrue("Column family: " + cfd + " was not added",
             freshTableDesc.hasColumnFamily(cfd.getName()));
         Assert.assertTrue(
@@ -659,7 +659,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         admin.modifyTable(td);
 
         // assertion
-        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
         ColumnFamilyDescriptor freshColumnDesc = freshTableDesc.getColumnFamily(columnDesc.getName());
         Assert.assertEquals("Column family: " + columnDesc + " was not altered",
             freshColumnDesc.getMaxVersions(), versions);
@@ -750,7 +750,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         LOG.info("Deleting column family: " + cfd + " from table: " + tableName);
         admin.deleteColumnFamily(tableName, cfd.getName());
         // assertion
-        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
         Assert.assertFalse("Column family: " + cfd + " was not added",
             freshTableDesc.hasColumnFamily(cfd.getName()));
         Assert.assertTrue(
@@ -801,7 +801,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
           put.addColumn(family, qualifier, value);
           table.put(put);
         }
-        TableDescriptor freshTableDesc = admin.listTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
         Assert.assertTrue(
           "After insert, Table: " + tableName + " in not enabled", admin.isTableEnabled(tableName));
         enabledTables.put(tableName, freshTableDesc);

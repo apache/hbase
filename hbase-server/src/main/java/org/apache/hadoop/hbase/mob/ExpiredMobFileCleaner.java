@@ -98,7 +98,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     Connection connection = ConnectionFactory.createConnection(getConf());
     Admin admin = connection.getAdmin();
     try {
-      TableDescriptor htd = admin.listTableDescriptor(tn);
+      TableDescriptor htd = admin.getDescriptor(tn);
       ColumnFamilyDescriptor family = htd.getColumnFamily(Bytes.toBytes(familyName));
       if (family == null || !family.isMobEnabled()) {
         throw new IOException("Column family " + familyName + " is not a MOB column family");
