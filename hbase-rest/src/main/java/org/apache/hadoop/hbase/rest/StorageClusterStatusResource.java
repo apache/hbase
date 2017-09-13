@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import java.util.EnumSet;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 
 @InterfaceAudience.Private
@@ -68,7 +70,8 @@ public class StorageClusterStatusResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      ClusterStatus status = servlet.getAdmin().getClusterStatus();
+      ClusterStatus status = servlet.getAdmin().getClusterStatus(
+        EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS));
       StorageClusterStatusModel model = new StorageClusterStatusModel();
       model.setRegions(status.getRegionsCount());
       model.setRequests(status.getRequestsCount());

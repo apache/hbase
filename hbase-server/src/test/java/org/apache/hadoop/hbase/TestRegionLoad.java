@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -35,6 +36,7 @@ import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -78,7 +80,8 @@ public class TestRegionLoad {
   public void testRegionLoad() throws Exception {
 
     // Check if regions match with the regionLoad from the server
-    for (ServerName serverName : admin.getClusterStatus().getServers()) {
+    for (ServerName serverName : admin
+        .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
       List<HRegionInfo> regions = admin.getOnlineRegions(serverName);
       Collection<RegionLoad> regionLoads = admin.getRegionLoad(serverName).values();
       checkRegionsAndRegionLoads(regions, regionLoads);
@@ -89,14 +92,15 @@ public class TestRegionLoad {
       List<HRegionInfo> tableRegions = admin.getTableRegions(table);
 
       List<RegionLoad> regionLoads = Lists.newArrayList();
-      for (ServerName serverName : admin.getClusterStatus().getServers()) {
+      for (ServerName serverName : admin
+          .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
         regionLoads.addAll(admin.getRegionLoad(serverName, table).values());
       }
       checkRegionsAndRegionLoads(tableRegions, regionLoads);
     }
 
     // Check RegionLoad matches the regionLoad from ClusterStatus
-    ClusterStatus clusterStatus = admin.getClusterStatus();
+    ClusterStatus clusterStatus = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
     for (ServerName serverName : clusterStatus.getServers()) {
       ServerLoad serverLoad = clusterStatus.getLoad(serverName);
       Map<byte[], RegionLoad> regionLoads = admin.getRegionLoad(serverName);

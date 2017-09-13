@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -56,6 +57,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -1177,7 +1179,9 @@ public final class Canary implements Tool {
 
     private void checkWriteTableDistribution() throws IOException {
       if (!admin.tableExists(writeTableName)) {
-        int numberOfServers = admin.getClusterStatus().getServers().size();
+        int numberOfServers =
+            admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()
+                .size();
         if (numberOfServers == 0) {
           throw new IllegalStateException("No live regionservers");
         }
@@ -1188,7 +1192,8 @@ public final class Canary implements Tool {
         admin.enableTable(writeTableName);
       }
 
-      ClusterStatus status = admin.getClusterStatus();
+      ClusterStatus status =
+          admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS, Option.MASTER));
       int numberOfServers = status.getServersSize();
       if (status.getServers().contains(status.getMaster())) {
         numberOfServers -= 1;
@@ -1491,11 +1496,12 @@ public final class Canary implements Tool {
           table.close();
         }
 
-        //get any live regionservers not serving any regions
-        for (ServerName rs : this.admin.getClusterStatus().getServers()) {
+        // get any live regionservers not serving any regions
+        for (ServerName rs : this.admin
+            .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
           String rsName = rs.getHostname();
           if (!rsAndRMap.containsKey(rsName)) {
-            rsAndRMap.put(rsName, Collections.<HRegionInfo>emptyList());
+            rsAndRMap.put(rsName, Collections.<HRegionInfo> emptyList());
           }
         }
       } catch (IOException e) {

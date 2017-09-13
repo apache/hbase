@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -80,7 +82,8 @@ public class TestMasterOperationsForRegionReplicas {
     TEST_UTIL.startMiniCluster(numSlaves);
     CONNECTION = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     ADMIN = CONNECTION.getAdmin();
-    while(ADMIN.getClusterStatus().getServers().size() < numSlaves) {
+    while(ADMIN.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+               .getServers().size() < numSlaves) {
       Thread.sleep(100);
     }
   }

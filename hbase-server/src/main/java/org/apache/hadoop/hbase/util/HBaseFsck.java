@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -85,6 +86,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -519,7 +521,9 @@ public class HBaseFsck extends Configured implements Closeable {
     connection = (ClusterConnection)ConnectionFactory.createConnection(getConf());
     admin = connection.getAdmin();
     meta = connection.getTable(TableName.META_TABLE_NAME);
-    status = admin.getClusterStatus();
+    status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS,
+      Option.DEAD_SERVERS, Option.MASTER, Option.BACKUP_MASTERS,
+      Option.REGIONS_IN_TRANSITION, Option.HBASE_VERSION));
   }
 
   /**
@@ -2440,7 +2444,7 @@ public class HBaseFsck extends Configured implements Closeable {
         LOG.info("Patching hbase:meta with .regioninfo: " + hbi.getHdfsHRI());
         int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
-            admin.getClusterStatus().getServers(), numReplicas);
+            admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers(), numReplicas);
 
         tryAssignmentRepair(hbi, "Trying to reassign region...");
       }
@@ -2467,7 +2471,7 @@ public class HBaseFsck extends Configured implements Closeable {
         LOG.info("Patching hbase:meta with with .regioninfo: " + hbi.getHdfsHRI());
         int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
-            admin.getClusterStatus().getServers(), numReplicas);
+            admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers(), numReplicas);
         tryAssignmentRepair(hbi, "Trying to fix unassigned region...");
       }
 

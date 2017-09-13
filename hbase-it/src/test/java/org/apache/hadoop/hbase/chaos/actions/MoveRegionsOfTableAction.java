@@ -20,12 +20,14 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,7 +57,8 @@ public class MoveRegionsOfTableAction extends Action {
     }
 
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
-    Collection<ServerName> serversList = admin.getClusterStatus().getServers();
+    Collection<ServerName> serversList =
+        admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
     ServerName[] servers = serversList.toArray(new ServerName[serversList.size()]);
 
     LOG.info("Performing action: Move regions of table " + tableName);

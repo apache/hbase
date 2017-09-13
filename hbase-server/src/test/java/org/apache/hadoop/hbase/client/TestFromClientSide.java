@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
@@ -4423,8 +4425,8 @@ public class TestFromClientSide {
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
     try (Admin admin = conn.getAdmin()) {
       assertTrue(admin.tableExists(tableName));
-      assertTrue(admin.getClusterStatus().getServersSize() ==
-        SLAVES + (tablesOnMaster? 1: 0));
+      assertTrue(admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+          .getServersSize() == SLAVES + (tablesOnMaster ? 1 : 0));
     }
   }
 

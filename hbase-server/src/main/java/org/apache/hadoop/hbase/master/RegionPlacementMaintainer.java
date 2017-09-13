@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
@@ -206,7 +208,7 @@ public class RegionPlacementMaintainer {
       // Get the all the region servers
       List<ServerName> servers = new ArrayList<>();
       try (Admin admin = this.connection.getAdmin()) {
-        servers.addAll(admin.getClusterStatus().getServers());
+        servers.addAll(admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers());
       }
 
       LOG.info("Start to generate assignment plan for " + numRegions +

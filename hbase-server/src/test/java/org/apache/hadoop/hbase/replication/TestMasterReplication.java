@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -186,7 +188,8 @@ public class TestMasterReplication {
     Waiter.waitFor(baseConfiguration, 10000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        ClusterStatus clusterStatus = utilities[0].getAdmin().getClusterStatus();
+        ClusterStatus clusterStatus = utilities[0].getAdmin()
+            .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
         ServerLoad serverLoad = clusterStatus.getLoad(rsName);
         List<ReplicationLoadSource> replicationLoadSourceList =
             serverLoad.getReplicationLoadSourceList();

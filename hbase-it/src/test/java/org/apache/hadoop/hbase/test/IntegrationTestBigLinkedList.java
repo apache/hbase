@@ -26,6 +26,7 @@ import java.io.InterruptedIOException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -50,6 +51,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -708,7 +710,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           // If we want to pre-split compute how many splits.
           if (conf.getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
               HBaseTestingUtility.PRESPLIT_TEST_TABLE)) {
-            int numberOfServers = admin.getClusterStatus().getServers().size();
+            int numberOfServers =
+                admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+                    .getServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }

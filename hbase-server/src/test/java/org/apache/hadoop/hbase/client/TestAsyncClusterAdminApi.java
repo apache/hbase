@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -240,7 +242,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     }
 
     // Check RegionLoad matches the regionLoad from ClusterStatus
-    ClusterStatus clusterStatus = admin.getClusterStatus().get();
+    ClusterStatus clusterStatus = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).get();
     for (ServerName serverName : clusterStatus.getServers()) {
       ServerLoad serverLoad = clusterStatus.getLoad(serverName);
       compareRegionLoads(serverLoad.getRegionsLoad().values(), admin.getRegionLoads(serverName)

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -152,7 +154,8 @@ public class TestMiniClusterLoadSequential {
         ", isMultiPut=" + isMultiPut);
     numKeys = numKeys();
     Admin admin = TEST_UTIL.getAdmin();
-    while (admin.getClusterStatus().getServers().size() < NUM_RS) {
+    while (admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+                .getServers().size() < NUM_RS) {
       LOG.info("Sleeping until " + NUM_RS + " RSs are online");
       Threads.sleepWithoutInterrupt(1000);
     }

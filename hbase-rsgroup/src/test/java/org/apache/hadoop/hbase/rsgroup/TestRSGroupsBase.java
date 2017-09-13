@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.security.SecureRandom;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
@@ -263,7 +265,8 @@ public abstract class TestRSGroupsBase {
 
   // return the real number of region servers, excluding the master embedded region server in 2.0+
   public int getNumServers() throws IOException {
-    ClusterStatus status = admin.getClusterStatus();
+    ClusterStatus status =
+        admin.getClusterStatus(EnumSet.of(Option.MASTER, Option.LIVE_SERVERS));
     ServerName master = status.getMaster();
     int count = 0;
     for (ServerName sn : status.getServers()) {
@@ -489,8 +492,9 @@ public abstract class TestRSGroupsBase {
     }
     //get server which is not a member of new group
     ServerName targetServer = null;
-    for(ServerName server : admin.getClusterStatus().getServers()) {
-      if(!newGroup.containsServer(server.getAddress())) {
+    for (ServerName server : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+                                  .getServers()) {
+      if (!newGroup.containsServer(server.getAddress())) {
         targetServer = server;
         break;
       }
@@ -518,7 +522,8 @@ public abstract class TestRSGroupsBase {
         return
             getTableRegionMap().get(tableName) != null &&
                 getTableRegionMap().get(tableName).size() == 6 &&
-                admin.getClusterStatus().getRegionsInTransition().size() < 1;
+                admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
+                     .getRegionsInTransition().size() < 1;
       }
     });
 
@@ -722,7 +727,7 @@ public abstract class TestRSGroupsBase {
 
     //get server which is not a member of new group
     ServerName targetServer = null;
-    for(ServerName server : admin.getClusterStatus().getServers()) {
+    for(ServerName server : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
       if(!newGroup.containsServer(server.getAddress()) && 
            !rsGroupAdmin.getRSGroupInfo("master").containsServer(server.getAddress())) {
         targetServer = server;
@@ -785,7 +790,8 @@ public abstract class TestRSGroupsBase {
         return getTableRegionMap().get(tableName) != null &&
                 getTableRegionMap().get(tableName).size() == 5 &&
                 getTableServerRegionMap().get(tableName).size() == 1 &&
-                admin.getClusterStatus().getRegionsInTransition().size() < 1;
+                admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
+                     .getRegionsInTransition().size() < 1;
       }
     });
 

@@ -2450,7 +2450,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public String[] getMasterCoprocessors() {
     try {
-      return getClusterStatus().getMasterCoprocessors();
+      return getClusterStatus(EnumSet.of(Option.MASTER_COPROCESSORS)).getMasterCoprocessors();
     } catch (IOException e) {
       LOG.error("Could not getClusterStatus()",e);
       return null;
@@ -3155,13 +3155,15 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void updateConfiguration() throws IOException {
-    for (ServerName server : this.getClusterStatus().getServers()) {
+    ClusterStatus status = getClusterStatus(
+      EnumSet.of(Option.LIVE_SERVERS, Option.MASTER, Option.BACKUP_MASTERS));
+    for (ServerName server : status.getServers()) {
       updateConfiguration(server);
     }
 
-    updateConfiguration(this.getClusterStatus().getMaster());
+    updateConfiguration(status.getMaster());
 
-    for (ServerName server : this.getClusterStatus().getBackupMasters()) {
+    for (ServerName server : status.getBackupMasters()) {
       updateConfiguration(server);
     }
   }

@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -34,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -406,7 +408,8 @@ public class TestMetaWithReplicas {
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ServerName currentServer = ProtobufUtil.toServerName(data);
-    Collection<ServerName> liveServers = TEST_UTIL.getAdmin().getClusterStatus().getServers();
+    Collection<ServerName> liveServers = TEST_UTIL.getAdmin()
+        .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
     ServerName moveToServer = null;
     for (ServerName s : liveServers) {
       if (!currentServer.equals(s)) {

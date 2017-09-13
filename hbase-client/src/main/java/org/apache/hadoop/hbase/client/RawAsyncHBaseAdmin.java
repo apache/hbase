@@ -2498,7 +2498,9 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> updateConfiguration() {
     CompletableFuture<Void> future = new CompletableFuture<Void>();
-    getClusterStatus().whenComplete(
+    getClusterStatus(
+      EnumSet.of(Option.LIVE_SERVERS, Option.MASTER, Option.BACKUP_MASTERS))
+          .whenComplete(
       (status, err) -> {
         if (err != null) {
           future.completeExceptionally(err);
