@@ -79,7 +79,9 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
@@ -3305,5 +3307,67 @@ public final class ProtobufUtil {
       }
     }
     return lockedResourceJsons.toString();
+  }
+
+  /**
+   * Convert a RegionInfo to a Proto RegionInfo
+   *
+   * @param info the RegionInfo to convert
+   * @return the converted Proto RegionInfo
+   */
+  public static HBaseProtos.RegionInfo toProtoRegionInfo(final org.apache.hadoop.hbase.client.RegionInfo info) {
+    if (info == null) return null;
+    HBaseProtos.RegionInfo.Builder builder = HBaseProtos.RegionInfo.newBuilder();
+    builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));
+    builder.setRegionId(info.getRegionId());
+    if (info.getStartKey() != null) {
+      builder.setStartKey(UnsafeByteOperations.unsafeWrap(info.getStartKey()));
+    }
+    if (info.getEndKey() != null) {
+      builder.setEndKey(UnsafeByteOperations.unsafeWrap(info.getEndKey()));
+    }
+    builder.setOffline(info.isOffline());
+    builder.setSplit(info.isSplit());
+    builder.setReplicaId(info.getReplicaId());
+    return builder.build();
+  }
+
+  /**
+   * Convert HBaseProto.RegionInfo to a RegionInfo
+   *
+   * @param proto the RegionInfo to convert
+   * @return the converted RegionInfo
+   */
+  public static org.apache.hadoop.hbase.client.RegionInfo toRegionInfo(final HBaseProtos.RegionInfo proto) {
+    if (proto == null) return null;
+    TableName tableName = ProtobufUtil.toTableName(proto.getTableName());
+    long regionId = proto.getRegionId();
+    int defaultReplicaId = org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
+    int replicaId = proto.hasReplicaId()? proto.getReplicaId(): defaultReplicaId;
+    if (tableName.equals(TableName.META_TABLE_NAME) && replicaId == defaultReplicaId) {
+      return RegionInfoBuilder.FIRST_META_REGIONINFO;
+    }
+    byte[] startKey = null;
+    byte[] endKey = null;
+    if (proto.hasStartKey()) {
+      startKey = proto.getStartKey().toByteArray();
+    }
+    if (proto.hasEndKey()) {
+      endKey = proto.getEndKey().toByteArray();
+    }
+    boolean split = false;
+    if (proto.hasSplit()) {
+      split = proto.getSplit();
+    }
+    RegionInfoBuilder rib = RegionInfoBuilder.newBuilder(tableName)
+    .setStartKey(startKey)
+    .setEndKey(endKey)
+    .setRegionId(regionId)
+    .setReplicaId(replicaId)
+    .setSplit(split);
+    if (proto.hasOffline()) {
+      rib.setOffline(proto.getOffline());
+    }
+    return rib.build();
   }
 }

@@ -17,7 +17,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 </%doc>
 <%import>
-org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 org.apache.hadoop.hbase.master.assignment.AssignmentManager.RegionInTransitionStat;
 org.apache.hadoop.hbase.master.assignment.RegionStates.RegionFailedOpen;
@@ -25,6 +24,7 @@ org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.conf.Configuration;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
+org.apache.hadoop.hbase.client.RegionInfoDisplay;
 java.util.HashSet;
 java.util.SortedSet;
 java.util.Map;
@@ -94,7 +94,7 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
                           }
                         </%java>
                         <td><% rs.getRegion().getEncodedName() %></td><td>
-                        <% HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(rs,
+                        <% RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(rs,
                             assignmentManager.getConfiguration()) %></td>
                         <td><% (currentTime - rs.getStamp()) %> </td>
                         <td> <% retryStatus %> </td>

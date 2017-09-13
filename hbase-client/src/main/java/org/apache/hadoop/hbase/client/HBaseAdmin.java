@@ -397,6 +397,16 @@ public class HBaseAdmin implements Admin {
     });
   }
 
+  @Override
+  public List<RegionInfo> getRegions(final ServerName sn) throws IOException {
+    return getOnlineRegions(sn).stream().collect(Collectors.toList());
+  }
+
+  @Override
+  public List<RegionInfo> getRegions(final TableName tableName) throws IOException {
+    return getTableRegions(tableName).stream().collect(Collectors.toList());
+  }
+
   private static class AbortProcedureFuture extends ProcedureFuture<Boolean> {
     private boolean isAbortInProgress;
 
@@ -1143,12 +1153,24 @@ public class HBaseAdmin implements Admin {
     unassign(hri.getRegionName(), true);
   }
 
+  /**
+   *
+   * @param sn
+   * @return List of {@link HRegionInfo}.
+   * @throws IOException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getRegions(ServerName)}.
+   */
+  @Deprecated
   @Override
   public List<HRegionInfo> getOnlineRegions(final ServerName sn) throws IOException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // TODO: There is no timeout on this controller. Set one!
     HBaseRpcController controller = rpcControllerFactory.newController();
-    return ProtobufUtil.getOnlineRegions(controller, admin);
+    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(controller, admin);
+    return onlineRegions == null ? null : onlineRegions.stream()
+            .map(hri -> new ImmutableHRegionInfo(hri))
+            .collect(Collectors.toList());
   }
 
   @Override
@@ -2340,6 +2362,15 @@ public class HBaseAdmin implements Admin {
     }
   }
 
+  /**
+   *
+   * @param tableName
+   * @return List of {@link HRegionInfo}.
+   * @throws IOException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getRegions(TableName)}.
+   */
+  @Deprecated
   @Override
   public List<HRegionInfo> getTableRegions(final TableName tableName)
   throws IOException {
@@ -2356,7 +2387,9 @@ public class HBaseAdmin implements Admin {
     } finally {
       zookeeper.close();
     }
-    return regions;
+    return regions == null ? null : regions.stream()
+            .map(hri -> new ImmutableHRegionInfo(hri))
+            .collect(Collectors.toList());
   }
 
   @Override

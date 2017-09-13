@@ -811,8 +811,20 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Get all the online regions on a region server.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17980">HBASE-17980</a>).
+   *             Use {@link #getRegions(ServerName sn)}.
    */
+  @Deprecated
   List<HRegionInfo> getOnlineRegions(ServerName sn) throws IOException;
+
+  /**
+   * Get all the online regions on a region server.
+   *
+   * @return List of {@link RegionInfo}
+   * @throws java.io.IOException
+   */
+  List<RegionInfo> getRegions(ServerName serverName) throws IOException;
 
   /**
    * Flush a table. Synchronous operation.
@@ -1510,9 +1522,22 @@ public interface Admin extends Abortable, Closeable {
    * @param tableName the name of the table
    * @return List of {@link HRegionInfo}.
    * @throws IOException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17980">HBASE-17980</a>).
+   *             Use {@link #getRegions(TableName)}.
    */
+  @Deprecated
   List<HRegionInfo> getTableRegions(TableName tableName)
     throws IOException;
+
+  /**
+   * Get the regions of a given table.
+   *
+   * @param tableName the name of the table
+   * @return List of {@link RegionInfo}.
+   * @throws IOException
+   */
+  List<RegionInfo> getRegions(TableName tableName) throws IOException;
 
   @Override
   void close() throws IOException;

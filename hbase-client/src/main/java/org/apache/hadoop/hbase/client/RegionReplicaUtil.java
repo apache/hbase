@@ -57,6 +57,7 @@ public class RegionReplicaUtil {
    * @return an HRegionInfo object corresponding to the same range (table, start and
    * end key), but for the given replicaId.
    */
+  @Deprecated // Deprecated for HBase-2.0.0, use #getRegionInfoForReplica
   public static HRegionInfo getRegionInfoForReplica(HRegionInfo regionInfo, int replicaId) {
     if (regionInfo.getReplicaId() == replicaId) {
       return regionInfo;
@@ -70,6 +71,37 @@ public class RegionReplicaUtil {
     }
     replicaInfo.setOffline(regionInfo.isOffline());
     return replicaInfo;
+  }
+
+  /**
+   * Returns the RegionInfo for the given replicaId.
+   * RegionInfo's correspond to a range of a table, but more than one
+   * "instance" of the same range can be deployed which are differentiated by
+   * the replicaId.
+   * @param regionInfo
+   * @param replicaId the replicaId to use
+   * @return an RegionInfo object corresponding to the same range (table, start and
+   * end key), but for the given replicaId.
+   */
+  public static RegionInfo getRegionInfoForReplica(RegionInfo regionInfo, int replicaId) {
+    if (regionInfo.getReplicaId() == replicaId) {
+      return regionInfo;
+    }
+    RegionInfoBuilder replicaInfo;
+    RegionInfo ri;
+    if (regionInfo.isMetaRegion()) {
+      ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    } else {
+      replicaInfo = RegionInfoBuilder.newBuilder(regionInfo.getTable())
+              .setStartKey(regionInfo.getStartKey())
+              .setEndKey(regionInfo.getEndKey())
+              .setSplit(regionInfo.isSplit())
+              .setRegionId(regionInfo.getRegionId())
+              .setReplicaId(replicaId);
+      replicaInfo.setOffline(regionInfo.isOffline());
+      ri = replicaInfo.build();
+    }
+    return ri;
   }
 
   /**
