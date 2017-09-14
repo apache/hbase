@@ -170,7 +170,13 @@ public class SecureBulkLoadManager {
       }
     }
 
-    fs.delete(new Path(request.getBulkToken()), true);
+    Path path = new Path(request.getBulkToken());
+    if (!fs.delete(path, true)) {
+      if (fs.exists(path)) {
+        throw new IOException("Failed to clean up " + path);
+      }
+    }
+    LOG.info("Cleaned up " + path + " successfully.");
   }
 
   public Map<byte[], List<Path>> secureBulkLoadHFiles(final Region region,
