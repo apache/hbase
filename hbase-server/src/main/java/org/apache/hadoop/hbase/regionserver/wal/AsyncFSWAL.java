@@ -707,8 +707,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   @Override
   protected void doShutdown() throws IOException {
     waitForSafePoint();
-    this.writer.close();
-    this.writer = null;
+    if (this.writer != null) {
+      this.writer.close();
+      this.writer = null;
+    }
     closeExecutor.shutdown();
     IOException error = new IOException("WAL has been closed");
     syncFutures.forEach(f -> f.done(f.getTxid(), error));

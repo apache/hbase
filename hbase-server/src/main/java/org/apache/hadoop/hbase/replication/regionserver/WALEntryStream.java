@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.OptionalLong;
 import java.util.concurrent.PriorityBlockingQueue;
 
 import org.apache.commons.logging.Log;
@@ -50,7 +50,7 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entry> {
+class WALEntryStream implements Closeable {
   private static final Log LOG = LogFactory.getLog(WALEntryStream.class);
 
   private Reader reader;
@@ -59,24 +59,11 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
   private Entry currentEntry;
   // position after reading current entry
   private long currentPosition = 0;
-  private PriorityBlockingQueue<Path> logQueue;
-  private FileSystem fs;
-  private Configuration conf;
-  private MetricsSource metrics;
-
-  /**
-   * Create an entry stream over the given queue
-   * @param logQueue the queue of WAL paths
-   * @param fs {@link FileSystem} to use to create {@link Reader} for this stream
-   * @param conf {@link Configuration} to use to create {@link Reader} for this stream
-   * @param metrics replication metrics
-   * @throws IOException
-   */
-  public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
-      MetricsSource metrics)
-      throws IOException {
-    this(logQueue, fs, conf, 0, metrics);
-  }
+  private final PriorityBlockingQueue<Path> logQueue;
+  private final FileSystem fs;
+  private final Configuration conf;
+  private final WALFileLengthProvider walFileLengthProvider;
+  private final MetricsSource metrics;
 
   /**
    * Create an entry stream over the given queue at the given start position
@@ -88,49 +75,38 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
    * @throws IOException
    */
   public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
-      long startPosition, MetricsSource metrics) throws IOException {
+      long startPosition, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
+      throws IOException {
     this.logQueue = logQueue;
     this.fs = fs;
     this.conf = conf;
     this.currentPosition = startPosition;
+    this.walFileLengthProvider = walFileLengthProvider;
     this.metrics = metrics;
   }
 
   /**
    * @return true if there is another WAL {@link Entry}
-   * @throws WALEntryStreamRuntimeException if there was an Exception while reading
    */
-  @Override
-  public boolean hasNext() {
+  public boolean hasNext() throws IOException {
     if (currentEntry == null) {
-      try {
-        tryAdvanceEntry();
-      } catch (Exception e) {
-        throw new WALEntryStreamRuntimeException(e);
-      }
+      tryAdvanceEntry();
     }
     return currentEntry != null;
   }
 
   /**
    * @return the next WAL entry in this stream
-   * @throws WALEntryStreamRuntimeException if there was an IOException
+   * @throws IOException
    * @throws NoSuchElementException if no more entries in the stream.
    */
-  @Override
-  public Entry next() {
-    if (!hasNext()) throw new NoSuchElementException();
+  public Entry next() throws IOException {
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
     Entry save = currentEntry;
     currentEntry = null; // gets reloaded by hasNext()
     return save;
-  }
-
-  /**
-   * Not supported.
-   */
-  @Override
-  public void remove() {
-    throw new UnsupportedOperationException();
   }
 
   /**
@@ -139,14 +115,6 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
   @Override
   public void close() throws IOException {
     closeReader();
-  }
-
-  /**
-   * @return the iterator over WAL entries in the queue.
-   */
-  @Override
-  public Iterator<Entry> iterator() {
-    return this;
   }
 
   /**
@@ -195,24 +163,27 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
 
   private void tryAdvanceEntry() throws IOException {
     if (checkReader()) {
-      readNextEntryAndSetPosition();
-      if (currentEntry == null) { // no more entries in this log file - see if log was rolled
-        if (logQueue.size() > 1) { // log was rolled
-          // Before dequeueing, we should always get one more attempt at reading.
-          // This is in case more entries came in after we opened the reader,
-          // and a new log was enqueued while we were reading. See HBASE-6758
-          resetReader();
-          readNextEntryAndSetPosition();
-          if (currentEntry == null) {
-            if (checkAllBytesParsed()) { // now we're certain we're done with this log file
-              dequeueCurrentLog();
-              if (openNextLog()) {
-                readNextEntryAndSetPosition();
-              }
+      boolean beingWritten = readNextEntryAndSetPosition();
+      if (currentEntry == null && !beingWritten) {
+        // no more entries in this log file, and the file is already closed, i.e, rolled
+        // Before dequeueing, we should always get one more attempt at reading.
+        // This is in case more entries came in after we opened the reader, and the log is rolled
+        // while we were reading. See HBASE-6758
+        resetReader();
+        readNextEntryAndSetPosition();
+        if (currentEntry == null) {
+          if (checkAllBytesParsed()) { // now we're certain we're done with this log file
+            dequeueCurrentLog();
+            if (openNextLog()) {
+              readNextEntryAndSetPosition();
             }
           }
-        } // no other logs, we've simply hit the end of the current open log. Do nothing
+        }
       }
+      // if currentEntry != null then just return
+      // if currentEntry == null but the file is still being written, then we should not switch to
+      // the next log either, just return here and try next time to see if there are more entries in
+      // the current file
     }
     // do nothing if we don't have a WAL Reader (e.g. if there's no logs in queue)
   }
@@ -270,15 +241,30 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     metrics.decrSizeOfLogQueue();
   }
 
-  private void readNextEntryAndSetPosition() throws IOException {
+  /**
+   * Returns whether the file is opened for writing.
+   */
+  private boolean readNextEntryAndSetPosition() throws IOException {
     Entry readEntry = reader.next();
     long readerPos = reader.getPosition();
+    OptionalLong fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
+    if (fileLength.isPresent() && readerPos > fileLength.getAsLong()) {
+      // see HBASE-14004, for AsyncFSWAL which uses fan-out, it is possible that we read uncommitted
+      // data, so we need to make sure that we do not read beyond the committed file length.
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("The provider tells us the valid length for " + currentPath + " is " +
+            fileLength.getAsLong() + ", but we have advanced to " + readerPos);
+      }
+      resetReader();
+      return true;
+    }
     if (readEntry != null) {
       metrics.incrLogEditsRead();
       metrics.incrLogReadInBytes(readerPos - currentPosition);
     }
     currentEntry = readEntry; // could be null
     setPosition(readerPos);
+    return fileLength.isPresent();
   }
 
   private void closeReader() throws IOException {
@@ -301,7 +287,9 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     Path nextPath = logQueue.peek();
     if (nextPath != null) {
       openReader(nextPath);
-      if (reader != null) return true;
+      if (reader != null) {
+        return true;
+      }
     }
     return false;
   }
@@ -408,14 +396,4 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     }
     return size;
   }
-
-  @InterfaceAudience.Private
-  public static class WALEntryStreamRuntimeException extends RuntimeException {
-    private static final long serialVersionUID = -6298201811259982568L;
-
-    public WALEntryStreamRuntimeException(Exception e) {
-      super(e);
-    }
-  }
-
 }
