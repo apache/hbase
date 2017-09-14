@@ -26,7 +26,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -76,8 +76,8 @@ public abstract class RpcExecutor {
   public static final int CALL_QUEUE_CODEL_DEFAULT_INTERVAL = 100;
   public static final double CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD = 0.8;
 
-  private AtomicLong numGeneralCallsDropped = new AtomicLong();
-  private AtomicLong numLifoModeSwitches = new AtomicLong();
+  private LongAdder numGeneralCallsDropped = new LongAdder();
+  private LongAdder numLifoModeSwitches = new LongAdder();
 
   protected final int numCallQueues;
   protected final List<BlockingQueue<CallRunner>> queues;
@@ -385,11 +385,11 @@ public abstract class RpcExecutor {
   }
 
   public long getNumGeneralCallsDropped() {
-    return numGeneralCallsDropped.get();
+    return numGeneralCallsDropped.longValue();
   }
 
   public long getNumLifoModeSwitches() {
-    return numLifoModeSwitches.get();
+    return numLifoModeSwitches.longValue();
   }
 
   public int getActiveHandlerCount() {
