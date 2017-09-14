@@ -216,6 +216,7 @@ public class TableSnapshotInputFormatImpl {
       scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
       // disable caching of data blocks
       scan.setCacheBlocks(false);
+      scan.setScanMetricsEnabled(true);
 
       scanner =
           new ClientSideRegionScanner(conf, fs, new Path(split.restoreDir), htd, hri, scan, null);
