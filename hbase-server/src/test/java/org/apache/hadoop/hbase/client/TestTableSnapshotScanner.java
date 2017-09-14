@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -185,6 +186,52 @@ public class TestTableSnapshotScanner {
   @Test
   public void testWithOfflineHBaseMultiRegion() throws Exception {
     testScanner(UTIL, "testWithMultiRegion", 20, true);
+  }
+
+  @Test
+  public void testScannerWithRestoreScanner() throws Exception {
+    setupCluster();
+    TableName tableName = TableName.valueOf("testScanner");
+    String snapshotName = "testScannerWithRestoreScanner";
+    try {
+      createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
+      Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan(bbb, yyy); // limit the scan
+
+      Configuration conf = UTIL.getConfiguration();
+      Path rootDir = FSUtils.getRootDir(conf);
+
+      TableSnapshotScanner scanner0 =
+          new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
+      verifyScanner(scanner0, bbb, yyy);
+      scanner0.close();
+
+      // restore snapshot.
+      RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+
+      // scan the snapshot without restoring snapshot
+      TableSnapshotScanner scanner =
+          new TableSnapshotScanner(conf, rootDir, restoreDir, snapshotName, scan, true);
+      verifyScanner(scanner, bbb, yyy);
+      scanner.close();
+
+      // check whether the snapshot has been deleted by the close of scanner.
+      scanner = new TableSnapshotScanner(conf, rootDir, restoreDir, snapshotName, scan, true);
+      verifyScanner(scanner, bbb, yyy);
+      scanner.close();
+
+      // restore snapshot again.
+      RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+
+      // check whether the snapshot has been deleted by the close of scanner.
+      scanner = new TableSnapshotScanner(conf, rootDir, restoreDir, snapshotName, scan, true);
+      verifyScanner(scanner, bbb, yyy);
+      scanner.close();
+    } finally {
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+      tearDownCluster();
+    }
   }
 
   private void testScanner(HBaseTestingUtility util, String snapshotName, int numRegions,

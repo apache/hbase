@@ -345,22 +345,20 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets up the job for reading from a table snapshot. It bypasses hbase servers
-   * and read directly from snapshot files.
-   *
+   * Sets up the job for reading from a table snapshot. It bypasses hbase servers and read directly
+   * from snapshot files.
    * @param snapshotName The name of the snapshot (of a table) to read from.
-   * @param scan  The scan instance with the columns, time range etc.
-   * @param mapper  The mapper class to use.
-   * @param outputKeyClass  The class of the output key.
-   * @param outputValueClass  The class of the output value.
-   * @param job  The current job to adjust.  Make sure the passed job is
-   * carrying all necessary HBase configuration.
-   * @param addDependencyJars upload HBase jars and jars for any of the configured
-   *           job classes via the distributed cache (tmpjars).
-   *
+   * @param scan The scan instance with the columns, time range etc.
+   * @param mapper The mapper class to use.
+   * @param outputKeyClass The class of the output key.
+   * @param outputValueClass The class of the output value.
+   * @param job The current job to adjust. Make sure the passed job is carrying all necessary HBase
+   *          configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
+   *          the distributed cache (tmpjars).
    * @param tmpRestoreDir a temporary directory to copy the snapshot files into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * After the job is finished, restore directory can be deleted.
+   *          have write permissions to this directory, and this should not be a subdirectory of
+   *          rootdir. After the job is finished, restore directory can be deleted.
    * @throws IOException When setting up the details fails.
    * @see TableSnapshotInputFormat
    */
@@ -369,10 +367,10 @@ public class TableMapReduceUtil {
       Class<?> outputKeyClass,
       Class<?> outputValueClass, Job job,
       boolean addDependencyJars, Path tmpRestoreDir)
-  throws IOException {
+      throws IOException {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
-    initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
-        outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
+    initTableMapperJob(snapshotName, scan, mapper, outputKeyClass, outputValueClass, job,
+      addDependencyJars, false, TableSnapshotInputFormat.class);
     resetCacheConfig(job.getConfiguration());
   }
 
