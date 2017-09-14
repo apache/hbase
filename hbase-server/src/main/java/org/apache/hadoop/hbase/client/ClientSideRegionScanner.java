@@ -86,6 +86,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
         resultSize += CellUtil.estimatedSerializedSizeOf(cell);
       }
       this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);
+      this.scanMetrics.countOfRowsScanned.incrementAndGet();
     }
 
     return result;
