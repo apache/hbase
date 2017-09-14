@@ -120,6 +120,7 @@ public class TestCanaryTool {
 
   @Test
   public void testReadTableTimeouts() throws Exception {
+    if (skipOldJREs()) return;
     final TableName [] tableNames = new TableName[2];
     tableNames[0] = TableName.valueOf("testReadTableTimeouts1");
     tableNames[1] = TableName.valueOf("testReadTableTimeouts2");
@@ -163,6 +164,7 @@ public class TestCanaryTool {
 
   @Test
   public void testWriteTableTimeout() throws Exception {
+    if (skipOldJREs()) return;
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
     Canary canary = new Canary(executor, sink);
@@ -181,6 +183,7 @@ public class TestCanaryTool {
   //no table created, so there should be no regions
   @Test
   public void testRegionserverNoRegions() throws Exception {
+    if (skipOldJREs()) return;
     runRegionserverCanary();
     verify(mockAppender).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
       @Override
@@ -193,6 +196,7 @@ public class TestCanaryTool {
   //by creating a table, there shouldn't be any region servers not serving any regions
   @Test
   public void testRegionserverWithRegions() throws Exception {
+    if (skipOldJREs()) return;
     TableName tableName = TableName.valueOf("testTable");
     testingUtility.createTable(tableName, new byte[][] { FAMILY });
     runRegionserverCanary();
@@ -225,6 +229,15 @@ public class TestCanaryTool {
     verify(sink, atLeastOnce())
         .publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
+  }
+
+  // We have unexpected trouble asserting with custom matchers using Mockito on Java < 8,
+  // so skip the relevant tests if running on an older JRE.
+  private static boolean skipOldJREs() {
+    String specVersion[] = System.getProperty("java.specification.version").split("\\.");
+    int majorVersion = Integer.valueOf(specVersion[0]);
+    int minorVersion = Integer.valueOf(specVersion[1]);
+    return !(majorVersion > 1 || (majorVersion == 1 && minorVersion > 7));
   }
 
   private void runRegionserverCanary() throws Exception {
