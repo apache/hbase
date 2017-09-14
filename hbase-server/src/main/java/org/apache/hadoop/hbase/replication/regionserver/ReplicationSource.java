@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -62,6 +60,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+
 
 /**
  * Class that handles the source of a replication stream.
@@ -73,7 +73,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
  * A stream is considered down when we cannot contact a region server on the
  * peer cluster for more than 55 seconds by default.
  * </p>
- *
  */
 @InterfaceAudience.Private
 public class ReplicationSource extends Thread implements ReplicationSourceInterface {
@@ -123,6 +122,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   private ReplicationThrottler throttler;
   private long defaultBandwidth;
   private long currentBandwidth;
+  private WALFileLengthProvider walFileLengthProvider;
   protected final ConcurrentHashMap<String, ReplicationSourceShipper> workerThreads =
       new ConcurrentHashMap<>();
 
@@ -147,12 +147,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
    * @throws IOException
    */
   @Override
-  public void init(final Configuration conf, final FileSystem fs,
-      final ReplicationSourceManager manager, final ReplicationQueues replicationQueues,
-      final ReplicationPeers replicationPeers, final Stoppable stopper,
-      final String peerClusterZnode, final UUID clusterId, ReplicationEndpoint replicationEndpoint,
-      final MetricsSource metrics)
-          throws IOException {
+  public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
+      ReplicationQueues replicationQueues, ReplicationPeers replicationPeers, Stoppable stopper,
+      String peerClusterZnode, UUID clusterId, ReplicationEndpoint replicationEndpoint,
+      WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
     this.stopper = stopper;
     this.conf = HBaseConfiguration.create(conf);
     this.waitOnEndpointSeconds =
@@ -181,6 +179,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     currentBandwidth = getCurrentBandwidth();
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
     this.totalBufferUsed = manager.getTotalBufferUsed();
+    this.walFileLengthProvider = walFileLengthProvider;
     LOG.info("peerClusterZnode=" + peerClusterZnode + ", ReplicationSource : " + peerId
         + ", currentBandwidth=" + this.currentBandwidth);
   }
@@ -559,5 +558,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
     totalReplicatedEdits.addAndGet(entries.size());
     totalBufferUsed.addAndGet(-batchSize);
+  }
+
+  @Override
+  public WALFileLengthProvider getWALFileLengthProvider() {
+    return walFileLengthProvider;
   }
 }

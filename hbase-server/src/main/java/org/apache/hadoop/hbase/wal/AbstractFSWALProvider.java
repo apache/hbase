@@ -115,7 +115,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   @Override
-  public List<WAL> getWALs() throws IOException {
+  public List<WAL> getWALs() {
     if (wal == null) {
       return Collections.emptyList();
     }

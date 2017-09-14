@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -38,6 +39,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
@@ -63,7 +65,7 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
  * Alternatively, you may provide a custom implementation of {@link WALProvider} by class name.
  */
 @InterfaceAudience.Private
-public class WALFactory {
+public class WALFactory implements WALFileLengthProvider {
 
   private static final Log LOG = LogFactory.getLog(WALFactory.class);
 
@@ -230,7 +232,7 @@ public class WALFactory {
     }
   }
 
-  public List<WAL> getWALs() throws IOException {
+  public List<WAL> getWALs() {
     return provider.getWALs();
   }
 
@@ -449,5 +451,10 @@ public class WALFactory {
 
   public final WALProvider getMetaWALProvider() {
     return this.metaProvider.get();
+  }
+
+  @Override
+  public OptionalLong getLogFileSizeIfBeingWritten(Path path) {
+    return getWALs().stream().map(w -> w.getLogFileSizeIfBeingWritten(path)).filter(o -> o.isPresent()).findAny().orElse(OptionalLong.empty());
   }
 }

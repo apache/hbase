@@ -19,9 +19,6 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +28,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -40,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -68,9 +65,12 @@ import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This class is responsible to manage all the replication
@@ -116,12 +116,12 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Path logDir;
   // Path to the wal archive
   private final Path oldLogDir;
+  private final WALFileLengthProvider walFileLengthProvider;
   // The number of ms that we wait before moving znodes, HBASE-3596
   private final long sleepBeforeFailover;
   // Homemade executer service for replication
   private final ThreadPoolExecutor executor;
 
-  private final Random rand;
   private final boolean replicationForBulkLoadDataEnabled;
 
   private Connection connection;
@@ -141,10 +141,10 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param oldLogDir the directory where old logs are archived
    * @param clusterId
    */
-  public ReplicationSourceManager(final ReplicationQueues replicationQueues,
-      final ReplicationPeers replicationPeers, final ReplicationTracker replicationTracker,
-      final Configuration conf, final Server server, final FileSystem fs, final Path logDir,
-      final Path oldLogDir, final UUID clusterId) throws IOException {
+  public ReplicationSourceManager(ReplicationQueues replicationQueues,
+      ReplicationPeers replicationPeers, ReplicationTracker replicationTracker, Configuration conf,
+      Server server, FileSystem fs, Path logDir, Path oldLogDir, UUID clusterId,
+      WALFileLengthProvider walFileLengthProvider) throws IOException {
     //CopyOnWriteArrayList is thread-safe.
     //Generally, reading is more than modifying.
     this.sources = new CopyOnWriteArrayList<>();
@@ -162,6 +162,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.sleepBeforeFailover =
         conf.getLong("replication.sleep.before.failover", 30000); // 30 seconds
     this.clusterId = clusterId;
+    this.walFileLengthProvider = walFileLengthProvider;
     this.replicationTracker.registerListener(this);
     this.replicationPeers.getAllPeerIds();
     // It's preferable to failover 1 RS at a time, but with good zk servers
@@ -175,8 +176,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     tfb.setNameFormat("ReplicationExecutor-%d");
     tfb.setDaemon(true);
     this.executor.setThreadFactory(tfb.build());
-    this.rand = new Random();
-    this.latestPaths = Collections.synchronizedSet(new HashSet<Path>());
+    this.latestPaths = new HashSet<Path>();
     replicationForBulkLoadDataEnabled =
         conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
           HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
@@ -243,7 +243,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Adds a normal source per registered peer cluster and tries to process all
    * old region server wal queues
    */
-  protected void init() throws IOException, ReplicationException {
+  void init() throws IOException, ReplicationException {
     for (String id : this.replicationPeers.getConnectedPeerIds()) {
       addSource(id);
       if (replicationForBulkLoadDataEnabled) {
@@ -267,13 +267,13 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @return the source that was created
    * @throws IOException
    */
-  protected ReplicationSourceInterface addSource(String id) throws IOException,
-      ReplicationException {
+  @VisibleForTesting
+  ReplicationSourceInterface addSource(String id) throws IOException, ReplicationException {
     ReplicationPeerConfig peerConfig = replicationPeers.getReplicationPeerConfig(id);
     ReplicationPeer peer = replicationPeers.getConnectedPeer(id);
-    ReplicationSourceInterface src =
-        getReplicationSource(this.conf, this.fs, this, this.replicationQueues,
-          this.replicationPeers, server, id, this.clusterId, peerConfig, peer);
+    ReplicationSourceInterface src = getReplicationSource(this.conf, this.fs, this,
+      this.replicationQueues, this.replicationPeers, server, id, this.clusterId, peerConfig, peer,
+      walFileLengthProvider);
     synchronized (this.walsById) {
       this.sources.add(src);
       Map<String, SortedSet<String>> walsByGroup = new HashMap<>();
@@ -330,7 +330,8 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Get a copy of the wals of the first source on this rs
    * @return a sorted set of wal names
    */
-  protected Map<String, Map<String, SortedSet<String>>> getWALs() {
+  @VisibleForTesting
+  Map<String, Map<String, SortedSet<String>>> getWALs() {
     return Collections.unmodifiableMap(walsById);
   }
 
@@ -338,7 +339,8 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Get a copy of the wals of the recovered sources on this rs
    * @return a sorted set of wal names
    */
-  protected Map<String, Map<String, SortedSet<String>>> getWalsByIdRecoveredQueues() {
+  @VisibleForTesting
+  Map<String, Map<String, SortedSet<String>>> getWalsByIdRecoveredQueues() {
     return Collections.unmodifiableMap(walsByIdRecoveredQueues);
   }
 
@@ -364,12 +366,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @return the normal source for the give peer if it exists, otherwise null.
    */
   public ReplicationSourceInterface getSource(String peerId) {
-    for (ReplicationSourceInterface source: getSources()) {
-      if (source.getPeerId().equals(peerId)) {
-        return source;
-      }
-    }
-    return null;
+    return getSources().stream().filter(s -> s.getPeerId().equals(peerId)).findFirst().orElse(null);
   }
 
   @VisibleForTesting
@@ -466,12 +463,11 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @return the created source
    * @throws IOException
    */
-  protected ReplicationSourceInterface getReplicationSource(final Configuration conf,
-      final FileSystem fs, final ReplicationSourceManager manager,
-      final ReplicationQueues replicationQueues, final ReplicationPeers replicationPeers,
-      final Server server, final String peerId, final UUID clusterId,
-      final ReplicationPeerConfig peerConfig, final ReplicationPeer replicationPeer)
-      throws IOException {
+  private ReplicationSourceInterface getReplicationSource(Configuration conf, FileSystem fs,
+      ReplicationSourceManager manager, ReplicationQueues replicationQueues,
+      ReplicationPeers replicationPeers, Server server, String peerId, UUID clusterId,
+      ReplicationPeerConfig peerConfig, ReplicationPeer replicationPeer,
+      WALFileLengthProvider walFileLengthProvider) throws IOException {
     RegionServerCoprocessorHost rsServerHost = null;
     TableDescriptors tableDescriptors = null;
     if (server instanceof HRegionServer) {
@@ -507,8 +503,8 @@ public class ReplicationSourceManager implements ReplicationListener {
 
     MetricsSource metrics = new MetricsSource(peerId);
     // init replication source
-    src.init(conf, fs, manager, replicationQueues, replicationPeers, server, peerId,
-      clusterId, replicationEndpoint, metrics);
+    src.init(conf, fs, manager, replicationQueues, replicationPeers, server, peerId, clusterId,
+      replicationEndpoint, walFileLengthProvider, metrics);
 
     // init replication endpoint
     replicationEndpoint.init(new ReplicationEndpoint.Context(replicationPeer.getConfiguration(),
@@ -674,7 +670,8 @@ public class ReplicationSourceManager implements ReplicationListener {
       // Wait a bit before transferring the queues, we may be shutting down.
       // This sleep may not be enough in some cases.
       try {
-        Thread.sleep(sleepBeforeFailover + (long) (rand.nextFloat() * sleepBeforeFailover));
+        Thread.sleep(sleepBeforeFailover +
+            (long) (ThreadLocalRandom.current().nextFloat() * sleepBeforeFailover));
       } catch (InterruptedException e) {
         LOG.warn("Interrupted while waiting before transferring a queue.");
         Thread.currentThread().interrupt();
@@ -688,7 +685,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       List<String> peers = rq.getUnClaimedQueueIds(rsZnode);
       while (peers != null && !peers.isEmpty()) {
         Pair<String, SortedSet<String>> peer = this.rq.claimQueue(rsZnode,
-            peers.get(rand.nextInt(peers.size())));
+          peers.get(ThreadLocalRandom.current().nextInt(peers.size())));
         long sleep = sleepBeforeFailover/2;
         if (peer != null) {
           newQueues.put(peer.getFirst(), peer.getSecond());
@@ -748,7 +745,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           // enqueue sources
           ReplicationSourceInterface src =
               getReplicationSource(conf, fs, ReplicationSourceManager.this, this.rq, this.rp,
-                server, peerId, this.clusterId, peerConfig, peer);
+                server, peerId, this.clusterId, peerConfig, peer, walFileLengthProvider);
           // synchronized on oldsources to avoid adding recovered source for the to-be-removed peer
           // see removePeer
           synchronized (oldsources) {

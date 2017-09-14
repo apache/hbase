@@ -60,7 +60,7 @@ public interface WALProvider {
 
   /** @return the List of WALs that are used by this server
    */
-  List<WAL> getWALs() throws IOException;
+  List<WAL> getWALs();
 
   /**
    * persist outstanding WALs to storage and stop accepting new appends.
@@ -76,18 +76,20 @@ public interface WALProvider {
    */
   void close() throws IOException;
 
-  // Writers are used internally. Users outside of the WAL should be relying on the
-  // interface provided by WAL.
-  interface Writer extends Closeable {
-    void sync() throws IOException;
-    void append(WAL.Entry entry) throws IOException;
+  interface WriterBase extends Closeable {
     long getLength();
   }
 
-  interface AsyncWriter extends Closeable {
+  // Writers are used internally. Users outside of the WAL should be relying on the
+  // interface provided by WAL.
+  interface Writer extends WriterBase {
+    void sync() throws IOException;
+    void append(WAL.Entry entry) throws IOException;
+  }
+
+  interface AsyncWriter extends WriterBase {
     CompletableFuture<Long> sync();
     void append(WAL.Entry entry);
-    long getLength();
   }
 
   /**

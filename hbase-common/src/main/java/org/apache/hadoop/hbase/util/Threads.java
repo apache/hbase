@@ -59,7 +59,7 @@ public class Threads {
    * @param t thread to run
    * @return Returns the passed Thread <code>t</code>.
    */
-  public static Thread setDaemonThreadRunning(final Thread t) {
+  public static <T extends Thread> T setDaemonThreadRunning(T t) {
     return setDaemonThreadRunning(t, t.getName());
   }
 
@@ -69,8 +69,7 @@ public class Threads {
    * @param name new name
    * @return Returns the passed Thread <code>t</code>.
    */
-  public static Thread setDaemonThreadRunning(final Thread t,
-    final String name) {
+  public static <T extends Thread> T setDaemonThreadRunning(T t, String name) {
     return setDaemonThreadRunning(t, name, null);
   }
 
@@ -78,12 +77,11 @@ public class Threads {
    * Utility method that sets name, daemon status and starts passed thread.
    * @param t thread to frob
    * @param name new name
-   * @param handler A handler to set on the thread.  Pass null if want to
-   * use default handler.
+   * @param handler A handler to set on the thread. Pass null if want to use default handler.
    * @return Returns the passed Thread <code>t</code>.
    */
-  public static Thread setDaemonThreadRunning(final Thread t,
-    final String name, final UncaughtExceptionHandler handler) {
+  public static <T extends Thread> T setDaemonThreadRunning(T t, String name,
+      UncaughtExceptionHandler handler) {
     t.setName(name);
     if (handler != null) {
       t.setUncaughtExceptionHandler(handler);

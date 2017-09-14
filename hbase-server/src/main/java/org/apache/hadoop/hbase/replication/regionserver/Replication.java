@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -85,6 +86,7 @@ public class Replication extends WALActionsListener.Base implements
   private int statsThreadPeriod;
   // ReplicationLoad to access replication metrics
   private ReplicationLoad replicationLoad;
+
   /**
    * Instantiate the replication management (if rep is enabled).
    * @param server Hosting server
@@ -93,9 +95,8 @@ public class Replication extends WALActionsListener.Base implements
    * @param oldLogDir directory where logs are archived
    * @throws IOException
    */
-  public Replication(final Server server, final FileSystem fs,
-      final Path logDir, final Path oldLogDir) throws IOException{
-    initialize(server, fs, logDir, oldLogDir);
+  public Replication(Server server, FileSystem fs, Path logDir, Path oldLogDir) throws IOException {
+    initialize(server, fs, logDir, oldLogDir, p -> OptionalLong.empty());
   }
 
   /**
@@ -104,8 +105,8 @@ public class Replication extends WALActionsListener.Base implements
   public Replication() {
   }
 
-  public void initialize(final Server server, final FileSystem fs,
-      final Path logDir, final Path oldLogDir) throws IOException {
+  public void initialize(Server server, FileSystem fs, Path logDir, Path oldLogDir,
+      WALFileLengthProvider walFileLengthProvider) throws IOException {
     this.server = server;
     this.conf = this.server.getConfiguration();
     this.replicationForBulkLoadData = isReplicationForBulkLoadDataEnabled(this.conf);
@@ -144,8 +145,8 @@ public class Replication extends WALActionsListener.Base implements
       throw new IOException("Could not read cluster id", ke);
     }
     this.replicationManager =
-        new ReplicationSourceManager(replicationQueues, replicationPeers, replicationTracker,
-            conf, this.server, fs, logDir, oldLogDir, clusterId);
+        new ReplicationSourceManager(replicationQueues, replicationPeers, replicationTracker, conf,
+            this.server, fs, logDir, oldLogDir, clusterId, walFileLengthProvider);
     this.statsThreadPeriod =
         this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
     LOG.debug("ReplicationStatisticsThread " + this.statsThreadPeriod);

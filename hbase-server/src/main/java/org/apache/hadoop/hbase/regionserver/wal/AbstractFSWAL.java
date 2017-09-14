@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
+
+import com.lmax.disruptor.RingBuffer;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -29,6 +32,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -58,6 +62,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.DrainBarrier;
@@ -68,15 +73,13 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.NullScope;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import com.lmax.disruptor.RingBuffer;
 
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS. Only one
@@ -105,7 +108,7 @@ import com.lmax.disruptor.RingBuffer;
  * (Need to keep our own file lengths, not rely on HDFS).
  */
 @InterfaceAudience.Private
-public abstract class AbstractFSWAL<W> implements WAL {
+public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   private static final Log LOG = LogFactory.getLog(AbstractFSWAL.class);
 
@@ -981,6 +984,28 @@ public abstract class AbstractFSWAL<W> implements WAL {
   public String toString() {
     return implClassName + " " + walFilePrefix + ":" + walFileSuffix + "(num "
         + filenum + ")";
+  }
+
+  /**
+   * if the given {@code path} is being written currently, then return its length.
+   * <p>
+   * This is used by replication to prevent replicating unacked log entries. See
+   * https://issues.apache.org/jira/browse/HBASE-14004 for more details.
+   */
+  @Override
+  public OptionalLong getLogFileSizeIfBeingWritten(Path path) {
+    rollWriterLock.lock();
+    try {
+      Path currentPath = getOldPath();
+      if (path.equals(currentPath)) {
+        W writer = this.writer;
+        return writer != null ? OptionalLong.of(writer.getLength()) : OptionalLong.empty();
+      } else {
+        return OptionalLong.empty();
+      }
+    } finally {
+      rollWriterLock.unlock();
+    }
   }
 
   /**

@@ -50,13 +50,12 @@ public class RecoveredReplicationSource extends ReplicationSource {
   private String actualPeerId;
 
   @Override
-  public void init(final Configuration conf, final FileSystem fs,
-      final ReplicationSourceManager manager, final ReplicationQueues replicationQueues,
-      final ReplicationPeers replicationPeers, final Stoppable stopper,
-      final String peerClusterZnode, final UUID clusterId, ReplicationEndpoint replicationEndpoint,
-      final MetricsSource metrics) throws IOException {
+  public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
+      ReplicationQueues replicationQueues, ReplicationPeers replicationPeers, Stoppable stopper,
+      String peerClusterZnode, UUID clusterId, ReplicationEndpoint replicationEndpoint,
+      WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
     super.init(conf, fs, manager, replicationQueues, replicationPeers, stopper, peerClusterZnode,
-      clusterId, replicationEndpoint, metrics);
+      clusterId, replicationEndpoint, walFileLengthProvider, metrics);
     this.actualPeerId = this.replicationQueueInfo.getPeerId();
   }
 

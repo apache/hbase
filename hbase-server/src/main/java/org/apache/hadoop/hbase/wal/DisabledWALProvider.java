@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -66,7 +67,7 @@ class DisabledWALProvider implements WALProvider {
   }
 
   @Override
-  public List<WAL> getWALs() throws IOException {
+  public List<WAL> getWALs() {
     List<WAL> wals = new ArrayList<>(1);
     wals.add(disabled);
     return wals;
@@ -231,6 +232,11 @@ class DisabledWALProvider implements WALProvider {
     @Override
     public String toString() {
       return "WAL disabled.";
+    }
+
+    @Override
+    public OptionalLong getLogFileSizeIfBeingWritten(Path path) {
+      return OptionalLong.empty();
     }
   }
 

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
+import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
@@ -42,16 +43,17 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   String peerClusterId;
   Path currentPath;
   MetricsSource metrics;
+  WALFileLengthProvider walFileLengthProvider;
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
       ReplicationQueues rq, ReplicationPeers rp, Stoppable stopper, String peerClusterId,
-      UUID clusterId, ReplicationEndpoint replicationEndpoint, MetricsSource metrics)
-          throws IOException {
-
+      UUID clusterId, ReplicationEndpoint replicationEndpoint,
+      WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
     this.manager = manager;
     this.peerClusterId = peerClusterId;
     this.metrics = metrics;
+    this.walFileLengthProvider = walFileLengthProvider;
   }
 
   @Override
@@ -134,5 +136,10 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public void postShipEdits(List<Entry> entries, int batchSize) {
+  }
+
+  @Override
+  public WALFileLengthProvider getWALFileLengthProvider() {
+    return walFileLengthProvider;
   }
 }

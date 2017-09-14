@@ -37,18 +37,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
-import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream.WALEntryStreamRuntimeException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
 /**
  * Reads and filters WAL entries, groups the filtered entries into batches, and puts the batches onto a queue
@@ -127,8 +127,8 @@ public class ReplicationSourceWALReader extends Thread {
   public void run() {
     int sleepMultiplier = 1;
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
-      try (WALEntryStream entryStream =
-          new WALEntryStream(logQueue, fs, conf, currentPosition, source.getSourceMetrics())) {
+      try (WALEntryStream entryStream = new WALEntryStream(logQueue, fs, conf, currentPosition,
+          source.getWALFileLengthProvider(), source.getSourceMetrics())) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           if (!checkQuota()) {
             continue;
@@ -147,7 +147,7 @@ public class ReplicationSourceWALReader extends Thread {
           currentPosition = entryStream.getPosition();
           entryStream.reset(); // reuse stream
         }
-      } catch (IOException | WALEntryStreamRuntimeException e) { // stream related
+      } catch (IOException e) { // stream related
         if (sleepMultiplier < maxRetriesMultiplier) {
           LOG.debug("Failed to read stream of replication entries: " + e);
           sleepMultiplier++;
@@ -202,8 +202,9 @@ public class ReplicationSourceWALReader extends Thread {
   // if we get an EOF due to a zero-length log, and there are other logs in queue
   // (highly likely we've closed the current log), we've hit the max retries, and autorecovery is
   // enabled, then dump the log
-  private void handleEofException(Exception e) {
-    if (e.getCause() instanceof EOFException && logQueue.size() > 1 && this.eofAutoRecovery) {
+  private void handleEofException(IOException e) {
+    if (e instanceof EOFException ||
+        e.getCause() instanceof EOFException && logQueue.size() > 1 && this.eofAutoRecovery) {
       try {
         if (fs.getFileStatus(logQueue.peek()).getLen() == 0) {
           LOG.warn("Forcing removal of 0 length log in queue: " + logQueue.peek());
