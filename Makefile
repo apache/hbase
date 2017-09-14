@@ -24,21 +24,25 @@ DEBUG_PATH := $(BUILD_PATH)/debug
 RELEASE_PATH := $(BUILD_PATH)/release
 PROTO_SRC_DIR := if
 PROTO_CXX_DIR := $(BUILD_PATH)/if
-MODULES := connection core exceptions security serde test-util utils
+MODULES := connection core exceptions security serde utils
+TEST_MODULES := test-util # These modules contain test code, not included in the build for the lib
 SRC_DIR := $(MODULES)
 DEBUG_BUILD_DIR := $(addprefix $(DEBUG_PATH)/,$(MODULES))
 RELEASE_BUILD_DIR := $(addprefix $(RELEASE_PATH)/,$(MODULES))
-INCLUDE_DIR := . $(BUILD_PATH) $(JAVA_HOME)/include/ $(JAVA_HOME)/include/linux
+INCLUDE_DIR := . $(BUILD_PATH)
+TEST_BUILD_INCLUDE_DIR := $(INLCUDE_DIR) $(JAVA_HOME)/include/ $(JAVA_HOME)/include/linux
 
 #flags to pass to the CPP compiler & linker
 CPPFLAGS_DEBUG := -D_GLIBCXX_USE_CXX11_ABI=0 -g -Wall -std=c++14 -pedantic -fPIC -MMD -MP
 CPPFLAGS_RELEASE := -D_GLIBCXX_USE_CXX11_ABI=0 -DNDEBUG -O2 -Wall -std=c++14 -pedantic -fPIC -MMD -MP
-LDFLAGS := -lprotobuf -lzookeeper_mt -lsasl2 -lfolly -lwangle -L $(JAVA_HOME)/jre/lib/amd64/server -ljvm
+LDFLAGS := -lprotobuf -lzookeeper_mt -lsasl2 -lfolly -lwangle
+TEST_BUILD_LDFLAGS := $(LDFLAGS) -L $(JAVA_HOME)/jre/lib/amd64/server -ljvm
 LINKFLAG := -shared
 
 #define list of source files and object files
 ALLSRC := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
-EXCLUDE_SRC := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*-test.cc)) core/simple-client.cc core/load-client.cc
+EXCLUDE_SRC := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*-test.cc)) \
+	core/simple-client.cc core/load-client.cc
 SRC := $(filter-out $(EXCLUDE_SRC), $(ALLSRC))
 PROTOSRC := $(patsubst %.proto, $(addprefix $(BUILD_PATH)/,%.pb.cc),$(wildcard if/*.proto))
 PROTOHDR := $(patsubst %.proto, $(addprefix $(BUILD_PATH)/,%.pb.h),$(wildcard if/*.proto))
