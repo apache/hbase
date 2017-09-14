@@ -24,7 +24,6 @@ include Java
 module Hbase
   class Table
     include HBaseConstants
-
     @@thread_pool = nil
 
     # Add the command 'name' to table s.t. the shell command also called via 'name'
@@ -102,7 +101,7 @@ flush and drop just by typing:
 Note that after dropping a table, your reference to it becomes useless and further usage
 is undefined (and not recommended).
 EOF
-      end
+    end
 
     #---------------------------------------------------------------------------------------------
 
@@ -162,7 +161,8 @@ EOF
     #----------------------------------------------------------------------------------------------
     # Create a Delete mutation
     def _createdelete_internal(row, column = nil,
-                               timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+                               timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
+                               args = {}, all_version = true)
       temptimestamp = timestamp
       if temptimestamp.is_a?(Hash)
         timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP
@@ -179,9 +179,12 @@ EOF
         visibility = args[VISIBILITY]
         set_cell_visibility(d, visibility) if visibility
       end
-      if column
+      if column && all_version
         family, qualifier = parse_column_name(column)
         d.addColumns(family, qualifier, timestamp)
+      elsif column && !all_version
+        family, qualifier = parse_column_name(column)
+        d.addColumn(family, qualifier, timestamp)
       end
       d
     end
@@ -189,7 +192,8 @@ EOF
     #----------------------------------------------------------------------------------------------
     # Delete rows using prefix
     def _deleterows_internal(row, column = nil,
-                             timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+                             timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
+                             args = {}, all_version = true)
       cache = row['CACHE'] ? row['CACHE'] : 100
       prefix = row['ROWPREFIXFILTER']
 
@@ -205,7 +209,7 @@ EOF
       while iter.hasNext
         row = iter.next
         key = org.apache.hadoop.hbase.util.Bytes.toStringBinary(row.getRow)
-        d = _createdelete_internal(key, column, timestamp, args)
+        d = _createdelete_internal(key, column, timestamp, args, all_version)
         list.add(d)
         if list.size >= cache
           @table.delete(list)
@@ -218,23 +222,25 @@ EOF
     #----------------------------------------------------------------------------------------------
     # Delete a cell
     def _delete_internal(row, column,
-                         timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
-      _deleteall_internal(row, column, timestamp, args)
+                         timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
+                         args = {}, all_version = false)
+      _deleteall_internal(row, column, timestamp, args, all_version)
     end
 
     #----------------------------------------------------------------------------------------------
     # Delete a row
     def _deleteall_internal(row, column = nil,
-                            timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+                            timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
+                            args = {}, all_version = true)
       # delete operation doesn't need read permission. Retaining the read check for
       # meta table as a part of HBASE-5837.
       if is_meta_table?
         raise ArgumentError, 'Row Not Found' if _get_internal(row).nil?
       end
       if row.is_a?(Hash)
-        _deleterows_internal(row, column, timestamp, args)
+        _deleterows_internal(row, column, timestamp, args, all_version)
       else
-        d = _createdelete_internal(row, column, timestamp, args)
+        d = _createdelete_internal(row, column, timestamp, args, all_version)
         @table.delete(d)
       end
     end
@@ -510,7 +516,7 @@ EOF
                  org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes, stoprow.to_java_bytes)
                else
                  org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes)
-        end
+               end
 
         # This will overwrite any startrow/stoprow settings
         scan.setRowPrefixFilter(rowprefixfilter.to_java_bytes) if rowprefixfilter

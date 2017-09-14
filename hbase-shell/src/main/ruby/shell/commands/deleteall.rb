@@ -58,7 +58,7 @@ EOF
       def deleteall(table, row, column = nil,
                     timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
         @start_time = Time.now
-        table._deleteall_internal(row, column, timestamp, args)
+        table._deleteall_internal(row, column, timestamp, args, true)
       end
     end
   end
