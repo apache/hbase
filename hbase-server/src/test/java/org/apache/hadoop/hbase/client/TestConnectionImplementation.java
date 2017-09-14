@@ -67,7 +67,7 @@ public class TestConnectionImplementation {
     // test that we fail to get a client to an unresolvable hostname, which
     // means it won't be cached
     ServerName badHost =
-        ServerName.valueOf("unknownhost.example.com:" + HConstants.DEFAULT_MASTER_PORT,
+        ServerName.valueOf("unknownhost.invalid:" + HConstants.DEFAULT_MASTER_PORT,
         System.currentTimeMillis());
     conn.getAdmin(badHost);
     fail("Obtaining admin to unresolvable hostname should have failed");
@@ -86,7 +86,7 @@ public class TestConnectionImplementation {
     // test that we fail to get a client to an unresolvable hostname, which
     // means it won't be cached
     ServerName badHost =
-        ServerName.valueOf("unknownhost.example.com:" + HConstants.DEFAULT_REGIONSERVER_PORT,
+        ServerName.valueOf("unknownhost.invalid:" + HConstants.DEFAULT_REGIONSERVER_PORT,
         System.currentTimeMillis());
     conn.getAdmin(badHost);
     fail("Obtaining client to unresolvable hostname should have failed");
