@@ -36,6 +36,9 @@
         <include>org.apache.hbase:hbase-build-support</include>
         <include>org.apache.hbase:hbase-build-configuration</include>
         <include>org.apache.hbase:hbase-assembly</include>
+        <include>org.apache.hbase:hbase-backup</include>
+        <include>org.apache.hbase:hbase-build-configuration</include>
+        <include>org.apache.hbase:hbase-build-support</include>
         <include>org.apache.hbase:hbase-checkstyle</include>
         <include>org.apache.hbase:hbase-client</include>
         <include>org.apache.hbase:hbase-common</include>
@@ -45,12 +48,15 @@
         <include>org.apache.hbase:hbase-hadoop2-compat</include>
         <include>org.apache.hbase:hbase-hadoop-compat</include>
         <include>org.apache.hbase:hbase-it</include>
+        <include>org.apache.hbase:hbase-mapreduce</include>
         <include>org.apache.hbase:hbase-metrics</include>
         <include>org.apache.hbase:hbase-metrics-api</include>
+        <include>org.apache.hbase:hbase-native-client</include>
         <include>org.apache.hbase:hbase-prefix-tree</include>
         <include>org.apache.hbase:hbase-procedure</include>
         <include>org.apache.hbase:hbase-protocol-shaded</include>
         <include>org.apache.hbase:hbase-protocol</include>
+        <include>org.apache.hbase:hbase-replication</include>
         <include>org.apache.hbase:hbase-rest</include>
         <include>org.apache.hbase:hbase-resource-bundle</include>
         <include>org.apache.hbase:hbase-rsgroup</include>
@@ -61,8 +67,6 @@
         <include>org.apache.hbase:hbase-spark-it</include>
         <include>org.apache.hbase:hbase-testing-util</include>
         <include>org.apache.hbase:hbase-thrift</include>
-        <include>org.apache.hbase:hbase-backup</include>
-        <include>org.apache.hbase:hbase-mapreduce</include>
       </includes>
       <!-- Include all the sources in the top directory -->
       <sources>
