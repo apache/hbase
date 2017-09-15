@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
@@ -119,6 +120,7 @@ public class TestCanaryTool {
   }
 
   @Test
+  @Ignore("Intermittent argument matching failures, see HBASE-18813")
   public void testReadTableTimeouts() throws Exception {
     final TableName [] tableNames = new TableName[2];
     tableNames[0] = TableName.valueOf(name.getMethodName() + "1");
@@ -162,6 +164,7 @@ public class TestCanaryTool {
   }
 
   @Test
+  @Ignore("Intermittent argument matching failures, see HBASE-18813")
   public void testWriteTableTimeout() throws Exception {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
