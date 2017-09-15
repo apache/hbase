@@ -239,8 +239,7 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param c the environment provided by the region server
    * @param store the store being compacted
-   * @param scanners the list {@link org.apache.hadoop.hbase.regionserver.StoreFileScanner}s
-   *  to be read from
+   * @param scanners the list of store file scanners to be read from
    * @param scanType the {@link ScanType} indicating whether this is a major or minor compaction
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved store
    *          files
@@ -1034,7 +1033,9 @@ public interface RegionObserver extends Coprocessor {
    * @param reader the base reader, if not {@code null}, from previous RegionObserver in the chain
    * @return a Reader instance to use instead of the base reader if overriding
    * default behavior, null otherwise
+   * @deprecated For Phoenix only, StoreFileReader is not a stable interface.
    */
+  @Deprecated
   default StoreFileReader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
       Reference r, StoreFileReader reader) throws IOException {
@@ -1053,7 +1054,9 @@ public interface RegionObserver extends Coprocessor {
    * @param r original reference file. This will be not null only when reading a split file.
    * @param reader the base reader instance
    * @return The reader to use
+   * @deprecated For Phoenix only, StoreFileReader is not a stable interface.
    */
+  @Deprecated
   default StoreFileReader postStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
       Reference r, StoreFileReader reader) throws IOException {
