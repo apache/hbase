@@ -836,21 +836,6 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
 
-    // preMerge
-    verifyAllowed(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
-        Region region_a = mock(Region.class);
-        when(region_a.getTableDescriptor()).thenReturn(htd);
-        Region region_b = mock(Region.class);
-        when(region_b.getTableDescriptor()).thenReturn(htd);
-        ACCESS_CONTROLLER.preMerge(ObserverContext.createAndPrepare(RSCP_ENV, null), region_a,
-          region_b);
-        return null;
-      }
-    }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
-
     // preRollWALWriterRequest
     verifyAllowed(new AccessTestAction() {
       @Override

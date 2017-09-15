@@ -24,12 +24,9 @@ import java.util.List;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
 /**
@@ -66,65 +63,6 @@ public interface RegionServerObserver extends Coprocessor {
    */
   default void preStopRegionServer(
     final ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {}
-
-  /**
-   * Called before the regions merge.
-   * Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} to skip the merge.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void preMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB) throws IOException {}
-
-  /**
-   * called after the regions merge.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void postMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB, final Region mergedRegion) throws IOException {}
-
-  /**
-   * This will be called before PONR step as part of regions merge transaction. Calling
-   * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the merge
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   * @param metaEntries mutations to execute on hbase:meta atomically with regions merge updates.
-   *        Any puts or deletes to execute on hbase:meta can be added to the mutations.
-   */
-  default void preMergeCommit(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB,
-      @MetaMutationAnnotation List<Mutation> metaEntries) throws IOException {}
-
-  /**
-   * This will be called after PONR step as part of regions merge transaction.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void postMergeCommit(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB, final Region mergedRegion) throws IOException {}
-
-  /**
-   * This will be called before the roll back of the regions merge.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void preRollBackMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB) throws IOException {}
-
-  /**
-   * This will be called after the roll back of the regions merge.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void postRollBackMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB) throws IOException {}
 
   /**
    * This will be called before executing user request to roll a region server WAL.

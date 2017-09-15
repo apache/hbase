@@ -30,10 +30,8 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -93,73 +91,6 @@ public class RegionServerCoprocessorHost extends
       public void postEnvCall(RegionServerEnvironment env) {
         // invoke coprocessor stop method
         shutdown(env);
-      }
-    });
-  }
-
-  public boolean preMerge(final HRegion regionA, final HRegion regionB, final User user) throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preMerge(ctx, regionA, regionB);
-      }
-    });
-  }
-
-  public void postMerge(final HRegion regionA, final HRegion regionB, final HRegion mergedRegion,
-                        final User user)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postMerge(ctx, regionA, regionB, mergedRegion);
-      }
-    });
-  }
-
-  public boolean preMergeCommit(final HRegion regionA, final HRegion regionB,
-      final @MetaMutationAnnotation List<Mutation> metaEntries, final User user)
-      throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preMergeCommit(ctx, regionA, regionB, metaEntries);
-      }
-    });
-  }
-
-  public void postMergeCommit(final HRegion regionA, final HRegion regionB,
-      final HRegion mergedRegion, final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postMergeCommit(ctx, regionA, regionB, mergedRegion);
-      }
-    });
-  }
-
-  public void preRollBackMerge(final HRegion regionA, final HRegion regionB, final User user)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preRollBackMerge(ctx, regionA, regionB);
-      }
-    });
-  }
-
-  public void postRollBackMerge(final HRegion regionA, final HRegion regionB, final User user)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postRollBackMerge(ctx, regionA, regionB);
       }
     });
   }
