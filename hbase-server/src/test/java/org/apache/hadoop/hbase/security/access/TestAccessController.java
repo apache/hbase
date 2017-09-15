@@ -857,31 +857,6 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test (timeout=180000)
-  public void testMergeRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    createTestTable(tableName);
-    try {
-      final List<HRegion> regions = TEST_UTIL.getHBaseCluster().findRegionsForTable(tableName);
-      assertTrue("not enough regions: " + regions.size(), regions.size() >= 2);
-
-      AccessTestAction action = new AccessTestAction() {
-        @Override
-        public Object run() throws Exception {
-          ACCESS_CONTROLLER.preMerge(ObserverContext.createAndPrepare(RSCP_ENV, null),
-            regions.get(0), regions.get(1));
-          return null;
-        }
-      };
-
-      verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
-      verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-        USER_GROUP_WRITE, USER_GROUP_CREATE);
-    } finally {
-      deleteTable(TEST_UTIL, tableName);
-    }
-  }
-
-  @Test (timeout=180000)
   public void testFlush() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override

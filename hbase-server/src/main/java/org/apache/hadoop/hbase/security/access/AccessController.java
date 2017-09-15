@@ -2575,33 +2575,6 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   }
 
   @Override
-  public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, Region regionA,
-      Region regionB) throws IOException {
-    requirePermission(getActiveUser(ctx), "mergeRegions", regionA.getTableDescriptor().getTableName(),
-        null, null, Action.ADMIN);
-  }
-
-  @Override
-  public void postMerge(ObserverContext<RegionServerCoprocessorEnvironment> c, Region regionA,
-      Region regionB, Region mergedRegion) throws IOException { }
-
-  @Override
-  public void preMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      Region regionA, Region regionB, List<Mutation> metaEntries) throws IOException { }
-
-  @Override
-  public void postMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      Region regionA, Region regionB, Region mergedRegion) throws IOException { }
-
-  @Override
-  public void preRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      Region regionA, Region regionB) throws IOException { }
-
-  @Override
-  public void postRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      Region regionA, Region regionB) throws IOException { }
-
-  @Override
   public void preRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
       throws IOException {
     requirePermission(getActiveUser(ctx), "preRollLogWriterRequest", Permission.Action.ADMIN);
