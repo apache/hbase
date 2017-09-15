@@ -226,7 +226,13 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         }
       }
 
-      fs.delete(new Path(request.getBulkToken()), true);
+      Path path = new Path(request.getBulkToken());
+      if (!fs.delete(path, true)) {
+        if (fs.exists(path)) {
+          throw new IOException("Failed to clean up " + path);
+        }
+      }
+      LOG.info("Cleaned up " + path + " successfully.");
       done.run(CleanupBulkLoadResponse.newBuilder().build());
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
