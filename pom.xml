@@ -812,7 +812,7 @@
                   <pluginExecutionFilter>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
-                    <version>${enforcer.version}</version>
+                    <versionRange>${enforcer.version}</versionRange>
                     <goals>
                       <goal>enforce</goal>
                     </goals>
