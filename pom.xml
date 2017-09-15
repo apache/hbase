@@ -775,7 +775,7 @@
                   <pluginExecutionFilter>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
-                    <versionRange>[1.0.1,)</versionRange>
+                    <version>${enforcer.version}</version>
                     <goals>
                       <goal>enforce</goal>
                     </goals>
@@ -934,6 +934,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${enforcer.version}</version>
         <dependencies>
           <dependency>
             <groupId>org.codehaus.mojo</groupId>
@@ -1478,6 +1479,8 @@
     <argLine>${hbase-surefire.argLine}</argLine>
     <jacoco.version>0.7.5.201505241946</jacoco.version>
     <extra.enforcer.version>1.0-beta-6</extra.enforcer.version>
+    <!--See HBASE-17351; we need to set version to 1.4. 1.4.1 fails with MENFORCER-248-->
+    <enforcer.version>1.4</enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
@@ -2270,6 +2273,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-enforcer-plugin</artifactId>
+            <version>${enforcer.version}</version>
             <configuration>
               <rules>
                 <enforceBytecodeVersion>
