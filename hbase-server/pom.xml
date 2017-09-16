@@ -496,6 +496,10 @@
       <artifactId>javax.servlet.jsp</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.el</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-core-asl</artifactId>
     </dependency>
