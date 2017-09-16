@@ -89,7 +89,7 @@ public class TestCanaryTool {
     Canary.ZookeeperStdOutSink sink = spy(new Canary.ZookeeperStdOutSink());
     Canary canary = new Canary(executor, sink);
     String[] args = { "-t", "10000", "-zookeeper" };
-    ToolRunner.run(testingUtility.getConfiguration(), canary, args);
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
 
     String baseZnode = testingUtility.getConfiguration()
         .get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
@@ -112,7 +112,7 @@ public class TestCanaryTool {
     Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
     Canary canary = new Canary(executor, sink);
     String[] args = { "-writeSniffing", "-t", "10000", name.getMethodName() };
-    ToolRunner.run(testingUtility.getConfiguration(), canary, args);
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
     assertEquals("verify no write error count", 0, canary.getWriteFailures().size());
     verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class),
@@ -142,7 +142,7 @@ public class TestCanaryTool {
     String configuredTimeoutStr = tableNames[0].getNameAsString() + "=" + Long.MAX_VALUE + "," +
       tableNames[1].getNameAsString() + "=0";
     String[] args = { "-readTableTimeouts", configuredTimeoutStr, name.getMethodName() + "1", name.getMethodName() + "2"};
-    ToolRunner.run(testingUtility.getConfiguration(), canary, args);
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     verify(sink, times(tableNames.length)).initializeAndGetReadLatencyForTable(isA(String.class));
     for (int i=0; i<2; i++) {
       assertNotEquals("verify non-null read latency", null, sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
@@ -170,7 +170,7 @@ public class TestCanaryTool {
     Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
     Canary canary = new Canary(executor, sink);
     String[] args = { "-writeSniffing", "-writeTableTimeout", String.valueOf(Long.MAX_VALUE)};
-    ToolRunner.run(testingUtility.getConfiguration(), canary, args);
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     assertNotEquals("verify non-null write latency", null, sink.getWriteLatency());
     assertNotEquals("verify non-zero write latency", 0L, sink.getWriteLatency());
     verify(mockAppender, times(1)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
@@ -225,7 +225,7 @@ public class TestCanaryTool {
     org.apache.hadoop.conf.Configuration conf =
       new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
     conf.setBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, true);
-    ToolRunner.run(conf, canary, args);
+    assertEquals(0, ToolRunner.run(conf, canary, args));
     verify(sink, atLeastOnce())
         .publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class),
         isA(ColumnFamilyDescriptor.class), anyLong());
@@ -236,7 +236,7 @@ public class TestCanaryTool {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary canary = new Canary(executor, new Canary.RegionServerStdOutSink());
     String[] args = { "-t", "10000", "-regionserver"};
-    ToolRunner.run(testingUtility.getConfiguration(), canary, args);
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
   }
 
