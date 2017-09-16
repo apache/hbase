@@ -104,7 +104,8 @@ protos: $(PROTO_CXX_DIR) $(PROTOSRC) $(PROTOHDR)
 
 install_headers:
 	cp -r $(INCLUDE_HBASE)/hbase $(LOCAL_INCLUDE_DIR)
-	cp -r $(PROTO_CXX_DIR) $(LOCAL_INCLUDE_DIR)/hbase/
+	mkdir -p $(LOCAL_INCLUDE_DIR)/hbase/if
+	cp -r $(PROTO_CXX_DIR)/*.h $(LOCAL_INCLUDE_DIR)/hbase/if
 
 uninstall_headers:
 	rm -rf $(LOCAL_INCLUDE_DIR)/hbase
