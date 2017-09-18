@@ -102,7 +102,7 @@ flush and drop just by typing:
 Note that after dropping a table, your reference to it becomes useless and further usage
 is undefined (and not recommended).
 EOF
-      end
+    end
 
     #---------------------------------------------------------------------------------------------
 
@@ -162,14 +162,16 @@ EOF
     #----------------------------------------------------------------------------------------------
     # Delete a cell
     def _delete_internal(row, column,
-    			timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
-      _deleteall_internal(row, column, timestamp, args)
+                timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
+                args = {}, all_version = false)
+      _deleteall_internal(row, column, timestamp, args, all_version)
     end
 
     #----------------------------------------------------------------------------------------------
     # Delete a row
     def _deleteall_internal(row, column = nil,
-    		timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+            timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
+            args = {}, all_version = true)
       # delete operation doesn't need read permission. Retaining the read check for
       # meta table as a part of HBASE-5837.
       if is_meta_table?
@@ -191,9 +193,12 @@ EOF
          visibility = args[VISIBILITY]
          set_cell_visibility(d, visibility) if visibility
       end
-      if column
+      if column && all_version
         family, qualifier = parse_column_name(column)
         d.deleteColumns(family, qualifier, timestamp)
+      elsif column && !all_version
+        family, qualifier = parse_column_name(column)
+        d.deleteColumn(family, qualifier, timestamp)
       end
       @table.delete(d)
     end
