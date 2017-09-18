@@ -19,9 +19,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
 import org.apache.commons.collections4.map.AbstractReferenceMap;
 import org.apache.commons.collections4.map.ReferenceMap;
 import org.apache.commons.lang3.ClassUtils;
@@ -46,9 +45,6 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -56,6 +52,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -75,17 +72,17 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -156,7 +153,7 @@ public class RegionCoprocessorHost
     }
 
     @Override
-    public HRegionInfo getRegionInfo() {
+    public RegionInfo getRegionInfo() {
       return region.getRegionInfo();
     }
 
@@ -1264,7 +1261,7 @@ public class RegionCoprocessorHost
    * @param edits the file of recovered edits
    * @throws IOException Exception
    */
-  public void preReplayWALs(final HRegionInfo info, final Path edits) throws IOException {
+  public void preReplayWALs(final RegionInfo info, final Path edits) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
@@ -1279,7 +1276,7 @@ public class RegionCoprocessorHost
    * @param edits the file of recovered edits
    * @throws IOException Exception
    */
-  public void postReplayWALs(final HRegionInfo info, final Path edits) throws IOException {
+  public void postReplayWALs(final RegionInfo info, final Path edits) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
@@ -1296,7 +1293,7 @@ public class RegionCoprocessorHost
    * @return true if default behavior should be bypassed, false otherwise
    * @throws IOException
    */
-  public boolean preWALRestore(final HRegionInfo info, final WALKey logKey,
+  public boolean preWALRestore(final RegionInfo info, final WALKey logKey,
       final WALEdit logEdit) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
@@ -1313,7 +1310,7 @@ public class RegionCoprocessorHost
    * @param logEdit
    * @throws IOException
    */
-  public void postWALRestore(final HRegionInfo info, final WALKey logKey, final WALEdit logEdit)
+  public void postWALRestore(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override

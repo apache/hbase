@@ -28,10 +28,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 
 /**
@@ -83,13 +83,13 @@ public class SampleRegionWALObserver implements WALObserver, RegionObserver {
 
   @Override
   public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     postWALWriteCalled = true;
   }
 
   @Override
   public boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     boolean bypass = false;
     // check table name matches or not.
     if (!Bytes.equals(info.getTable().toBytes(), this.tableName)) {
@@ -132,7 +132,7 @@ public class SampleRegionWALObserver implements WALObserver, RegionObserver {
    */
   @Override
   public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     preWALRestoreCalled = true;
   }
 
@@ -154,7 +154,7 @@ public class SampleRegionWALObserver implements WALObserver, RegionObserver {
    */
   @Override
   public void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     postWALRestoreCalled = true;
   }
 

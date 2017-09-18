@@ -24,11 +24,11 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * It's provided to have a way for coprocessors to observe, rewrite,
@@ -75,7 +75,7 @@ public interface WALObserver extends Coprocessor {
    */
   // TODO: return value is not used
   default boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     return false;
   }
 
@@ -84,7 +84,7 @@ public interface WALObserver extends Coprocessor {
    * is writen to WAL.
    */
   default void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
    * Called before rolling the current WAL

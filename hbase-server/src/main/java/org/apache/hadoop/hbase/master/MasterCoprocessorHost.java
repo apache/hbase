@@ -28,15 +28,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Provides the coprocessor framework and environment for master oriented
@@ -242,7 +242,7 @@ public class MasterCoprocessorHost
 
   /* Implementation of hooks for invoking MasterObservers */
 
-  public void preCreateTable(final TableDescriptor htd, final HRegionInfo[] regions)
+  public void preCreateTable(final TableDescriptor htd, final RegionInfo[] regions)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -253,7 +253,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postCreateTable(final TableDescriptor htd, final HRegionInfo[] regions)
+  public void postCreateTable(final TableDescriptor htd, final RegionInfo[] regions)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -264,7 +264,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preCreateTableAction(final TableDescriptor htd, final HRegionInfo[] regions,
+  public void preCreateTableAction(final TableDescriptor htd, final RegionInfo[] regions,
                                    final User user)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
@@ -277,7 +277,7 @@ public class MasterCoprocessorHost
   }
 
   public void postCompletedCreateTableAction(
-      final TableDescriptor htd, final HRegionInfo[] regions, final User user) throws IOException {
+      final TableDescriptor htd, final RegionInfo[] regions, final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -704,8 +704,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preMove(final HRegionInfo region, final ServerName srcServer,
-      final ServerName destServer) throws IOException {
+  public boolean preMove(final RegionInfo region, final ServerName srcServer,
+                         final ServerName destServer) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -715,7 +715,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postMove(final HRegionInfo region, final ServerName srcServer,
+  public void postMove(final RegionInfo region, final ServerName srcServer,
       final ServerName destServer) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -726,7 +726,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preAssign(final HRegionInfo regionInfo) throws IOException {
+  public boolean preAssign(final RegionInfo regionInfo) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -736,7 +736,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postAssign(final HRegionInfo regionInfo) throws IOException {
+  public void postAssign(final RegionInfo regionInfo) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -746,7 +746,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preUnassign(final HRegionInfo regionInfo, final boolean force)
+  public boolean preUnassign(final RegionInfo regionInfo, final boolean force)
       throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -757,7 +757,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postUnassign(final HRegionInfo regionInfo, final boolean force) throws IOException {
+  public void postUnassign(final RegionInfo regionInfo, final boolean force) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -767,7 +767,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preRegionOffline(final HRegionInfo regionInfo) throws IOException {
+  public void preRegionOffline(final RegionInfo regionInfo) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -777,7 +777,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postRegionOffline(final HRegionInfo regionInfo) throws IOException {
+  public void postRegionOffline(final RegionInfo regionInfo) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
@@ -787,7 +787,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preMergeRegions(final HRegionInfo[] regionsToMerge)
+  public void preMergeRegions(final RegionInfo[] regionsToMerge)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -798,7 +798,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postMergeRegions(final HRegionInfo[] regionsToMerge)
+  public void postMergeRegions(final RegionInfo[] regionsToMerge)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -897,8 +897,8 @@ public class MasterCoprocessorHost
    * @throws IOException
    */
   public void postCompletedSplitRegionAction(
-      final HRegionInfo regionInfoA,
-      final HRegionInfo regionInfoB,
+      final RegionInfo regionInfoA,
+      final RegionInfo regionInfoB,
       final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
@@ -966,7 +966,7 @@ public class MasterCoprocessorHost
    * @throws IOException
    */
   public boolean preMergeRegionsAction(
-      final HRegionInfo[] regionsToMerge, final User user) throws IOException {
+      final RegionInfo[] regionsToMerge, final User user) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver,
@@ -984,8 +984,8 @@ public class MasterCoprocessorHost
    * @throws IOException
    */
   public void postCompletedMergeRegionsAction(
-      final HRegionInfo[] regionsToMerge,
-      final HRegionInfo mergedRegion,
+      final RegionInfo[] regionsToMerge,
+      final RegionInfo mergedRegion,
       final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
@@ -1004,7 +1004,7 @@ public class MasterCoprocessorHost
    * @throws IOException
    */
   public boolean preMergeRegionsCommit(
-      final HRegionInfo[] regionsToMerge,
+      final RegionInfo[] regionsToMerge,
       final @MetaMutationAnnotation List<Mutation> metaEntries,
       final User user) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
@@ -1024,8 +1024,8 @@ public class MasterCoprocessorHost
    * @throws IOException
    */
   public void postMergeRegionsCommit(
-      final HRegionInfo[] regionsToMerge,
-      final HRegionInfo mergedRegion,
+      final RegionInfo[] regionsToMerge,
+      final RegionInfo mergedRegion,
       final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
@@ -1043,7 +1043,7 @@ public class MasterCoprocessorHost
    * @throws IOException
    */
   public void postRollBackMergeRegionsAction(
-      final HRegionInfo[] regionsToMerge, final User user) throws IOException {
+      final RegionInfo[] regionsToMerge, final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver,
@@ -1809,7 +1809,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preRequestLock(String namespace, TableName tableName, HRegionInfo[] regionInfos,
+  public void preRequestLock(String namespace, TableName tableName, RegionInfo[] regionInfos,
       LockType type, String description) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -1820,7 +1820,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postRequestLock(String namespace, TableName tableName, HRegionInfo[] regionInfos,
+  public void postRequestLock(String namespace, TableName tableName, RegionInfo[] regionInfos,
       LockType type, String description) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override

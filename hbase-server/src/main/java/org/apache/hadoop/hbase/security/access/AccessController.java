@@ -18,6 +18,20 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -35,7 +49,6 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -43,7 +56,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
@@ -54,6 +66,7 @@ import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Query;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -93,8 +106,6 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -120,21 +131,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -303,7 +302,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   AuthResult permissionGranted(String request, User user, Action permRequest,
       RegionCoprocessorEnvironment e,
       Map<byte [], ? extends Collection<?>> families) {
-    HRegionInfo hri = e.getRegion().getRegionInfo();
+    RegionInfo hri = e.getRegion().getRegionInfo();
     TableName tableName = hri.getTable();
 
     // 1. All users need read access to hbase:meta table.
@@ -645,7 +644,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
       RegionCoprocessorEnvironment env,
       Map<byte[], ? extends Collection<byte[]>> familyMap)
     throws IOException {
-    HRegionInfo hri = env.getRegion().getRegionInfo();
+    RegionInfo hri = env.getRegion().getRegionInfo();
     TableName tableName = hri.getTable();
 
     if (user == null) {
@@ -988,7 +987,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableDescriptor desc, HRegionInfo[] regions) throws IOException {
+      TableDescriptor desc, RegionInfo[] regions) throws IOException {
     Set<byte[]> families = desc.getColumnFamilyNames();
     Map<byte[], Set<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] family: families) {
@@ -1002,7 +1001,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   public void postCompletedCreateTableAction(
       final ObserverContext<MasterCoprocessorEnvironment> c,
       final TableDescriptor desc,
-      final HRegionInfo[] regions) throws IOException {
+      final RegionInfo[] regions) throws IOException {
     // When AC is used, it should be configured as the 1st CP.
     // In Master, the table operations like create, are handled by a Thread pool but the max size
     // for this pool is 1. So if multiple CPs create tables on startup, these creations will happen
@@ -1251,26 +1250,26 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   }
 
   @Override
-  public void preMove(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo region,
+  public void preMove(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo region,
       ServerName srcServer, ServerName destServer) throws IOException {
     requirePermission(getActiveUser(c), "move", region.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
-  public void preAssign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo)
+  public void preAssign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo)
       throws IOException {
     requirePermission(getActiveUser(c), "assign", regionInfo.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
-  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo,
+  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo,
       boolean force) throws IOException {
     requirePermission(getActiveUser(c), "unassign", regionInfo.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
   public void preRegionOffline(ObserverContext<MasterCoprocessorEnvironment> c,
-      HRegionInfo regionInfo) throws IOException {
+      RegionInfo regionInfo) throws IOException {
     requirePermission(getActiveUser(c), "regionOffline", regionInfo.getTable(), null, null,
         Action.ADMIN);
   }
@@ -1478,7 +1477,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
     if (region == null) {
       LOG.error("NULL region from RegionCoprocessorEnvironment in preOpen()");
     } else {
-      HRegionInfo regionInfo = region.getRegionInfo();
+      RegionInfo regionInfo = region.getRegionInfo();
       if (regionInfo.getTable().isSystemTable()) {
         checkSystemOrSuperUser(getActiveUser(c));
       } else {
@@ -2467,7 +2466,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   }
 
   private TableName getTableName(Region region) {
-    HRegionInfo regionInfo = region.getRegionInfo();
+    RegionInfo regionInfo = region.getRegionInfo();
     if (regionInfo != null) {
       return regionInfo.getTable();
     }
@@ -2569,7 +2568,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preMergeRegions(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-                              final HRegionInfo[] regionsToMerge) throws IOException {
+                              final RegionInfo[] regionsToMerge) throws IOException {
     requirePermission(getActiveUser(ctx), "mergeRegions", regionsToMerge[0].getTable(), null, null,
       Action.ADMIN);
   }
@@ -2718,7 +2717,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-      TableName tableName, HRegionInfo[] regionInfos, LockType type, String description)
+      TableName tableName, RegionInfo[] regionInfos, LockType type, String description)
   throws IOException {
     // There are operations in the CREATE and ADMIN domain which may require lock, READ
     // or WRITE. So for any lock request, we check for these two perms irrespective of lock type.
@@ -2734,7 +2733,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   }
 
   private void checkLockPermissions(User user, String namespace,
-      TableName tableName, HRegionInfo[] regionInfos, String reason)
+      TableName tableName, RegionInfo[] regionInfos, String reason)
   throws IOException {
     if (namespace != null && !namespace.isEmpty()) {
       requireNamespacePermission(user, reason, namespace, Action.ADMIN, Action.CREATE);

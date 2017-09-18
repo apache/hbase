@@ -18,13 +18,6 @@
  */
 package org.apache.hadoop.hbase.namespace;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -54,6 +47,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -86,6 +80,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Category(MediumTests.class)
 public class TestNamespaceAuditor {
@@ -303,7 +304,7 @@ public class TestNamespaceAuditor {
     @Override
     public synchronized void preMergeRegionsAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HRegionInfo[] regionsToMerge) throws IOException {
+        final RegionInfo[] regionsToMerge) throws IOException {
       notifyAll();
       if (shouldFailMerge) {
         throw new IOException("fail merge");
@@ -540,7 +541,7 @@ public class TestNamespaceAuditor {
 
     @Override
     public void preCreateTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableDescriptor desc, HRegionInfo[] regions) throws IOException {
+        TableDescriptor desc, RegionInfo[] regions) throws IOException {
       if (throwExceptionInPreCreateTableAction) {
         throw new IOException("Throw exception as it is demanded.");
       }
