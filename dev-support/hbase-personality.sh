@@ -119,8 +119,7 @@ function personality_modules
     yetus_debug "EXCLUDE_TESTS_URL = ${EXCLUDE_TESTS_URL}"
     yetus_debug "INCLUDE_TESTS_URL = ${INCLUDE_TESTS_URL}"
     if [[ -n "$EXCLUDE_TESTS_URL" ]]; then
-        wget "$EXCLUDE_TESTS_URL" -O "excludes"
-        if [[ $? -eq 0 ]]; then
+        if wget "$EXCLUDE_TESTS_URL" -O "excludes"; then
           excludes=$(cat excludes)
           yetus_debug "excludes=${excludes}"
           if [[ -n "${excludes}" ]]; then
@@ -132,8 +131,7 @@ function personality_modules
                "${EXCLUDE_TESTS_URL}. Ignoring and proceeding."
         fi
     elif [[ -n "$INCLUDE_TESTS_URL" ]]; then
-        wget "$INCLUDE_TESTS_URL" -O "includes"
-        if [[ $? -eq 0 ]]; then
+        if wget "$INCLUDE_TESTS_URL" -O "includes"; then
           includes=$(cat includes)
           yetus_debug "includes=${includes}"
           if [[ -n "${includes}" ]]; then
@@ -164,6 +162,50 @@ function personality_modules
 # TODO break them into individual files so it's easier to maintain them?
 
 # TODO line length check? could ignore all java files since checkstyle gets them.
+
+###################################################
+
+add_test_type shadedjars
+
+
+function shadedjars_initialize
+{
+  yetus_debug "initializing shaded client checks."
+  maven_add_install shadedjars
+  add_test shadedjars
+}
+
+function shadedjars_clean
+{
+  "${MAVEN}" "${MAVEN_ARGS[@]}" clean -fae -pl hbase_shaded/hbase-shaded-check-invariants -am -Prelease
+}
+
+## @description test the shaded client artifacts
+## @audience private
+## @stability evolving
+## @param repostatus
+function shadedjars_rebuild
+{
+  local repostatus=$1
+  local logfile="${PATCH_DIR}/${repostatus}-shadedjars.txt"
+
+  big_console_header "Checking shaded client builds on ${repostatus}"
+
+  echo_and_redirect "${logfile}" \
+    "${MAVEN}" "${MAVEN_ARGS[@]}" clean verify -fae --batch-mode \
+      -pl hbase-shaded/hbase-shaded-check-invariants -am \
+      -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
+      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+
+  count=$(${GREP} -c '\[ERROR\]' "${logfile}")
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 shadedjars "${repostatus} has ${count} errors when building our shaded downstream artifacts."
+    return 1
+  fi
+
+  add_vote_table +1 shadedjars "${repostatus} has no errors when building our shaded downstream artifacts."
+  return 0
+}
 
 ###################################################
 
