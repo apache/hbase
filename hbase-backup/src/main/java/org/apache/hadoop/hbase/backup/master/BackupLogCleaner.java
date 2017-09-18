@@ -76,8 +76,10 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     // all members of this class are null if backup is disabled,
     // so we cannot filter the files
     if (this.getConf() == null || !BackupManager.isBackupEnabled(getConf())) {
-      LOG.warn("Backup is not enabled. Check your " + BackupRestoreConstants.BACKUP_ENABLE_KEY
-          + " setting");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Backup is not enabled. Check your "
+            + BackupRestoreConstants.BACKUP_ENABLE_KEY + " setting");
+      }
       return files;
     }
 
@@ -117,12 +119,11 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public void setConf(Configuration config) {
     // If backup is disabled, keep all members null
+    super.setConf(config);
     if (!config.getBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY,
       BackupRestoreConstants.BACKUP_ENABLE_DEFAULT)) {
       LOG.warn("Backup is disabled - allowing all wals to be deleted");
-      return;
     }
-    super.setConf(config);
   }
 
   @Override
