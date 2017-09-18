@@ -51,7 +51,7 @@ public class NoTagsKeyValue extends KeyValue {
   }
 
   @Override
-  public Cell deepClone() {
+  public ExtendedCell deepClone() {
     byte[] copy = Bytes.copy(this.bytes, this.offset, this.length);
     KeyValue kv = new NoTagsKeyValue(copy, 0, copy.length);
     kv.setSequenceId(this.getSequenceId());

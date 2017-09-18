@@ -470,7 +470,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public Cell deepClone() {
+    public ExtendedCell deepClone() {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
     }
@@ -715,7 +715,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public Cell deepClone() {
+    public ExtendedCell deepClone() {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
     }

@@ -52,7 +52,7 @@ public class NoTagsByteBufferKeyValue extends ByteBufferKeyValue {
   }
 
   @Override
-  public Cell deepClone() {
+  public ExtendedCell deepClone() {
     byte[] copy = new byte[this.length];
     ByteBufferUtils.copyFromBufferToArray(copy, this.buf, this.offset, 0, this.length);
     KeyValue kv = new NoTagsKeyValue(copy, 0, copy.length);

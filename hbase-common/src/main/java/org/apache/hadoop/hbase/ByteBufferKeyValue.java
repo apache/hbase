@@ -302,7 +302,7 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
   }
 
   @Override
-  public Cell deepClone() {
+  public ExtendedCell deepClone() {
     byte[] copy = new byte[this.length];
     ByteBufferUtils.copyFromBufferToArray(copy, this.buf, this.offset, 0, this.length);
     KeyValue kv = new KeyValue(copy, 0, copy.length);
