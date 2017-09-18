@@ -117,8 +117,7 @@ function personality_modules
   if [[ ${testtype} = unit ]]; then
     extra="${extra} -PrunAllTests"
     if [[ -n "$EXCLUDE_TESTS_URL" ]]; then
-        wget "$EXCLUDE_TESTS_URL" -O "excludes"
-        if [[ $? -eq 0 ]]; then
+        if wget "$EXCLUDE_TESTS_URL" -O "excludes"; then
           excludes=$(cat excludes)
           if [[ -n "${excludes}" ]]; then
             extra="${extra} -Dtest.exclude.pattern=${excludes}"
@@ -129,8 +128,7 @@ function personality_modules
                "${EXCLUDE_TESTS_URL}. Ignoring and proceeding."
         fi
     elif [[ -n "$INCLUDE_TESTS_URL" ]]; then
-        wget "$INCLUDE_TESTS_URL" -O "includes"
-        if [[ $? -eq 0 ]]; then
+        if wget "$INCLUDE_TESTS_URL" -O "includes"; then
           includes=$(cat includes)
           if [[ -n "${includes}" ]]; then
             extra="${extra} -Dtest=${includes}"
