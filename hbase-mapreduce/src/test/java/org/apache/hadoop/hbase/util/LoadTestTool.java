@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -36,9 +35,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -258,46 +258,46 @@ public class LoadTestTool extends AbstractHBaseTool {
       byte[][] columnFamilies) throws IOException {
     try (Connection conn = ConnectionFactory.createConnection(conf);
         Admin admin = conn.getAdmin()) {
-      TableDescriptor tableDesc = admin.getTableDescriptor(tableName);
+      TableDescriptor tableDesc = admin.getDescriptor(tableName);
       LOG.info("Disabling table " + tableName);
       admin.disableTable(tableName);
       for (byte[] cf : columnFamilies) {
-        HColumnDescriptor columnDesc = (HColumnDescriptor) tableDesc.getColumnFamily(cf);
+        ColumnFamilyDescriptor columnDesc = tableDesc.getColumnFamily(cf);
         boolean isNewCf = columnDesc == null;
-        if (isNewCf) {
-          columnDesc = new HColumnDescriptor(cf);
-        }
+        ColumnFamilyDescriptorBuilder columnDescBuilder = isNewCf ?
+            ColumnFamilyDescriptorBuilder.newBuilder(cf) :
+            ColumnFamilyDescriptorBuilder.newBuilder(columnDesc);
         if (bloomType != null) {
-          columnDesc.setBloomFilterType(bloomType);
+          columnDescBuilder.setBloomFilterType(bloomType);
         }
         if (compressAlgo != null) {
-          columnDesc.setCompressionType(compressAlgo);
+          columnDescBuilder.setCompressionType(compressAlgo);
         }
         if (dataBlockEncodingAlgo != null) {
-          columnDesc.setDataBlockEncoding(dataBlockEncodingAlgo);
+          columnDescBuilder.setDataBlockEncoding(dataBlockEncodingAlgo);
         }
         if (inMemoryCF) {
-          columnDesc.setInMemory(inMemoryCF);
+          columnDescBuilder.setInMemory(inMemoryCF);
         }
         if (cipher != null) {
           byte[] keyBytes = new byte[cipher.getKeyLength()];
           new SecureRandom().nextBytes(keyBytes);
-          columnDesc.setEncryptionType(cipher.getName());
-          columnDesc.setEncryptionKey(
+          columnDescBuilder.setEncryptionType(cipher.getName());
+          columnDescBuilder.setEncryptionKey(
               EncryptionUtil.wrapKey(conf,
                   User.getCurrent().getShortName(),
                   new SecretKeySpec(keyBytes,
                       cipher.getName())));
         }
         if (mobThreshold >= 0) {
-          columnDesc.setMobEnabled(true);
-          columnDesc.setMobThreshold(mobThreshold);
+          columnDescBuilder.setMobEnabled(true);
+          columnDescBuilder.setMobThreshold(mobThreshold);
         }
 
         if (isNewCf) {
-          admin.addColumnFamily(tableName, columnDesc);
+          admin.addColumnFamily(tableName, columnDescBuilder.build());
         } else {
-          admin.modifyColumnFamily(tableName, columnDesc);
+          admin.modifyColumnFamily(tableName, columnDescBuilder.build());
         }
       }
       LOG.info("Enabling table " + tableName);
@@ -346,7 +346,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         + "already exists");
 
     addOptWithArg(NUM_TABLES,
-      "A positive integer number. When a number n is speicfied, load test "
+      "A positive integer number. When a number n is specified, load test "
           + "tool  will load n table parallely. -tn parameter value becomes "
           + "table name prefix. Each table name is in format <tn>_1...<tn>_n");
 
@@ -705,7 +705,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       LOG.info("Starting to mutate data...");
       System.out.println("Starting to mutate data...");
       // TODO : currently append and increment operations not tested with tags
-      // Will update this aftet it is done
+      // Will update this after it is done
       updaterThreads.start(startKey, endKey, numUpdaterThreads);
     }
 
@@ -897,7 +897,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   private void addAuthInfoToConf(Properties authConfig, Configuration conf, String owner,
       String userList) throws IOException {
-    List<String> users = new ArrayList(Arrays.asList(userList.split(",")));
+    List<String> users = new ArrayList<>(Arrays.asList(userList.split(",")));
     users.add(owner);
     for (String user : users) {
       String keyTabFileConfKey = "hbase." + user + ".keytab.file";
