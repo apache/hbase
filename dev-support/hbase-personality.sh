@@ -36,8 +36,12 @@
 
 personality_plugins "all"
 
+## @description  Globals specific to this personality
+## @audience     private
+## @stability    evolving
 function personality_globals
 {
+  BUILDTOOL=maven
   #shellcheck disable=SC2034
   PROJECT_NAME=hbase
   #shellcheck disable=SC2034
@@ -47,9 +51,18 @@ function personality_globals
   #shellcheck disable=SC2034
   GITHUB_REPO="apache/hbase"
 
-  # TODO use PATCH_BRANCH to select hadoop versions to use.
   # All supported Hadoop versions that we want to test the compilation with
-  HBASE_HADOOP_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.7.1"
+  # See the Hadoop section on prereqs in the HBase Reference Guide
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    HBASE_HADOOP3_VERSIONS=""
+  elif [[ ${PATCH_BRANCH} = branch-2* ]]; then
+    HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    HBASE_HADOOP3_VERSIONS="3.0.0-alpha4"
+  else # master or a feature branch
+    HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    HBASE_HADOOP3_VERSIONS="3.0.0-alpha4"
+  fi
 
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
@@ -58,6 +71,11 @@ function personality_globals
 
 }
 
+## @description  Queue up modules for this personality
+## @audience     private
+## @stability    evolving
+## @param        repostatus
+## @param        testtype
 function personality_modules
 {
   local repostatus=$1
@@ -71,13 +89,14 @@ function personality_modules
   extra="-DHBasePatchProcess"
 
   if [[ ${repostatus} == branch
-     && ${testtype} == mvninstall ]];then
-     personality_enqueue_module . ${extra}
-     return
+     && ${testtype} == mvninstall ]] ||
+     [[ "${BUILDMODE}" == full ]];then
+    personality_enqueue_module . ${extra}
+    return
   fi
 
   if [[ ${testtype} = findbugs ]]; then
-    for module in ${CHANGED_MODULES}; do
+    for module in "${CHANGED_MODULES[@]}"; do
       # skip findbugs on hbase-shell and hbase-it. hbase-it has nothing
       # in src/main/java where findbugs goes to look
       if [[ ${module} == hbase-shell ]]; then
@@ -97,10 +116,12 @@ function personality_modules
   # tests respectively.
   if [[ ${testtype} = unit ]]; then
     extra="${extra} -PrunAllTests"
+    yetus_debug "EXCLUDE_TESTS_URL = ${EXCLUDE_TESTS_URL}"
+    yetus_debug "INCLUDE_TESTS_URL = ${INCLUDE_TESTS_URL}"
     if [[ -n "$EXCLUDE_TESTS_URL" ]]; then
-        wget "$EXCLUDE_TESTS_URL" -O "excludes"
-        if [[ $? -eq 0 ]]; then
+        if wget "$EXCLUDE_TESTS_URL" -O "excludes"; then
           excludes=$(cat excludes)
+          yetus_debug "excludes=${excludes}"
           if [[ -n "${excludes}" ]]; then
             extra="${extra} -Dtest.exclude.pattern=${excludes}"
           fi
@@ -110,9 +131,9 @@ function personality_modules
                "${EXCLUDE_TESTS_URL}. Ignoring and proceeding."
         fi
     elif [[ -n "$INCLUDE_TESTS_URL" ]]; then
-        wget "$INCLUDE_TESTS_URL" -O "includes"
-        if [[ $? -eq 0 ]]; then
+        if wget "$INCLUDE_TESTS_URL" -O "includes"; then
           includes=$(cat includes)
+          yetus_debug "includes=${includes}"
           if [[ -n "${includes}" ]]; then
             extra="${extra} -Dtest=${includes}"
           fi
@@ -130,7 +151,7 @@ function personality_modules
     fi
   fi
 
-  for module in ${CHANGED_MODULES}; do
+  for module in "${CHANGED_MODULES[@]}"; do
     # shellcheck disable=SC2086
     personality_enqueue_module ${module} ${extra}
   done
@@ -144,8 +165,56 @@ function personality_modules
 
 ###################################################
 
+add_test_type shadedjars
+
+
+function shadedjars_initialize
+{
+  yetus_debug "initializing shaded client checks."
+  maven_add_install shadedjars
+  add_test shadedjars
+}
+
+function shadedjars_clean
+{
+  "${MAVEN}" "${MAVEN_ARGS[@]}" clean -fae -pl hbase_shaded/hbase-shaded-check-invariants -am -Prelease
+}
+
+## @description test the shaded client artifacts
+## @audience private
+## @stability evolving
+## @param repostatus
+function shadedjars_rebuild
+{
+  local repostatus=$1
+  local logfile="${PATCH_DIR}/${repostatus}-shadedjars.txt"
+
+  big_console_header "Checking shaded client builds on ${repostatus}"
+
+  echo_and_redirect "${logfile}" \
+    "${MAVEN}" "${MAVEN_ARGS[@]}" clean verify -fae --batch-mode \
+      -pl hbase-shaded/hbase-shaded-check-invariants -am \
+      -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
+      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+
+  count=$(${GREP} -c '\[ERROR\]' "${logfile}")
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 shadedjars "${repostatus} has ${count} errors when building our shaded downstream artifacts."
+    return 1
+  fi
+
+  add_vote_table +1 shadedjars "${repostatus} has no errors when building our shaded downstream artifacts."
+  return 0
+}
+
+###################################################
+
 add_test_type hadoopcheck
 
+## @description  hadoopcheck file filter
+## @audience     private
+## @stability    evolving
+## @param        filename
 function hadoopcheck_filefilter
 {
   local filename=$1
@@ -155,6 +224,10 @@ function hadoopcheck_filefilter
   fi
 }
 
+## @description  hadoopcheck test
+## @audience     private
+## @stability    evolving
+## @param        repostatus
 function hadoopcheck_rebuild
 {
   local repostatus=$1
@@ -162,6 +235,8 @@ function hadoopcheck_rebuild
   local logfile
   local count
   local result=0
+  local hbase_hadoop2_versions
+  local hbase_hadoop3_versions
 
   if [[ "${repostatus}" = branch ]]; then
     return 0
@@ -169,16 +244,34 @@ function hadoopcheck_rebuild
 
   big_console_header "Compiling against various Hadoop versions"
 
+  hbase_hadoop2_versions=${HBASE_HADOOP2_VERSIONS}
+  hbase_hadoop3_versions=${HBASE_HADOOP3_VERSIONS}
+
+
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  for hadoopver in ${HBASE_HADOOP_VERSIONS}; do
+  for hadoopver in ${hbase_hadoop2_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
     echo_and_redirect "${logfile}" \
       "${MAVEN}" clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-two.version="${hadoopver}"
-    count=$(${GREP} -c ERROR "${logfile}")
+    count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
-      add_vote_table -1 hadoopcheck "Patch causes ${count} errors with Hadoop v${hadoopver}."
+      add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
+      ((result=result+1))
+    fi
+  done
+
+  for hadoopver in ${hbase_hadoop3_versions}; do
+    logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
+    echo_and_redirect "${logfile}" \
+      "${MAVEN}" clean install \
+        -DskipTests -DHBasePatchProcess \
+        -Dhadoop-three.version="${hadoopver} \
+        -Dhadoop.profile=3.0"
+    count=$(${GREP} -c '\[ERROR\]' "${logfile}")
+    if [[ ${count} -gt 0 ]]; then
+      add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
       ((result=result+1))
     fi
   done
@@ -187,15 +280,23 @@ function hadoopcheck_rebuild
     return 1
   fi
 
-  add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${HBASE_HADOOP_VERSIONS}."
+  if [[ -n "${hbase_hadoop3_versions}" ]]; then
+    add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${hbase_hadoop2_versions} or ${hbase_hadoop3_versions}."
+  else
+    add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${hbase_hadoop2_versions}."
+  fi
   return 0
 }
 
 ######################################
 
-# TODO if we need th protoc check, we probably need to check building all the modules that rely on hbase-protocol
+# TODO if we need the protoc check, we probably need to check building all the modules that rely on hbase-protocol
 add_test_type hbaseprotoc
 
+## @description  hbaseprotoc file filter
+## @audience     private
+## @stability    evolving
+## @param        filename
 function hbaseprotoc_filefilter
 {
   local filename=$1
@@ -205,34 +306,40 @@ function hbaseprotoc_filefilter
   fi
 }
 
+## @description  hadoopcheck test
+## @audience     private
+## @stability    evolving
+## @param        repostatus
 function hbaseprotoc_rebuild
 {
-  local i=0
-  local fn
-  local module
-  local logfile
-  local count
-  local result
+  declare repostatus=$1
+  declare i=0
+  declare fn
+  declare module
+  declare logfile
+  declare count
+  declare result
 
   if [[ "${repostatus}" = branch ]]; then
     return 0
   fi
 
-  verify_needed_test hbaseprotoc
-  if [[ $? == 0 ]]; then
+  if ! verify_needed_test hbaseprotoc; then
     return 0
   fi
 
-  big_console_header "Patch HBase protoc plugin"
+  big_console_header "HBase protoc plugin: ${BUILDMODE}"
 
   start_clock
 
-
   personality_modules patch hbaseprotoc
-  modules_workers patch hbaseprotoc compile -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
+  # Need to run 'install' instead of 'compile' because shading plugin
+  # is hooked-up to 'install'; else hbase-protocol-shaded is left with
+  # half of its process done.
+  modules_workers patch hbaseprotoc install -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
 
   # shellcheck disable=SC2153
-  until [[ $i -eq ${#MODULE[@]} ]]; do
+  until [[ $i -eq "${#MODULE[@]}" ]]; do
     if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
       ((result=result+1))
       ((i=i+1))
@@ -242,7 +349,7 @@ function hbaseprotoc_rebuild
     fn=$(module_file_fragment "${module}")
     logfile="${PATCH_DIR}/patch-hbaseprotoc-${fn}.txt"
 
-    count=$(${GREP} -c ERROR "${logfile}")
+    count=$(${GREP} -c '\[ERROR\]' "${logfile}")
 
     if [[ ${count} -gt 0 ]]; then
       module_status ${i} -1 "patch-hbaseprotoc-${fn}.txt" "Patch generated "\
@@ -263,6 +370,10 @@ function hbaseprotoc_rebuild
 
 add_test_type hbaseanti
 
+## @description  hbaseanti file filter
+## @audience     private
+## @stability    evolving
+## @param        filename
 function hbaseanti_filefilter
 {
   local filename=$1
@@ -272,14 +383,21 @@ function hbaseanti_filefilter
   fi
 }
 
+## @description  hbaseanti patch file check
+## @audience     private
+## @stability    evolving
+## @param        filename
 function hbaseanti_patchfile
 {
   local patchfile=$1
   local warnings
   local result
 
-  verify_needed_test hbaseanti
-  if [[ $? == 0 ]]; then
+  if [[ "${BUILDMODE}" = full ]]; then
+    return 0
+  fi
+
+  if ! verify_needed_test hbaseanti; then
     return 0
   fi
 
@@ -307,13 +425,17 @@ function hbaseanti_patchfile
   return 0
 }
 
-# Work around HBASE-15042
+
+## @description  hbase custom mvnsite file filter.  See HBASE-15042
+## @audience     private
+## @stability    evolving
+## @param        filename
 function mvnsite_filefilter
 {
   local filename=$1
 
   if [[ ${BUILDTOOL} = maven ]]; then
-    if [[ ${filename} =~ src/main/site || ${filename} =~ src/main/asciidoc ]]; then
+    if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc ]]; then
       yetus_debug "tests/mvnsite: ${filename}"
       add_test mvnsite
     fi
