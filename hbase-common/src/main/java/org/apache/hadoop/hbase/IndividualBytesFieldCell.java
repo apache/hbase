@@ -183,7 +183,7 @@ public class IndividualBytesFieldCell implements ExtendedCell {
   }
 
   @Override
-  public Cell deepClone() {
+  public ExtendedCell deepClone() {
     // When being added to the memstore, deepClone() is called and KeyValue has less heap overhead.
     return new KeyValue(this);
   }
