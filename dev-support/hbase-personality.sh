@@ -51,18 +51,18 @@ function personality_globals
   #shellcheck disable=SC2034
   GITHUB_REPO="apache/hbase"
 
-  # TODO use PATCH_BRANCH to select hadoop versions to use.
   # All supported Hadoop versions that we want to test the compilation with
-  # NOTE: The master defines below are reused by BRANCH_2 too; if you change
-  # master instances, be sure to adjust BRANCH_2 appropriately.
-  HBASE_MASTER_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-  HBASE_MASTER_HADOOP3_VERSIONS="3.0.0-alpha2"
-
-  HBASE_BRANCH_2_HADOOP2_VERSIONS="${HBASE_MASTER_HADOOP2_VERSIONS}"
-  HBASE_BRANCH_2_HADOOP3_VERSIONS="${HBASE_MASTER_HADOOP3_VERSIONS}"
-
-  HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-  HBASE_HADOOP3_VERSIONS=""
+  # See the Hadoop section on prereqs in the HBase Reference Guide
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    HBASE_HADOOP3_VERSIONS=""
+  elif [[ ${PATCH_BRANCH} = branch-2* ]]; then
+    HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    HBASE_HADOOP3_VERSIONS="3.0.0-alpha4"
+  else # master or a feature branch
+    HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    HBASE_HADOOP3_VERSIONS="3.0.0-alpha4"
+  fi
 
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
@@ -116,9 +116,12 @@ function personality_modules
   # tests respectively.
   if [[ ${testtype} = unit ]]; then
     extra="${extra} -PrunAllTests"
+    yetus_debug "EXCLUDE_TESTS_URL = ${EXCLUDE_TESTS_URL}"
+    yetus_debug "INCLUDE_TESTS_URL = ${INCLUDE_TESTS_URL}"
     if [[ -n "$EXCLUDE_TESTS_URL" ]]; then
         if wget "$EXCLUDE_TESTS_URL" -O "excludes"; then
           excludes=$(cat excludes)
+          yetus_debug "excludes=${excludes}"
           if [[ -n "${excludes}" ]]; then
             extra="${extra} -Dtest.exclude.pattern=${excludes}"
           fi
@@ -130,6 +133,7 @@ function personality_modules
     elif [[ -n "$INCLUDE_TESTS_URL" ]]; then
         if wget "$INCLUDE_TESTS_URL" -O "includes"; then
           includes=$(cat includes)
+          yetus_debug "includes=${includes}"
           if [[ -n "${includes}" ]]; then
             extra="${extra} -Dtest=${includes}"
           fi
@@ -158,6 +162,50 @@ function personality_modules
 # TODO break them into individual files so it's easier to maintain them?
 
 # TODO line length check? could ignore all java files since checkstyle gets them.
+
+###################################################
+
+add_test_type shadedjars
+
+
+function shadedjars_initialize
+{
+  yetus_debug "initializing shaded client checks."
+  maven_add_install shadedjars
+  add_test shadedjars
+}
+
+function shadedjars_clean
+{
+  "${MAVEN}" "${MAVEN_ARGS[@]}" clean -fae -pl hbase_shaded/hbase-shaded-check-invariants -am -Prelease
+}
+
+## @description test the shaded client artifacts
+## @audience private
+## @stability evolving
+## @param repostatus
+function shadedjars_rebuild
+{
+  local repostatus=$1
+  local logfile="${PATCH_DIR}/${repostatus}-shadedjars.txt"
+
+  big_console_header "Checking shaded client builds on ${repostatus}"
+
+  echo_and_redirect "${logfile}" \
+    "${MAVEN}" "${MAVEN_ARGS[@]}" clean verify -fae --batch-mode \
+      -pl hbase-shaded/hbase-shaded-check-invariants -am \
+      -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
+      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+
+  count=$(${GREP} -c '\[ERROR\]' "${logfile}")
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 shadedjars "${repostatus} has ${count} errors when building our shaded downstream artifacts."
+    return 1
+  fi
+
+  add_vote_table +1 shadedjars "${repostatus} has no errors when building our shaded downstream artifacts."
+  return 0
+}
 
 ###################################################
 
@@ -196,16 +244,9 @@ function hadoopcheck_rebuild
 
   big_console_header "Compiling against various Hadoop versions"
 
-  if [[ "${PATCH_BRANCH}" = "master" ]]; then
-    hbase_hadoop2_versions=${HBASE_MASTER_HADOOP2_VERSIONS}
-    hbase_hadoop3_versions=${HBASE_MASTER_HADOOP3_VERSIONS}
-  elif [[ "${PATCH_BRANCH}" = "branch-2" ]]; then
-    hbase_hadoop2_versions=${HBASE_BRANCH_2_HADOOP2_VERSIONS}
-    hbase_hadoop3_versions=${HBASE_BRANCH_2_HADOOP3_VERSIONS}
-  else
-    hbase_hadoop2_versions=${HBASE_HADOOP2_VERSIONS}
-    hbase_hadoop3_versions=${HBASE_HADOOP3_VERSIONS}
-  fi
+  hbase_hadoop2_versions=${HBASE_HADOOP2_VERSIONS}
+  hbase_hadoop3_versions=${HBASE_HADOOP3_VERSIONS}
+
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
   for hadoopver in ${hbase_hadoop2_versions}; do
@@ -394,7 +435,7 @@ function mvnsite_filefilter
   local filename=$1
 
   if [[ ${BUILDTOOL} = maven ]]; then
-    if [[ ${filename} =~ src/main/site || ${filename} =~ src/main/asciidoc ]]; then
+    if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc ]]; then
       yetus_debug "tests/mvnsite: ${filename}"
       add_test mvnsite
     fi
