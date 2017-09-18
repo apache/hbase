@@ -23,12 +23,12 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -37,7 +37,7 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment {
   Region getRegion();
 
   /** @return region information for the region this coprocessor is running on */
-  HRegionInfo getRegionInfo();
+  RegionInfo getRegionInfo();
 
   /** @return reference to the region server services */
   RegionServerServices getRegionServerServices();

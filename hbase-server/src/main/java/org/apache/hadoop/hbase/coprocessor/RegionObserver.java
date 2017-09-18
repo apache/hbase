@@ -30,9 +30,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -40,6 +37,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -63,6 +61,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Coprocessors implement this interface to observe and mediate client actions on the region.
@@ -943,7 +943,7 @@ public interface RegionObserver extends Coprocessor {
    * @param edits the file of recovered edits
    */
   default void preReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-      HRegionInfo info, Path edits) throws IOException {}
+    RegionInfo info, Path edits) throws IOException {}
 
   /**
    * Called after replaying WALs for this region.
@@ -952,7 +952,7 @@ public interface RegionObserver extends Coprocessor {
    * @param edits the file of recovered edits
    */
   default void postReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-      HRegionInfo info, Path edits) throws IOException {}
+    RegionInfo info, Path edits) throws IOException {}
 
   /**
    * Called before a {@link WALEdit}
@@ -960,7 +960,7 @@ public interface RegionObserver extends Coprocessor {
    * @param ctx the environment provided by the region server
    */
   default void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
+    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
    * Called after a {@link WALEdit}
@@ -968,7 +968,7 @@ public interface RegionObserver extends Coprocessor {
    * @param ctx the environment provided by the region server
    */
   default void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
+    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
    * Called before bulkLoadHFile. Users can create a StoreFile instance to

@@ -19,11 +19,6 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,6 +45,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -81,6 +77,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -284,14 +285,14 @@ public class TestMasterObserver {
     @Override
     public void preMergeRegions(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HRegionInfo[] regionsToMerge) throws IOException {
+        final RegionInfo[] regionsToMerge) throws IOException {
       preMergeRegionsCalled = true;
     }
 
     @Override
     public void postMergeRegions(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HRegionInfo[] regionsToMerge) throws IOException {
+        final RegionInfo[] regionsToMerge) throws IOException {
       postMergeRegionsCalled = true;
     }
 
@@ -301,7 +302,7 @@ public class TestMasterObserver {
 
     @Override
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableDescriptor desc, HRegionInfo[] regions) throws IOException {
+        TableDescriptor desc, RegionInfo[] regions) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -310,7 +311,7 @@ public class TestMasterObserver {
 
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableDescriptor desc, HRegionInfo[] regions) throws IOException {
+        TableDescriptor desc, RegionInfo[] regions) throws IOException {
       postCreateTableCalled = true;
     }
 
@@ -697,7 +698,7 @@ public class TestMasterObserver {
 
     @Override
     public void preMove(ObserverContext<MasterCoprocessorEnvironment> env,
-        HRegionInfo region, ServerName srcServer, ServerName destServer)
+        RegionInfo region, ServerName srcServer, ServerName destServer)
     throws IOException {
       if (bypass) {
         env.bypass();
@@ -706,7 +707,7 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void postMove(ObserverContext<MasterCoprocessorEnvironment> env, HRegionInfo region,
+    public void postMove(ObserverContext<MasterCoprocessorEnvironment> env, RegionInfo region,
         ServerName srcServer, ServerName destServer)
     throws IOException {
       postMoveCalled = true;
@@ -722,7 +723,7 @@ public class TestMasterObserver {
 
     @Override
     public void preAssign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final HRegionInfo regionInfo) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -731,7 +732,7 @@ public class TestMasterObserver {
 
     @Override
     public void postAssign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final HRegionInfo regionInfo) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       postAssignCalled = true;
     }
 
@@ -745,7 +746,7 @@ public class TestMasterObserver {
 
     @Override
     public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final HRegionInfo regionInfo, final boolean force) throws IOException {
+        final RegionInfo regionInfo, final boolean force) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -754,7 +755,7 @@ public class TestMasterObserver {
 
     @Override
     public void postUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final HRegionInfo regionInfo, final boolean force) throws IOException {
+        final RegionInfo regionInfo, final boolean force) throws IOException {
       postUnassignCalled = true;
     }
 
@@ -768,13 +769,13 @@ public class TestMasterObserver {
 
     @Override
     public void preRegionOffline(ObserverContext<MasterCoprocessorEnvironment> env,
-        final HRegionInfo regionInfo) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       preRegionOfflineCalled = true;
     }
 
     @Override
     public void postRegionOffline(ObserverContext<MasterCoprocessorEnvironment> env,
-        final HRegionInfo regionInfo) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       postRegionOfflineCalled = true;
     }
 
@@ -977,7 +978,7 @@ public class TestMasterObserver {
     public void preCreateTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> env,
         final TableDescriptor desc,
-        final HRegionInfo[] regions) throws IOException {
+        final RegionInfo[] regions) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -988,7 +989,7 @@ public class TestMasterObserver {
     public void postCompletedCreateTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final TableDescriptor desc,
-        final HRegionInfo[] regions) throws IOException {
+        final RegionInfo[] regions) throws IOException {
       postCompletedCreateTableActionCalled = true;
       tableCreationLatch.countDown();
     }
@@ -1368,14 +1369,14 @@ public class TestMasterObserver {
 
     @Override
     public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-        TableName tableName, HRegionInfo[] regionInfos, LockType type,
+        TableName tableName, RegionInfo[] regionInfos, LockType type,
         String description) throws IOException {
       preRequestLockCalled = true;
     }
 
     @Override
     public void postRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-        TableName tableName, HRegionInfo[] regionInfos, LockType type,
+        TableName tableName, RegionInfo[] regionInfos, LockType type,
         String description) throws IOException {
       postRequestLockCalled = true;
     }
@@ -1414,8 +1415,8 @@ public class TestMasterObserver {
     @Override
     public void postCompletedSplitRegionAction(
         final ObserverContext<MasterCoprocessorEnvironment> c,
-        final HRegionInfo regionInfoA,
-        final HRegionInfo regionInfoB) throws IOException {
+        final RegionInfo regionInfoA,
+        final RegionInfo regionInfoB) throws IOException {
     }
 
     @Override
@@ -1438,34 +1439,34 @@ public class TestMasterObserver {
     @Override
     public void preMergeRegionsAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HRegionInfo[] regionsToMerge) throws IOException {
+        final RegionInfo[] regionsToMerge) throws IOException {
     }
 
     @Override
     public void postCompletedMergeRegionsAction(
         final ObserverContext<MasterCoprocessorEnvironment> c,
-        final HRegionInfo[] regionsToMerge,
-        final HRegionInfo mergedRegion) throws IOException {
+        final RegionInfo[] regionsToMerge,
+        final RegionInfo mergedRegion) throws IOException {
     }
 
     @Override
     public void preMergeRegionsCommitAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HRegionInfo[] regionsToMerge,
+        final RegionInfo[] regionsToMerge,
         final List<Mutation> metaEntries) throws IOException {
     }
 
     @Override
     public void postMergeRegionsCommitAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HRegionInfo[] regionsToMerge,
-        final HRegionInfo mergedRegion) throws IOException {
+        final RegionInfo[] regionsToMerge,
+        final RegionInfo mergedRegion) throws IOException {
     }
 
     @Override
     public void postRollBackMergeRegionsAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final HRegionInfo[] regionsToMerge) throws IOException {
+        final RegionInfo[] regionsToMerge) throws IOException {
     }
   }
 
