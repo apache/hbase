@@ -1297,8 +1297,8 @@ public class MetaTableAccessor {
       Put putA = makePutFromRegionInfo(splitA);
       Put putB = makePutFromRegionInfo(splitB);
 
-      addLocation(putA, sn, 1, -1, splitA.getReplicaId()); //new regions, openSeqNum = 1 is fine.
-      addLocation(putB, sn, 1, -1, splitB.getReplicaId());
+      addSequenceNum(putA, 1, -1, splitA.getReplicaId()); //new regions, openSeqNum = 1 is fine.
+      addSequenceNum(putB, 1, -1, splitB.getReplicaId());
 
       // Add empty locations for region replicas of daughters so that number of replicas can be
       // cached whenever the primary region is looked up from meta
@@ -1537,6 +1537,15 @@ public class MetaTableAccessor {
     p.addImmutable(HConstants.CATALOG_FAMILY, getServerColumn(replicaId), now, null);
     p.addImmutable(HConstants.CATALOG_FAMILY, getStartCodeColumn(replicaId), now, null);
     p.addImmutable(HConstants.CATALOG_FAMILY, getSeqNumColumn(replicaId), now, null);
+    return p;
+  }
+
+  public static Put addSequenceNum(final Put p, long openSeqNum, long time, int replicaId) {
+    if (time <= 0) {
+      time = EnvironmentEdgeManager.currentTime();
+    }
+    p.addImmutable(HConstants.CATALOG_FAMILY, getSeqNumColumn(replicaId), time,
+      Bytes.toBytes(openSeqNum));
     return p;
   }
 
