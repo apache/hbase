@@ -22,12 +22,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -69,7 +72,7 @@ final public class FilterList extends Filter {
   private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
   private List<Filter> filters = new ArrayList<Filter>();
-  private Filter seekHintFilter = null;
+  private Set<Filter> seekHintFilter = new HashSet<>();
 
   /**
    * Save previous return code and previous cell for every filter in filter list. For MUST_PASS_ONE,
@@ -207,7 +210,7 @@ final public class FilterList extends Filter {
         prevCellList.set(i, null);
       }
     }
-    seekHintFilter = null;
+    seekHintFilter.clear();
   }
 
   @Override
@@ -314,6 +317,7 @@ final public class FilterList extends Filter {
     justification="Intentional")
   public ReturnCode filterKeyValue(Cell v) throws IOException {
     this.referenceKV = v;
+    seekHintFilter.clear();
 
     // Accumulates successive transformation of every filter that includes the Cell:
     Cell transformed = v;
@@ -345,10 +349,12 @@ final public class FilterList extends Filter {
           transformed = filter.transformCell(transformed);
           continue;
         case SEEK_NEXT_USING_HINT:
-          seekHintFilter = filter;
-          return code;
+          seekHintFilter.add(filter);
+          continue;
         default:
-          return code;
+          if (seekHintFilter.isEmpty()) {
+            return code;
+          }
         }
       } else if (operator == Operator.MUST_PASS_ONE) {
         Cell prevCell = this.prevCellList.get(i);
@@ -396,6 +402,10 @@ final public class FilterList extends Filter {
           throw new IllegalStateException("Received code is not valid.");
         }
       }
+    }
+
+    if (!seekHintFilter.isEmpty()) {
+      return ReturnCode.SEEK_NEXT_USING_HINT;
     }
 
     // Save the transformed Cell for transform():
@@ -522,7 +532,17 @@ final public class FilterList extends Filter {
   public Cell getNextCellHint(Cell currentKV) throws IOException {
     Cell keyHint = null;
     if (operator == Operator.MUST_PASS_ALL) {
-      if (seekHintFilter != null) keyHint = seekHintFilter.getNextCellHint(currentKV);
+      for (Filter filter : seekHintFilter) {
+        if (filter.filterAllRemaining()) continue;
+        Cell curKeyHint = filter.getNextCellHint(currentKV);
+        if (keyHint == null) {
+          keyHint = curKeyHint;
+          continue;
+        }
+        if (KeyValue.COMPARATOR.compare(keyHint, curKeyHint) < 0) {
+          keyHint = curKeyHint;
+        }
+      }
       return keyHint;
     }
 
