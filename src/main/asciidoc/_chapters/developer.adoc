@@ -2221,6 +2221,23 @@ this property on platforms that favor the bundled .so. See release notes on HBAS
 for more. The complaint you see is something like the following:
 `Cause: java.lang.RuntimeException: Failed construction of Master: class org.apache.hadoop.hbase.master.HMasterorg.apache.hadoop.hbase.shaded.io.netty.channel.epoll.`
 
+If running unit tests and you run into the above message, add the system property
+to your surefire configuration by doing like the below:
+
+[source,xml]
+----
+  <plugin>
+    <artifactId>maven-surefire-plugin</artifactId>
+    <configuration>
+      <systemPropertyVariables>
+        <org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>org.apache.hadoop.hbase.shaded.</org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>
+      </systemPropertyVariables>
+    </configuration>
+  </plugin>
+----
+
+Again the trailing period in the value above is intended.
+
 The `hbase-thirdparty` project has groupid of `org.apache.hbase.thirdparty`.
 As of this writing, it provides three jars; one for netty with an artifactid of
 `hbase-thirdparty-netty`, one for protobuf at `hbase-thirdparty-protobuf` and then
