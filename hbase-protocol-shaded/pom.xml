@@ -150,7 +150,7 @@
                 <excludes>
                   <!--Exclude protobuf itself. We get a patched version from hbase-thirdparty.
                     -->
-                  <exclude>org.apache.hadoop.hbase.shaded.com.google:*</exclude>
+                  <exclude>org.apache.hbase.thirdparty:*</exclude>
                   <exclude>com.google.protobuf:protobuf-java</exclude>
                   <exclude>com.google.code.findbugs:*</exclude>
                   <exclude>com.google.errorprone:error_prone_annotations</exclude>
