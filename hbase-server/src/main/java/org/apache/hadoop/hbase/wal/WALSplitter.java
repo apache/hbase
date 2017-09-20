@@ -2337,8 +2337,8 @@ public class WALSplitter {
       return new ArrayList<>();
     }
 
-    long replaySeqId = (entry.getEdit().hasOrigSequenceNumber()) ?
-      entry.getEdit().getOrigSequenceNumber() : entry.getEdit().getLogSequenceNumber();
+    long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ?
+      entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
     int count = entry.getAssociatedCellCount();
     List<MutationReplay> mutations = new ArrayList<>();
     Cell previousCell = null;
@@ -2368,9 +2368,9 @@ public class WALSplitter {
         } else {
           m = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
           // Puts might come from increment or append, thus we need nonces.
-          long nonceGroup = entry.getEdit().hasNonceGroup()
-              ? entry.getEdit().getNonceGroup() : HConstants.NO_NONCE;
-          long nonce = entry.getEdit().hasNonce() ? entry.getEdit().getNonce() : HConstants.NO_NONCE;
+          long nonceGroup = entry.getKey().hasNonceGroup()
+              ? entry.getKey().getNonceGroup() : HConstants.NO_NONCE;
+          long nonce = entry.getKey().hasNonce() ? entry.getKey().getNonce() : HConstants.NO_NONCE;
           mutations.add(new MutationReplay(MutationType.PUT, m, nonceGroup, nonce));
         }
       }
@@ -2385,10 +2385,10 @@ public class WALSplitter {
 
     // reconstruct WALKey
     if (logEntry != null) {
-      org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALEdit walKeyProto =
-          entry.getEdit();
+      org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey walKeyProto =
+          entry.getKey();
       List<UUID> clusterIds = new ArrayList<>(walKeyProto.getClusterIdsCount());
-      for (HBaseProtos.UUID uuid : entry.getEdit().getClusterIdsList()) {
+      for (HBaseProtos.UUID uuid : entry.getKey().getClusterIdsList()) {
         clusterIds.add(new UUID(uuid.getMostSigBits(), uuid.getLeastSigBits()));
       }
       key = new WALKey(walKeyProto.getEncodedRegionName().toByteArray(), TableName.valueOf(

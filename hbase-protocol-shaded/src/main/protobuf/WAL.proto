@@ -34,9 +34,10 @@ message WALHeader {
 }
 
 /*
- * Protocol buffer version of WALEdit;
+ * Protocol buffer version of WALKey; see WALKey comment, not really a key but WALEdit header
+ * for some KVs
  */
-message WALEdit {
+message WALKey {
   required bytes encoded_region_name = 1;
   required bytes table_name = 2;
   required uint64 log_sequence_number = 3;
@@ -61,6 +62,14 @@ message WALEdit {
   optional uint64 nonceGroup = 9;
   optional uint64 nonce = 10;
   optional uint64 orig_sequence_number = 11;
+
+/*
+  optional CustomEntryType custom_entry_type = 9;
+
+  enum CustomEntryType {
+    COMPACTION = 0;
+  }
+*/
 }
 
 enum ScopeType {

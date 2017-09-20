@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader.Builder;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALEdit;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -333,7 +333,7 @@ public class ProtobufLogReader extends ReaderBase {
         }
         return false;
       }
-      WALEdit.Builder builder = WALEdit.newBuilder();
+      WALKey.Builder builder = WALKey.newBuilder();
       long size = 0;
       try {
         long available = -1;
@@ -363,12 +363,11 @@ public class ProtobufLogReader extends ReaderBase {
           throw new EOFException("Partial PB while reading WAL, " +
               "probably an unexpected EOF, ignoring. current offset=" + this.inputStream.getPos());
         }
-        WALEdit walKey = builder.build();
+        WALKey walKey = builder.build();
         entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
         if (!walKey.hasFollowingKvCount() || 0 == walKey.getFollowingKvCount()) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset=" +
-              this.inputStream.getPos());
+            LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset=" + this.inputStream.getPos());
           }
           continue;
         }
