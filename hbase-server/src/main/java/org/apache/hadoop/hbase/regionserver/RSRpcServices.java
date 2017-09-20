@@ -597,13 +597,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @param row
    * @param family
    * @param qualifier
-   * @param op
+   * @param compareOp
    * @param comparator @throws IOException
    */
   private boolean checkAndRowMutate(final Region region, final List<ClientProtos.Action> actions,
-      final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
-      CompareOperator op, ByteArrayComparable comparator, RegionActionResult.Builder builder,
-      ActivePolicyEnforcement spaceQuotaEnforcement) throws IOException {
+                                    final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
+                                    CompareOperator op, ByteArrayComparable comparator, RegionActionResult.Builder builder,
+                                    ActivePolicyEnforcement spaceQuotaEnforcement) throws IOException {
     if (!region.getRegionInfo().isMetaTable()) {
       regionServer.cacheFlusher.reclaimMemStoreMemory();
     }
@@ -648,6 +648,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   /**
    * Execute an append mutation.
+   *
+   * @param region
+   * @param m
+   * @param cellScanner
    * @return result to return to client if default operation should be
    * bypassed as indicated by RegionObserver, null otherwise
    * @throws IOException
@@ -2073,7 +2077,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // empty input
         return ReplicateWALEntryResponse.newBuilder().build();
       }
-      ByteString regionName = entries.get(0).getEdit().getEncodedRegionName();
+      ByteString regionName = entries.get(0).getKey().getEncodedRegionName();
       Region region = regionServer.getRegionByEncodedName(regionName.toStringUtf8());
       RegionCoprocessorHost coprocessorHost =
           ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())
@@ -2086,19 +2090,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       Durability durability = isPrimary ? Durability.USE_DEFAULT : Durability.SKIP_WAL;
 
       for (WALEntry entry : entries) {
-        if (!regionName.equals(entry.getEdit().getEncodedRegionName())) {
+        if (!regionName.equals(entry.getKey().getEncodedRegionName())) {
           throw new NotServingRegionException("Replay request contains entries from multiple " +
               "regions. First region:" + regionName.toStringUtf8() + " , other region:"
-              + entry.getEdit().getEncodedRegionName());
+              + entry.getKey().getEncodedRegionName());
         }
         if (regionServer.nonceManager != null && isPrimary) {
-          long nonceGroup = entry.getEdit().hasNonceGroup()
-            ? entry.getEdit().getNonceGroup() : HConstants.NO_NONCE;
-          long nonce = entry.getEdit().hasNonce() ? entry.getEdit().getNonce() : HConstants.NO_NONCE;
+          long nonceGroup = entry.getKey().hasNonceGroup()
+            ? entry.getKey().getNonceGroup() : HConstants.NO_NONCE;
+          long nonce = entry.getKey().hasNonce() ? entry.getKey().getNonce() : HConstants.NO_NONCE;
           regionServer.nonceManager.reportOperationFromWal(
               nonceGroup,
               nonce,
-              entry.getEdit().getWriteTime());
+              entry.getKey().getWriteTime());
         }
         Pair<WALKey, WALEdit> walEntry = (coprocessorHost == null) ? null : new Pair<>();
         List<WALSplitter.MutationReplay> edits = WALSplitter.getMutationsFromWALEntry(entry,
@@ -2117,8 +2121,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // HBASE-17924
           // sort to improve lock efficiency
           Collections.sort(edits);
-          long replaySeqId = (entry.getEdit().hasOrigSequenceNumber()) ?
-            entry.getEdit().getOrigSequenceNumber() : entry.getEdit().getLogSequenceNumber();
+          long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ?
+            entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
           OperationStatus[] result = doReplayBatchOp(region, edits, replaySeqId);
           // check if it's a partial success
           for (int i = 0; result != null && i < result.length; i++) {

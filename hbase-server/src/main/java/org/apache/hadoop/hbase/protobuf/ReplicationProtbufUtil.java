@@ -109,7 +109,7 @@ public class ReplicationProtbufUtil {
     for (Entry entry: entries) {
       entryBuilder.clear();
       // TODO: this duplicates a lot in WALKey#getBuilder
-      WALProtos.WALEdit.Builder keyBuilder = entryBuilder.getEditBuilder();
+      WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
       WALKey key = entry.getKey();
       keyBuilder.setEncodedRegionName(
           UnsafeByteOperations.unsafeWrap(encodedRegionName == null

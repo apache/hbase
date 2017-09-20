@@ -172,7 +172,7 @@ message UpdateFavoredNodesResponse {
 
 // Protocol buffer version of WAL for replication
 message WALEntry {
-  required WALEdit edit = 1;
+  required WALKey key = 1;
   // Following may be null if the KVs/Cells are carried along the side in a cellblock (See
   // RPC for more on cellblocks). If Cells/KVs are in a cellblock, this next field is null
   // and associated_cell_count has count of Cells associated w/ this WALEntry

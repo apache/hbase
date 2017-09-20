@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.UUID;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -375,7 +376,7 @@ public class TestReplicationSink {
   private WALEntry.Builder createWALEntryBuilder(TableName table) {
     WALEntry.Builder builder = WALEntry.newBuilder();
     builder.setAssociatedCellCount(1);
-    WALProtos.WALEdit.Builder keyBuilder = WALProtos.WALEdit.newBuilder();
+    WALKey.Builder keyBuilder = WALKey.newBuilder();
     UUID.Builder uuidBuilder = UUID.newBuilder();
     uuidBuilder.setLeastSigBits(HConstants.DEFAULT_CLUSTER_ID.getLeastSignificantBits());
     uuidBuilder.setMostSigBits(HConstants.DEFAULT_CLUSTER_ID.getMostSignificantBits());
@@ -384,7 +385,7 @@ public class TestReplicationSink {
     keyBuilder.setWriteTime(System.currentTimeMillis());
     keyBuilder.setEncodedRegionName(UnsafeByteOperations.unsafeWrap(HConstants.EMPTY_BYTE_ARRAY));
     keyBuilder.setLogSequenceNumber(-1);
-    builder.setEdit(keyBuilder.build());
+    builder.setKey(keyBuilder.build());
     return builder;
   }
 }
