@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import com.google.protobuf.Message;
 
 /**
- * Defines the procedure to atomically perform multiple scans and mutations
+ * Defines the procedures to atomically perform multiple scans and mutations
  * on a HRegion.
  *
  * This is invoked by {@link Region#processRowsWithLocks(RowProcessor)}.

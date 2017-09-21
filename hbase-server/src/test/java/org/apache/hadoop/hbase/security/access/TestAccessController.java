@@ -2878,16 +2878,14 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction prepareBulkLoadAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.prePrepareBulkLoad(ObserverContext.createAndPrepare(RCP_ENV, null),
-          null);
+        ACCESS_CONTROLLER.prePrepareBulkLoad(ObserverContext.createAndPrepare(RCP_ENV, null));
         return null;
       }
     };
     AccessTestAction cleanupBulkLoadAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCleanupBulkLoad(ObserverContext.createAndPrepare(RCP_ENV, null),
-          null);
+        ACCESS_CONTROLLER.preCleanupBulkLoad(ObserverContext.createAndPrepare(RCP_ENV, null));
         return null;
       }
     };

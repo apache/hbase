@@ -80,6 +80,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     try {
       SecureBulkLoadManager secureBulkLoadManager =
           this.env.getRegionServerServices().getSecureBulkLoadManager();
+
       String bulkToken = secureBulkLoadManager.prepareBulkLoad(this.env.getRegion(),
           convert(request));
       done.run(PrepareBulkLoadResponse.newBuilder().setBulkToken(bulkToken).build());
@@ -115,6 +116,10 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     done.run(null);
   }
 
+  /**
+   * Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
+   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException
+   */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest
   convert(CleanupBulkLoadRequest request)
       throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {

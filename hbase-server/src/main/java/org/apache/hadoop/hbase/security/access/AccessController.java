@@ -2155,12 +2155,11 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
    * Authorization check for
    * SecureBulkLoadProtocol.prepareBulkLoad()
    * @param ctx the context
-   * @param request the request
    * @throws IOException
    */
   @Override
-  public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-      PrepareBulkLoadRequest request) throws IOException {
+  public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
+  throws IOException {
     requireAccess(getActiveUser(ctx), "prePrepareBulkLoad",
         ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.CREATE);
   }
@@ -2169,12 +2168,11 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
    * Authorization security check for
    * SecureBulkLoadProtocol.cleanupBulkLoad()
    * @param ctx the context
-   * @param request the request
    * @throws IOException
    */
   @Override
-  public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-      CleanupBulkLoadRequest request) throws IOException {
+  public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
+  throws IOException {
     requireAccess(getActiveUser(ctx), "preCleanupBulkLoad",
         ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.CREATE);
   }
