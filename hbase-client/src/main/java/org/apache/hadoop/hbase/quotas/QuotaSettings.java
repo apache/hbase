@@ -49,7 +49,9 @@ public abstract class QuotaSettings {
   /**
    * Convert a QuotaSettings to a protocol buffer SetQuotaRequest. This is used internally by the
    * Admin client to serialize the quota settings and send them to the master.
+   * @deprecated Removed in HBase 2.0+ as a part of removing protobuf from our API
    */
+  @Deprecated
   public static SetQuotaRequest buildSetQuotaRequestProto(final QuotaSettings settings) {
     SetQuotaRequest.Builder builder = SetQuotaRequest.newBuilder();
     if (settings.getUserName() != null) {
@@ -68,7 +70,9 @@ public abstract class QuotaSettings {
   /**
    * Called by toSetQuotaRequestProto() the subclass should implement this method to set the
    * specific SetQuotaRequest properties.
+   * @deprecated Removed in HBase 2.0+ as a part of removing protobuf from our API
    */
+  @Deprecated
   protected abstract void setupSetQuotaRequest(SetQuotaRequest.Builder builder);
 
   protected String ownerToString() {
