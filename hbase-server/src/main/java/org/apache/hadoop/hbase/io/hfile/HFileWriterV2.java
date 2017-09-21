@@ -274,13 +274,14 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       newBlock();
     }
 
-    synchronized (HFileWriterV2.class) {
-      if (WARN_CELL_WITH_TAGS && getFileContext().isIncludesTags()) {
-        LOG.warn("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
-          + " is required to support cell attributes/tags. Consider setting "
-          + HFile.FORMAT_VERSION_KEY + " accordingly.");
-        WARN_CELL_WITH_TAGS = false;
-      }
+    // Reads/writes from/to WARN_CELL_WITH_TAGS aren't thread-safe, but this
+    // is of limited concern because it should only result in limited extra logging
+
+    if (WARN_CELL_WITH_TAGS && getFileContext().isIncludesTags()) {
+      LOG.warn("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
+        + " is required to support cell attributes/tags. Consider setting "
+        + HFile.FORMAT_VERSION_KEY + " accordingly.");
+      WARN_CELL_WITH_TAGS = false;
     }
 
     fsBlockWriter.write(cell);
