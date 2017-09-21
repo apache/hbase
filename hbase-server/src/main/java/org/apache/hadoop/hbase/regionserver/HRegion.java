@@ -6410,8 +6410,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (this.joinedHeap != null) {
           result = this.joinedHeap.requestSeek(kv, true, true) || result;
         }
-      } catch (FileNotFoundException e) {
-        throw handleFileNotFound(e);
       } finally {
         closeRegionOperation();
       }
