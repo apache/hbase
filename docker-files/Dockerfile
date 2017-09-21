@@ -15,30 +15,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM pjameson/buck-folly-watchman:20160511
+FROM ubuntu:16.04
 
 ARG CC=/usr/bin/gcc-5
 ARG CXX=/usr/bin/g++-5
-ARG CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O2 -pthread"
-ARG CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -g -fno-omit-frame-pointer -O2 -pthread"
+ARG CFLAGS="-fPIC -g -fno-omit-frame-pointer -O2 -pthread"
+ARG CXXFLAGS="-fPIC -g -fno-omit-frame-pointer -O2 -pthread"
 
 ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/"
+
+RUN apt-get update && \
+    apt-get install -y vim maven inetutils-ping python-pip doxygen graphviz clang-format valgrind \
+        wget libgflags-dev libgoogle-glog-dev dh-autoreconf pkg-config libssl-dev build-essential \
+        libboost-all-dev libevent-dev libdouble-conversion-dev cmake libkrb5-dev git openjdk-8-jdk && \
+    pip install yapf && \
+    apt-get -qq clean && \
+    apt-get -y -qq autoremove && \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/ && \
+    rm -rf /tmp/*
 
 RUN wget ftp://ftp.cyrusimap.org/cyrus-sasl/cyrus-sasl-2.1.26.tar.gz ; \
     tar zxf cyrus-sasl-2.1.26.tar.gz ; \
     cd cyrus-sasl-2.1.26 ; \
     ./configure ; \
-    make ; \
+    make -j4; \
     make install ;\
     cp /usr/local/lib/sasl2/* /usr/lib/sasl2/
-
-RUN apt-get install -y vim maven inetutils-ping python-pip doxygen graphviz clang-format \
-        valgrind && \
-      pip install yapf && \
-      apt-get -qq clean && \
-      apt-get -y -qq autoremove && \
-      rm -rf /var/lib/{apt,dpkg,cache,log}/ && \
-      rm -rf /tmp/*
 
 RUN apt-get update && \
     apt-get install -y debconf-utils debconf-set-selections && \
@@ -67,7 +69,7 @@ RUN git clone https://github.com/google/protobuf.git /usr/src/protobuf && \
   ldconfig && \
   ./autogen.sh && \
   ./configure && \
-  make && \
+  make -j4 && \
   make install && \ 
   make clean && \
   rm -rf .git && \
@@ -79,12 +81,12 @@ RUN git clone https://github.com/google/protobuf.git /usr/src/protobuf && \
   cd src/c && \
   ldconfig && \
   ./configure && \
-  make && \
+  make -j4 && \
   make install && \
   make clean && \
   ldconfig
 
-# Update folly
+# Update folly. `make check` removed due to a failing test, explicitly installing gtest ourselves
 RUN cd /usr/src/ && \
   ver=2017.09.04.00 && \
   wget https://github.com/facebook/folly/archive/v$ver.tar.gz && \
@@ -96,13 +98,17 @@ RUN cd /usr/src/ && \
   tar zxf release-1.8.0.tar.gz && \
   rm -f release-1.8.0.tar.gz && \
   mv googletest-release-1.8.0 gtest && \
-  cd ../ && \
+  cd gtest && \
+  cmake . && \
+  make -j4 && \
+  make install && \
+  cd ../.. && \
   ldconfig && \
   autoreconf -ivf && \
   ./configure && \
-  make && \
-  make check && \
-  make install
+  make -j4 && \
+  make install && \
+  make clean
 
 # Update wangle
 RUN cd /usr/src/ && \
@@ -113,9 +119,10 @@ RUN cd /usr/src/ && \
   cd wangle-$ver/wangle && \
   ldconfig && \
   cmake . -DBUILD_TESTS=OFF  && \
-  make && \
+  make -j4 && \
   ctest && \
-  make install
+  make install && \
+  make clean
 
 RUN echo "enabled=1" >> /etc/default/apport
 

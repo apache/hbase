@@ -47,31 +47,11 @@ Then go into the hbase-native-client directory and run `./bin/start-docker.sh`
 that will build the docker development environment and when complete will
 drop you into a shell on a linux vm with all the tools needed installed.
 
-# Buck
 
-From then on we can use [buck](https://buckbuild.com/) to build everything.
-For example:
-```
-buck build //core:core
-buck test --all
-buck build //core:simple-client
-```
-
-That will build the library, then build and test everything, then build
-the simple-client binary. Buck will find all modules used, and compile
-them in parallel, caching the results. Output from buck is in the buck-out
-foulder. Generated binaries are in buck-out/gen logs are in buck-out/logs
-
-
-# Make
-
-If learning buck isn't your thing there is a Makefile wrapper for your
-convenience.
+# CMake
 
 ```
-make help
-make check
-make clean
-make all
-make build
+cmake .
+make
+make install
 ```

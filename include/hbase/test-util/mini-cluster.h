@@ -21,6 +21,7 @@
 #include <jni.h>
 #include <string>
 #include <vector>
+#include <mutex>
 
 namespace hbase {
 
@@ -69,7 +70,7 @@ class MiniCluster {
   jmethodID str_ctor_mid_;
   jobject htu_;
   jobject cluster_;
-  pthread_mutex_t count_mutex_;
+  std::mutex count_mutex_;
   JavaVM *jvm_;
   JNIEnv *CreateVM(JavaVM **jvm);
   void Setup();

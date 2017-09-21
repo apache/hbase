@@ -23,7 +23,6 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
-#include <google/protobuf/stubs/callback.h>
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
 
 #include <chrono>

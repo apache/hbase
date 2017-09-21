@@ -80,7 +80,7 @@ MiniCluster::~MiniCluster() {
 
 void MiniCluster::Setup() {
   jmethodID constructor;
-  pthread_mutex_lock(&count_mutex_);
+  std::lock_guard<std::mutex> lock(count_mutex_);
   if (env_ == NULL) {
     env_ = CreateVM(&jvm_);
     if (env_ == NULL) {
@@ -176,7 +176,6 @@ void MiniCluster::Setup() {
       exit(-1);
     }
   }
-  pthread_mutex_unlock(&count_mutex_);
 }
 
 jobject MiniCluster::htu() {

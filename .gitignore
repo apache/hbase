@@ -27,3 +27,19 @@ third-party/*
 
 # Generated files
 src/hbase/utils/version.h
+
+# Tests
+*-test
+
+# Executables
+load-client
+simple-client
+
+# CMake temporary files
+CMakeCache.txt
+CMakeFiles
+*.cmake
+Makefile
+
+# Copied from hbase-common at build-time
+include/hbase/utils/version.h
