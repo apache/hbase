@@ -52,7 +52,6 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
   protected boolean noClusterCleanUp = false;
   private String tableName = "ChaosMonkeyRunner.tableName";
   private String familyName = "ChaosMonkeyRunner.familyName";
-  private volatile boolean stop = false;
 
   @Override
   public void addOptions() {
@@ -93,14 +92,26 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
   protected int doWork() throws Exception {
     setUpCluster();
     getAndStartMonkey();
-    while (!stop) {// loop here until got killed
-      Thread.sleep(10000);
+    while (!monkey.isStopped()) {
+      // loop here until got killed
+      try {
+        // TODO: make sleep time configurable
+        Thread.sleep(5000); // 5 seconds
+      } catch (InterruptedException ite) {
+        // Chaos monkeys got interrupted.
+        // It is ok to stop monkeys and exit.
+        monkey.stop("Interruption occurred.");
+        break;
+      }
     }
+    monkey.waitForStop();
     return 0;
   }
 
   public void stopRunner() {
-    stop = true;
+    if (monkey != null) {
+      monkey.stop("Program Control");
+    }
   }
 
   public void setUpCluster() throws Exception {
