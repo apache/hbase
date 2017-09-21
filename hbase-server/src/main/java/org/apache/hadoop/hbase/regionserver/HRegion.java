@@ -216,9 +216,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String HREGION_MVCC_PRE_ASSIGN = "hbase.hregion.mvcc.preassign";
   public static final boolean DEFAULT_HREGION_MVCC_PRE_ASSIGN = true;
 
-  public static final String HREGION_UNASSIGN_FOR_FNFE = "hbase.hregion.unassign.for.fnfe";
-  public static final boolean DEFAULT_HREGION_UNASSIGN_FOR_FNFE = true;
-
   public static final String HBASE_MAX_CELL_SIZE_KEY = "hbase.server.keyvalue.maxsize";
   public static final int DEFAULT_MAX_CELL_SIZE = 10485760;
 
@@ -674,8 +671,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final Durability durability;
   private final boolean regionStatsEnabled;
 
-  // whether to unassign region if we hit FNFE
-  private final RegionUnassigner regionUnassigner;
   /**
    * HRegion constructor. This constructor should only be used for testing and
    * extensions.  Instances of HRegion should be instantiated with the
@@ -827,14 +822,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
 
     this.maxCellSize = conf.getLong(HBASE_MAX_CELL_SIZE_KEY, DEFAULT_MAX_CELL_SIZE);
-
-    boolean unassignForFNFE =
-        conf.getBoolean(HREGION_UNASSIGN_FOR_FNFE, DEFAULT_HREGION_UNASSIGN_FOR_FNFE);
-    if (unassignForFNFE) {
-      this.regionUnassigner = new RegionUnassigner(rsServices, fs.getRegionInfo());
-    } else {
-      this.regionUnassigner = null;
-    }
   }
 
   void setHTableSpecificConf() {
@@ -5993,20 +5980,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
-    private void handleFileNotFound(Throwable fnfe) {
-      // Try reopening the region since we have lost some storefiles.
-      // See HBASE-17712 for more details.
-      LOG.warn("A store file got lost, so close and reopen region", fnfe);
-      if (regionUnassigner != null) {
-        regionUnassigner.unassign();
-      }
-    }
-
     private IOException handleException(List<KeyValueScanner> instantiatedScanners,
         Throwable t) {
-      if (t instanceof FileNotFoundException) {
-        handleFileNotFound(t);
-      }
       // remove scaner read point before throw the exception
       scannerReadPoints.remove(this);
       if (storeHeap != null) {
@@ -6089,19 +6064,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         throw new UnknownScannerException("Scanner was closed");
       }
       boolean moreValues = false;
-      try {
-        if (outResults.isEmpty()) {
-          // Usually outResults is empty. This is true when next is called
-          // to handle scan or get operation.
-          moreValues = nextInternal(outResults, scannerContext);
-        } else {
-          List<Cell> tmpList = new ArrayList<Cell>();
-          moreValues = nextInternal(tmpList, scannerContext);
-          outResults.addAll(tmpList);
-        }
-      } catch (FileNotFoundException e) {
-        handleFileNotFound(e);
-        throw e;
+      if (outResults.isEmpty()) {
+        // Usually outResults is empty. This is true when next is called
+        // to handle scan or get operation.
+        moreValues = nextInternal(outResults, scannerContext);
+      } else {
+        List<Cell> tmpList = new ArrayList<Cell>();
+        moreValues = nextInternal(tmpList, scannerContext);
+        outResults.addAll(tmpList);
       }
 
       // If the size limit was reached it means a partial Result is being returned. Returning a
@@ -6541,9 +6511,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (this.joinedHeap != null) {
           result = this.joinedHeap.requestSeek(kv, true, true) || result;
         }
-      } catch (FileNotFoundException e) {
-        handleFileNotFound(e);
-        throw e;
       } finally {
         closeRegionOperation();
       }
