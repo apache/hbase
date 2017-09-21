@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
@@ -52,16 +53,22 @@ public interface BulkLoadObserver extends Coprocessor {
     /**
       * Called as part of SecureBulkLoadEndpoint.prepareBulkLoad() RPC call.
       * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+      * If you need to get the region or table name, get it from the
+      * <code>ctx</code> as follows: <code>code>ctx.getEnvironment().getRegion()</code>. Use
+      * getRegionInfo to fetch the encodedName and use getTabldDescriptor() to get the tableName.
       * @param ctx the environment to interact with the framework and master
       */
-    default void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-        PrepareBulkLoadRequest request) throws IOException {}
+    default void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
+    throws IOException {}
 
     /**
       * Called as part of SecureBulkLoadEndpoint.cleanupBulkLoad() RPC call.
       * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+      * If you need to get the region or table name, get it from the
+      * <code>ctx</code> as follows: <code>code>ctx.getEnvironment().getRegion()</code>. Use
+      * getRegionInfo to fetch the encodedName and use getTabldDescriptor() to get the tableName.
       * @param ctx the environment to interact with the framework and master
       */
-    default void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-      CleanupBulkLoadRequest request) throws IOException {}
+    default void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
+    throws IOException {}
 }
