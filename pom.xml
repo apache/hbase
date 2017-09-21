@@ -85,11 +85,9 @@
     <module>hbase-checkstyle</module>
     <module>hbase-external-blockcache</module>
     <module>hbase-shaded</module>
-    <module>hbase-spark</module>
     <module>hbase-archetypes</module>
     <module>hbase-metrics-api</module>
     <module>hbase-metrics</module>
-    <module>hbase-spark-it</module>
     <module>hbase-backup</module>
   </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
@@ -993,38 +991,6 @@
                     <exclude>com.google.code.findbugs:jsr305</exclude>
                   </excludes>
                   <message>We don't allow the JSR305 jar from the Findbugs project, see HBASE-16321.</message>
-                </bannedDependencies>
-              </rules>
-            </configuration>
-          </execution>
-          <execution>
-            <id>banned-scala</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <bannedDependencies>
-                  <excludes>
-                    <exclude>org.scala-lang:scala-library</exclude>
-                  </excludes>
-                  <message>We don't allow Scala outside of the hbase-spark module, see HBASE-13992.</message>
-                </bannedDependencies>
-              </rules>
-            </configuration>
-          </execution>
-          <execution>
-            <id>banned-hbase-spark</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <bannedDependencies>
-                  <excludes>
-                    <exclude>org.apache.hbase:hbase-spark</exclude>
-                  </excludes>
-                  <message>We don't allow other modules to depend on hbase-spark, see HBASE-13992.</message>
                 </bannedDependencies>
               </rules>
             </configuration>
@@ -3305,7 +3271,7 @@
                 <exclude>**/protobuf/*</exclude>
                 <exclude>**/*.scala</exclude>
               </sourceFileExcludes>
-              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark:org.apache.hadoop.hbase.generated*</excludePackageNames>
+              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.generated*</excludePackageNames>
               <show>private</show> <!-- (shows all classes and members) -->
               <quiet>true</quiet>
               <linksource>true</linksource>
@@ -3348,7 +3314,7 @@
                 <exclude>**/protobuf/*</exclude>
                 <exclude>**/*.scala</exclude>
               </sourceFileExcludes>
-              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark:org.apache.hadoop.hbase.generated*</excludePackageNames>
+              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.generated*</excludePackageNames>
               <show>private</show> <!-- (shows all classes and members) -->
               <quiet>true</quiet>
               <linksource>true</linksource>
