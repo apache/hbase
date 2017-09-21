@@ -56,6 +56,7 @@ public abstract class QuotaSettings {
    * This is used internally by the Admin client to serialize the quota settings
    * and send them to the master.
    */
+  @InterfaceAudience.Private
   public static SetQuotaRequest buildSetQuotaRequestProto(final QuotaSettings settings) {
     SetQuotaRequest.Builder builder = SetQuotaRequest.newBuilder();
     if (settings.getUserName() != null) {
@@ -76,6 +77,7 @@ public abstract class QuotaSettings {
    * the subclass should implement this method to set the specific SetQuotaRequest
    * properties.
    */
+  @InterfaceAudience.Private
   protected abstract void setupSetQuotaRequest(SetQuotaRequest.Builder builder);
 
   protected String ownerToString() {
