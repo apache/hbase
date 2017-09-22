@@ -1275,7 +1275,7 @@ class ConnectionManager {
       Scan s = new Scan();
       s.setReversed(true);
       s.withStartRow(metaKey);
-      s.setOneRowLimit();
+
       if (this.useMetaReplicas) {
         s.setConsistency(Consistency.TIMELINE);
       }
@@ -1305,6 +1305,7 @@ class ConnectionManager {
         try {
           Result regionInfoRow = null;
           s.resetMvccReadPoint();
+          s.setOneRowLimit();
           try (ReversedClientScanner rcs =
               new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
                   rpcControllerFactory, getMetaLookupPool(),
