@@ -805,7 +805,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     s.setReversed(true);
     s.withStartRow(metaKey);
     s.addFamily(HConstants.CATALOG_FAMILY);
-    s.setOneRowLimit();
+
     if (this.useMetaReplicas) {
       s.setConsistency(Consistency.TIMELINE);
     }
@@ -835,6 +835,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       try {
         Result regionInfoRow = null;
         s.resetMvccReadPoint();
+        s.setOneRowLimit();
         try (ReversedClientScanner rcs =
             new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
                 rpcControllerFactory, getMetaLookupPool(), metaReplicaCallTimeoutScanInMicroSecond)) {
