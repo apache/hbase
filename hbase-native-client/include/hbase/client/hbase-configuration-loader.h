@@ -23,8 +23,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/optional.hpp>
-
 #include "hbase/client/configuration.h"
 #include "hbase/utils/optional.h"
 
