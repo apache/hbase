@@ -25,9 +25,9 @@
 #include <boost/filesystem.hpp>
 #include "hbase/client/configuration.h"
 #include "hbase/client/hbase-configuration-loader.h"
+#include "hbase/utils/optional.h"
 
 using namespace hbase;
-using std::experimental::nullopt;
 
 const std::string kDefHBaseConfPath("./build/test-data/hbase-configuration-test/conf/");
 const std::string kHBaseConfPath("./build/test-data/hbase-configuration-test/custom-conf/");
@@ -150,7 +150,7 @@ TEST(Configuration, LoadConfFromDefaultLocation) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_STREQ((*conf).Get("custom-prop", "Set this value").c_str(), "custom-value");
   EXPECT_STREQ((*conf).Get("default-prop", "Set this value").c_str(), "default-value");
 }
@@ -167,7 +167,7 @@ TEST(Configuration, LoadConfFromCustomLocation) {
   HBaseConfigurationLoader loader;
   std::vector<std::string> resources{kHBaseSiteXml};
   hbase::optional<Configuration> conf = loader.LoadResources(kHBaseConfPath, resources);
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_STREQ((*conf).Get("custom-prop", "").c_str(), "custom-value");
   EXPECT_STRNE((*conf).Get("custom-prop", "").c_str(), "some-value");
 }
@@ -188,7 +188,7 @@ TEST(Configuration, LoadConfFromMultipleLocatons) {
   std::string conf_paths = kDefHBaseConfPath + ":" + kHBaseConfPath;
   std::vector<std::string> resources{kHBaseDefaultXml, kHBaseSiteXml};
   hbase::optional<Configuration> conf = loader.LoadResources(conf_paths, resources);
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_STREQ((*conf).Get("default-prop", "From hbase-default.xml").c_str(), "default-value");
   EXPECT_STREQ((*conf).Get("custom-prop", "").c_str(), "custom-value");
   EXPECT_STRNE((*conf).Get("custom-prop", "").c_str(), "some-value");
@@ -207,7 +207,7 @@ TEST(Configuration, DefaultValues) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_STREQ((*conf).Get("default-prop", "Set this value.").c_str(), "default-value");
   EXPECT_STREQ((*conf).Get("custom-prop", "Set this value.").c_str(), "custom-value");
 }
@@ -219,7 +219,7 @@ TEST(Configuration, FinalValues) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_STREQ((*conf).Get("hbase.rootdir", "").c_str(), "/root/hbase-docker/apps/hbase/data");
   EXPECT_STREQ((*conf).Get("hbase.zookeeper.property.datadir", "").c_str(),
                "/root/hbase-docker/zookeeper");
@@ -241,7 +241,7 @@ TEST(Configuration, EnvVars) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_STREQ((*conf).Get("hbase-client.user.name", "").c_str(), "${user.name}");
   EXPECT_STRNE((*conf).Get("hbase-client.user.name", "root").c_str(), "test-user");
 }
@@ -253,7 +253,7 @@ TEST(Configuration, SelfRef) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_STREQ((*conf).Get("selfRef", "${selfRef}").c_str(), "${selfRef}");
 }
 
@@ -264,7 +264,7 @@ TEST(Configuration, VarExpansion) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_STREQ((*conf).Get("foo.substs", "foo-value").c_str(),
                "bar-value,bar-value,bar-value,bar-value,bar-value,bar-value,"
                "bar-value,bar-value,bar-value,bar-value,");
@@ -278,7 +278,7 @@ TEST(Configuration, VarExpansionException) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   ASSERT_THROW((*conf).Get("foo.substs.exception", "foo-value").c_str(), std::runtime_error);
 }
 
@@ -289,7 +289,7 @@ TEST(Configuration, GetInt) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_EQ(16000, (*conf).GetInt("int", 0));
   EXPECT_EQ(2147483646, (*conf).GetInt("int.largevalue", 0));
 }
@@ -301,7 +301,7 @@ TEST(Configuration, GetLong) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_EQ(2147483850, (*conf).GetLong("long", 0));
   EXPECT_EQ(9223372036854775807, (*conf).GetLong("long.largevalue", 0));
 }
@@ -313,7 +313,7 @@ TEST(Configuration, GetDouble) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_DOUBLE_EQ(17.9769e+100, (*conf).GetDouble("double", 0.0));
   EXPECT_DOUBLE_EQ(170.769e+200, (*conf).GetDouble("double.largevalue", 0.0));
 }
@@ -325,7 +325,7 @@ TEST(Configuration, GetBool) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   EXPECT_EQ(true, (*conf).GetBool("bool.true", true));
   EXPECT_EQ(false, (*conf).GetBool("bool.false", false));
 }
@@ -337,7 +337,7 @@ TEST(Configuration, GetIntException) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   ASSERT_THROW((*conf).GetInt("int.exception", 0), std::runtime_error);
 }
 
@@ -348,7 +348,7 @@ TEST(Configuration, GetLongException) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   ASSERT_THROW((*conf).GetLong("long.exception", 0), std::runtime_error);
 }
 
@@ -359,7 +359,7 @@ TEST(Configuration, GetDoubleException) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   ASSERT_THROW((*conf).GetDouble("double.exception", 0), std::runtime_error);
 }
 
@@ -370,6 +370,6 @@ TEST(Configuration, GetBoolException) {
 
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
-  ASSERT_TRUE(conf != nullopt) << "No configuration object present.";
+  ASSERT_TRUE(conf != none) << "No configuration object present.";
   ASSERT_THROW((*conf).GetBool("bool.exception", false), std::runtime_error);
 }

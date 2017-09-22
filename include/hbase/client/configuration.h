@@ -24,12 +24,12 @@
 #include <string>
 #include <vector>
 
-#include <experimental/optional>
+#include "hbase/utils/optional.h"
 
 namespace hbase {
 
 template <class T>
-using optional = std::experimental::optional<T>;
+using optional = boost::optional<T>;
 
 class Configuration {
  public:
