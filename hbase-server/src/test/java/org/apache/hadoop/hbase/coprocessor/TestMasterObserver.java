@@ -60,12 +60,12 @@ import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNamesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -1259,52 +1259,56 @@ public class TestMasterObserver {
 
     @Override
     public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String userName, final Quotas quotas) throws IOException {
+        final String userName, final GlobalQuotaSettings quotas) throws IOException {
     }
 
     @Override
     public void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String userName, final Quotas quotas) throws IOException {
+        final String userName, final GlobalQuotaSettings quotas) throws IOException {
     }
 
     @Override
     public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String userName, final TableName tableName, final Quotas quotas) throws IOException {
+        final String userName, final TableName tableName, final GlobalQuotaSettings quotas)
+            throws IOException {
     }
 
     @Override
     public void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String userName, final TableName tableName, final Quotas quotas) throws IOException {
+        final String userName, final TableName tableName, final GlobalQuotaSettings quotas)
+            throws IOException {
     }
 
     @Override
     public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String userName, final String namespace, final Quotas quotas) throws IOException {
+        final String userName, final String namespace, final GlobalQuotaSettings quotas)
+            throws IOException {
     }
 
     @Override
     public void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String userName, final String namespace, final Quotas quotas) throws IOException {
+        final String userName, final String namespace, final GlobalQuotaSettings quotas)
+            throws IOException {
     }
 
     @Override
     public void preSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName, final Quotas quotas) throws IOException {
+        final TableName tableName, final GlobalQuotaSettings quotas) throws IOException {
     }
 
     @Override
     public void postSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName, final Quotas quotas) throws IOException {
+        final TableName tableName, final GlobalQuotaSettings quotas) throws IOException {
     }
 
     @Override
     public void preSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String namespace, final Quotas quotas) throws IOException {
+        final String namespace, final GlobalQuotaSettings quotas) throws IOException {
     }
 
     @Override
     public void postSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String namespace, final Quotas quotas) throws IOException {
+        final String namespace, final GlobalQuotaSettings quotas) throws IOException {
     }
 
     @Override

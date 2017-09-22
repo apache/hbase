@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -123,7 +124,6 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
@@ -2585,31 +2585,33 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
 
   @Override
   public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final Quotas quotas) throws IOException {
+      final String userName, final GlobalQuotaSettings quotas) throws IOException {
     requirePermission(getActiveUser(ctx), "setUserQuota", Action.ADMIN);
   }
 
   @Override
   public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final TableName tableName, final Quotas quotas) throws IOException {
+      final String userName, final TableName tableName, final GlobalQuotaSettings quotas)
+          throws IOException {
     requirePermission(getActiveUser(ctx), "setUserTableQuota", tableName, null, null, Action.ADMIN);
   }
 
   @Override
   public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final String namespace, final Quotas quotas) throws IOException {
+      final String userName, final String namespace, final GlobalQuotaSettings quotas)
+          throws IOException {
     requirePermission(getActiveUser(ctx), "setUserNamespaceQuota", Action.ADMIN);
   }
 
   @Override
   public void preSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final Quotas quotas) throws IOException {
+      final TableName tableName, final GlobalQuotaSettings quotas) throws IOException {
     requirePermission(getActiveUser(ctx), "setTableQuota", tableName, null, null, Action.ADMIN);
   }
 
   @Override
   public void preSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String namespace, final Quotas quotas) throws IOException {
+      final String namespace, final GlobalQuotaSettings quotas) throws IOException {
     requirePermission(getActiveUser(ctx), "setNamespaceQuota", Action.ADMIN);
   }
 

@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -1075,95 +1075,99 @@ public interface MasterObserver extends Coprocessor {
    * Called before the quota for the user is stored.
    * @param ctx the environment to interact with the framework and master
    * @param userName the name of user
-   * @param quotas the quota settings
+   * @param quotas the current quota for the user
    */
   default void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final Quotas quotas) throws IOException {}
+      final String userName, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called after the quota for the user is stored.
    * @param ctx the environment to interact with the framework and master
    * @param userName the name of user
-   * @param quotas the quota settings
+   * @param quotas the resulting quota for the user
    */
   default void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final Quotas quotas) throws IOException {}
+      final String userName, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called before the quota for the user on the specified table is stored.
    * @param ctx the environment to interact with the framework and master
    * @param userName the name of user
    * @param tableName the name of the table
-   * @param quotas the quota settings
+   * @param quotas the current quota for the user on the table
    */
-  default void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final TableName tableName, final Quotas quotas) throws IOException {}
+  default void preSetUserQuota(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final String userName,
+      final TableName tableName, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called after the quota for the user on the specified table is stored.
    * @param ctx the environment to interact with the framework and master
    * @param userName the name of user
    * @param tableName the name of the table
-   * @param quotas the quota settings
+   * @param quotas the resulting quota for the user on the table
    */
-  default void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final TableName tableName, final Quotas quotas) throws IOException {}
+  default void postSetUserQuota(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final String userName,
+      final TableName tableName, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called before the quota for the user on the specified namespace is stored.
    * @param ctx the environment to interact with the framework and master
    * @param userName the name of user
    * @param namespace the name of the namespace
-   * @param quotas the quota settings
+   * @param quotas the current quota for the user on the namespace
    */
-  default void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final String namespace, final Quotas quotas) throws IOException {}
+  default void preSetUserQuota(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final String userName,
+      final String namespace, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called after the quota for the user on the specified namespace is stored.
    * @param ctx the environment to interact with the framework and master
    * @param userName the name of user
    * @param namespace the name of the namespace
-   * @param quotas the quota settings
+   * @param quotas the resulting quota for the user on the namespace
    */
-  default void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final String namespace, final Quotas quotas) throws IOException {}
+  default void postSetUserQuota(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final String userName,
+      final String namespace, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called before the quota for the table is stored.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param quotas the quota settings
+   * @param quotas the current quota for the table
    */
   default void preSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final Quotas quotas) throws IOException {}
+      final TableName tableName, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called after the quota for the table is stored.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param quotas the quota settings
+   * @param quotas the resulting quota for the table
    */
   default void postSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final Quotas quotas) throws IOException {}
+      final TableName tableName, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called before the quota for the namespace is stored.
    * @param ctx the environment to interact with the framework and master
    * @param namespace the name of the namespace
-   * @param quotas the quota settings
+   * @param quotas the current quota for the namespace
    */
   default void preSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String namespace, final Quotas quotas) throws IOException {}
+      final String namespace, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called after the quota for the namespace is stored.
    * @param ctx the environment to interact with the framework and master
    * @param namespace the name of the namespace
-   * @param quotas the quota settings
+   * @param quotas the resulting quota for the namespace
    */
   default void postSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String namespace, final Quotas quotas) throws IOException {}
+      final String namespace, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
    * Called before merge regions request.
