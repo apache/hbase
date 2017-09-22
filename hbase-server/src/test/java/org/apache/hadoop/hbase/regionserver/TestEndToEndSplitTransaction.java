@@ -136,11 +136,6 @@ public class TestEndToEndSplitTransaction {
         regions.getSecond().getRegionInfo());
       }
 
-      // first daughter second
-      if (split.useZKForAssignment) {
-        server.postOpenDeployTasks(regions.getFirst());
-      }
-
       // Add to online regions
       server.addToOnlineRegions(regions.getSecond());
       // THIS is the crucial point:
@@ -163,63 +158,6 @@ public class TestEndToEndSplitTransaction {
 
       assertTrue(test(conn, tableName, firstRow, server));
       assertTrue(test(conn, tableName, lastRow, server));
-    }
-  }
-
-  @Test
-  public void testTableAvailableWhileSplitting() throws Exception {
-    TableName tableName = TableName.valueOf("TestTableAvailableWhileSplitting");
-    byte[] familyName = Bytes.toBytes("fam");
-    try (HTable ht = TEST_UTIL.createTable(tableName, familyName)) {
-      TEST_UTIL.loadTable(ht, familyName, false);
-    }
-    Admin admin = TEST_UTIL.getHBaseAdmin();
-    HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
-    byte[] splitRow = Bytes.toBytes("lll");
-    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      byte[] regionName = conn.getRegionLocator(tableName).getRegionLocation(splitRow)
-          .getRegionInfo().getRegionName();
-      Region region = server.getRegion(regionName);
-      SplitTransactionImpl split = new SplitTransactionImpl((HRegion) region, splitRow);
-      split.prepare();
-      assertTrue(admin.isTableAvailable(tableName));
-
-      // 1. phase I
-      PairOfSameType<Region> regions = split.createDaughters(server, server, null);
-      // Parent should be offline at this stage and daughters not yet open
-      assertFalse(admin.isTableAvailable(tableName));
-
-      // passing null as services prevents final step of postOpenDeployTasks
-      // 2, most of phase II
-      split.openDaughters(server, null, regions.getFirst(), regions.getSecond());
-      assertFalse(admin.isTableAvailable(tableName));
-
-      // Finish openeing daughters
-      // 2nd daughter first
-      if (split.useZKForAssignment) {
-        server.postOpenDeployTasks(regions.getSecond());
-      } else {
-        server.reportRegionStateTransition(
-          RegionServerStatusProtos.RegionStateTransition.TransitionCode.SPLIT,
-          region.getRegionInfo(), regions.getFirst().getRegionInfo(),
-          regions.getSecond().getRegionInfo());
-      }
-
-      // first daughter second
-      if (split.useZKForAssignment) {
-        server.postOpenDeployTasks(regions.getFirst());
-      }
-
-      // After postOpenDeploy daughters should have location in meta
-      assertTrue(admin.isTableAvailable(tableName));
-
-      server.addToOnlineRegions(regions.getSecond());
-      server.addToOnlineRegions(regions.getFirst());
-      assertTrue(admin.isTableAvailable(tableName));
-    } finally {
-      if (admin != null) {
-        admin.close();
-      }
     }
   }
 
