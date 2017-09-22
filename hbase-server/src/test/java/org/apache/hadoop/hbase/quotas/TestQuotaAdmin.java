@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -71,6 +72,14 @@ public class TestQuotaAdmin {
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
+  }
+
+  @After
+  public void clearQuotaTable() throws Exception {
+    if (TEST_UTIL.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)) {
+      TEST_UTIL.getAdmin().disableTable(QuotaUtil.QUOTA_TABLE_NAME);
+      TEST_UTIL.getAdmin().truncateTable(QuotaUtil.QUOTA_TABLE_NAME, false);
+    }
   }
 
   @AfterClass
@@ -249,7 +258,7 @@ public class TestQuotaAdmin {
   @Test
   public void testSetGetRemoveSpaceQuota() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    final TableName tn = TableName.valueOf("table1");
+    final TableName tn = TableName.valueOf("sq_table1");
     final long sizeLimit = 1024L * 1024L * 1024L * 1024L * 5L; // 5TB
     final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.NO_WRITES;
     QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, violationPolicy);
@@ -302,7 +311,7 @@ public class TestQuotaAdmin {
   @Test
   public void testSetModifyRemoveQuota() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    final TableName tn = TableName.valueOf("table1");
+    final TableName tn = TableName.valueOf("sq_table2");
     final long originalSizeLimit = 1024L * 1024L * 1024L * 1024L * 5L; // 5TB
     final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.NO_WRITES;
     QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(

@@ -514,12 +514,7 @@ public class TestQuotaThrottle {
         }
         count += tables.length;
       }
-    } catch (RetriesExhaustedWithDetailsException e) {
-      for (Throwable t: e.getCauses()) {
-        if (!(t instanceof ThrottlingException)) {
-          throw e;
-        }
-      }
+    } catch (ThrottlingException e) {
       LOG.error("put failed after nRetries=" + count, e);
     }
     return count;
