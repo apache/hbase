@@ -24,11 +24,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Cached mob file.
@@ -39,7 +38,7 @@ public class CachedMobFile extends MobFile implements Comparable<CachedMobFile> 
   private long accessCount;
   private AtomicLong referenceCount = new AtomicLong(0);
 
-  public CachedMobFile(StoreFile sf) {
+  public CachedMobFile(HStoreFile sf) {
     super(sf);
   }
 
@@ -47,7 +46,7 @@ public class CachedMobFile extends MobFile implements Comparable<CachedMobFile> 
       CacheConfig cacheConf) throws IOException {
     // XXX: primaryReplica is only used for constructing the key of block cache so it is not a
     // critical problem if we pass the wrong value, so here we always pass true. Need to fix later.
-    StoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
     return new CachedMobFile(sf);
   }
 

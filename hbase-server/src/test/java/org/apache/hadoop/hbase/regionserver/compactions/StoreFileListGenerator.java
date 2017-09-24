@@ -15,20 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
-public abstract class StoreFileListGenerator
-    extends MockStoreFileGenerator implements Iterable<List<StoreFile>> {
+public abstract class StoreFileListGenerator extends MockStoreFileGenerator
+    implements Iterable<List<HStoreFile>> {
 
   public static final int MAX_FILE_GEN_ITERS = 10;
   public static final int NUM_FILES_GEN = 1000;
 
-  StoreFileListGenerator(final Class klass) {
+  StoreFileListGenerator(Class<?> klass) {
     super(klass);
   }
 }

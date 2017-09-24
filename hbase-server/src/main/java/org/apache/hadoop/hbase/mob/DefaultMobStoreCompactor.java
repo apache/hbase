@@ -91,7 +91,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         }
       };
 
-  public DefaultMobStoreCompactor(Configuration conf, Store store) {
+  public DefaultMobStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
     // The mob cells reside in the mob-enabled column family which is held by HMobStore.
     // During the compaction, the compactor reads the cells from the mob files and

@@ -39,7 +39,7 @@ public class DefaultStoreFlusher extends StoreFlusher {
   private static final Log LOG = LogFactory.getLog(DefaultStoreFlusher.class);
   private final Object flushLock = new Object();
 
-  public DefaultStoreFlusher(Configuration conf, Store store) {
+  public DefaultStoreFlusher(Configuration conf, HStore store) {
     super(conf, store);
   }
 

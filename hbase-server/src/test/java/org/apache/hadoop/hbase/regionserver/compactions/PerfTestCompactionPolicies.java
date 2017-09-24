@@ -26,13 +26,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -44,9 +42,6 @@ import org.junit.runners.Parameterized;
 @Category({RegionServerTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
-
-
-  private static final Log LOG = LogFactory.getLog(PerfTestCompactionPolicies.class);
 
   private final RatioBasedCompactionPolicy cp;
   private final StoreFileListGenerator generator;
@@ -62,13 +57,13 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
 
 
 
-    Class[] policyClasses = new Class[]{
+    Class<?>[] policyClasses = new Class[]{
         EverythingPolicy.class,
         RatioBasedCompactionPolicy.class,
         ExploringCompactionPolicy.class,
     };
 
-    Class[] fileListGenClasses = new Class[]{
+    Class<?>[] fileListGenClasses = new Class[]{
         ExplicitFileListGenerator.class,
         ConstantSizeFileListGenerator.class,
         SemiConstantSizeFileListGenerator.class,
@@ -88,12 +83,12 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
         * policyClasses.length);
 
 
-    for (Class policyClass :  policyClasses) {
-      for (Class genClass: fileListGenClasses) {
-        for (int maxFile:maxFileValues) {
-          for (int minFile:minFilesValues) {
-            for (float ratio:ratioValues) {
-              params.add(new Object[] {policyClass, genClass, maxFile, minFile, ratio});
+    for (Class<?> policyClass : policyClasses) {
+      for (Class<?> genClass : fileListGenClasses) {
+        for (int maxFile : maxFileValues) {
+          for (int minFile : minFilesValues) {
+            for (float ratio : ratioValues) {
+              params.add(new Object[] { policyClass, genClass, maxFile, minFile, ratio });
             }
           }
         }
@@ -150,9 +145,9 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
   @Test
   public final void testSelection() throws Exception {
     long fileDiff = 0;
-    for (List<StoreFile> storeFileList : generator) {
-      List<StoreFile> currentFiles = new ArrayList<>(18);
-      for (StoreFile file : storeFileList) {
+    for (List<HStoreFile> storeFileList : generator) {
+      List<HStoreFile> currentFiles = new ArrayList<>(18);
+      for (HStoreFile file : storeFileList) {
         currentFiles.add(file);
         currentFiles = runIteration(currentFiles);
       }
@@ -172,21 +167,20 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
   }
 
 
-  private List<StoreFile> runIteration(List<StoreFile> startingStoreFiles) throws IOException {
-
-    List<StoreFile> storeFiles = new ArrayList<>(startingStoreFiles);
+  private List<HStoreFile> runIteration(List<HStoreFile> startingStoreFiles) throws IOException {
+    List<HStoreFile> storeFiles = new ArrayList<>(startingStoreFiles);
     CompactionRequest req = cp.selectCompaction(
         storeFiles, new ArrayList<>(), false, false, false);
     long newFileSize = 0;
 
-    Collection<StoreFile> filesToCompact = req.getFiles();
+    Collection<HStoreFile> filesToCompact = req.getFiles();
 
     if (!filesToCompact.isEmpty()) {
 
       storeFiles = new ArrayList<>(storeFiles);
       storeFiles.removeAll(filesToCompact);
 
-      for (StoreFile storeFile : filesToCompact) {
+      for (HStoreFile storeFile : filesToCompact) {
         newFileSize += storeFile.getReader().length();
       }
 

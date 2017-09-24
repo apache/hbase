@@ -723,8 +723,8 @@ public class TestMobCompactor {
 
     @Override
     public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        List<StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {
-
+        List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
+        throws IOException {
       int count = candidates.size();
       if (count >= 2) {
         for (int i = 0; i < count - 2; i++) {
@@ -815,7 +815,7 @@ public class TestMobCompactor {
       Assert.assertTrue(hasFiles);
       Path path = files[0].getPath();
       CacheConfig cacheConf = new CacheConfig(conf);
-      StoreFile sf = new HStoreFile(TEST_UTIL.getTestFileSystem(), path, conf, cacheConf,
+      HStoreFile sf = new HStoreFile(TEST_UTIL.getTestFileSystem(), path, conf, cacheConf,
         BloomType.NONE, true);
       sf.initReader();
       HFile.Reader reader = sf.getReader().getHFileReader();

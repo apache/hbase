@@ -47,7 +47,7 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
   private StripeStoreConfig config;
 
   @Override
-  public boolean needsCompaction(List<StoreFile> filesCompacting) {
+  public boolean needsCompaction(List<HStoreFile> filesCompacting) {
     return this.compactionPolicy.needsCompactions(this.storeFileManager, filesCompacting);
   }
 
@@ -58,7 +58,7 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
 
   @Override
   protected void createComponents(
-      Configuration conf, Store store, CellComparator comparator) throws IOException {
+      Configuration conf, HStore store, CellComparator comparator) throws IOException {
     this.config = new StripeStoreConfig(conf, store);
     this.compactionPolicy = new StripeCompactionPolicy(conf, store, config);
     this.storeFileManager = new StripeStoreFileManager(comparator, conf, this.config);
@@ -74,12 +74,12 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
     private StripeCompactionPolicy.StripeCompactionRequest stripeRequest = null;
 
     @Override
-    public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
+    public List<HStoreFile> preSelect(List<HStoreFile> filesCompacting) {
       return compactionPolicy.preSelectFilesForCoprocessor(storeFileManager, filesCompacting);
     }
 
     @Override
-    public boolean select(List<StoreFile> filesCompacting, boolean isUserCompaction,
+    public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
         boolean mayUseOffPeak, boolean forceMajor) throws IOException {
       this.stripeRequest = compactionPolicy.selectCompaction(
           storeFileManager, filesCompacting, mayUseOffPeak);

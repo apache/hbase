@@ -98,7 +98,7 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
       // timestamp a bit to make sure that now - lowestModTime is greater than major compaction
       // period(1ms).
       // trigger an aged major compaction
-      List<StoreFile> candidates = sfCreate(50, 25, 12, 12);
+      List<HStoreFile> candidates = sfCreate(50, 25, 12, 12);
       edge.increment(2);
       compactEquals(candidates, 50, 25, 12, 12);
       // major sure exceeding maxCompactSize also downgrades aged minors
@@ -164,10 +164,10 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
         oldScanInfo.getTimeToPurgeDeletes(), oldScanInfo.getComparator(), oldScanInfo.isNewVersionBehavior());
     store.setScanInfo(newScanInfo);
     // Do not compact empty store file
-    List<StoreFile> candidates = sfCreate(0);
-    for (StoreFile file : candidates) {
-      if (file instanceof MockStoreFile) {
-        MockStoreFile mockFile = (MockStoreFile) file;
+    List<HStoreFile> candidates = sfCreate(0);
+    for (HStoreFile file : candidates) {
+      if (file instanceof MockHStoreFile) {
+        MockHStoreFile mockFile = (MockHStoreFile) file;
         mockFile.setTimeRangeTracker(new TimeRangeTracker(-1, -1));
         mockFile.setEntries(0);
       }

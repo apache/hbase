@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.io.compress.Compression
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding
 import org.apache.hadoop.hbase.io.hfile.{HFile, CacheConfig, HFileContextBuilder, HFileWriterImpl}
-import org.apache.hadoop.hbase.regionserver.{HStore, StoreFile, StoreFileWriter, BloomType}
+import org.apache.hadoop.hbase.regionserver.{HStore, HStoreFile, StoreFileWriter, BloomType}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.mapred.JobConf
 import org.apache.spark.broadcast.Broadcast
@@ -1075,13 +1075,13 @@ class HBaseContext(@transient sc: SparkContext,
                                previousRow: Array[Byte],
                                compactionExclude: Boolean): Unit = {
     if (w != null) {
-      w.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY,
+      w.appendFileInfo(HStoreFile.BULKLOAD_TIME_KEY,
         Bytes.toBytes(System.currentTimeMillis()))
-      w.appendFileInfo(StoreFile.BULKLOAD_TASK_KEY,
+      w.appendFileInfo(HStoreFile.BULKLOAD_TASK_KEY,
         Bytes.toBytes(regionSplitPartitioner.getPartition(previousRow)))
-      w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY,
+      w.appendFileInfo(HStoreFile.MAJOR_COMPACTION_KEY,
         Bytes.toBytes(true))
-      w.appendFileInfo(StoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
+      w.appendFileInfo(HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
         Bytes.toBytes(compactionExclude))
       w.appendTrackedTimestampsToMetadata()
       w.close()

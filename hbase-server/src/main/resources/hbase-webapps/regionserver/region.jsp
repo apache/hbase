@@ -95,7 +95,7 @@
      List<? extends Store> stores = region.getStores();
      for (Store store : stores) {
        String cf = store.getColumnFamilyName();
-       Collection<StoreFile> storeFiles = store.getStorefiles(); %>
+       Collection<? extends StoreFile> storeFiles = store.getStorefiles(); %>
 
        <h3>Column Family: <%= cf %></h2>
 

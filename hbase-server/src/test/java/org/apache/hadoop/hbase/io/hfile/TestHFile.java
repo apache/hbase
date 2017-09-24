@@ -164,8 +164,8 @@ public class TestHFile  {
     w.close();
     Reader r = HFile.createReader(fs, f, cacheConf, true, conf);
     r.loadFileInfo();
-    assertNull(r.getFirstKey());
-    assertNull(r.getLastKey());
+    assertFalse(r.getFirstKey().isPresent());
+    assertFalse(r.getLastKey().isPresent());
   }
 
   /**

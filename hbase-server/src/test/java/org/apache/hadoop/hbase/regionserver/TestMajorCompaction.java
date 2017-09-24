@@ -84,7 +84,7 @@ public class TestMajorCompaction {
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
 
-  private Region r = null;
+  private HRegion r = null;
   private HTableDescriptor htd = null;
   private static final byte [] COLUMN_FAMILY = fam1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
@@ -328,7 +328,7 @@ public class TestMajorCompaction {
       // ensure that major compaction time is deterministic
       RatioBasedCompactionPolicy
           c = (RatioBasedCompactionPolicy)s.storeEngine.getCompactionPolicy();
-      Collection<StoreFile> storeFiles = s.getStorefiles();
+      Collection<HStoreFile> storeFiles = s.getStorefiles();
       long mcTime = c.getNextMajorCompactTime(storeFiles);
       for (int i = 0; i < 10; ++i) {
         assertEquals(mcTime, c.getNextMajorCompactTime(storeFiles));
@@ -358,7 +358,7 @@ public class TestMajorCompaction {
   private void verifyCounts(int countRow1, int countRow2) throws Exception {
     int count1 = 0;
     int count2 = 0;
-    for (StoreFile f: r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
+    for (HStoreFile f: r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       scanner.seekTo();
       do {
@@ -377,7 +377,7 @@ public class TestMajorCompaction {
 
   private int count() throws IOException {
     int count = 0;
-    for (StoreFile f: r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
+    for (HStoreFile f: r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       if (!scanner.seekTo()) {
         continue;

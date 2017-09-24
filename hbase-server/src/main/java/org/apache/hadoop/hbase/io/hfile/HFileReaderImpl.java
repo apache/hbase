@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -338,14 +339,12 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
   }
 
-  private String toStringFirstKey() {
-    if(getFirstKey() == null)
-      return null;
-    return CellUtil.getCellKeyAsString(getFirstKey());
+  private Optional<String> toStringFirstKey() {
+    return getFirstKey().map(CellUtil::getCellKeyAsString);
   }
 
-  private String toStringLastKey() {
-    return CellUtil.toString(getLastKey(), false);
+  private Optional<String> toStringLastKey() {
+    return getLastKey().map(CellUtil::getCellKeyAsString);
   }
 
   @Override
@@ -382,12 +381,12 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    *         first KeyValue.
    */
   @Override
-  public Cell getFirstKey() {
+  public Optional<Cell> getFirstKey() {
     if (dataBlockIndexReader == null) {
       throw new BlockIndexNotLoadedException();
     }
-    return dataBlockIndexReader.isEmpty() ? null
-        : dataBlockIndexReader.getRootBlockKey(0);
+    return dataBlockIndexReader.isEmpty() ? Optional.empty()
+        : Optional.of(dataBlockIndexReader.getRootBlockKey(0));
   }
 
   /**
@@ -397,10 +396,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @return the first row key, or null if the file is empty.
    */
   @Override
-  public byte[] getFirstRowKey() {
-    Cell firstKey = getFirstKey();
+  public Optional<byte[]> getFirstRowKey() {
     // We have to copy the row part to form the row key alone
-    return firstKey == null? null: CellUtil.cloneRow(firstKey);
+    return getFirstKey().map(CellUtil::cloneRow);
   }
 
   /**
@@ -410,9 +408,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @return the last row key, or null if the file is empty.
    */
   @Override
-  public byte[] getLastRowKey() {
-    Cell lastKey = getLastKey();
-    return lastKey == null? null: CellUtil.cloneRow(lastKey);
+  public Optional<byte[]> getLastRowKey() {
+    // We have to copy the row part to form the row key alone
+    return getLastKey().map(CellUtil::cloneRow);
   }
 
   /** @return number of KV entries in this HFile */
@@ -1550,8 +1548,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    *         key
    */
   @Override
-  public Cell getLastKey() {
-    return dataBlockIndexReader.isEmpty() ? null : lastKeyCell;
+  public Optional<Cell> getLastKey() {
+    return dataBlockIndexReader.isEmpty() ? Optional.empty() : Optional.of(lastKeyCell);
   }
 
   /**
@@ -1560,8 +1558,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @throws IOException
    */
   @Override
-  public Cell midkey() throws IOException {
-    return dataBlockIndexReader.midkey();
+  public Optional<Cell> midKey() throws IOException {
+    return Optional.ofNullable(dataBlockIndexReader.midkey());
   }
 
   @Override

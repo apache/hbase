@@ -24,13 +24,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.AbstractMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.AbstractMultiFileWriter.WriterFactory;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Base class for implementing a Compactor which will generate multiple output files after
@@ -42,7 +42,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
 
   private static final Log LOG = LogFactory.getLog(AbstractMultiOutputCompactor.class);
 
-  public AbstractMultiOutputCompactor(Configuration conf, Store store) {
+  public AbstractMultiOutputCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 

@@ -120,24 +120,24 @@ public class TestCompactionArchiveIOException {
       region.flush(true);
     }
 
-    HStore store = (HStore) region.getStore(fam);
+    HStore store = region.getStore(fam);
     assertEquals(fileCount, store.getStorefilesCount());
 
-    Collection<StoreFile> storefiles = store.getStorefiles();
+    Collection<HStoreFile> storefiles = store.getStorefiles();
     // None of the files should be in compacted state.
-    for (StoreFile file : storefiles) {
+    for (HStoreFile file : storefiles) {
       assertFalse(file.isCompactedAway());
     }
 
     StoreFileManager fileManager = store.getStoreEngine().getStoreFileManager();
-    Collection<StoreFile> initialCompactedFiles = fileManager.getCompactedfiles();
+    Collection<HStoreFile> initialCompactedFiles = fileManager.getCompactedfiles();
     assertTrue(initialCompactedFiles == null || initialCompactedFiles.isEmpty());
 
     // Do compaction
     region.compact(true);
 
     // all prior store files should now be compacted
-    Collection<StoreFile> compactedFilesPreClean = fileManager.getCompactedfiles();
+    Collection<HStoreFile> compactedFilesPreClean = fileManager.getCompactedfiles();
     assertNotNull(compactedFilesPreClean);
     assertTrue(compactedFilesPreClean.size() > 0);
 
@@ -148,17 +148,17 @@ public class TestCompactionArchiveIOException {
     out.writeInt(1);
     out.close();
 
-    StoreFile errStoreFile = new MockStoreFile(testUtil, errFile, 1, 0, false, 1);
+    HStoreFile errStoreFile = new MockHStoreFile(testUtil, errFile, 1, 0, false, 1);
     fileManager.addCompactionResults(
-        ImmutableList.of(errStoreFile), ImmutableList.<StoreFile>of());
+        ImmutableList.of(errStoreFile), ImmutableList.of());
 
     // cleanup compacted files
     cleaner.chore();
 
     // make sure the compacted files are cleared
-    Collection<StoreFile> compactedFilesPostClean = fileManager.getCompactedfiles();
+    Collection<HStoreFile> compactedFilesPostClean = fileManager.getCompactedfiles();
     assertEquals(1, compactedFilesPostClean.size());
-    for (StoreFile origFile : compactedFilesPreClean) {
+    for (HStoreFile origFile : compactedFilesPreClean) {
       assertFalse(compactedFilesPostClean.contains(origFile));
     }
 

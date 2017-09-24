@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.security.User;
 public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
   DateTieredCompactionPolicy, DateTieredCompactor, DefaultStoreFileManager> {
   @Override
-  public boolean needsCompaction(List<StoreFile> filesCompacting) {
+  public boolean needsCompaction(List<HStoreFile> filesCompacting) {
     return compactionPolicy.needsCompaction(storeFileManager.getStorefiles(),
       filesCompacting);
   }
@@ -54,7 +54,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
   }
 
   @Override
-  protected void createComponents(Configuration conf, Store store, CellComparator kvComparator)
+  protected void createComponents(Configuration conf, HStore store, CellComparator kvComparator)
       throws IOException {
     this.compactionPolicy = new DateTieredCompactionPolicy(conf, store);
     this.storeFileManager =
@@ -67,13 +67,13 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
   private final class DateTieredCompactionContext extends CompactionContext {
 
     @Override
-    public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
+    public List<HStoreFile> preSelect(List<HStoreFile> filesCompacting) {
       return compactionPolicy.preSelectCompactionForCoprocessor(storeFileManager.getStorefiles(),
         filesCompacting);
     }
 
     @Override
-    public boolean select(List<StoreFile> filesCompacting, boolean isUserCompaction,
+    public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
         boolean mayUseOffPeak, boolean forceMajor) throws IOException {
       request = compactionPolicy.selectCompaction(storeFileManager.getStorefiles(), filesCompacting,
         isUserCompaction, mayUseOffPeak, forceMajor);

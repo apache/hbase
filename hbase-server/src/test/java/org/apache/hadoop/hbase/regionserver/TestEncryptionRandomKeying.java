@@ -55,8 +55,8 @@ public class TestEncryptionRandomKeying {
     List<Path> paths = new ArrayList<>();
     for (Region region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {
-      for (Store store: region.getStores()) {
-        for (StoreFile storefile: store.getStorefiles()) {
+      for (HStore store : ((HRegion) region).getStores()) {
+        for (HStoreFile storefile : store.getStorefiles()) {
           paths.add(storefile.getPath());
         }
       }

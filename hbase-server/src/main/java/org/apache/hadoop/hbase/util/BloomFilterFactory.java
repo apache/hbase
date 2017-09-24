@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.io.DataInput;
@@ -26,17 +24,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterBase;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Handles Bloom filter initialization based on configuration and serialized
- * metadata in the reader and writer of {@link org.apache.hadoop.hbase.regionserver.StoreFile}.
+ * Handles Bloom filter initialization based on configuration and serialized metadata in the reader
+ * and writer of {@link org.apache.hadoop.hbase.regionserver.HStoreFile}.
  */
 @InterfaceAudience.Private
 public final class BloomFilterFactory {
@@ -155,7 +153,7 @@ public final class BloomFilterFactory {
 
   /**
    * Creates a new general (Row or RowCol) Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.StoreFile} writing.
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
    *
    * @param conf
    * @param cacheConf
@@ -203,7 +201,7 @@ public final class BloomFilterFactory {
 
   /**
    * Creates a new Delete Family Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.StoreFile} writing.
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
    * @param conf
    * @param cacheConf
    * @param maxKeys an estimate of the number of keys we expect to insert.

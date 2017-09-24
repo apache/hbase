@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
@@ -89,7 +88,7 @@ public class TestCompactionArchiveConcurrentClose {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(fam));
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
-    Region region = initHRegion(htd, info);
+    HRegion region = initHRegion(htd, info);
     RegionServerServices rss = mock(RegionServerServices.class);
     List<Region> regions = new ArrayList<>();
     regions.add(region);
@@ -112,12 +111,12 @@ public class TestCompactionArchiveConcurrentClose {
       region.flush(true);
     }
 
-    Store store = region.getStore(fam);
+    HStore store = region.getStore(fam);
     assertEquals(fileCount, store.getStorefilesCount());
 
-    Collection<StoreFile> storefiles = store.getStorefiles();
+    Collection<HStoreFile> storefiles = store.getStorefiles();
     // None of the files should be in compacted state.
-    for (StoreFile file : storefiles) {
+    for (HStoreFile file : storefiles) {
       assertFalse(file.isCompactedAway());
     }
     // Do compaction
@@ -157,7 +156,7 @@ public class TestCompactionArchiveConcurrentClose {
     }
   }
 
-  private Region initHRegion(HTableDescriptor htd, HRegionInfo info)
+  private HRegion initHRegion(HTableDescriptor htd, HRegionInfo info)
       throws IOException {
     Configuration conf = testUtil.getConfiguration();
     Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
@@ -185,7 +184,7 @@ public class TestCompactionArchiveConcurrentClose {
     }
 
     @Override
-    public void removeStoreFiles(String familyName, Collection<StoreFile> storeFiles)
+    public void removeStoreFiles(String familyName, Collection<HStoreFile> storeFiles)
         throws IOException {
       super.removeStoreFiles(familyName, storeFiles);
       archived.set(true);

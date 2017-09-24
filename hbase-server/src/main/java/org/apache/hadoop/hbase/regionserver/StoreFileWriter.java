@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -33,10 +38,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -48,6 +52,9 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.RowBloomContext;
 import org.apache.hadoop.hbase.util.RowColBloomContext;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 /**
  * A StoreFile writer.  Use this to read/write HBase Store Files. It is package
@@ -185,10 +192,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * @throws IOException problem writing to FS
    */
   public void appendMetadata(final long maxSequenceId, final boolean majorCompaction)
-  throws IOException {
-    writer.appendFileInfo(StoreFile.MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
-    writer.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY,
-        Bytes.toBytes(majorCompaction));
+      throws IOException {
+    writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
+    writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
     appendTrackedTimestampsToMetadata();
   }
 
@@ -202,9 +208,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    */
   public void appendMetadata(final long maxSequenceId, final boolean majorCompaction,
       final long mobCellsCount) throws IOException {
-    writer.appendFileInfo(StoreFile.MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
-    writer.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
-    writer.appendFileInfo(StoreFile.MOB_CELLS_COUNT, Bytes.toBytes(mobCellsCount));
+    writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
+    writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
+    writer.appendFileInfo(MOB_CELLS_COUNT, Bytes.toBytes(mobCellsCount));
     appendTrackedTimestampsToMetadata();
   }
 
@@ -212,8 +218,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * Add TimestampRange and earliest put timestamp to Metadata
    */
   public void appendTrackedTimestampsToMetadata() throws IOException {
-    appendFileInfo(StoreFile.TIMERANGE_KEY, WritableUtils.toByteArray(timeRangeTracker));
-    appendFileInfo(StoreFile.EARLIEST_PUT_TS, Bytes.toBytes(earliestPutTs));
+    appendFileInfo(TIMERANGE_KEY, WritableUtils.toByteArray(timeRangeTracker));
+    appendFileInfo(EARLIEST_PUT_TS, Bytes.toBytes(earliestPutTs));
   }
 
   /**
@@ -310,8 +316,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     // add the general Bloom filter writer and append file info
     if (hasGeneralBloom) {
       writer.addGeneralBloomFilter(generalBloomFilterWriter);
-      writer.appendFileInfo(StoreFile.BLOOM_FILTER_TYPE_KEY,
-          Bytes.toBytes(bloomType.toString()));
+      writer.appendFileInfo(BLOOM_FILTER_TYPE_KEY, Bytes.toBytes(bloomType.toString()));
       bloomContext.addLastBloomKey(writer);
     }
     return hasGeneralBloom;
@@ -327,8 +332,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
     // append file info about the number of delete family kvs
     // even if there is no delete family Bloom.
-    writer.appendFileInfo(StoreFile.DELETE_FAMILY_COUNT,
-        Bytes.toBytes(this.deleteFamilyCnt));
+    writer.appendFileInfo(DELETE_FAMILY_COUNT, Bytes.toBytes(this.deleteFamilyCnt));
 
     return hasDeleteFamilyBloom;
   }
@@ -501,7 +505,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       }
 
       // set block storage policy for temp path
-      String policyName = this.conf.get(HColumnDescriptor.STORAGE_POLICY);
+      String policyName = this.conf.get(ColumnFamilyDescriptorBuilder.STORAGE_POLICY);
       if (null == policyName) {
         policyName = this.conf.get(HStore.BLOCK_STORAGE_POLICY_KEY);
       }

@@ -16,11 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -40,5 +40,5 @@ public interface ChangedReadersObserver {
    * @param memStoreScanners scanner of current memstore
    * @throws IOException e
    */
-  void updateReaders(List<StoreFile> sfs, List<KeyValueScanner> memStoreScanners) throws IOException;
+  void updateReaders(List<HStoreFile> sfs, List<KeyValueScanner> memStoreScanners) throws IOException;
 }

@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
@@ -62,6 +61,7 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /*
  * The CompactionTool allows to execute a compaction specifying a:
@@ -165,11 +165,11 @@ public class CompactionTool extends Configured implements Tool {
         if (!compaction.isPresent()) {
           break;
         }
-        List<StoreFile> storeFiles =
+        List<HStoreFile> storeFiles =
             store.compact(compaction.get(), NoLimitThroughputController.INSTANCE);
         if (storeFiles != null && !storeFiles.isEmpty()) {
           if (keepCompactedFiles && deleteCompacted) {
-            for (StoreFile storeFile: storeFiles) {
+            for (HStoreFile storeFile: storeFiles) {
               fs.delete(storeFile.getPath(), false);
             }
           }

@@ -25,7 +25,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.commons.logging.Log;
@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -54,6 +53,7 @@ import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
@@ -482,20 +482,6 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Moves multiple store files to the relative region's family store directory.
-   * @param storeFiles list of store files divided by family
-   * @throws IOException
-   */
-  void commitStoreFiles(final Map<byte[], List<StoreFile>> storeFiles) throws IOException {
-    for (Map.Entry<byte[], List<StoreFile>> es: storeFiles.entrySet()) {
-      String familyName = Bytes.toString(es.getKey());
-      for (StoreFile sf: es.getValue()) {
-        commitStoreFile(familyName, sf.getPath());
-      }
-    }
-  }
-
-  /**
    * Archives the specified store file from the specified family.
    * @param familyName Family that contains the store files
    * @param filePath {@link Path} to the store file to remove
@@ -513,7 +499,7 @@ public class HRegionFileSystem {
    * @param storeFiles set of store files to remove
    * @throws IOException if the archiving fails
    */
-  public void removeStoreFiles(final String familyName, final Collection<StoreFile> storeFiles)
+  public void removeStoreFiles(String familyName, Collection<HStoreFile> storeFiles)
       throws IOException {
     HFileArchiver.archiveStoreFiles(this.conf, this.fs, this.regionInfoForFs,
         this.tableDir, Bytes.toBytes(familyName), storeFiles);
@@ -671,9 +657,8 @@ public class HRegionFileSystem {
    * @return Path to created reference.
    * @throws IOException
    */
-  public Path splitStoreFile(final HRegionInfo hri, final String familyName, final StoreFile f,
-      final byte[] splitRow, final boolean top, RegionSplitPolicy splitPolicy)
-          throws IOException {
+  public Path splitStoreFile(HRegionInfo hri, String familyName, HStoreFile f, byte[] splitRow,
+      boolean top, RegionSplitPolicy splitPolicy) throws IOException {
     if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
@@ -682,28 +667,28 @@ public class HRegionFileSystem {
         if (top) {
           //check if larger than last key.
           Cell splitKey = CellUtil.createFirstOnRow(splitRow);
-          Cell lastKey = f.getLastKey();
+          Optional<Cell> lastKey = f.getLastKey();
           // If lastKey is null means storefile is empty.
-          if (lastKey == null) {
+          if (!lastKey.isPresent()) {
             return null;
           }
-          if (f.getComparator().compare(splitKey, lastKey) > 0) {
+          if (f.getComparator().compare(splitKey, lastKey.get()) > 0) {
             return null;
           }
         } else {
           //check if smaller than first key
           Cell splitKey = CellUtil.createLastOnRow(splitRow);
-          Cell firstKey = f.getFirstKey();
+          Optional<Cell> firstKey = f.getFirstKey();
           // If firstKey is null means storefile is empty.
-          if (firstKey == null) {
+          if (!firstKey.isPresent()) {
             return null;
           }
-          if (f.getComparator().compare(splitKey, firstKey) < 0) {
+          if (f.getComparator().compare(splitKey, firstKey.get()) < 0) {
             return null;
           }
         }
       } finally {
-        f.closeReader(f.getCacheConf() != null ? f.getCacheConf().shouldEvictOnClose() : true);
+        f.closeStoreFile(f.getCacheConf() != null ? f.getCacheConf().shouldEvictOnClose() : true);
       }
     }
 
@@ -791,9 +776,8 @@ public class HRegionFileSystem {
    * @return Path to created reference.
    * @throws IOException
    */
-  public Path mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
-      final StoreFile f, final Path mergedDir)
-      throws IOException {
+  public Path mergeStoreFile(HRegionInfo mergedRegion, String familyName, HStoreFile f,
+      Path mergedDir) throws IOException {
     Path referenceDir = new Path(new Path(mergedDir,
         mergedRegion.getEncodedName()), familyName);
     // A whole reference to the store file.

@@ -19,14 +19,15 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
@@ -80,12 +81,12 @@ public abstract class RegionSplitPolicy extends Configured {
 
     byte[] splitPointFromLargestStore = null;
     long largestStoreSize = 0;
-    for (Store s : stores) {
-      byte[] splitPoint = s.getSplitPoint();
+    for (HStore s : stores) {
+      Optional<byte[]> splitPoint = s.getSplitPoint();
       // Store also returns null if it has references as way of indicating it is not splittable
       long storeSize = s.getSize();
-      if (splitPoint != null && largestStoreSize < storeSize) {
-        splitPointFromLargestStore = splitPoint;
+      if (splitPoint.isPresent() && largestStoreSize < storeSize) {
+        splitPointFromLargestStore = splitPoint.get();
         largestStoreSize = storeSize;
       }
     }
@@ -131,7 +132,7 @@ public abstract class RegionSplitPolicy extends Configured {
 
   /**
    * In {@link HRegionFileSystem#splitStoreFile(org.apache.hadoop.hbase.HRegionInfo, String,
-   * StoreFile, byte[], boolean, RegionSplitPolicy)} we are not creating the split reference
+   * HStoreFile, byte[], boolean, RegionSplitPolicy)} we are not creating the split reference
    * if split row not lies in the StoreFile range. But in some use cases we may need to create
    * the split reference even when the split row not lies in the range. This method can be used
    * to decide, whether to skip the the StoreFile range check or not.

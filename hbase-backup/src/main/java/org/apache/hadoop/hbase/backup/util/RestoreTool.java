@@ -440,8 +440,8 @@ public class RestoreTool {
           final byte[] first, last;
           try {
             reader.loadFileInfo();
-            first = reader.getFirstRowKey();
-            last = reader.getLastRowKey();
+            first = reader.getFirstRowKey().get();
+            last = reader.getLastRowKey().get();
             LOG.debug("Trying to figure out region boundaries hfile=" + hfile + " first="
                 + Bytes.toStringBinary(first) + " last=" + Bytes.toStringBinary(last));
 

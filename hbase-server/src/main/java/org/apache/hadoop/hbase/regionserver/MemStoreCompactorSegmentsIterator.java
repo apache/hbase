@@ -45,10 +45,8 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
   private StoreScanner compactingScanner;
 
   // C-tor
-  public MemStoreCompactorSegmentsIterator(
-      List<ImmutableSegment> segments,
-      CellComparator comparator, int compactionKVMax, Store store
-  ) throws IOException {
+  public MemStoreCompactorSegmentsIterator(List<ImmutableSegment> segments,
+      CellComparator comparator, int compactionKVMax, HStore store) throws IOException {
     super(compactionKVMax);
 
     List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
@@ -108,7 +106,7 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
    * Creates the scanner for compacting the pipeline.
    * @return the scanner
    */
-  private StoreScanner createScanner(Store store, List<KeyValueScanner> scanners)
+  private StoreScanner createScanner(HStore store, List<KeyValueScanner> scanners)
       throws IOException {
     // Get all available versions
     return new StoreScanner(store, store.getScanInfo(), OptionalInt.of(Integer.MAX_VALUE), scanners,

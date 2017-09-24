@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -102,7 +103,7 @@ public class StoreFileScanner implements KeyValueScanner {
   /**
    * Return an array of scanners corresponding to the given set of store files.
    */
-  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
+  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
       boolean cacheBlocks, boolean usePread, long readPt) throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, usePread, false, false, readPt);
   }
@@ -110,7 +111,7 @@ public class StoreFileScanner implements KeyValueScanner {
   /**
    * Return an array of scanners corresponding to the given set of store files.
    */
-  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
+  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
       boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean useDropBehind,
       long readPt) throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, useDropBehind, null,
@@ -121,7 +122,7 @@ public class StoreFileScanner implements KeyValueScanner {
    * Return an array of scanners corresponding to the given set of store files, And set the
    * ScanQueryMatcher for each store file scanner for further optimization
    */
-  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
+  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
       boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean canUseDrop,
       ScanQueryMatcher matcher, long readPt) throws IOException {
     if (files.isEmpty()) {
@@ -129,15 +130,15 @@ public class StoreFileScanner implements KeyValueScanner {
     }
     List<StoreFileScanner> scanners = new ArrayList<>(files.size());
     boolean canOptimizeForNonNullColumn = matcher != null ? !matcher.hasNullColumnInQuery() : false;
-    PriorityQueue<StoreFile> sortedFiles =
+    PriorityQueue<HStoreFile> sortedFiles =
         new PriorityQueue<>(files.size(), StoreFileComparators.SEQ_ID);
-    for (StoreFile file : files) {
+    for (HStoreFile file : files) {
       // The sort function needs metadata so we need to open reader first before sorting the list.
       file.initReader();
       sortedFiles.add(file);
     }
     for (int i = 0, n = files.size(); i < n; i++) {
-      StoreFile sf = sortedFiles.remove();
+      HStoreFile sf = sortedFiles.remove();
       StoreFileScanner scanner;
       if (usePread) {
         scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn);
@@ -154,10 +155,10 @@ public class StoreFileScanner implements KeyValueScanner {
    * Get scanners for compaction. We will create a separated reader for each store file to avoid
    * contention with normal read request.
    */
-  public static List<StoreFileScanner> getScannersForCompaction(Collection<StoreFile> files,
+  public static List<StoreFileScanner> getScannersForCompaction(Collection<HStoreFile> files,
       boolean canUseDropBehind, long readPt) throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<>(files.size());
-    List<StoreFile> sortedFiles = new ArrayList<>(files);
+    List<HStoreFile> sortedFiles = new ArrayList<>(files);
     Collections.sort(sortedFiles, StoreFileComparators.SEQ_ID);
     boolean succ = false;
     try {
@@ -537,12 +538,11 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public boolean seekToLastRow() throws IOException {
-    byte[] lastRow = reader.getLastRowKey();
-    if (lastRow == null) {
+    Optional<byte[]> lastRow = reader.getLastRowKey();
+    if (!lastRow.isPresent()) {
       return false;
     }
-    Cell seekKey = CellUtil
-        .createFirstOnRow(lastRow, 0, (short) lastRow.length);
+    Cell seekKey = CellUtil.createFirstOnRow(lastRow.get());
     if (seek(seekKey)) {
       return true;
     } else {

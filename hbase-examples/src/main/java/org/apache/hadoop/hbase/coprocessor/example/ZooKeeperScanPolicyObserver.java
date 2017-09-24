@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.zookeeper.KeeperException;
@@ -130,32 +129,32 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
 
     @Override
     public void process(WatchedEvent event) {
-      switch(event.getType()) {
-      case NodeDataChanged:
-      case NodeCreated:
-      try {
-        // get data and re-watch
-        data = zk.getData(node, this, null);
-        LOG.debug("Read asynchronously: "+(data == null ? "null" : Bytes.toLong(data)));
-      } catch (InterruptedException ix) {
-      } catch (KeeperException kx) {
-        needSetup = true;
-      }
-      break;
+      switch (event.getType()) {
+        case NodeDataChanged:
+        case NodeCreated:
+          try {
+            // get data and re-watch
+            data = zk.getData(node, this, null);
+            LOG.debug("Read asynchronously: " + (data == null ? "null" : Bytes.toLong(data)));
+          } catch (InterruptedException ix) {
+          } catch (KeeperException kx) {
+            needSetup = true;
+          }
+          break;
 
-      case NodeDeleted:
-      try {
-        // just re-watch
-        zk.exists(node, this);
-        data = null;
-      } catch (InterruptedException ix) {
-      } catch (KeeperException kx) {
-        needSetup = true;
-      }
-      break;
+        case NodeDeleted:
+          try {
+            // just re-watch
+            zk.exists(node, this);
+            data = null;
+          } catch (InterruptedException ix) {
+          } catch (KeeperException kx) {
+            needSetup = true;
+          }
+          break;
 
-      default:
-        // ignore
+        default:
+          // ignore
       }
     }
   }
@@ -166,15 +165,13 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
     if (!re.getSharedData().containsKey(zkkey)) {
       // there is a short race here
       // in the worst case we create a watcher that will be notified once
-      re.getSharedData().putIfAbsent(
-          zkkey,
-          new ZKWatcher(re.getRegionServerServices().getZooKeeper()
-              .getRecoverableZooKeeper().getZooKeeper()));
+      re.getSharedData().putIfAbsent(zkkey, new ZKWatcher(
+          re.getRegionServerServices().getZooKeeper().getRecoverableZooKeeper().getZooKeeper()));
     }
   }
 
   protected ScanInfo getScanInfo(Store store, RegionCoprocessorEnvironment e) {
-    byte[] data = ((ZKWatcher)e.getSharedData().get(zkkey)).getData();
+    byte[] data = ((ZKWatcher) e.getSharedData().get(zkkey)).getData();
     if (data == null) {
       return null;
     }
@@ -182,8 +179,7 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
     if (oldSI.getTtl() == Long.MAX_VALUE) {
       return null;
     }
-    long ttl = Math.max(EnvironmentEdgeManager.currentTime() -
-        Bytes.toLong(data), oldSI.getTtl());
+    long ttl = Math.max(EnvironmentEdgeManager.currentTime() - Bytes.toLong(data), oldSI.getTtl());
     return new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(), ttl,
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
   }
@@ -197,7 +193,7 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
       // take default action
       return null;
     }
-    return new StoreScanner(store, scanInfo, OptionalInt.empty(), scanners,
+    return new StoreScanner((HStore) store, scanInfo, OptionalInt.empty(), scanners,
         ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 
@@ -210,7 +206,7 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
       // take default action
       return null;
     }
-    return new StoreScanner(store, scanInfo, OptionalInt.empty(), scanners, scanType,
+    return new StoreScanner((HStore) store, scanInfo, OptionalInt.empty(), scanners, scanType,
         store.getSmallestReadPoint(), earliestPutTs);
   }
 
@@ -223,7 +219,7 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
       // take default action
       return null;
     }
-    return new StoreScanner(store, scanInfo, scan, targetCols,
-      ((HStore)store).getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED));
+    return new StoreScanner((HStore) store, scanInfo, scan, targetCols,
+        ((HStore) store).getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED));
   }
 }

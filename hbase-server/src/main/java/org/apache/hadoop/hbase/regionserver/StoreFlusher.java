@@ -29,10 +29,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Store flusher interface. Turns a snapshot of memstore into a set of store files (usually one).
@@ -41,9 +41,9 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 @InterfaceAudience.Private
 abstract class StoreFlusher {
   protected Configuration conf;
-  protected Store store;
+  protected HStore store;
 
-  public StoreFlusher(Configuration conf, Store store) {
+  public StoreFlusher(Configuration conf, HStore store) {
     this.conf = conf;
     this.store = store;
   }

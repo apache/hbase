@@ -28,8 +28,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
@@ -40,10 +38,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Interface for objects that hold a column family in a Region. Its a memstore and a set of zero or
@@ -63,9 +61,9 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   // General Accessors
   CellComparator getComparator();
 
-  Collection<StoreFile> getStorefiles();
+  Collection<? extends StoreFile> getStorefiles();
 
-  Collection<StoreFile> getCompactedFiles();
+  Collection<? extends StoreFile> getCompactedFiles();
 
   /**
    * Close all the readers We don't need to worry about subsequent requests because the Region
@@ -73,7 +71,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @return the {@link StoreFile StoreFiles} that were previously being used.
    * @throws IOException on failure
    */
-  Collection<StoreFile> close() throws IOException;
+  Collection<? extends StoreFile> close() throws IOException;
 
   /**
    * Return a scanner for both the memstore and the HStore files. Assumes we are not in a
@@ -86,105 +84,6 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   KeyValueScanner getScanner(Scan scan, final NavigableSet<byte[]> targetCols, long readPt)
       throws IOException;
 
-  /**
-   * Get all scanners with no filtering based on TTL (that happens further down the line).
-   * @param cacheBlocks cache the blocks or not
-   * @param usePread true to use pread, false if not
-   * @param isCompaction true if the scanner is created for compaction
-   * @param matcher the scan query matcher
-   * @param startRow the start row
-   * @param stopRow the stop row
-   * @param readPt the read point of the current scan
-   * @return all scanners for this store
-   */
-  default List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet, boolean usePread,
-      boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt)
-      throws IOException {
-    return getScanners(cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow, false,
-      readPt);
-  }
-
-  /**
-   * Get all scanners with no filtering based on TTL (that happens further down the line).
-   * @param cacheBlocks cache the blocks or not
-   * @param usePread true to use pread, false if not
-   * @param isCompaction true if the scanner is created for compaction
-   * @param matcher the scan query matcher
-   * @param startRow the start row
-   * @param includeStartRow true to include start row, false if not
-   * @param stopRow the stop row
-   * @param includeStopRow true to include stop row, false if not
-   * @param readPt the read point of the current scan
-   * @return all scanners for this store
-   */
-  List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread, boolean isCompaction,
-      ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow, byte[] stopRow,
-      boolean includeStopRow, long readPt) throws IOException;
-
-  /**
-   * Recreates the scanners on the current list of active store file scanners
-   * @param currentFileScanners the current set of active store file scanners
-   * @param cacheBlocks cache the blocks or not
-   * @param usePread use pread or not
-   * @param isCompaction is the scanner for compaction
-   * @param matcher the scan query matcher
-   * @param startRow the scan's start row
-   * @param includeStartRow should the scan include the start row
-   * @param stopRow the scan's stop row
-   * @param includeStopRow should the scan include the stop row
-   * @param readPt the read point of the current scane
-   * @param includeMemstoreScanner whether the current scanner should include memstorescanner
-   * @return list of scanners recreated on the current Scanners
-   * @throws IOException
-   */
-  List<KeyValueScanner> recreateScanners(List<KeyValueScanner> currentFileScanners,
-      boolean cacheBlocks, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
-      byte[] startRow, boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-      boolean includeMemstoreScanner) throws IOException;
-
-  /**
-   * Create scanners on the given files and if needed on the memstore with no filtering based on TTL
-   * (that happens further down the line).
-   * @param files the list of files on which the scanners has to be created
-   * @param cacheBlocks cache the blocks or not
-   * @param usePread true to use pread, false if not
-   * @param isCompaction true if the scanner is created for compaction
-   * @param matcher the scan query matcher
-   * @param startRow the start row
-   * @param stopRow the stop row
-   * @param readPt the read point of the current scan
-   * @param includeMemstoreScanner true if memstore has to be included
-   * @return scanners on the given files and on the memstore if specified
-   */
-  default List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks,
-      boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
-      byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner)
-      throws IOException {
-    return getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow,
-      false, readPt, includeMemstoreScanner);
-  }
-
-  /**
-   * Create scanners on the given files and if needed on the memstore with no filtering based on TTL
-   * (that happens further down the line).
-   * @param files the list of files on which the scanners has to be created
-   * @param cacheBlocks ache the blocks or not
-   * @param usePread true to use pread, false if not
-   * @param isCompaction true if the scanner is created for compaction
-   * @param matcher the scan query matcher
-   * @param startRow the start row
-   * @param includeStartRow true to include start row, false if not
-   * @param stopRow the stop row
-   * @param includeStopRow true to include stop row, false if not
-   * @param readPt the read point of the current scan
-   * @param includeMemstoreScanner true if memstore has to be included
-   * @return scanners on the given files and on the memstore if specified
-   */
-  List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks, boolean usePread,
-      boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow,
-      byte[] stopRow, boolean includeStopRow, long readPt, boolean includeMemstoreScanner)
-      throws IOException;
-
   ScanInfo getScanInfo();
 
   /**
@@ -193,7 +92,6 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   long timeOfOldestEdit();
 
   FileSystem getFileSystem();
-
 
   /**
    * @param maxKeyCount
@@ -269,10 +167,10 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @deprecated see compact(CompactionContext, ThroughputController, User)
    */
   @Deprecated
-  List<StoreFile> compact(CompactionContext compaction,
+  List<? extends StoreFile> compact(CompactionContext compaction,
       ThroughputController throughputController) throws IOException;
 
-  List<StoreFile> compact(CompactionContext compaction,
+  List<? extends StoreFile> compact(CompactionContext compaction,
     ThroughputController throughputController, User user) throws IOException;
 
   /**
@@ -297,10 +195,9 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   boolean canSplit();
 
   /**
-   * Determines if Store should be split
-   * @return byte[] if store should be split, null otherwise.
+   * Determines if Store should be split.
    */
-  byte[] getSplitPoint();
+  Optional<byte[]> getSplitPoint();
 
   // General accessors into the state of the store
   // TODO abstract some of this out into a metrics class

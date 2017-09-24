@@ -200,7 +200,7 @@ public class TestCompoundBloomFilter {
 
   private void readStoreFile(int t, BloomType bt, List<KeyValue> kvs,
       Path sfPath) throws IOException {
-    StoreFile sf = new HStoreFile(fs, sfPath, conf, cacheConf, bt, true);
+    HStoreFile sf = new HStoreFile(fs, sfPath, conf, cacheConf, bt, true);
     sf.initReader();
     StoreFileReader r = sf.getReader();
     final boolean pread = true; // does not really matter

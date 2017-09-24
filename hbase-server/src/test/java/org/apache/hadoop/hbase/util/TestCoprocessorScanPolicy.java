@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
@@ -58,10 +59,9 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -254,7 +254,7 @@ public class TestCoprocessorScanPolicy {
           family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(), family.isNewVersionBehavior());
-      return new StoreScanner(store, scanInfo,
+      return new StoreScanner((HStore) store, scanInfo,
           newVersions == null ? OptionalInt.empty() : OptionalInt.of(newVersions.intValue()),
           scanners, ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
           HConstants.OLDEST_TIMESTAMP);
@@ -274,7 +274,7 @@ public class TestCoprocessorScanPolicy {
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(),
           family.isNewVersionBehavior());
-      return new StoreScanner(store, scanInfo,
+      return new StoreScanner((HStore) store, scanInfo,
           newVersions == null ? OptionalInt.empty() : OptionalInt.of(newVersions.intValue()),
           scanners, scanType, store.getSmallestReadPoint(), earliestPutTs);
     }
@@ -292,8 +292,9 @@ public class TestCoprocessorScanPolicy {
         ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
             family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
             newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-            family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(), family.isNewVersionBehavior());
-        return new StoreScanner(store, scanInfo, scan, targetCols, readPt);
+            family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(),
+            family.isNewVersionBehavior());
+        return new StoreScanner((HStore) store, scanInfo, scan, targetCols, readPt);
       } else {
         return s;
       }

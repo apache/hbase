@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -858,13 +859,13 @@ public class HBaseFsck extends Configured implements Closeable {
                 new CacheConfig(getConf()), true, getConf());
               if ((reader.getFirstKey() != null)
                   && ((storeFirstKey == null) || (comparator.compare(storeFirstKey,
-                      ((KeyValue.KeyOnlyKeyValue) reader.getFirstKey()).getKey()) > 0))) {
-                storeFirstKey = ((KeyValue.KeyOnlyKeyValue)reader.getFirstKey()).getKey();
+                      ((KeyValue.KeyOnlyKeyValue) reader.getFirstKey().get()).getKey()) > 0))) {
+                storeFirstKey = ((KeyValue.KeyOnlyKeyValue)reader.getFirstKey().get()).getKey();
               }
               if ((reader.getLastKey() != null)
                   && ((storeLastKey == null) || (comparator.compare(storeLastKey,
-                      ((KeyValue.KeyOnlyKeyValue)reader.getLastKey()).getKey())) < 0)) {
-                storeLastKey = ((KeyValue.KeyOnlyKeyValue)reader.getLastKey()).getKey();
+                      ((KeyValue.KeyOnlyKeyValue)reader.getLastKey().get()).getKey())) < 0)) {
+                storeLastKey = ((KeyValue.KeyOnlyKeyValue)reader.getLastKey().get()).getKey();
               }
               reader.close();
             }
@@ -961,10 +962,10 @@ public class HBaseFsck extends Configured implements Closeable {
           CacheConfig cacheConf = new CacheConfig(getConf());
           hf = HFile.createReader(fs, hfile.getPath(), cacheConf, true, getConf());
           hf.loadFileInfo();
-          Cell startKv = hf.getFirstKey();
-          start = CellUtil.cloneRow(startKv);
-          Cell endKv = hf.getLastKey();
-          end = CellUtil.cloneRow(endKv);
+          Optional<Cell> startKv = hf.getFirstKey();
+          start = CellUtil.cloneRow(startKv.get());
+          Optional<Cell> endKv = hf.getLastKey();
+          end = CellUtil.cloneRow(endKv.get());
         } catch (IOException ioe) {
           LOG.warn("Problem reading orphan file " + hfile + ", skipping");
           continue;

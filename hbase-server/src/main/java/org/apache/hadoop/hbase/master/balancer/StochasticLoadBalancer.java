@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegi
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Optional;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
@@ -1241,7 +1242,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   /**
    * Compute a cost of a potential cluster configuration based upon where
-   * {@link org.apache.hadoop.hbase.regionserver.StoreFile}s are located.
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile}s are located.
    */
   static abstract class LocalityBasedCostFunction extends CostFunction {
 

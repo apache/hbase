@@ -15,26 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /** A mock used so our tests don't deal with actual StoreFiles */
-public class MockStoreFile extends HStoreFile {
+@InterfaceAudience.Private
+public class MockHStoreFile extends HStoreFile {
   long length = 0;
   boolean isRef = false;
   long ageInDisk;
@@ -48,7 +52,7 @@ public class MockStoreFile extends HStoreFile {
   long modificationTime;
   boolean compactedAway;
 
-  MockStoreFile(HBaseTestingUtility testUtil, Path testPath,
+  MockHStoreFile(HBaseTestingUtility testUtil, Path testPath,
       long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
     super(testUtil.getTestFileSystem(), testPath, testUtil.getConfiguration(),
         new CacheConfig(testUtil.getConfiguration()), BloomType.NONE, true);
@@ -184,29 +188,34 @@ public class MockStoreFile extends HStoreFile {
       }
 
       @Override
-      public Cell getLastKey() {
+      public Optional<Cell> getLastKey() {
         if (splitPoint != null) {
-          return CellUtil.createCell(Arrays.copyOf(splitPoint, splitPoint.length + 1));
+          return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+              .setType(KeyValue.Type.Put.getCode())
+              .setRow(Arrays.copyOf(splitPoint, splitPoint.length + 1)).build());
         } else {
-          return null;
+          return Optional.empty();
         }
       }
 
       @Override
-      public Cell midkey() throws IOException {
+      public Optional<Cell> midKey() throws IOException {
         if (splitPoint != null) {
-          return CellUtil.createCell(splitPoint);
+          return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+              .setType(KeyValue.Type.Put.getCode()).setRow(splitPoint).build());
         } else {
-          return null;
+          return Optional.empty();
         }
       }
 
       @Override
-      public Cell getFirstKey() {
+      public Optional<Cell> getFirstKey() {
         if (splitPoint != null) {
-          return CellUtil.createCell(Arrays.copyOf(splitPoint, splitPoint.length - 1));
+          return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+              .setType(KeyValue.Type.Put.getCode()).setRow(splitPoint, 0, splitPoint.length - 1)
+              .build());
         } else {
-          return null;
+          return Optional.empty();
         }
       }
     };

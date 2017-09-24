@@ -25,14 +25,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 public class DefaultCompactor extends Compactor<StoreFileWriter> {
   private static final Log LOG = LogFactory.getLog(DefaultCompactor.class);
 
-  public DefaultCompactor(final Configuration conf, final Store store) {
+  public DefaultCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 
@@ -76,7 +76,7 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
    *         made it through the compaction.
    * @throws IOException
    */
-  public List<Path> compactForTesting(final Collection<StoreFile> filesToCompact, boolean isMajor)
+  public List<Path> compactForTesting(Collection<HStoreFile> filesToCompact, boolean isMajor)
       throws IOException {
     CompactionRequest cr = new CompactionRequest(filesToCompact);
     cr.setIsMajor(isMajor, isMajor);

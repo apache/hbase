@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -33,19 +36,17 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.io.Closeables;
 
@@ -70,7 +72,7 @@ public abstract class Compactor<T extends CellSink> {
   protected static final long COMPACTION_PROGRESS_LOG_INTERVAL = 60 * 1000;
   protected volatile CompactionProgress progress;
   protected final Configuration conf;
-  protected final Store store;
+  protected final HStore store;
 
   protected final int compactionKVMax;
   protected final Compression.Algorithm compactionCompression;
@@ -88,7 +90,7 @@ public abstract class Compactor<T extends CellSink> {
   private boolean dropCacheMinor;
 
   //TODO: depending on Store is not good but, realistically, all compactors currently do.
-  Compactor(final Configuration conf, final Store store) {
+  Compactor(Configuration conf, HStore store) {
     this.conf = conf;
     this.store = store;
     this.compactionKVMax =
@@ -137,12 +139,12 @@ public abstract class Compactor<T extends CellSink> {
    * @return The result.
    */
   protected FileDetails getFileDetails(
-      Collection<StoreFile> filesToCompact, boolean allFiles) throws IOException {
+      Collection<HStoreFile> filesToCompact, boolean allFiles) throws IOException {
     FileDetails fd = new FileDetails();
     long oldestHFileTimeStampToKeepMVCC = System.currentTimeMillis() - 
       (1000L * 60 * 60 * 24 * this.keepSeqIdPeriod);  
 
-    for (StoreFile file : filesToCompact) {
+    for (HStoreFile file : filesToCompact) {
       if(allFiles && (file.getModificationTimeStamp() < oldestHFileTimeStampToKeepMVCC)) {
         // when isAllFiles is true, all files are compacted so we can calculate the smallest 
         // MVCC value to keep
@@ -184,7 +186,7 @@ public abstract class Compactor<T extends CellSink> {
       // This is used to remove family delete marker during compaction.
       long earliestPutTs = 0;
       if (allFiles) {
-        tmp = fileInfo.get(StoreFile.EARLIEST_PUT_TS);
+        tmp = fileInfo.get(EARLIEST_PUT_TS);
         if (tmp == null) {
           // There's a file with no information, must be an old one
           // assume we have very old puts
@@ -194,7 +196,7 @@ public abstract class Compactor<T extends CellSink> {
           fd.earliestPutTs = Math.min(fd.earliestPutTs, earliestPutTs);
         }
       }
-      tmp = fileInfo.get(StoreFile.TIMERANGE_KEY);
+      tmp = fileInfo.get(TIMERANGE_KEY);
       TimeRangeTracker trt = TimeRangeTracker.getTimeRangeTracker(tmp);
       fd.latestPutTs = trt == null? HConstants.LATEST_TIMESTAMP: trt.getMax();
       if (LOG.isDebugEnabled()) {
@@ -215,7 +217,7 @@ public abstract class Compactor<T extends CellSink> {
    * @param filesToCompact Files.
    * @return Scanners.
    */
-  protected List<StoreFileScanner> createFileScanners(Collection<StoreFile> filesToCompact,
+  protected List<StoreFileScanner> createFileScanners(Collection<HStoreFile> filesToCompact,
       long smallestReadPoint, boolean useDropBehind) throws IOException {
     return StoreFileScanner.getScannersForCompaction(filesToCompact, useDropBehind,
       smallestReadPoint);
@@ -498,7 +500,7 @@ public abstract class Compactor<T extends CellSink> {
    * @param earliestPutTs Earliest put across all files.
    * @return A compaction scanner.
    */
-  protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
+  protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
       ScanType scanType, long smallestReadPoint, long earliestPutTs) throws IOException {
     return new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), scanners, scanType,
         smallestReadPoint, earliestPutTs);
@@ -513,7 +515,7 @@ public abstract class Compactor<T extends CellSink> {
    * @param dropDeletesToRow Drop deletes ending with this row, exclusive. Can be null.
    * @return A compaction scanner.
    */
-  protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
+  protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
       long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
       byte[] dropDeletesToRow) throws IOException {
     return new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), scanners,
