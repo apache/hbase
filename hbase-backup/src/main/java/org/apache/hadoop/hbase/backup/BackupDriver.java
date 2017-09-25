@@ -31,6 +31,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_DESC;
 
 import java.io.IOException;
 import java.net.URI;
@@ -154,6 +156,8 @@ public class BackupDriver extends AbstractHBaseTool {
     addOptWithArg(OPTION_RECORD_NUMBER, OPTION_RECORD_NUMBER_DESC);
     addOptWithArg(OPTION_SET, OPTION_SET_DESC);
     addOptWithArg(OPTION_PATH, OPTION_PATH_DESC);
+    addOptWithArg(OPTION_YARN_QUEUE_NAME, OPTION_YARN_QUEUE_NAME_DESC);
+    
   }
 
   @Override
