@@ -63,7 +63,7 @@ public class TestReplicationBase {
   protected static ZooKeeperWatcher zkw2;
 
   protected static ReplicationAdmin admin;
-  private static Admin hbaseAdmin;
+  protected static Admin hbaseAdmin;
 
   protected static Table htable1;
   protected static Table htable2;
