@@ -45,9 +45,6 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,8 +52,16 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
@@ -472,7 +477,7 @@ public class TestRegionReplicas {
       // should be able to deal with it giving us all the result we expect.
       int keys = 0;
       int sum = 0;
-      for (StoreFile sf: secondaryRegion.getStore(f).getStorefiles()) {
+      for (HStoreFile sf : ((HStore) secondaryRegion.getStore(f)).getStorefiles()) {
         // Our file does not exist anymore. was moved by the compaction above.
         LOG.debug(getRS().getFileSystem().exists(sf.getPath()));
         Assert.assertFalse(getRS().getFileSystem().exists(sf.getPath()));

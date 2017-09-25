@@ -43,9 +43,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -56,10 +56,10 @@ import org.mockito.stubbing.Answer;
 
 public class TestCompactor {
 
-  public static StoreFile createDummyStoreFile(long maxSequenceId) throws Exception {
+  public static HStoreFile createDummyStoreFile(long maxSequenceId) throws Exception {
     // "Files" are totally unused, it's Scanner class below that gives compactor fake KVs.
     // But compaction depends on everything under the sun, so stub everything with dummies.
-    StoreFile sf = mock(StoreFile.class);
+    HStoreFile sf = mock(HStoreFile.class);
     StoreFileReader r = mock(StoreFileReader.class);
     when(r.length()).thenReturn(1L);
     when(r.getBloomFilterType()).thenReturn(BloomType.NONE);

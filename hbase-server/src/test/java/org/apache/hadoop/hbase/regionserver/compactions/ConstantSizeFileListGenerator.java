@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 /**
  * Class to generate several lists of StoreFiles that are all the same size.
@@ -37,8 +36,8 @@ class ConstantSizeFileListGenerator extends StoreFileListGenerator {
   }
 
   @Override
-  public final Iterator<List<StoreFile>> iterator() {
-    return new Iterator<List<StoreFile>>() {
+  public final Iterator<List<HStoreFile>> iterator() {
+    return new Iterator<List<HStoreFile>>() {
       private int count = 0;
 
       @Override
@@ -47,9 +46,9 @@ class ConstantSizeFileListGenerator extends StoreFileListGenerator {
       }
 
       @Override
-      public List<StoreFile> next() {
+      public List<HStoreFile> next() {
         count += 1;
-        ArrayList<StoreFile> files = new ArrayList<>(NUM_FILES_GEN);
+        ArrayList<HStoreFile> files = new ArrayList<>(NUM_FILES_GEN);
         for (int i = 0; i < NUM_FILES_GEN; i++) {
           files.add(createMockStoreFile(FILESIZE));
         }

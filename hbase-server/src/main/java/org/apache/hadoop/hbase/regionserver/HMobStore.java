@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -59,6 +58,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The store implementation to save MOBs (medium objects), it extends the HStore.
@@ -166,7 +166,7 @@ public class HMobStore extends HStore {
    * Creates the mob store engine.
    */
   @Override
-  protected StoreEngine<?, ?, ?, ?> createStoreEngine(Store store, Configuration conf,
+  protected StoreEngine<?, ?, ?, ?> createStoreEngine(HStore store, Configuration conf,
       CellComparator cellComparator) throws IOException {
     MobStoreEngine engine = new MobStoreEngine();
     engine.createComponents(conf, store, cellComparator);
@@ -291,7 +291,7 @@ public class HMobStore extends HStore {
    * @param path the path to the mob file
    */
   private void validateMobFile(Path path) throws IOException {
-    StoreFile storeFile = null;
+    HStoreFile storeFile = null;
     try {
       storeFile = new HStoreFile(region.getFilesystem(), path, conf, this.mobCacheConfig,
           BloomType.NONE, isPrimaryReplicaStore());
@@ -301,7 +301,7 @@ public class HMobStore extends HStore {
       throw e;
     } finally {
       if (storeFile != null) {
-        storeFile.closeReader(false);
+        storeFile.closeStoreFile(false);
       }
     }
   }

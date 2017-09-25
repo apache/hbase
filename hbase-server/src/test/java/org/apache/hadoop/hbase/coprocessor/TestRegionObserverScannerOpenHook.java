@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -116,7 +115,7 @@ public class TestRegionObserverScannerOpenHook {
         Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt)
         throws IOException {
       scan.setFilter(new NoDataFilter());
-      return new StoreScanner(store, store.getScanInfo(), scan, targetCols, readPt);
+      return new StoreScanner((HStore) store, store.getScanInfo(), scan, targetCols, readPt);
     }
   }
 

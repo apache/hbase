@@ -25,13 +25,14 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -246,7 +247,7 @@ public class TestRegionSplitPolicy {
     HStore mockStore = Mockito.mock(HStore.class);
     Mockito.doReturn(2000L).when(mockStore).getSize();
     Mockito.doReturn(true).when(mockStore).canSplit();
-    Mockito.doReturn(Bytes.toBytes("abcd")).when(mockStore).getSplitPoint();
+    Mockito.doReturn(Optional.of(Bytes.toBytes("abcd"))).when(mockStore).getSplitPoint();
     stores.add(mockStore);
 
     KeyPrefixRegionSplitPolicy policy = (KeyPrefixRegionSplitPolicy) RegionSplitPolicy
@@ -322,8 +323,7 @@ public class TestRegionSplitPolicy {
     HStore mockStore = Mockito.mock(HStore.class);
     Mockito.doReturn(2000L).when(mockStore).getSize();
     Mockito.doReturn(true).when(mockStore).canSplit();
-    Mockito.doReturn(Bytes.toBytes("store 1 split"))
-      .when(mockStore).getSplitPoint();
+    Mockito.doReturn(Optional.of(Bytes.toBytes("store 1 split"))).when(mockStore).getSplitPoint();
     stores.add(mockStore);
 
     assertEquals("store 1 split",
@@ -333,8 +333,7 @@ public class TestRegionSplitPolicy {
     HStore mockStore2 = Mockito.mock(HStore.class);
     Mockito.doReturn(4000L).when(mockStore2).getSize();
     Mockito.doReturn(true).when(mockStore2).canSplit();
-    Mockito.doReturn(Bytes.toBytes("store 2 split"))
-      .when(mockStore2).getSplitPoint();
+    Mockito.doReturn(Optional.of(Bytes.toBytes("store 2 split"))).when(mockStore2).getSplitPoint();
     stores.add(mockStore2);
 
     assertEquals("store 2 split",
@@ -355,7 +354,7 @@ public class TestRegionSplitPolicy {
     HStore mockStore = Mockito.mock(HStore.class);
     Mockito.doReturn(2000L).when(mockStore).getSize();
     Mockito.doReturn(true).when(mockStore).canSplit();
-    Mockito.doReturn(Bytes.toBytes("ab,cd")).when(mockStore).getSplitPoint();
+    Mockito.doReturn(Optional.of(Bytes.toBytes("ab,cd"))).when(mockStore).getSplitPoint();
     stores.add(mockStore);
 
     DelimitedKeyPrefixRegionSplitPolicy policy = (DelimitedKeyPrefixRegionSplitPolicy) RegionSplitPolicy

@@ -49,12 +49,10 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -68,6 +66,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 
 /**
  * Class to test HBaseAdmin.
@@ -1320,8 +1321,8 @@ public class TestAdmin1 {
 
       List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(tableName);
       for (HRegion r : regions) {
-        Store store = r.getStore(Bytes.toBytes(fn));
-        for (StoreFile sf : store.getStorefiles()) {
+        HStore store = r.getStore(Bytes.toBytes(fn));
+        for (HStoreFile sf : store.getStorefiles()) {
           assertTrue(sf.toString().contains(fn));
           assertTrue("Column family " + fn + " should have 3 copies",
             FSUtils.getDefaultReplication(TEST_UTIL.getTestFileSystem(), sf.getPath()) == (sf
@@ -1329,7 +1330,7 @@ public class TestAdmin1 {
         }
 
         store = r.getStore(Bytes.toBytes(fn1));
-        for (StoreFile sf : store.getStorefiles()) {
+        for (HStoreFile sf : store.getStorefiles()) {
           assertTrue(sf.toString().contains(fn1));
           assertTrue("Column family " + fn1 + " should have only 1 copy", 1 == sf.getFileInfo()
               .getFileStatus().getReplication());

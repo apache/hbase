@@ -176,11 +176,9 @@ public class TestHStoreFile extends HBaseTestCase {
     // Split on a row, not in middle of row.  Midkey returned by reader
     // may be in middle of row.  Create new one with empty column and
     // timestamp.
-    Cell kv = reader.midkey();
-    byte [] midRow = CellUtil.cloneRow(kv);
-    kv = reader.getLastKey();
-    byte [] finalRow = CellUtil.cloneRow(kv);
-    hsf.closeReader(true);
+    byte [] midRow = CellUtil.cloneRow(reader.midKey().get());
+    byte [] finalRow = CellUtil.cloneRow(reader.getLastKey().get());
+    hsf.closeStoreFile(true);
 
     // Make a reference
     HRegionInfo splitHri = new HRegionInfo(hri.getTable(), null, midRow);
@@ -190,7 +188,8 @@ public class TestHStoreFile extends HBaseTestCase {
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
     HFileScanner s = refHsf.getReader().getScanner(false, false);
-    for(boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
+    Cell kv = null;
+    for (boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
       ByteBuffer bb = ByteBuffer.wrap(((KeyValue) s.getKey()).getKey());
       kv = KeyValueUtil.createKeyValueFromKey(bb);
       if (first) {
@@ -301,7 +300,7 @@ public class TestHStoreFile extends HBaseTestCase {
     f.initReader();
     Path pathA = splitStoreFile(cloneRegionFs, splitHriA, TEST_FAMILY, f, SPLITKEY, true); // top
     Path pathB = splitStoreFile(cloneRegionFs, splitHriB, TEST_FAMILY, f, SPLITKEY, false);// bottom
-    f.closeReader(true);
+    f.closeStoreFile(true);
     // OK test the thing
     FSUtils.logFileSystemState(fs, testDir, LOG);
 
@@ -342,7 +341,7 @@ public class TestHStoreFile extends HBaseTestCase {
   private void checkHalfHFile(final HRegionFileSystem regionFs, final HStoreFile f)
       throws IOException {
     f.initReader();
-    Cell midkey = f.getReader().midkey();
+    Cell midkey = f.getReader().midKey().get();
     KeyValue midKV = (KeyValue)midkey;
     byte [] midRow = CellUtil.cloneRow(midKV);
     // Create top split.

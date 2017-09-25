@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -51,6 +49,7 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.UserScanQueryMatcher;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
@@ -67,7 +66,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
   private static final Log LOG = LogFactory.getLog(StoreScanner.class);
   // In unit tests, the store could be null
-  protected final Optional<Store> store;
+  protected final Optional<HStore> store;
   private ScanQueryMatcher matcher;
   protected KeyValueHeap heap;
   private boolean cacheBlocks;
@@ -147,7 +146,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // Indicates whether there was flush during the course of the scan
   private volatile boolean flushed = false;
   // generally we get one file from a flush
-  private final List<StoreFile> flushedStoreFiles = new ArrayList<>(1);
+  private final List<HStoreFile> flushedStoreFiles = new ArrayList<>(1);
   // Since CompactingMemstore is now default, we get three memstore scanners from a flush
   private final List<KeyValueScanner> memStoreScannersAfterFlush = new ArrayList<>(3);
   // The current list of scanners
@@ -160,7 +159,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private boolean topChanged = false;
 
   /** An internal constructor. */
-  private StoreScanner(Optional<Store> store, Scan scan, ScanInfo scanInfo,
+  private StoreScanner(Optional<HStore> store, Scan scan, ScanInfo scanInfo,
       int numColumns, long readPt, boolean cacheBlocks, ScanType scanType) {
     this.readPt = readPt;
     this.store = store;
@@ -223,7 +222,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param columns which columns we are scanning
    * @throws IOException
    */
-  public StoreScanner(Store store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
+  public StoreScanner(HStore store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
       long readPt) throws IOException {
     this(Optional.of(store), scan, scanInfo, columns != null ? columns.size() : 0, readPt,
         scan.getCacheBlocks(), ScanType.USER_SCAN);
@@ -275,7 +274,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param scanners ancillary scanners
    * @param smallestReadPoint the readPoint that we should use for tracking versions
    */
-  public StoreScanner(Store store, ScanInfo scanInfo, OptionalInt maxVersions,
+  public StoreScanner(HStore store, ScanInfo scanInfo, OptionalInt maxVersions,
       List<? extends KeyValueScanner> scanners, ScanType scanType, long smallestReadPoint,
       long earliestPutTs) throws IOException {
     this(store, scanInfo, maxVersions, scanners, scanType, smallestReadPoint, earliestPutTs, null,
@@ -292,20 +291,20 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param dropDeletesFromRow The inclusive left bound of the range; can be EMPTY_START_ROW.
    * @param dropDeletesToRow The exclusive right bound of the range; can be EMPTY_END_ROW.
    */
-  public StoreScanner(Store store, ScanInfo scanInfo, OptionalInt maxVersions,
+  public StoreScanner(HStore store, ScanInfo scanInfo, OptionalInt maxVersions,
       List<? extends KeyValueScanner> scanners, long smallestReadPoint, long earliestPutTs,
       byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
     this(store, scanInfo, maxVersions, scanners, ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint,
         earliestPutTs, dropDeletesFromRow, dropDeletesToRow);
   }
 
-  private StoreScanner(Store store, ScanInfo scanInfo, OptionalInt maxVersions,
+  private StoreScanner(HStore store, ScanInfo scanInfo, OptionalInt maxVersions,
       List<? extends KeyValueScanner> scanners, ScanType scanType, long smallestReadPoint,
       long earliestPutTs, byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
     this(Optional.of(store),
         maxVersions.isPresent() ? new Scan().readVersions(maxVersions.getAsInt())
             : SCAN_FOR_COMPACTION,
-        scanInfo, 0, ((HStore) store).getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED),
+        scanInfo, 0, store.getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED),
         false, scanType);
     assert scanType != ScanType.USER_SCAN;
     matcher =
@@ -844,9 +843,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   // Implementation of ChangedReadersObserver
   @Override
-  public void updateReaders(List<StoreFile> sfs, List<KeyValueScanner> memStoreScanners) throws IOException {
-    if (CollectionUtils.isEmpty(sfs)
-      && CollectionUtils.isEmpty(memStoreScanners)) {
+  public void updateReaders(List<HStoreFile> sfs, List<KeyValueScanner> memStoreScanners)
+      throws IOException {
+    if (CollectionUtils.isEmpty(sfs) && CollectionUtils.isEmpty(memStoreScanners)) {
       return;
     }
     flushLock.lock();
@@ -868,7 +867,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    */
   protected final boolean reopenAfterFlush() throws IOException {
     // here we can make sure that we have a Store instance.
-    Store store = this.store.get();
+    HStore store = this.store.get();
     Cell lastTop = heap.peek();
     // When we have the scan object, should we not pass it to getScanners() to get a limited set of
     // scanners? We did so in the constructor and we could have done it now by storing the scan
@@ -996,7 +995,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     List<KeyValueScanner> newCurrentScanners;
     KeyValueHeap newHeap;
     // We must have a store instance here
-    Store store = this.store.get();
+    HStore store = this.store.get();
     try {
       // recreate the scanners on the current file scanners
       fileScanners = store.recreateScanners(scannersToClose, cacheBlocks, false, false,

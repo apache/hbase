@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -86,7 +88,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -98,7 +99,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.util.Progressable;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -106,13 +106,16 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+
 /**
  * Test class for the Store
  */
-@Category({RegionServerTests.class, MediumTests.class})
-public class TestStore {
-  private static final Log LOG = LogFactory.getLog(TestStore.class);
-  @Rule public TestName name = new TestName();
+@Category({ RegionServerTests.class, MediumTests.class })
+public class TestHStore {
+  private static final Log LOG = LogFactory.getLog(TestHStore.class);
+  @Rule
+  public TestName name = new TestName();
 
   HStore store;
   byte [] table = Bytes.toBytes("table");
@@ -161,8 +164,7 @@ public class TestStore {
     init(methodName, TEST_UTIL.getConfiguration());
   }
 
-  private Store init(String methodName, Configuration conf)
-  throws IOException {
+  private Store init(String methodName, Configuration conf) throws IOException {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     // some of the tests write 4 versions and then flush
     // (with HBASE-4241, lower versions are collected on flush)
@@ -170,24 +172,24 @@ public class TestStore {
     return init(methodName, conf, hcd);
   }
 
-  private Store init(String methodName, Configuration conf,
-      HColumnDescriptor hcd) throws IOException {
+  private HStore init(String methodName, Configuration conf, HColumnDescriptor hcd)
+      throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
     return init(methodName, conf, htd, hcd);
   }
 
-  private Store init(String methodName, Configuration conf, HTableDescriptor htd,
+  private HStore init(String methodName, Configuration conf, HTableDescriptor htd,
       HColumnDescriptor hcd) throws IOException {
     return init(methodName, conf, htd, hcd, null);
   }
 
   @SuppressWarnings("deprecation")
-  private Store init(String methodName, Configuration conf, HTableDescriptor htd,
+  private HStore init(String methodName, Configuration conf, HTableDescriptor htd,
       HColumnDescriptor hcd, MyStoreHook hook) throws IOException {
     return init(methodName, conf, htd, hcd, hook, false);
   }
   @SuppressWarnings("deprecation")
-  private Store init(String methodName, Configuration conf, HTableDescriptor htd,
+  private HStore init(String methodName, Configuration conf, HTableDescriptor htd,
       HColumnDescriptor hcd, MyStoreHook hook, boolean switchToPread) throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
@@ -240,39 +242,39 @@ public class TestStore {
       public Object run() throws Exception {
         // Make sure it worked (above is sensitive to caching details in hadoop core)
         FileSystem fs = FileSystem.get(conf);
-        Assert.assertEquals(FaultyFileSystem.class, fs.getClass());
+        assertEquals(FaultyFileSystem.class, fs.getClass());
         FaultyFileSystem ffs = (FaultyFileSystem)fs;
 
         // Initialize region
         init(name.getMethodName(), conf);
 
         MemstoreSize size = store.memstore.getFlushableSize();
-        Assert.assertEquals(0, size.getDataSize());
+        assertEquals(0, size.getDataSize());
         LOG.info("Adding some data");
         MemstoreSize kvSize = new MemstoreSize();
         store.add(new KeyValue(row, family, qf1, 1, (byte[])null), kvSize);
         size = store.memstore.getFlushableSize();
-        Assert.assertEquals(kvSize, size);
+        assertEquals(kvSize, size);
         // Flush.  Bug #1 from HBASE-10466.  Make sure size calculation on failed flush is right.
         try {
           LOG.info("Flushing");
           flushStore(store, id++);
-          Assert.fail("Didn't bubble up IOE!");
+          fail("Didn't bubble up IOE!");
         } catch (IOException ioe) {
-          Assert.assertTrue(ioe.getMessage().contains("Fault injected"));
+          assertTrue(ioe.getMessage().contains("Fault injected"));
         }
         size = store.memstore.getFlushableSize();
-        Assert.assertEquals(kvSize, size);
+        assertEquals(kvSize, size);
         MemstoreSize kvSize2 = new MemstoreSize();
         store.add(new KeyValue(row, family, qf2, 2, (byte[])null), kvSize2);
         // Even though we add a new kv, we expect the flushable size to be 'same' since we have
         // not yet cleared the snapshot -- the above flush failed.
-        Assert.assertEquals(kvSize, size);
+        assertEquals(kvSize, size);
         ffs.fault.set(false);
         flushStore(store, id++);
         size = store.memstore.getFlushableSize();
         // Size should be the foreground kv size.
-        Assert.assertEquals(kvSize2, size);
+        assertEquals(kvSize2, size);
         flushStore(store, id++);
         size = store.memstore.getFlushableSize();
         assertEquals(0, size.getDataSize());
@@ -307,8 +309,8 @@ public class TestStore {
 
     // Verify that compression and encoding settings are respected
     HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), true, conf);
-    Assert.assertEquals(hcd.getCompressionType(), reader.getCompressionAlgorithm());
-    Assert.assertEquals(hcd.getDataBlockEncoding(), reader.getDataBlockEncoding());
+    assertEquals(hcd.getCompressionType(), reader.getCompressionAlgorithm());
+    assertEquals(hcd.getDataBlockEncoding(), reader.getDataBlockEncoding());
     reader.close();
   }
 
@@ -354,19 +356,19 @@ public class TestStore {
     }
 
     // Verify the total number of store files
-    Assert.assertEquals(storeFileNum, this.store.getStorefiles().size());
+    assertEquals(storeFileNum, this.store.getStorefiles().size());
 
      // Each call will find one expired store file and delete it before compaction happens.
      // There will be no compaction due to threshold above. Last file will not be replaced.
     for (int i = 1; i <= storeFileNum - 1; i++) {
       // verify the expired store file.
       assertFalse(this.store.requestCompaction().isPresent());
-      Collection<StoreFile> sfs = this.store.getStorefiles();
+      Collection<HStoreFile> sfs = this.store.getStorefiles();
       // Ensure i files are gone.
       if (minVersions == 0) {
         assertEquals(storeFileNum - i, sfs.size());
         // Ensure only non-expired files remain.
-        for (StoreFile sf : sfs) {
+        for (HStoreFile sf : sfs) {
           assertTrue(sf.getReader().getMaxTimestamp() >= (edge.currentTime() - storeTtl));
         }
       } else {
@@ -377,7 +379,7 @@ public class TestStore {
     }
     assertFalse(this.store.requestCompaction().isPresent());
 
-    Collection<StoreFile> sfs = this.store.getStorefiles();
+    Collection<HStoreFile> sfs = this.store.getStorefiles();
     // Assert the last expired file is not removed.
     if (minVersions == 0) {
       assertEquals(1, sfs.size());
@@ -385,8 +387,8 @@ public class TestStore {
     long ts = sfs.iterator().next().getReader().getMaxTimestamp();
     assertTrue(ts < (edge.currentTime() - storeTtl));
 
-    for (StoreFile sf : sfs) {
-      sf.closeReader(true);
+    for (HStoreFile sf : sfs) {
+      sf.closeStoreFile(true);
     }
   }
 
@@ -408,24 +410,24 @@ public class TestStore {
     // after flush; check the lowest time stamp
     long lowestTimeStampFromManager = StoreUtils.getLowestTimestamp(store.getStorefiles());
     long lowestTimeStampFromFS = getLowestTimeStampFromFS(fs, store.getStorefiles());
-    Assert.assertEquals(lowestTimeStampFromManager,lowestTimeStampFromFS);
+    assertEquals(lowestTimeStampFromManager,lowestTimeStampFromFS);
 
     // after compact; check the lowest time stamp
     store.compact(store.requestCompaction().get(), NoLimitThroughputController.INSTANCE, null);
     lowestTimeStampFromManager = StoreUtils.getLowestTimestamp(store.getStorefiles());
     lowestTimeStampFromFS = getLowestTimeStampFromFS(fs, store.getStorefiles());
-    Assert.assertEquals(lowestTimeStampFromManager, lowestTimeStampFromFS);
+    assertEquals(lowestTimeStampFromManager, lowestTimeStampFromFS);
   }
 
   private static long getLowestTimeStampFromFS(FileSystem fs,
-      final Collection<StoreFile> candidates) throws IOException {
+      final Collection<HStoreFile> candidates) throws IOException {
     long minTs = Long.MAX_VALUE;
     if (candidates.isEmpty()) {
       return minTs;
     }
     Path[] p = new Path[candidates.size()];
     int i = 0;
-    for (StoreFile sf : candidates) {
+    for (HStoreFile sf : candidates) {
       p[i] = sf.getPath();
       ++i;
     }
@@ -458,7 +460,7 @@ public class TestStore {
     flush(1);
     // Now put in place an empty store file.  Its a little tricky.  Have to
     // do manually with hacked in sequence id.
-    StoreFile f = this.store.getStorefiles().iterator().next();
+    HStoreFile f = this.store.getStorefiles().iterator().next();
     Path storedir = f.getPath().getParent();
     long seqid = f.getMaxSequenceId();
     Configuration c = HBaseConfiguration.create();
@@ -474,12 +476,12 @@ public class TestStore {
     this.store.close();
     // Reopen it... should pick up two files
     this.store = new HStore(this.store.getHRegion(), this.store.getColumnFamilyDescriptor(), c);
-    Assert.assertEquals(2, this.store.getStorefilesCount());
+    assertEquals(2, this.store.getStorefilesCount());
 
     result = HBaseTestingUtility.getFromStoreFile(store,
         get.getRow(),
         qualifiers);
-    Assert.assertEquals(1, result.size());
+    assertEquals(1, result.size());
   }
 
   /**
@@ -583,14 +585,14 @@ public class TestStore {
   private void flush(int storeFilessize) throws IOException{
     this.store.snapshot();
     flushStore(store, id++);
-    Assert.assertEquals(storeFilessize, this.store.getStorefiles().size());
-    Assert.assertEquals(0, ((AbstractMemStore)this.store.memstore).getActive().getCellsCount());
+    assertEquals(storeFilessize, this.store.getStorefiles().size());
+    assertEquals(0, ((AbstractMemStore)this.store.memstore).getActive().getCellsCount());
   }
 
   private void assertCheck() {
-    Assert.assertEquals(expected.size(), result.size());
+    assertEquals(expected.size(), result.size());
     for(int i=0; i<expected.size(); i++) {
-      Assert.assertEquals(expected.get(i), result.get(i));
+      assertEquals(expected.get(i), result.get(i));
     }
   }
 
@@ -614,7 +616,7 @@ public class TestStore {
       public Object run() throws Exception {
         // Make sure it worked (above is sensitive to caching details in hadoop core)
         FileSystem fs = FileSystem.get(conf);
-        Assert.assertEquals(FaultyFileSystem.class, fs.getClass());
+        assertEquals(FaultyFileSystem.class, fs.getClass());
 
         // Initialize region
         init(name.getMethodName(), conf);
@@ -628,20 +630,20 @@ public class TestStore {
 
         Collection<StoreFileInfo> files =
           store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
-        Assert.assertEquals(0, files != null ? files.size() : 0);
+        assertEquals(0, files != null ? files.size() : 0);
 
         //flush
         try {
           LOG.info("Flushing");
           flush(1);
-          Assert.fail("Didn't bubble up IOE!");
+          fail("Didn't bubble up IOE!");
         } catch (IOException ioe) {
-          Assert.assertTrue(ioe.getMessage().contains("Fault injected"));
+          assertTrue(ioe.getMessage().contains("Fault injected"));
         }
 
         LOG.info("After failed flush, we should still have no files!");
         files = store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
-        Assert.assertEquals(0, files != null ? files.size() : 0);
+        assertEquals(0, files != null ? files.size() : 0);
         store.getHRegion().getWAL().close();
         return null;
       }
@@ -769,27 +771,27 @@ public class TestStore {
 
     get.setTimeRange(0,15);
     result = HBaseTestingUtility.getFromStoreFile(store, get);
-    Assert.assertTrue(result.size()>0);
+    assertTrue(result.size()>0);
 
     get.setTimeRange(40,90);
     result = HBaseTestingUtility.getFromStoreFile(store, get);
-    Assert.assertTrue(result.size()>0);
+    assertTrue(result.size()>0);
 
     get.setTimeRange(10,45);
     result = HBaseTestingUtility.getFromStoreFile(store, get);
-    Assert.assertTrue(result.size()>0);
+    assertTrue(result.size()>0);
 
     get.setTimeRange(80,145);
     result = HBaseTestingUtility.getFromStoreFile(store, get);
-    Assert.assertTrue(result.size()>0);
+    assertTrue(result.size()>0);
 
     get.setTimeRange(1,2);
     result = HBaseTestingUtility.getFromStoreFile(store, get);
-    Assert.assertTrue(result.size()>0);
+    assertTrue(result.size()>0);
 
     get.setTimeRange(90,200);
     result = HBaseTestingUtility.getFromStoreFile(store, get);
-    Assert.assertTrue(result.size()==0);
+    assertTrue(result.size()==0);
   }
 
   /**
@@ -800,9 +802,9 @@ public class TestStore {
   @Test
   public void testSplitWithEmptyColFam() throws IOException {
     init(this.name.getMethodName());
-    Assert.assertNull(store.getSplitPoint());
+    assertFalse(store.getSplitPoint().isPresent());
     store.getHRegion().forceSplit(null);
-    Assert.assertNull(store.getSplitPoint());
+    assertFalse(store.getSplitPoint().isPresent());
     store.getHRegion().clearSplit();
   }
 
@@ -817,8 +819,8 @@ public class TestStore {
     Configuration conf = HBaseConfiguration.create();
     conf.setLong(CONFIG_KEY, anyValue);
     init(name.getMethodName() + "-xml", conf);
-    Assert.assertTrue(store.throttleCompaction(anyValue + 1));
-    Assert.assertFalse(store.throttleCompaction(anyValue));
+    assertTrue(store.throttleCompaction(anyValue + 1));
+    assertFalse(store.throttleCompaction(anyValue));
 
     // HTD overrides XML.
     --anyValue;
@@ -826,22 +828,22 @@ public class TestStore {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     htd.setConfiguration(CONFIG_KEY, Long.toString(anyValue));
     init(name.getMethodName() + "-htd", conf, htd, hcd);
-    Assert.assertTrue(store.throttleCompaction(anyValue + 1));
-    Assert.assertFalse(store.throttleCompaction(anyValue));
+    assertTrue(store.throttleCompaction(anyValue + 1));
+    assertFalse(store.throttleCompaction(anyValue));
 
     // HCD overrides them both.
     --anyValue;
     hcd.setConfiguration(CONFIG_KEY, Long.toString(anyValue));
     init(name.getMethodName() + "-hcd", conf, htd, hcd);
-    Assert.assertTrue(store.throttleCompaction(anyValue + 1));
-    Assert.assertFalse(store.throttleCompaction(anyValue));
+    assertTrue(store.throttleCompaction(anyValue + 1));
+    assertFalse(store.throttleCompaction(anyValue));
   }
 
   public static class DummyStoreEngine extends DefaultStoreEngine {
     public static DefaultCompactor lastCreatedCompactor = null;
 
     @Override
-    protected void createComponents(Configuration conf, Store store, CellComparator comparator)
+    protected void createComponents(Configuration conf, HStore store, CellComparator comparator)
         throws IOException {
       super.createComponents(conf, store, comparator);
       lastCreatedCompactor = this.compactor;
@@ -853,12 +855,12 @@ public class TestStore {
     Configuration conf = HBaseConfiguration.create();
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DummyStoreEngine.class.getName());
     init(this.name.getMethodName(), conf);
-    Assert.assertEquals(DummyStoreEngine.lastCreatedCompactor,
+    assertEquals(DummyStoreEngine.lastCreatedCompactor,
       this.store.storeEngine.getCompactor());
   }
 
   private void addStoreFile() throws IOException {
-    StoreFile f = this.store.getStorefiles().iterator().next();
+    HStoreFile f = this.store.getStorefiles().iterator().next();
     Path storedir = f.getPath().getParent();
     long seqid = this.store.getMaxSequenceId();
     Configuration c = TEST_UTIL.getConfiguration();
@@ -875,9 +877,9 @@ public class TestStore {
   }
 
   private void archiveStoreFile(int index) throws IOException {
-    Collection<StoreFile> files = this.store.getStorefiles();
-    StoreFile sf = null;
-    Iterator<StoreFile> it = files.iterator();
+    Collection<HStoreFile> files = this.store.getStorefiles();
+    HStoreFile sf = null;
+    Iterator<HStoreFile> it = files.iterator();
     for (int i = 0; i <= index; i++) {
       sf = it.next();
     }
@@ -885,14 +887,14 @@ public class TestStore {
   }
 
   private void closeCompactedFile(int index) throws IOException {
-    Collection<StoreFile> files =
+    Collection<HStoreFile> files =
         this.store.getStoreEngine().getStoreFileManager().getCompactedfiles();
-    StoreFile sf = null;
-    Iterator<StoreFile> it = files.iterator();
+    HStoreFile sf = null;
+    Iterator<HStoreFile> it = files.iterator();
     for (int i = 0; i <= index; i++) {
       sf = it.next();
     }
-    sf.closeReader(true);
+    sf.closeStoreFile(true);
     store.getStoreEngine().getStoreFileManager().removeCompactedFiles(Lists.newArrayList(sf));
   }
 
@@ -1455,7 +1457,7 @@ public class TestStore {
     }
 
     @Override
-    public List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks,
+    public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
         boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
         boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
         boolean includeMemstoreScanner) throws IOException {
@@ -1463,6 +1465,7 @@ public class TestStore {
       return super.getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true,
         stopRow, false, readPt, includeMemstoreScanner);
     }
+
     @Override
     public long getSmallestReadPoint() {
       return hook.getSmallestReadPoint(this);
@@ -1514,8 +1517,8 @@ public class TestStore {
     ScanInfo scanInfo = store.getScanInfo();
     Scan scan = new Scan();
     scan.addFamily(family);
-    Collection<StoreFile> storefiles2 = store.getStorefiles();
-    ArrayList<StoreFile> actualStorefiles = Lists.newArrayList(storefiles2);
+    Collection<HStoreFile> storefiles2 = store.getStorefiles();
+    ArrayList<HStoreFile> actualStorefiles = Lists.newArrayList(storefiles2);
     StoreScanner storeScanner =
         (StoreScanner) store.getScanner(scan, scan.getFamilyMap().get(family), Long.MAX_VALUE);
     // get the current heap
@@ -1535,7 +1538,7 @@ public class TestStore {
     // flush them
     flushStore(store, seqID);
     storefiles2 = store.getStorefiles();
-    ArrayList<StoreFile> actualStorefiles1 = Lists.newArrayList(storefiles2);
+    ArrayList<HStoreFile> actualStorefiles1 = Lists.newArrayList(storefiles2);
     actualStorefiles1.removeAll(actualStorefiles);
     // Do compaction
     List<Exception> exceptions = new ArrayList<Exception>();

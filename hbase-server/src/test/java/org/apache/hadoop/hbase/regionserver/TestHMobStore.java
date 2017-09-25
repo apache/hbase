@@ -518,7 +518,7 @@ public class TestHMobStore {
     this.store.add(new KeyValue(row, family, qf6, 1, value), null);
     flush(2);
 
-    Collection<StoreFile> storefiles = this.store.getStorefiles();
+    Collection<HStoreFile> storefiles = this.store.getStorefiles();
     checkMobHFileEncrytption(storefiles);
 
     // Scan the values
@@ -547,8 +547,8 @@ public class TestHMobStore {
     checkMobHFileEncrytption(this.store.getStorefiles());
   }
 
-  private void checkMobHFileEncrytption(Collection<StoreFile> storefiles) {
-    StoreFile storeFile = storefiles.iterator().next();
+  private void checkMobHFileEncrytption(Collection<HStoreFile> storefiles) {
+    HStoreFile storeFile = storefiles.iterator().next();
     HFile.Reader reader = storeFile.getReader().getHFileReader();
     byte[] encryptionKey = reader.getTrailer().getEncryptionKey();
     Assert.assertTrue(null != encryptionKey);

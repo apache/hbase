@@ -499,7 +499,7 @@ public class RegionCoprocessorHost
    * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long,
    *   InternalScanner, CompactionLifeCycleTracker, long)}
    */
-  public InternalScanner preCompactScannerOpen(Store store, List<StoreFileScanner> scanners,
+  public InternalScanner preCompactScannerOpen(HStore store, List<StoreFileScanner> scanners,
       ScanType scanType, long earliestPutTs, CompactionLifeCycleTracker tracker, User user,
       long readPoint) throws IOException {
     return execOperationWithResult(null,
@@ -514,7 +514,7 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Called prior to selecting the {@link StoreFile}s for compaction from the list of currently
+   * Called prior to selecting the {@link HStoreFile}s for compaction from the list of currently
    * available candidates.
    * @param store The store where compaction is being requested
    * @param candidates The currently available store files
@@ -522,7 +522,7 @@ public class RegionCoprocessorHost
    * @return If {@code true}, skip the normal selection process and use the current list
    * @throws IOException
    */
-  public boolean preCompactSelection(Store store, List<StoreFile> candidates,
+  public boolean preCompactSelection(HStore store, List<HStoreFile> candidates,
       CompactionLifeCycleTracker tracker, User user) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
@@ -534,13 +534,13 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Called after the {@link StoreFile}s to be compacted have been selected from the available
+   * Called after the {@link HStoreFile}s to be compacted have been selected from the available
    * candidates.
    * @param store The store where compaction is being requested
    * @param selected The store files selected to compact
    * @param tracker used to track the life cycle of a compaction
    */
-  public void postCompactSelection(Store store, ImmutableList<StoreFile> selected,
+  public void postCompactSelection(HStore store, ImmutableList<HStoreFile> selected,
       CompactionLifeCycleTracker tracker, User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
@@ -559,7 +559,7 @@ public class RegionCoprocessorHost
    * @param tracker used to track the life cycle of a compaction
    * @throws IOException
    */
-  public InternalScanner preCompact(Store store, InternalScanner scanner, ScanType scanType,
+  public InternalScanner preCompact(HStore store, InternalScanner scanner, ScanType scanType,
       CompactionLifeCycleTracker tracker, User user) throws IOException {
     return execOperationWithResult(false, scanner,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>(user) {
@@ -578,7 +578,7 @@ public class RegionCoprocessorHost
    * @param tracker used to track the life cycle of a compaction
    * @throws IOException
    */
-  public void postCompact(Store store, StoreFile resultFile, CompactionLifeCycleTracker tracker,
+  public void postCompact(HStore store, HStoreFile resultFile, CompactionLifeCycleTracker tracker,
       User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
@@ -593,7 +593,7 @@ public class RegionCoprocessorHost
    * Invoked before a memstore flush
    * @throws IOException
    */
-  public InternalScanner preFlush(final Store store, final InternalScanner scanner)
+  public InternalScanner preFlush(HStore store, final InternalScanner scanner)
       throws IOException {
     return execOperationWithResult(false, scanner,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>() {
@@ -623,16 +623,16 @@ public class RegionCoprocessorHost
    * See
    * {@link RegionObserver#preFlushScannerOpen(ObserverContext, Store, List, InternalScanner, long)}
    */
-  public InternalScanner preFlushScannerOpen(final Store store,
-      final List<KeyValueScanner> scanners, final long readPoint) throws IOException {
+  public InternalScanner preFlushScannerOpen(HStore store, List<KeyValueScanner> scanners,
+      long readPoint) throws IOException {
     return execOperationWithResult(null,
-        coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>() {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        setResult(oserver.preFlushScannerOpen(ctx, store, scanners, getResult(), readPoint));
-      }
-    });
+      coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>() {
+        @Override
+        public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+            throws IOException {
+          setResult(oserver.preFlushScannerOpen(ctx, store, scanners, getResult(), readPoint));
+        }
+      });
   }
 
   /**
@@ -653,7 +653,7 @@ public class RegionCoprocessorHost
    * Invoked after a memstore flush
    * @throws IOException
    */
-  public void postFlush(final Store store, final StoreFile storeFile) throws IOException {
+  public void postFlush(HStore store, HStoreFile storeFile) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
@@ -1136,16 +1136,16 @@ public class RegionCoprocessorHost
    * See
    * {@link RegionObserver#preStoreScannerOpen(ObserverContext, Store, Scan, NavigableSet, KeyValueScanner, long)}
    */
-  public KeyValueScanner preStoreScannerOpen(final Store store, final Scan scan,
-      final NavigableSet<byte[]> targetCols, final long readPt) throws IOException {
+  public KeyValueScanner preStoreScannerOpen(HStore store, Scan scan,
+      NavigableSet<byte[]> targetCols, long readPt) throws IOException {
     return execOperationWithResult(null,
-        coprocessors.isEmpty() ? null : new RegionOperationWithResult<KeyValueScanner>() {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        setResult(oserver.preStoreScannerOpen(ctx, store, scan, targetCols, getResult(), readPt));
-      }
-    });
+      coprocessors.isEmpty() ? null : new RegionOperationWithResult<KeyValueScanner>() {
+        @Override
+        public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+            throws IOException {
+          setResult(oserver.preStoreScannerOpen(ctx, store, scan, targetCols, getResult(), readPt));
+        }
+      });
   }
 
   /**

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -48,7 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>This type works in tandem with the {@link Reference} type.  This class
  * is used reading while Reference is used writing.
  *
- * <p>This file is not splitable.  Calls to {@link #midkey()} return null.
+ * <p>This file is not splitable.  Calls to {@link #midKey()} return null.
  */
 @InterfaceAudience.Private
 public class HalfStoreFileReader extends StoreFileReader {
@@ -60,7 +61,7 @@ public class HalfStoreFileReader extends StoreFileReader {
 
   protected final Cell splitCell;
 
-  private Cell firstKey = null;
+  private Optional<Cell> firstKey = null;
 
   private boolean firstKeySeeked = false;
 
@@ -258,8 +259,8 @@ public class HalfStoreFileReader extends StoreFileReader {
       @Override
       public boolean seekBefore(Cell key) throws IOException {
         if (top) {
-          Cell fk = getFirstKey();
-          if (getComparator().compareKeyIgnoresMvcc(key, fk) <= 0) {
+          Optional<Cell> fk = getFirstKey();
+          if (getComparator().compareKeyIgnoresMvcc(key, fk.get()) <= 0) {
             return false;
           }
         } else {
@@ -303,7 +304,7 @@ public class HalfStoreFileReader extends StoreFileReader {
   }
   
   @Override
-  public Cell getLastKey() {
+  public Optional<Cell> getLastKey() {
     if (top) {
       return super.getLastKey();
     }
@@ -311,7 +312,7 @@ public class HalfStoreFileReader extends StoreFileReader {
     HFileScanner scanner = getScanner(true, true);
     try {
       if (scanner.seekBefore(this.splitCell)) {
-        return scanner.getKey();
+        return Optional.ofNullable(scanner.getKey());
       }
     } catch (IOException e) {
       LOG.warn("Failed seekBefore " + Bytes.toStringBinary(this.splitkey), e);
@@ -320,22 +321,22 @@ public class HalfStoreFileReader extends StoreFileReader {
         scanner.close();
       }
     }
-    return null;
+    return Optional.empty();
   }
 
   @Override
-  public Cell midkey() throws IOException {
+  public Optional<Cell> midKey() throws IOException {
     // Returns null to indicate file is not splitable.
-    return null;
+    return Optional.empty();
   }
 
   @Override
-  public Cell getFirstKey() {
+  public Optional<Cell> getFirstKey() {
     if (!firstKeySeeked) {
       HFileScanner scanner = getScanner(true, true, false);
       try {
         if (scanner.seekTo()) {
-          this.firstKey = scanner.getKey();
+          this.firstKey = Optional.ofNullable(scanner.getKey());
         }
         firstKeySeeked = true;
       } catch (IOException e) {

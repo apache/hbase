@@ -38,16 +38,15 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.HashMultimap;
@@ -435,10 +434,9 @@ public class SpaceQuotaHelperForTests {
     @Override
     public boolean evaluate() throws Exception {
       for (HRegion region : cluster.getRegions(tn)) {
-        for (Store store : region.getStores()) {
-          HStore hstore = (HStore) store;
-          Collection<StoreFile> files =
-              hstore.getStoreEngine().getStoreFileManager().getCompactedfiles();
+        for (HStore store : region.getStores()) {
+          Collection<HStoreFile> files =
+              store.getStoreEngine().getStoreFileManager().getCompactedfiles();
           if (null != files && !files.isEmpty()) {
             LOG.debug(region.getRegionInfo().getEncodedName() + " still has compacted files");
             return false;

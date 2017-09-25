@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -40,7 +40,7 @@ public class CompactionRequest {
   private enum DisplayCompactionType { MINOR, ALL_FILES, MAJOR }
   private DisplayCompactionType isMajor = DisplayCompactionType.MINOR;
   private int priority = Store.NO_PRIORITY;
-  private Collection<StoreFile> filesToCompact;
+  private Collection<HStoreFile> filesToCompact;
 
   // CompactRequest object creation time.
   private long selectionTime;
@@ -51,19 +51,19 @@ public class CompactionRequest {
   private long totalSize = -1L;
   private CompactionLifeCycleTracker tracker = CompactionLifeCycleTracker.DUMMY;
 
-  public CompactionRequest(Collection<StoreFile> files) {
+  public CompactionRequest(Collection<HStoreFile> files) {
     this.selectionTime = EnvironmentEdgeManager.currentTime();
     this.timeInNanos = System.nanoTime();
     this.filesToCompact = Preconditions.checkNotNull(files, "files for compaction can not null");
     recalculateSize();
   }
 
-  public void updateFiles(Collection<StoreFile> files) {
+  public void updateFiles(Collection<HStoreFile> files) {
     this.filesToCompact = Preconditions.checkNotNull(files, "files for compaction can not null");
     recalculateSize();
   }
 
-  public Collection<StoreFile> getFiles() {
+  public Collection<HStoreFile> getFiles() {
     return this.filesToCompact;
   }
 
@@ -152,7 +152,7 @@ public class CompactionRequest {
    * @param files files that should be included in the compaction
    */
   private void recalculateSize() {
-    this.totalSize = filesToCompact.stream().map(StoreFile::getReader)
+    this.totalSize = filesToCompact.stream().map(HStoreFile::getReader)
         .mapToLong(r -> r != null ? r.length() : 0L).sum();
   }
 }

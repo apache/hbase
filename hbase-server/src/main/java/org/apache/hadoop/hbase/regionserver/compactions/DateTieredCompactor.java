@@ -24,13 +24,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.DateTieredMultiFileWriter;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This compactor will generate StoreFile for different time ranges.
@@ -40,7 +40,7 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
 
   private static final Log LOG = LogFactory.getLog(DateTieredCompactor.class);
 
-  public DateTieredCompactor(Configuration conf, Store store) {
+  public DateTieredCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 

@@ -96,7 +96,7 @@ public class TestHalfStoreFileReader {
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
     r.loadFileInfo();
-    Cell midKV = r.midkey();
+    Cell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
     // System.out.println("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
@@ -155,7 +155,7 @@ public class TestHalfStoreFileReader {
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
     r.loadFileInfo();
-    Cell midKV = r.midkey();
+    Cell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
     Reference bottom = new Reference(midkey, Reference.Range.bottom);

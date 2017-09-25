@@ -42,10 +42,10 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.Scanner;
 import org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.StoreFileWritersCapture;
@@ -195,7 +195,7 @@ public class TestStripeCompactor {
     // Create store mock that is satisfactory for compactor.
     HColumnDescriptor col = new HColumnDescriptor(NAME_OF_THINGS);
     ScanInfo si = new ScanInfo(conf, col, Long.MAX_VALUE, 0, CellComparator.COMPARATOR);
-    Store store = mock(Store.class);
+    HStore store = mock(HStore.class);
     when(store.getColumnFamilyDescriptor()).thenReturn(col);
     when(store.getScanInfo()).thenReturn(si);
     when(store.areWritesEnabled()).thenReturn(true);
@@ -207,14 +207,14 @@ public class TestStripeCompactor {
 
     return new StripeCompactor(conf, store) {
       @Override
-      protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
+      protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
           long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
           byte[] dropDeletesToRow) throws IOException {
         return scanner;
       }
 
       @Override
-      protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
+      protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
           ScanType scanType, long smallestReadPoint, long earliestPutTs) throws IOException {
         return scanner;
       }

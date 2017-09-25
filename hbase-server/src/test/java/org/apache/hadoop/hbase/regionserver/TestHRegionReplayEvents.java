@@ -238,9 +238,9 @@ public class TestHRegionReplayEvents {
     verifyData(secondaryRegion, 0, 1000, cq, families);
 
     // close the region, and inspect that it has not flushed
-    Map<byte[], List<StoreFile>> files = secondaryRegion.close(false);
+    Map<byte[], List<HStoreFile>> files = secondaryRegion.close(false);
     // assert that there are no files (due to flush)
-    for (List<StoreFile> f : files.values()) {
+    for (List<HStoreFile> f : files.values()) {
       assertTrue(f.isEmpty());
     }
   }
@@ -1523,8 +1523,8 @@ public class TestHRegionReplayEvents {
       storeFileName.addAll(storeDesc.getStoreFileList());
     }
     // assert that the bulk loaded files are picked
-    for (Store s : secondaryRegion.getStores()) {
-      for (StoreFile sf : s.getStorefiles()) {
+    for (HStore s : secondaryRegion.getStores()) {
+      for (HStoreFile sf : s.getStorefiles()) {
         storeFileName.remove(sf.getPath().getName());
       }
     }

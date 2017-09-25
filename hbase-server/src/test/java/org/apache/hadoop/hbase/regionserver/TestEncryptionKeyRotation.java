@@ -210,14 +210,14 @@ public class TestEncryptionKeyRotation {
     boolean compacted = false;
     for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
         .getOnlineRegions(tableName)) {
-      for (Store store : region.getStores()) {
+      for (HStore store : ((HRegion) region).getStores()) {
         compacted = false;
         while (!compacted) {
           if (store.getStorefiles() != null) {
             while (store.getStorefilesCount() != 1) {
               Thread.sleep(100);
             }
-            for (StoreFile storefile : store.getStorefiles()) {
+            for (HStoreFile storefile : store.getStorefiles()) {
               if (!storefile.isCompactedAway()) {
                 compacted = true;
                 break;
@@ -234,10 +234,10 @@ public class TestEncryptionKeyRotation {
 
   private static List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
-    for (Region region:
-        TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(tableName)) {
-      for (Store store: region.getStores()) {
-        for (StoreFile storefile: store.getStorefiles()) {
+    for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
+        .getOnlineRegions(tableName)) {
+      for (HStore store : ((HRegion) region).getStores()) {
+        for (HStoreFile storefile : store.getStorefiles()) {
           paths.add(storefile.getPath());
         }
       }
@@ -247,13 +247,13 @@ public class TestEncryptionKeyRotation {
 
   private static List<Path> findCompactedStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
-    for (Region region:
-        TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(tableName)) {
-      for (Store store : region.getStores()) {
-        Collection<StoreFile> compactedfiles =
-            ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
+    for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
+        .getOnlineRegions(tableName)) {
+      for (HStore store : ((HRegion) region).getStores()) {
+        Collection<HStoreFile> compactedfiles =
+            store.getStoreEngine().getStoreFileManager().getCompactedfiles();
         if (compactedfiles != null) {
-          for (StoreFile storefile : compactedfiles) {
+          for (HStoreFile storefile : compactedfiles) {
             paths.add(storefile.getPath());
           }
         }

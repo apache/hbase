@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -85,7 +86,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -1162,7 +1162,7 @@ public class TestHFileOutputFormat2  {
         Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), true, conf);
         Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 
-        byte[] bloomFilter = fileInfo.get(StoreFile.BLOOM_FILTER_TYPE_KEY);
+        byte[] bloomFilter = fileInfo.get(BLOOM_FILTER_TYPE_KEY);
         if (bloomFilter == null) bloomFilter = Bytes.toBytes("NONE");
         assertEquals("Incorrect bloom filter used for column family " + familyStr +
           "(reader: " + reader + ")",

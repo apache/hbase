@@ -189,7 +189,7 @@ public interface RegionObserver extends Coprocessor {
    * @param tracker tracker used to track the life cycle of a compaction
    */
   default void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      List<StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {}
+      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {}
 
   /**
    * Called after the {@link StoreFile}s to compact have been selected from the available
@@ -200,7 +200,7 @@ public interface RegionObserver extends Coprocessor {
    * @param tracker tracker used to track the life cycle of a compaction
    */
   default void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      ImmutableList<StoreFile> selected, CompactionLifeCycleTracker tracker) {}
+      ImmutableList<? extends StoreFile> selected, CompactionLifeCycleTracker tracker) {}
 
   /**
    * Called prior to writing the {@link StoreFile}s selected for compaction into a new

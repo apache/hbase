@@ -42,11 +42,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.Scanner;
@@ -87,14 +87,14 @@ public class TestDateTieredCompactor {
   public boolean usePrivateReaders;
 
   private DateTieredCompactor createCompactor(StoreFileWritersCapture writers,
-      final KeyValue[] input, List<StoreFile> storefiles) throws Exception {
+      final KeyValue[] input, List<HStoreFile> storefiles) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.regionserver.compaction.private.readers", usePrivateReaders);
     final Scanner scanner = new Scanner(input);
     // Create store mock that is satisfactory for compactor.
     HColumnDescriptor col = new HColumnDescriptor(NAME_OF_THINGS);
     ScanInfo si = new ScanInfo(conf, col, Long.MAX_VALUE, 0, CellComparator.COMPARATOR);
-    final Store store = mock(Store.class);
+    HStore store = mock(HStore.class);
     when(store.getStorefiles()).thenReturn(storefiles);
     when(store.getColumnFamilyDescriptor()).thenReturn(col);
     when(store.getScanInfo()).thenReturn(si);
@@ -109,14 +109,14 @@ public class TestDateTieredCompactor {
 
     return new DateTieredCompactor(conf, store) {
       @Override
-      protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
+      protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
           long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
           byte[] dropDeletesToRow) throws IOException {
         return scanner;
       }
 
       @Override
-      protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
+      protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
           ScanType scanType, long smallestReadPoint, long earliestPutTs) throws IOException {
         return scanner;
       }
@@ -126,8 +126,8 @@ public class TestDateTieredCompactor {
   private void verify(KeyValue[] input, List<Long> boundaries, KeyValue[][] output,
       boolean allFiles) throws Exception {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
-    StoreFile sf1 = createDummyStoreFile(1L);
-    StoreFile sf2 = createDummyStoreFile(2L);
+    HStoreFile sf1 = createDummyStoreFile(1L);
+    HStoreFile sf2 = createDummyStoreFile(2L);
     DateTieredCompactor dtc = createCompactor(writers, input, Arrays.asList(sf1, sf2));
     List<Path> paths = dtc.compact(new CompactionRequest(Arrays.asList(sf1)),
       boundaries.subList(0, boundaries.size() - 1), NoLimitThroughputController.INSTANCE, null);

@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
 /**
  * RegionObserver that just reimplements the default behavior,
@@ -51,7 +50,7 @@ public class NoOpScanPolicyObserver implements RegionObserver {
     ScanInfo oldSI = store.getScanInfo();
     ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(),
         oldSI.getTtl(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-    return new StoreScanner(store, scanInfo, OptionalInt.empty(), scanners,
+    return new StoreScanner((HStore) store, scanInfo, OptionalInt.empty(), scanners,
         ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 
@@ -67,7 +66,7 @@ public class NoOpScanPolicyObserver implements RegionObserver {
     ScanInfo oldSI = store.getScanInfo();
     ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(),
         oldSI.getTtl(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-    return new StoreScanner(store, scanInfo, OptionalInt.empty(), scanners, scanType,
+    return new StoreScanner((HStore) store, scanInfo, OptionalInt.empty(), scanners, scanType,
         store.getSmallestReadPoint(), earliestPutTs);
   }
 
@@ -76,10 +75,10 @@ public class NoOpScanPolicyObserver implements RegionObserver {
       Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPoint)
       throws IOException {
     Region r = c.getEnvironment().getRegion();
-    return scan.isReversed() ? new ReversedStoreScanner(store,
-        store.getScanInfo(), scan, targetCols, r.getReadPoint(scan
-            .getIsolationLevel())) : new StoreScanner(store,
-        store.getScanInfo(), scan, targetCols, r.getReadPoint(scan
-            .getIsolationLevel()));
+    return scan.isReversed()
+        ? new ReversedStoreScanner((HStore) store, store.getScanInfo(), scan, targetCols,
+            r.getReadPoint(scan.getIsolationLevel()))
+        : new StoreScanner((HStore) store, store.getScanInfo(), scan, targetCols,
+            r.getReadPoint(scan.getIsolationLevel()));
   }
 }

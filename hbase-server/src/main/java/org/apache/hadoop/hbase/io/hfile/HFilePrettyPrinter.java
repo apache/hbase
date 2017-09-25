@@ -544,7 +544,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     }
 
     try {
-      out.println("Mid-key: " + (CellUtil.getCellKeyAsString(reader.midkey())));
+      out.println("Mid-key: " + reader.midKey().map(CellUtil::getCellKeyAsString));
     } catch (Exception e) {
       out.println ("Unable to retrieve the midkey");
     }

@@ -62,9 +62,9 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -843,10 +843,10 @@ public abstract class TestVisibilityLabels {
     }
     TEST_UTIL.getAdmin().flush(tableName);
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-    Store store = regions.get(0).getStore(fam);
-    Collection<StoreFile> storefiles = store.getStorefiles();
+    HStore store = regions.get(0).getStore(fam);
+    Collection<HStoreFile> storefiles = store.getStorefiles();
     assertTrue(storefiles.size() > 0);
-    for (StoreFile storeFile : storefiles) {
+    for (HStoreFile storeFile : storefiles) {
       assertTrue(storeFile.getReader().getHFileReader().getFileContext().isIncludesTags());
     }
   }

@@ -571,7 +571,7 @@ public class TestHFileBlockIndex {
    boolean hasArrayIndexOutOfBoundsException = false;
    try {
      // get the mid-key.
-     reader.midkey();
+     reader.midKey();
    } catch (ArrayIndexOutOfBoundsException e) {
      hasArrayIndexOutOfBoundsException = true;
    } finally {
@@ -649,8 +649,8 @@ public class TestHFileBlockIndex {
       assertEquals(expectedNumLevels,
           reader.getTrailer().getNumDataIndexLevels());
 
-      assertTrue(Bytes.equals(keys[0], ((KeyValue)reader.getFirstKey()).getKey()));
-      assertTrue(Bytes.equals(keys[NUM_KV - 1], ((KeyValue)reader.getLastKey()).getKey()));
+      assertTrue(Bytes.equals(keys[0], ((KeyValue)reader.getFirstKey().get()).getKey()));
+      assertTrue(Bytes.equals(keys[NUM_KV - 1], ((KeyValue)reader.getLastKey().get()).getKey()));
       LOG.info("Last key: " + Bytes.toStringBinary(keys[NUM_KV - 1]));
 
       for (boolean pread : new boolean[] { false, true }) {
@@ -706,7 +706,7 @@ public class TestHFileBlockIndex {
       // Validate the mid-key.
       assertEquals(
           Bytes.toStringBinary(blockKeys.get((blockKeys.size() - 1) / 2)),
-          reader.midkey());
+          reader.midKey());
 
       assertEquals(UNCOMPRESSED_INDEX_SIZES[testI],
           reader.getTrailer().getUncompressedDataIndexSize());

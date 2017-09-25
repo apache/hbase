@@ -113,7 +113,7 @@ public class TestReversibleScanners {
           .withFileContext(hFileContext).build();
       writeStoreFile(writer);
 
-      StoreFile sf = new HStoreFile(fs, writer.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+      HStoreFile sf = new HStoreFile(fs, writer.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
           BloomType.NONE, true);
 
       List<StoreFileScanner> scanners = StoreFileScanner
@@ -167,10 +167,10 @@ public class TestReversibleScanners {
     writeMemstoreAndStoreFiles(memstore, new StoreFileWriter[] { writer1,
         writer2 });
 
-    StoreFile sf1 = new HStoreFile(fs, writer1.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+    HStoreFile sf1 = new HStoreFile(fs, writer1.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
         BloomType.NONE, true);
 
-    StoreFile sf2 = new HStoreFile(fs, writer2.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+    HStoreFile sf2 = new HStoreFile(fs, writer2.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
         BloomType.NONE, true);
     /**
      * Test without MVCC
@@ -257,10 +257,10 @@ public class TestReversibleScanners {
     writeMemstoreAndStoreFiles(memstore, new StoreFileWriter[] { writer1,
         writer2 });
 
-    StoreFile sf1 = new HStoreFile(fs, writer1.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+    HStoreFile sf1 = new HStoreFile(fs, writer1.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
         BloomType.NONE, true);
 
-    StoreFile sf2 = new HStoreFile(fs, writer2.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
+    HStoreFile sf2 = new HStoreFile(fs, writer2.getPath(), TEST_UTIL.getConfiguration(), cacheConf,
         BloomType.NONE, true);
 
     ScanInfo scanInfo =
@@ -418,19 +418,15 @@ public class TestReversibleScanners {
     verifyCountAndOrder(scanner, expectedRowNum * 2 * 2, expectedRowNum, false);
   }
 
-  private StoreScanner getReversibleStoreScanner(MemStore memstore,
-      StoreFile sf1, StoreFile sf2, Scan scan,
-      ScanInfo scanInfo, int readPoint) throws IOException {
-    List<KeyValueScanner> scanners = getScanners(memstore, sf1, sf2, null,
-        false, readPoint);
+  private StoreScanner getReversibleStoreScanner(MemStore memstore, HStoreFile sf1, HStoreFile sf2,
+      Scan scan, ScanInfo scanInfo, int readPoint) throws IOException {
+    List<KeyValueScanner> scanners = getScanners(memstore, sf1, sf2, null, false, readPoint);
     NavigableSet<byte[]> columns = null;
-    for (Map.Entry<byte[], NavigableSet<byte[]>> entry : scan.getFamilyMap()
-        .entrySet()) {
+    for (Map.Entry<byte[], NavigableSet<byte[]>> entry : scan.getFamilyMap().entrySet()) {
       // Should only one family
       columns = entry.getValue();
     }
-    StoreScanner storeScanner = new ReversedStoreScanner(scan, scanInfo,
-         columns, scanners);
+    StoreScanner storeScanner = new ReversedStoreScanner(scan, scanInfo, columns, scanners);
     return storeScanner;
   }
 
@@ -487,22 +483,17 @@ public class TestReversibleScanners {
     assertEquals(null, kvHeap.peek());
   }
 
-  private ReversedKeyValueHeap getReversibleKeyValueHeap(MemStore memstore,
-      StoreFile sf1, StoreFile sf2, byte[] startRow, int readPoint)
-      throws IOException {
-    List<KeyValueScanner> scanners = getScanners(memstore, sf1, sf2, startRow,
-        true, readPoint);
-    ReversedKeyValueHeap kvHeap = new ReversedKeyValueHeap(scanners,
-        CellComparator.COMPARATOR);
+  private ReversedKeyValueHeap getReversibleKeyValueHeap(MemStore memstore, HStoreFile sf1,
+      HStoreFile sf2, byte[] startRow, int readPoint) throws IOException {
+    List<KeyValueScanner> scanners = getScanners(memstore, sf1, sf2, startRow, true, readPoint);
+    ReversedKeyValueHeap kvHeap = new ReversedKeyValueHeap(scanners, CellComparator.COMPARATOR);
     return kvHeap;
   }
 
-  private List<KeyValueScanner> getScanners(MemStore memstore, StoreFile sf1,
-      StoreFile sf2, byte[] startRow, boolean doSeek, int readPoint)
-      throws IOException {
-    List<StoreFileScanner> fileScanners = StoreFileScanner
-        .getScannersForStoreFiles(Lists.newArrayList(sf1, sf2), false, true,
-            false, false, readPoint);
+  private List<KeyValueScanner> getScanners(MemStore memstore, HStoreFile sf1, HStoreFile sf2,
+      byte[] startRow, boolean doSeek, int readPoint) throws IOException {
+    List<StoreFileScanner> fileScanners = StoreFileScanner.getScannersForStoreFiles(
+      Lists.newArrayList(sf1, sf2), false, true, false, false, readPoint);
     List<KeyValueScanner> memScanners = memstore.getScanners(readPoint);
     List<KeyValueScanner> scanners = new ArrayList<>(fileScanners.size() + 1);
     scanners.addAll(fileScanners);

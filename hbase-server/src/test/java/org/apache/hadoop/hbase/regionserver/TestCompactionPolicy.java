@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +43,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 public class TestCompactionPolicy {
   private final static Log LOG = LogFactory.getLog(TestCompactionPolicy.class);
@@ -141,7 +141,7 @@ public class TestCompactionPolicy {
     return result;
   }
 
-  List<StoreFile> sfCreate(long... sizes) throws IOException {
+  List<HStoreFile> sfCreate(long... sizes) throws IOException {
     ArrayList<Long> ageInDisk = new ArrayList<>();
     for (int i = 0; i < sizes.length; i++) {
       ageInDisk.add(0L);
@@ -149,11 +149,11 @@ public class TestCompactionPolicy {
     return sfCreate(toArrayList(sizes), ageInDisk);
   }
 
-  List<StoreFile> sfCreate(ArrayList<Long> sizes, ArrayList<Long> ageInDisk) throws IOException {
+  List<HStoreFile> sfCreate(ArrayList<Long> sizes, ArrayList<Long> ageInDisk) throws IOException {
     return sfCreate(false, sizes, ageInDisk);
   }
 
-  List<StoreFile> sfCreate(boolean isReference, long... sizes) throws IOException {
+  List<HStoreFile> sfCreate(boolean isReference, long... sizes) throws IOException {
     ArrayList<Long> ageInDisk = new ArrayList<>(sizes.length);
     for (int i = 0; i < sizes.length; i++) {
       ageInDisk.add(0L);
@@ -161,17 +161,17 @@ public class TestCompactionPolicy {
     return sfCreate(isReference, toArrayList(sizes), ageInDisk);
   }
 
-  List<StoreFile> sfCreate(boolean isReference, ArrayList<Long> sizes, ArrayList<Long> ageInDisk)
+  List<HStoreFile> sfCreate(boolean isReference, ArrayList<Long> sizes, ArrayList<Long> ageInDisk)
       throws IOException {
-    List<StoreFile> ret = Lists.newArrayList();
+    List<HStoreFile> ret = Lists.newArrayList();
     for (int i = 0; i < sizes.size(); i++) {
-      ret.add(new MockStoreFile(TEST_UTIL, TEST_FILE, sizes.get(i), ageInDisk.get(i), isReference,
+      ret.add(new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes.get(i), ageInDisk.get(i), isReference,
           i));
     }
     return ret;
   }
 
-  long[] getSizes(List<StoreFile> sfList) {
+  long[] getSizes(List<HStoreFile> sfList) {
     long[] aNums = new long[sfList.size()];
     for (int i = 0; i < sfList.size(); ++i) {
       aNums[i] = sfList.get(i).getReader().length();
@@ -179,23 +179,23 @@ public class TestCompactionPolicy {
     return aNums;
   }
 
-  void compactEquals(List<StoreFile> candidates, long... expected) throws IOException {
+  void compactEquals(List<HStoreFile> candidates, long... expected) throws IOException {
     compactEquals(candidates, false, false, expected);
   }
 
-  void compactEquals(List<StoreFile> candidates, boolean forcemajor, long... expected)
+  void compactEquals(List<HStoreFile> candidates, boolean forcemajor, long... expected)
       throws IOException {
     compactEquals(candidates, forcemajor, false, expected);
   }
 
-  void compactEquals(List<StoreFile> candidates, boolean forcemajor, boolean isOffPeak,
+  void compactEquals(List<HStoreFile> candidates, boolean forcemajor, boolean isOffPeak,
       long... expected) throws IOException {
     store.forceMajor = forcemajor;
     // Test Default compactions
     CompactionRequest result =
         ((RatioBasedCompactionPolicy) store.storeEngine.getCompactionPolicy()).selectCompaction(
           candidates, new ArrayList<>(), false, isOffPeak, forcemajor);
-    List<StoreFile> actual = new ArrayList<>(result.getFiles());
+    List<HStoreFile> actual = new ArrayList<>(result.getFiles());
     if (isOffPeak && !forcemajor) {
       Assert.assertTrue(result.isOffPeak());
     }

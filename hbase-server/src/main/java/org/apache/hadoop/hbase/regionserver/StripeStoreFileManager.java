@@ -39,11 +39,11 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableCollection;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
@@ -100,19 +100,19 @@ public class StripeStoreFileManager
      * same index, except the last one. Inside each list, the files are in reverse order by
      * seqNum. Note that the length of this is one higher than that of stripeEndKeys.
      */
-    public ArrayList<ImmutableList<StoreFile>> stripeFiles = new ArrayList<>();
+    public ArrayList<ImmutableList<HStoreFile>> stripeFiles = new ArrayList<>();
     /** Level 0. The files are in reverse order by seqNum. */
-    public ImmutableList<StoreFile> level0Files = ImmutableList.<StoreFile>of();
+    public ImmutableList<HStoreFile> level0Files = ImmutableList.of();
 
     /** Cached list of all files in the structure, to return from some calls */
-    public ImmutableList<StoreFile> allFilesCached = ImmutableList.<StoreFile>of();
-    private ImmutableList<StoreFile> allCompactedFilesCached = ImmutableList.<StoreFile>of();
+    public ImmutableList<HStoreFile> allFilesCached = ImmutableList.of();
+    private ImmutableList<HStoreFile> allCompactedFilesCached = ImmutableList.of();
   }
   private State state = null;
 
   /** Cached file metadata (or overrides as the case may be) */
-  private HashMap<StoreFile, byte[]> fileStarts = new HashMap<>();
-  private HashMap<StoreFile, byte[]> fileEnds = new HashMap<>();
+  private HashMap<HStoreFile, byte[]> fileStarts = new HashMap<>();
+  private HashMap<HStoreFile, byte[]> fileEnds = new HashMap<>();
   /** Normally invalid key is null, but in the map null is the result for "no key"; so use
    * the following constant value in these maps instead. Note that this is a constant and
    * we use it to compare by reference when we read from the map. */
@@ -132,17 +132,17 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public void loadFiles(List<StoreFile> storeFiles) {
+  public void loadFiles(List<HStoreFile> storeFiles) {
     loadUnclassifiedStoreFiles(storeFiles);
   }
 
   @Override
-  public Collection<StoreFile> getStorefiles() {
+  public Collection<HStoreFile> getStorefiles() {
     return state.allFilesCached;
   }
 
   @Override
-  public Collection<StoreFile> getCompactedfiles() {
+  public Collection<HStoreFile> getCompactedfiles() {
     return state.allCompactedFilesCached;
   }
 
@@ -152,7 +152,7 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public void insertNewFiles(Collection<StoreFile> sfs) throws IOException {
+  public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
     CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(true);
     // Passing null does not cause NPE??
     cmc.mergeResults(null, sfs);
@@ -160,8 +160,8 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public ImmutableCollection<StoreFile> clearFiles() {
-    ImmutableCollection<StoreFile> result = state.allFilesCached;
+  public ImmutableCollection<HStoreFile> clearFiles() {
+    ImmutableCollection<HStoreFile> result = state.allFilesCached;
     this.state = new State();
     this.fileStarts.clear();
     this.fileEnds.clear();
@@ -169,8 +169,8 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public ImmutableCollection<StoreFile> clearCompactedFiles() {
-    ImmutableCollection<StoreFile> result = state.allCompactedFilesCached;
+  public ImmutableCollection<HStoreFile> clearCompactedFiles() {
+    ImmutableCollection<HStoreFile> result = state.allCompactedFilesCached;
     this.state = new State();
     return result;
   }
@@ -183,7 +183,7 @@ public class StripeStoreFileManager
   /** See {@link StoreFileManager#getCandidateFilesForRowKeyBefore(KeyValue)}
    * for details on this methods. */
   @Override
-  public Iterator<StoreFile> getCandidateFilesForRowKeyBefore(final KeyValue targetKey) {
+  public Iterator<HStoreFile> getCandidateFilesForRowKeyBefore(final KeyValue targetKey) {
     KeyBeforeConcatenatedLists result = new KeyBeforeConcatenatedLists();
     // Order matters for this call.
     result.addSublist(state.level0Files);
@@ -200,14 +200,14 @@ public class StripeStoreFileManager
    * {@link StoreFileManager#updateCandidateFilesForRowKeyBefore(Iterator, KeyValue, Cell)}
    * for details on this methods. */
   @Override
-  public Iterator<StoreFile> updateCandidateFilesForRowKeyBefore(
-      Iterator<StoreFile> candidateFiles, final KeyValue targetKey, final Cell candidate) {
+  public Iterator<HStoreFile> updateCandidateFilesForRowKeyBefore(
+      Iterator<HStoreFile> candidateFiles, final KeyValue targetKey, final Cell candidate) {
     KeyBeforeConcatenatedLists.Iterator original =
         (KeyBeforeConcatenatedLists.Iterator)candidateFiles;
     assert original != null;
-    ArrayList<List<StoreFile>> components = original.getComponents();
+    ArrayList<List<HStoreFile>> components = original.getComponents();
     for (int firstIrrelevant = 0; firstIrrelevant < components.size(); ++firstIrrelevant) {
-      StoreFile sf = components.get(firstIrrelevant).get(0);
+      HStoreFile sf = components.get(firstIrrelevant).get(0);
       byte[] endKey = endOf(sf);
       // Entries are ordered as such: L0, then stripes in reverse order. We never remove
       // level 0; we remove the stripe, and all subsequent ones, as soon as we find the
@@ -221,12 +221,6 @@ public class StripeStoreFileManager
     return original;
   }
 
-  private byte[] getSplitPoint(Collection<StoreFile> sfs) throws IOException {
-    Optional<StoreFile> largestFile = StoreUtils.getLargestFile(sfs);
-    return largestFile.isPresent()
-        ? StoreUtils.getFileSplitPoint(largestFile.get(), cellComparator).orElse(null) : null;
-  }
-
   /**
    * Override of getSplitPoint that determines the split point as the boundary between two
    * stripes, unless it causes significant imbalance between split sides' sizes. In that
@@ -235,8 +229,10 @@ public class StripeStoreFileManager
    * @return The split point, or null if no split is possible.
    */
   @Override
-  public byte[] getSplitPoint() throws IOException {
-    if (this.getStorefileCount() == 0) return null;
+  public Optional<byte[]> getSplitPoint() throws IOException {
+    if (this.getStorefileCount() == 0) {
+      return Optional.empty();
+    }
     if (state.stripeFiles.size() <= 1) {
       return getSplitPointFromAllFiles();
     }
@@ -265,7 +261,9 @@ public class StripeStoreFileManager
     if (ratio < 1) {
       ratio = 1 / ratio;
     }
-    if (config.getMaxSplitImbalance() > ratio) return state.stripeEndRows[leftIndex];
+    if (config.getMaxSplitImbalance() > ratio) {
+      return Optional.of(state.stripeEndRows[leftIndex]);
+    }
 
     // If the difference between the sides is too large, we could get the proportional key on
     // the a stripe to equalize the difference, but there's no proportional key method at the
@@ -278,18 +276,21 @@ public class StripeStoreFileManager
     if (newRatio < 1) {
       newRatio = 1 / newRatio;
     }
-    if (newRatio >= ratio)  return state.stripeEndRows[leftIndex];
+    if (newRatio >= ratio) {
+      return Optional.of(state.stripeEndRows[leftIndex]);
+    }
     LOG.debug("Splitting the stripe - ratio w/o split " + ratio + ", ratio with split "
         + newRatio + " configured ratio " + config.getMaxSplitImbalance());
-    // Ok, we may get better ratio, get it.
-    return getSplitPoint(state.stripeFiles.get(isRightLarger ? rightIndex : leftIndex));
+    // OK, we may get better ratio, get it.
+    return StoreUtils.getSplitPoint(state.stripeFiles.get(isRightLarger ? rightIndex : leftIndex),
+      cellComparator);
   }
 
-  private byte[] getSplitPointFromAllFiles() throws IOException {
-    ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<>();
+  private Optional<byte[]> getSplitPointFromAllFiles() throws IOException {
+    ConcatenatedLists<HStoreFile> sfs = new ConcatenatedLists<>();
     sfs.addSublist(state.level0Files);
     sfs.addAllSublists(state.stripeFiles);
-    return getSplitPoint(sfs);
+    return StoreUtils.getSplitPoint(sfs, cellComparator);
   }
 
   private double getMidStripeSplitRatio(long smallerSize, long largerSize, long lastLargerSize) {
@@ -297,7 +298,7 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public Collection<StoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
+  public Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
       byte[] stopRow, boolean includeStopRow) {
     if (state.stripeFiles.isEmpty()) {
       return state.level0Files; // There's just L0.
@@ -313,7 +314,7 @@ public class StripeStoreFileManager
       return state.allFilesCached; // We need to read all files.
     }
 
-    ConcatenatedLists<StoreFile> result = new ConcatenatedLists<>();
+    ConcatenatedLists<HStoreFile> result = new ConcatenatedLists<>();
     result.addAllSublists(state.stripeFiles.subList(firstStripe, lastStripe + 1));
     result.addSublist(state.level0Files);
     return result;
@@ -321,7 +322,7 @@ public class StripeStoreFileManager
 
   @Override
   public void addCompactionResults(
-    Collection<StoreFile> compactedFiles, Collection<StoreFile> results) throws IOException {
+    Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results) throws IOException {
     // See class comment for the assumptions we make here.
     LOG.debug("Attempting to merge compaction results: " + compactedFiles.size()
         + " files replaced by " + results.size());
@@ -337,14 +338,14 @@ public class StripeStoreFileManager
   // Let a background thread close the actual reader on these compacted files and also
   // ensure to evict the blocks from block cache so that they are no longer in
   // cache
-  private void markCompactedAway(Collection<StoreFile> compactedFiles) {
-    for (StoreFile file : compactedFiles) {
+  private void markCompactedAway(Collection<HStoreFile> compactedFiles) {
+    for (HStoreFile file : compactedFiles) {
       file.markCompactedAway();
     }
   }
 
   @Override
-  public void removeCompactedFiles(Collection<StoreFile> compactedFiles) throws IOException {
+  public void removeCompactedFiles(Collection<HStoreFile> compactedFiles) throws IOException {
     // See class comment for the assumptions we make here.
     LOG.debug("Attempting to delete compaction results: " + compactedFiles.size());
     // In order to be able to fail in the middle of the operation, we'll operate on lazy
@@ -378,7 +379,7 @@ public class StripeStoreFileManager
    */
   private long getStripeFilesSize(int stripeIndex) {
     long result = 0;
-    for (StoreFile sf : state.stripeFiles.get(stripeIndex)) {
+    for (HStoreFile sf : state.stripeFiles.get(stripeIndex)) {
       result += sf.getReader().length();
     }
     return result;
@@ -391,13 +392,13 @@ public class StripeStoreFileManager
    * go to level 0.
    * @param storeFiles Store files to add.
    */
-  private void loadUnclassifiedStoreFiles(List<StoreFile> storeFiles) {
+  private void loadUnclassifiedStoreFiles(List<HStoreFile> storeFiles) {
     LOG.debug("Attempting to load " + storeFiles.size() + " store files.");
-    TreeMap<byte[], ArrayList<StoreFile>> candidateStripes = new TreeMap<>(MAP_COMPARATOR);
-    ArrayList<StoreFile> level0Files = new ArrayList<>();
+    TreeMap<byte[], ArrayList<HStoreFile>> candidateStripes = new TreeMap<>(MAP_COMPARATOR);
+    ArrayList<HStoreFile> level0Files = new ArrayList<>();
     // Separate the files into tentative stripes; then validate. Currently, we rely on metadata.
     // If needed, we could dynamically determine the stripes in future.
-    for (StoreFile sf : storeFiles) {
+    for (HStoreFile sf : storeFiles) {
       byte[] startRow = startOf(sf), endRow = endOf(sf);
       // Validate the range and put the files into place.
       if (isInvalid(startRow) || isInvalid(endRow)) {
@@ -410,7 +411,7 @@ public class StripeStoreFileManager
         insertFileIntoStripe(level0Files, sf); // Bad metadata - goes to L0 also.
         ensureLevel0Metadata(sf);
       } else {
-        ArrayList<StoreFile> stripe = candidateStripes.get(endRow);
+        ArrayList<HStoreFile> stripe = candidateStripes.get(endRow);
         if (stripe == null) {
           stripe = new ArrayList<>();
           candidateStripes.put(endRow, stripe);
@@ -423,14 +424,14 @@ public class StripeStoreFileManager
 
     boolean hasOverlaps = false;
     byte[] expectedStartRow = null; // first stripe can start wherever
-    Iterator<Map.Entry<byte[], ArrayList<StoreFile>>> entryIter =
+    Iterator<Map.Entry<byte[], ArrayList<HStoreFile>>> entryIter =
         candidateStripes.entrySet().iterator();
     while (entryIter.hasNext()) {
-      Map.Entry<byte[], ArrayList<StoreFile>> entry = entryIter.next();
-      ArrayList<StoreFile> files = entry.getValue();
+      Map.Entry<byte[], ArrayList<HStoreFile>> entry = entryIter.next();
+      ArrayList<HStoreFile> files = entry.getValue();
       // Validate the file start rows, and remove the bad ones to level 0.
       for (int i = 0; i < files.size(); ++i) {
-        StoreFile sf = files.get(i);
+        HStoreFile sf = files.get(i);
         byte[] startRow = startOf(sf);
         if (expectedStartRow == null) {
           expectedStartRow = startRow; // ensure that first stripe is still consistent
@@ -439,7 +440,7 @@ public class StripeStoreFileManager
           LOG.warn("Store file doesn't fit into the tentative stripes - expected to start at ["
               + Bytes.toString(expectedStartRow) + "], but starts at [" + Bytes.toString(startRow)
               + "], to L0 it goes");
-          StoreFile badSf = files.remove(i);
+          HStoreFile badSf = files.remove(i);
           insertFileIntoStripe(level0Files, badSf);
           ensureLevel0Metadata(badSf);
           --i;
@@ -459,7 +460,7 @@ public class StripeStoreFileManager
     // as open keys anyway, and log the message.
     // If there were errors, we'll play it safe and dump everything into L0.
     if (!candidateStripes.isEmpty()) {
-      StoreFile firstFile = candidateStripes.firstEntry().getValue().get(0);
+      HStoreFile firstFile = candidateStripes.firstEntry().getValue().get(0);
       boolean isOpen = isOpen(startOf(firstFile)) && isOpen(candidateStripes.lastKey());
       if (!isOpen) {
         LOG.warn("The range of the loaded files does not cover full key space: from ["
@@ -470,8 +471,8 @@ public class StripeStoreFileManager
           ensureEdgeStripeMetadata(candidateStripes.lastEntry().getValue(), false);
         } else {
           LOG.warn("Inconsistent files, everything goes to L0.");
-          for (ArrayList<StoreFile> files : candidateStripes.values()) {
-            for (StoreFile sf : files) {
+          for (ArrayList<HStoreFile> files : candidateStripes.values()) {
+            for (HStoreFile sf : files) {
               insertFileIntoStripe(level0Files, sf);
               ensureLevel0Metadata(sf);
             }
@@ -486,9 +487,9 @@ public class StripeStoreFileManager
     state.level0Files = ImmutableList.copyOf(level0Files);
     state.stripeFiles = new ArrayList<>(candidateStripes.size());
     state.stripeEndRows = new byte[Math.max(0, candidateStripes.size() - 1)][];
-    ArrayList<StoreFile> newAllFiles = new ArrayList<>(level0Files);
+    ArrayList<HStoreFile> newAllFiles = new ArrayList<>(level0Files);
     int i = candidateStripes.size() - 1;
-    for (Map.Entry<byte[], ArrayList<StoreFile>> entry : candidateStripes.entrySet()) {
+    for (Map.Entry<byte[], ArrayList<HStoreFile>> entry : candidateStripes.entrySet()) {
       state.stripeFiles.add(ImmutableList.copyOf(entry.getValue()));
       newAllFiles.addAll(entry.getValue());
       if (i > 0) {
@@ -501,14 +502,14 @@ public class StripeStoreFileManager
     debugDumpState("Files loaded");
   }
 
-  private void ensureEdgeStripeMetadata(ArrayList<StoreFile> stripe, boolean isFirst) {
-    HashMap<StoreFile, byte[]> targetMap = isFirst ? fileStarts : fileEnds;
-    for (StoreFile sf : stripe) {
+  private void ensureEdgeStripeMetadata(ArrayList<HStoreFile> stripe, boolean isFirst) {
+    HashMap<HStoreFile, byte[]> targetMap = isFirst ? fileStarts : fileEnds;
+    for (HStoreFile sf : stripe) {
       targetMap.put(sf, OPEN_KEY);
     }
   }
 
-  private void ensureLevel0Metadata(StoreFile sf) {
+  private void ensureLevel0Metadata(HStoreFile sf) {
     if (!isInvalid(startOf(sf))) this.fileStarts.put(sf, INVALID_KEY_IN_MAP);
     if (!isInvalid(endOf(sf))) this.fileEnds.put(sf, INVALID_KEY_IN_MAP);
   }
@@ -616,7 +617,7 @@ public class StripeStoreFileManager
   }
 
 
-  private byte[] startOf(StoreFile sf) {
+  private byte[] startOf(HStoreFile sf) {
     byte[] result = fileStarts.get(sf);
 
     // result and INVALID_KEY_IN_MAP are compared _only_ by reference on purpose here as the latter
@@ -627,7 +628,7 @@ public class StripeStoreFileManager
              : result == INVALID_KEY_IN_MAP ? INVALID_KEY : result;
   }
 
-  private byte[] endOf(StoreFile sf) {
+  private byte[] endOf(HStoreFile sf) {
     byte[] result = fileEnds.get(sf);
 
     // result and INVALID_KEY_IN_MAP are compared _only_ by reference on purpose here as the latter
@@ -643,7 +644,7 @@ public class StripeStoreFileManager
    * @param stripe Stripe copy to insert into.
    * @param sf File to insert.
    */
-  private static void insertFileIntoStripe(ArrayList<StoreFile> stripe, StoreFile sf) {
+  private static void insertFileIntoStripe(ArrayList<HStoreFile> stripe, HStoreFile sf) {
     // The only operation for which sorting of the files matters is KeyBefore. Therefore,
     // we will store the file in reverse order by seqNum from the outset.
     for (int insertBefore = 0; ; ++insertBefore) {
@@ -664,20 +665,20 @@ public class StripeStoreFileManager
    * but will quickly cut down on them as it finds something in the more likely ones; thus,
    * the above allow us to avoid unnecessary copying of a bunch of lists.
    */
-  private static class KeyBeforeConcatenatedLists extends ConcatenatedLists<StoreFile> {
+  private static class KeyBeforeConcatenatedLists extends ConcatenatedLists<HStoreFile> {
     @Override
-    public java.util.Iterator<StoreFile> iterator() {
+    public java.util.Iterator<HStoreFile> iterator() {
       return new Iterator();
     }
 
-    public class Iterator extends ConcatenatedLists<StoreFile>.Iterator {
-      public ArrayList<List<StoreFile>> getComponents() {
+    public class Iterator extends ConcatenatedLists<HStoreFile>.Iterator {
+      public ArrayList<List<HStoreFile>> getComponents() {
         return components;
       }
 
       public void removeComponents(int startIndex) {
-        List<List<StoreFile>> subList = components.subList(startIndex, components.size());
-        for (List<StoreFile> entry : subList) {
+        List<List<HStoreFile>> subList = components.subList(startIndex, components.size());
+        for (List<HStoreFile> entry : subList) {
           size -= entry.size();
         }
         assert size >= 0;
@@ -690,7 +691,7 @@ public class StripeStoreFileManager
           throw new IllegalStateException("No element to remove");
         }
         this.nextWasCalled = false;
-        List<StoreFile> src = components.get(currentComponent);
+        List<HStoreFile> src = components.get(currentComponent);
         if (src instanceof ImmutableList<?>) {
           src = new ArrayList<>(src);
           components.set(currentComponent, src);
@@ -711,14 +712,14 @@ public class StripeStoreFileManager
    * then creates a new state object and puts it in place.
    */
   private class CompactionOrFlushMergeCopy {
-    private ArrayList<List<StoreFile>> stripeFiles = null;
-    private ArrayList<StoreFile> level0Files = null;
+    private ArrayList<List<HStoreFile>> stripeFiles = null;
+    private ArrayList<HStoreFile> level0Files = null;
     private ArrayList<byte[]> stripeEndRows = null;
 
-    private Collection<StoreFile> compactedFiles = null;
-    private Collection<StoreFile> results = null;
+    private Collection<HStoreFile> compactedFiles = null;
+    private Collection<HStoreFile> results = null;
 
-    private List<StoreFile> l0Results = new ArrayList<>();
+    private List<HStoreFile> l0Results = new ArrayList<>();
     private final boolean isFlush;
 
     public CompactionOrFlushMergeCopy(boolean isFlush) {
@@ -727,14 +728,14 @@ public class StripeStoreFileManager
       this.isFlush = isFlush;
     }
 
-    private void mergeResults(Collection<StoreFile> compactedFiles, Collection<StoreFile> results)
+    private void mergeResults(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results)
         throws IOException {
       assert this.compactedFiles == null && this.results == null;
       this.compactedFiles = compactedFiles;
       this.results = results;
       // Do logical processing.
       if (!isFlush) removeCompactedFiles();
-      TreeMap<byte[], StoreFile> newStripes = processResults();
+      TreeMap<byte[], HStoreFile> newStripes = processResults();
       if (newStripes != null) {
         processNewCandidateStripes(newStripes);
       }
@@ -744,7 +745,7 @@ public class StripeStoreFileManager
       updateMetadataMaps();
     }
 
-    private void deleteResults(Collection<StoreFile> compactedFiles) throws IOException {
+    private void deleteResults(Collection<HStoreFile> compactedFiles) throws IOException {
       this.compactedFiles = compactedFiles;
       // Create new state and update parent.
       State state = createNewState(true);
@@ -762,13 +763,13 @@ public class StripeStoreFileManager
       newState.stripeEndRows = (this.stripeEndRows == null) ? oldState.stripeEndRows
           : this.stripeEndRows.toArray(new byte[this.stripeEndRows.size()][]);
       newState.stripeFiles = new ArrayList<>(this.stripeFiles.size());
-      for (List<StoreFile> newStripe : this.stripeFiles) {
+      for (List<HStoreFile> newStripe : this.stripeFiles) {
         newState.stripeFiles.add(newStripe instanceof ImmutableList<?>
-            ? (ImmutableList<StoreFile>)newStripe : ImmutableList.copyOf(newStripe));
+            ? (ImmutableList<HStoreFile>)newStripe : ImmutableList.copyOf(newStripe));
       }
 
-      List<StoreFile> newAllFiles = new ArrayList<>(oldState.allFilesCached);
-      List<StoreFile> newAllCompactedFiles = new ArrayList<>(oldState.allCompactedFilesCached);
+      List<HStoreFile> newAllFiles = new ArrayList<>(oldState.allFilesCached);
+      List<HStoreFile> newAllCompactedFiles = new ArrayList<>(oldState.allCompactedFilesCached);
       if (!isFlush) {
         newAllFiles.removeAll(compactedFiles);
         if (delCompactedFiles) {
@@ -788,13 +789,13 @@ public class StripeStoreFileManager
     private void updateMetadataMaps() {
       StripeStoreFileManager parent = StripeStoreFileManager.this;
       if (!isFlush) {
-        for (StoreFile sf : this.compactedFiles) {
+        for (HStoreFile sf : this.compactedFiles) {
           parent.fileStarts.remove(sf);
           parent.fileEnds.remove(sf);
         }
       }
       if (this.l0Results != null) {
-        for (StoreFile sf : this.l0Results) {
+        for (HStoreFile sf : this.l0Results) {
           parent.ensureLevel0Metadata(sf);
         }
       }
@@ -804,14 +805,14 @@ public class StripeStoreFileManager
      * @param index Index of the stripe we need.
      * @return A lazy stripe copy from current stripes.
      */
-    private final ArrayList<StoreFile> getStripeCopy(int index) {
-      List<StoreFile> stripeCopy = this.stripeFiles.get(index);
-      ArrayList<StoreFile> result = null;
+    private final ArrayList<HStoreFile> getStripeCopy(int index) {
+      List<HStoreFile> stripeCopy = this.stripeFiles.get(index);
+      ArrayList<HStoreFile> result = null;
       if (stripeCopy instanceof ImmutableList<?>) {
         result = new ArrayList<>(stripeCopy);
         this.stripeFiles.set(index, result);
       } else {
-        result = (ArrayList<StoreFile>)stripeCopy;
+        result = (ArrayList<HStoreFile>)stripeCopy;
       }
       return result;
     }
@@ -819,7 +820,7 @@ public class StripeStoreFileManager
     /**
      * @return A lazy L0 copy from current state.
      */
-    private final ArrayList<StoreFile> getLevel0Copy() {
+    private final ArrayList<HStoreFile> getLevel0Copy() {
       if (this.level0Files == null) {
         this.level0Files = new ArrayList<>(StripeStoreFileManager.this.state.level0Files);
       }
@@ -831,9 +832,9 @@ public class StripeStoreFileManager
      * or to the list of new candidate stripes.
      * @return New candidate stripes.
      */
-    private TreeMap<byte[], StoreFile> processResults() throws IOException {
-      TreeMap<byte[], StoreFile> newStripes = null;
-      for (StoreFile sf : this.results) {
+    private TreeMap<byte[], HStoreFile> processResults() throws IOException {
+      TreeMap<byte[], HStoreFile> newStripes = null;
+      for (HStoreFile sf : this.results) {
         byte[] startRow = startOf(sf), endRow = endOf(sf);
         if (isInvalid(endRow) || isInvalid(startRow)) {
           if (!isFlush) {
@@ -856,7 +857,7 @@ public class StripeStoreFileManager
         if (newStripes == null) {
           newStripes = new TreeMap<>(MAP_COMPARATOR);
         }
-        StoreFile oldSf = newStripes.put(endRow, sf);
+        HStoreFile oldSf = newStripes.put(endRow, sf);
         if (oldSf != null) {
           throw new IOException("Compactor has produced multiple files for the stripe ending in ["
               + Bytes.toString(endRow) + "], found " + sf.getPath() + " and " + oldSf.getPath());
@@ -870,9 +871,9 @@ public class StripeStoreFileManager
      * @param compactedFiles Compacted files.
      */
     private void removeCompactedFiles() throws IOException {
-      for (StoreFile oldFile : this.compactedFiles) {
+      for (HStoreFile oldFile : this.compactedFiles) {
         byte[] oldEndRow = endOf(oldFile);
-        List<StoreFile> source = null;
+        List<HStoreFile> source = null;
         if (isInvalid(oldEndRow)) {
           source = getLevel0Copy();
         } else {
@@ -895,7 +896,7 @@ public class StripeStoreFileManager
      * @param newStripes  New stripes - files by end row.
      */
     private void processNewCandidateStripes(
-        TreeMap<byte[], StoreFile> newStripes) throws IOException {
+        TreeMap<byte[], HStoreFile> newStripes) throws IOException {
       // Validate that the removed and added aggregate ranges still make for a full key space.
       boolean hasStripes = !this.stripeFiles.isEmpty();
       this.stripeEndRows = new ArrayList<>(Arrays.asList(StripeStoreFileManager.this.state.stripeEndRows));
@@ -907,7 +908,7 @@ public class StripeStoreFileManager
       }
 
       boolean canAddNewStripes = true;
-      Collection<StoreFile> filesForL0 = null;
+      Collection<HStoreFile> filesForL0 = null;
       if (hasStripes) {
         // Determine which stripes will need to be removed because they conflict with new stripes.
         // The new boundaries should match old stripe boundaries, so we should get exact matches.
@@ -921,7 +922,7 @@ public class StripeStoreFileManager
         int removeTo = findStripeIndexByEndRow(lastEndRow);
         if (removeTo < 0) throw new IOException("Compaction is trying to add a bad range.");
         // See if there are files in the stripes we are trying to replace.
-        ArrayList<StoreFile> conflictingFiles = new ArrayList<>();
+        ArrayList<HStoreFile> conflictingFiles = new ArrayList<>();
         for (int removeIndex = removeTo; removeIndex >= removeFrom; --removeIndex) {
           conflictingFiles.addAll(this.stripeFiles.get(removeIndex));
         }
@@ -942,7 +943,7 @@ public class StripeStoreFileManager
             filesForL0 = conflictingFiles;
           }
           if (filesForL0 != null) {
-            for (StoreFile sf : filesForL0) {
+            for (HStoreFile sf : filesForL0) {
               insertFileIntoStripe(getLevel0Copy(), sf);
             }
             l0Results.addAll(filesForL0);
@@ -966,7 +967,7 @@ public class StripeStoreFileManager
       // Now, insert new stripes. The total ranges match, so we can insert where we removed.
       byte[] previousEndRow = null;
       int insertAt = removeFrom;
-      for (Map.Entry<byte[], StoreFile> newStripe : newStripes.entrySet()) {
+      for (Map.Entry<byte[], HStoreFile> newStripe : newStripes.entrySet()) {
         if (previousEndRow != null) {
           // Validate that the ranges are contiguous.
           assert !isOpen(previousEndRow);
@@ -977,7 +978,7 @@ public class StripeStoreFileManager
           }
         }
         // Add the new stripe.
-        ArrayList<StoreFile> tmp = new ArrayList<>();
+        ArrayList<HStoreFile> tmp = new ArrayList<>();
         tmp.add(newStripe.getValue());
         stripeFiles.add(insertAt, tmp);
         previousEndRow = newStripe.getKey();
@@ -990,7 +991,7 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public List<StoreFile> getLevel0Files() {
+  public List<HStoreFile> getLevel0Files() {
     return this.state.level0Files;
   }
 
@@ -1005,7 +1006,7 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public ArrayList<ImmutableList<StoreFile>> getStripes() {
+  public ArrayList<ImmutableList<HStoreFile>> getStripes() {
     return this.state.stripeFiles;
   }
 
@@ -1015,22 +1016,22 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public Collection<StoreFile> getUnneededFiles(long maxTs, List<StoreFile> filesCompacting) {
+  public Collection<HStoreFile> getUnneededFiles(long maxTs, List<HStoreFile> filesCompacting) {
     // 1) We can never get rid of the last file which has the maximum seqid in a stripe.
     // 2) Files that are not the latest can't become one due to (1), so the rest are fair game.
     State state = this.state;
-    Collection<StoreFile> expiredStoreFiles = null;
-    for (ImmutableList<StoreFile> stripe : state.stripeFiles) {
+    Collection<HStoreFile> expiredStoreFiles = null;
+    for (ImmutableList<HStoreFile> stripe : state.stripeFiles) {
       expiredStoreFiles = findExpiredFiles(stripe, maxTs, filesCompacting, expiredStoreFiles);
     }
     return findExpiredFiles(state.level0Files, maxTs, filesCompacting, expiredStoreFiles);
   }
 
-  private Collection<StoreFile> findExpiredFiles(ImmutableList<StoreFile> stripe, long maxTs,
-      List<StoreFile> filesCompacting, Collection<StoreFile> expiredStoreFiles) {
+  private Collection<HStoreFile> findExpiredFiles(ImmutableList<HStoreFile> stripe, long maxTs,
+      List<HStoreFile> filesCompacting, Collection<HStoreFile> expiredStoreFiles) {
     // Order by seqnum is reversed.
     for (int i = 1; i < stripe.size(); ++i) {
-      StoreFile sf = stripe.get(i);
+      HStoreFile sf = stripe.get(i);
       synchronized (sf) {
         long fileTs = sf.getReader().getMaxTimestamp();
         if (fileTs < maxTs && !filesCompacting.contains(sf)) {
@@ -1061,7 +1062,7 @@ public class StripeStoreFileManager
     // we flush data to stripe directly.
     int delta = stateLocal.level0Files.isEmpty() ? 0 : 1;
     double max = 0.0;
-    for (ImmutableList<StoreFile> stripeFile : stateLocal.stripeFiles) {
+    for (ImmutableList<HStoreFile> stripeFile : stateLocal.stripeFiles) {
       int stripeFileCount = stripeFile.size();
       double normCount =
           (double) (stripeFileCount + delta - config.getStripeCompactMinFiles())
@@ -1079,7 +1080,7 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public Comparator<StoreFile> getStoreFileComparator() {
+  public Comparator<HStoreFile> getStoreFileComparator() {
     return StoreFileComparators.SEQ_ID;
   }
 }

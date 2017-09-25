@@ -33,14 +33,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Function;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Collections2;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
- * Utility class to handle the removal of HFiles (or the respective {@link StoreFile StoreFiles})
+ * Utility class to handle the removal of HFiles (or the respective {@link HStoreFile StoreFiles})
  * for a HRegion from the {@link FileSystem}. The hfiles will be archived or deleted, depending on
  * the state of the system.
  */
@@ -226,7 +226,7 @@ public class HFileArchiver {
    * @throws IOException if the files could not be correctly disposed.
    */
   public static void archiveStoreFiles(Configuration conf, FileSystem fs, HRegionInfo regionInfo,
-      Path tableDir, byte[] family, Collection<StoreFile> compactedFiles)
+      Path tableDir, byte[] family, Collection<HStoreFile> compactedFiles)
       throws IOException, FailedArchiveException {
 
     // sometimes in testing, we don't have rss, so we need to check for that
@@ -479,13 +479,13 @@ public class HFileArchiver {
    * @throws IOException if a file cannot be deleted. All files will be attempted to deleted before
    *           throwing the exception, rather than failing at the first file.
    */
-  private static void deleteStoreFilesWithoutArchiving(Collection<StoreFile> compactedFiles)
+  private static void deleteStoreFilesWithoutArchiving(Collection<HStoreFile> compactedFiles)
       throws IOException {
     LOG.debug("Deleting store files without archiving.");
     List<IOException> errors = new ArrayList<>(0);
-    for (StoreFile hsf : compactedFiles) {
+    for (HStoreFile hsf : compactedFiles) {
       try {
-        hsf.deleteReader();
+        hsf.deleteStoreFile();
       } catch (IOException e) {
         LOG.error("Failed to delete store file:" + hsf.getPath());
         errors.add(e);
@@ -524,16 +524,16 @@ public class HFileArchiver {
   }
 
   /**
-   * Convert the {@link StoreFile} into something we can manage in the archive
+   * Convert the {@link HStoreFile} into something we can manage in the archive
    * methods
    */
-  private static class StoreToFile extends FileConverter<StoreFile> {
+  private static class StoreToFile extends FileConverter<HStoreFile> {
     public StoreToFile(FileSystem fs) {
       super(fs);
     }
 
     @Override
-    public File apply(StoreFile input) {
+    public File apply(HStoreFile input) {
       return new FileableStoreFile(fs, input);
     }
   }
@@ -656,20 +656,20 @@ public class HFileArchiver {
   }
 
   /**
-   * {@link File} adapter for a {@link StoreFile} living on a {@link FileSystem}
+   * {@link File} adapter for a {@link HStoreFile} living on a {@link FileSystem}
    * .
    */
   private static class FileableStoreFile extends File {
-    StoreFile file;
+    HStoreFile file;
 
-    public FileableStoreFile(FileSystem fs, StoreFile store) {
+    public FileableStoreFile(FileSystem fs, HStoreFile store) {
       super(fs);
       this.file = store;
     }
 
     @Override
     public void delete() throws IOException {
-      file.deleteReader();
+      file.deleteStoreFile();
     }
 
     @Override
@@ -690,7 +690,7 @@ public class HFileArchiver {
 
     @Override
     public void close() throws IOException {
-      file.closeReader(true);
+      file.closeStoreFile(true);
     }
 
     @Override

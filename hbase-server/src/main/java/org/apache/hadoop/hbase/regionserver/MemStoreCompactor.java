@@ -244,30 +244,27 @@ public class MemStoreCompactor {
     MemStoreSegmentsIterator iterator = null;
 
     switch (action) {
-    case COMPACT:
-      iterator =
-          new MemStoreCompactorSegmentsIterator(versionedList.getStoreSegments(),
-              compactingMemStore.getComparator(),
-              compactionKVMax, compactingMemStore.getStore());
+      case COMPACT:
+        iterator = new MemStoreCompactorSegmentsIterator(versionedList.getStoreSegments(),
+            compactingMemStore.getComparator(), compactionKVMax, compactingMemStore.getStore());
 
-      result = SegmentFactory.instance().createImmutableSegmentByCompaction(
+        result = SegmentFactory.instance().createImmutableSegmentByCompaction(
           compactingMemStore.getConfiguration(), compactingMemStore.getComparator(), iterator,
           versionedList.getNumOfCells(), ImmutableSegment.Type.ARRAY_MAP_BASED);
-      iterator.close();
-      break;
-    case MERGE:
-      iterator =
-          new MemStoreMergerSegmentsIterator(versionedList.getStoreSegments(),
-              compactingMemStore.getComparator(),
-              compactionKVMax);
+        iterator.close();
+        break;
+      case MERGE:
+        iterator = new MemStoreMergerSegmentsIterator(versionedList.getStoreSegments(),
+            compactingMemStore.getComparator(), compactionKVMax);
 
-      result = SegmentFactory.instance().createImmutableSegmentByMerge(
+        result = SegmentFactory.instance().createImmutableSegmentByMerge(
           compactingMemStore.getConfiguration(), compactingMemStore.getComparator(), iterator,
           versionedList.getNumOfCells(), ImmutableSegment.Type.ARRAY_MAP_BASED,
           versionedList.getStoreSegments());
-      iterator.close();
-      break;
-    default: throw new RuntimeException("Unknown action " + action); // sanity check
+        iterator.close();
+        break;
+      default:
+        throw new RuntimeException("Unknown action " + action); // sanity check
     }
 
     return result;

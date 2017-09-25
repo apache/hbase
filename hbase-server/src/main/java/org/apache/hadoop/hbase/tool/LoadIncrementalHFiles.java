@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -702,7 +703,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item, final Table table,
       final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
     Path hfilePath = item.getFilePath();
-    byte[] first, last;
+    Optional<byte[]> first, last;
     try (HFile.Reader hfr = HFile.createReader(hfilePath.getFileSystem(getConf()), hfilePath,
       new CacheConfig(getConf()), true, getConf())) {
       hfr.loadFileInfo();
@@ -713,19 +714,19 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       return new Pair<>(null, hfilePath.getName());
     }
 
-    LOG.info("Trying to load hfile=" + hfilePath + " first=" + Bytes.toStringBinary(first) +
-        " last=" + Bytes.toStringBinary(last));
-    if (first == null || last == null) {
-      assert first == null && last == null;
+    LOG.info("Trying to load hfile=" + hfilePath + " first=" + first.map(Bytes::toStringBinary) +
+        " last=" + last.map(Bytes::toStringBinary));
+    if (!first.isPresent() || !last.isPresent()) {
+      assert !first.isPresent() && !last.isPresent();
       // TODO what if this is due to a bad HFile?
       LOG.info("hfile " + hfilePath + " has no entries, skipping");
       return null;
     }
-    if (Bytes.compareTo(first, last) > 0) {
-      throw new IllegalArgumentException(
-          "Invalid range: " + Bytes.toStringBinary(first) + " > " + Bytes.toStringBinary(last));
+    if (Bytes.compareTo(first.get(), last.get()) > 0) {
+      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(first.get()) +
+          " > " + Bytes.toStringBinary(last.get()));
     }
-    int idx = Arrays.binarySearch(startEndKeys.getFirst(), first, Bytes.BYTES_COMPARATOR);
+    int idx = Arrays.binarySearch(startEndKeys.getFirst(), first.get(), Bytes.BYTES_COMPARATOR);
     if (idx < 0) {
       // not on boundary, returns -(insertion index). Calculate region it
       // would be in.
@@ -753,7 +754,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           "Please use hbck tool to fix it first.");
     }
 
-    boolean lastKeyInRange = Bytes.compareTo(last, startEndKeys.getSecond()[idx]) < 0 ||
+    boolean lastKeyInRange = Bytes.compareTo(last.get(), startEndKeys.getSecond()[idx]) < 0 ||
         Bytes.equals(startEndKeys.getSecond()[idx], HConstants.EMPTY_BYTE_ARRAY);
     if (!lastKeyInRange) {
       List<LoadQueueItem> lqis = splitStoreFile(item, table,
@@ -834,8 +835,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
                 " for family " + builder.getNameAsString());
           }
           reader.loadFileInfo();
-          byte[] first = reader.getFirstRowKey();
-          byte[] last = reader.getLastRowKey();
+          byte[] first = reader.getFirstRowKey().get();
+          byte[] last = reader.getLastRowKey().get();
 
           LOG.info("Trying to figure out region boundaries hfile=" + hfile + " first=" +
               Bytes.toStringBinary(first) + " last=" + Bytes.toStringBinary(last));

@@ -186,8 +186,8 @@ public class TestHFileSeek extends TestCase {
     Reader reader = HFile.createReaderFromStream(path, fsdis,
         fs.getFileStatus(path).getLen(), new CacheConfig(conf), conf);
     reader.loadFileInfo();
-    KeySampler kSampler = new KeySampler(rng, ((KeyValue) reader.getFirstKey()).getKey(),
-        ((KeyValue) reader.getLastKey()).getKey(), keyLenGen);
+    KeySampler kSampler = new KeySampler(rng, ((KeyValue) reader.getFirstKey().get()).getKey(),
+        ((KeyValue) reader.getLastKey().get()).getKey(), keyLenGen);
     HFileScanner scanner = reader.getScanner(false, USE_PREAD);
     BytesWritable key = new BytesWritable();
     timer.reset();

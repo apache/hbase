@@ -82,8 +82,8 @@ public class TestStripeStoreEngine {
         .thenReturn(new ArrayList<>());
 
     // Produce 3 L0 files.
-    StoreFile sf = createFile();
-    ArrayList<StoreFile> compactUs = al(sf, createFile(), createFile());
+    HStoreFile sf = createFile();
+    ArrayList<HStoreFile> compactUs = al(sf, createFile(), createFile());
     se.getStoreFileManager().loadFiles(compactUs);
     // Create a compaction that would want to split the stripe.
     CompactionContext compaction = se.createCompaction();
@@ -103,8 +103,8 @@ public class TestStripeStoreEngine {
       NoLimitThroughputController.INSTANCE, null);
   }
 
-  private static StoreFile createFile() throws Exception {
-    StoreFile sf = mock(StoreFile.class);
+  private static HStoreFile createFile() throws Exception {
+    HStoreFile sf = mock(HStoreFile.class);
     when(sf.getMetadataValue(any(byte[].class)))
       .thenReturn(StripeStoreFileManager.INVALID_KEY);
     when(sf.getReader()).thenReturn(mock(StoreFileReader.class));
@@ -114,12 +114,12 @@ public class TestStripeStoreEngine {
   }
 
   private static TestStoreEngine createEngine(Configuration conf) throws Exception {
-    Store store = mock(Store.class);
+    HStore store = mock(HStore.class);
     CellComparator kvComparator = mock(CellComparator.class);
     return (TestStoreEngine)StoreEngine.create(store, conf, kvComparator);
   }
 
-  private static ArrayList<StoreFile> al(StoreFile... sfs) {
+  private static ArrayList<HStoreFile> al(HStoreFile... sfs) {
     return new ArrayList<>(Arrays.asList(sfs));
   }
 }

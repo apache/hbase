@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -226,7 +227,7 @@ public class TestCompaction {
 
   private int count() throws IOException {
     int count = 0;
-    for (StoreFile f: this.r.stores.
+    for (HStoreFile f: this.r.stores.
         get(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       if (!scanner.seekTo()) {
@@ -255,9 +256,9 @@ public class TestCompaction {
     for (int i = 0; i < nfiles; i++) {
       createStoreFile(r);
     }
-    HStore store = (HStore) r.getStore(COLUMN_FAMILY);
+    HStore store = r.getStore(COLUMN_FAMILY);
 
-    Collection<StoreFile> storeFiles = store.getStorefiles();
+    Collection<HStoreFile> storeFiles = store.getStorefiles();
     DefaultCompactor tool = (DefaultCompactor)store.storeEngine.getCompactor();
     tool.compactForTesting(storeFiles, false);
 
@@ -276,8 +277,8 @@ public class TestCompaction {
     } catch (Exception e) {
       // The complete compaction should fail and the corrupt file should remain
       // in the 'tmp' directory;
-      assert (fs.exists(origPath));
-      assert (!fs.exists(dstPath));
+      assertTrue(fs.exists(origPath));
+      assertFalse(fs.exists(dstPath));
       System.out.println("testCompactionWithCorruptResult Passed");
       return;
     }
@@ -389,8 +390,8 @@ public class TestCompaction {
   }
 
   private class StoreMockMaker extends StatefulStoreMockMaker {
-    public ArrayList<StoreFile> compacting = new ArrayList<>();
-    public ArrayList<StoreFile> notCompacting = new ArrayList<>();
+    public ArrayList<HStoreFile> compacting = new ArrayList<>();
+    public ArrayList<HStoreFile> notCompacting = new ArrayList<>();
     private ArrayList<Integer> results;
 
     public StoreMockMaker(ArrayList<Integer> results) {
@@ -398,19 +399,21 @@ public class TestCompaction {
     }
 
     public class TestCompactionContext extends CompactionContext {
-      private List<StoreFile> selectedFiles;
-      public TestCompactionContext(List<StoreFile> selectedFiles) {
+
+      private List<HStoreFile> selectedFiles;
+
+      public TestCompactionContext(List<HStoreFile> selectedFiles) {
         super();
         this.selectedFiles = selectedFiles;
       }
 
       @Override
-      public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
+      public List<HStoreFile> preSelect(List<HStoreFile> filesCompacting) {
         return new ArrayList<>();
       }
 
       @Override
-      public boolean select(List<StoreFile> filesCompacting, boolean isUserCompaction,
+      public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
           boolean mayUseOffPeak, boolean forceMajor) throws IOException {
         this.request = new CompactionRequest(selectedFiles);
         this.request.setPriority(getPriority());
@@ -445,7 +448,7 @@ public class TestCompaction {
       notCompacting.addAll(ctx.selectedFiles);
     }
 
-    public synchronized void finishCompaction(List<StoreFile> sfs) {
+    public synchronized void finishCompaction(List<HStoreFile> sfs) {
       if (sfs.isEmpty()) return;
       synchronized (results) {
         results.add(sfs.size());
@@ -466,7 +469,9 @@ public class TestCompaction {
       public volatile boolean isInCompact = false;
 
       public void unblock() {
-        synchronized (this) { this.notifyAll(); }
+        synchronized (this) {
+          this.notifyAll();
+        }
       }
 
       @Override
@@ -484,12 +489,12 @@ public class TestCompaction {
       }
 
       @Override
-      public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
+      public List<HStoreFile> preSelect(List<HStoreFile> filesCompacting) {
         return new ArrayList<>();
       }
 
       @Override
-      public boolean select(List<StoreFile> f, boolean i, boolean m, boolean e)
+      public boolean select(List<HStoreFile> f, boolean i, boolean m, boolean e)
           throws IOException {
         this.request = new CompactionRequest(new ArrayList<>());
         return true;
@@ -673,14 +678,14 @@ public class TestCompaction {
   }
 
   public static class DummyCompactor extends DefaultCompactor {
-    public DummyCompactor(Configuration conf, Store store) {
+    public DummyCompactor(Configuration conf, HStore store) {
       super(conf, store);
       this.keepSeqIdPeriod = 0;
     }
   }
 
-  private static StoreFile createFile() throws Exception {
-    StoreFile sf = mock(StoreFile.class);
+  private static HStoreFile createFile() throws Exception {
+    HStoreFile sf = mock(HStoreFile.class);
     when(sf.getPath()).thenReturn(new Path("file"));
     StoreFileReader r = mock(StoreFileReader.class);
     when(r.length()).thenReturn(10L);

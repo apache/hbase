@@ -42,9 +42,10 @@ import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -140,10 +141,10 @@ public class TestHBaseFsckEncryption {
 
   private List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
-    for (Region region:
-        TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {
-      for (Store store: region.getStores()) {
-        for (StoreFile storefile: store.getStorefiles()) {
+    for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
+        .getOnlineRegions(htd.getTableName())) {
+      for (HStore store : ((HRegion) region).getStores()) {
+        for (HStoreFile storefile : store.getStorefiles()) {
           paths.add(storefile.getPath());
         }
       }

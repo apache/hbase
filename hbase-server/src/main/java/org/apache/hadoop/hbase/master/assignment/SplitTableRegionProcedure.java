@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.hbase.master.assignment;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -41,7 +43,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -58,19 +60,21 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SplitTableRegionState;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SplitTableRegionState;
 
 /**
  * The procedure to split a region in a table.
@@ -636,8 +640,8 @@ public class SplitTableRegionProcedure
     }
   }
 
-  private Pair<Path, Path> splitStoreFile(final HRegionFileSystem regionFs,
-      final byte[] family, final StoreFile sf) throws IOException {
+  private Pair<Path, Path> splitStoreFile(HRegionFileSystem regionFs, byte[] family, HStoreFile sf)
+      throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("pid=" + getProcId() + " splitting started for store file: " +
           sf.getPath() + " for region: " + getParentRegion().getShortNameToLog());
@@ -663,7 +667,7 @@ public class SplitTableRegionProcedure
   private class StoreFileSplitter implements Callable<Pair<Path,Path>> {
     private final HRegionFileSystem regionFs;
     private final byte[] family;
-    private final StoreFile sf;
+    private final HStoreFile sf;
 
     /**
      * Constructor that takes what it needs to split
@@ -671,8 +675,7 @@ public class SplitTableRegionProcedure
      * @param family Family that contains the store file
      * @param sf which file
      */
-    public StoreFileSplitter(final HRegionFileSystem regionFs, final byte[] family,
-        final StoreFile sf) {
+    public StoreFileSplitter(HRegionFileSystem regionFs, byte[] family, HStoreFile sf) {
       this.regionFs = regionFs;
       this.sf = sf;
       this.family = family;

@@ -94,7 +94,7 @@ public class TestFSErrorsExposed {
     TestHStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
+    HStoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
         BloomType.NONE, true);
     sf.initReader();
     StoreFileReader reader = sf.getReader();
@@ -144,12 +144,12 @@ public class TestFSErrorsExposed {
     TestHStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
+    HStoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
         BloomType.NONE, true);
 
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
         Collections.singletonList(sf), false, true, false, false,
-        // 0 is passed as readpoint because this test operates on StoreFile directly
+        // 0 is passed as readpoint because this test operates on HStoreFile directly
         0);
     KeyValueScanner scanner = scanners.get(0);
 

@@ -26,11 +26,11 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * 
@@ -55,10 +55,9 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
   }
 
   @Override
-  public CompactionRequest selectCompaction(Collection<StoreFile> candidateFiles,
-      List<StoreFile> filesCompacting, boolean isUserCompaction, boolean mayUseOffPeak,
+  public CompactionRequest selectCompaction(Collection<HStoreFile> candidateFiles,
+      List<HStoreFile> filesCompacting, boolean isUserCompaction, boolean mayUseOffPeak,
       boolean forceMajor) throws IOException {
-    
     if(forceMajor){
       LOG.warn("Major compaction is not supported for FIFO compaction policy. Ignore the flag.");
     }
@@ -70,13 +69,13 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
     }
     
     // Nothing to compact
-    Collection<StoreFile> toCompact = getExpiredStores(candidateFiles, filesCompacting);
+    Collection<HStoreFile> toCompact = getExpiredStores(candidateFiles, filesCompacting);
     CompactionRequest result = new CompactionRequest(toCompact);
     return result;
   }
 
   @Override
-  public boolean shouldPerformMajorCompaction(Collection<StoreFile> filesToCompact)
+  public boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
     throws IOException {
     boolean isAfterSplit = StoreUtils.hasReferences(filesToCompact);
     if(isAfterSplit){
@@ -87,8 +86,8 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
   }
 
   @Override
-  public boolean needsCompaction(Collection<StoreFile> storeFiles, 
-      List<StoreFile> filesCompacting) {  
+  public boolean needsCompaction(Collection<HStoreFile> storeFiles,
+      List<HStoreFile> filesCompacting) {
     boolean isAfterSplit = StoreUtils.hasReferences(storeFiles);
     if(isAfterSplit){
       LOG.info("Split detected, delegate to the parent policy.");
@@ -97,9 +96,9 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
     return hasExpiredStores(storeFiles);
   }
 
-  private  boolean hasExpiredStores(Collection<StoreFile> files) {
+  private boolean hasExpiredStores(Collection<HStoreFile> files) {
     long currentTime = EnvironmentEdgeManager.currentTime();
-    for(StoreFile sf: files){
+    for(HStoreFile sf: files){
       // Check MIN_VERSIONS is in HStore removeUnneededFiles
       long maxTs = sf.getReader().getMaxTimestamp();
       long maxTtl = storeConfigInfo.getStoreFileTtl();
@@ -113,11 +112,11 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
     return false;
   }
 
-  private  Collection<StoreFile> getExpiredStores(Collection<StoreFile> files,
-    Collection<StoreFile> filesCompacting) {
+  private Collection<HStoreFile> getExpiredStores(Collection<HStoreFile> files,
+      Collection<HStoreFile> filesCompacting) {
     long currentTime = EnvironmentEdgeManager.currentTime();
-    Collection<StoreFile> expiredStores = new ArrayList<>();
-    for(StoreFile sf: files){
+    Collection<HStoreFile> expiredStores = new ArrayList<>();
+    for(HStoreFile sf: files){
       // Check MIN_VERSIONS is in HStore removeUnneededFiles
       long maxTs = sf.getReader().getMaxTimestamp();
       long maxTtl = storeConfigInfo.getStoreFileTtl();

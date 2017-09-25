@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.client.Scan;
@@ -70,7 +69,6 @@ import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -78,6 +76,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The mob utilities
@@ -315,7 +314,7 @@ public final class MobUtils {
       // no file found
       return;
     }
-    List<StoreFile> filesToClean = new ArrayList<>();
+    List<HStoreFile> filesToClean = new ArrayList<>();
     int deletedFileCount = 0;
     for (FileStatus file : stats) {
       String fileName = file.getPath().getName();
@@ -467,7 +466,7 @@ public final class MobUtils {
    * @throws IOException
    */
   public static void removeMobFiles(Configuration conf, FileSystem fs, TableName tableName,
-      Path tableDir, byte[] family, Collection<StoreFile> storeFiles) throws IOException {
+      Path tableDir, byte[] family, Collection<HStoreFile> storeFiles) throws IOException {
     HFileArchiver.archiveStoreFiles(conf, fs, getMobRegionInfo(tableName), tableDir, family,
         storeFiles);
   }
@@ -721,7 +720,7 @@ public final class MobUtils {
    */
   private static void validateMobFile(Configuration conf, FileSystem fs, Path path,
       CacheConfig cacheConfig, boolean primaryReplica) throws IOException {
-    StoreFile storeFile = null;
+    HStoreFile storeFile = null;
     try {
       storeFile = new HStoreFile(fs, path, conf, cacheConfig, BloomType.NONE, primaryReplica);
       storeFile.initReader();
@@ -730,7 +729,7 @@ public final class MobUtils {
       throw e;
     } finally {
       if (storeFile != null) {
-        storeFile.closeReader(false);
+        storeFile.closeStoreFile(false);
       }
     }
   }

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -253,14 +254,16 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
   }
 
   public static class CompactorRegionObserver implements RegionObserver {
+
     @Override
     public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
-        InternalScanner s, CompactionLifeCycleTracker request, long readPoint) throws IOException {
-      return createCompactorScanner(store, scanners, scanType, earliestPutTs);
+        Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
+        long earliestPutTs, InternalScanner s, CompactionLifeCycleTracker request, long readPoint)
+        throws IOException {
+      return createCompactorScanner((HStore) store, scanners, scanType, earliestPutTs);
     }
 
-    private InternalScanner createCompactorScanner(Store store,
+    private InternalScanner createCompactorScanner(HStore store,
         List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs)
         throws IOException {
       return new CompactorStoreScanner(store, store.getScanInfo(), OptionalInt.empty(), scanners,
@@ -270,7 +273,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
 
   private static class CompactorStoreScanner extends StoreScanner {
 
-    public CompactorStoreScanner(Store store, ScanInfo scanInfo, OptionalInt maxVersions,
+    public CompactorStoreScanner(HStore store, ScanInfo scanInfo, OptionalInt maxVersions,
         List<? extends KeyValueScanner> scanners, ScanType scanType, long smallestReadPoint,
         long earliestPutTs) throws IOException {
       super(store, scanInfo, maxVersions, scanners, scanType, smallestReadPoint, earliestPutTs);
