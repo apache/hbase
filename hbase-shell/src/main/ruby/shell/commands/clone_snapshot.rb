@@ -47,6 +47,10 @@ EOF
           tableName = args[1]
           raise "Table already exists: #{tableName}!"
         end
+        if cause.is_a?(org.apache.hadoop.hbase.NamespaceNotFoundException)
+          namespace_name = args[1].split(':')[0]
+          raise "Unknown namespace: #{namespace_name}!"
+        end
       end
     end
   end
