@@ -85,7 +85,7 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
     UTIL.getConfiguration().setBoolean("hbase.thrift.readonly", true);
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.startMiniCluster();
-    Admin admin = UTIL.getAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableAname));
     for (HColumnDescriptor family : families) {
       tableDescriptor.addFamily(family);
