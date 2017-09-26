@@ -82,6 +82,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -177,7 +178,7 @@ public class HFileOutputFormat2
   @Override
   public RecordWriter<ImmutableBytesWritable, Cell> getRecordWriter(
       final TaskAttemptContext context) throws IOException, InterruptedException {
-    return createRecordWriter(context);
+    return createRecordWriter(context, this.getOutputCommitter(context));
   }
 
   protected static byte[] getTableNameSuffixedWithFamily(byte[] tableName, byte[] family) {
@@ -185,12 +186,11 @@ public class HFileOutputFormat2
   }
 
   static <V extends Cell> RecordWriter<ImmutableBytesWritable, V>
-      createRecordWriter(final TaskAttemptContext context)
+      createRecordWriter(final TaskAttemptContext context, final OutputCommitter committer)
           throws IOException {
 
     // Get the path of the temporary output file
-    final Path outputPath = FileOutputFormat.getOutputPath(context);
-    final Path outputDir = new FileOutputCommitter(outputPath, context).getWorkPath();
+    final Path outputDir = ((FileOutputCommitter)committer).getWorkPath();
     final Configuration conf = context.getConfiguration();
     final boolean writeMultipleTables = conf.getBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false) ;
     final String writeTableNames = conf.get(OUTPUT_TABLE_NAME_CONF_KEY);
