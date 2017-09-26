@@ -1436,7 +1436,7 @@
     <bouncycastle.version>1.46</bouncycastle.version>
     <kerby.version>1.0.0-RC2</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
-    <curator.version>2.12.0</curator.version>
+    <curator.version>4.0.0</curator.version>
     <!-- Plugin Dependencies -->
     <apache.rat.version>0.12</apache.rat.version>
     <asciidoctor.plugin.version>1.5.5</asciidoctor.plugin.version>
@@ -2066,13 +2066,14 @@
       </dependency>
       <dependency>
         <groupId>org.apache.curator</groupId>
-        <artifactId>curator-recipes</artifactId>
-        <version>${curator.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.curator</groupId>
         <artifactId>curator-framework</artifactId>
         <version>${curator.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.curator</groupId>
@@ -2082,6 +2083,10 @@
           <exclusion>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
