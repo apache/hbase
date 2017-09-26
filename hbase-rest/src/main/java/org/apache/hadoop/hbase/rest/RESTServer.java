@@ -355,9 +355,14 @@ public class RESTServer implements Constants {
       infoServer.setAttribute("hbase.conf", conf);
       infoServer.start();
     }
-    // start server
-    server.start();
-    server.join();
+    try {
+      // start server
+      server.start();
+      server.join();
+    } catch (Exception e) {
+      LOG.fatal("Failed to start server", e);
+      System.exit(1);
+    }
     LOG.info("***** STOPPING service '" + RESTServer.class.getSimpleName() + "' *****");
   }
 }
