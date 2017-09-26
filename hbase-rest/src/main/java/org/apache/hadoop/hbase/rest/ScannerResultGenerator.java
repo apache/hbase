@@ -25,7 +25,7 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -80,7 +80,7 @@ public class ScannerResultGenerator extends ResultGenerator {
       if (rowspec.hasColumns()) {
         byte[][] columns = rowspec.getColumns();
         for (byte[] column: columns) {
-          byte[][] split = KeyValue.parseColumn(column);
+          byte[][] split = CellUtil.parseColumn(column);
           if (split.length == 1) {
             scan.addFamily(split[0]);
           } else if (split.length == 2) {

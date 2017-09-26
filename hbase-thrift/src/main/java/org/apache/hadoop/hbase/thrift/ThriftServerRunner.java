@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -923,7 +924,7 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError {
-      byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
+      byte [][] famAndQf = CellUtil.parseColumn(getBytes(column));
       if (famAndQf.length == 1) {
         return get(tableName, row, famAndQf[0], null, attributes);
       }
@@ -968,7 +969,7 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
         int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
+      byte [][] famAndQf = CellUtil.parseColumn(getBytes(column));
       if(famAndQf.length == 1) {
         return getVer(tableName, row, famAndQf[0], null, numVersions, attributes);
       }
@@ -1014,7 +1015,7 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
         long timestamp, int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
+      byte [][] famAndQf = CellUtil.parseColumn(getBytes(column));
       if (famAndQf.length == 1) {
         return getVerTs(tableName, row, famAndQf[0], null, timestamp, numVersions, attributes);
       }
@@ -1101,7 +1102,7 @@ public class ThriftServerRunner implements Runnable {
         Get get = new Get(getBytes(row));
         addAttributes(get, attributes);
         for(ByteBuffer column : columns) {
-          byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
+          byte [][] famAndQf = CellUtil.parseColumn(getBytes(column));
           if (famAndQf.length == 1) {
               get.addFamily(famAndQf[0]);
           } else {
@@ -1167,7 +1168,7 @@ public class ThriftServerRunner implements Runnable {
           if (columns != null) {
 
             for(ByteBuffer column : columns) {
-              byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
+              byte [][] famAndQf = CellUtil.parseColumn(getBytes(column));
               if (famAndQf.length == 1) {
                 get.addFamily(famAndQf[0]);
               } else {
@@ -1207,7 +1208,7 @@ public class ThriftServerRunner implements Runnable {
         table = getTable(tableName);
         Delete delete  = new Delete(getBytes(row));
         addAttributes(delete, attributes);
-        byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
+        byte [][] famAndQf = CellUtil.parseColumn(getBytes(column));
         if (famAndQf.length == 1) {
           delete.addFamily(famAndQf[0], timestamp);
         } else {
@@ -1320,7 +1321,7 @@ public class ThriftServerRunner implements Runnable {
 
         // I apologize for all this mess :)
         for (Mutation m : mutations) {
-          byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
+          byte[][] famAndQf = CellUtil.parseColumn(getBytes(m.column));
           if (m.isDelete) {
             if (famAndQf.length == 1) {
               delete.addFamily(famAndQf[0], timestamp);
@@ -1379,7 +1380,7 @@ public class ThriftServerRunner implements Runnable {
         Put put = new Put(row, timestamp);
         addAttributes(put, attributes);
         for (Mutation m : mutations) {
-          byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
+          byte[][] famAndQf = CellUtil.parseColumn(getBytes(m.column));
           if (m.isDelete) {
             // no qualifier, family only.
             if (famAndQf.length == 1) {
@@ -1433,7 +1434,7 @@ public class ThriftServerRunner implements Runnable {
     public long atomicIncrement(
         ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long amount)
             throws IOError, IllegalArgument, TException {
-      byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
+      byte [][] famAndQf = CellUtil.parseColumn(getBytes(column));
       if(famAndQf.length == 1) {
         return atomicIncrement(tableName, row, famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, amount);
       }
@@ -1525,7 +1526,7 @@ public class ThriftServerRunner implements Runnable {
         }
         if (tScan.isSetColumns() && tScan.getColumns().size() != 0) {
           for(ByteBuffer column : tScan.getColumns()) {
-            byte [][] famQf = KeyValue.parseColumn(getBytes(column));
+            byte [][] famQf = CellUtil.parseColumn(getBytes(column));
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -1565,7 +1566,7 @@ public class ThriftServerRunner implements Runnable {
         addAttributes(scan, attributes);
         if(columns != null && columns.size() != 0) {
           for(ByteBuffer column : columns) {
-            byte [][] famQf = KeyValue.parseColumn(getBytes(column));
+            byte [][] famQf = CellUtil.parseColumn(getBytes(column));
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -1595,7 +1596,7 @@ public class ThriftServerRunner implements Runnable {
         addAttributes(scan, attributes);
         if(columns != null && columns.size() != 0) {
           for(ByteBuffer column : columns) {
-            byte [][] famQf = KeyValue.parseColumn(getBytes(column));
+            byte [][] famQf = CellUtil.parseColumn(getBytes(column));
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -1629,7 +1630,7 @@ public class ThriftServerRunner implements Runnable {
         scan.setFilter(f);
         if (columns != null && columns.size() != 0) {
           for(ByteBuffer column : columns) {
-            byte [][] famQf = KeyValue.parseColumn(getBytes(column));
+            byte [][] famQf = CellUtil.parseColumn(getBytes(column));
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -1659,7 +1660,7 @@ public class ThriftServerRunner implements Runnable {
         scan.setTimeRange(0, timestamp);
         if (columns != null && columns.size() != 0) {
           for (ByteBuffer column : columns) {
-            byte [][] famQf = KeyValue.parseColumn(getBytes(column));
+            byte [][] famQf = CellUtil.parseColumn(getBytes(column));
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -1690,7 +1691,7 @@ public class ThriftServerRunner implements Runnable {
         scan.setTimeRange(0, timestamp);
         if (columns != null && columns.size() != 0) {
           for (ByteBuffer column : columns) {
-            byte [][] famQf = KeyValue.parseColumn(getBytes(column));
+            byte [][] famQf = CellUtil.parseColumn(getBytes(column));
             if(famQf.length == 1) {
               scan.addFamily(famQf[0]);
             } else {
@@ -1868,7 +1869,7 @@ public class ThriftServerRunner implements Runnable {
         put = new Put(getBytes(row), HConstants.LATEST_TIMESTAMP);
         addAttributes(put, attributes);
 
-        byte[][] famAndQf = KeyValue.parseColumn(getBytes(mput.column));
+        byte[][] famAndQf = CellUtil.parseColumn(getBytes(mput.column));
 
         put.addImmutable(famAndQf[0], famAndQf[1], mput.value != null ? getBytes(mput.value)
             : HConstants.EMPTY_BYTE_ARRAY);
@@ -1882,7 +1883,7 @@ public class ThriftServerRunner implements Runnable {
       Table table = null;
       try {
         table = getTable(tableName);
-        byte[][] famAndQf = KeyValue.parseColumn(getBytes(column));
+        byte[][] famAndQf = CellUtil.parseColumn(getBytes(column));
         return table.checkAndPut(getBytes(row), famAndQf[0], famAndQf[1],
           value != null ? getBytes(value) : HConstants.EMPTY_BYTE_ARRAY, put);
       } catch (IOException e) {

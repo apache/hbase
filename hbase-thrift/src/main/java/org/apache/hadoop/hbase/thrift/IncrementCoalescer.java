@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
@@ -196,7 +196,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   }
 
   private boolean internalQueueTincrement(TIncrement inc) throws TException {
-    byte[][] famAndQf = KeyValue.parseColumn(inc.getColumn());
+    byte[][] famAndQf = CellUtil.parseColumn(inc.getColumn());
     if (famAndQf.length != 2) return false;
 
     return internalQueueIncrement(inc.getTable(), inc.getRow(), famAndQf[0], famAndQf[1],

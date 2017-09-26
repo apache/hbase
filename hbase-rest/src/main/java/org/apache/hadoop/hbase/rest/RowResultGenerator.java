@@ -25,10 +25,10 @@ import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -50,7 +50,7 @@ public class RowResultGenerator extends ResultGenerator {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {
         for (byte[] col: rowspec.getColumns()) {
-          byte[][] split = KeyValue.parseColumn(col);
+          byte[][] split = CellUtil.parseColumn(col);
           if (split.length == 1) {
             get.addFamily(split[0]);
           } else if (split.length == 2) {

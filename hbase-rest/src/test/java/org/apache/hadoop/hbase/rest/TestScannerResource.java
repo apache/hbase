@@ -44,7 +44,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -93,7 +93,7 @@ public class TestScannerResource {
       throws IOException {
     Random rng = new Random();
     byte[] k = new byte[3];
-    byte [][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(column));
+    byte [][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(column));
     List<Put> puts = new ArrayList<>();
     for (byte b1 = 'a'; b1 < 'z'; b1++) {
       for (byte b2 = 'a'; b2 < 'z'; b2++) {

@@ -67,7 +67,7 @@ public class ThriftUtilities {
     if (in.name == null || !in.name.hasRemaining()) {
       throw new IllegalArgument("column name is empty");
     }
-    byte [] parsedName = KeyValue.parseColumn(Bytes.getBytes(in.name))[0];
+    byte [] parsedName = CellUtil.parseColumn(Bytes.getBytes(in.name))[0];
     HColumnDescriptor col = new HColumnDescriptor(parsedName)
         .setMaxVersions(in.maxVersions)
         .setCompressionType(comp)
@@ -160,7 +160,7 @@ public class ThriftUtilities {
           result.sortedColumns = new ArrayList<>();
           for (Cell kv : result_.rawCells()) {
             result.sortedColumns.add(new TColumn(
-                ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.cloneFamily(kv),
+                ByteBuffer.wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv),
                     CellUtil.cloneQualifier(kv))),
                 new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp())));
           }
@@ -168,7 +168,7 @@ public class ThriftUtilities {
           result.columns = new TreeMap<>();
           for (Cell kv : result_.rawCells()) {
             result.columns.put(
-                ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.cloneFamily(kv),
+                ByteBuffer.wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv),
                     CellUtil.cloneQualifier(kv))),
                 new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp()));
           }
@@ -203,7 +203,7 @@ public class ThriftUtilities {
    */
   public static Increment incrementFromThrift(TIncrement tincrement) {
     Increment inc = new Increment(tincrement.getRow());
-    byte[][] famAndQf = KeyValue.parseColumn(tincrement.getColumn());
+    byte[][] famAndQf = CellUtil.parseColumn(tincrement.getColumn());
     if (famAndQf.length != 2) return null;
     inc.addColumn(famAndQf[0], famAndQf[1], tincrement.getAmmount());
     return inc;
@@ -227,7 +227,7 @@ public class ThriftUtilities {
     int length = columns.size();
 
     for (int i = 0; i < length; i++) {
-      byte[][] famAndQf = KeyValue.parseColumn(getBytes(columns.get(i)));
+      byte[][] famAndQf = CellUtil.parseColumn(getBytes(columns.get(i)));
       append.addColumn(famAndQf[0], famAndQf[1], getBytes(values.get(i)));
     }
     return append;

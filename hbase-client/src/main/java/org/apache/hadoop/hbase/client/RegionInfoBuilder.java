@@ -487,14 +487,5 @@ public class RegionInfoBuilder {
       return RegionInfo.COMPARATOR.compare(this, other);
     }
 
-    /**
-     * @return Comparator to use comparing {@link KeyValue}s.
-     * @deprecated Use Region#getCellComparator().  deprecated for hbase 2.0, remove for hbase 3.0
-     */
-    @Deprecated
-    public KeyValue.KVComparator getComparator() {
-      return isMetaRegion()?
-          KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;
-    }
   }
 }

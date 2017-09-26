@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -92,7 +92,7 @@ public class TestScannersWithLabels {
 
   private static int insertData(TableName tableName, String column, double prob) throws IOException {
     byte[] k = new byte[3];
-    byte[][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(column));
+    byte[][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(column));
 
     List<Put> puts = new ArrayList<>(9);
     for (int i = 0; i < 9; i++) {

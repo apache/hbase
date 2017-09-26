@@ -23,9 +23,7 @@ import static org.apache.hadoop.hbase.util.Bytes.len;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -41,11 +39,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 /**
  * An HBase Key/Value. This is the fundamental HBase Type.
  * <p>
@@ -101,24 +97,17 @@ public class KeyValue implements ExtendedCell {
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
    * of KeyValue only.
-   * @deprecated Use {@link CellComparator#COMPARATOR} instead
+   * @deprecated Use {@link CellComparator#COMPARATOR} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static final KVComparator COMPARATOR = new KVComparator();
   /**
    * A {@link KVComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
-   * @deprecated Use {@link CellComparator#META_COMPARATOR} instead
+   * @deprecated Use {@link CellComparator#META_COMPARATOR} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static final KVComparator META_COMPARATOR = new MetaComparator();
-
-  /**
-   * Needed for Bloom Filters.
-   *    * @deprecated Use {@link Bytes#BYTES_RAWCOMPARATOR} instead
-   */
-  @Deprecated
-  public static final KVComparator RAW_COMPARATOR = new RawBytesComparator();
 
   /** Size of the key length field in bytes*/
   public static final int KEY_LENGTH_SIZE = Bytes.SIZEOF_INT;
@@ -290,15 +279,6 @@ public class KeyValue implements ExtendedCell {
   protected byte [] bytes = null;  // an immutable byte array that contains the KV
   protected int offset = 0;  // offset into bytes buffer KV starts at
   protected int length = 0;  // length of the KV starting from offset.
-
-  /**
-   * @return True if a delete type, a {@link KeyValue.Type#Delete} or
-   * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
-   * KeyValue type.
-   */
-  public static boolean isDelete(byte t) {
-    return Type.Delete.getCode() <= t && t <= Type.DeleteFamily.getCode();
-  }
 
   /** Here be dragons **/
 
@@ -1509,29 +1489,11 @@ public class KeyValue implements ExtendedCell {
   }
 
   /**
-   * @return Type of this KeyValue.
-   */
-  @Deprecated
-  public byte getType() {
-    return getTypeByte();
-  }
-
-  /**
    * @return KeyValue.TYPE byte representation
    */
   @Override
   public byte getTypeByte() {
     return this.bytes[this.offset + getKeyLength() - 1 + ROW_OFFSET];
-  }
-
-  /**
-   * @return True if a delete type, a {@link KeyValue.Type#Delete} or
-   * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
-   * KeyValue type.
-   */
-  @Deprecated // use CellUtil#isDelete
-  public boolean isDelete() {
-    return KeyValue.isDelete(getType());
   }
 
   /**
@@ -1602,52 +1564,6 @@ public class KeyValue implements ExtendedCell {
   }
 
   /**
-   * Splits a column in {@code family:qualifier} form into separate byte arrays. An empty qualifier
-   * (ie, {@code fam:}) is parsed as <code>{ fam, EMPTY_BYTE_ARRAY }</code> while no delimiter (ie,
-   * {@code fam}) is parsed as an array of one element, <code>{ fam }</code>.
-   * <p>
-   * Don't forget, HBase DOES support empty qualifiers. (see HBASE-9549)
-   * </p>
-   * <p>
-   * Not recommend to be used as this is old-style API.
-   * </p>
-   * @param c The column.
-   * @return The parsed column.
-   */
-  public static byte [][] parseColumn(byte [] c) {
-    final int index = getDelimiter(c, 0, c.length, COLUMN_FAMILY_DELIMITER);
-    if (index == -1) {
-      // If no delimiter, return array of size 1
-      return new byte [][] { c };
-    } else if(index == c.length - 1) {
-      // family with empty qualifier, return array size 2
-      byte [] family = new byte[c.length-1];
-      System.arraycopy(c, 0, family, 0, family.length);
-      return new byte [][] { family, HConstants.EMPTY_BYTE_ARRAY};
-    }
-    // Family and column, return array size 2
-    final byte [][] result = new byte [2][];
-    result[0] = new byte [index];
-    System.arraycopy(c, 0, result[0], 0, index);
-    final int len = c.length - (index + 1);
-    result[1] = new byte[len];
-    System.arraycopy(c, index + 1 /* Skip delimiter */, result[1], 0, len);
-    return result;
-  }
-
-  /**
-   * Makes a column in family:qualifier form from separate byte arrays.
-   * <p>
-   * Not recommended for usage as this is old-style API.
-   * @param family
-   * @param qualifier
-   * @return family:qualifier
-   */
-  public static byte [] makeColumn(byte [] family, byte [] qualifier) {
-    return Bytes.add(family, COLUMN_FAMILY_DELIM_ARRAY, qualifier);
-  }
-
-  /**
    * @param b
    * @param delimiter
    * @return Index of delimiter having started from start of <code>b</code>
@@ -1692,7 +1608,7 @@ public class KeyValue implements ExtendedCell {
   /**
    * A {@link KVComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
-   * @deprecated : {@link CellComparator#META_COMPARATOR} to be used
+   * @deprecated : {@link CellComparator#META_COMPARATOR} to be used. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static class MetaComparator extends KVComparator {
@@ -1807,7 +1723,7 @@ public class KeyValue implements ExtendedCell {
    * Compare KeyValues.  When we compare KeyValues, we only compare the Key
    * portion.  This means two KeyValues with same Key but different Values are
    * considered the same as far as this Comparator is concerned.
-   * @deprecated : Use {@link CellComparator}.
+   * @deprecated : Use {@link CellComparator}. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static class KVComparator implements RawComparator<Cell>, SamePrefixComparator<byte[]> {
@@ -2323,40 +2239,6 @@ public class KeyValue implements ExtendedCell {
   }
 
   /**
-   * @param b
-   * @return A KeyValue made of a byte array that holds the key-only part.
-   * Needed to convert hfile index members to KeyValues.
-   */
-  public static KeyValue createKeyValueFromKey(final byte [] b) {
-    return createKeyValueFromKey(b, 0, b.length);
-  }
-
-  /**
-   * @param bb
-   * @return A KeyValue made of a byte buffer that holds the key-only part.
-   * Needed to convert hfile index members to KeyValues.
-   */
-  public static KeyValue createKeyValueFromKey(final ByteBuffer bb) {
-    return createKeyValueFromKey(bb.array(), bb.arrayOffset(), bb.limit());
-  }
-
-  /**
-   * @param b
-   * @param o
-   * @param l
-   * @return A KeyValue made of a byte array that holds the key-only part.
-   * Needed to convert hfile index members to KeyValues.
-   */
-  public static KeyValue createKeyValueFromKey(final byte [] b, final int o,
-      final int l) {
-    byte [] newb = new byte[l + ROW_OFFSET];
-    System.arraycopy(b, o, newb, ROW_OFFSET, l);
-    Bytes.putInt(newb, 0, l);
-    Bytes.putInt(newb, Bytes.SIZEOF_INT, 0);
-    return new KeyValue(newb);
-  }
-
-  /**
    * @param in Where to read bytes from.  Creates a byte array to hold the KeyValue
    * backing bytes copied from the steam.
    * @return KeyValue created by deserializing from <code>in</code> OR if we find a length
@@ -2386,55 +2268,6 @@ public class KeyValue implements ExtendedCell {
     byte [] bytes = new byte[length];
     in.readFully(bytes);
     return new KeyValue(bytes, 0, length);
-  }
-
-  /**
-   * Create a new KeyValue by copying existing cell and adding new tags
-   * @param c
-   * @param newTags
-   * @return a new KeyValue instance with new tags
-   */
-  public static KeyValue cloneAndAddTags(Cell c, List<Tag> newTags) {
-    List<Tag> existingTags = null;
-    if(c.getTagsLength() > 0) {
-      existingTags = CellUtil.getTags(c);
-      existingTags.addAll(newTags);
-    } else {
-      existingTags = newTags;
-    }
-    return new KeyValue(c.getRowArray(), c.getRowOffset(), (int)c.getRowLength(),
-      c.getFamilyArray(), c.getFamilyOffset(), (int)c.getFamilyLength(),
-      c.getQualifierArray(), c.getQualifierOffset(), (int) c.getQualifierLength(),
-      c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(), c.getValueOffset(),
-      c.getValueLength(), existingTags);
-  }
-
-  /**
-   * Create a KeyValue reading from the raw InputStream.
-   * Named <code>iscreate</code> so doesn't clash with {@link #create(DataInput)}
-   * @param in
-   * @return Created KeyValue or throws an exception
-   * @throws IOException
-   * {@link Deprecated} As of 1.2. Use {@link KeyValueUtil#iscreate(InputStream, boolean)} instead.
-   */
-  @Deprecated
-  public static KeyValue iscreate(final InputStream in) throws IOException {
-    byte [] intBytes = new byte[Bytes.SIZEOF_INT];
-    int bytesRead = 0;
-    while (bytesRead < intBytes.length) {
-      int n = in.read(intBytes, bytesRead, intBytes.length - bytesRead);
-      if (n < 0) {
-        if (bytesRead == 0) {
-          throw new EOFException();
-        }
-        throw new IOException("Failed read of int, read " + bytesRead + " bytes");
-      }
-      bytesRead += n;
-    }
-    // TODO: perhaps some sanity check is needed here.
-    byte [] bytes = new byte[Bytes.toInt(intBytes)];
-    IOUtils.readFully(in, bytes, 0, bytes.length);
-    return new KeyValue(bytes, 0, bytes.length);
   }
 
   /**
@@ -2497,23 +2330,6 @@ public class KeyValue implements ExtendedCell {
   }
 
   /**
-   * Comparator that compares row component only of a KeyValue.
-   */
-  public static class RowOnlyComparator implements Comparator<KeyValue> {
-    final KVComparator comparator;
-
-    public RowOnlyComparator(final KVComparator c) {
-      this.comparator = c;
-    }
-
-    @Override
-    public int compare(KeyValue left, KeyValue right) {
-      return comparator.compareRows(left, right);
-    }
-  }
-
-
-  /**
    * Avoids redundant comparisons for better performance.
    *
    * TODO get rid of this wart
@@ -2526,71 +2342,6 @@ public class KeyValue implements ExtendedCell {
     int compareIgnoringPrefix(int commonPrefix, byte[] left, int loffset, int llength,
         byte[] right, int roffset, int rlength
     );
-  }
-
-  /**
-   * @deprecated  Not to be used for any comparsions
-   */
-  @Deprecated
-  public static class RawBytesComparator extends KVComparator {
-    /**
-     * The HFileV2 file format's trailer contains this class name.  We reinterpret this and
-     * instantiate the appropriate comparator.
-     * TODO: With V3 consider removing this.
-     * @return legacy class name for FileFileTrailer#comparatorClassName
-     */
-    @Override
-    public String getLegacyKeyComparatorName() {
-      return "org.apache.hadoop.hbase.util.Bytes$ByteArrayComparator";
-    }
-
-    /**
-     * @deprecated Since 0.99.2.
-     */
-    @Override
-    @Deprecated
-    public int compareFlatKey(byte[] left, int loffset, int llength, byte[] right,
-        int roffset, int rlength) {
-      return Bytes.BYTES_RAWCOMPARATOR.compare(left,  loffset, llength, right, roffset, rlength);
-    }
-
-    @Override
-    public int compare(Cell left, Cell right) {
-      return compareOnlyKeyPortion(left, right);
-    }
-
-    @Override
-    @VisibleForTesting
-    public int compareOnlyKeyPortion(Cell left, Cell right) {
-      int c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getRowArray(), left.getRowOffset(),
-          left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
-      if (c != 0) {
-        return c;
-      }
-      c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getFamilyArray(), left.getFamilyOffset(),
-          left.getFamilyLength(), right.getFamilyArray(), right.getFamilyOffset(),
-          right.getFamilyLength());
-      if (c != 0) {
-        return c;
-      }
-      c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getQualifierArray(), left.getQualifierOffset(),
-          left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
-          right.getQualifierLength());
-      if (c != 0) {
-        return c;
-      }
-      c = compareTimestamps(left.getTimestamp(), right.getTimestamp());
-      if (c != 0) {
-        return c;
-      }
-      return (0xff & left.getTypeByte()) - (0xff & right.getTypeByte());
-    }
-
-    @Override
-    public byte[] calcIndexKey(byte[] lastKeyOfPreviousBlock, byte[] firstKeyInBlock) {
-      return firstKeyInBlock;
-    }
-
   }
 
   /**

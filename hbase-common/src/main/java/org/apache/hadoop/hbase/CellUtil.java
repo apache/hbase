@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
 import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
+import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
+import static org.apache.hadoop.hbase.KeyValue.getDelimiter;
+import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIM_ARRAY;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -126,6 +129,51 @@ public final class CellUtil {
     return output;
   }
 
+  /**
+   * Makes a column in family:qualifier form from separate byte arrays.
+   * <p>
+   * Not recommended for usage as this is old-style API.
+   * @param family
+   * @param qualifier
+   * @return family:qualifier
+   */
+  public static byte [] makeColumn(byte [] family, byte [] qualifier) {
+    return Bytes.add(family, COLUMN_FAMILY_DELIM_ARRAY, qualifier);
+  }
+
+  /**
+   * Splits a column in {@code family:qualifier} form into separate byte arrays. An empty qualifier
+   * (ie, {@code fam:}) is parsed as <code>{ fam, EMPTY_BYTE_ARRAY }</code> while no delimiter (ie,
+   * {@code fam}) is parsed as an array of one element, <code>{ fam }</code>.
+   * <p>
+   * Don't forget, HBase DOES support empty qualifiers. (see HBASE-9549)
+   * </p>
+   * <p>
+   * Not recommend to be used as this is old-style API.
+   * </p>
+   * @param c The column.
+   * @return The parsed column.
+   */
+  public static byte [][] parseColumn(byte [] c) {
+    final int index = getDelimiter(c, 0, c.length, COLUMN_FAMILY_DELIMITER);
+    if (index == -1) {
+      // If no delimiter, return array of size 1
+      return new byte [][] { c };
+    } else if(index == c.length - 1) {
+      // family with empty qualifier, return array size 2
+      byte [] family = new byte[c.length-1];
+      System.arraycopy(c, 0, family, 0, family.length);
+      return new byte [][] { family, HConstants.EMPTY_BYTE_ARRAY};
+    }
+    // Family and column, return array size 2
+    final byte [][] result = new byte [2][];
+    result[0] = new byte [index];
+    System.arraycopy(c, 0, result[0], 0, index);
+    final int len = c.length - (index + 1);
+    result[1] = new byte[len];
+    System.arraycopy(c, index + 1 /* Skip delimiter */, result[1], 0, len);
+    return result;
+  }
 
   /******************** copyTo **********************************/
 
