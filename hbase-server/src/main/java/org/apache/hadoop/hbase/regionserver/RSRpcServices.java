@@ -2177,11 +2177,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         requestCount.increment();
         List<WALEntry> entries = request.getEntryList();
         CellScanner cellScanner = ((HBaseRpcController)controller).cellScanner();
-        regionServer.getRegionServerCoprocessorHost().preReplicateLogEntries(entries, cellScanner);
+        regionServer.getRegionServerCoprocessorHost().preReplicateLogEntries();
         regionServer.replicationSinkHandler.replicateLogEntries(entries, cellScanner,
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
           request.getSourceHFileArchiveDirPath());
-        regionServer.getRegionServerCoprocessorHost().postReplicateLogEntries(entries, cellScanner);
+        regionServer.getRegionServerCoprocessorHost().postReplicateLogEntries();
         return ReplicateWALEntryResponse.newBuilder().build();
       } else {
         throw new ServiceException("Replication services are not initialized yet");

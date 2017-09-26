@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.client.Query;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
@@ -121,10 +122,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -2622,14 +2621,9 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   }
 
   @Override
-  public void preReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      List<WALEntry> entries, CellScanner cells) throws IOException {
+  public void preReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {
     requirePermission(getActiveUser(ctx), "replicateLogEntries", Action.WRITE);
-  }
-
-  @Override
-  public void postReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      List<WALEntry> entries, CellScanner cells) throws IOException {
   }
 
   @Override

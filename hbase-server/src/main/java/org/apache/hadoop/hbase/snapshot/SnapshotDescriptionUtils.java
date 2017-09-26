@@ -373,10 +373,10 @@ public final class SnapshotDescriptionUtils {
    * @return true if the user is the owner of the snapshot,
    *         false otherwise or the snapshot owner field is not present.
    */
-  public static boolean isSnapshotOwner(final SnapshotDescription snapshot, final User user) {
+  public static boolean isSnapshotOwner(org.apache.hadoop.hbase.client.SnapshotDescription snapshot,
+      User user) {
     if (user == null) return false;
-    if (!snapshot.hasOwner()) return false;
-    return snapshot.getOwner().equals(user.getShortName());
+    return user.getShortName().equals(snapshot.getOwner());
   }
 
   public static boolean isSecurityAvailable(Configuration conf) throws IOException {

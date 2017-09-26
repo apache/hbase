@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -136,7 +137,6 @@ import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * Performs authorization checks for common operations, according to different
@@ -2001,10 +2001,8 @@ public class TestAccessController extends SecureTestUtil {
   public void testSnapshot() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
-    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
-    builder.setName(TEST_TABLE.getNameAsString() + "-snapshot");
-    builder.setTable(TEST_TABLE.getNameAsString());
-    final SnapshotDescription snapshot = builder.build();
+    final SnapshotDescription snapshot = new SnapshotDescription(
+        TEST_TABLE.getNameAsString() + "-snapshot", TEST_TABLE);
     AccessTestAction snapshotAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -2062,11 +2060,9 @@ public class TestAccessController extends SecureTestUtil {
   public void testSnapshotWithOwner() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
-    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
-    builder.setName(TEST_TABLE.getNameAsString() + "-snapshot");
-    builder.setTable(TEST_TABLE.getNameAsString());
-    builder.setOwner(USER_OWNER.getName());
-    final SnapshotDescription snapshot = builder.build();
+    final SnapshotDescription snapshot = new SnapshotDescription(
+        TEST_TABLE.getNameAsString() + "-snapshot", TEST_TABLE, null, USER_OWNER.getName());
+
     AccessTestAction snapshotAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -2904,10 +2900,8 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction replicateLogEntriesAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preReplicateLogEntries(ObserverContext.createAndPrepare(RSCP_ENV, null),
-          null, null);
-        ACCESS_CONTROLLER.postReplicateLogEntries(ObserverContext.createAndPrepare(RSCP_ENV, null),
-          null, null);
+        ACCESS_CONTROLLER.preReplicateLogEntries(ObserverContext.createAndPrepare(RSCP_ENV, null));
+        ACCESS_CONTROLLER.postReplicateLogEntries(ObserverContext.createAndPrepare(RSCP_ENV, null));
         return null;
       }
     };
