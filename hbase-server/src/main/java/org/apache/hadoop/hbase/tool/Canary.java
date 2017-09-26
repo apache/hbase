@@ -1022,19 +1022,14 @@ public final class Canary implements Tool {
       if (this.initAdmin()) {
         try {
           List<Future<Void>> taskFutures = new LinkedList<>();
-          RegionStdOutSink regionSink = null;
-          try {
-            regionSink = this.getSink();
-          } catch (RuntimeException e) {
-            LOG.error("Run RegionMonitor failed!", e);
-            this.errorCode = ERROR_EXIT_CODE;
-          }
+          RegionStdOutSink regionSink = this.getSink();
           if (this.targets != null && this.targets.length > 0) {
             String[] tables = generateMonitorTables(this.targets);
             // Check to see that each table name passed in the -readTableTimeouts argument is also passed as a monitor target.
             if (! new HashSet<>(Arrays.asList(tables)).containsAll(this.configuredReadTableTimeouts.keySet())) {
               LOG.error("-readTableTimeouts can only specify read timeouts for monitor targets passed via command line.");
               this.errorCode = USAGE_EXIT_CODE;
+              return;
             }
             this.initialized = true;
             for (String table : tables) {
@@ -1096,7 +1091,9 @@ public final class Canary implements Tool {
         } catch (Exception e) {
           LOG.error("Run regionMonitor failed", e);
           this.errorCode = ERROR_EXIT_CODE;
-        }
+        } finally {
+          this.done = true;
+	}
       }
       this.done = true;
     }
