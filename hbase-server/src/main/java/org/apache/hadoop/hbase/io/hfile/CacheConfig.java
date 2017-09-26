@@ -737,6 +737,7 @@ public class CacheConfig {
   @VisibleForTesting
   static synchronized void clearGlobalInstances() {
     GLOBAL_L1_CACHE_INSTANCE = null;
+    GLOBAL_L2_CACHE_INSTANCE = null;
     GLOBAL_BLOCK_CACHE_INSTANCE = null;
   }
 }
