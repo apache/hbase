@@ -19,15 +19,12 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.util.List;
 
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
-import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
 /**
  * Defines coprocessor hooks for interacting with operations on the
@@ -91,24 +88,28 @@ public interface RegionServerObserver extends Coprocessor {
     return endpoint;
   }
 
+  // TODO remove below 2 hooks when we implement AC as a core impl than a CP impl.
   /**
    * This will be called before executing replication request to shipping log entries.
    * @param ctx the environment to interact with the framework and region server.
-   * @param entries list of WALEntries to replicate
-   * @param cells Cells that the WALEntries refer to (if cells is non-null)
+   * @deprecated As of release 2.0.0 with out any replacement. This is maintained for internal
+   * usage by AccessController. Do not use these hooks in custom co-processors.
    */
-  default void preReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      List<WALEntry> entries, CellScanner cells) throws IOException {}
+  @Deprecated
+  default void preReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {
+  }
 
   /**
    * This will be called after executing replication request to shipping log entries.
    * @param ctx the environment to interact with the framework and region server.
-   * @param entries list of WALEntries to replicate
-   * @param cells Cells that the WALEntries refer to (if cells is non-null)
+   * @deprecated As of release 2.0.0 with out any replacement. This is maintained for internal
+   * usage by AccessController. Do not use these hooks in custom co-processors.
    */
+  @Deprecated
   default void postReplicateLogEntries(
-      final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      List<WALEntry> entries, CellScanner cells) throws IOException {}
+      final ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
+  }
 
   /**
    * This will be called before clearing compaction queues

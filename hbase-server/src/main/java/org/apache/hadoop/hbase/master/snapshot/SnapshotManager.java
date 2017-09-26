@@ -199,16 +199,18 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @throws IOException File system exception
    */
   public List<SnapshotDescription> getCompletedSnapshots() throws IOException {
-    return getCompletedSnapshots(SnapshotDescriptionUtils.getSnapshotsDir(rootDir));
+    return getCompletedSnapshots(SnapshotDescriptionUtils.getSnapshotsDir(rootDir), true);
   }
 
   /**
    * Gets the list of all completed snapshots.
    * @param snapshotDir snapshot directory
+   * @param withCpCall Whether to call CP hooks
    * @return list of SnapshotDescriptions
    * @throws IOException File system exception
    */
-  private List<SnapshotDescription> getCompletedSnapshots(Path snapshotDir) throws IOException {
+  private List<SnapshotDescription> getCompletedSnapshots(Path snapshotDir, boolean withCpCall)
+      throws IOException {
     List<SnapshotDescription> snapshotDescs = new ArrayList<>();
     // first create the snapshot root path and check to see if it exists
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
@@ -223,6 +225,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     FileStatus[] snapshots = fs.listStatus(snapshotDir,
       new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
+    withCpCall = withCpCall && cpHost != null;
     // loop through all the completed snapshots
     for (FileStatus snapshot : snapshots) {
       Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
@@ -235,9 +238,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       try {
         in = fs.open(info);
         SnapshotDescription desc = SnapshotDescription.parseFrom(in);
-        if (cpHost != null) {
+        org.apache.hadoop.hbase.client.SnapshotDescription descPOJO = (withCpCall)
+            ? ProtobufUtil.createSnapshotDesc(desc) : null;
+        if (withCpCall) {
           try {
-            cpHost.preListSnapshot(desc);
+            cpHost.preListSnapshot(descPOJO);
           } catch (AccessDeniedException e) {
             LOG.warn("Current user does not have access to " + desc.getName() + " snapshot. "
                 + "Either you should be owner of this snapshot or admin user.");
@@ -248,8 +253,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
         snapshotDescs.add(desc);
 
         // call coproc post hook
-        if (cpHost != null) {
-          cpHost.postListSnapshot(desc);
+        if (withCpCall) {
+          cpHost.postListSnapshot(descPOJO);
         }
       } catch (IOException e) {
         LOG.warn("Found a corrupted snapshot " + snapshot.getPath(), e);
@@ -300,8 +305,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // call coproc pre hook
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
+    org.apache.hadoop.hbase.client.SnapshotDescription snapshotPOJO = null;
     if (cpHost != null) {
-      cpHost.preDeleteSnapshot(snapshot);
+      snapshotPOJO = ProtobufUtil.createSnapshotDesc(snapshot);
+      cpHost.preDeleteSnapshot(snapshotPOJO);
     }
 
     LOG.debug("Deleting snapshot: " + snapshotName);
@@ -312,7 +319,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // call coproc post hook
     if (cpHost != null) {
-      cpHost.postDeleteSnapshot(snapshot);
+      cpHost.postDeleteSnapshot(snapshotPOJO);
     }
 
   }
@@ -587,8 +594,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // call pre coproc hook
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
+    org.apache.hadoop.hbase.client.SnapshotDescription snapshotPOJO = null;
     if (cpHost != null) {
-      cpHost.preSnapshot(snapshot, desc);
+      snapshotPOJO = ProtobufUtil.createSnapshotDesc(snapshot);
+      cpHost.preSnapshot(snapshotPOJO, desc);
     }
 
     // if the table is enabled, then have the RS run actually the snapshot work
@@ -616,7 +625,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // call post coproc hook
     if (cpHost != null) {
-      cpHost.postSnapshot(snapshot, desc);
+      cpHost.postSnapshot(snapshotPOJO, desc);
     }
   }
 
@@ -684,8 +693,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       final NonceKey nonceKey, final boolean restoreAcl) throws IOException {
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     TableDescriptor htd = TableDescriptorBuilder.copy(tableName, snapshotTableDesc);
+    org.apache.hadoop.hbase.client.SnapshotDescription snapshotPOJO = null;
     if (cpHost != null) {
-      cpHost.preCloneSnapshot(reqSnapshot, htd);
+      snapshotPOJO = ProtobufUtil.createSnapshotDesc(reqSnapshot);
+      cpHost.preCloneSnapshot(snapshotPOJO, htd);
     }
     long procId;
     try {
@@ -698,7 +709,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     LOG.info("Clone snapshot=" + snapshot.getName() + " as table=" + tableName);
 
     if (cpHost != null) {
-      cpHost.postCloneSnapshot(reqSnapshot, htd);
+      cpHost.postCloneSnapshot(snapshotPOJO, htd);
     }
     return procId;
   }
@@ -812,8 +823,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
 
     // call Coprocessor pre hook
+    org.apache.hadoop.hbase.client.SnapshotDescription snapshotPOJO = null;
     if (cpHost != null) {
-      cpHost.preRestoreSnapshot(reqSnapshot, snapshotTableDesc);
+      snapshotPOJO = ProtobufUtil.createSnapshotDesc(reqSnapshot);
+      cpHost.preRestoreSnapshot(snapshotPOJO, snapshotTableDesc);
     }
 
     long procId;
@@ -827,7 +840,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
 
     if (cpHost != null) {
-      cpHost.postRestoreSnapshot(reqSnapshot, snapshotTableDesc);
+      cpHost.postRestoreSnapshot(snapshotPOJO, snapshotTableDesc);
     }
 
     return procId;
@@ -1045,7 +1058,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // check if an older version of snapshot directory was present
     Path oldSnapshotDir = new Path(mfs.getRootDir(), HConstants.OLD_SNAPSHOT_DIR_NAME);
     FileSystem fs = mfs.getFileSystem();
-    List<SnapshotDescription> ss = getCompletedSnapshots(new Path(rootDir, oldSnapshotDir));
+    List<SnapshotDescription> ss = getCompletedSnapshots(new Path(rootDir, oldSnapshotDir), false);
     if (ss != null && !ss.isEmpty()) {
       LOG.error("Snapshots from an earlier release were found under: " + oldSnapshotDir);
       LOG.error("Please rename the directory as " + HConstants.SNAPSHOT_DIR_NAME);

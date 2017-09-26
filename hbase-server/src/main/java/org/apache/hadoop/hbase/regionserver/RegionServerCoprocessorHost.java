@@ -26,7 +26,6 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -42,7 +41,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -115,24 +113,24 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
-  public void preReplicateLogEntries(final List<WALEntry> entries, final CellScanner cells)
+  public void preReplicateLogEntries()
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preReplicateLogEntries(ctx, entries, cells);
+        oserver.preReplicateLogEntries(ctx);
       }
     });
   }
 
-  public void postReplicateLogEntries(final List<WALEntry> entries, final CellScanner cells)
+  public void postReplicateLogEntries()
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postReplicateLogEntries(ctx, entries, cells);
+        oserver.postReplicateLogEntries(ctx);
       }
     });
   }
