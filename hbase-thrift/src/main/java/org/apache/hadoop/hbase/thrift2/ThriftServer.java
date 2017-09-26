@@ -154,6 +154,8 @@ public class ThriftServer {
       "Amount of time in milliseconds before a server thread will timeout " +
       "waiting for client to send data on a connected socket. Currently, " +
       "only applies to TBoundedThreadPoolServer");
+    options.addOption("ro", "readonly", false,
+      "Respond only to read method requests [default: false]");
     OptionGroup servers = new OptionGroup();
     servers.addOption(
         new Option("nonblocking", false, "Use the TNonblockingServer. This implies the framed transport."));
@@ -399,6 +401,14 @@ public class ThriftServer {
       conf.set("hbase.thrift.info.bindAddress", bindAddress);
     } else {
       bindAddress = conf.get("hbase.thrift.info.bindAddress");
+    }
+
+    // check if server should only process read requests, if so override the conf
+    if (cmd.hasOption("readonly")) {
+      conf.setBoolean("hbase.thrift.readonly", true);
+      if (log.isDebugEnabled()) {
+        log.debug("readonly set to true");
+      }
     }
 
     // Get read timeout
