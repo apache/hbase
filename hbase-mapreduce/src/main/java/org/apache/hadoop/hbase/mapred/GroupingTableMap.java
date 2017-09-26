@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -118,7 +117,7 @@ implements TableMap<ImmutableBytesWritable,Result> {
     int numCols = columns.length;
     if (numCols > 0) {
       for (Cell value: r.listCells()) {
-        byte [] column = KeyValue.makeColumn(CellUtil.cloneFamily(value),
+        byte [] column = CellUtil.makeColumn(CellUtil.cloneFamily(value),
             CellUtil.cloneQualifier(value));
         for (int i = 0; i < numCols; i++) {
           if (Bytes.equals(column, columns[i])) {

@@ -295,7 +295,7 @@ public class TestScannersWithFilters {
       for (CellModel cell: cells) {
         assertTrue("Row mismatch",
             Bytes.equals(rowModel.getKey(), CellUtil.cloneRow(kvs[idx])));
-        byte[][] split = KeyValue.parseColumn(cell.getColumn());
+        byte[][] split = CellUtil.parseColumn(cell.getColumn());
         assertTrue("Family mismatch",
             Bytes.equals(split[0], CellUtil.cloneFamily(kvs[idx])));
         assertTrue("Qualifier mismatch",

@@ -326,7 +326,7 @@ public abstract class HBaseTestCase extends TestCase {
                 }
               }
               byte[][] split =
-                KeyValue.parseColumn(Bytes.toBytes(sb.toString()));
+                CellUtil.parseColumn(Bytes.toBytes(sb.toString()));
               if(split.length == 1) {
                 byte[] qualifier = new byte[0];
                 put.addColumn(split[0], qualifier, t);

@@ -565,8 +565,8 @@ public class FixedFileTrailer {
     } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
         || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())) {
       comparatorKlass = MetaCellComparator.class;
-    } else if (comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getClass().getName())
-        || comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName())) {
+    } else if (comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue.RawBytesComparator")
+        || comparatorClassName.equals("org.apache.hadoop.hbase.util.Bytes$ByteArrayComparator")) {
       // When the comparator to be used is Bytes.BYTES_RAWCOMPARATOR, we just return null from here
       // Bytes.BYTES_RAWCOMPARATOR is not a CellComparator
       comparatorKlass = null;

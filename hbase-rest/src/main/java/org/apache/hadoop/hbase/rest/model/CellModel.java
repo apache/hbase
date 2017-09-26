@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
@@ -132,7 +131,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
    */
   public CellModel(byte[] column, byte[] qualifier, long timestamp,
       byte[] value) {
-    this.column = KeyValue.makeColumn(column, qualifier);
+    this.column = CellUtil.makeColumn(column, qualifier);
     this.timestamp = timestamp;
     this.value = value;
   }

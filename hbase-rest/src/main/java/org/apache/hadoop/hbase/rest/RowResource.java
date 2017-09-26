@@ -43,7 +43,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Increment;
@@ -233,7 +232,7 @@ public class RowResource extends ResourceBase {
               .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
               .build();
           }
-          byte [][] parts = KeyValue.parseColumn(col);
+          byte [][] parts = CellUtil.parseColumn(col);
           if (parts.length != 2) {
             return Response.status(Response.Status.BAD_REQUEST)
               .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
@@ -301,7 +300,7 @@ public class RowResource extends ResourceBase {
             .build();
       }
       Put put = new Put(row);
-      byte parts[][] = KeyValue.parseColumn(column);
+      byte parts[][] = CellUtil.parseColumn(column);
       if (parts.length != 2) {
         return Response.status(Response.Status.BAD_REQUEST)
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
@@ -390,7 +389,7 @@ public class RowResource extends ResourceBase {
       delete = new Delete(rowspec.getRow());
 
     for (byte[] column: rowspec.getColumns()) {
-      byte[][] split = KeyValue.parseColumn(column);
+      byte[][] split = CellUtil.parseColumn(column);
       if (rowspec.hasTimestamp()) {
         if (split.length == 1) {
           delete.addFamily(split[0], rowspec.getTimestamp());
@@ -473,7 +472,7 @@ public class RowResource extends ResourceBase {
       boolean retValue;
       CellModel valueToCheckCell = cellModels.get(cellModelCount - 1);
       byte[] valueToCheckColumn = valueToCheckCell.getColumn();
-      byte[][] valueToPutParts = KeyValue.parseColumn(valueToCheckColumn);
+      byte[][] valueToPutParts = CellUtil.parseColumn(valueToCheckColumn);
       if (valueToPutParts.length == 2 && valueToPutParts[1].length > 0) {
         CellModel valueToPutCell = null;
 
@@ -490,7 +489,7 @@ public class RowResource extends ResourceBase {
                     .build();
           }
 
-          byte [][] parts = KeyValue.parseColumn(col);
+          byte [][] parts = CellUtil.parseColumn(col);
 
           if (parts.length != 2) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -606,7 +605,7 @@ public class RowResource extends ResourceBase {
                     .build();
           }
 
-          parts = KeyValue.parseColumn(col);
+          parts = CellUtil.parseColumn(col);
 
           if (parts.length == 1) {
             // Only Column Family is specified
@@ -623,7 +622,7 @@ public class RowResource extends ResourceBase {
         }
       }
 
-      parts = KeyValue.parseColumn(valueToDeleteColumn);
+      parts = CellUtil.parseColumn(valueToDeleteColumn);
       if (parts.length == 2) {
         if (parts[1].length != 0) {
           // To support backcompat of deleting a cell
@@ -722,7 +721,7 @@ public class RowResource extends ResourceBase {
                   .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
                   .build();
         }
-        byte [][] parts = KeyValue.parseColumn(col);
+        byte [][] parts = CellUtil.parseColumn(col);
         if (parts.length != 2) {
           servlet.getMetrics().incrementFailedAppendRequests(1);
           return Response.status(Response.Status.BAD_REQUEST)
@@ -816,7 +815,7 @@ public class RowResource extends ResourceBase {
                   .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
                   .build();
         }
-        byte [][] parts = KeyValue.parseColumn(col);
+        byte [][] parts = CellUtil.parseColumn(col);
         if (parts.length != 2) {
           servlet.getMetrics().incrementFailedIncrementRequests(1);
           return Response.status(Response.Status.BAD_REQUEST)

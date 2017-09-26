@@ -27,7 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
@@ -213,7 +213,7 @@ implements Configurable {
    * @throws IllegalArgumentException When familyAndQualifier is invalid.
    */
   private static void addColumn(Scan scan, byte[] familyAndQualifier) {
-    byte [][] fq = KeyValue.parseColumn(familyAndQualifier);
+    byte [][] fq = CellUtil.parseColumn(familyAndQualifier);
     if (fq.length == 1) {
       scan.addFamily(fq[0]);
     } else if (fq.length == 2) {
