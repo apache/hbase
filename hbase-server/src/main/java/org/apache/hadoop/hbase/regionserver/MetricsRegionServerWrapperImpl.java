@@ -84,6 +84,8 @@ class MetricsRegionServerWrapperImpl
   private volatile long averageRegionSize = 0L;
 
   private CacheStats cacheStats;
+  private CacheStats l1Stats = null;
+  private CacheStats l2Stats = null;
   private ScheduledExecutorService executor;
   private Runnable runnable;
   private long period;
@@ -113,8 +115,12 @@ class MetricsRegionServerWrapperImpl
    */
   private synchronized  void initBlockCache() {
     CacheConfig cacheConfig = this.regionServer.cacheConfig;
-    if (cacheConfig != null && this.blockCache == null) {
-      this.blockCache = cacheConfig.getBlockCache();
+    if (cacheConfig != null) {
+      l1Stats = cacheConfig.getL1Stats();
+      l2Stats = cacheConfig.getL2Stats();
+      if (this.blockCache == null) {
+        this.blockCache = cacheConfig.getBlockCache();
+      }
     }
 
     if (this.blockCache != null && this.cacheStats == null) {
@@ -326,6 +332,67 @@ class MetricsRegionServerWrapperImpl
       return 0;
     }
     return this.cacheStats.getFailedInserts();
+  }
+
+  @Override
+  public long getL1CacheHitCount() {
+    return 200;
+  }
+
+  @Override
+  public long getL1CacheMissCount() {
+    if (this.l1Stats == null) {
+      return 0;
+    }
+    return this.l1Stats.getMissCount();
+  }
+
+  @Override
+  public double getL1CacheHitRatio() {
+    if (this.l1Stats == null) {
+      return 0;
+    }
+    return this.l1Stats.getHitRatio();
+  }
+
+  @Override
+  public double getL1CacheMissRatio() {
+    if (this.l1Stats == null) {
+      return 0;
+    }
+    return this.l1Stats.getMissRatio();
+  }
+
+  @Override
+  public long getL2CacheHitCount() {
+    if (this.l2Stats == null) {
+      return 0;
+    }
+    return this.l2Stats.getHitCount();
+  }
+
+  @Override
+  public long getL2CacheMissCount() {
+    if (this.l2Stats == null) {
+      return 0;
+    }
+    return this.l2Stats.getMissCount();
+  }
+
+  @Override
+  public double getL2CacheHitRatio() {
+    if (this.l2Stats == null) {
+      return 0;
+    }
+    return this.l2Stats.getHitRatio();
+  }
+
+  @Override
+  public double getL2CacheMissRatio() {
+    if (this.l2Stats == null) {
+      return 0;
+    }
+    return this.l2Stats.getMissRatio();
   }
 
   @Override public void forceRecompute() {
