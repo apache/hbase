@@ -45,7 +45,7 @@ public class TestBlockCacheReporting {
 
   @Before
   public void setUp() throws Exception {
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = null;
+    CacheConfig.clearGlobalInstances();
     this.conf = HBaseConfiguration.create();
   }
 
