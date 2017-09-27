@@ -70,6 +70,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -126,16 +127,15 @@ public class HFileOutputFormat2
   @Override
   public RecordWriter<ImmutableBytesWritable, Cell> getRecordWriter(
       final TaskAttemptContext context) throws IOException, InterruptedException {
-    return createRecordWriter(context);
+    return createRecordWriter(context, this.getOutputCommitter(context));
   }
 
   static <V extends Cell> RecordWriter<ImmutableBytesWritable, V>
-      createRecordWriter(final TaskAttemptContext context)
+      createRecordWriter(final TaskAttemptContext context, final OutputCommitter committer)
           throws IOException {
 
     // Get the path of the temporary output file
-    final Path outputPath = FileOutputFormat.getOutputPath(context);
-    final Path outputdir = new FileOutputCommitter(outputPath, context).getWorkPath();
+    final Path outputdir = ((FileOutputCommitter) committer).getWorkPath();
     final Configuration conf = context.getConfiguration();
     final FileSystem fs = outputdir.getFileSystem(conf);
     // These configs. are from hbase-*.xml
