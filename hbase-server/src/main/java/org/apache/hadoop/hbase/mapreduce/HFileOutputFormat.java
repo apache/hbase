@@ -69,7 +69,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   @Override
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(
       final TaskAttemptContext context) throws IOException, InterruptedException {
-    return HFileOutputFormat2.createRecordWriter(context);
+    return HFileOutputFormat2.createRecordWriter(context, this.getOutputCommitter(context));
   }
 
   /**
