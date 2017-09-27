@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -66,8 +67,10 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  * }
  * </pre>
  * <p>
- * Internally, this input format restores the snapshot into the given tmp directory. Similar to
- * {@link TableInputFormat} an InputSplit is created per region. The region is opened for reading
+ * Internally, this input format restores the snapshot into the given tmp directory. By default,
+ * and similar to {@link TableInputFormat} an InputSplit is created per region, but optionally you
+ * can run N mapper tasks per every region, in which case the region key range will be split to
+ * N sub-ranges and an InputSplit will be created per sub-range. The region is opened for reading
  * from each RecordReader. An internal RegionScanner is used to execute the
  * {@link org.apache.hadoop.hbase.CellScanner} obtained from the user.
  * <p>
@@ -216,4 +219,21 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       throws IOException {
     TableSnapshotInputFormatImpl.setInput(job.getConfiguration(), snapshotName, restoreDir);
   }
+
+  /**
+   * Configures the job to use TableSnapshotInputFormat to read from a snapshot.
+   * @param job the job to configure
+   * @param snapshotName the name of the snapshot to read from
+   * @param restoreDir a temporary directory to restore the snapshot into. Current user should
+   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
+   * After the job is finished, restoreDir can be deleted.
+   * @param splitAlgo split algorithm to generate splits from region
+   * @param numSplitsPerRegion how many input splits to generate per one region
+   * @throws IOException if an error occurs
+   */
+   public static void setInput(Job job, String snapshotName, Path restoreDir,
+                               RegionSplitter.SplitAlgorithm splitAlgo, int numSplitsPerRegion) throws IOException {
+     TableSnapshotInputFormatImpl.setInput(job.getConfiguration(), snapshotName, restoreDir,
+             splitAlgo, numSplitsPerRegion);
+   }
 }
