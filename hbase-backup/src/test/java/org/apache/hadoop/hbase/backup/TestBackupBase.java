@@ -136,8 +136,9 @@ public class TestBackupBase {
         // copy out the table and region info files for each table
         BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
         // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
-        convertWALsToHFiles(backupInfo);
-        incrementalCopyHFiles(backupInfo);
+        convertWALsToHFiles();
+        incrementalCopyHFiles(new String[] {getBulkOutputDir().toString()},
+          backupInfo.getBackupRootDir());
         failStageIf(Stage.stage_2);
         // Save list of WAL files copied
         backupManager.recordWALFiles(backupInfo.getIncrBackupFileList());
